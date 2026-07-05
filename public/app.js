@@ -1,4 +1,5 @@
 let data = null;
+let nexusOperationsLastResult = null;
 let map = null;
 let layers = {};
 let userMap = null;
@@ -267,8 +268,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-366";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v340";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-376";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v350";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -21562,6 +21563,7 @@ const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
   "logistics", "route-support", "pickup-request", "delivery-request", "cold-chain", "storage", "dispatch-gate",
   "workforce", "training", "digital-literacy", "ai-training", "job-readiness", "youth-workforce", "employer-referral", "certification", "lms-handoff",
   "live-knowledge", "internet", "research", "source-backed-answer",
+  "operations-memory",
   "maps", "field-visit", "route-planning", "location-sharing",
   "email", "sms", "whatsapp", "phone-handoff", "telegram", "communications-status",
   "music", "media", "youtube", "media-handoff",
@@ -21571,6 +21573,7 @@ const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
 ]);
 
 const NEXUS_FUNCTION_WINDOW_ROUTE_MAP = Object.freeze({
+  "operations-memory": "operations-memory",
   "virtual-care": "telehealth-intake",
   telehealth: "telehealth-intake",
   "video-visit": "telehealth-intake",
@@ -21668,7 +21671,8 @@ const NEXUS_FUNCTION_WINDOW_LABELS = Object.freeze({
   music: "Music & Media", media: "Music & Media", youtube: "Music & Media", "media-handoff": "Music & Media",
   offline: "Offline & Low-Bandwidth Support", "low-bandwidth": "Offline & Low-Bandwidth Support", "offline-queue": "Offline & Low-Bandwidth Support", "sync-status": "Offline & Low-Bandwidth Support", "local-fallback": "Offline & Low-Bandwidth Support",
   "admin-review": "Provider & Case Queue", "provider-queue": "Provider & Case Queue", "vendor-queue": "Provider & Case Queue", "care-team-queue": "Provider & Case Queue", "pharmacy-queue": "Provider & Case Queue", "mobile-clinic-queue": "Provider & Case Queue", "agronomy-queue": "Provider & Case Queue", "marketplace-queue": "Provider & Case Queue", "logistics-queue": "Provider & Case Queue", "workforce-queue": "Provider & Case Queue", "case-timeline": "Provider & Case Queue", "provider-response-inbox": "Provider & Case Queue",
-  payment: "Payment / Booking / Dispatch Gate", "payment-gate": "Payment / Booking / Dispatch Gate", booking: "Payment / Booking / Dispatch Gate", "booking-gate": "Payment / Booking / Dispatch Gate", dispatch: "Payment / Booking / Dispatch Gate", "admin-approval": "Payment / Booking / Dispatch Gate"
+  payment: "Payment / Booking / Dispatch Gate", "payment-gate": "Payment / Booking / Dispatch Gate", booking: "Payment / Booking / Dispatch Gate", "booking-gate": "Payment / Booking / Dispatch Gate", dispatch: "Payment / Booking / Dispatch Gate", "admin-approval": "Payment / Booking / Dispatch Gate",
+  "operations-memory": "Persistent Operations Memory"
 });
 
 const NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS = Object.freeze({
@@ -22353,7 +22357,8 @@ const NEXUS_MAJOR_LAUNCH_BUTTONS = Object.freeze([
   { id: "agritrade", label: "AgriTrade", command: "Browse AgriTrade." },
   { id: "logistics", label: "Logistics", command: "Nexus, open logistics cold chain." },
   { id: "jobs", label: "Workforce", command: "Nexus, open workforce training." },
-  { id: "live-knowledge", label: "Live Knowledge", command: "Research climate-smart agriculture in Africa and show sources." }
+  { id: "live-knowledge", label: "Live Knowledge", command: "Research climate-smart agriculture in Africa and show sources." },
+  { id: "operations-memory", label: "Operations", command: "Show audit log" }
 ]);
 
 function nexusAllAgenticWorkflows() {
@@ -23550,6 +23555,7 @@ function openNexusCapability(capabilityId, options = {}) {
 }
 
 function launchCapabilityFromAskNexus(input = "") {
+  if (isNexusPersistentOperationsCommand(input)) return false;
   const functionIntent = resolveNexusFunctionIntent(input, { source: "typed-command" });
   if (functionIntent.functionId) {
     const opened = openNexusFunctionWindow(functionIntent.functionId, { command: input, source: "typed-command", sourceSurface: "ask_nexus" });
@@ -23566,6 +23572,7 @@ function launchCapabilityFromAskNexus(input = "") {
 }
 
 function launchCapabilityFromVoice(transcript = "") {
+  if (isNexusPersistentOperationsCommand(transcript)) return false;
   const capability = resolveNexusCapability(transcript);
   const functionIntent = resolveNexusFunctionIntent(transcript, { source: "voice-command" });
   if (functionIntent.functionId) {
@@ -24937,6 +24944,144 @@ function nexusCommandInputForSubmit(target = null) {
     || $("#nexusCommandCenterInput");
 }
 
+function isNexusPersistentOperationsCommand(command = "") {
+  return /\b(chronic care profile|blood pressure|bp|glucose|blood sugar|rpm|rtm|therapy activity|provider review|pharmacy referral|mobile clinic follow-up|telehealth encounter|deceased|stop outreach|archive intake|delete intake|mobile clinic provider|pharmacy provider|add provider|add buyer|add seller|out of business|create shipment|tracking event|shipment timeline|cancel shipment|create transaction|add item to transaction|cancel transaction|transaction ledger|heat illness|heat risk|heat index|action receipts|audit log)\b/i.test(String(command || ""));
+}
+
+function nexusOperationsActionForCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(create|add|start).*(chronic care|hypertension|diabetes|obesity)\b/.test(text)) return "create_chronic_care_profile";
+  if (/\b(blood pressure|bp|glucose|blood sugar|weight|pulse|oxygen|rpm reading|record rpm)\b/.test(text)) return "add_rpm_reading";
+  if (/\b(rtm|therapy|mobility|pain|exercise|nutrition|symptom check)\b/.test(text)) return "add_rtm_activity";
+  if (/\b(show chronic care timeline|chronic care timeline)\b/.test(text)) return "show_chronic_care_timeline";
+  if (/\b(provider review|chronic care provider review)\b/.test(text)) return "create_provider_review_packet";
+  if (/\b(pharmacy referral from.*chronic|create pharmacy referral)\b/.test(text)) return "create_pharmacy_referral";
+  if (/\b(mobile clinic follow-up|mobile clinic follow up)\b/.test(text)) return "create_mobile_clinic_follow_up";
+  if (/\b(telehealth encounter from.*chronic|create telehealth encounter)\b/.test(text)) return "create_telehealth_encounter";
+  if (/\b(deceased|stop outreach|no contact|no-contact)\b/.test(text)) return "mark_deceased_stop_outreach";
+  if (/\b(create intake|healthcare intake|patient intake)\b/.test(text)) return "create_intake";
+  if (/\b(archive this intake|archive intake)\b/.test(text)) return "archive_intake";
+  if (/\b(delete this intake|delete intake)\b/.test(text)) return "delete_intake_if_allowed";
+  if (/\b(add.*pharmacy provider|add.*pharmacy)\b/.test(text)) return "add_pharmacy_provider";
+  if (/\b(add.*mobile clinic provider|add.*mobile clinic)\b/.test(text)) return "add_mobile_clinic_provider";
+  if (/\b(add.*provider)\b/.test(text)) return "add_provider";
+  if (/\b(add.*buyer)\b/.test(text)) return "add_buyer";
+  if (/\b(add.*seller)\b/.test(text)) return "add_seller";
+  if (/\b(out of business|closed business|mark.*seller.*closed)\b/.test(text)) return "mark_party_closed";
+  if (/\b(create shipment|shipment from|farm to market)\b/.test(text)) return "create_shipment";
+  if (/\b(add tracking event|picked up|in transit|delivered|temperature issue)\b/.test(text)) return "add_tracking_event";
+  if (/\b(show shipment timeline|shipment timeline)\b/.test(text)) return "show_shipment_timeline";
+  if (/\b(cancel shipment|cancel this shipment)\b/.test(text)) return "cancel_shipment";
+  if (/\b(create transaction|transaction ledger)\b/.test(text)) return "create_transaction";
+  if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
+  if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
+  if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
+  if (/\b(show action receipts|action receipts)\b/.test(text)) return "show_action_receipts";
+  if (/\b(show audit log|audit log)\b/.test(text)) return "show_audit_log";
+  return "status";
+}
+
+async function runNexusPersistentOperationsCommand(command = "", options = {}) {
+  const action = options.action || nexusOperationsActionForCommand(command);
+  const response = await request("/api/nexus/operations/command", {
+    method: "POST",
+    body: {
+      action,
+      command,
+      ...(options.body || {})
+    }
+  });
+  data = response;
+  nexusOperationsLastResult = response.nexusOperationsResult || null;
+  nexusActiveWorkflowState = {
+    id: "operations-memory",
+    functionId: "operations-memory",
+    command: command || action,
+    source: options.source || "operations-command",
+    workflow: "operations-memory",
+    action,
+    openedAt: Date.now(),
+    minimized: false
+  };
+  recordNexusRecentWorkflow("operations-memory", {
+    title: "Operations Memory",
+    status: nexusOperationsLastResult?.record?.status || nexusOperationsLastResult?.receipt?.status || "prepared",
+    summary: nexusOperationsLastResult?.receipt?.did?.[0] || "Persistent operations memory updated."
+  });
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  scheduleNexusActiveWorkflowFocus({ instant: true });
+  return true;
+}
+
+function renderNexusOperationsMemoryWindow() {
+  const ops = data?.persistentOperations || nexusOperationsLastResult?.operations || {};
+  const result = nexusOperationsLastResult || {};
+  const collections = ops.collections || {};
+  const actions = [
+    ["create_chronic_care_profile", "Create chronic care profile"],
+    ["add_rpm_reading", "Add BP/RPM reading"],
+    ["add_rtm_activity", "Add RTM activity"],
+    ["show_chronic_care_timeline", "Show chronic timeline"],
+    ["create_provider_review_packet", "Prepare provider review"],
+    ["create_pharmacy_referral", "Create pharmacy referral"],
+    ["create_mobile_clinic_follow_up", "Create mobile clinic follow-up"],
+    ["mark_deceased_stop_outreach", "Mark deceased / stop outreach"],
+    ["add_pharmacy_provider", "Add pharmacy provider"],
+    ["add_mobile_clinic_provider", "Add mobile clinic provider"],
+    ["add_buyer", "Add buyer"],
+    ["add_seller", "Add seller"],
+    ["mark_party_closed", "Mark seller closed"],
+    ["create_shipment", "Create shipment"],
+    ["add_tracking_event", "Add tracking event"],
+    ["cancel_shipment", "Cancel shipment"],
+    ["create_transaction", "Create transaction"],
+    ["add_transaction_item", "Add transaction item"],
+    ["cancel_transaction", "Cancel transaction"],
+    ["log_heat_risk_report", "Open heat risk window"],
+    ["show_action_receipts", "Show action receipts"],
+    ["show_audit_log", "Show audit log"]
+  ];
+  const record = result.record || null;
+  const receipt = result.receipt || (ops.recentReceipts || [])[0] || null;
+  const audit = result.audit || (ops.recentAudit || [])[0] || null;
+  return `
+    <section class="nexus-operations-memory-window" data-nexus-operations-memory-window="true">
+      <div class="nexus-operations-status-grid">
+        <article><strong>${escapeHtml(String(collections.chronicCareProfiles || 0))}</strong><span>${escapeHtml(translateText("Chronic profiles"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.rpmReadings || 0))}</strong><span>${escapeHtml(translateText("RPM readings"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.rtmActivities || 0))}</strong><span>${escapeHtml(translateText("RTM activities"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.providers || 0))}</strong><span>${escapeHtml(translateText("Providers"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.parties || 0))}</strong><span>${escapeHtml(translateText("Buyers / sellers"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.shipments || 0))}</strong><span>${escapeHtml(translateText("Shipments"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.transactions || 0))}</strong><span>${escapeHtml(translateText("Transactions"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.auditLogs || 0))}</strong><span>${escapeHtml(translateText("Audit logs"))}</span></article>
+      </div>
+      <div class="nexus-operations-action-grid">
+        ${actions.map(([action, label]) => `<button type="button" data-nexus-operations-action="${escapeHtml(action)}">${escapeHtml(translateText(label))}</button>`).join("")}
+      </div>
+      <section class="nexus-operations-heat-risk" data-nexus-heat-risk-window="true" data-fake-illness-prevalence-map="false">
+        <strong>${escapeHtml(translateText("Health Risk / Heat Index"))}</strong>
+        <p>${escapeHtml(translateText(ops.heatRisk?.datasetNotice || "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets."))}</p>
+      </section>
+      <section class="nexus-operations-result" data-nexus-operations-result="true">
+        <strong>${escapeHtml(translateText("Latest operations result"))}</strong>
+        <p>${escapeHtml(translateText(result.action ? `Action: ${result.action}` : "Choose an operation or type an operations command."))}</p>
+        ${record ? `<pre>${escapeHtml(JSON.stringify(record, null, 2))}</pre>` : ""}
+      </section>
+      <section class="nexus-action-receipt" data-nexus-action-receipt="true" data-nexus-persistent-action-receipt="true">
+        <strong>${escapeHtml(translateText("Nexus did / did not do"))}</strong>
+        <div><b>${escapeHtml(translateText("Nexus did:"))}</b><ul>${(receipt?.did || ["No operation receipt yet."]).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul></div>
+        <div><b>${escapeHtml(translateText("Nexus did not:"))}</b><ul>${(receipt?.didNot || ["Nexus did not execute external actions."]).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul></div>
+      </section>
+      <section class="nexus-operations-audit" data-nexus-operations-audit-log="true">
+        <strong>${escapeHtml(translateText("Audit / consent trail"))}</strong>
+        <p>${escapeHtml(translateText(audit?.summary || "Audit records appear here after operations are created, updated, archived, or cancelled."))}</p>
+      </section>
+    </section>
+  `;
+}
+
 function renderNexusActiveWorkflowWorkspace() {
   const state = nexusActiveWorkflowState || {};
   if (!state.id && !state.functionId) {
@@ -25016,9 +25161,11 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Assistant summary"))}</strong>
         <p>${escapeHtml(translateText(`Nexus resolved this request to ${presentation.title}. Complete the relevant fields here, review the packet preview, then choose a safe next action.`))}</p>
       </section>
-      ${renderNexusWorkflowLandingWindow(definition, state)}
-      ${renderNexusWorkflowLaneStatus(id)}
-      ${renderNexusConfirmationSummary(latestPacket, latestLane)}
+      ${id === "operations-memory" ? renderNexusOperationsMemoryWindow() : `
+        ${renderNexusWorkflowLandingWindow(definition, state)}
+        ${renderNexusWorkflowLaneStatus(id)}
+        ${renderNexusConfirmationSummary(latestPacket, latestLane)}
+      `}
       <div class="nexus-workflow-steps" aria-label="${escapeHtml(translateText("Workflow steps"))}">
         ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
       </div>
@@ -25762,6 +25909,21 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
     nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
     renderUserWorkspace();
+    return true;
+  }
+  if (isNexusPersistentOperationsCommand(normalized)) {
+    runNexusPersistentOperationsCommand(normalized, { source: "operations-command" }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
     return true;
   }
   const requestedHomeModeId = detectNexusHomeModePanelId(normalized);
@@ -41656,6 +41818,27 @@ async function runWowDemo() {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory']");
+  if (persistentOperationsShortcut) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const command = persistentOperationsShortcut.dataset.nexusCommand || "Show audit log";
+    setCommandInputs(command);
+    runNexusPersistentOperationsCommand(command, { source: "mode-click" }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+    return true;
+  }
   if (eventTarget?.closest?.("[data-nexus-workflow-minimize]")) {
     event.preventDefault();
     event.stopPropagation();
@@ -41689,6 +41872,26 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (isNexusPersistentOperationsCommand(command)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      runNexusPersistentOperationsCommand(command, { source: "command-submit" }).catch(error => {
+        nexusAgenticBrainLastResult = {
+          ok: false,
+          status: "nexus_operations_memory_error",
+          mode: "Operations Memory",
+          message: error.message || "Operations memory needs attention.",
+          preparedCards: [],
+          noExecutionAuthorized: true,
+          localOnly: true
+        };
+        renderUserWorkspace();
+      });
+      return true;
+    }
     if (launchCapabilityFromAskNexus(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -41820,6 +42023,28 @@ function handleNexusStandardUserHomeClick(event) {
     scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
+  if (normalizedModeId === "operations-memory") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const operationsCommand = command || "Show audit log";
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = operationsCommand;
+    setCommandInputs(operationsCommand);
+    runNexusPersistentOperationsCommand(operationsCommand, { source: "mode-click" }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+    return true;
+  }
   const clickedCapability = resolveNexusCapability(command, { modeId });
   if (clickedCapability) {
     event.preventDefault();
@@ -41865,6 +42090,28 @@ function nexusHandleStandardUserHomeShortcut(event) {
 
 function handleNexusUserExperienceMaximizationClick(event) {
   const target = event.target;
+  const operationsAction = target?.closest?.("[data-nexus-operations-action]");
+  if (operationsAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    const action = operationsAction.dataset.nexusOperationsAction || "status";
+    runNexusPersistentOperationsCommand(action.replace(/_/g, " "), {
+      action,
+      source: "operations-action-button"
+    }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+    return true;
+  }
   const recent = target?.closest?.("[data-nexus-recent-workflow]");
   if (recent) {
     event.preventDefault();
@@ -42086,6 +42333,30 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    const persistentOperationsShortcut = event.target?.closest?.("[data-nexus-mode-shortcut='operations-memory']");
+    if (persistentOperationsShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      const command = persistentOperationsShortcut.dataset.nexusCommand || "Show audit log";
+      setCommandInputs(command);
+      await runNexusPersistentOperationsCommand(command, { source: "mode-click" });
+      return;
+    }
+    const persistentOperationsSubmit = event.target?.closest?.("[data-nexus-command-center-submit]");
+    if (persistentOperationsSubmit) {
+      const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
+      const command = input?.value?.trim() || "";
+      if (isNexusPersistentOperationsCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        await runNexusPersistentOperationsCommand(command, { source: "command-submit" });
+        return;
+      }
+    }
     if (handleNexusUserExperienceMaximizationClick(event)) return;
     if (await handleNexusKnowledgeRailClick(event)) return;
     if (await handleNexusProductionRailsClick(event)) return;
@@ -42104,6 +42375,15 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (isNexusPersistentOperationsCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        await runNexusPersistentOperationsCommand(command, { source: "command-submit" });
+        return;
+      }
       if (launchCapabilityFromAskNexus(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -42271,6 +42551,10 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      if (isNexusPersistentOperationsCommand(command)) {
+        await runNexusPersistentOperationsCommand(command, { source: "command-submit" });
+        return;
+      }
       if (launchCapabilityFromAskNexus(command)) return;
       if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) return;
       if (isNexusLiveKnowledgeQuestion(command)) {

@@ -37,8 +37,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-366";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v340";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-376";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v350";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -3878,6 +3878,7 @@ function publicState(db, user) {
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
+    persistentOperations: nexusOperationsSummary(db),
     admin: adminSnapshot(db, providers),
     profile: profileForUser(db.profile, user)
   };
@@ -33052,6 +33053,563 @@ function nexusEndgameStatus(db, env = process.env) {
   };
 }
 
+const NEXUS_OPERATION_COLLECTIONS = Object.freeze([
+  "patients",
+  "healthcareIntakes",
+  "chronicCareProfiles",
+  "rpmReadings",
+  "rtmActivities",
+  "medicationAdherenceNotes",
+  "careTasks",
+  "providers",
+  "parties",
+  "marketplaceListings",
+  "shipments",
+  "trackingEvents",
+  "transactions",
+  "cases",
+  "actionReceipts",
+  "consentRecords",
+  "auditLogs",
+  "archiveRecords",
+  "heatRiskReports",
+  "providerResponses",
+  "statusChanges"
+]);
+
+function nexusNow() {
+  return new Date().toISOString();
+}
+
+function nexusOperationId(prefix = "NX-OPS") {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function ensureNexusPersistentOperations(db) {
+  db.nexusPersistentOperations = db.nexusPersistentOperations || {};
+  for (const key of NEXUS_OPERATION_COLLECTIONS) {
+    if (!Array.isArray(db.nexusPersistentOperations[key])) db.nexusPersistentOperations[key] = [];
+  }
+  return db.nexusPersistentOperations;
+}
+
+function cleanOpsText(value, max = 500) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function cleanOpsArray(value, maxItems = 12) {
+  if (Array.isArray(value)) return value.map(item => cleanOpsText(item, 120)).filter(Boolean).slice(0, maxItems);
+  return cleanOpsText(value, 400).split(/[,;\n]/).map(item => cleanOpsText(item, 120)).filter(Boolean).slice(0, maxItems);
+}
+
+function safeOpsSnapshot(record = {}) {
+  const blocked = /token|secret|password|auth|key/i;
+  return Object.fromEntries(Object.entries(record || {}).filter(([key]) => !blocked.test(key)).map(([key, value]) => {
+    if (typeof value === "string") return [key, cleanOpsText(value, 240)];
+    if (Array.isArray(value)) return [key, value.slice(0, 8).map(item => typeof item === "string" ? cleanOpsText(item, 120) : item)];
+    if (value && typeof value === "object") return [key, safeOpsSnapshot(value)];
+    return [key, value];
+  }));
+}
+
+function addNexusOperationsAudit(db, entityType, entityId, action, actor, summary, before = null, after = null) {
+  const store = ensureNexusPersistentOperations(db);
+  const audit = {
+    auditId: nexusOperationId("NX-AUD"),
+    entityType,
+    entityId,
+    action,
+    actor: cleanOpsText(actor || "standard-user", 80),
+    timestamp: nexusNow(),
+    summary: cleanOpsText(summary, 500),
+    before: before ? safeOpsSnapshot(before) : null,
+    after: after ? safeOpsSnapshot(after) : null
+  };
+  store.auditLogs.unshift(audit);
+  store.auditLogs = store.auditLogs.slice(0, 1000);
+  return audit;
+}
+
+function addNexusOperationsReceipt(db, entityType, entityId, action, did = [], didNot = [], status = "prepared") {
+  const store = ensureNexusPersistentOperations(db);
+  const receipt = {
+    receiptId: nexusOperationId("NX-RCPT"),
+    entityType,
+    entityId,
+    action,
+    status,
+    createdAt: nexusNow(),
+    did: did.map(item => cleanOpsText(item, 220)).filter(Boolean),
+    didNot: didNot.length ? didNot.map(item => cleanOpsText(item, 220)).filter(Boolean) : [
+      "Nexus did not diagnose, prescribe, book, dispatch, pay, send, call, share location, approve a refill, or claim provider acceptance.",
+      "Nexus did not expose secrets or create a hidden external action."
+    ],
+    noExecutionAuthorized: true
+  };
+  store.actionReceipts.unshift(receipt);
+  store.actionReceipts = store.actionReceipts.slice(0, 1000);
+  return receipt;
+}
+
+function addNexusConsentRecord(db, entityType, entityId, consentType, granted = false, actor = "standard-user") {
+  const store = ensureNexusPersistentOperations(db);
+  const consent = {
+    consentId: nexusOperationId("NX-CONS"),
+    entityType,
+    entityId,
+    consentType,
+    granted: Boolean(granted),
+    actor: cleanOpsText(actor, 80),
+    timestamp: nexusNow()
+  };
+  store.consentRecords.unshift(consent);
+  store.consentRecords = store.consentRecords.slice(0, 1000);
+  return consent;
+}
+
+function nexusOperationsSummary(db) {
+  const store = ensureNexusPersistentOperations(db);
+  return {
+    ok: true,
+    storage: usingPostgresState() ? "postgres-jsonb" : "local-json",
+    collections: Object.fromEntries(NEXUS_OPERATION_COLLECTIONS.map(key => [key, store[key].length])),
+    chronicCare: {
+      activeProfiles: store.chronicCareProfiles.filter(item => !/archived|deceased/.test(item.status || "")).length,
+      rpmReadings: store.rpmReadings.length,
+      rtmActivities: store.rtmActivities.length,
+      noContactProfiles: store.chronicCareProfiles.filter(item => item.noContact).length
+    },
+    directories: {
+      providers: store.providers.length,
+      pharmacies: store.providers.filter(item => item.type === "pharmacy").length,
+      mobileClinics: store.providers.filter(item => item.type === "mobile-clinic").length,
+      agronomyExperts: store.providers.filter(item => item.type === "agronomy").length,
+      buyersSellers: store.parties.length
+    },
+    trade: {
+      shipments: store.shipments.length,
+      transactions: store.transactions.length,
+      trackingEvents: store.trackingEvents.length
+    },
+    heatRisk: {
+      reports: store.heatRiskReports.length,
+      liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL),
+      datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL
+        ? "Configured heat-risk source may provide source-backed heat context."
+        : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets."
+    },
+    safety: {
+      noDiagnosis: true,
+      noPrescribing: true,
+      noFakePayments: true,
+      noFakeShipmentTracking: true,
+      noFakeIllnessPrevalenceMap: true,
+      consentBeforeSharing: true,
+      auditTrail: true
+    },
+    recentReceipts: store.actionReceipts.slice(0, 8),
+    recentAudit: store.auditLogs.slice(0, 8)
+  };
+}
+
+function latestChronicCareProfile(store) {
+  return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
+}
+
+function latestShipment(store) {
+  return store.shipments.find(item => !/cancelled|delivered/.test(item.status || "")) || store.shipments[0] || null;
+}
+
+function latestTransaction(store) {
+  return store.transactions.find(item => !/cancelled|completed|paid/.test(item.status || "")) || store.transactions[0] || null;
+}
+
+function latestParty(store, type = "") {
+  return store.parties.find(item => !type || item.type === type || item.type === "both") || store.parties[0] || null;
+}
+
+function parseNexusOperationsCommand(command = "") {
+  const text = cleanOpsText(command, 500).toLowerCase();
+  if (/\b(create|add|start).*(chronic care|hypertension|diabetes|obesity)\b/.test(text)) return "create_chronic_care_profile";
+  if (/\b(blood pressure|bp|glucose|blood sugar|weight|pulse|oxygen|rpm reading|record rpm)\b/.test(text)) return "add_rpm_reading";
+  if (/\b(rtm|therapy|mobility|pain|exercise|nutrition|symptom check)\b/.test(text)) return "add_rtm_activity";
+  if (/\b(show chronic care timeline|chronic care timeline)\b/.test(text)) return "show_chronic_care_timeline";
+  if (/\b(provider review|chronic care provider review)\b/.test(text)) return "create_provider_review_packet";
+  if (/\b(pharmacy referral from.*chronic|create pharmacy referral)\b/.test(text)) return "create_pharmacy_referral";
+  if (/\b(mobile clinic follow-up|mobile clinic follow up)\b/.test(text)) return "create_mobile_clinic_follow_up";
+  if (/\b(telehealth encounter from.*chronic|create telehealth encounter)\b/.test(text)) return "create_telehealth_encounter";
+  if (/\b(deceased|stop outreach|no contact|no-contact)\b/.test(text)) return "mark_deceased_stop_outreach";
+  if (/\b(create intake|healthcare intake|patient intake)\b/.test(text)) return "create_intake";
+  if (/\b(archive this intake|archive intake)\b/.test(text)) return "archive_intake";
+  if (/\b(delete this intake|delete intake)\b/.test(text)) return "delete_intake_if_allowed";
+  if (/\b(add.*pharmacy provider|add.*pharmacy)\b/.test(text)) return "add_pharmacy_provider";
+  if (/\b(add.*mobile clinic provider|add.*mobile clinic)\b/.test(text)) return "add_mobile_clinic_provider";
+  if (/\b(add.*provider)\b/.test(text)) return "add_provider";
+  if (/\b(add.*buyer)\b/.test(text)) return "add_buyer";
+  if (/\b(add.*seller)\b/.test(text)) return "add_seller";
+  if (/\b(out of business|closed business|mark.*seller.*closed)\b/.test(text)) return "mark_party_closed";
+  if (/\b(create shipment|shipment from|farm to market)\b/.test(text)) return "create_shipment";
+  if (/\b(add tracking event|picked up|in transit|delivered|temperature issue)\b/.test(text)) return "add_tracking_event";
+  if (/\b(show shipment timeline|shipment timeline)\b/.test(text)) return "show_shipment_timeline";
+  if (/\b(cancel shipment|cancel this shipment)\b/.test(text)) return "cancel_shipment";
+  if (/\b(create transaction|transaction ledger)\b/.test(text)) return "create_transaction";
+  if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
+  if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
+  if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
+  if (/\b(show action receipts|action receipts)\b/.test(text)) return "show_action_receipts";
+  if (/\b(show audit log|audit log)\b/.test(text)) return "show_audit_log";
+  return "";
+}
+
+function nexusOperationResponse(db, action, record, audit, receipt, extra = {}) {
+  return {
+    ok: true,
+    action,
+    record,
+    audit,
+    receipt,
+    operations: nexusOperationsSummary(db),
+    noExecutionAuthorized: true,
+    safety: {
+      didNotDiagnose: true,
+      didNotPrescribe: true,
+      didNotPay: true,
+      didNotDispatch: true,
+      didNotSendMessage: true,
+      didNotFakeProviderAcceptance: true
+    },
+    ...extra
+  };
+}
+
+function runNexusOperationsAction(db, body = {}, user = null) {
+  const store = ensureNexusPersistentOperations(db);
+  const actor = user?.role || body.actor || "standard-user";
+  const command = body.command || "";
+  const action = body.action || parseNexusOperationsCommand(command) || "status";
+  const now = nexusNow();
+  const didNot = [
+    "Nexus did not diagnose, prescribe, recommend medication changes, contact providers, send messages, dispatch services, process payments, fake GPS tracking, or claim live acceptance.",
+    "Nexus kept the record in persistent operations memory with audit and review controls."
+  ];
+
+  if (action === "status") {
+    return { ok: true, action, operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (action === "create_chronic_care_profile") {
+    const conditionArea = cleanOpsText(body.conditionArea || (/diabetes/i.test(command) ? "diabetes" : /obesity/i.test(command) ? "obesity" : /hypertension|blood pressure|bp/i.test(command) ? "hypertension" : "general chronic care"), 40).replace(/\s+/g, "-");
+    const profile = {
+      chronicCareId: nexusOperationId("NX-CC"),
+      patientId: cleanOpsText(body.patientId || body.patientName || "standard-user-local-patient", 120),
+      conditionArea: ["diabetes", "hypertension", "obesity", "multiple", "other"].includes(conditionArea) ? conditionArea : conditionArea === "general-chronic-care" ? "other" : conditionArea,
+      status: cleanOpsText(body.status || "active", 40),
+      createdAt: now,
+      updatedAt: now,
+      preferredLanguage: cleanOpsText(body.preferredLanguage || "English", 80),
+      countryOrRegion: cleanOpsText(body.countryOrRegion || body.region || "", 120),
+      careGoals: cleanOpsArray(body.careGoals || "provider review, RPM/RTM monitoring, follow-up planning"),
+      medications: cleanOpsArray(body.medications || ""),
+      allergies: cleanOpsArray(body.allergies || ""),
+      riskFlags: cleanOpsArray(body.riskFlags || ""),
+      providerLane: cleanOpsText(body.providerLane || "physician-review", 80),
+      consentState: { preparePacket: body.preparePacket !== false, shareWithProvider: body.shareWithProvider === true, lastUpdatedAt: now },
+      noContact: false,
+      archiveReason: null
+    };
+    store.chronicCareProfiles.unshift(profile);
+    addNexusConsentRecord(db, "chronic-care", profile.chronicCareId, "preparePacket", profile.consentState.preparePacket, actor);
+    const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "chronic_care_profile_created", actor, `${profile.conditionArea} chronic care profile created for local operations memory.`, null, profile);
+    const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, "create_chronic_care_profile", ["Created chronic care profile.", "Recorded consent state and provider review lane."], didNot, "active");
+    return nexusOperationResponse(db, action, profile, audit, receipt);
+  }
+
+  if (action === "add_rpm_reading") {
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const reading = {
+      readingId: nexusOperationId("NX-RPM"),
+      chronicCareId: profile.chronicCareId,
+      type: cleanOpsText(body.type || (/glucose|sugar/i.test(command) ? "blood_glucose" : /weight/i.test(command) ? "weight" : /pulse/i.test(command) ? "pulse" : /oxygen/i.test(command) ? "oxygen" : /adherence/i.test(command) ? "medication_adherence" : "blood_pressure"), 80),
+      value: cleanOpsText(body.value || command || "manual reading recorded", 160),
+      observedAt: body.observedAt || now,
+      notes: cleanOpsText(body.notes || "", 300),
+      source: cleanOpsText(body.source || "patient-entered", 80),
+      createdAt: now
+    };
+    store.rpmReadings.unshift(reading);
+    profile.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rpm_reading_added", actor, `${reading.type} RPM reading added.`, null, reading);
+    const receipt = addNexusOperationsReceipt(db, "rpm-reading", reading.readingId, "add_rpm_reading", ["Added RPM reading to chronic care timeline.", "Kept reading local until consented provider sharing is configured."], didNot, "recorded");
+    return nexusOperationResponse(db, action, reading, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
+  }
+
+  if (action === "add_rtm_activity") {
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
+    const activity = {
+      activityId: nexusOperationId("NX-RTM"),
+      chronicCareId: profile.chronicCareId,
+      type: cleanOpsText(body.type || (/mobility/i.test(command) ? "mobility" : /pain/i.test(command) ? "pain" : /exercise/i.test(command) ? "exercise" : /nutrition/i.test(command) ? "nutrition" : /adherence/i.test(command) ? "medication_adherence" : /symptom/i.test(command) ? "symptom_check" : "therapy_activity"), 80),
+      value: cleanOpsText(body.value || command || "therapy activity recorded", 200),
+      observedAt: body.observedAt || now,
+      notes: cleanOpsText(body.notes || "", 300),
+      createdAt: now
+    };
+    store.rtmActivities.unshift(activity);
+    profile.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rtm_activity_added", actor, `${activity.type} RTM activity added.`, null, activity);
+    const receipt = addNexusOperationsReceipt(db, "rtm-activity", activity.activityId, "add_rtm_activity", ["Added RTM activity to chronic care timeline."], didNot, "recorded");
+    return nexusOperationResponse(db, action, activity, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
+  }
+
+  if (action === "show_chronic_care_timeline") {
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
+    return { ok: true, action, record: profile, timeline: nexusChronicCareTimeline(store, profile?.chronicCareId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (["create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up", "create_telehealth_encounter"].includes(action)) {
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
+    const caseItem = {
+      caseId: nexusOperationId("NX-CASE"),
+      chronicCareId: profile.chronicCareId,
+      type: lane,
+      status: "prepared",
+      summary: cleanOpsText(body.summary || `${lane} packet prepared from chronic care profile.`, 300),
+      consentRequiredBeforeSharing: true,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.cases.unshift(caseItem);
+    const audit = addNexusOperationsAudit(db, "case", caseItem.caseId, action, actor, `${lane} case packet prepared from chronic care profile.`, null, caseItem);
+    const receipt = addNexusOperationsReceipt(db, "case", caseItem.caseId, action, [`Prepared ${lane} case packet from chronic care profile.`, "Marked sharing as consent-gated."], didNot, "prepared");
+    return nexusOperationResponse(db, action, caseItem, audit, receipt);
+  }
+
+  if (action === "create_intake") {
+    const intake = {
+      intakeId: nexusOperationId("NX-INTAKE"),
+      patientId: cleanOpsText(body.patientId || "standard-user-local-patient", 120),
+      chronicCareId: cleanOpsText(body.chronicCareId || latestChronicCareProfile(store)?.chronicCareId || "", 120),
+      status: "active",
+      reason: cleanOpsText(body.reason || command || "Healthcare intake created.", 300),
+      noContact: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.healthcareIntakes.unshift(intake);
+    const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, "intake_created", actor, "Healthcare intake created and linked to operations memory.", null, intake);
+    const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, "create_intake", ["Created healthcare intake record.", "Kept external sharing disabled until consent and provider configuration."], didNot, "active");
+    return nexusOperationResponse(db, action, intake, audit, receipt);
+  }
+
+  if (["archive_intake", "delete_intake_if_allowed"].includes(action)) {
+    const intake = store.healthcareIntakes.find(item => item.intakeId === body.intakeId) || store.healthcareIntakes[0];
+    if (!intake) return { ok: false, error: "intake_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...intake };
+    intake.status = action === "archive_intake" ? "archived" : "deactivated-delete-review";
+    intake.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "intake", entityId: intake.intakeId, action, reason: cleanOpsText(body.reason || "User requested archive/deactivate review.", 240), createdAt: now });
+    const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, action, actor, `Intake ${intake.status}; audit trail preserved.`, before, intake);
+    const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, action, ["Updated intake status and preserved audit trail."], ["Nexus did not hard-delete required audit records or continue outreach."], intake.status);
+    return nexusOperationResponse(db, action, intake, audit, receipt);
+  }
+
+  if (action === "mark_deceased_stop_outreach") {
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
+    if (!profile) return { ok: false, error: "chronic_care_profile_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...profile };
+    profile.status = "deceased-stop-outreach";
+    profile.noContact = true;
+    profile.archiveReason = cleanOpsText(body.reason || "Marked deceased / stop outreach; admin confirmation required for further policy action.", 240);
+    profile.updatedAt = now;
+    store.healthcareIntakes.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived"; item.noContact = true; item.updatedAt = now; });
+    store.careTasks.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived-no-contact"; item.updatedAt = now; });
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "chronic-care", entityId: profile.chronicCareId, action, reason: profile.archiveReason, createdAt: now });
+    const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "patient_deceased_stop_outreach", actor, "Profile marked deceased/no-contact; reminders and active intakes archived; audit preserved.", before, profile);
+    const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, action, ["Marked profile deceased/no-contact.", "Archived linked active intakes and care tasks.", "Preserved audit trail."], ["Nexus did not send reminders, messages, provider notices, or hard-delete protected records."], "deceased-stop-outreach");
+    return nexusOperationResponse(db, action, profile, audit, receipt);
+  }
+
+  if (["add_provider", "add_pharmacy_provider", "add_mobile_clinic_provider"].includes(action)) {
+    const type = action === "add_pharmacy_provider" ? "pharmacy" : action === "add_mobile_clinic_provider" ? "mobile-clinic" : cleanOpsText(body.type || "clinic", 60);
+    const provider = {
+      providerId: nexusOperationId("NX-PROV"),
+      type,
+      name: cleanOpsText(body.name || `${type} provider`, 160),
+      status: cleanOpsText(body.status || "active", 60),
+      serviceRegion: cleanOpsText(body.serviceRegion || body.region || "", 160),
+      contactEmail: cleanOpsText(body.contactEmail || "", 160),
+      smsTo: cleanOpsText(body.smsTo || "", 80),
+      whatsappTo: cleanOpsText(body.whatsappTo || "", 80),
+      intakeUrl: cleanOpsText(body.intakeUrl || "", 220),
+      notes: cleanOpsText(body.notes || "", 400),
+      createdAt: now,
+      updatedAt: now
+    };
+    store.providers.unshift(provider);
+    const audit = addNexusOperationsAudit(db, "provider", provider.providerId, "provider_added", actor, `${type} provider added to directory.`, null, provider);
+    const receipt = addNexusOperationsReceipt(db, "provider", provider.providerId, action, [`Added ${type} provider directory record.`], didNot, "active");
+    return nexusOperationResponse(db, action, provider, audit, receipt);
+  }
+
+  if (["add_buyer", "add_seller"].includes(action)) {
+    const party = {
+      partyId: nexusOperationId("NX-PARTY"),
+      type: action === "add_buyer" ? "buyer" : "seller",
+      businessName: cleanOpsText(body.businessName || body.name || `${action === "add_buyer" ? "Buyer" : "Seller"} business`, 160),
+      contactName: cleanOpsText(body.contactName || "", 120),
+      status: "active",
+      region: cleanOpsText(body.region || "", 160),
+      productsOffered: cleanOpsArray(body.productsOffered || (action === "add_seller" ? "produce" : "")),
+      productsWanted: cleanOpsArray(body.productsWanted || (action === "add_buyer" ? "produce" : "")),
+      contactEmail: cleanOpsText(body.contactEmail || "", 160),
+      smsTo: cleanOpsText(body.smsTo || "", 80),
+      whatsappTo: cleanOpsText(body.whatsappTo || "", 80),
+      verificationStatus: cleanOpsText(body.verificationStatus || "unverified", 60),
+      notes: cleanOpsText(body.notes || "", 400),
+      createdAt: now,
+      updatedAt: now
+    };
+    store.parties.unshift(party);
+    const audit = addNexusOperationsAudit(db, "party", party.partyId, "buyer_seller_added", actor, `${party.type} party added to directory.`, null, party);
+    const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, [`Added ${party.type} directory record.`], didNot, "active");
+    return nexusOperationResponse(db, action, party, audit, receipt);
+  }
+
+  if (action === "mark_party_closed") {
+    const party = store.parties.find(item => item.partyId === body.partyId) || latestParty(store, "seller");
+    if (!party) return { ok: false, error: "party_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...party };
+    party.status = "closed";
+    party.noContact = true;
+    party.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "party", entityId: party.partyId, action: "marked_closed", reason: "Business closed/out of business; stop outreach.", createdAt: now });
+    const audit = addNexusOperationsAudit(db, "party", party.partyId, "business_closed_stop_outreach", actor, "Buyer/seller marked closed; transaction and shipment history preserved.", before, party);
+    const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, ["Marked business closed and stopped outreach.", "Preserved transaction/shipment history."], ["Nexus did not contact the party or delete historical records."], "closed");
+    return nexusOperationResponse(db, action, party, audit, receipt);
+  }
+
+  if (action === "create_shipment") {
+    const shipment = {
+      shipmentId: nexusOperationId("NX-SHIP"),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer")?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller")?.partyId || "", 120),
+      origin: cleanOpsText(body.origin || "farm", 160),
+      destination: cleanOpsText(body.destination || "market", 160),
+      productType: cleanOpsText(body.productType || "produce", 120),
+      quantity: cleanOpsText(body.quantity || "", 120),
+      coldChainRequired: Boolean(body.coldChainRequired),
+      status: "draft",
+      routeSummary: cleanOpsText(body.routeSummary || "Route not calculated. No GPS/carrier confirmation.", 240),
+      trackingEvents: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    store.shipments.unshift(shipment);
+    const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_created", actor, "Shipment draft created without GPS or carrier confirmation.", null, shipment);
+    const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Created shipment draft.", "Attached buyer/seller references where available."], ["Nexus did not fake GPS tracking, carrier pickup, delivery, route calculation, or dispatch."], "draft");
+    return nexusOperationResponse(db, action, shipment, audit, receipt);
+  }
+
+  if (action === "add_tracking_event") {
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
+    const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
+    const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
+    store.trackingEvents.unshift(event);
+    shipment.status = eventStatus;
+    shipment.updatedAt = now;
+    shipment.trackingEvents = [event, ...(shipment.trackingEvents || [])].slice(0, 50);
+    const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "tracking_event_added", actor, `${eventStatus} tracking event added from local/manual report.`, null, event);
+    const receipt = addNexusOperationsReceipt(db, "tracking-event", event.eventId, action, ["Added manual/local tracking event to shipment timeline."], ["Nexus did not claim GPS, carrier, route, or delivery confirmation unless provided by a real configured provider."], eventStatus);
+    return nexusOperationResponse(db, action, event, audit, receipt, { shipment });
+  }
+
+  if (action === "show_shipment_timeline") {
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
+    const timeline = store.trackingEvents.filter(item => item.shipmentId === shipment?.shipmentId);
+    return { ok: true, action, record: shipment, timeline, operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (action === "cancel_shipment") {
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
+    if (!shipment) return { ok: false, error: "shipment_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...shipment };
+    shipment.status = "cancelled";
+    shipment.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_cancelled", actor, "Shipment cancelled in local ledger before confirmed external execution.", before, shipment);
+    const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Cancelled shipment record before execution."], ["Nexus did not contact a carrier, cancel a real dispatch, or fake carrier confirmation."], "cancelled");
+    return nexusOperationResponse(db, action, shipment, audit, receipt);
+  }
+
+  if (action === "create_transaction") {
+    const transaction = {
+      transactionId: nexusOperationId("NX-TXN"),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer")?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller")?.partyId || "", 120),
+      shipmentId: cleanOpsText(body.shipmentId || latestShipment(store)?.shipmentId || "", 120),
+      amount: cleanOpsText(body.amount || "0", 80),
+      currency: cleanOpsText(body.currency || "USD", 12),
+      items: Array.isArray(body.items) ? body.items : [],
+      status: "draft",
+      paymentProvider: cleanOpsText(body.paymentProvider || "none", 40),
+      providerTransactionId: null,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.transactions.unshift(transaction);
+    const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_created", actor, "Transaction draft created with payment execution disabled.", null, transaction);
+    const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Created transaction draft and payment gate."], ["Nexus did not charge, pay, refund, escrow, checkout, or create a provider transaction ID."], "draft");
+    return nexusOperationResponse(db, action, transaction, audit, receipt);
+  }
+
+  if (action === "add_transaction_item") {
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store) || runNexusOperationsAction(db, { action: "create_transaction" }, user).record;
+    const before = { ...transaction, items: [...(transaction.items || [])] };
+    const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(body.amount || "0", 80), createdAt: now };
+    transaction.items = [item, ...(transaction.items || [])];
+    transaction.status = "prepared";
+    transaction.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_item_added", actor, "Item added to transaction draft before payment execution.", before, transaction);
+    const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Added item to transaction draft.", "Kept payment provider status as none unless a real provider returns an ID."], ["Nexus did not process payment or claim receipt/refund."], "prepared");
+    return nexusOperationResponse(db, action, transaction, audit, receipt);
+  }
+
+  if (action === "cancel_transaction") {
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
+    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...transaction };
+    transaction.status = "cancelled";
+    transaction.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_cancelled", actor, "Transaction cancelled before external payment execution.", before, transaction);
+    const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Cancelled transaction before execution."], ["Nexus did not contact Stripe, charge a card, refund, or fake payment settlement."], "cancelled");
+    return nexusOperationResponse(db, action, transaction, audit, receipt);
+  }
+
+  if (action === "log_heat_risk_report") {
+    const report = { heatReportId: nexusOperationId("NX-HEAT"), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
+    store.heatRiskReports.unshift(report);
+    const audit = addNexusOperationsAudit(db, "case", report.heatReportId, "heat_risk_report_logged", actor, "Heat risk report logged without fake prevalence map.", null, report);
+    const receipt = addNexusOperationsReceipt(db, "case", report.heatReportId, action, ["Logged local heat illness/risk report.", "Displayed no-live-dataset notice when configured data is absent."], ["Nexus did not fake illness prevalence, diagnosis, dispatch, weather source, or map overlay."], "recorded");
+    return nexusOperationResponse(db, action, report, audit, receipt);
+  }
+
+  if (action === "show_action_receipts") return { ok: true, action, receipts: store.actionReceipts.slice(0, 50), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  if (action === "show_audit_log") return { ok: true, action, auditLogs: store.auditLogs.slice(0, 50), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+
+  return { ok: false, error: "unsupported_operations_action", action, operations: nexusOperationsSummary(db) };
+}
+
+function nexusChronicCareTimeline(store, chronicCareId = "") {
+  if (!chronicCareId) return [];
+  return [
+    ...store.chronicCareProfiles.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "profile", occurredAt: item.createdAt, title: `${item.conditionArea} chronic care profile`, record: item })),
+    ...store.rpmReadings.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "rpm", occurredAt: item.observedAt, title: `${item.type}: ${item.value}`, record: item })),
+    ...store.rtmActivities.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "rtm", occurredAt: item.observedAt, title: `${item.type}: ${item.value}`, record: item })),
+    ...store.cases.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "case", occurredAt: item.createdAt, title: `${item.type} case ${item.status}`, record: item })),
+    ...store.careTasks.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "task", occurredAt: item.createdAt, title: `${item.type || "task"} ${item.status}`, record: item }))
+  ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
+}
+
 async function api(req, res, url) {
   const db = await readDb();
   const usersChanged = ensureDefaultUsers(db);
@@ -33096,6 +33654,31 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/operations/status" && req.method === "GET") {
+    return send(res, 200, nexusOperationsSummary(db));
+  }
+
+  if (url.pathname === "/api/nexus/operations/action" && req.method === "POST") {
+    const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
+    const result = runNexusOperationsAction(db, await readBody(req), operationsUser);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    const state = publicState(db, operationsUser);
+    state.nexusOperationsResult = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/nexus/operations/command" && req.method === "POST") {
+    const body = await readBody(req);
+    const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
+    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    const state = publicState(db, operationsUser);
+    state.nexusOperationsResult = result;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/nexus/production/status" && req.method === "GET") {

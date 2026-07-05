@@ -11184,6 +11184,61 @@ body.user-mode .nexus-app-window-command-row button {
   border-radius: 14px;
 }
 
+body.user-mode .nexus-operations-memory-window {
+  display: grid;
+  gap: 14px;
+}
+
+body.user-mode .nexus-operations-status-grid,
+body.user-mode .nexus-operations-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-operations-status-grid article,
+body.user-mode .nexus-operations-heat-risk,
+body.user-mode .nexus-operations-result,
+body.user-mode .nexus-operations-audit {
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, .44);
+}
+
+body.user-mode .nexus-operations-status-grid article {
+  display: grid;
+  gap: 2px;
+}
+
+body.user-mode .nexus-operations-status-grid strong {
+  color: #ecfeff;
+  font-size: 1.35rem;
+}
+
+body.user-mode .nexus-operations-status-grid span,
+body.user-mode .nexus-operations-heat-risk p,
+body.user-mode .nexus-operations-result p,
+body.user-mode .nexus-operations-audit p {
+  color: rgba(226, 232, 240, .88);
+}
+
+body.user-mode .nexus-operations-action-grid button {
+  min-height: 40px;
+  border-radius: 14px;
+  font-size: .84rem;
+}
+
+body.user-mode .nexus-operations-result pre {
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 14px;
+  color: rgba(226, 232, 240, .92);
+  background: rgba(15, 23, 42, .78);
+  white-space: pre-wrap;
+}
+
 body.user-mode .nexus-ux-status-badge {
   display: inline-flex;
   width: fit-content;
@@ -11290,7 +11345,9 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-recent-workflows {
   body.user-mode .nexus-recent-workflow-grid,
   body.user-mode .nexus-command-status-summary,
   body.user-mode .nexus-role-low-bandwidth-panel,
-  body.user-mode .nexus-app-window-command-row {
+  body.user-mode .nexus-app-window-command-row,
+  body.user-mode .nexus-operations-status-grid,
+  body.user-mode .nexus-operations-action-grid {
     grid-template-columns: 1fr;
   }
 
