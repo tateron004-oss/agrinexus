@@ -91,7 +91,15 @@ function runRp1ProviderCredentialInventorySafeConfigQa() {
     assert(!app.includes(moduleName), `public/app.js must not load ${moduleName}.`);
     assert(!index.includes(moduleName), `public/index.html must not load ${moduleName}.`);
   });
-  assert(!server.includes("NEXUS_WEATHER_PROVIDER_API_KEY"), "server.js must not read provider API keys for Standard User startup.");
+  assert(!app.includes("NEXUS_WEATHER_PROVIDER_API_KEY"), "public/app.js must not read provider API keys for Standard User startup.");
+  assert(!index.includes("NEXUS_WEATHER_PROVIDER_API_KEY"), "public/index.html must not read provider API keys for Standard User startup.");
+  [
+    /NEXUS_WEATHER_PROVIDER_API_KEY\s*[:=]\s*["'][^"']+["']/i,
+    /TWILIO_AUTH_TOKEN\s*[:=]\s*["'][^"']+["']/i,
+    /(?:sk_live|sk_test|AIzaSy|xoxb-|-----BEGIN PRIVATE KEY-----)/i
+  ].forEach(pattern => {
+    assert(!pattern.test(server), `server.js must not contain hardcoded provider secrets: ${pattern}`);
+  });
 
   [
     "fetch" + "(",

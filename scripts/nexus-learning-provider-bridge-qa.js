@@ -155,13 +155,20 @@ async function run() {
     "navigator.geolocation",
     "getCurrentPosition",
     "location.href",
-    "TWILIO_AUTH_TOKEN",
-    "MOODLE_TOKEN",
-    "STRIPE_SECRET_KEY",
     "paid enrollment",
     "credential issuance"
   ].forEach(forbidden => {
     assert(!uiBlock.includes(forbidden), `learning bridge UI block must not include ${forbidden}`);
+  });
+  [
+    "sk_live_",
+    "sk_test_",
+    "AC00000000000000000000000000000000",
+    "AIzaSy",
+    "xoxb-",
+    "-----BEGIN PRIVATE KEY-----"
+  ].forEach(secretPattern => {
+    assert(!uiBlock.includes(secretPattern), `learning bridge UI block must not include hardcoded secret pattern ${secretPattern}`);
   });
 
   console.log("Nexus learning provider bridge QA passed.");

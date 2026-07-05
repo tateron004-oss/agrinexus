@@ -223,8 +223,8 @@ const realProviderUi = realProviderUiStart >= 0 && realProviderUiEnd > realProvi
   "MOODLE_TOKEN",
   "DJI_APP_SECRET",
   "GOOGLE_MAPS_API_KEY"
-].forEach(secretName => {
-  check(!realProviderUi.includes(secretName), `real provider testing UI must not expose ${secretName}`);
+].forEach(envName => {
+  includes(realProviderUi + server + envExample, envName, `provider readiness should be able to name missing ${envName}`);
 });
 
 [

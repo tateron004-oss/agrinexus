@@ -28972,7 +28972,7 @@ function nexusRetrievalReason(question = "", classification = {}) {
 }
 
 function nexusInternetAgenticCommandMatches(question = "") {
-  return /\b(internet services|online services|what.*active|search the latest|latest .*information|check weather|heat risk|show trade routes|track this shipment|find buyers|prepare a buyer transaction|cancel this transaction|save this patient intake|prepare this for a physician|find a pharmacy|request a mobile clinic|create a video visit|enroll this learner|find training resources|prepare this applicant|contact this employer|create a drone mission|dispatch the drone|upload drone imagery|translate this|call this person on whatsapp|play music|source-backed|provider lane|live service)\b/i.test(question);
+  return /\b(connect everything|test all providers|what is connected|what credentials are missing|show live-ready services|test live knowledge|test maps|test weather|test sms|test whatsapp|test payments|test lms|test drone|test telehealth|show provider receipts|internet services|online services|what.*active|search the latest|latest .*information|check weather|heat risk|show trade routes|track this shipment|find buyers|prepare a buyer transaction|cancel this transaction|save this patient intake|prepare this for a physician|find a pharmacy|request a mobile clinic|create a video visit|enroll this learner|find training resources|prepare this applicant|contact this employer|create a drone mission|dispatch the drone|upload drone imagery|translate this|call this person on whatsapp|play music|source-backed|provider lane|live service)\b/i.test(question);
 }
 
 async function nexusInternetAgenticResponse(db, body = {}, user = null, env = process.env) {
@@ -28981,11 +28981,14 @@ async function nexusInternetAgenticResponse(db, body = {}, user = null, env = pr
   const laneSnapshot = nexusInternetServiceLaneSnapshot(lane, env);
   const adapter = nexusInternetServiceAdapter(lane, env);
   const wantsStatus = /\b(what.*active|internet services|online services|provider lane|live service status)\b/i.test(question);
+  const wantsProviderStatus = /\b(connect everything|test all providers|what is connected|what credentials are missing|show live-ready services|show provider receipts)\b/i.test(question);
   const wantsSearch = /\b(search|latest|source-backed|current|research|weather|heat risk|route|map|translate|music|media)\b/i.test(question) && lane.riskLevel === "low";
   let serviceResult = null;
-  if (wantsStatus) {
-    const snapshot = nexusInternetServicesSnapshot(env);
-    const summary = `Nexus checked ${snapshot.summary.total} internet service lanes across ${snapshot.summary.categories} categories. ${snapshot.summary.publicAvailable} public/local lanes are available now, ${snapshot.summary.configured} credential sets appear configured, and ${snapshot.summary.missingCredentials} lanes still need credentials.`;
+  if (wantsStatus || wantsProviderStatus) {
+    const snapshot = wantsProviderStatus ? nexusProviderReadinessSnapshot(env, db) : nexusInternetServicesSnapshot(env);
+    const summary = wantsProviderStatus
+      ? `Nexus checked ${snapshot.totalProviderLanes} provider lanes. ${snapshot.connectedLanes} are connected or public/local, ${snapshot.testReady} are test-ready, ${snapshot.liveReady} are live-ready, and ${snapshot.missingCredentials} still need credentials.`
+      : `Nexus checked ${snapshot.summary.total} internet service lanes across ${snapshot.summary.categories} categories. ${snapshot.summary.publicAvailable} public/local lanes are available now, ${snapshot.summary.configured} credential sets appear configured, and ${snapshot.summary.missingCredentials} lanes still need credentials.`;
     const receipt = createNexusInternetServiceReceipt(db, lane, "internet_services_status", "internet_result_returned", summary, {
       mode: "ask-nexus",
       publicFallbackUsed: true,
@@ -34133,12 +34136,52 @@ const NEXUS_INTERNET_SERVICE_REGISTRY = Object.freeze([
   nexusInternetLane("pdf-report-export", "PDF / Report Export", "Storage / Files / Export", "pdf-report-export", "PDF/report export lane using current local architecture.", [], [], ["export", "reports"], ["pdf_export"], "pdf_export_test", "low", { publicProvider: true, externalReceiptRequired: false })
 ]);
 
+const NEXUS_PROVIDER_ENV_ALIASES = Object.freeze({
+  GOOGLE_CSE_ID: ["GOOGLE_CSE_ENGINE_ID"],
+  GOOGLE_CSE_ENGINE_ID: ["GOOGLE_CSE_ID"],
+  AZURE_BING_SEARCH_KEY: ["BING_SEARCH_API_KEY"],
+  BING_SEARCH_API_KEY: ["AZURE_BING_SEARCH_KEY"],
+  TOMORROW_IO_API_KEY: ["TOMORROW_API_KEY"],
+  TOMORROW_API_KEY: ["TOMORROW_IO_API_KEY"],
+  NEXUS_GEOSPATIAL_PROVIDER_ENDPOINT: ["NEXUS_GEOCODING_PROVIDER_ENDPOINT", "NEXUS_ROUTING_PROVIDER_ENDPOINT"],
+  NEXUS_GENERIC_PROVIDER_API_KEY: ["NEXUS_MAP_PROVIDER_API_KEY", "NEXUS_WEATHER_PROVIDER_API_KEY", "NEXUS_EMAIL_PROVIDER_API_KEY", "NEXUS_SMS_PROVIDER_API_KEY", "NEXUS_WHATSAPP_PROVIDER_API_KEY", "NEXUS_VIDEO_PROVIDER_API_KEY", "NEXUS_PAYMENT_PROVIDER_API_KEY", "NEXUS_SHIPMENT_PROVIDER_API_KEY", "NEXUS_WORKFORCE_PROVIDER_API_KEY", "NEXUS_LMS_PROVIDER_API_KEY", "NEXUS_MEDIA_PROVIDER_API_KEY", "NEXUS_TRANSLATION_PROVIDER_API_KEY", "NEXUS_GENERIC_PROVIDER_API_KEY"],
+  GMAIL_API_ACCESS_TOKEN: ["GMAIL_REFRESH_TOKEN"],
+  MICROSOFT_GRAPH_ACCESS_TOKEN: ["MICROSOFT_GRAPH_REFRESH_TOKEN"],
+  TWILIO_PHONE_NUMBER: ["TWILIO_FROM_NUMBER", "TWILIO_NUMBER", "TWILIO_SMS_FROM"],
+  TWILIO_FROM_NUMBER: ["TWILIO_PHONE_NUMBER", "TWILIO_NUMBER", "TWILIO_SMS_FROM"],
+  TWILIO_VOICE_FROM_NUMBER: ["TWILIO_FROM_NUMBER", "TWILIO_PHONE_NUMBER", "TWILIO_NUMBER"],
+  WHATSAPP_BUSINESS_ACCESS_TOKEN: ["WHATSAPP_BUSINESS_TOKEN"],
+  NEXUS_PROVIDER_REFERRAL_ENDPOINT: ["NEXUS_HEALTH_PROVIDER_ENDPOINT"],
+  NEXUS_CLINIC_INTAKE_ENDPOINT: ["NEXUS_HEALTH_PROVIDER_ENDPOINT"],
+  NEXUS_DEVICE_PROVIDER_ENDPOINT: ["NEXUS_RPM_PROVIDER_ENDPOINT", "NEXUS_RTM_PROVIDER_ENDPOINT"],
+  NEXUS_MARKETPLACE_ENDPOINT: ["NEXUS_MARKETPLACE_PROVIDER_ENDPOINT"],
+  NEXUS_LOGISTICS_ENDPOINT: ["NEXUS_LOGISTICS_PROVIDER_ENDPOINT"],
+  NEXUS_WORKFORCE_ENDPOINT: ["NEXUS_WORKFORCE_PROVIDER_ENDPOINT", "NEXUS_EMPLOYER_PROVIDER_ENDPOINT"],
+  NEXUS_LMS_ENDPOINT: ["NEXUS_LMS_PROVIDER_ENDPOINT"],
+  NEXUS_DRONE_ENDPOINT: ["NEXUS_DRONE_PROVIDER_ENDPOINT"],
+  NEXUS_DRONE_DISPATCH_ENDPOINT: ["NEXUS_DRONE_PROVIDER_ENDPOINT"],
+  NEXUS_IMAGERY_STORAGE_ENDPOINT: ["NEXUS_IMAGERY_UPLOAD_ENDPOINT"],
+  NEXUS_DOCUMENT_STORAGE_ENDPOINT: ["NEXUS_GENERIC_PROVIDER_ENDPOINT"],
+  YOUTUBE_API_KEY: ["NEXUS_MEDIA_PROVIDER_API_KEY"],
+  GOOGLE_TRANSLATE_API_KEY: ["NEXUS_TRANSLATION_PROVIDER_API_KEY"],
+  AZURE_TRANSLATOR_KEY: ["NEXUS_TRANSLATION_PROVIDER_API_KEY"]
+});
+
 function nexusInternetServiceEnvPresent(name, env = process.env) {
-  return Boolean(String(env[name] || "").trim());
+  const names = [name, ...(NEXUS_PROVIDER_ENV_ALIASES[name] || [])];
+  return names.some(candidate => Boolean(String(env[candidate] || "").trim()));
+}
+
+function nexusInternetServiceAcceptedEnvNames(name) {
+  return [name, ...(NEXUS_PROVIDER_ENV_ALIASES[name] || [])];
+}
+
+function nexusInternetMissingEnv(requiredEnv = [], env = process.env) {
+  return requiredEnv.filter(name => !nexusInternetServiceEnvPresent(name, env));
 }
 
 function nexusInternetServiceLaneSnapshot(lane, env = process.env) {
-  const missingEnv = nexusMissingEnv(lane.requiredEnv || [], env);
+  const missingEnv = nexusInternetMissingEnv(lane.requiredEnv || [], env);
   const configured = missingEnv.length === 0;
   let status = "unknown";
   if (lane.publicProvider) status = "available_public";
@@ -34160,8 +34203,8 @@ function nexusInternetServiceLaneSnapshot(lane, env = process.env) {
     canTest,
     canExecuteLive,
     lastChecked: nexusNow(),
-    requiredEnvStatus: (lane.requiredEnv || []).map(name => ({ name, present: nexusInternetServiceEnvPresent(name, env) })),
-    optionalEnvStatus: (lane.optionalEnv || []).map(name => ({ name, present: nexusInternetServiceEnvPresent(name, env) })),
+    requiredEnvStatus: (lane.requiredEnv || []).map(name => ({ name, acceptedNames: nexusInternetServiceAcceptedEnvNames(name), present: nexusInternetServiceEnvPresent(name, env) })),
+    optionalEnvStatus: (lane.optionalEnv || []).map(name => ({ name, acceptedNames: nexusInternetServiceAcceptedEnvNames(name), present: nexusInternetServiceEnvPresent(name, env) })),
     noSecretValues: true
   };
 }
@@ -34271,8 +34314,8 @@ function nexusInternetServiceAdapter(lane, env = process.env) {
     serviceLaneId: lane.id,
     provider: lane.providerType,
     requiredEnv: lane.requiredEnv,
-    isConfigured: () => nexusMissingEnv(lane.requiredEnv, env).length === 0 || lane.publicProvider,
-    getMissingEnv: () => nexusMissingEnv(lane.requiredEnv, env),
+    isConfigured: () => nexusInternetMissingEnv(lane.requiredEnv, env).length === 0 || lane.publicProvider,
+    getMissingEnv: () => nexusInternetMissingEnv(lane.requiredEnv, env),
     test: (db, body = {}) => {
       const snapshot = nexusInternetServiceLaneSnapshot(lane, env);
       const gateStatus = snapshot.canTest ? snapshot.status === "available_public" ? "internet_result_returned" : snapshot.missingEnv.length ? "local_prepared" : "internet_result_returned" : "blocked_missing_credentials";
@@ -34347,6 +34390,206 @@ function nexusInternetServiceAdapter(lane, env = process.env) {
 
 function nexusInternetServiceAdapters(env = process.env) {
   return Object.fromEntries(NEXUS_INTERNET_SERVICE_REGISTRY.map(lane => [lane.id, nexusInternetServiceAdapter(lane, env)]));
+}
+
+function nexusProviderActivationStatusFromLane(lane) {
+  if (lane.status === "available_public") return "local_fallback";
+  if (lane.oauthProvider && lane.missingEnv.length) return "oauth_required";
+  if (lane.requiresVendorApproval && lane.missingEnv.length) return "vendor_required";
+  if (lane.missingEnv.length) return "missing_credentials";
+  if (lane.requiresConsent) return "consent_required";
+  if (lane.requiresAdminApproval) return "approval_required";
+  if (lane.requiresVendorApproval) return "vendor_required";
+  if (lane.requiresConfirmation) return "confirmation_required";
+  return lane.canExecuteLive ? "live_ready" : "test_ready";
+}
+
+function nexusProviderReadinessSnapshot(env = process.env, db = null) {
+  const services = nexusInternetServicesSnapshot(env);
+  const store = db ? ensureNexusPersistentOperations(db) : null;
+  const lanes = services.lanes.map(lane => {
+    const activationStatus = nexusProviderActivationStatusFromLane(lane);
+    const lastReceipt = store?.internetServiceReceipts?.find(receipt => receipt.serviceLaneId === lane.id) || null;
+    const liveExecutionAllowed = lane.credentialConfigured
+      && lane.canExecuteLive
+      && !lane.requiresConsent
+      && !lane.requiresConfirmation
+      && !lane.requiresAdminApproval
+      && !lane.requiresVendorApproval;
+    return {
+      id: lane.id,
+      label: lane.label,
+      category: lane.category,
+      provider: lane.providerType,
+      selectedProvider: String(env[`NEXUS_${String(lane.category || "").split(" ")[0].toUpperCase()}_PROVIDER`] || lane.providerType || ""),
+      status: activationStatus,
+      rawStatus: lane.status,
+      configured: lane.credentialConfigured,
+      publicProvider: lane.publicProvider,
+      testAvailable: lane.canTest,
+      testReady: lane.canTest && !lane.missingEnv.length,
+      liveReady: activationStatus === "live_ready",
+      liveExecutionAllowed,
+      localFallbackAvailable: lane.localFallback || lane.publicProvider,
+      requiredEnv: lane.requiredEnv,
+      acceptedEnv: Object.fromEntries((lane.requiredEnv || []).map(name => [name, nexusInternetServiceAcceptedEnvNames(name)])),
+      missingEnv: lane.missingEnv,
+      optionalEnv: lane.optionalEnv,
+      supportedModes: lane.supportedModes,
+      supportedActions: lane.supportedActions,
+      riskLevel: lane.riskLevel,
+      requiresConsent: lane.requiresConsent,
+      requiresConfirmation: lane.requiresConfirmation,
+      requiresAdminApproval: lane.requiresAdminApproval,
+      requiresVendorApproval: lane.requiresVendorApproval,
+      lastTestResult: lastReceipt ? {
+        receiptId: lastReceipt.receiptId,
+        gateStatus: lastReceipt.gateStatus,
+        summary: lastReceipt.summary,
+        timestamp: lastReceipt.timestamp
+      } : null,
+      nextSetupStep: lane.missingEnv.length
+        ? `Add ${lane.missingEnv.join(", ")} to the environment or continue with local fallback.`
+        : lane.requiresConsent || lane.requiresConfirmation || lane.requiresAdminApproval || lane.requiresVendorApproval
+          ? "Credentials are present. Complete consent, confirmation, approval, and vendor/provider gates before live execution."
+          : "Run a safe provider test and review the receipt before any downstream action.",
+      noSecretValues: true
+    };
+  });
+  const byStatus = lanes.reduce((acc, lane) => {
+    acc[lane.status] = (acc[lane.status] || 0) + 1;
+    return acc;
+  }, {});
+  const missingCredentialChecklist = lanes
+    .filter(lane => lane.missingEnv.length)
+    .map(lane => ({
+      id: lane.id,
+      label: lane.label,
+      category: lane.category,
+      provider: lane.provider,
+      requiredEnv: lane.requiredEnv,
+      missingEnv: lane.missingEnv,
+      acceptedEnv: lane.acceptedEnv,
+      nextSetupStep: lane.nextSetupStep,
+      noSecretValues: true
+    }));
+  return {
+    ok: true,
+    name: "Nexus Connect Everything Provider Activation",
+    totalProviderLanes: lanes.length,
+    connectedLanes: lanes.filter(lane => lane.configured || lane.publicProvider).length,
+    missingCredentials: lanes.filter(lane => lane.status === "missing_credentials").length,
+    oauthRequired: lanes.filter(lane => lane.status === "oauth_required").length,
+    vendorRequired: lanes.filter(lane => lane.status === "vendor_required").length,
+    testReady: lanes.filter(lane => lane.testReady || lane.publicProvider).length,
+    liveReady: lanes.filter(lane => lane.liveReady).length,
+    failedTests: store ? (store.internetServiceReceipts || []).filter(receipt => receipt.gateStatus === "failed").length : 0,
+    localFallbackLanes: lanes.filter(lane => lane.localFallbackAvailable).length,
+    byStatus,
+    categories: services.categories,
+    lanes,
+    missingCredentialChecklist,
+    recentReceipts: store ? store.internetServiceReceipts.slice(0, 20) : [],
+    recentAudit: store ? store.auditLogs.filter(item => item.entityType === "internet-service" || item.entityType === "provider-readiness").slice(0, 20) : [],
+    noSecretValues: true,
+    noSilentExecution: true
+  };
+}
+
+function nexusProviderReadinessReport(env = process.env, db = null) {
+  const readiness = nexusProviderReadinessSnapshot(env, db);
+  const laneNames = lanes => lanes.map(lane => `${lane.label} (${lane.id})`);
+  const activated = readiness.lanes.filter(lane => lane.configured || lane.publicProvider);
+  const missing = readiness.lanes.filter(lane => lane.missingEnv.length);
+  const oauth = readiness.lanes.filter(lane => lane.status === "oauth_required");
+  const vendor = readiness.lanes.filter(lane => lane.status === "vendor_required" || lane.requiresVendorApproval);
+  const liveReady = readiness.lanes.filter(lane => lane.liveReady);
+  const testReady = readiness.lanes.filter(lane => lane.testReady || lane.publicProvider);
+  const localFallback = readiness.lanes.filter(lane => lane.localFallbackAvailable);
+  return {
+    ok: true,
+    generatedAt: nexusNow(),
+    summary: {
+      totalProviderLanes: readiness.totalProviderLanes,
+      connectedLanes: readiness.connectedLanes,
+      testReady: readiness.testReady,
+      liveReady: readiness.liveReady,
+      missingCredentials: readiness.missingCredentials,
+      oauthRequired: readiness.oauthRequired,
+      vendorRequired: readiness.vendorRequired,
+      localFallbackLanes: readiness.localFallbackLanes
+    },
+    activatedProviders: laneNames(activated),
+    testReadyProviders: laneNames(testReady),
+    liveReadyProviders: laneNames(liveReady),
+    missingCredentialChecklist: missing.map(lane => ({ id: lane.id, label: lane.label, category: lane.category, missingEnv: lane.missingEnv, acceptedEnv: lane.acceptedEnv, nextSetupStep: lane.nextSetupStep })),
+    oauthRequiredChecklist: oauth.map(lane => ({ id: lane.id, label: lane.label, missingEnv: lane.missingEnv, nextSetupStep: lane.nextSetupStep })),
+    vendorRequiredChecklist: vendor.map(lane => ({ id: lane.id, label: lane.label, requiredEnv: lane.requiredEnv, nextSetupStep: lane.nextSetupStep })),
+    localFallbackAvailable: laneNames(localFallback),
+    blockedForSafety: readiness.lanes.filter(lane => lane.requiresConsent || lane.requiresConfirmation || lane.requiresAdminApproval || lane.requiresVendorApproval).map(lane => ({
+      id: lane.id,
+      label: lane.label,
+      riskLevel: lane.riskLevel,
+      requiresConsent: lane.requiresConsent,
+      requiresConfirmation: lane.requiresConfirmation,
+      requiresAdminApproval: lane.requiresAdminApproval,
+      requiresVendorApproval: lane.requiresVendorApproval
+    })),
+    recommendedActivationOrder: [
+      "Live Knowledge / Search",
+      "Maps / Routing / Geospatial",
+      "Weather / Climate / Heat Risk",
+      "Translation / Language",
+      "Media / Music",
+      "Communications",
+      "Learning / LMS",
+      "Marketplace / Trade / Logistics",
+      "Telehealth / Video",
+      "Healthcare Support",
+      "Payments / Mobile Money / Marketplace",
+      "Drone / Imagery / Storage"
+    ],
+    noSecretValues: true
+  };
+}
+
+function nexusProviderReadinessMarkdownReport(env = process.env, db = null) {
+  const report = nexusProviderReadinessReport(env, db);
+  return [
+    "# Nexus Provider Connection Readiness Report",
+    "",
+    `Generated: ${report.generatedAt}`,
+    "",
+    "## Summary",
+    "",
+    `- Total provider lanes: ${report.summary.totalProviderLanes}`,
+    `- Connected lanes: ${report.summary.connectedLanes}`,
+    `- Test-ready lanes: ${report.summary.testReady}`,
+    `- Live-ready lanes: ${report.summary.liveReady}`,
+    `- Missing credential lanes: ${report.summary.missingCredentials}`,
+    `- OAuth-required lanes: ${report.summary.oauthRequired}`,
+    `- Vendor-required lanes: ${report.summary.vendorRequired}`,
+    `- Local fallback lanes: ${report.summary.localFallbackLanes}`,
+    "",
+    "## Missing Credential Checklist",
+    "",
+    ...report.missingCredentialChecklist.slice(0, 80).map(item => `- ${item.label}: ${item.missingEnv.join(", ") || "none"}`),
+    "",
+    "## OAuth And Vendor Required",
+    "",
+    ...report.oauthRequiredChecklist.map(item => `- OAuth: ${item.label}`),
+    ...report.vendorRequiredChecklist.map(item => `- Vendor/partner approval: ${item.label}`),
+    "",
+    "## First Recommended Activation Order",
+    "",
+    ...report.recommendedActivationOrder.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "## Safety",
+    "",
+    "Nexus does not claim live execution unless a configured adapter test passes and an external provider receipt exists. Health, pharmacy, telehealth, payments, drone dispatch, communications, employer outreach, LMS enrollment, and marketplace actions remain consent, confirmation, approval, and audit gated.",
+    "",
+    "No secret values are included in this report."
+  ].join("\n");
 }
 
 function nexusInternetIntentLane(command = "") {
@@ -35220,6 +35463,83 @@ async function api(req, res, url) {
     return send(res, 200, nexusRealProviderStatus(db));
   }
 
+  if (url.pathname === "/api/nexus/provider-readiness" && req.method === "GET") {
+    const snapshot = nexusProviderReadinessSnapshot(process.env, db);
+    addNexusOperationsAudit(db, "provider-readiness", "connect-everything", "provider_readiness_viewed", user?.role || "standard-user", "Provider readiness viewed; env names only, no secret values, no live execution.", null, { totalProviderLanes: snapshot.totalProviderLanes, noSecretValues: true });
+    await writeDb(db);
+    return send(res, 200, snapshot);
+  }
+
+  if (url.pathname === "/api/nexus/provider-readiness-report" && req.method === "GET") {
+    const report = nexusProviderReadinessReport(process.env, db);
+    addNexusOperationsAudit(db, "provider-readiness", "report", "provider_readiness_report_generated", user?.role || "standard-user", "Provider readiness report generated without secret values.", null, { totalProviderLanes: report.summary.totalProviderLanes, noSecretValues: true });
+    await writeDb(db);
+    return send(res, 200, report);
+  }
+
+  if (url.pathname === "/api/nexus/provider/test-all" && req.method === "POST") {
+    const body = await readBody(req);
+    const configuredOnly = body.configuredOnly !== false;
+    const lanes = NEXUS_INTERNET_SERVICE_REGISTRY
+      .map(lane => nexusInternetServiceLaneSnapshot(lane, process.env))
+      .filter(lane => !configuredOnly || lane.credentialConfigured || lane.publicProvider || lane.canTest);
+    const results = lanes.map(laneSnapshot => {
+      const lane = nexusInternetServiceLaneById(laneSnapshot.id);
+      return nexusInternetServiceAdapter(lane, process.env).test(db, { ...body, mode: body.mode || "provider-test-all" });
+    });
+    const summary = {
+      totalTested: results.length,
+      passed: results.filter(result => !["failed", "blocked_for_safety"].includes(result.gateStatus)).length,
+      missingCredentials: results.filter(result => result.lane?.missingEnv?.length).length,
+      publicFallback: results.filter(result => result.lane?.publicProvider).length,
+      liveExecuted: 0
+    };
+    addNexusOperationsAudit(db, "provider-readiness", "test-all", "provider_test_all_completed", user?.role || "standard-user", `Tested ${summary.totalTested} provider lanes safely. No live execution occurred.`, null, { ...summary, noSecretValues: true });
+    await writeDb(db);
+    return send(res, 200, { ok: true, summary, results, noSecretValues: true, noLiveExecutionClaimed: true });
+  }
+
+  if (url.pathname === "/api/nexus/provider/activate" && req.method === "POST") {
+    const body = await readBody(req);
+    const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || body.serviceLaneId || body.provider || "", 160));
+    const snapshot = nexusInternetServiceLaneSnapshot(lane, process.env);
+    const status = snapshot.missingEnv.length ? "blocked_missing_credentials" : snapshot.requiresConsent || snapshot.requiresConfirmation || snapshot.requiresAdminApproval || snapshot.requiresVendorApproval ? "activation_gate_required" : "test_ready";
+    const summary = `${lane.label} activation request recorded. Status: ${status}. Nexus did not execute a provider action.`;
+    const receipt = createNexusInternetServiceReceipt(db, lane, "provider_activation_requested", status === "test_ready" ? "local_prepared" : status, summary, {
+      mode: body.mode || "provider-activation",
+      missingCredentials: snapshot.missingEnv,
+      whatHappened: [summary],
+      whatDidNotHappen: ["Nexus did not alter environment variables.", "Nexus did not execute a live provider action.", "Nexus did not expose secret values."]
+    });
+    const audit = createNexusInternetServiceAudit(db, lane, "provider_activation_requested", summary, { missingEnv: snapshot.missingEnv, gateStatus: receipt.gateStatus });
+    await writeDb(db);
+    return send(res, 200, { ok: true, lane: snapshot, status, receipt, audit, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/nexus/provider/deactivate" && req.method === "POST") {
+    const body = await readBody(req);
+    const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || body.serviceLaneId || body.provider || "", 160));
+    const summary = `${lane.label} deactivation/cancel request recorded locally. No provider was contacted.`;
+    const receipt = createNexusInternetServiceReceipt(db, lane, "provider_deactivation_requested", "cancelled", summary, {
+      mode: body.mode || "provider-activation",
+      whatHappened: [summary],
+      whatDidNotHappen: ["Nexus did not modify credentials.", "Nexus did not contact the provider.", "Nexus did not execute live actions."]
+    });
+    const audit = createNexusInternetServiceAudit(db, lane, "provider_deactivation_requested", summary, { gateStatus: "cancelled" });
+    await writeDb(db);
+    return send(res, 200, { ok: true, receipt, audit, noSecretValues: true, noExecutionAuthorized: true, noProviderContact: true });
+  }
+
+  if (url.pathname === "/api/nexus/provider/test-receipts" && req.method === "GET") {
+    const store = ensureNexusPersistentOperations(db);
+    return send(res, 200, {
+      ok: true,
+      receipts: store.internetServiceReceipts.slice(0, 100),
+      audit: store.auditLogs.filter(item => item.entityType === "internet-service" || item.entityType === "provider-readiness").slice(0, 100),
+      noSecretValues: true
+    });
+  }
+
   if (url.pathname === "/api/nexus/internet-services" && req.method === "GET") {
     const store = ensureNexusPersistentOperations(db);
     const snapshot = nexusInternetServicesSnapshot(process.env);
@@ -35366,6 +35686,12 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/provider/test" && req.method === "POST") {
     const body = await readBody(req);
     const adapterId = cleanOpsText(body.adapterId || body.providerLane || "generic-provider", 100);
+    if (body.laneId || body.serviceLaneId || NEXUS_INTERNET_SERVICE_REGISTRY.some(lane => lane.id === adapterId || lane.providerType === adapterId || lane.label === adapterId)) {
+      const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || body.serviceLaneId || adapterId, 160));
+      const result = nexusInternetServiceAdapter(lane, process.env).test(db, { ...body, mode: body.mode || "provider-test-selected" });
+      await writeDb(db);
+      return send(res, 200, { ...result, providerReadiness: nexusProviderReadinessSnapshot(process.env, db), noSecretValues: true });
+    }
     const adapter = nexusProviderAdapters(process.env).find(item => item.id === adapterId || item.providerLaneId === adapterId) || nexusProviderAdapters(process.env).find(item => item.id === "generic-provider");
     const status = adapter?.canExecute ? "provider_test_passed" : "provider_test_failed";
     const result = {

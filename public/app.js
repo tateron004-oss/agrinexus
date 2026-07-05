@@ -22329,6 +22329,25 @@ const NEXUS_FULL_INTERNET_SERVICE_UI_CATEGORIES = Object.freeze([
 ]);
 
 function renderNexusFullInternetServicesActivationRuntime() {
+  const providerCounts = {
+    total: 0,
+    connected: 0,
+    missingCredentials: 0,
+    oauthRequired: 0,
+    vendorRequired: 0,
+    testReady: 0,
+    liveReady: 0,
+    failedTests: 0,
+    localFallback: 0
+  };
+  NEXUS_FULL_INTERNET_SERVICE_UI_CATEGORIES.forEach(category => {
+    providerCounts.total += category.lanes.length;
+    if (/public|local/i.test(category.status)) providerCounts.localFallback += 1;
+    if (/credential/i.test(category.status)) providerCounts.missingCredentials += 1;
+    if (/vendor/i.test(category.status)) providerCounts.vendorRequired += 1;
+    if (/oauth/i.test(category.status)) providerCounts.oauthRequired += 1;
+    if (/public|local/i.test(category.status)) providerCounts.testReady += 1;
+  });
   return `
     <section class="nexus-full-internet-services-runtime nexus-glass-card" data-nexus-full-internet-services-runtime="true" data-no-secret-values="true" data-live-provider-receipts-required="true" aria-label="${escapeHtml(translateText("Nexus Internet Services and Activation Center"))}">
       <div class="nexus-internet-services-heading">
@@ -22350,6 +22369,46 @@ function renderNexusFullInternetServicesActivationRuntime() {
           "Test shipment tracking readiness",
           "Test media search/embed readiness"
         ].map(label => `<button type="button" data-nexus-internet-service-test="${escapeHtml(label.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${escapeHtml(translateText(label))}</button>`).join("")}
+      </div>
+      <div class="nexus-connect-everything-provider-activation" data-nexus-connect-everything-provider-activation="true" data-provider-readiness-report="true" data-no-secret-values="true">
+        <div class="nexus-connect-everything-head">
+          <span class="eyebrow">${escapeHtml(translateText("Connect Everything"))}</span>
+          <strong>${escapeHtml(translateText("Provider readiness operator view"))}</strong>
+          <p>${escapeHtml(translateText("Nexus can test configured provider lanes, record receipts, show missing credential names, and keep external actions gated until credentials, consent, confirmation, approval, and provider receipts are present."))}</p>
+        </div>
+        <div class="nexus-connect-everything-counts" data-nexus-provider-readiness-counts="true">
+          ${[
+            ["Total provider lanes", providerCounts.total],
+            ["Connected lanes", providerCounts.connected],
+            ["Missing credentials", providerCounts.missingCredentials],
+            ["OAuth required", providerCounts.oauthRequired],
+            ["Vendor required", providerCounts.vendorRequired],
+            ["Test-ready lanes", providerCounts.testReady],
+            ["Live-ready lanes", providerCounts.liveReady],
+            ["Failed tests", providerCounts.failedTests],
+            ["Local fallback lanes", providerCounts.localFallback]
+          ].map(([label, value]) => `<span><strong>${escapeHtml(String(value))}</strong>${escapeHtml(translateText(label))}</span>`).join("")}
+        </div>
+        <div class="nexus-connect-everything-actions" data-nexus-provider-readiness-actions="true">
+          ${[
+            ["refresh-readiness", "Refresh readiness"],
+            ["test-selected-lane", "Test selected lane"],
+            ["test-all-configured-lanes", "Test all configured lanes"],
+            ["export-provider-readiness-report", "Export provider readiness report"],
+            ["show-missing-credentials-checklist", "Show missing credentials checklist"],
+            ["show-live-ready-lanes-only", "Show live-ready lanes only"],
+            ["show-blocked-lanes-only", "Show blocked lanes only"]
+          ].map(([id, label]) => `<button type="button" data-nexus-provider-readiness-action="${escapeHtml(id)}" data-command="${escapeHtml(label)}">${escapeHtml(translateText(label))}</button>`).join("")}
+        </div>
+        <div class="nexus-missing-credentials-checklist" data-nexus-missing-credentials-checklist="true">
+          <strong>${escapeHtml(translateText("Missing credentials checklist"))}</strong>
+          <span>${escapeHtml(translateText("The API returns exact env variable names and present/missing booleans. Secret values are never shown."))}</span>
+          <span>${escapeHtml(translateText("Examples: TAVILY_API_KEY, GOOGLE_MAPS_API_KEY, OPENWEATHER_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, STRIPE_SECRET_KEY, MOODLE_TOKEN, YOUTUBE_API_KEY."))}</span>
+        </div>
+        <div class="nexus-live-ready-lanes" data-nexus-live-ready-lanes="true">
+          <strong>${escapeHtml(translateText("Live-ready lanes"))}</strong>
+          <span>${escapeHtml(translateText("A lane is live-ready only after required credentials are present, its safe adapter test passes, and any consent/confirmation/approval/vendor gates are satisfied. The default local view does not claim live execution."))}</span>
+        </div>
       </div>
       <div class="nexus-internet-services-summary" data-nexus-standard-user-online-capability-summary="true">
         <span>${escapeHtml(translateText("Can run now"))}: ${escapeHtml(translateText("public/local fallback, source-ready search when configured, local packets, receipts, and audit."))}</span>
@@ -42029,6 +42088,66 @@ async function runWowDemo() {
   goSection("dashboard");
 }
 
+function nexusProviderActivationCommandForAction(action = "", fallback = "") {
+  const normalized = String(action || "").toLowerCase().trim();
+  const commands = {
+    "refresh-readiness": "Nexus, what is connected?",
+    "test-selected-lane": "Nexus, test live knowledge.",
+    "test-all-configured-lanes": "Nexus, test all providers.",
+    "export-provider-readiness-report": "Nexus, show provider receipts.",
+    "show-missing-credentials-checklist": "Nexus, what credentials are missing?",
+    "show-live-ready-lanes-only": "Nexus, show live-ready services.",
+    "show-blocked-lanes-only": "Nexus, what credentials are missing?",
+    "test-live-knowledge": "Nexus, test live knowledge.",
+    "test-maps-routing": "Nexus, test maps.",
+    "test-weather-heat-risk": "Nexus, test weather.",
+    "test-translation": "Nexus, test translation.",
+    "test-communications-readiness": "Nexus, test SMS.",
+    "test-telehealth-readiness": "Nexus, test telehealth.",
+    "test-payment-readiness": "Nexus, test payments.",
+    "test-lms-readiness": "Nexus, test LMS.",
+    "test-drone-readiness": "Nexus, test drone.",
+    "test-shipment-tracking-readiness": "Nexus, test shipment tracking.",
+    "test-media-search-embed-readiness": "Nexus, test media search."
+  };
+  return commands[normalized] || fallback || "Nexus, what is connected?";
+}
+
+function handleNexusProviderActivationControlClick(event) {
+  const target = event.target?.closest?.("[data-nexus-provider-readiness-action],[data-nexus-internet-service-test]");
+  if (!target) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  const action = target.dataset.nexusProviderReadinessAction || target.dataset.nexusInternetServiceTest || "";
+  const command = nexusProviderActivationCommandForAction(action, target.dataset.command || target.textContent || "");
+  setCommandInputs(command);
+  const input = $("#nexusCommandCenterInput");
+  if (input) input.value = command;
+  if (isNexusLiveKnowledgeQuestion(command)) {
+    runNexusKnowledgeQuery(command).catch(error => {
+      nexusKnowledgeActionStatus = error.message || "Knowledge rail action needs attention.";
+      if (experienceMode === "user") renderUserWorkspace();
+    });
+    return true;
+  }
+  if (!runNexusStandardUserHomeLocalCommand(command)) {
+    runNexusPersistentOperationsCommand(command, { source: "provider-activation-control" }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_provider_activation_control_failed_safely",
+        mode: "Provider activation",
+        message: error.message || "Provider activation status needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+  }
+  return true;
+}
+
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
@@ -42082,6 +42201,7 @@ function handleNexusStandardUserHomeClick(event) {
   if (eventTarget?.closest?.("[data-nexus-global-offline-action]")) {
     return handleNexusGlobalOfflineAccessClick(event);
   }
+  if (handleNexusProviderActivationControlClick(event)) return true;
   const submit = eventTarget?.closest?.("[data-nexus-command-center-submit]");
   if (submit) {
     const input = nexusCommandInputForSubmit(submit);

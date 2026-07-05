@@ -171,12 +171,20 @@ const uiBlock = app.slice(app.indexOf("function renderNexusMarketplaceBridgePane
   "window.open(",
   "navigator.geolocation",
   "getCurrentPosition",
-  "location.href",
-  "TWILIO_AUTH_TOKEN",
-  "STRIPE_SECRET_KEY",
-  "MOODLE_TOKEN"
+  "location.href"
 ].forEach(forbidden => {
   assert(!uiBlock.includes(forbidden), `marketplace bridge UI block must not include ${forbidden}`);
+});
+
+[
+  "sk_live_",
+  "sk_test_",
+  "AC00000000000000000000000000000000",
+  "AIzaSy",
+  "xoxb-",
+  "-----BEGIN PRIVATE KEY-----"
+].forEach(secretPattern => {
+  assert(!uiBlock.includes(secretPattern), `marketplace bridge UI block must not include hardcoded secret pattern ${secretPattern}`);
 });
 
 [

@@ -11823,6 +11823,83 @@ body.user-mode .nexus-internet-service-actions button {
   font-weight: 900;
 }
 
+body.user-mode .nexus-connect-everything-provider-activation {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(45, 212, 191, .24);
+  background:
+    linear-gradient(135deg, rgba(8, 47, 73, .52), rgba(12, 74, 110, .24)),
+    radial-gradient(circle at 18% 15%, rgba(34, 211, 238, .18), transparent 36%),
+    radial-gradient(circle at 82% 18%, rgba(168, 85, 247, .16), transparent 34%);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 18px 48px rgba(8, 13, 32, .26);
+}
+
+body.user-mode .nexus-connect-everything-head {
+  display: grid;
+  gap: 5px;
+}
+
+body.user-mode .nexus-connect-everything-head strong,
+body.user-mode .nexus-missing-credentials-checklist strong,
+body.user-mode .nexus-live-ready-lanes strong {
+  display: block;
+  color: rgba(255, 255, 255, .97);
+  text-shadow: 0 0 14px rgba(34, 211, 238, .2);
+}
+
+body.user-mode .nexus-connect-everything-head p {
+  color: rgba(226, 232, 240, .86);
+  margin: 0;
+}
+
+body.user-mode .nexus-connect-everything-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 8px;
+}
+
+body.user-mode .nexus-connect-everything-counts span,
+body.user-mode .nexus-missing-credentials-checklist,
+body.user-mode .nexus-live-ready-lanes {
+  border: 1px solid rgba(148, 163, 184, .22);
+  background: rgba(15, 23, 42, .42);
+  border-radius: 14px;
+  padding: 10px;
+  color: rgba(226, 232, 240, .86);
+}
+
+body.user-mode .nexus-connect-everything-counts strong {
+  display: block;
+  color: rgba(255, 255, 255, .98);
+  font-size: 1.05rem;
+}
+
+body.user-mode .nexus-connect-everything-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-connect-everything-actions button {
+  width: auto;
+  min-height: 0;
+  border: 1px solid rgba(34, 211, 238, .34);
+  background: rgba(30, 41, 59, .52);
+  color: rgba(240, 249, 255, .95);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-missing-credentials-checklist,
+body.user-mode .nexus-live-ready-lanes {
+  display: grid;
+  gap: 5px;
+}
+
 body.user-mode .nexus-internet-services-summary span,
 body.user-mode .nexus-internet-receipts-audit-preview span {
   border: 1px solid rgba(125, 211, 252, .22);

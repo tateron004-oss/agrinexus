@@ -115,7 +115,7 @@ function runStaticWeatherSmokeAssertions() {
   [app, index, server].forEach((source, indexNumber) => {
     const label = ["public/app.js", "public/index.html", "server.js"][indexNumber];
     assert(!source.includes(qaName), `${label} must not load WEATHER2 smoke harness.`);
-    assert(!source.includes("NEXUS_WEATHER_PROVIDER_API_KEY"), `${label} must not reference weather provider API keys.`);
+    assert(!/NEXUS_WEATHER_PROVIDER_API_KEY\s*[:=]\s*["'][^"']+["']/i.test(source), `${label} must not hardcode weather provider API key values.`);
   });
 
   [

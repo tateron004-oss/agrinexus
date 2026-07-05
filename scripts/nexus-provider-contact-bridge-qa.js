@@ -134,14 +134,14 @@ const bridgeUi = app.slice(bridgeUiStart, bridgeUiEnd);
 });
 
 [
-  "TWILIO_AUTH_TOKEN",
-  "GOOGLE_MAPS_API_KEY",
-  "STRIPE_SECRET_KEY",
-  "ZOOM_CLIENT_SECRET",
-  "MOODLE_TOKEN",
-  "DJI_APP_SECRET"
-].forEach(secretName => {
-  assert(!bridgeUi.includes(secretName), `provider contact bridge UI must not expose ${secretName}`);
+  "sk_live_",
+  "sk_test_",
+  "AC00000000000000000000000000000000",
+  "AIzaSy",
+  "xoxb-",
+  "-----BEGIN PRIVATE KEY-----"
+].forEach(secretPattern => {
+  assert(!bridgeUi.includes(secretPattern), `provider contact bridge UI must not expose hardcoded secret pattern ${secretPattern}`);
 });
 
 const bridge = require(path.join(root, "server/providers/providerContactBridgeProvider.js"));
