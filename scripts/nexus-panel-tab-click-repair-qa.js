@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
+const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8").replace(/\r\n/g, "\n");
 
 const app = read("public/app.js");
 const index = read("public/index.html");
@@ -137,16 +137,16 @@ formButtonMatches.forEach(buttonHtml => {
 });
 
 [
-  "nexus-behavior-361",
-  "agrinexus-pwa-v339"
+  "nexus-behavior-366",
+  "agrinexus-pwa-v340"
 ].forEach(version => {
   includes(app, version, `app cache version ${version}`);
   includes(server, version, `server cache version ${version}`);
 });
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v339"', "service worker cache bump");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-361"', "service worker build bump");
-includes(index, "/styles.css?v=nexus-behavior-361", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-361", "app cache bust");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-v340"', "service worker cache bump");
+includes(sw, 'BUILD_VERSION = "nexus-behavior-366"', "service worker build bump");
+includes(index, "/styles.css?v=nexus-behavior-366", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-366", "app cache bust");
 
 [
   "live emergency response enabled",

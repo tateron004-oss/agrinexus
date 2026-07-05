@@ -267,8 +267,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-361";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v339";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-366";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v340";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -21551,6 +21551,7 @@ let nexusActiveWorkflowState = {
   openedAt: 0,
   minimized: false
 };
+let nexusMinimizedFunctionWindowState = null;
 
 const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
   "virtual-care", "telehealth", "video-visit", "chronic-disease", "diabetes", "hypertension", "obesity", "rpm", "rtm", "physician-review", "follow-up", "emergency-guidance",
@@ -21654,20 +21655,20 @@ const NEXUS_FUNCTION_WINDOW_ROUTE_MAP = Object.freeze({
 });
 
 const NEXUS_FUNCTION_WINDOW_LABELS = Object.freeze({
-  "virtual-care": "Virtual Care", telehealth: "Telehealth", "video-visit": "Video Visit", "chronic-disease": "Chronic Disease Support", diabetes: "Diabetes Support", hypertension: "Hypertension Support", obesity: "Obesity Support", rpm: "RPM Reading Intake", rtm: "RTM Update Intake", "physician-review": "Physician Review", "follow-up": "Follow-up", "emergency-guidance": "Emergency Guidance",
-  pharmacy: "Pharmacy Support", "pharmacy-referral": "Pharmacy Referral", "medication-review": "Medication Review", "refill-coordination": "Refill Coordination", "medication-adherence": "Medication Adherence", "diabetes-supplies": "Diabetes Supplies",
-  "mobile-clinic": "Mobile Clinic", "vitals-check": "Vitals Check", "diabetes-follow-up": "Diabetes Follow-up", "hypertension-follow-up": "Hypertension Follow-up", "obesity-support": "Obesity Support", "rural-clinic": "Rural Clinic", "community-outreach": "Community Outreach",
-  agriculture: "Agriculture Help", agronomy: "Agronomy Support", "crop-issue": "Crop Issue", "pest-disease": "Pest / Disease", "soil-fertilizer": "Soil / Fertilizer", irrigation: "Irrigation", "climate-smart-agriculture": "Climate-smart Agriculture", "farmer-training": "Farmer Training", "drone-mission": "Drone Mission Prep", "farm-visit": "Farm Visit",
-  agritrade: "AgriTrade Marketplace", marketplace: "Marketplace", "vendor-inquiry": "Vendor Inquiry", "buyer-seller": "Buyer / Seller", "produce-listing": "Produce Listing", "input-sourcing": "Input Sourcing", "quote-request": "Quote Request",
-  logistics: "Logistics", "route-support": "Route Support", "pickup-request": "Pickup Request", "delivery-request": "Delivery Request", "cold-chain": "Cold Chain", storage: "Storage", "dispatch-gate": "Dispatch Gate",
-  workforce: "Workforce", training: "Training", "digital-literacy": "Digital Literacy", "ai-training": "AI Training", "job-readiness": "Job Readiness", "youth-workforce": "Youth Workforce", "employer-referral": "Employer Referral", certification: "Certification", "lms-handoff": "LMS Handoff",
+  "virtual-care": "Virtual Care Encounter", telehealth: "Virtual Care Encounter", "video-visit": "Virtual Care Encounter", "chronic-disease": "Virtual Care Encounter", diabetes: "Virtual Care Encounter", hypertension: "Virtual Care Encounter", obesity: "Virtual Care Encounter", rpm: "Virtual Care Encounter", rtm: "Virtual Care Encounter", "physician-review": "Virtual Care Encounter", "follow-up": "Virtual Care Encounter", "emergency-guidance": "Virtual Care Encounter",
+  pharmacy: "Pharmacy Referral", "pharmacy-referral": "Pharmacy Referral", "medication-review": "Pharmacy Referral", "refill-coordination": "Pharmacy Referral", "medication-adherence": "Pharmacy Referral", "diabetes-supplies": "Pharmacy Referral",
+  "mobile-clinic": "Mobile Clinic Request", "vitals-check": "Mobile Clinic Request", "diabetes-follow-up": "Mobile Clinic Request", "hypertension-follow-up": "Mobile Clinic Request", "obesity-support": "Mobile Clinic Request", "rural-clinic": "Mobile Clinic Request", "community-outreach": "Mobile Clinic Request",
+  agriculture: "Agriculture Expert Case", agronomy: "Agriculture Expert Case", "crop-issue": "Agriculture Expert Case", "pest-disease": "Agriculture Expert Case", "soil-fertilizer": "Agriculture Expert Case", irrigation: "Agriculture Expert Case", "climate-smart-agriculture": "Agriculture Expert Case", "farmer-training": "Agriculture Expert Case", "drone-mission": "Agriculture Expert Case", "farm-visit": "Agriculture Expert Case",
+  agritrade: "AgriTrade Marketplace Inquiry", marketplace: "AgriTrade Marketplace Inquiry", "vendor-inquiry": "AgriTrade Marketplace Inquiry", "buyer-seller": "AgriTrade Marketplace Inquiry", "produce-listing": "AgriTrade Marketplace Inquiry", "input-sourcing": "AgriTrade Marketplace Inquiry", "quote-request": "AgriTrade Marketplace Inquiry",
+  logistics: "Logistics & Cold Chain Request", "route-support": "Logistics & Cold Chain Request", "pickup-request": "Logistics & Cold Chain Request", "delivery-request": "Logistics & Cold Chain Request", "cold-chain": "Logistics & Cold Chain Request", storage: "Logistics & Cold Chain Request", "dispatch-gate": "Payment / Booking / Dispatch Gate",
+  workforce: "Workforce & Training Referral", training: "Workforce & Training Referral", "digital-literacy": "Workforce & Training Referral", "ai-training": "Workforce & Training Referral", "job-readiness": "Workforce & Training Referral", "youth-workforce": "Workforce & Training Referral", "employer-referral": "Workforce & Training Referral", certification: "Workforce & Training Referral", "lms-handoff": "Workforce & Training Referral",
   "live-knowledge": "Live Knowledge Research", internet: "Internet Research", research: "Research", "source-backed-answer": "Source-backed Answer",
-  maps: "Maps", "field-visit": "Field Visit", "route-planning": "Route Planning", "location-sharing": "Location Sharing Gate",
-  email: "Email Draft", sms: "SMS Draft", whatsapp: "WhatsApp Draft", "phone-handoff": "Phone Handoff", telegram: "Telegram Draft", "communications-status": "Communications Status",
-  music: "Music", media: "Media", youtube: "YouTube Handoff", "media-handoff": "Media Handoff",
-  offline: "Offline Queue", "low-bandwidth": "Low-bandwidth Mode", "offline-queue": "Offline Queue", "sync-status": "Sync Status", "local-fallback": "Local Fallback",
-  "admin-review": "Admin Review", "provider-queue": "Provider Queue", "vendor-queue": "Vendor Queue", "care-team-queue": "Care Team Queue", "pharmacy-queue": "Pharmacy Queue", "mobile-clinic-queue": "Mobile Clinic Queue", "agronomy-queue": "Agronomy Queue", "marketplace-queue": "Marketplace Queue", "logistics-queue": "Logistics Queue", "workforce-queue": "Workforce Queue", "case-timeline": "Case Timeline", "provider-response-inbox": "Provider Response Inbox",
-  payment: "Payment Gate", "payment-gate": "Payment Gate", booking: "Booking Gate", "booking-gate": "Booking Gate", dispatch: "Dispatch Gate", "admin-approval": "Admin Approval"
+  maps: "Route Planning & Field Visit", "field-visit": "Route Planning & Field Visit", "route-planning": "Route Planning & Field Visit", "location-sharing": "Route Planning & Field Visit",
+  email: "Communications Center", sms: "Communications Center", whatsapp: "Communications Center", "phone-handoff": "Communications Center", telegram: "Communications Center", "communications-status": "Communications Center",
+  music: "Music & Media", media: "Music & Media", youtube: "Music & Media", "media-handoff": "Music & Media",
+  offline: "Offline & Low-Bandwidth Support", "low-bandwidth": "Offline & Low-Bandwidth Support", "offline-queue": "Offline & Low-Bandwidth Support", "sync-status": "Offline & Low-Bandwidth Support", "local-fallback": "Offline & Low-Bandwidth Support",
+  "admin-review": "Provider & Case Queue", "provider-queue": "Provider & Case Queue", "vendor-queue": "Provider & Case Queue", "care-team-queue": "Provider & Case Queue", "pharmacy-queue": "Provider & Case Queue", "mobile-clinic-queue": "Provider & Case Queue", "agronomy-queue": "Provider & Case Queue", "marketplace-queue": "Provider & Case Queue", "logistics-queue": "Provider & Case Queue", "workforce-queue": "Provider & Case Queue", "case-timeline": "Provider & Case Queue", "provider-response-inbox": "Provider & Case Queue",
+  payment: "Payment / Booking / Dispatch Gate", "payment-gate": "Payment / Booking / Dispatch Gate", booking: "Payment / Booking / Dispatch Gate", "booking-gate": "Payment / Booking / Dispatch Gate", dispatch: "Payment / Booking / Dispatch Gate", "admin-approval": "Payment / Booking / Dispatch Gate"
 });
 
 const NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS = Object.freeze({
@@ -21760,7 +21761,7 @@ const NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS = Object.freeze({
 const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
   "mobile-clinic": {
     type: "mobile-clinic-intake",
-    title: "Mobile Clinic Intake",
+    title: "Mobile Clinic Request",
     status: "Request preparation only",
     summary: "Nexus helps organize a mobile clinic request, vitals context, consent status, and local queue readiness without dispatching a clinic.",
     fields: [
@@ -21771,9 +21772,10 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "symptoms", label: "Symptoms / concern", type: "textarea", placeholder: "Describe what should be reviewed" },
       { name: "readings", label: "Vitals / readings", type: "textarea", placeholder: "BP, glucose, weight, pulse, temperature if already known" },
       { name: "redFlags", label: "Red flag checklist", type: "checkboxes", options: ["Chest pain", "Trouble breathing", "Severe weakness/confusion", "Severe bleeding", "None selected"] },
-      { name: "consent", label: "Consent and confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] }
+      { name: "consent", label: "Consent checkbox", type: "checkbox", placeholder: "User consents to prepare the request locally" },
+      { name: "confirmation", label: "Confirmation checkbox", type: "checkbox", placeholder: "User confirms the packet should be prepared, not sent" }
     ],
-    actions: ["Prepare mobile clinic request", "Create local queue item", "Review emergency guidance", "Check send gate"],
+    actions: ["Prepare mobile clinic request", "Queue locally", "Send/request action disabled until provider configured", "Review emergency guidance"],
     preview: "Mobile clinic request packet preview: service area, need, symptoms/readings, red flags, consent state, and queue status.",
     statusNote: "No mobile clinic dispatch, route, message, call, or provider contact occurs from this window."
   },
@@ -21788,33 +21790,38 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "medicationList", label: "Medication list", type: "textarea", placeholder: "Medication names as written, if known" },
       { name: "allergy", label: "Allergy field", type: "textarea", placeholder: "Known allergies, unsure, or none known" },
       { name: "concern", label: "Concern", type: "textarea", placeholder: "What should a pharmacist or provider review?" },
-      { name: "readings", label: "Readings if relevant", type: "textarea", placeholder: "BP, glucose, weight, or other relevant readings" },
-      { name: "consent", label: "Consent and confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] }
+      { name: "readings", label: "Relevant readings", type: "textarea", placeholder: "BP, glucose, weight, or other relevant readings" },
+      { name: "consent", label: "Consent checkbox", type: "checkbox", placeholder: "User consents to prepare the pharmacy packet locally" },
+      { name: "confirmation", label: "Confirmation checkbox", type: "checkbox", placeholder: "User confirms the packet should be prepared, not sent" }
     ],
-    actions: ["Prepare pharmacy packet", "Queue pharmacy review", "Review confirmation", "Check pharmacy connector"],
+    actions: ["Prepare pharmacy packet", "Queue locally", "Send referral action disabled until provider configured", "Check pharmacy connector"],
     preview: "Pharmacy packet preview: need, condition, medication list, allergies, concern, readings, and consent state.",
     statusNote: "No prescription, refill approval, pharmacy fulfillment, message, call, or provider handoff is claimed."
   },
   telehealth: {
     type: "virtual-care-intake",
-    title: "Virtual Care Intake",
+    title: "Virtual Care Encounter",
     status: "Provider review gate",
     summary: "Nexus prepares a telehealth encounter packet with symptoms, RPM/RTM readings, red flags, consent, and video room gate status.",
     fields: [
       { name: "condition", label: "Condition", type: "select", options: ["Diabetes", "Hypertension", "Obesity", "General concern", "Other"] },
       { name: "concern", label: "Concern / symptoms", type: "textarea", placeholder: "What should the provider review?" },
       { name: "rpmRtm", label: "RPM / RTM readings", type: "textarea", placeholder: "BP, glucose, weight, pulse, therapy notes" },
+      { name: "medications", label: "Medication field", type: "textarea", placeholder: "Medication context, if already known" },
+      { name: "allergies", label: "Allergy field", type: "textarea", placeholder: "Known allergies, unsure, or none known" },
       { name: "redFlags", label: "Red flags", type: "checkboxes", options: ["Chest pain", "Trouble breathing", "Stroke-like symptoms", "Severe confusion", "None selected"] },
-      { name: "consent", label: "Consent / confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] },
+      { name: "consentPrepare", label: "Consent to prepare packet", type: "checkbox", placeholder: "User consents to prepare the encounter packet" },
+      { name: "consentShare", label: "Consent to share", type: "checkbox", placeholder: "User consents only when a provider is configured and reviewed" },
+      { name: "confirmation", label: "Confirmation checkbox", type: "checkbox", placeholder: "User confirms preparation, not execution" },
       { name: "followUp", label: "Follow-up action", type: "textarea", placeholder: "Questions, follow-up reminders, or provider notes" }
     ],
-    actions: ["Prepare encounter packet", "Review video room gate", "Provider review queue", "Prepare follow-up"],
+    actions: ["Prepare encounter packet", "Review video room gate / Create video room gate", "Provider review queue", "Create follow-up"],
     preview: "Virtual care packet preview: condition, symptoms, readings, red flags, consent, Provider review queue status, and video status.",
     statusNote: "No diagnosis, treatment, prescription, appointment booking, video room creation, provider contact, or urgent-response action is claimed."
   },
   agriculture: {
     type: "agronomy-crop-support",
-    title: "Agronomy / Crop Issue",
+    title: "Agriculture Expert Case",
     status: "Source-backed support preparation",
     summary: "Nexus organizes crop context, field observations, and research needs into a concise agronomy packet for learning or expert review.",
     fields: [
@@ -21825,15 +21832,16 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "observations", label: "Field observations", type: "textarea", placeholder: "Leaves, roots, water, fertilizer, pests, photos already reviewed by human" },
       { name: "soilWater", label: "Soil / water / fertilizer notes", type: "textarea", placeholder: "Soil, water source, fertilizer, irrigation notes" },
       { name: "seasonWeather", label: "Season / weather context optional", type: "textarea", placeholder: "Season, recent rainfall, heat, drought, flooding" },
-      { name: "urgency", label: "Urgency", type: "select", options: ["Learning / planning", "Needs local expert review", "Crop loss risk", "Unsure"] }
+      { name: "urgency", label: "Urgency", type: "select", options: ["Learning / planning", "Needs local expert review", "Crop loss risk", "Unsure"] },
+      { name: "desiredOutcome", label: "Desired outcome", type: "textarea", placeholder: "Education, packet, research, marketplace, logistics, or expert review" }
     ],
-    actions: ["Run Live Knowledge research", "Prepare agronomy packet", "Queue expert review", "Review marketplace/logistics links"],
+    actions: ["Run Live Knowledge research", "Prepare agronomy packet", "Queue for expert review", "Send to expert disabled until provider configured"],
     preview: "Agronomy packet preview: crop, region, problem, observations, soil/water/fertilizer notes, weather context, urgency, and research status.",
     statusNote: "No crop diagnosis, pesticide prescription, field dispatch, location sharing, vendor contact, or purchase is claimed."
   },
   marketplace: {
     type: "agritrade-vendor-inquiry",
-    title: "AgriTrade Vendor Inquiry",
+    title: "AgriTrade Marketplace Inquiry",
     status: "Inquiry preparation only",
     summary: "Nexus prepares buyer/seller details, product context, quantity, region, and desired outcome before any vendor handoff.",
     fields: [
@@ -21844,13 +21852,13 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "region", label: "Region", type: "text", placeholder: "Market, community, city, country" },
       { name: "desiredOutcome", label: "Desired outcome", type: "textarea", placeholder: "What should the inquiry accomplish?" }
     ],
-    actions: ["Prepare inquiry", "Queue vendor review", "Review payment gate", "Prepare logistics questions"],
+    actions: ["Prepare inquiry", "Queue locally", "Send vendor inquiry disabled until provider configured", "Review payment gate"],
     preview: "AgriTrade inquiry preview: inquiry type, role, product/service, quantity, region, desired outcome, and vendor queue status.",
     statusNote: "No purchase, order, payment, vendor acceptance, delivery, or marketplace transaction is claimed."
   },
   logistics: {
     type: "logistics-cold-chain-request",
-    title: "Logistics / Cold Chain Request",
+    title: "Logistics & Cold Chain Request",
     status: "Logistics request preparation only",
     summary: "Nexus prepares pickup, dropoff, product, timing, and cold-chain needs before any logistics connector or dispatch gate.",
     fields: [
@@ -21862,15 +21870,15 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "timing", label: "Timing", type: "text", placeholder: "Date/time window or urgency" },
       { name: "coldChain", label: "Cold-chain / storage need", type: "select", options: ["None", "Chilled", "Frozen", "Dry storage", "Unsure"] }
     ],
-    actions: ["Prepare logistics request", "Open route planning", "Queue logistics review", "Review dispatch gate"],
+    actions: ["Prepare logistics request", "Queue locally", "Send logistics request disabled until provider configured", "Review dispatch gate"],
     preview: "Logistics request preview: request type, pickup, dropoff, product, quantity, timing, cold-chain/storage need, and queue status.",
     statusNote: "No booking, dispatch, delivery, carrier contact, or live route launch is claimed."
   },
   maps: {
     type: "maps-route-planning",
-    title: "Maps / Route Planning",
+    title: "Route Planning & Field Visit",
     status: "Route preparation only unless provider is configured",
-    summary: "Nexus prepares typed origin/destination route context and can surface existing map support without requesting browser location or faking route metrics.",
+    summary: "Nexus prepares typed origin/destination route context and can surface existing map support without requesting browser location or faking route metrics. Try: Map route from Stockton to Sacramento.",
     fields: [
       { name: "startPoint", label: "Start point", type: "text", placeholder: "Typed start point" },
       { name: "destination", label: "Destination", type: "text", placeholder: "Typed destination" },
@@ -21878,12 +21886,12 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "routeNotes", label: "Route notes", type: "textarea", placeholder: "Timing, road, accessibility, safety, cold-chain, or visit notes" }
     ],
     actions: ["Prepare route", "Open map review", "Review location-sharing gate", "Queue route handoff"],
-    preview: "Route planning preview: start point, destination, purpose, route notes, provider status, and location-sharing gate.",
-    statusNote: "No browser geolocation, live navigation, tracking, route distance/time, dispatch, or location sharing is claimed unless a configured provider returns it."
+    preview: "Route summary area and field visit preview: start point, destination, purpose, route notes, provider status, and location-sharing gate.",
+    statusNote: "route provider not configured / route preparation only. Route provider is not configured. Nexus can prepare the route request, but no live route calculation has executed. No browser geolocation, live navigation, tracking, route distance/time, dispatch, or location sharing is claimed unless a configured provider returns it."
   },
   research: {
     type: "internet-research",
-    title: "Internet Research",
+    title: "Live Knowledge Research",
     status: "Live retrieval if configured",
     summary: "Nexus prepares a source-backed research query and shows provider status, returned source cards, and citation metadata only when real retrieval provides them.",
     fields: [
@@ -21897,7 +21905,7 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
   },
   workforce: {
     type: "training-workforce-referral",
-    title: "Training / Workforce Referral",
+    title: "Workforce & Training Referral",
     status: "Referral preparation only",
     summary: "Nexus organizes training, literacy, job readiness, employer referral, and business-creation context for partner review.",
     fields: [
@@ -21908,9 +21916,67 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
       { name: "experience", label: "Experience level", type: "select", options: ["New learner", "Some experience", "Experienced", "Returning worker"] },
       { name: "outcome", label: "Training / employment / business goal", type: "textarea", placeholder: "What outcome does the learner or worker want?" }
     ],
-    actions: ["Prepare referral packet", "Queue partner review", "Find training sources", "Review LMS gate"],
+    actions: ["Prepare referral packet", "Queue locally", "Send partner referral disabled until provider configured", "Review LMS gate"],
     preview: "Workforce referral preview: goal, skill area, region, language, experience, desired outcome, and partner queue/send status.",
     statusNote: "No enrollment, employer contact, certificate award, or LMS handoff is claimed unless configured and explicitly confirmed."
+  },
+  communications: {
+    type: "communications-center",
+    title: "Communications Center",
+    status: "Draft and confirmation gate",
+    summary: "Nexus prepares email, SMS, WhatsApp, phone, and Telegram message previews with recipient review, provider status, and local queue fallback.",
+    fields: [
+      { name: "channel", label: "Channel", type: "select", options: ["Email", "SMS", "WhatsApp", "Phone call script", "Telegram"] },
+      { name: "recipient", label: "Recipient", type: "text", placeholder: "Name, role, or masked contact label" },
+      { name: "messagePreview", label: "Message preview", type: "textarea", placeholder: "Draft message or call script for review" },
+      { name: "consent", label: "Consent / confirmation gate", type: "select", options: ["Not confirmed", "Needs review", "User confirmed draft only"] }
+    ],
+    actions: ["Prepare message preview", "Queue locally", "Send action disabled until provider configured", "Review communications status"],
+    preview: "Communications preview: email status, SMS status, WhatsApp status, recipient, message preview, consent state, and Local queue fallback.",
+    statusNote: "No email, SMS, WhatsApp, Telegram, phone call, or provider communication is claimed unless a configured provider returns success."
+  },
+  admin: {
+    type: "provider-case-queue",
+    title: "Provider & Case Queue",
+    status: "Local review queue",
+    summary: "Nexus shows queue lanes, case status, timeline, follow-up options, and empty states without claiming provider replies.",
+    fields: [
+      { name: "queueLane", label: "Queue lane", type: "select", options: ["Provider queue", "Vendor queue", "Pharmacy queue", "Mobile clinic queue", "Agronomy queue", "Logistics queue", "Workforce queue"] },
+      { name: "caseStatus", label: "Case status / timeline", type: "textarea", placeholder: "Prepared, queued, blocked, response pending, or empty state" },
+      { name: "response", label: "Add response / status action", type: "textarea", placeholder: "Manual review note only; no fake provider reply" },
+      { name: "followUp", label: "Follow-up action", type: "textarea", placeholder: "Local follow-up action or next review step" }
+    ],
+    actions: ["Show queue lane", "Add local status note", "Create follow-up", "Review local queue status"],
+    preview: "Queue preview: selected lane, case list or empty state, timeline/status area, follow-up action, and Local queue status.",
+    statusNote: "No provider reply, vendor acceptance, clinical review, pharmacy response, or partner status is claimed unless manually entered or received from a real provider system."
+  },
+  media: {
+    type: "music-media",
+    title: "Music & Media",
+    status: "Safe media handoff",
+    summary: "Nexus prepares a music/media search or provider handoff with copyright-safe messaging and no unsupported playback claim.",
+    fields: [
+      { name: "mediaSearch", label: "Media search / input", type: "text", placeholder: "R&B, Afrobeats, gospel, study music, YouTube query" },
+      { name: "provider", label: "Provider / handoff status", type: "select", options: ["YouTube handoff", "Spotify handoff", "Apple Music future-gated", "Local demo rhythm only"] },
+      { name: "playback", label: "Playback / handoff note", type: "textarea", placeholder: "What should open or be prepared?" }
+    ],
+    actions: ["Prepare media handoff", "Open YouTube option", "Review provider status", "Keep local if blocked"],
+    preview: "Media preview: search input, YouTube embed or handoff area when available, provider/handoff status, and safe playback messaging.",
+    statusNote: "Nexus does not download, rip, cache, redistribute, or claim playback unless actual embedded playback is present."
+  },
+  offline: {
+    type: "offline-low-bandwidth",
+    title: "Offline & Low-Bandwidth Support",
+    status: "Local fallback support",
+    summary: "Nexus shows offline queue summary, sync status, local fallback explanation, and manual retry/sync options when available.",
+    fields: [
+      { name: "queueSummary", label: "Offline queue summary", type: "textarea", placeholder: "Packets or local fallback items to keep available" },
+      { name: "syncStatus", label: "Sync status", type: "select", options: ["Online", "Offline", "Low bandwidth", "Retry later", "Sync unavailable"] },
+      { name: "fallback", label: "Local fallback explanation", type: "textarea", placeholder: "What can be completed locally?" }
+    ],
+    actions: ["Review offline queue", "Retry sync if available", "Save local fallback", "Show blocked state"],
+    preview: "Offline preview: queue summary, sync status, local fallback explanation, retry/sync action if available, and safe blocked state.",
+    statusNote: "Offline mode does not silently sync, contact providers, send messages, process payments, or claim fresh live data."
   },
   gate: {
     type: "payment-booking-dispatch-gate",
@@ -21925,7 +21991,7 @@ const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
     ],
     actions: ["Prepare request preview", "Admin approval gate", "Keep not executed", "Show audit requirement"],
     preview: "Gate preview: action type, approval requirements, missing credentials, prepared request, admin gate, and explicit not-executed status.",
-    statusNote: "Not executed. No payment, booking, dispatch, order, send, provider acceptance, or emergency action has occurred."
+    statusNote: "This action has not executed. Not executed. No payment, booking, dispatch, order, send, provider acceptance, or emergency action has occurred."
   }
 });
 
@@ -23045,6 +23111,7 @@ function renderNexusFunctionWindow(state = nexusActiveWorkflowState) {
 
 function closeNexusFunctionWindow(options = {}) {
   nexusActiveWorkflowState = null;
+  nexusMinimizedFunctionWindowState = null;
   if (options.resetResult !== false) nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(options.command || "What can Nexus do?");
   saveNexusRuntimeMemory();
   if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
@@ -23056,6 +23123,7 @@ function closeNexusFunctionWindow(options = {}) {
 
 function minimizeNexusFunctionWindow() {
   if (!nexusActiveWorkflowState?.id) return false;
+  nexusMinimizedFunctionWindowState = { ...nexusActiveWorkflowState };
   nexusActiveWorkflowState = {
     ...nexusActiveWorkflowState,
     minimized: true,
@@ -23067,22 +23135,26 @@ function minimizeNexusFunctionWindow() {
 }
 
 function restoreNexusFunctionWindow(functionIdOverride = "") {
-  const overrideId = normalizeNexusFunctionId(functionIdOverride, nexusActiveWorkflowState?.command || "");
-  if (!nexusActiveWorkflowState?.id && !nexusActiveWorkflowState?.functionId && !overrideId) return false;
-  const functionId = overrideId || normalizeNexusFunctionId(nexusActiveWorkflowState.functionId || nexusActiveWorkflowState.workflow || nexusActiveWorkflowState.id, nexusActiveWorkflowState.command || "");
-  const workflowId = nexusActiveWorkflowState.id || NEXUS_FUNCTION_WINDOW_ROUTE_MAP[functionId] || normalizeNexusWorkflowId(functionId, nexusActiveWorkflowState.command || "") || "resource-assistant";
+  const previousState = nexusActiveWorkflowState?.id || nexusActiveWorkflowState?.functionId
+    ? nexusActiveWorkflowState
+    : nexusMinimizedFunctionWindowState || {};
+  const overrideId = normalizeNexusFunctionId(functionIdOverride, previousState?.command || "");
+  if (!previousState?.id && !previousState?.functionId && !overrideId) return false;
+  const functionId = overrideId || normalizeNexusFunctionId(previousState.functionId || previousState.workflow || previousState.id, previousState.command || "");
+  const workflowId = previousState.id || NEXUS_FUNCTION_WINDOW_ROUTE_MAP[functionId] || normalizeNexusWorkflowId(functionId, previousState.command || "") || "resource-assistant";
   nexusActiveWorkflowState = {
-    ...(nexusActiveWorkflowState || {}),
+    ...(previousState || {}),
     id: workflowId,
     functionId,
-    command: nexusActiveWorkflowState?.command || NEXUS_FUNCTION_WINDOW_LABELS[functionId] || "Open Nexus function",
-    source: nexusActiveWorkflowState?.source || "function-window-dock-restore",
-    workflow: nexusActiveWorkflowState?.workflow || functionId,
-    action: nexusActiveWorkflowState?.action || "restore",
-    openedAt: nexusActiveWorkflowState?.openedAt || Date.now(),
+    command: previousState?.command || NEXUS_FUNCTION_WINDOW_LABELS[functionId] || "Open Nexus function",
+    source: previousState?.source || "function-window-dock-restore",
+    workflow: previousState?.workflow || functionId,
+    action: previousState?.action || "restore",
+    openedAt: previousState?.openedAt || Date.now(),
     minimized: false,
     updatedAt: Date.now()
   };
+  nexusMinimizedFunctionWindowState = null;
   saveNexusRuntimeMemory();
   if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
     renderUserWorkspace();
@@ -23131,6 +23203,30 @@ function openNexusFunctionWindow(functionId, options = {}) {
     scheduleNexusActiveWorkflowFocus({ instant: options.instant !== false });
   }
   return true;
+}
+
+function resolveNexusAppIntent(input, options = {}) {
+  return resolveNexusFunctionIntent(input, { ...options, source: options.source || "nexus-app-window" });
+}
+
+function openNexusAppWindow(windowId, options = {}) {
+  return openNexusFunctionWindow(windowId, { ...options, source: options.source || "nexus-app-window" });
+}
+
+function renderNexusAppWindow(state = nexusActiveWorkflowState) {
+  return renderNexusFunctionWindow(state);
+}
+
+function closeNexusAppWindow(options = {}) {
+  return closeNexusFunctionWindow(options);
+}
+
+function minimizeNexusAppWindow() {
+  return minimizeNexusFunctionWindow();
+}
+
+function restoreNexusAppWindow(windowIdOverride = "") {
+  return restoreNexusFunctionWindow(windowIdOverride);
 }
 
 function openNexusCapability(capabilityId, options = {}) {
@@ -23268,6 +23364,12 @@ if (typeof window !== "undefined") {
   window["minimizeNexusFunctionWindow"] = minimizeNexusFunctionWindow;
   window["restoreNexusFunctionWindow"] = restoreNexusFunctionWindow;
   window["resolveNexusFunctionIntent"] = resolveNexusFunctionIntent;
+  window["openNexusAppWindow"] = openNexusAppWindow;
+  window["renderNexusAppWindow"] = renderNexusAppWindow;
+  window["closeNexusAppWindow"] = closeNexusAppWindow;
+  window["minimizeNexusAppWindow"] = minimizeNexusAppWindow;
+  window["restoreNexusAppWindow"] = restoreNexusAppWindow;
+  window["resolveNexusAppIntent"] = resolveNexusAppIntent;
 }
 
 function updateNexusWorkflowState(workflowId, data = {}) {
@@ -23989,6 +24091,7 @@ function normalizeNexusWorkflowId(workflowId = "", command = "") {
   if (NEXUS_HOME_MODE_IDS.includes(raw)) return raw;
   if (nexusAllAgenticWorkflows().some(item => item.id === raw)) return raw;
   if (raw === "health") return "chronic-care";
+  if (/\b(provider queue|provider & case queue|case queue|review queue|admin queue|provider response inbox|case timeline)\b/.test(text)) return "provider-review";
   if (raw === "providers" || raw === "provider" || raw === "doctor") return "provider-support";
   if (raw === "messages" || raw === "communication" || raw === "communications") return "communications";
   if (raw === "ask" || raw === "agent" || raw === "resource") return "resource-assistant";
@@ -24047,7 +24150,7 @@ function normalizeNexusFunctionId(functionId = "", command = "") {
     .replace(/^messages$/, "communications-status");
   if (NEXUS_FUNCTION_WINDOW_IDS.includes(raw)) return raw;
   const text = `${raw} ${command || ""}`.toLowerCase();
-  if (isNexusLiveKnowledgeQuestion(text) || /\b(internet|research|source-backed|sources|citations)\b/.test(text)) return "live-knowledge";
+  if (isNexusLiveKnowledgeQuestion(text) || /\b(internet|research|source-backed|sources|citations|look up|find current)\b/.test(text)) return "live-knowledge";
   if (/\b(diabetes follow|diabetes follow-up)\b/.test(text)) return "diabetes-follow-up";
   if (/\b(hypertension follow|blood pressure follow)\b/.test(text)) return "hypertension-follow-up";
   if (/\b(obesity support|weight support)\b/.test(text)) return "obesity-support";
@@ -24058,6 +24161,7 @@ function normalizeNexusFunctionId(functionId = "", command = "") {
   if (/\b(remote therapeutic monitoring|rtm|therapy update)\b/.test(text)) return "rtm";
   if (/\b(video visit|daily room|video room)\b/.test(text)) return "video-visit";
   if (/\b(telehealth|virtual care|doctor video|clinic intake|health intake)\b/.test(text)) return "telehealth";
+  if (/\b(provider queue|provider & case queue|case queue|review queue|admin queue|provider response inbox|case timeline)\b/.test(text)) return "provider-queue";
   if (/\b(physician|provider review|provider queue|provider bridge|care team)\b/.test(text)) return "physician-review";
   if (/\b(emergency|urgent help|red flag)\b/.test(text)) return "emergency-guidance";
   if (/\b(refill)\b/.test(text)) return "refill-coordination";
@@ -24077,14 +24181,14 @@ function normalizeNexusFunctionId(functionId = "", command = "") {
   if (/\b(vendor inquiry)\b/.test(text)) return "vendor-inquiry";
   if (/\b(buyer|seller)\b/.test(text)) return "buyer-seller";
   if (/\b(produce listing|listing)\b/.test(text)) return "produce-listing";
-  if (/\b(input sourcing|farm inputs)\b/.test(text)) return "input-sourcing";
+  if (/\b(input sourcing|farm inputs|supplier request)\b/.test(text)) return "input-sourcing";
   if (/\b(quote)\b/.test(text)) return "quote-request";
   if (/\b(agritrade|marketplace)\b/.test(text)) return "agritrade";
   if (/\b(cold chain|cold-chain)\b/.test(text)) return "cold-chain";
   if (/\b(pickup)\b/.test(text)) return "pickup-request";
   if (/\b(delivery)\b/.test(text)) return "delivery-request";
   if (/\b(storage)\b/.test(text)) return "storage";
-  if (/\b(logistics|route support)\b/.test(text)) return "logistics";
+  if (/\b(logistics|route support|farm to market)\b/.test(text)) return "logistics";
   if (/\b(digital literacy)\b/.test(text)) return "digital-literacy";
   if (/\b(ai training)\b/.test(text)) return "ai-training";
   if (/\b(job readiness|interview|skills checklist|farm jobs|jobs)\b/.test(text)) return "job-readiness";
@@ -24096,17 +24200,17 @@ function normalizeNexusFunctionId(functionId = "", command = "") {
   if (/\b(location sharing)\b/.test(text)) return "location-sharing";
   if (/\b(route planning|route|maps|map)\b/.test(text)) return "maps";
   if (/\b(whatsapp)\b/.test(text)) return "whatsapp";
-  if (/\b(sms|text message)\b/.test(text)) return "sms";
+  if (/\b(sms|text message|text provider)\b/.test(text)) return "sms";
   if (/\b(email)\b/.test(text)) return "email";
   if (/\b(phone|call)\b/.test(text)) return "phone-handoff";
   if (/\b(telegram)\b/.test(text)) return "telegram";
-  if (/\b(communications?|message)\b/.test(text)) return "communications-status";
-  if (/\b(youtube)\b/.test(text)) return "youtube";
-  if (/\b(music|media|spotify|afrobeats|r&b|rnb|gospel)\b/.test(text)) return "music";
+  if (/\b(send message|text provider|send by email|communications?|message)\b/.test(text)) return "communications-status";
+  if (/\b(youtube|media handoff)\b/.test(text)) return "youtube";
+  if (/\b(play music|music|media|spotify|afrobeats|r&b|rnb|gospel)\b/.test(text)) return "music";
   if (/\b(low bandwidth|low-bandwidth)\b/.test(text)) return "low-bandwidth";
   if (/\b(sync status)\b/.test(text)) return "sync-status";
   if (/\b(offline|queue)\b/.test(text)) return "offline";
-  if (/\b(admin review)\b/.test(text)) return "admin-review";
+  if (/\b(admin queue|review queue|admin review)\b/.test(text)) return "admin-review";
   if (/\b(provider response inbox)\b/.test(text)) return "provider-response-inbox";
   if (/\b(case timeline)\b/.test(text)) return "case-timeline";
   if (/\b(pharmacy queue)\b/.test(text)) return "pharmacy-queue";
@@ -24242,6 +24346,10 @@ function nexusWorkflowLandingKind(definition = {}) {
   if (/maps|field-visit|route-planning|location-sharing|route-support/.test(id) || category === "maps") return "maps";
   if (/live-knowledge|internet|research|source-backed/.test(id) || category === "research") return "research";
   if (/workforce|training|literacy|job|youth|employer|certification|lms/.test(id)) return "workforce";
+  if (/email|sms|whatsapp|phone|telegram|communications/.test(id) || category === "communications") return "communications";
+  if (/admin|queue|timeline|inbox/.test(id) || category === "admin") return "admin";
+  if (/music|media|youtube/.test(id) || category === "media") return "media";
+  if (/offline|low-bandwidth|sync|local-fallback/.test(id) || category === "offline") return "offline";
   if (/payment|booking|dispatch|approval/.test(id) || category === "gate") return "gate";
   return NEXUS_WORKFLOW_LANDING_WINDOWS[category] ? category : "research";
 }
@@ -24295,6 +24403,15 @@ function renderNexusLandingField(field = {}, state = {}) {
       </fieldset>
     `;
   }
+  if (field.type === "checkbox") {
+    return `
+      <label class="nexus-landing-field nexus-landing-single-checkbox">
+        <span>${escapeHtml(translateText(label))}</span>
+        <input type="checkbox" data-nexus-landing-field="${safeName}" name="${safeName}">
+        <small>${escapeHtml(translateText(placeholder))}</small>
+      </label>
+    `;
+  }
   if (field.type === "textarea") {
     return `
       <label class="nexus-landing-field">
@@ -24319,7 +24436,7 @@ function renderNexusRoutePlanningLandingArea(config = {}, state = {}) {
     <section class="nexus-landing-route-panel" data-nexus-route-planning-window="true" data-route-provider-configured="${configured ? "true" : "false"}" data-geolocation-used="false" data-location-permission-requested="false">
       <div>
         <strong>${escapeHtml(translateText("Route summary area"))}</strong>
-        <p>${escapeHtml(translateText(configured ? "A configured route provider may return route metadata after explicit typed origin/destination review." : "route provider not configured / route preparation only. Nexus will not fake route distance or time."))}</p>
+        <p>${escapeHtml(translateText(configured ? "A configured route provider may return route metadata after explicit typed origin/destination review." : "Route provider is not configured. Nexus can prepare the route request, but no live route calculation has executed."))}</p>
       </div>
       <div class="nexus-route-input-row">
         <label><span>${escapeHtml(translateText("Start point"))}</span><input data-nexus-route-start value="${escapeHtml(route.start)}" placeholder="${escapeHtml(translateText("Typed start point"))}"></label>
@@ -24364,7 +24481,7 @@ function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
   const id = definition.id || "";
   const functionId = definition.functionId || "";
   return `
-    <section class="nexus-workflow-landing-window nexus-workflow-landing-${escapeHtml(config.kind)}" data-nexus-workflow-landing-window="true" data-nexus-workflow-landing-kind="${escapeHtml(config.kind)}" data-nexus-function-id="${escapeHtml(functionId || id)}">
+    <section class="nexus-workflow-landing-window nexus-workflow-landing-${escapeHtml(config.kind)}" data-nexus-app-window-landing="true" data-nexus-workflow-landing-window="true" data-nexus-workflow-landing-kind="${escapeHtml(config.kind)}" data-nexus-function-id="${escapeHtml(functionId || id)}">
       <div class="nexus-landing-status-strip">
         <span>${escapeHtml(translateText(config.status))}</span>
         <span>${escapeHtml(translateText("Consent/confirmation required before external action"))}</span>
@@ -24382,7 +24499,10 @@ function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
       <section class="nexus-landing-next-actions" data-nexus-landing-next-actions="true">
         <strong>${escapeHtml(translateText("Next actions"))}</strong>
         <div>
-          ${(config.actions || []).map(action => `<button type="button" data-nexus-mode-shortcut="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(action)}">${escapeHtml(translateText(action))}</button>`).join("")}
+          ${(config.actions || []).map(action => {
+            const disabled = /\b(disabled|not configured|provider configured|blocked)\b/i.test(action);
+            return `<button type="button" data-nexus-mode-shortcut="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(action)}" ${disabled ? 'disabled aria-disabled="true" data-nexus-disabled-reason="provider-not-configured"' : ""}>${escapeHtml(translateText(action))}</button>`;
+          }).join("")}
         </div>
       </section>
       <section class="nexus-landing-packet-preview" data-nexus-landing-packet-preview="true">
@@ -24529,11 +24649,11 @@ function renderNexusActiveWorkflowWorkspace() {
   const { id, functionId, presentation, content, fields } = definition;
   if (state.minimized) {
     return `
-      <div class="nexus-function-window-dock nexus-glass-card" data-nexus-function-window-dock="true" data-nexus-function-window="${escapeHtml(functionId || id)}" role="status">
+    <div class="nexus-function-window-dock nexus-glass-card" data-nexus-app-window-dock="true" data-nexus-function-window-dock="true" data-nexus-function-window="${escapeHtml(functionId || id)}" role="status">
         <strong>${escapeHtml(translateText(presentation.title))}</strong>
         <span>${escapeHtml(translateText("Minimized - external actions remain gated."))}</span>
-        <button type="button" data-nexus-window-restore data-nexus-function-window-restore="${escapeHtml(functionId || id)}" data-nexus-mode-shortcut="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(state.command || presentation.title || "Open Nexus function")}" onclick="window.restoreNexusFunctionWindow && window.restoreNexusFunctionWindow('${escapeHtml(functionId || id)}')" aria-label="${escapeHtml(translateText("Restore function window"))}">${escapeHtml(translateText("Restore"))}</button>
-        <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
+        <button type="button" data-nexus-window-restore data-nexus-function-window-restore="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(state.command || presentation.title || "Open Nexus function")}" onclick="window.restoreNexusFunctionWindow && window.restoreNexusFunctionWindow('${escapeHtml(functionId || id)}')" aria-label="${escapeHtml(translateText("Restore function window"))}">${escapeHtml(translateText("Restore"))}</button>
+        <button type="button" data-nexus-workflow-close data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
       </div>
     `;
   }
@@ -24547,8 +24667,8 @@ function renderNexusActiveWorkflowWorkspace() {
         ? ["Describe need", "Review marketplace details", "Prepare inquiry", "Confirm before any transaction"]
         : ["Add details", "Review prepared next steps", "Save or change workflow", "Confirm before external action"];
   return `
-    <div class="nexus-workflow-modal-backdrop" data-nexus-workflow-modal="true" data-nexus-function-window-backdrop="true" role="presentation">
-    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-modal nexus-function-window nexus-function-window-${escapeHtml(functionId || id)} nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-function-window="true" data-nexus-function-window-id="${escapeHtml(functionId || id)}" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" role="dialog" aria-modal="true" aria-labelledby="nexusActiveWorkflowHeading">
+    <div class="nexus-workflow-modal-backdrop" data-nexus-workflow-modal="true" data-nexus-app-window-backdrop="true" data-nexus-function-window-backdrop="true" role="presentation">
+    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-modal nexus-function-window nexus-function-window-${escapeHtml(functionId || id)} nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-app-window="true" data-nexus-app-window-id="${escapeHtml(functionId || id)}" data-nexus-function-window="true" data-nexus-function-window-id="${escapeHtml(functionId || id)}" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" role="dialog" aria-modal="true" aria-labelledby="nexusActiveWorkflowHeading">
       <div class="nexus-workflow-header">
         <span class="nexus-workflow-icon" aria-hidden="true">${escapeHtml(presentation.icon || "")}</span>
         <div>
@@ -24560,7 +24680,7 @@ function renderNexusActiveWorkflowWorkspace() {
           <button type="button" data-nexus-workflow-back aria-label="${escapeHtml(translateText("Back to Nexus home"))}">${escapeHtml(translateText("Back"))}</button>
           <button type="button" data-nexus-workflow-minimize aria-label="${escapeHtml(translateText("Minimize function window"))}">${escapeHtml(translateText("Minimize"))}</button>
           <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?">${escapeHtml(translateText("Change"))}</button>
-          <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
+          <button type="button" data-nexus-workflow-close data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
         </div>
       </div>
       <div class="nexus-workflow-purpose">
@@ -41239,12 +41359,7 @@ if (typeof window !== "undefined") {
 
 function bindNexusStandardUserHomeControls() {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
-  if (typeof window !== "undefined") {
-    window.restoreNexusFunctionWindow = restoreNexusFunctionWindow;
-    window.openNexusFunctionWindow = openNexusFunctionWindow;
-    window.closeNexusFunctionWindow = closeNexusFunctionWindow;
-    window.minimizeNexusFunctionWindow = minimizeNexusFunctionWindow;
-  }
+  exposeNexusAppWindowApis();
   if (document.body.dataset.nexusFunctionWindowDelegateBound !== "true") {
     document.body.dataset.nexusFunctionWindowDelegateBound = "true";
     document.addEventListener("click", event => {
@@ -41253,6 +41368,7 @@ function bindNexusStandardUserHomeControls() {
       if (!control || !document.body.classList.contains("user-mode")) return;
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation?.();
       if (control.matches("[data-nexus-workflow-minimize]")) {
         minimizeNexusFunctionWindow();
         return;
@@ -42668,7 +42784,24 @@ function bindStatic() {
   });
 }
 
+function exposeNexusAppWindowApis() {
+  if (typeof window === "undefined") return;
+  window.openNexusFunctionWindow = openNexusFunctionWindow;
+  window.renderNexusFunctionWindow = renderNexusFunctionWindow;
+  window.closeNexusFunctionWindow = closeNexusFunctionWindow;
+  window.minimizeNexusFunctionWindow = minimizeNexusFunctionWindow;
+  window.restoreNexusFunctionWindow = restoreNexusFunctionWindow;
+  window.resolveNexusFunctionIntent = resolveNexusFunctionIntent;
+  window.openNexusAppWindow = openNexusAppWindow;
+  window.renderNexusAppWindow = renderNexusAppWindow;
+  window.closeNexusAppWindow = closeNexusAppWindow;
+  window.minimizeNexusAppWindow = minimizeNexusAppWindow;
+  window.restoreNexusAppWindow = restoreNexusAppWindow;
+  window.resolveNexusAppIntent = resolveNexusAppIntent;
+}
+
 async function boot() {
+  exposeNexusAppWindowApis();
   registerWebApp();
   installAgriNexusNativeBridge();
   restoreNexusRuntimeMemory();

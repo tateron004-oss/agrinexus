@@ -11001,8 +11001,8 @@ body.user-mode .nexus-active-workflow-modal {
 body.user-mode .nexus-function-window-dock {
   position: fixed;
   right: clamp(14px, 3vw, 34px);
-  bottom: clamp(14px, 3vh, 34px);
-  z-index: 82;
+  bottom: clamp(142px, 18vh, 176px);
+  z-index: 124;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto auto;
   align-items: center;
@@ -12234,6 +12234,18 @@ body.user-mode .nexus-landing-checkboxes label {
   font-size: .82rem;
 }
 
+body.user-mode .nexus-landing-single-checkbox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+body.user-mode .nexus-landing-single-checkbox small {
+  grid-column: 1 / -1;
+  color: rgba(226, 232, 240, .72);
+}
+
 body.user-mode .nexus-landing-route-panel,
 body.user-mode .nexus-landing-research-panel {
   display: grid;
@@ -12275,6 +12287,13 @@ body.user-mode .nexus-landing-research-panel button {
   color: rgba(255, 255, 255, .96);
   padding: 9px 12px;
   font-weight: 850;
+}
+
+body.user-mode .nexus-landing-next-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .62;
+  border-color: rgba(148, 163, 184, .32);
+  background: rgba(15, 23, 42, .6);
 }
 
 @media (max-width: 760px) {
