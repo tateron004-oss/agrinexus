@@ -22293,6 +22293,68 @@ let nexusPreparedPackets = [];
 let nexusActionHistory = [];
 let nexusPartnerProfiles = [];
 let nexusLaneConfigOverrides = {};
+let nexusRecentWorkflows = [];
+let nexusUserExperienceRole = "Standard User";
+let nexusLowBandwidthMode = false;
+let nexusLanguagePreference = "";
+let nexusGuidedWorkflowAnswers = {};
+
+const NEXUS_UX_ROLES = Object.freeze([
+  "Standard User",
+  "Provider",
+  "Vendor",
+  "Admin",
+  "Trainer",
+  "Agriculture Expert",
+  "Clinic Staff"
+]);
+
+const NEXUS_UX_STATUS_LABELS = Object.freeze([
+  "Draft",
+  "Ready",
+  "Prepared",
+  "Queued locally",
+  "Needs consent",
+  "Needs confirmation",
+  "Blocked: missing credentials",
+  "Provider configured",
+  "Sent",
+  "Not executed",
+  "Research ready",
+  "Research complete",
+  "Emergency guidance",
+  "Follow-up needed"
+]);
+
+const NEXUS_UX_COMMAND_EXAMPLES = Object.freeze([
+  "Open command center",
+  "Show recent workflows",
+  "Continue mobile clinic",
+  "Continue pharmacy referral",
+  "Start guided mobile clinic intake",
+  "Start guided pharmacy intake",
+  "Start guided telehealth intake",
+  "Use low bandwidth mode",
+  "Set role to provider",
+  "Set role to admin",
+  "Show what Nexus can do",
+  "Close this window",
+  "Minimize this window",
+  "Restore last window",
+  "Go back",
+  "Show action receipt"
+]);
+
+const NEXUS_MAJOR_LAUNCH_BUTTONS = Object.freeze([
+  { id: "telehealth-intake", label: "Virtual Care", command: "Nexus, start a telehealth intake." },
+  { id: "mobile-clinic", label: "Mobile Clinic", command: "Nexus, prepare mobile clinic support." },
+  { id: "pharmacy-support", label: "Pharmacy", command: "Nexus, prepare pharmacy support." },
+  { id: "agriculture", label: "Agriculture", command: "I need agriculture support." },
+  { id: "agritrade", label: "AgriTrade", command: "Browse AgriTrade." },
+  { id: "logistics", label: "Logistics", command: "Nexus, open logistics cold chain." },
+  { id: "jobs", label: "Workforce", command: "Nexus, open workforce training." },
+  { id: "live-knowledge", label: "Live Knowledge", command: "Research climate-smart agriculture in Africa and show sources." }
+]);
 
 function nexusAllAgenticWorkflows() {
   const seen = new Set();
@@ -22687,6 +22749,12 @@ function recordNexusOutcome(packet, result) {
 
 function showNexusOutcome(packet, result) {
   const entry = recordNexusOutcome(packet, result);
+  recordNexusRecentWorkflow(packet.workflowId, {
+    title: packet.workflowLabel,
+    category: packet.category,
+    status: /queued/i.test(entry.outcomeStatus) ? "queued" : /prepared|waiting/i.test(entry.outcomeStatus) ? "prepared" : /credential|blocked/i.test(entry.outcomeStatus) ? "blocked" : "completed",
+    summary: entry.resultMessage || packet.summary
+  });
   nexusAgenticBrainLastResult = {
     ok: true,
     status: "nexus_action_outcome_recorded",
@@ -22706,6 +22774,190 @@ function showNexusOutcome(packet, result) {
   return entry;
 }
 
+function nexusSafeWorkflowSummary(workflowId = "", status = "draft") {
+  const definition = nexusWorkflowDefinition(workflowId, "");
+  const title = definition?.presentation?.title || NEXUS_FUNCTION_WINDOW_LABELS[workflowId] || "Nexus workflow";
+  if (status === "queued") return `${title} is queued locally; no outside provider was contacted.`;
+  if (status === "prepared") return `${title} has a local review packet ready.`;
+  if (status === "blocked") return `${title} is blocked until credentials, consent, and confirmation are ready.`;
+  if (status === "completed") return `${title} has a recorded local outcome.`;
+  return `${title} is open as a safe draft.`;
+}
+
+function recordNexusRecentWorkflow(workflowId = "", options = {}) {
+  const id = normalizeNexusWorkflowId(workflowId || options.id || "", options.command || "") || workflowId || "resource-assistant";
+  const definition = nexusWorkflowDefinition(id, options.command || "");
+  const title = options.title || definition?.presentation?.title || NEXUS_FUNCTION_WINDOW_LABELS[id] || "Nexus workflow";
+  const status = options.status || "draft";
+  const summary = options.summary || nexusSafeWorkflowSummary(id, status);
+  const category = options.category || nexusWorkflowRegistryEntry(id)?.category || "platform";
+  const item = {
+    id,
+    title,
+    category,
+    updatedAt: new Date().toISOString(),
+    status,
+    summary: String(summary || "").slice(0, 140)
+  };
+  nexusRecentWorkflows = [item, ...nexusRecentWorkflows.filter(existing => existing.id !== id)].slice(0, 8);
+  return item;
+}
+
+function nexusStatusBadgeLabel(status = "") {
+  const text = String(status || "").toLowerCase();
+  if (/waiting|confirmation/.test(text)) return "Needs confirmation";
+  if (/consent/.test(text)) return "Needs consent";
+  if (/credential|missing|blocked/.test(text)) return "Blocked: missing credentials";
+  if (/queued/.test(text)) return "Queued locally";
+  if (/prepared/.test(text)) return "Prepared";
+  if (/ready|configured/.test(text)) return "Ready";
+  if (/sent|submitted/.test(text)) return "Sent";
+  if (/not[_ -]?executed|no[_ -]?execution/.test(text)) return "Not executed";
+  if (/research_complete/.test(text)) return "Research complete";
+  if (/research/.test(text)) return "Research ready";
+  if (/emergency/.test(text)) return "Emergency guidance";
+  if (/follow/.test(text)) return "Follow-up needed";
+  return "Draft";
+}
+
+function renderNexusStatusBadge(status = "Draft", options = {}) {
+  const label = options.label || nexusStatusBadgeLabel(status);
+  const tone = String(label || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "draft";
+  return `<span class="nexus-ux-status-badge nexus-ux-status-${escapeHtml(tone)}" data-nexus-status-badge="${escapeHtml(label)}">${escapeHtml(translateText(`Status: ${label}`))}</span>`;
+}
+
+function nexusGuidedFieldsForDefinition(definition = {}) {
+  return (definition.fields || []).slice(0, 5).map((field, index) => ({
+    name: field.name || `field${index + 1}`,
+    label: field.label || `Question ${index + 1}`,
+    question: field.question || `What should Nexus record for ${field.label || "this step"}?`
+  }));
+}
+
+function renderNexusGuidedIntakePanel(definition = {}, state = {}) {
+  const id = definition.id || "";
+  const fields = nexusGuidedFieldsForDefinition(definition);
+  const answers = nexusGuidedWorkflowAnswers[id] || {};
+  const answeredCount = fields.filter(field => String(answers[field.name] || "").trim()).length;
+  const currentIndex = Math.min(answeredCount, Math.max(fields.length - 1, 0));
+  const currentField = fields[currentIndex] || fields[0] || { label: "Next detail", question: "What should Nexus record next?" };
+  const progress = fields.length ? Math.round((answeredCount / fields.length) * 100) : 0;
+  return `
+    <section class="nexus-guided-intake" data-nexus-guided-intake="true" data-nexus-guided-workflow="${escapeHtml(id)}">
+      <div class="nexus-guided-header">
+        <div>
+          <strong>${escapeHtml(translateText("Guided intake"))}</strong>
+          <span>${escapeHtml(translateText(`Step ${Math.min(currentIndex + 1, fields.length || 1)} of ${fields.length || 1}`))}</span>
+        </div>
+        <button type="button" data-nexus-guided-mode="form" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Switch to form mode"))}</button>
+      </div>
+      <div class="nexus-guided-progress" aria-label="${escapeHtml(translateText(`Guided progress ${progress}%`))}"><span style="width:${escapeHtml(String(progress))}%"></span></div>
+      <p>${escapeHtml(translateText(currentField.question))}</p>
+      <label class="nexus-landing-field">
+        <span>${escapeHtml(translateText(currentField.label))}</span>
+        <input data-nexus-guided-answer="${escapeHtml(currentField.name)}" data-nexus-mode-field="${escapeHtml(currentField.name)}" value="${escapeHtml(answers[currentField.name] || "")}" placeholder="${escapeHtml(translateText("Type your answer here"))}">
+      </label>
+      <div class="nexus-guided-actions">
+        <button type="button" data-nexus-guided-back data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Back"))}</button>
+        <button type="button" data-nexus-guided-save data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Save answer"))}</button>
+        <button type="button" data-nexus-guided-mode="form" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Edit all fields"))}</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusWorkflowHelperBlock(definition = {}) {
+  const id = definition.id || "";
+  const helpers = {
+    "mobile-clinic": "Nexus can prepare a mobile clinic request, organize vitals/readings, queue the case locally, and send it to a configured provider only after consent and confirmation.",
+    pharmacy: "Nexus can prepare a pharmacy review packet, organize medications/allergies, queue it locally, and send it to a configured pharmacy endpoint only after consent and confirmation.",
+    telehealth: "Nexus can prepare telehealth intake notes, organize RPM/RTM readings, and create provider-ready summaries without diagnosing, prescribing, or booking.",
+    agriculture: "Nexus can organize crop context, run source-backed research when configured, prepare an agronomy packet, and queue expert review without dispatching a field agent.",
+    marketplace: "Nexus can prepare buyer/seller questions and marketplace inquiry packets, but it will not buy, sell, pay, or contact vendors without approved confirmation.",
+    logistics: "Nexus can prepare pickup, delivery, and cold-chain request details while keeping booking and dispatch blocked until providers are configured and confirmed.",
+    maps: "Nexus can prepare typed route and field visit requests without browser geolocation or location sharing.",
+    research: "Nexus can run Live Knowledge when configured and show real citation cards; without credentials it shows an honest blocked state.",
+    workforce: "Nexus can prepare training and workforce referral packets without submitting applications or contacting partners automatically.",
+    gate: "Nexus can prepare a payment, booking, or dispatch request for review, but it will not execute payment, booking, or dispatch unless a real provider is configured and confirmed.",
+    communications: "Nexus can draft messages, SMS, WhatsApp, email, phone, and Telegram scripts while send/call actions remain credential and confirmation gated.",
+    admin: "Nexus can show provider and case queues for review without making hidden provider changes.",
+    media: "Nexus can prepare safe provider handoff options for music and media without hosting, downloading, caching, or claiming playback.",
+    offline: "Nexus can keep local fallback and queue context visible for low-bandwidth work without automatic external sync."
+  };
+  const text = helpers[id] || helpers[definition.kind] || "Nexus can guide this workflow, prepare safe next steps, and keep external action blocked until the required provider, consent, confirmation, and audit gates are complete.";
+  return `
+    <section class="nexus-window-helper" data-nexus-window-helper="what-can-nexus-do">
+      <strong>${escapeHtml(translateText("What can Nexus do here?"))}</strong>
+      <p>${escapeHtml(translateText(text))}</p>
+    </section>
+  `;
+}
+
+function renderNexusSmartEmptyState(kind = "packet") {
+  const messages = {
+    packet: "No packet prepared yet. Complete the intake fields, then choose Prepare packet.",
+    route: "No route prepared yet. Enter a start point and destination to prepare a route request.",
+    provider: "No provider endpoint is configured yet. Nexus can still prepare and queue this locally.",
+    research: "Enter a research question to run source-backed Live Knowledge.",
+    queue: "No local queue item is active yet. Prepare or queue a packet to see it here."
+  };
+  return `<p class="nexus-smart-empty-state" data-nexus-smart-empty-state="${escapeHtml(kind)}">${escapeHtml(translateText(messages[kind] || messages.packet))}</p>`;
+}
+
+function renderNexusConfirmationSummary(packet = null, lane = null) {
+  const title = packet?.workflowLabel || "this request";
+  const missing = lane?.requiredCredentials || [];
+  return `
+    <section class="nexus-confirmation-summary" data-nexus-confirmation-summary="true">
+      <strong>${escapeHtml(translateText("Before anything serious happens"))}</strong>
+      <div>
+        <b>${escapeHtml(translateText("Here is what Nexus will do:"))}</b>
+        <ul>
+          <li>${escapeHtml(translateText(`Prepare ${title}.`))}</li>
+          <li>${escapeHtml(translateText("Store it locally for review."))}</li>
+          <li>${escapeHtml(translateText(missing.length ? `Keep it local because provider setup is missing: ${missing.join(", ")}.` : "Wait for your explicit confirmation before any configured external action."))}</li>
+        </ul>
+      </div>
+      <div>
+        <b>${escapeHtml(translateText("Nexus will not:"))}</b>
+        <ul>
+          <li>${escapeHtml(translateText("Schedule, dispatch, pay, send, call, diagnose, prescribe, or share externally without the required gates."))}</li>
+          <li>${escapeHtml(translateText("Claim provider acceptance or live execution unless a configured provider returns success."))}</li>
+        </ul>
+      </div>
+      <div class="nexus-confirmation-summary-actions">
+        <button type="button" data-nexus-action-controller="request-confirmation" data-workflow-id="${escapeHtml(packet?.workflowId || nexusActiveWorkflowState?.id || "")}">${escapeHtml(translateText("Confirm"))}</button>
+        <button type="button" data-nexus-action-controller="prepare-packet" data-workflow-id="${escapeHtml(packet?.workflowId || nexusActiveWorkflowState?.id || "")}">${escapeHtml(translateText("Edit"))}</button>
+        <button type="button" data-nexus-workflow-close>${escapeHtml(translateText("Cancel"))}</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusActionReceipt(packet = null, entry = null) {
+  const status = entry?.outcomeStatus || packet?.outcomeStatus || "draft";
+  return `
+    <section class="nexus-action-receipt" data-nexus-action-receipt="true">
+      <strong>${escapeHtml(translateText("Action receipt"))}</strong>
+      <div>
+        <b>${escapeHtml(translateText("Nexus did:"))}</b>
+        <ul>
+          <li>${escapeHtml(translateText(packet ? `Prepared ${packet.workflowLabel}.` : "Opened the workflow safely."))}</li>
+          <li>${escapeHtml(translateText(/queued/i.test(status) ? "Created a local queue item." : "Kept the work in local review."))}</li>
+        </ul>
+      </div>
+      <div>
+        <b>${escapeHtml(translateText("Nexus did not:"))}</b>
+        <ul>
+          <li>${escapeHtml(translateText("Send externally, contact a provider, approve a refill, book, pay, dispatch, call, or message anyone unless a configured provider confirmed success."))}</li>
+          <li>${escapeHtml(translateText("Hide missing credentials or claim unavailable live action."))}</li>
+        </ul>
+      </div>
+      <p>${escapeHtml(translateText(`Status: ${nexusStatusBadgeLabel(status)}`))}${entry?.resultMessage ? ` - ${escapeHtml(translateText(entry.resultMessage))}` : ""}</p>
+    </section>
+  `;
+}
+
 function saveNexusRuntimeMemory() {
   try {
     localStorage.setItem("nexusActiveWorkflowState", JSON.stringify(nexusActiveWorkflowState || {}));
@@ -22713,6 +22965,11 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusActionHistory", JSON.stringify(nexusActionHistory.slice(0, 25)));
     localStorage.setItem("nexusPartnerProfiles", JSON.stringify(nexusPartnerProfiles.slice(0, 25)));
     localStorage.setItem("nexusLaneConfigOverrides", JSON.stringify(nexusLaneConfigOverrides || {}));
+    localStorage.setItem("nexusRecentWorkflows", JSON.stringify(nexusRecentWorkflows.slice(0, 8)));
+    localStorage.setItem("nexusUserExperienceRole", nexusUserExperienceRole);
+    localStorage.setItem("nexusLowBandwidthMode", nexusLowBandwidthMode ? "true" : "false");
+    localStorage.setItem("nexusLanguagePreference", nexusLanguagePreference || "");
+    localStorage.setItem("nexusGuidedWorkflowAnswers", JSON.stringify(nexusGuidedWorkflowAnswers || {}));
   } catch {
     // Local storage can be unavailable; Nexus keeps the current session state.
   }
@@ -22725,11 +22982,18 @@ function restoreNexusRuntimeMemory() {
     nexusActionHistory = JSON.parse(localStorage.getItem("nexusActionHistory") || "[]") || [];
     nexusPartnerProfiles = JSON.parse(localStorage.getItem("nexusPartnerProfiles") || "[]") || [];
     nexusLaneConfigOverrides = JSON.parse(localStorage.getItem("nexusLaneConfigOverrides") || "{}") || {};
+    nexusRecentWorkflows = JSON.parse(localStorage.getItem("nexusRecentWorkflows") || "[]") || [];
+    nexusUserExperienceRole = localStorage.getItem("nexusUserExperienceRole") || "Standard User";
+    nexusLowBandwidthMode = localStorage.getItem("nexusLowBandwidthMode") === "true";
+    nexusLanguagePreference = localStorage.getItem("nexusLanguagePreference") || "";
+    nexusGuidedWorkflowAnswers = JSON.parse(localStorage.getItem("nexusGuidedWorkflowAnswers") || "{}") || {};
   } catch {
     nexusPreparedPackets = [];
     nexusActionHistory = [];
     nexusPartnerProfiles = [];
     nexusLaneConfigOverrides = {};
+    nexusRecentWorkflows = [];
+    nexusGuidedWorkflowAnswers = {};
   }
 }
 
@@ -22738,6 +23002,8 @@ function clearNexusSensitiveLocalData() {
   nexusActionHistory = [];
   nexusPartnerProfiles = [];
   nexusLaneConfigOverrides = {};
+  nexusRecentWorkflows = [];
+  nexusGuidedWorkflowAnswers = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
     localStorage.removeItem("nexusActiveWorkflowState");
@@ -22745,6 +23011,8 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusActionHistory");
     localStorage.removeItem("nexusPartnerProfiles");
     localStorage.removeItem("nexusLaneConfigOverrides");
+    localStorage.removeItem("nexusRecentWorkflows");
+    localStorage.removeItem("nexusGuidedWorkflowAnswers");
   } catch {}
   nexusAgenticBrainLastResult = {
     ok: true,
@@ -23178,8 +23446,15 @@ function openNexusFunctionWindow(functionId, options = {}) {
     action: options.action || resolved.type || "open",
     openedAt: Date.now(),
     minimized: false,
+    guidedMode: options.guidedMode === true,
     transcript: options.transcript || (options.source === "voice-command" ? command : "")
   };
+  recordNexusRecentWorkflow(workflowId, {
+    status: "draft",
+    command,
+    title: definition?.presentation?.title || NEXUS_FUNCTION_WINDOW_LABELS[targetFunctionId],
+    category: nexusWorkflowRegistryEntry(workflowId)?.category || "platform"
+  });
   saveNexusRuntimeMemory();
   const panelResult = buildNexusHomeModePanelResult(workflowId, command);
   nexusAgenticBrainLastResult = options.preparedResult || panelResult || {
@@ -24480,20 +24755,29 @@ function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
   const config = nexusWorkflowLandingConfig(definition, state);
   const id = definition.id || "";
   const functionId = definition.functionId || "";
+  const guidedMode = state.guidedMode === true;
+  const lane = nexusIntegrationLaneById(nexusWorkflowRegistryEntry(id)?.integrationLaneId);
   return `
     <section class="nexus-workflow-landing-window nexus-workflow-landing-${escapeHtml(config.kind)}" data-nexus-app-window-landing="true" data-nexus-workflow-landing-window="true" data-nexus-workflow-landing-kind="${escapeHtml(config.kind)}" data-nexus-function-id="${escapeHtml(functionId || id)}">
       <div class="nexus-landing-status-strip">
-        <span>${escapeHtml(translateText(config.status))}</span>
+        ${renderNexusStatusBadge(config.status)}
         <span>${escapeHtml(translateText("Consent/confirmation required before external action"))}</span>
         <span>${escapeHtml(translateText("No hidden execution"))}</span>
       </div>
+      ${renderNexusWorkflowHelperBlock({ ...definition, kind: config.kind })}
       <section class="nexus-landing-purpose">
         <strong>${escapeHtml(translateText(config.title))}</strong>
         <p>${escapeHtml(translateText(config.summary))}</p>
       </section>
-      <form class="nexus-landing-intake-grid" data-nexus-landing-intake="${escapeHtml(config.type)}" aria-label="${escapeHtml(translateText(`${config.title} intake`))}">
-        ${(config.fields || []).map(field => renderNexusLandingField(field, state)).join("")}
-      </form>
+      <div class="nexus-intake-mode-toggle" data-nexus-intake-mode-toggle="true">
+        <button type="button" data-nexus-guided-mode="form" data-workflow-id="${escapeHtml(id)}" aria-pressed="${!guidedMode}">${escapeHtml(translateText("Form mode"))}</button>
+        <button type="button" data-nexus-guided-mode="guided" data-workflow-id="${escapeHtml(id)}" aria-pressed="${guidedMode}">${escapeHtml(translateText("Guided mode"))}</button>
+      </div>
+      ${guidedMode ? renderNexusGuidedIntakePanel({ ...config, id }, state) : `
+        <form class="nexus-landing-intake-grid" data-nexus-landing-intake="${escapeHtml(config.type)}" aria-label="${escapeHtml(translateText(`${config.title} intake`))}">
+          ${(config.fields || []).map(field => renderNexusLandingField(field, state)).join("")}
+        </form>
+      `}
       ${config.kind === "maps" ? renderNexusRoutePlanningLandingArea(config, state) : ""}
       ${config.kind === "research" ? renderNexusLiveKnowledgeLandingArea(config, state) : ""}
       <section class="nexus-landing-next-actions" data-nexus-landing-next-actions="true">
@@ -24507,11 +24791,14 @@ function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
       </section>
       <section class="nexus-landing-packet-preview" data-nexus-landing-packet-preview="true">
         <strong>${escapeHtml(translateText("Result / packet preview"))}</strong>
+        ${renderNexusSmartEmptyState(config.kind === "maps" ? "route" : config.kind === "research" ? "research" : "packet")}
         <p>${escapeHtml(translateText(config.preview))}</p>
       </section>
       <section class="nexus-landing-provider-status" data-nexus-landing-provider-status="true" data-no-secret-exposure="true" data-no-fake-execution="true">
         <strong>${escapeHtml(translateText("Provider / safety status"))}</strong>
+        ${renderNexusStatusBadge(lane?.status || "not_configured")}
         <p>${escapeHtml(translateText(config.statusNote))}</p>
+        ${renderNexusSmartEmptyState("provider")}
         <p>${escapeHtml(translateText("Missing credentials, when applicable, are shown by environment variable name only. Secret values are never rendered."))}</p>
       </section>
     </section>
@@ -24621,6 +24908,35 @@ function renderNexusPilotReadinessDashboard() {
   `;
 }
 
+function renderNexusAppWindowSwitcher(activeId = "") {
+  return `
+    <nav class="nexus-app-window-switcher" data-nexus-app-window-switcher="true" aria-label="${escapeHtml(translateText("Switch Nexus app window"))}">
+      ${NEXUS_MAJOR_LAUNCH_BUTTONS.map(item => `
+        <button type="button" class="${activeId === item.id ? "active" : ""}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" aria-pressed="${activeId === item.id ? "true" : "false"}">
+          ${escapeHtml(translateText(item.label))}
+        </button>
+      `).join("")}
+    </nav>
+  `;
+}
+
+function renderNexusAppWindowCommandRow(command = "") {
+  return `
+    <div class="nexus-app-window-command-row" data-nexus-app-window-command-row="true">
+      <label>
+        <span>${escapeHtml(translateText("Ask Nexus in this window"))}</span>
+        <input data-nexus-window-command-input value="${escapeHtml(command || "")}" placeholder="${escapeHtml(translateText("Type a command, for example: open agriculture help"))}">
+      </label>
+      <button type="button" data-nexus-command-center-submit data-nexus-window-command-submit>${escapeHtml(translateText("Ask"))}</button>
+    </div>
+  `;
+}
+
+function nexusCommandInputForSubmit(target = null) {
+  return target?.closest?.("[data-nexus-app-window-command-row]")?.querySelector?.("[data-nexus-window-command-input]")
+    || $("#nexusCommandCenterInput");
+}
+
 function renderNexusActiveWorkflowWorkspace() {
   const state = nexusActiveWorkflowState || {};
   if (!state.id && !state.functionId) {
@@ -24659,6 +24975,8 @@ function renderNexusActiveWorkflowWorkspace() {
   }
   const healthcare = isNexusHealthcareWorkflow(id);
   const latestPacket = nexusPreparedPackets.find(packet => packet.workflowId === id);
+  const latestEntry = latestPacket ? nexusActionHistory.find(entry => entry.packetId === latestPacket.packetId) : null;
+  const latestLane = latestPacket ? nexusIntegrationLaneById(latestPacket.destinationLaneId) : nexusIntegrationLaneById(nexusWorkflowRegistryEntry(id)?.integrationLaneId);
   const steps = healthcare
     ? ["Add context", "Review safety boundaries", "Prepare provider-ready summary", "Confirm before any future handoff"]
     : id === "maps"
@@ -24674,6 +24992,7 @@ function renderNexusActiveWorkflowWorkspace() {
         <div>
           <span class="eyebrow">${escapeHtml(translateText("Focused Nexus function window"))}</span>
           <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText(presentation.title))}</h3>
+          ${renderNexusStatusBadge(latestEntry?.outcomeStatus || latestPacket?.outcomeStatus || latestLane?.status || "draft")}
           <p>${escapeHtml(translateText(content.explanation))}</p>
         </div>
         <div class="nexus-workflow-window-actions">
@@ -24687,6 +25006,8 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Next step"))}</strong>
         <span>${escapeHtml(translateText(content.nextPrompt))}</span>
       </div>
+      ${renderNexusAppWindowCommandRow(state.command || "")}
+      ${renderNexusAppWindowSwitcher(id)}
       <div class="nexus-workflow-launch-status" data-testid="nexus-workflow-launch-status" role="status">
         <strong>${escapeHtml(translateText("Opened in active workspace"))}</strong>
         <span>${escapeHtml(translateText(nexusWorkflowBlockedReason(id)))}</span>
@@ -24697,6 +25018,7 @@ function renderNexusActiveWorkflowWorkspace() {
       </section>
       ${renderNexusWorkflowLandingWindow(definition, state)}
       ${renderNexusWorkflowLaneStatus(id)}
+      ${renderNexusConfirmationSummary(latestPacket, latestLane)}
       <div class="nexus-workflow-steps" aria-label="${escapeHtml(translateText("Workflow steps"))}">
         ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
       </div>
@@ -24711,9 +25033,11 @@ function renderNexusActiveWorkflowWorkspace() {
       <section class="nexus-function-window-preview" data-nexus-function-window-preview="true">
         <strong>${escapeHtml(translateText("Results / packet preview"))}</strong>
         ${renderNexusKnowledgeAnswerCard(functionId === "live-knowledge" || id === "resource-assistant" ? nexusKnowledgeLastResult : null)}
+        ${latestPacket ? "" : renderNexusSmartEmptyState(functionId === "live-knowledge" || id === "resource-assistant" ? "research" : "packet")}
         <p>${escapeHtml(translateText(latestPacket ? `${latestPacket.workflowLabel || presentation.title} packet is prepared for review.` : "No full packet has been prepared yet. Use Prepare packet to generate a short review preview inside this window."))}</p>
       </section>
-      ${latestPacket ? renderNexusConfirmationPanel(latestPacket, nexusIntegrationLaneById(latestPacket.destinationLaneId)) : ""}
+      ${latestPacket ? renderNexusConfirmationPanel(latestPacket, latestLane) : ""}
+      ${renderNexusActionReceipt(latestPacket, latestEntry)}
       ${renderNexusWorkflowActionHistory()}
     </section>
     </div>
@@ -24759,8 +25083,15 @@ function openNexusWorkflow(workflowId, options = {}) {
     workflow: options.workflow || workflowId || "",
     action: options.action || "",
     openedAt: Date.now(),
-    minimized: false
+    minimized: false,
+    guidedMode: options.guidedMode === true
   };
+  recordNexusRecentWorkflow(definition?.id || safeId, {
+    status: "draft",
+    command,
+    title: definition?.presentation?.title,
+    category: nexusWorkflowRegistryEntry(definition?.id || safeId)?.category || "platform"
+  });
   saveNexusRuntimeMemory();
   if (definition) {
     const panelResult = buildNexusHomeModePanelResult(definition.id, command);
@@ -25277,6 +25608,100 @@ function renderNexusModeLauncher() {
   `;
 }
 
+function renderNexusMajorLaunchButtons() {
+  return `
+    <section class="nexus-major-launches" data-nexus-command-center-launches="true" aria-label="${escapeHtml(translateText("Open major Nexus services"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Command Center"))}</span>
+        <strong>${escapeHtml(translateText("Open a major service"))}</strong>
+      </div>
+      <div class="nexus-major-launch-grid">
+        ${NEXUS_MAJOR_LAUNCH_BUTTONS.map(item => `
+          <button type="button" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
+            <strong>${escapeHtml(translateText(item.label))}</strong>
+            <span>${escapeHtml(translateText("Open guided app window"))}</span>
+          </button>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusRecentWorkflowsPanel() {
+  const items = nexusRecentWorkflows.slice(0, 5);
+  return `
+    <section class="nexus-recent-workflows" data-nexus-recent-workflows="true" aria-label="${escapeHtml(translateText("Continue where you left off"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Recent"))}</span>
+        <strong>${escapeHtml(translateText("Continue where you left off"))}</strong>
+      </div>
+      ${items.length ? `
+        <div class="nexus-recent-workflow-grid">
+          ${items.map(item => `
+            <button type="button" data-nexus-recent-workflow="${escapeHtml(item.id)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(`Continue ${item.title}`)}">
+              <span>${escapeHtml(translateText(item.title))}</span>
+              ${renderNexusStatusBadge(item.status)}
+              <small>${escapeHtml(translateText(item.summary))}</small>
+            </button>
+          `).join("")}
+        </div>
+      ` : `<p class="nexus-smart-empty-state" data-nexus-smart-empty-state="recent-workflows">${escapeHtml(translateText("No recent workflow yet. Ask Nexus or choose a service to begin."))}</p>`}
+    </section>
+  `;
+}
+
+function renderNexusRoleAwareControls() {
+  const roleSuggestions = {
+    "Standard User": "Suggested: ask Nexus, choose a support area, prepare packets, and review safe next steps.",
+    Provider: "Suggested: review provider-ready summaries, prepared packets, and confirmation-gated handoffs.",
+    Vendor: "Suggested: review marketplace inquiry prep, logistics requests, and credential-gated actions.",
+    Admin: "Suggested: review queues, credential status, audit posture, and blocked external actions.",
+    Trainer: "Suggested: review learning, literacy, workforce, and enrollment preparation lanes.",
+    "Agriculture Expert": "Suggested: review crop support, field visit planning, AgriTrade, and source-backed guidance.",
+    "Clinic Staff": "Suggested: review telehealth intake, mobile clinic, pharmacy prep, and chronic care summaries."
+  };
+  return `
+    <section class="nexus-role-low-bandwidth-panel" data-nexus-role-aware-view="true" data-nexus-low-bandwidth-control="true">
+      <div>
+        <label>
+          <span>${escapeHtml(translateText("Role view"))}</span>
+          <select data-nexus-role-selector aria-label="${escapeHtml(translateText("Select role view"))}">
+            ${NEXUS_UX_ROLES.map(role => `<option value="${escapeHtml(role)}" ${role === nexusUserExperienceRole ? "selected" : ""}>${escapeHtml(translateText(role))}</option>`).join("")}
+          </select>
+        </label>
+        <small>${escapeHtml(translateText("This filters suggestions only. It is not authentication or authorization."))}</small>
+        <p class="nexus-role-suggestion" data-nexus-role-suggestion>${escapeHtml(translateText(roleSuggestions[nexusUserExperienceRole] || roleSuggestions["Standard User"]))}</p>
+      </div>
+      <div>
+        <label>
+          <span>${escapeHtml(translateText("Language preference"))}</span>
+          <select data-nexus-language-preference aria-label="${escapeHtml(translateText("Language preference"))}">
+            ${["English", "Spanish", "French", "Arabic", "Portuguese", "Swahili"].map(language => `<option value="${escapeHtml(language)}" ${language === (nexusLanguagePreference || "English") ? "selected" : ""}>${escapeHtml(translateText(language))}</option>`).join("")}
+          </select>
+        </label>
+        <small>${escapeHtml(translateText(nexusLanguagePreference ? "Language preference captured for local UI guidance." : "Choose a display preference. Full translation depends on supported app content."))}</small>
+      </div>
+      <button type="button" data-nexus-low-bandwidth-toggle aria-pressed="${nexusLowBandwidthMode ? "true" : "false"}">
+        ${escapeHtml(translateText(nexusLowBandwidthMode ? "Low-bandwidth mode on" : "Use low-bandwidth mode"))}
+      </button>
+    </section>
+  `;
+}
+
+function renderNexusCommandCenterStatusSummary() {
+  const providerMissing = nexusRealProviderTestingStatus?.providers?.filter?.(provider => provider.testabilityState === "missing_config").length || 0;
+  const queued = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "queued" || packet.offlineEligible).length;
+  const liveReady = nexusKnowledgeStatus?.ready || nexusKnowledgeStatus?.configured || false;
+  return `
+    <section class="nexus-command-status-summary" data-nexus-provider-status-summary="true" data-nexus-queue-fallback-summary="true" data-nexus-live-knowledge-status-summary="true" data-nexus-production-safety-status="true">
+      <article>${renderNexusStatusBadge(providerMissing ? "missing_config" : "ready")}<strong>${escapeHtml(translateText("Provider status"))}</strong><span>${escapeHtml(translateText(providerMissing ? `${providerMissing} provider area(s) need credentials.` : "Provider gates are visible and safe."))}</span></article>
+      <article>${renderNexusStatusBadge(queued ? "queued" : "prepared")}<strong>${escapeHtml(translateText("Queue / fallback"))}</strong><span>${escapeHtml(translateText(queued ? `${queued} local item(s) can be reviewed.` : "No queued local item yet."))}</span></article>
+      <article>${renderNexusStatusBadge(liveReady ? "research_complete" : "credential_required")}<strong>${escapeHtml(translateText("Live Knowledge"))}</strong><span>${escapeHtml(translateText(liveReady ? "Configured source retrieval can show citations." : "Missing credentials are shown by env name only."))}</span></article>
+      <article>${renderNexusStatusBadge("not_executed")}<strong>${escapeHtml(translateText("Production safety"))}</strong><span>${escapeHtml(translateText("No hidden execution. Serious actions require consent and confirmation."))}</span></article>
+    </section>
+  `;
+}
+
 function renderNexusSuggestedActions() {
   return `
     <section class="nexus-suggested-actions" data-nexus-suggested-actions="true" aria-label="${escapeHtml(translateText("What Nexus can help with today"))}">
@@ -25332,6 +25757,89 @@ function buildNexusCapabilityOverviewResult(command = "") {
 function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
+  const normalizedLower = normalized.toLowerCase();
+  if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
+    closeNexusFunctionWindow({ command: "What can Nexus do?" });
+    nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
+  const requestedHomeModeId = detectNexusHomeModePanelId(normalized);
+  if (requestedHomeModeId && nexusWorkflowDefinition(requestedHomeModeId, normalized)) {
+    return openNexusWorkflow(requestedHomeModeId, { command: normalized, source: "home-mode-command" });
+  }
+  if (/\b(show recent workflows|recent workflows|continue where you left off)\b/i.test(normalized)) {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_recent_workflows_visible",
+      mode: "Recent workflows",
+      message: nexusRecentWorkflows.length ? "Recent workflows are visible in the Command Center." : "No recent workflows yet. Choose a service to begin.",
+      preparedCards: nexusRecentWorkflows.map(item => ({ type: "recent_workflow", title: item.title, status: item.status, localOnly: true })),
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (/\b(continue mobile clinic|continue pharmacy|continue crop|continue agriculture|continue telehealth|continue logistics|continue training|continue live knowledge|continue workforce)\b/i.test(normalized)) {
+    const match = nexusRecentWorkflows.find(item => normalizedLower.includes(item.title.toLowerCase().split(" ")[0]) || normalizedLower.includes(item.id.replace(/-/g, " "))) || nexusRecentWorkflows[0];
+    if (match) return openNexusWorkflow(match.id, { command: normalized, source: "continue-recent-command" });
+  }
+  if (/\b(start guided|guided intake|guided mode)\b/i.test(normalized)) {
+    const workflowId = normalizeNexusWorkflowId("", normalized) || detectNexusHomeModePanelId(normalized) || nexusActiveWorkflowState?.id || "mobile-clinic";
+    return openNexusWorkflow(workflowId, { command: normalized, source: "guided-command", guidedMode: true });
+  }
+  if (/\b(use low bandwidth mode|turn on low bandwidth|low-bandwidth mode)\b/i.test(normalized)) {
+    nexusLowBandwidthMode = !/\b(turn off|disable|standard visual)\b/i.test(normalized);
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_low_bandwidth_preference_updated",
+      mode: "Low-bandwidth mode",
+      message: nexusLowBandwidthMode ? "Low-bandwidth mode is on. Nexus will emphasize compact text-first workflows." : "Low-bandwidth mode is off.",
+      preparedCards: [{ type: "low_bandwidth_preference", title: "Low-bandwidth mode", status: nexusLowBandwidthMode ? "on" : "off", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  const roleCommand = normalized.match(/\bset role to (standard user|provider|vendor|admin|trainer|agriculture expert|clinic staff)\b/i);
+  if (roleCommand) {
+    const requested = roleCommand[1].replace(/\b\w/g, letter => letter.toUpperCase());
+    nexusUserExperienceRole = NEXUS_UX_ROLES.find(role => role.toLowerCase() === requested.toLowerCase()) || "Standard User";
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_role_view_updated",
+      mode: "Role-aware view",
+      message: `${nexusUserExperienceRole} view selected. This is a UX filter, not authentication.`,
+      preparedCards: [{ type: "role_aware_view", title: nexusUserExperienceRole, status: "selected", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (/\b(close this window|close window)\b/i.test(normalized)) return closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  if (/\b(minimize this window|minimize window)\b/i.test(normalized)) return minimizeNexusFunctionWindow();
+  if (/\b(restore last window|restore window)\b/i.test(normalized)) return restoreNexusFunctionWindow();
+  if (/\b(go back|back to home)\b/i.test(normalized)) return closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  if (/\b(show action receipt|what did nexus do|what did you do)\b/i.test(normalized)) {
+    const packet = nexusPreparedPackets[0] || null;
+    const entry = nexusActionHistory[0] || null;
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_action_receipt_visible",
+      mode: "Action receipt",
+      message: entry?.resultMessage || "No action receipt yet. Prepare or queue a packet to create one.",
+      preparedCards: [{ type: "nexus_action_receipt", title: packet?.workflowLabel || "Action receipt", status: entry?.outcomeStatus || "none", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
   if (/\b(clear local sensitive data|clear sensitive data|reset local nexus data)\b/i.test(normalized)) {
     clearNexusSensitiveLocalData();
     return true;
@@ -26056,6 +26564,7 @@ function handleNexusPlatformDashboardClick(event) {
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
+  document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
   // Review farm, crop, route, and field support options.
   // Review health access options and preparation steps.
@@ -26068,6 +26577,10 @@ function renderUserWorkspace() {
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
+        ${renderNexusMajorLaunchButtons()}
+        ${renderNexusRecentWorkflowsPanel()}
+        ${renderNexusRoleAwareControls()}
+        ${renderNexusCommandCenterStatusSummary()}
         ${renderNexusActiveWorkflowWorkspace()}
         ${renderNexusCoreFeatureCards()}
         ${renderNexusModeLauncher()}
@@ -41174,7 +41687,7 @@ function handleNexusStandardUserHomeClick(event) {
   }
   const submit = eventTarget?.closest?.("[data-nexus-command-center-submit]");
   if (submit) {
-    const input = $("#nexusCommandCenterInput");
+    const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "What can Nexus do?";
     if (launchCapabilityFromAskNexus(command)) {
       event.preventDefault();
@@ -41350,6 +41863,119 @@ function nexusHandleStandardUserHomeShortcut(event) {
   return handleNexusStandardUserHomeClick(event);
 }
 
+function handleNexusUserExperienceMaximizationClick(event) {
+  const target = event.target;
+  const recent = target?.closest?.("[data-nexus-recent-workflow]");
+  if (recent) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = recent.dataset.nexusRecentWorkflow || recent.dataset.nexusModeShortcut || "";
+    return openNexusWorkflow(id, { command: recent.dataset.nexusCommand || `Continue ${id}`, source: "recent-workflow" });
+  }
+  const lowBandwidth = target?.closest?.("[data-nexus-low-bandwidth-toggle]");
+  if (lowBandwidth) {
+    event.preventDefault();
+    event.stopPropagation();
+    nexusLowBandwidthMode = !nexusLowBandwidthMode;
+    document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_low_bandwidth_preference_updated",
+      mode: "Nexus Command Center",
+      message: nexusLowBandwidthMode ? "Low-bandwidth mode is on. Nexus will emphasize text-first workflows and local fallback status." : "Low-bandwidth mode is off. Standard visual mode is restored.",
+      preparedCards: [{ type: "low_bandwidth_preference", title: "Low-bandwidth mode", status: nexusLowBandwidthMode ? "on" : "off", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  const guidedMode = target?.closest?.("[data-nexus-guided-mode]");
+  if (guidedMode) {
+    event.preventDefault();
+    event.stopPropagation();
+    nexusActiveWorkflowState = {
+      ...(nexusActiveWorkflowState || {}),
+      guidedMode: guidedMode.dataset.nexusGuidedMode === "guided",
+      id: guidedMode.dataset.workflowId || nexusActiveWorkflowState?.id || ""
+    };
+    saveNexusRuntimeMemory();
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
+    return true;
+  }
+  const guidedSave = target?.closest?.("[data-nexus-guided-save]");
+  if (guidedSave) {
+    event.preventDefault();
+    event.stopPropagation();
+    const workflowId = guidedSave.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    const input = document.querySelector("[data-nexus-guided-answer]");
+    if (workflowId && input) {
+      nexusGuidedWorkflowAnswers[workflowId] = {
+        ...(nexusGuidedWorkflowAnswers[workflowId] || {}),
+        [input.dataset.nexusGuidedAnswer || "answer"]: input.value || ""
+      };
+      recordNexusRecentWorkflow(workflowId, { status: "draft", summary: "Guided intake answer saved locally." });
+      saveNexusRuntimeMemory();
+      renderUserWorkspace();
+      scheduleNexusActiveWorkflowFocus({ instant: true });
+    }
+    return true;
+  }
+  const guidedBack = target?.closest?.("[data-nexus-guided-back]");
+  if (guidedBack) {
+    event.preventDefault();
+    event.stopPropagation();
+    const workflowId = guidedBack.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    const answers = nexusGuidedWorkflowAnswers[workflowId] || {};
+    const keys = Object.keys(answers);
+    if (keys.length) delete answers[keys[keys.length - 1]];
+    nexusGuidedWorkflowAnswers[workflowId] = answers;
+    saveNexusRuntimeMemory();
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
+    return true;
+  }
+  return false;
+}
+
+function handleNexusUserExperienceMaximizationChange(event) {
+  const role = event.target?.closest?.("[data-nexus-role-selector]");
+  if (role) {
+    nexusUserExperienceRole = NEXUS_UX_ROLES.includes(role.value) ? role.value : "Standard User";
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_role_view_updated",
+      mode: "Nexus Command Center",
+      message: `${nexusUserExperienceRole} view selected. This filters suggestions only and does not change authentication or safety gates.`,
+      preparedCards: [{ type: "role_aware_view", title: nexusUserExperienceRole, status: "ux filter active", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  const language = event.target?.closest?.("[data-nexus-language-preference]");
+  if (language) {
+    nexusLanguagePreference = language.value || "English";
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_language_preference_captured",
+      mode: "Nexus Command Center",
+      message: `${nexusLanguagePreference} preference captured for this browser. Nexus will not claim full translation unless supported content is available.`,
+      preparedCards: [{ type: "language_preference", title: nexusLanguagePreference, status: "captured locally", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
 if (typeof globalThis !== "undefined") {
   globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
 }
@@ -41460,6 +42086,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (handleNexusUserExperienceMaximizationClick(event)) return;
     if (await handleNexusKnowledgeRailClick(event)) return;
     if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
@@ -41475,7 +42102,7 @@ function bindStatic() {
     if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
     if (earlyCommandCenterSubmit) {
-      const input = $("#nexusCommandCenterInput");
+      const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
       if (launchCapabilityFromAskNexus(command)) {
         event.preventDefault();
@@ -41640,7 +42267,7 @@ function bindStatic() {
     if (commandCenterSubmit) {
       event.preventDefault();
       event.stopPropagation();
-      const input = $("#nexusCommandCenterInput");
+      const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
@@ -42399,6 +43026,9 @@ function bindStatic() {
       runWorkflowVoiceResponse();
     }
   });
+  document.addEventListener("change", event => {
+    handleNexusUserExperienceMaximizationChange(event);
+  }, true);
 
   window.addEventListener("hashchange", () => {
     goSection(sectionFromHash(), { updateHash: false, instant: true });

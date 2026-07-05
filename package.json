@@ -72,6 +72,7 @@
     "qa:nexus-function-window-system": "node scripts/nexus-function-window-system-qa.js",
     "qa:nexus-workflow-landing-windows": "node scripts/nexus-workflow-landing-windows-qa.js",
     "qa:nexus-app-window-experience": "node scripts/nexus-app-window-experience-qa.js",
+    "qa:nexus-user-experience-maximization": "node scripts/nexus-user-experience-maximization-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
     "qa:nexus-global-review-queue-audit": "node scripts/nexus-global-review-queue-audit-qa.js",

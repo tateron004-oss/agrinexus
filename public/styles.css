@@ -11028,6 +11028,283 @@ body.user-mode .nexus-function-window-dock span {
   font-size: 12px;
 }
 
+body.user-mode .nexus-major-launches,
+body.user-mode .nexus-recent-workflows,
+body.user-mode .nexus-role-low-bandwidth-panel,
+body.user-mode .nexus-command-status-summary,
+body.user-mode .nexus-window-helper,
+body.user-mode .nexus-guided-intake,
+body.user-mode .nexus-confirmation-summary,
+body.user-mode .nexus-action-receipt {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, .22);
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, .66), rgba(2, 6, 23, .42)),
+    radial-gradient(circle at 10% 0%, rgba(34, 211, 238, .12), transparent 34%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-major-launch-grid,
+body.user-mode .nexus-recent-workflow-grid,
+body.user-mode .nexus-command-status-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-major-launch-grid button,
+body.user-mode .nexus-recent-workflow-grid button,
+body.user-mode .nexus-role-low-bandwidth-panel button,
+body.user-mode .nexus-confirmation-summary-actions button,
+body.user-mode .nexus-guided-actions button,
+body.user-mode .nexus-intake-mode-toggle button {
+  min-height: 44px;
+  border: 1px solid rgba(103, 232, 249, .28);
+  border-radius: 16px;
+  color: rgba(240, 249, 255, .96);
+  background: linear-gradient(135deg, rgba(34, 211, 238, .14), rgba(139, 92, 246, .12));
+  box-shadow: 0 0 18px rgba(34, 211, 238, .12), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-major-launch-grid button,
+body.user-mode .nexus-recent-workflow-grid button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+body.user-mode .nexus-major-launch-grid strong,
+body.user-mode .nexus-recent-workflow-grid span,
+body.user-mode .nexus-command-status-summary strong,
+body.user-mode .nexus-window-helper strong,
+body.user-mode .nexus-guided-intake strong,
+body.user-mode .nexus-confirmation-summary strong,
+body.user-mode .nexus-action-receipt strong {
+  color: rgba(255, 255, 255, .97);
+}
+
+body.user-mode .nexus-major-launch-grid span,
+body.user-mode .nexus-recent-workflow-grid small,
+body.user-mode .nexus-command-status-summary span,
+body.user-mode .nexus-window-helper p,
+body.user-mode .nexus-guided-intake p,
+body.user-mode .nexus-confirmation-summary li,
+body.user-mode .nexus-action-receipt li,
+body.user-mode .nexus-action-receipt p {
+  color: rgba(226, 232, 240, .88);
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-role-low-bandwidth-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+body.user-mode .nexus-role-low-bandwidth-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+body.user-mode .nexus-role-low-bandwidth-panel select {
+  min-height: 44px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 14px;
+  color: #f8fbff;
+  background: rgba(2, 6, 23, .72);
+}
+
+body.user-mode .nexus-role-suggestion {
+  margin: 0.35rem 0 0;
+  color: rgba(226, 232, 240, .88);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-app-window-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .38);
+}
+
+body.user-mode .nexus-app-window-switcher button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 999px;
+  color: rgba(226, 232, 240, .9);
+  background: rgba(15, 23, 42, .66);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+body.user-mode .nexus-app-window-switcher button.active,
+body.user-mode .nexus-app-window-switcher button:hover {
+  color: #f8fbff;
+  border-color: rgba(34, 211, 238, .42);
+  background: rgba(14, 165, 233, .2);
+  box-shadow: 0 0 16px rgba(34, 211, 238, .14);
+}
+
+body.user-mode .nexus-app-window-command-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(34, 211, 238, .2);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, .48);
+}
+
+body.user-mode .nexus-app-window-command-row label {
+  display: grid;
+  gap: 6px;
+  color: rgba(226, 232, 240, .9);
+  font-weight: 800;
+}
+
+body.user-mode .nexus-app-window-command-row input {
+  min-height: 42px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 14px;
+  color: #f8fbff;
+  background: rgba(2, 6, 23, .72);
+}
+
+body.user-mode .nexus-app-window-command-row button {
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+body.user-mode .nexus-ux-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(125, 211, 252, .28);
+  border-radius: 999px;
+  color: #ecfeff;
+  background: rgba(14, 165, 233, .14);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+body.user-mode .nexus-ux-status-blocked-missing-credentials,
+body.user-mode .nexus-ux-status-needs-confirmation,
+body.user-mode .nexus-ux-status-needs-consent {
+  border-color: rgba(251, 191, 36, .36);
+  color: #fef3c7;
+  background: rgba(245, 158, 11, .14);
+}
+
+body.user-mode .nexus-ux-status-queued-locally,
+body.user-mode .nexus-ux-status-prepared,
+body.user-mode .nexus-ux-status-ready,
+body.user-mode .nexus-ux-status-research-complete {
+  border-color: rgba(52, 211, 153, .34);
+  color: #d1fae5;
+  background: rgba(16, 185, 129, .14);
+}
+
+body.user-mode .nexus-intake-mode-toggle,
+body.user-mode .nexus-guided-actions,
+body.user-mode .nexus-confirmation-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+body.user-mode .nexus-intake-mode-toggle button[aria-pressed="true"] {
+  border-color: rgba(34, 211, 238, .55);
+  box-shadow: 0 0 24px rgba(34, 211, 238, .22);
+}
+
+body.user-mode .nexus-guided-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+body.user-mode .nexus-guided-header div {
+  display: grid;
+  gap: 4px;
+}
+
+body.user-mode .nexus-guided-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .8);
+}
+
+body.user-mode .nexus-guided-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6);
+}
+
+body.user-mode .nexus-smart-empty-state {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px dashed rgba(125, 211, 252, .28);
+  border-radius: 14px;
+  color: rgba(226, 232, 240, .88);
+  background: rgba(2, 6, 23, .34);
+}
+
+body.user-mode .nexus-confirmation-summary ul,
+body.user-mode .nexus-action-receipt ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+body.user-mode.nexus-low-bandwidth-mode .nexus-command-neural-wave,
+body.user-mode.nexus-low-bandwidth-mode .nexus-command-center-hero::before,
+body.user-mode.nexus-low-bandwidth-mode .nexus-command-center-hero::after {
+  display: none;
+}
+
+body.user-mode.nexus-low-bandwidth-mode .nexus-active-workflow,
+body.user-mode.nexus-low-bandwidth-mode .nexus-command-center-hero,
+body.user-mode.nexus-low-bandwidth-mode .nexus-major-launches,
+body.user-mode.nexus-low-bandwidth-mode .nexus-recent-workflows {
+  background: rgba(2, 6, 23, .88) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 780px) {
+  body.user-mode .nexus-major-launch-grid,
+  body.user-mode .nexus-recent-workflow-grid,
+  body.user-mode .nexus-command-status-summary,
+  body.user-mode .nexus-role-low-bandwidth-panel,
+  body.user-mode .nexus-app-window-command-row {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-guided-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.user-mode .nexus-active-workflow-modal {
+    width: calc(100vw - 18px);
+    max-height: calc(100vh - 18px);
+  }
+}
+
 body.user-mode .nexus-active-workflow.nexus-workflow-focus-ring {
   box-shadow:
     0 0 0 1px rgba(125, 211, 252, .42),
