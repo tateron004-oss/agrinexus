@@ -268,8 +268,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-380";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v354";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-381";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v355";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22711,6 +22711,8 @@ let nexusAgenticCommandLocalMemory = {
 };
 const NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY = "nexusChronicHealthPredictiveModelerState";
 let nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
+const NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY = "nexusAgriculturePredictiveIntelligenceModelerState";
+let nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
 const NEXUS_DEMO_DATA_STORAGE_KEY = "nexusDemoDataSandboxState";
 const NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY = "nexusDemoDataSandboxVisible";
 let nexusDemoDataVisible = localStorage.getItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY) !== "false";
@@ -23689,6 +23691,7 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusAgenticCommandMissions", JSON.stringify(nexusAgenticCommandMissions.slice(0, 25)));
     localStorage.setItem("nexusAgenticCommandLocalMemory", JSON.stringify(nexusAgenticCommandLocalMemory || {}));
     localStorage.setItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusChronicPredictiveModelerState || buildEmptyNexusChronicPredictiveModelerState()));
+    localStorage.setItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusAgriculturePredictiveModelerState || buildEmptyNexusAgriculturePredictiveModelerState()));
     localStorage.setItem("nexusUserExperienceRole", nexusUserExperienceRole);
     localStorage.setItem("nexusLowBandwidthMode", nexusLowBandwidthMode ? "true" : "false");
     localStorage.setItem("nexusLanguagePreference", nexusLanguagePreference || "");
@@ -23714,6 +23717,10 @@ function restoreNexusRuntimeMemory() {
     nexusChronicPredictiveModelerState = {
       ...buildEmptyNexusChronicPredictiveModelerState(),
       ...(JSON.parse(localStorage.getItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY) || "{}") || {})
+    };
+    nexusAgriculturePredictiveModelerState = {
+      ...buildEmptyNexusAgriculturePredictiveModelerState(),
+      ...(JSON.parse(localStorage.getItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY) || "{}") || {})
     };
     nexusUserExperienceRole = localStorage.getItem("nexusUserExperienceRole") || "Standard User";
     nexusLowBandwidthMode = localStorage.getItem("nexusLowBandwidthMode") === "true";
@@ -23746,6 +23753,7 @@ function restoreNexusRuntimeMemory() {
       receipts: []
     };
     nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
+    nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
     nexusGuidedWorkflowAnswers = {};
   }
 }
@@ -23777,6 +23785,7 @@ function clearNexusSensitiveLocalData() {
     receipts: []
   };
   nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
+  nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
   nexusGuidedWorkflowAnswers = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
@@ -23789,6 +23798,7 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusAgenticCommandMissions");
     localStorage.removeItem("nexusAgenticCommandLocalMemory");
     localStorage.removeItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY);
+    localStorage.removeItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY);
     localStorage.removeItem("nexusGuidedWorkflowAnswers");
   } catch {}
   nexusAgenticBrainLastResult = {
@@ -26905,6 +26915,7 @@ function renderNexusAgenticMissionWorkspace() {
         </div>
       ` : ""}
       ${(mission.submode === "chronic_health_predictive_modeler" || nexusChronicPredictiveModelerState?.riskSignals?.length) ? renderNexusChronicPredictiveModelerPanel() : ""}
+      ${(mission.submode === "agriculture_predictive_intelligence_modeler" || nexusAgriculturePredictiveModelerState?.riskSignals?.length) ? renderNexusAgriculturePredictiveModelerPanel() : ""}
       <div class="nexus-mission-actions">
         <button type="button" class="primary" data-nexus-agentic-runtime-action="continue">${escapeHtml(translateText("Continue mission"))}</button>
         <button type="button" data-nexus-agentic-runtime-action="confirm">${escapeHtml(translateText("Confirm local step"))}</button>
@@ -27968,6 +27979,708 @@ function renderNexusChronicPredictiveModelerPanel() {
   `;
 }
 
+function buildEmptyNexusAgriculturePredictiveModelerState() {
+  const now = new Date().toISOString();
+  return {
+    id: `nexus-agriculture-predictive-${Date.now()}`,
+    userId: "standard-user-local",
+    createdAt: now,
+    updatedAt: now,
+    source: "nexus_agriculture_predictive_intelligence_modeler",
+    localOnly: true,
+    sandbox: false,
+    expertEvaluationMode: true,
+    farmProfile: {
+      farmName: "",
+      farmerName: "",
+      location: "",
+      fieldId: "",
+      acreage: "",
+      cropType: "",
+      livestockType: "",
+      season: "",
+      plantingDate: "",
+      expectedHarvestDate: ""
+    },
+    observations: {
+      cropHealth: [],
+      pestDisease: [],
+      waterIrrigation: [],
+      soilFertility: [],
+      yield: [],
+      storage: [],
+      market: [],
+      foodSecurity: [],
+      notes: []
+    },
+    trends: {
+      cropHealth: {},
+      pestDisease: {},
+      waterStress: {},
+      soilFertility: {},
+      yieldRisk: {},
+      storageLoss: {},
+      marketReadiness: {},
+      foodSecurity: {}
+    },
+    riskSignals: [],
+    trajectory: [],
+    scenarioSimulations: [],
+    missingData: [],
+    confidence: {},
+    advisorSummary: {},
+    reasoningTrace: [],
+    receipts: []
+  };
+}
+
+function nexusAgricultureRiskLevels() {
+  return ["stable", "watch", "elevated", "high", "urgent_review", "insufficient_data"];
+}
+
+function nexusAgricultureTrajectoryValues() {
+  return ["improving", "stable", "worsening", "variable", "unknown"];
+}
+
+function nexusAgricultureConfidenceValues() {
+  return ["high", "moderate", "low", "insufficient_data"];
+}
+
+function isNexusAgriculturePredictiveModelerCommand(command = "") {
+  return /\b(maize|tomato|cassava|rice|crop|field|farm|farmer|agriculture|agronomist|leaves|leaf|yellowing|wilting|stunted|spots|lesions|pests?|cassava leaves|mold|stored|storage|rainfall|irrigation|drought|soil test|soil|fertility|hectares?|acreage|yield risk|field risk trend|crop risk pattern|agriculture risk|farm prediction|compare this week|simulate .*rainfall|simulate .*irrigation|agriculture reasoning trace|agriculture expert checklist|agriculture predictive receipts|market-ready|prepare .*sale|food-security risk)\b/i.test(String(command || ""));
+}
+
+function nexusAgricultureTimestampFromCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  const now = new Date();
+  if (/\byesterday\b/.test(text)) return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  if (/\blast week\b/.test(text)) return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  if (/\blast month\b/.test(text)) return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  return now.toISOString();
+}
+
+function nexusAgricultureDetectedCrop(command = "") {
+  const text = String(command || "").toLowerCase();
+  return ["maize", "tomato", "cassava", "rice", "beans", "sorghum", "wheat", "potato"].find(crop => text.includes(crop)) || "";
+}
+
+function nexusAgricultureDetectedCommodity(command = "") {
+  return nexusAgricultureDetectedCrop(command) || (/\bstored\b|\bstorage\b|\bsale\b|\bmarket\b/i.test(command) ? "commodity not specified" : "");
+}
+
+function nexusAgricultureObservation(idSeed, type, command, fields = {}) {
+  return {
+    id: `nexus-agriculture-observation-${type}-${idSeed}-${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    rawInput: command,
+    parsedValue: fields.parsedValue || "",
+    cropType: fields.cropType || nexusAgricultureDetectedCrop(command),
+    commodity: fields.commodity || nexusAgricultureDetectedCommodity(command),
+    location: fields.location || "",
+    fieldId: fields.fieldId || "",
+    acreage: fields.acreage || "",
+    quantity: fields.quantity || "",
+    unit: fields.unit || "",
+    growthStage: fields.growthStage || (/seedling|vegetative|flowering|fruiting|harvest/i.exec(command)?.[0] || ""),
+    symptoms: fields.symptoms || [],
+    pestSigns: fields.pestSigns || [],
+    diseaseSigns: fields.diseaseSigns || [],
+    rainfall: fields.rainfall || "",
+    irrigation: fields.irrigation || "",
+    soilMoisture: fields.soilMoisture || "",
+    fertilizer: fields.fertilizer || "",
+    storageMethod: fields.storageMethod || "",
+    marketDetails: fields.marketDetails || {},
+    timestamp: fields.timestamp || nexusAgricultureTimestampFromCommand(command),
+    source: "natural_command",
+    localOnly: true,
+    confidence: fields.confidence || "moderate",
+    notes: fields.notes || ""
+  };
+}
+
+function parseNexusAgriculturePredictiveObservations(command = "") {
+  const text = String(command || "");
+  const lower = text.toLowerCase();
+  const observations = [];
+  let idSeed = Date.now();
+  const cropType = nexusAgricultureDetectedCrop(text);
+  const acreageMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(hectares?|ha|acres?)\b/i);
+  const quantityMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(bags?|tons?|kg|kilograms?|crates?)\b/i);
+
+  const symptoms = [
+    ["yellowing", /yellowing|yellow leaves/i],
+    ["wilting", /wilting|wilted/i],
+    ["stunted growth", /stunted/i],
+    ["spots/lesions", /spots?|lesions?/i],
+    ["leaf damage", /leaf damage|damaging .*leaves/i],
+    ["mold/spoilage", /mold|spoilage|rot/i]
+  ].filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
+  if (symptoms.length || /\bcrop risk|field risk|crop health\b/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "crop_health", text, {
+      parsedValue: symptoms.join(", ") || "crop health risk query",
+      cropType,
+      symptoms,
+      confidence: symptoms.length ? "moderate" : "low"
+    }));
+  }
+
+  const pestSigns = [
+    ["pest damage", /pests?|insects?|bugs?/i],
+    ["leaf damage", /leaf damage|damaging .*leaves/i],
+    ["spread concern", /spread|spreading|outbreak/i]
+  ].filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
+  const diseaseSigns = [
+    ["spots/lesions", /spots?|lesions?/i],
+    ["mold/fungal sign", /mold|fungal|mildew|rot/i],
+    ["wilting", /wilting/i]
+  ].filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
+  if (pestSigns.length || diseaseSigns.length) {
+    observations.push(nexusAgricultureObservation(idSeed++, "pest_disease", text, {
+      parsedValue: [...pestSigns, ...diseaseSigns].join(", "),
+      cropType,
+      pestSigns,
+      diseaseSigns,
+      confidence: "moderate"
+    }));
+  }
+
+  if (/\brainfall|irrigation|drought|water|dry|flood|drainage|heat|wilting/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "water_irrigation", text, {
+      parsedValue: /low.*rainfall|rainfall.*low/i.test(text) ? "low rainfall" : /without irrigation|irrigation gap/i.test(text) ? "irrigation gap" : /flood|drainage/i.test(text) ? "flood/drainage concern" : "water context",
+      cropType,
+      rainfall: /low.*rainfall|rainfall.*low|three days|two weeks/i.test(text) ? "low or missing rainfall reported" : "",
+      irrigation: /without irrigation|irrigation gap|irrigation resumes/i.test(text) ? text : "",
+      soilMoisture: /dry|moisture/i.test(text) ? text : "",
+      symptoms: /wilting/i.test(text) ? ["wilting"] : [],
+      confidence: "moderate"
+    }));
+  }
+
+  if (/\bsoil|fertility|fertilizer|ph\b|nutrient|erosion|salinity|compaction|rotation/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "soil_fertility", text, {
+      parsedValue: /soil test.*missing|missing.*soil test/i.test(text) ? "soil test missing" : "soil/fertility context",
+      cropType,
+      fertilizer: /fertilizer/i.test(text) ? text : "",
+      notes: text,
+      confidence: /soil test.*missing|missing.*soil test/i.test(text) ? "high" : "moderate"
+    }));
+  }
+
+  if (/\byield|planted|planting|hectares?|acres?|harvest|plant population/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "yield", text, {
+      parsedValue: acreageMatch ? `planted ${acreageMatch[1]} ${acreageMatch[2]}` : "yield risk query",
+      cropType,
+      acreage: acreageMatch ? `${acreageMatch[1]} ${acreageMatch[2]}` : "",
+      unit: acreageMatch?.[2] || "",
+      confidence: acreageMatch ? "moderate" : "low"
+    }));
+  }
+
+  if (/\bstored|storage|mold|moisture|spoilage|ventilation|packaging|post[- ]?harvest/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "storage", text, {
+      parsedValue: /mold/i.test(text) ? "mold on stored commodity" : "storage/post-harvest context",
+      cropType,
+      commodity: nexusAgricultureDetectedCommodity(text),
+      quantity: quantityMatch ? `${quantityMatch[1]} ${quantityMatch[2]}` : "",
+      storageMethod: /stored/i.test(text) ? "stored commodity" : "",
+      symptoms: /mold|spoilage|rot/i.test(text) ? ["mold/spoilage"] : [],
+      confidence: "moderate"
+    }));
+  }
+
+  if (/\bmarket-ready|market ready|prepare .*sale|for sale|buyer|quality grade|price|transport|packaging|delivery|trade\b/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "market", text, {
+      parsedValue: /market-ready|market ready/i.test(text) ? "market readiness question" : "sale preparation question",
+      cropType,
+      commodity: nexusAgricultureDetectedCommodity(text),
+      quantity: quantityMatch ? `${quantityMatch[1]} ${quantityMatch[2]}` : "",
+      marketDetails: {
+        buyer: /\bbuyer\b/i.test(text) ? "mentioned" : "",
+        transport: /\btransport\b/i.test(text) ? "mentioned" : "",
+        price: /\bprice\b/i.test(text) ? "mentioned" : "",
+        packaging: /\bpackaging\b/i.test(text) ? "mentioned" : ""
+      },
+      confidence: "moderate"
+    }));
+  }
+
+  if (/\bfood-security|food security|community|stock|crop failure|price changes?|transport barriers?|vulnerable|household\b/i.test(text)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "food_security", text, {
+      parsedValue: "food-security risk assessment",
+      cropType,
+      commodity: nexusAgricultureDetectedCommodity(text),
+      notes: text,
+      confidence: "moderate"
+    }));
+  }
+
+  if (!observations.length && /\bshow|predict|driving|missing|compare|simulate|summary|trace|checklist|receipts\b/i.test(lower)) {
+    observations.push(nexusAgricultureObservation(idSeed++, "query", text, {
+      parsedValue: "agriculture predictive modeler query",
+      confidence: "high"
+    }));
+  }
+  return observations;
+}
+
+function nexusAgricultureSignal(domain, signalName, riskLevel, trajectory, severity, confidenceLabel, dataQuality, explanation, contributingFactors = [], missingData = [], recommendedReview = "", suggestedNextQuestions = []) {
+  return {
+    id: `nexus-agriculture-risk-${domain}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    domain,
+    signalName,
+    riskLevel,
+    trajectory,
+    severity,
+    confidenceLabel,
+    dataQuality,
+    explanation,
+    contributingFactors,
+    missingData,
+    recommendedReview,
+    suggestedNextQuestions,
+    expertReviewChecklist: [
+      "Review farmer-reported observations and field context.",
+      "Confirm crop/commodity, location, time/season, and growth stage.",
+      "Review water, soil, pest/disease, storage, market, and food-security context.",
+      "Use agronomist, extension officer, or qualified program lead review before decisions."
+    ],
+    createdAt: new Date().toISOString()
+  };
+}
+
+function nexusAgricultureRiskRank(level = "insufficient_data") {
+  return { urgent_review: 5, high: 4, elevated: 3, watch: 2, stable: 1, insufficient_data: 0 }[level] ?? 0;
+}
+
+function evaluateNexusAgriculturePredictiveModel(state = nexusAgriculturePredictiveModelerState) {
+  const base = buildEmptyNexusAgriculturePredictiveModelerState();
+  const observations = { ...base.observations, ...(state.observations || {}) };
+  const missingData = new Set();
+  const riskSignals = [];
+  const cropHealth = observations.cropHealth || [];
+  const pestDisease = observations.pestDisease || [];
+  const water = observations.waterIrrigation || [];
+  const soil = observations.soilFertility || [];
+  const yieldObs = observations.yield || [];
+  const storage = observations.storage || [];
+  const market = observations.market || [];
+  const foodSecurity = observations.foodSecurity || [];
+  const latestCrop = [...cropHealth, ...pestDisease, ...water, ...yieldObs, ...market].map(item => item.cropType).filter(Boolean).slice(-1)[0] || state.farmProfile?.cropType || "unspecified crop";
+  const latestCommodity = [...storage, ...market, ...foodSecurity].map(item => item.commodity).filter(Boolean).slice(-1)[0] || latestCrop;
+
+  if (!latestCrop || latestCrop === "unspecified crop") missingData.add("Crop/commodity type");
+  if (!state.farmProfile?.location && !Object.values(observations).flat().some(item => item.location)) missingData.add("Field location");
+  if (!Object.values(observations).flat().some(item => item.growthStage)) missingData.add("Growth stage");
+  if (!water.length) missingData.add("Rainfall/irrigation context");
+  if (!soil.length) missingData.add("Soil test or fertility context");
+
+  if (cropHealth.length) {
+    const adverse = cropHealth.filter(item => (item.symptoms || []).length);
+    const urgent = cropHealth.some(item => /rapid|spread|whole field|urgent/i.test(item.rawInput || ""));
+    const riskLevel = urgent ? "urgent_review" : adverse.length >= 2 ? "high" : adverse.length ? "elevated" : "watch";
+    riskSignals.push(nexusAgricultureSignal("cropHealth", "Crop stress signal", riskLevel, adverse.length >= 2 ? "worsening" : "variable", riskLevel === "high" || riskLevel === "urgent_review" ? "high" : "moderate", missingData.size > 3 ? "low" : "moderate", missingData.size ? "partial farmer-reported field context" : "usable field context", "Crop health observations were checked for yellowing, wilting, lesions, stunting, pest/disease overlap, water context, and missing field data.", adverse.flatMap(item => item.symptoms || []).map(item => `Crop observation: ${item}`).slice(-6), Array.from(missingData), "Agronomist or extension review is recommended if stress persists, spreads, or crop value is high.", ["What field or village is affected?", "What growth stage is the crop in?", "How much of the field is affected?"]));
+  }
+
+  if (pestDisease.length) {
+    const factors = pestDisease.flatMap(item => [...(item.pestSigns || []), ...(item.diseaseSigns || [])]);
+    const riskLevel = factors.length >= 3 ? "high" : factors.length ? "elevated" : "watch";
+    missingData.add("Photo or field inspection evidence");
+    missingData.add("Affected area percentage");
+    riskSignals.push(nexusAgricultureSignal("pestDisease", "Pest/disease pressure", riskLevel, factors.length >= 3 ? "worsening" : "variable", riskLevel === "high" ? "high" : "moderate", "moderate", "partial pest/disease context", "Pest and disease pressure was estimated from reported pests, leaf/stem damage, mold/rot/spots/lesions, spread speed, and missing field inspection context.", [...new Set(factors)].map(item => `Pest/disease sign: ${item}`), Array.from(missingData), "Qualified field review is recommended before any pesticide, disease, or fertility decision.", ["What pest was seen?", "What percent of plants are affected?", "Is damage spreading?"]));
+  }
+
+  if (water.length) {
+    const lowRain = water.some(item => /low|without|gap|dry|two weeks|three days/i.test(`${item.parsedValue} ${item.rainfall} ${item.irrigation} ${item.rawInput}`));
+    const flood = water.some(item => /flood|drainage/i.test(item.rawInput || ""));
+    const riskLevel = flood ? "elevated" : lowRain && cropHealth.length ? "high" : lowRain ? "elevated" : "watch";
+    missingData.add("Soil moisture measurement");
+    riskSignals.push(nexusAgricultureSignal("waterStress", flood ? "Flood/drainage risk" : "Water stress signal", riskLevel, lowRain || flood ? "worsening" : "variable", riskLevel === "high" ? "high" : "moderate", "moderate", "partial water context", "Water stress was checked from reported rainfall, irrigation gaps, wilting, soil moisture notes, heat, drainage, and crop water demand context.", water.map(item => `Water context: ${item.parsedValue}`).slice(-5), Array.from(missingData), "Review irrigation, drainage, soil moisture, weather source, and crop stage before decisions.", ["When was the last rainfall?", "What is the irrigation schedule?", "Is soil moisture measured?"]));
+  }
+
+  if (soil.length || cropHealth.some(item => (item.symptoms || []).includes("yellowing"))) {
+    const yellowing = cropHealth.some(item => (item.symptoms || []).includes("yellowing"));
+    const missingSoilTest = soil.some(item => /soil test missing/i.test(item.parsedValue || item.rawInput || "")) || !soil.length;
+    const riskLevel = yellowing && missingSoilTest ? "elevated" : missingSoilTest ? "watch" : "stable";
+    if (missingSoilTest) missingData.add("Soil test");
+    missingData.add("pH/nutrient data");
+    riskSignals.push(nexusAgricultureSignal("soilFertility", "Soil/fertility gap", riskLevel, "unknown", riskLevel === "elevated" ? "moderate" : "low", missingSoilTest ? "low" : "moderate", "limited soil/fertility context", "Soil and fertility risk was checked from yellowing, fertilizer notes, missing soil tests, pH/nutrients, erosion, salinity, compaction, and rotation context.", [yellowing ? "Yellowing may overlap with fertility, water, pest, or disease stress" : "", missingSoilTest ? "Soil test missing" : ""].filter(Boolean), Array.from(missingData), "Review soil test and field conditions before fertilizer or soil amendment decisions.", ["Is there a recent soil test?", "What fertilizer was applied?", "Any erosion, salinity, or compaction?"]));
+  }
+
+  if (yieldObs.length || cropHealth.length || pestDisease.length || water.length) {
+    const stressOverlap = [cropHealth.length, pestDisease.length, water.length].filter(Boolean).length;
+    if (!yieldObs.some(item => item.acreage)) missingData.add("Acreage/hectares");
+    missingData.add("Planting date");
+    missingData.add("Prior yield");
+    const riskLevel = stressOverlap >= 3 ? "high" : stressOverlap >= 2 ? "elevated" : yieldObs.length ? "watch" : "insufficient_data";
+    riskSignals.push(nexusAgricultureSignal("yieldRisk", "Yield-risk signal", riskLevel, stressOverlap >= 2 ? "worsening" : "unknown", riskLevel === "high" ? "high" : "moderate", missingData.size > 4 ? "low" : "moderate", "partial yield context", "Yield risk considered crop stress, pest/disease pressure, water stress, planting area, growth stage, fertilizer, prior yield, and missing data.", [`Stress domain overlap: ${stressOverlap}`, ...yieldObs.map(item => item.parsedValue)].filter(Boolean), Array.from(missingData), "Review yield assumptions with an agronomist, cooperative, buyer, or food-security lead.", ["What acreage/hectares are planted?", "When was planting?", "What was prior yield?"]));
+  }
+
+  if (storage.length) {
+    const lossFactors = storage.flatMap(item => item.symptoms || []);
+    if (!storage.some(item => item.storageMethod)) missingData.add("Storage method");
+    missingData.add("Moisture level");
+    const riskLevel = lossFactors.length >= 2 ? "high" : lossFactors.length ? "elevated" : "watch";
+    riskSignals.push(nexusAgricultureSignal("storageLoss", "Storage-loss risk", riskLevel, lossFactors.length ? "worsening" : "unknown", riskLevel === "high" ? "high" : "moderate", "moderate", "partial storage context", "Storage-loss risk checked moisture, mold, spoilage, pests, ventilation, duration, packaging, commodity, and quantity.", lossFactors.map(item => `Storage sign: ${item}`), Array.from(missingData), "Review storage conditions before sale, transport, or household food-security decisions.", ["What is moisture level?", "How long has it been stored?", "What storage method is used?"]));
+  }
+
+  if (market.length) {
+    const latestMarket = market[market.length - 1];
+    const details = latestMarket.marketDetails || {};
+    ["buyer", "quality grade", "price expectation", "transport", "packaging", "delivery window", "payment terms"].forEach(item => {
+      if (!new RegExp(item.split(" ")[0], "i").test(`${latestMarket.rawInput} ${Object.values(details).join(" ")}`)) missingData.add(item);
+    });
+    const readyItems = ["quantity", "transport", "packaging"].filter(item => new RegExp(item, "i").test(`${latestMarket.rawInput} ${latestMarket.quantity} ${Object.values(details).join(" ")}`));
+    const riskLevel = missingData.has("buyer") ? "elevated" : readyItems.length >= 2 ? "stable" : "watch";
+    riskSignals.push(nexusAgricultureSignal("marketReadiness", "Market-readiness signal", riskLevel, readyItems.length >= 2 ? "improving" : "unknown", "moderate", "moderate", "partial market/trade context", "Market readiness checked commodity, quantity, grade, buyer, price, packaging, transport, documents, delivery window, and payment terms.", [`Commodity focus: ${latestMarket.commodity || latestCommodity}`, `Known readiness items: ${readyItems.join(", ") || "none yet"}`], Array.from(missingData), "Review buyer, transport, quality, price, and payment terms before any marketplace action.", ["Who is the buyer?", "What grade/quality is available?", "Is transport available?"]));
+  }
+
+  if (foodSecurity.length || (water.length && storage.length) || (pestDisease.length && /maize|rice|cassava/i.test(latestCrop))) {
+    missingData.add("Household/community stock levels");
+    missingData.add("Local price changes");
+    missingData.add("Community size/vulnerable groups");
+    const compounded = [water.length, pestDisease.length, storage.length, market.length].filter(Boolean).length;
+    const riskLevel = foodSecurity.length && compounded >= 2 ? "high" : compounded >= 2 ? "elevated" : foodSecurity.length ? "watch" : "insufficient_data";
+    riskSignals.push(nexusAgricultureSignal("foodSecurity", "Food-security risk", riskLevel, compounded >= 2 ? "worsening" : "unknown", riskLevel === "high" ? "high" : "moderate", "low", "limited community/program context", "Food-security risk considered crop failure signs, water stress, pest/disease pressure, storage loss, price/market access, transport barriers, and missing community context.", [`Compounded risk domains: ${compounded}`, ...foodSecurity.map(item => item.parsedValue)].filter(Boolean), Array.from(missingData), "Program, extension, cooperative, or ministry review is recommended before any public action.", ["What stock level remains?", "Have local prices changed?", "Are transport/access barriers present?"]));
+  }
+
+  if (!riskSignals.length) {
+    riskSignals.push(nexusAgricultureSignal("general", "Agriculture predictive support signal", "insufficient_data", "unknown", "low", "insufficient_data", "insufficient data", "Nexus needs more farm, crop, water, soil, pest, storage, market, or food-security context.", [], Array.from(missingData), "Collect field observations before expert review.", ["What crop and field are affected?", "What changed recently?", "Any water, pest, soil, storage, or market issue?"]));
+  }
+
+  const primarySignal = [...riskSignals].sort((a, b) => nexusAgricultureRiskRank(b.riskLevel) - nexusAgricultureRiskRank(a.riskLevel))[0];
+  state.farmProfile = { ...base.farmProfile, ...(state.farmProfile || {}), cropType: state.farmProfile?.cropType || latestCrop };
+  state.observations = observations;
+  state.riskSignals = riskSignals;
+  state.missingData = [...new Set(riskSignals.flatMap(signal => signal.missingData || []))];
+  state.trends = {
+    cropHealth: { trajectory: cropHealth.length >= 2 ? "worsening" : cropHealth.length ? "variable" : "unknown", observations: cropHealth.length },
+    pestDisease: { trajectory: pestDisease.length >= 2 ? "worsening" : pestDisease.length ? "variable" : "unknown", observations: pestDisease.length },
+    waterStress: { trajectory: water.length >= 2 ? "worsening" : water.length ? "variable" : "unknown", observations: water.length },
+    soilFertility: { trajectory: soil.length ? "unknown" : "unknown", observations: soil.length },
+    yieldRisk: { trajectory: yieldObs.length || cropHealth.length ? "variable" : "unknown", observations: yieldObs.length },
+    storageLoss: { trajectory: storage.length ? "worsening" : "unknown", observations: storage.length },
+    marketReadiness: { trajectory: market.length ? "variable" : "unknown", observations: market.length },
+    foodSecurity: { trajectory: foodSecurity.length ? "variable" : "unknown", observations: foodSecurity.length }
+  };
+  state.trajectory = Object.entries(state.trends).map(([domain, trend]) => ({ domain, ...trend }));
+  state.confidence = {
+    label: primarySignal.confidenceLabel,
+    dataQuality: primarySignal.dataQuality,
+    reason: state.missingData.length ? `Missing field context: ${state.missingData.slice(0, 5).join(", ")}` : "Available farmer-reported context supports review."
+  };
+  state.scenarioSimulations = buildNexusAgricultureScenarioSimulations(state);
+  state.reasoningTrace = buildNexusAgricultureReasoningTrace(state, primarySignal);
+  state.expertChecklist = buildNexusAgricultureExpertChecklist(state);
+  state.advisorSummary = buildNexusAgricultureAdvisorSummary(state, primarySignal);
+  state.updatedAt = new Date().toISOString();
+  return state;
+}
+
+function buildNexusAgricultureScenarioSimulations(state = nexusAgriculturePredictiveModelerState) {
+  return [
+    {
+      scenario: "Rainfall remains low for the next 14 days",
+      projectedSignal: "Water stress and yield-risk signals may worsen.",
+      reason: "Low rainfall combined with wilting or irrigation gaps increases crop stress.",
+      dataThatWouldImproveConfidence: "Soil moisture, irrigation schedule, crop growth stage, field location, and recent weather data.",
+      reviewNote: "Nexus does not claim live weather unless a provider is configured."
+    },
+    {
+      scenario: "Irrigation resumes consistently",
+      projectedSignal: "Water stress trajectory may improve.",
+      reason: "Consistent water availability can reduce observed wilting and stabilize crop stress signals.",
+      dataThatWouldImproveConfidence: "Irrigation schedule, soil moisture, rainfall, and field inspection.",
+      reviewNote: "Field inspection is recommended to confirm plant recovery and rule out disease or fertility gaps."
+    },
+    {
+      scenario: "Pest pressure spreads",
+      projectedSignal: "Pest/disease pressure and yield-risk signals may worsen.",
+      reason: "Spread, leaf damage, and disease-like signs increase field review urgency.",
+      dataThatWouldImproveConfidence: "Affected area percentage, pest identification, photos, and local outbreak reports.",
+      reviewNote: "No pesticide or treatment instruction is final without expert review."
+    },
+    {
+      scenario: "Storage moisture remains high",
+      projectedSignal: "Storage-loss risk may increase.",
+      reason: "Moisture, mold, pests, poor ventilation, and long storage duration increase post-harvest loss risk.",
+      dataThatWouldImproveConfidence: "Moisture level, storage method, ventilation, duration, commodity, and quantity.",
+      reviewNote: "Nexus does not arrange buyers, transport, or claims."
+    },
+    {
+      scenario: "Market transport becomes available",
+      projectedSignal: "Market-readiness trajectory may improve.",
+      reason: "Transport availability can reduce trade risk when quantity, quality, buyer, delivery, and payment terms are known.",
+      dataThatWouldImproveConfidence: "Buyer, grade, price expectation, packaging, transport, delivery window, and payment terms.",
+      reviewNote: "Nexus prepares marketplace context only and does not contact buyers or process payments."
+    },
+    {
+      scenario: "Missing field data is completed",
+      projectedSignal: "Confidence/data-quality level may improve.",
+      reason: "Field location, growth stage, water, soil, pest, yield, storage, market, and food-security context improve prediction quality.",
+      dataThatWouldImproveConfidence: (state.missingData || []).slice(0, 8).join(", ") || "Field observations and expert review data.",
+      reviewNote: "More complete evidence supports better agronomist or program review."
+    }
+  ];
+}
+
+function buildNexusAgricultureReasoningTrace(state = nexusAgriculturePredictiveModelerState, signal = null) {
+  const observations = state.observations || {};
+  const latestObservation = Object.values(observations).flat().slice(-1)[0];
+  return [
+    latestObservation ? `Parsed observation: ${latestObservation.parsedValue || latestObservation.rawInput}.` : "Checked for agriculture observations; none available yet.",
+    `Classified domain: ${(signal || state.riskSignals?.[0])?.domain || "insufficient_data"}.`,
+    `Detected crop/commodity: ${state.farmProfile?.cropType || latestObservation?.cropType || latestObservation?.commodity || "not yet detected"}.`,
+    "Checked crop health, pest/disease, water, soil/fertility, yield, storage, market, and food-security context.",
+    `Identified missing field context: ${(state.missingData || []).slice(0, 6).join(", ") || "none obvious"}.`,
+    `Assigned risk signal: ${(signal || state.riskSignals?.[0])?.riskLevel || "insufficient_data"}.`,
+    `Assigned confidence: ${state.confidence?.label || "insufficient_data"}.`,
+    "Prepared scenario projections, agronomist/advisor summary, expert checklist, and receipts.",
+    "Preserved no live weather, satellite, drone, buyer contact, shipment, payment, pesticide/fertilizer prescription, or external execution claims."
+  ];
+}
+
+function buildNexusAgricultureExpertChecklist(state = nexusAgriculturePredictiveModelerState) {
+  const observations = state.observations || {};
+  const all = Object.values(observations).flat();
+  const has = key => (observations[key] || []).length > 0;
+  return [
+    ["Observation parsed", all.length > 0],
+    ["Crop/commodity detected", Boolean(state.farmProfile?.cropType || all.some(item => item.cropType || item.commodity))],
+    ["Location or field identified", Boolean(state.farmProfile?.location || all.some(item => item.location || item.fieldId))],
+    ["Time/season captured or requested", all.some(item => item.timestamp) || state.missingData?.includes("Time/season")],
+    ["Growth stage reviewed", all.some(item => item.growthStage) || state.missingData?.includes("Growth stage")],
+    ["Weather/water context reviewed", has("waterIrrigation")],
+    ["Soil/fertility context reviewed", has("soilFertility")],
+    ["Pest/disease signs reviewed", has("pestDisease")],
+    ["Yield factors reviewed", has("yield") || state.riskSignals?.some(signal => signal.domain === "yieldRisk")],
+    ["Storage/post-harvest factors reviewed", has("storage")],
+    ["Market/trade readiness reviewed", has("market")],
+    ["Food-security context reviewed", has("foodSecurity") || state.riskSignals?.some(signal => signal.domain === "foodSecurity")],
+    ["Missing data identified", Boolean(state.missingData?.length)],
+    ["Risk signal generated", Boolean(state.riskSignals?.length)],
+    ["Confidence/data quality assigned", Boolean(state.confidence?.label)],
+    ["Contributing factors explained", Boolean(state.riskSignals?.some(signal => signal.contributingFactors?.length))],
+    ["Scenario projection generated", Boolean(state.scenarioSimulations?.length)],
+    ["Advisor summary available", Boolean(state.advisorSummary?.text)],
+    ["Receipt/timeline recorded", Boolean(state.receipts?.length)],
+    ["No external action falsely claimed", true]
+  ].map(([label, checked]) => ({ label, checked: Boolean(checked) }));
+}
+
+function buildNexusAgricultureAdvisorSummary(state = nexusAgriculturePredictiveModelerState, primarySignal = null) {
+  const signal = primarySignal || state.riskSignals?.[0] || {};
+  const observations = Object.values(state.observations || {}).flat();
+  const checklist = buildNexusAgricultureExpertChecklist(state);
+  const text = [
+    "Agriculture Predictive Intelligence Summary",
+    "",
+    `Farm/field context:\n${state.farmProfile?.farmName || "Local/sandbox farm context"} ${state.farmProfile?.location || "location not specified"}`.trim(),
+    "",
+    `Crop/commodity focus:\n${state.farmProfile?.cropType || observations.map(item => item.cropType || item.commodity).filter(Boolean).slice(-1)[0] || "not yet specified"}`,
+    "",
+    `Recent farmer-reported observations:\n${observations.slice(-6).map(item => `${item.type}: ${item.parsedValue || item.rawInput}`).join("\n") || "No observations captured yet."}`,
+    "",
+    `Trend interpretation:\n${JSON.stringify(state.trends || {}, null, 2)}`,
+    "",
+    `Predictive agriculture support signal:\n${signal.signalName || "Insufficient data"} - ${signal.riskLevel || "insufficient_data"}`,
+    "",
+    `Trajectory:\n${signal.trajectory || "unknown"}`,
+    "",
+    `Confidence/data quality:\n${state.confidence?.label || "insufficient_data"} / ${state.confidence?.dataQuality || "insufficient data"}`,
+    "",
+    `Contributing factors:\n${(signal.contributingFactors || []).join("\n") || "No contributing factors yet."}`,
+    "",
+    `Missing information:\n${(state.missingData || []).join("\n") || "No major missing data flagged."}`,
+    "",
+    `Scenario projection:\n${(state.scenarioSimulations || []).map(item => `${item.scenario}: ${item.projectedSignal}`).join("\n")}`,
+    "",
+    `Agriculture expert checklist:\n${checklist.map(item => `${item.checked ? "[x]" : "[ ]"} ${item.label}`).join("\n")}`,
+    "",
+    `Suggested review considerations:\n${signal.recommendedReview || "Collect field observations and review with an agriculture expert."}`,
+    "",
+    "Important system note:\nThis summary reflects Nexus predictive support analysis from available field data and should be reviewed by an agriculture expert, agronomist, extension officer, or qualified program lead."
+  ].join("\n");
+  return {
+    title: "Agriculture Predictive Intelligence Summary",
+    text,
+    generatedAt: new Date().toISOString(),
+    localOnly: true,
+    noExternalProviderContact: true,
+    noBuyerContact: true,
+    noLiveWeatherClaim: true,
+    noSatelliteOrDroneAnalysisClaim: true
+  };
+}
+
+function nexusAgriculturePredictiveReceipt(eventType, detail) {
+  const receipt = {
+    id: `nexus-agriculture-predictive-receipt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    eventType,
+    detail,
+    createdAt: new Date().toISOString(),
+    happened: detail,
+    didNot: "Nexus did not pull live weather, analyze live satellite/drone imagery, contact buyers, arrange shipment, submit insurance or agency claims, prescribe pesticide/fertilizer, guarantee yield, or execute externally.",
+    localOnly: true,
+    expertEvaluationMode: true
+  };
+  nexusAgriculturePredictiveModelerState.receipts = [receipt, ...(nexusAgriculturePredictiveModelerState.receipts || [])].slice(0, 30);
+  return receipt;
+}
+
+function applyNexusAgriculturePredictiveCommand(command = "", options = {}) {
+  const state = {
+    ...buildEmptyNexusAgriculturePredictiveModelerState(),
+    ...nexusAgriculturePredictiveModelerState,
+    farmProfile: {
+      ...buildEmptyNexusAgriculturePredictiveModelerState().farmProfile,
+      ...(nexusAgriculturePredictiveModelerState.farmProfile || {})
+    },
+    observations: {
+      ...buildEmptyNexusAgriculturePredictiveModelerState().observations,
+      ...(nexusAgriculturePredictiveModelerState.observations || {})
+    }
+  };
+  state.updatedAt = new Date().toISOString();
+  state.sandbox = Boolean(nexusDemoDataState?.loaded);
+  const observations = parseNexusAgriculturePredictiveObservations(command);
+  observations.forEach(observation => {
+    if (observation.cropType && !state.farmProfile.cropType) state.farmProfile.cropType = observation.cropType;
+    if (observation.type === "crop_health") state.observations.cropHealth.push(observation);
+    else if (observation.type === "pest_disease") state.observations.pestDisease.push(observation);
+    else if (observation.type === "water_irrigation") state.observations.waterIrrigation.push(observation);
+    else if (observation.type === "soil_fertility") state.observations.soilFertility.push(observation);
+    else if (observation.type === "yield") state.observations.yield.push(observation);
+    else if (observation.type === "storage") state.observations.storage.push(observation);
+    else if (observation.type === "market") state.observations.market.push(observation);
+    else if (observation.type === "food_security") state.observations.foodSecurity.push(observation);
+    else state.observations.notes.push(observation);
+  });
+  nexusAgriculturePredictiveModelerState = evaluateNexusAgriculturePredictiveModel(state);
+  nexusAgriculturePredictiveReceipt(observations.some(item => item.type !== "query") ? "field_observation_captured" : "agriculture_predictive_view_requested", observations.some(item => item.type !== "query") ? `${observations.filter(item => item.type !== "query").length} agriculture predictive observation(s) captured locally.` : "Agriculture predictive modeler view requested.");
+  nexusAgriculturePredictiveReceipt("field_risk_signal_generated", `${nexusAgriculturePredictiveModelerState.riskSignals?.[0]?.signalName || "Predictive agriculture support signal"}: ${nexusAgriculturePredictiveModelerState.riskSignals?.[0]?.riskLevel || "insufficient_data"}.`);
+  if (/simulate/i.test(command)) nexusAgriculturePredictiveReceipt("scenario_projection_generated", "Agriculture scenario projection generated locally.");
+  if (/summary|sale|market-ready|food-security/i.test(command)) nexusAgriculturePredictiveReceipt("advisor_summary_generated", "Agronomist/advisor predictive summary generated locally.");
+  saveNexusRuntimeMemory();
+  const mission = buildNexusAgriculturePredictiveMission(command, options);
+  return setNexusAgenticCommandResult(mission, "Agriculture Predictive Intelligence Modeler updated. Review farm risk signal, trajectory, confidence, contributing factors, missing data, scenarios, expert checklist, reasoning trace, advisor summary, and receipts.");
+}
+
+function buildNexusAgriculturePredictiveMission(command = "", options = {}) {
+  const signal = nexusAgriculturePredictiveModelerState.riskSignals?.[0] || {};
+  const id = `nexus-agriculture-predictive-mission-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  return {
+    id,
+    title: "Agriculture Predictive Intelligence Modeler",
+    mode: "agriculture-food-security",
+    submode: "agriculture_predictive_intelligence_modeler",
+    goal: command,
+    status: "predictive_agriculture_support_ready",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userInput: command,
+    source: options.source || "nexus_brain_agriculture_predictive_runtime",
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    localOnly: true,
+    expertEvaluationMode: true,
+    collectedInfo: [
+      `Crop/commodity focus: ${nexusAgriculturePredictiveModelerState.farmProfile?.cropType || "not specified"}`,
+      `Predictive agriculture support signal: ${signal.riskLevel || "insufficient_data"}`,
+      `Trajectory: ${signal.trajectory || "unknown"}`,
+      `Confidence: ${nexusAgriculturePredictiveModelerState.confidence?.label || "insufficient_data"}`
+    ],
+    missingInfo: nexusAgriculturePredictiveModelerState.missingData || [],
+    suggestedQuestions: [
+      "What data is missing from my farm prediction?",
+      "Create an agronomist summary.",
+      "Show the agriculture reasoning trace.",
+      "Simulate what happens if rainfall stays low."
+    ],
+    nextStep: "Review the agriculture expert summary and collect missing field context before agronomist or program decisions.",
+    riskLevel: signal.riskLevel === "urgent_review" || signal.riskLevel === "high" ? "high" : "medium",
+    confirmationRequired: false,
+    confirmationStatus: "not_required_for_local_predictive_review",
+    executionStatus: "completed_local_predictive_support",
+    providerReadiness: "local_predictive_support_only",
+    actionPlan: [
+      "Parse farmer-reported agriculture observations.",
+      "Evaluate deterministic field, crop, storage, market, and food-security risk signals.",
+      "Identify contributing factors and missing field context.",
+      "Generate advisor summary, checklist, scenarios, reasoning trace, and receipts."
+    ],
+    receipts: nexusAgriculturePredictiveModelerState.receipts || [],
+    timeline: (nexusAgriculturePredictiveModelerState.receipts || []).map(receipt => ({ at: receipt.createdAt, event: receipt.eventType, detail: receipt.detail })),
+    relatedRecords: Object.values(nexusAgriculturePredictiveModelerState.observations || {}).flat().slice(-8),
+    outcome: { status: signal.riskLevel || "insufficient_data", verified: true, noExternalExecution: true },
+    safetyNote: "Predictive agriculture support only. Nexus does not claim live weather, satellite/drone analysis, buyer contact, shipment, payment, insurance, agency notification, yield guarantee, or final pesticide/fertilizer instruction.",
+    actionType: "agriculture_predictive_modeler"
+  };
+}
+
+function renderNexusAgriculturePredictiveModelerPanel() {
+  const state = nexusAgriculturePredictiveModelerState || buildEmptyNexusAgriculturePredictiveModelerState();
+  const signal = state.riskSignals?.[0] || {};
+  const observations = state.observations || {};
+  const allObservations = Object.values(observations).flat();
+  const latestObservation = allObservations.slice(-1)[0];
+  const factors = [...new Set((state.riskSignals || []).flatMap(item => item.contributingFactors || []))];
+  const checklist = buildNexusAgricultureExpertChecklist(state);
+  const examples = [
+    "Nexus, my maize leaves are yellowing.",
+    "Nexus, my tomato plants are wilting after three days without irrigation.",
+    "Nexus, pests are damaging my cassava leaves.",
+    "Nexus, I saw mold on stored maize.",
+    "Nexus, rainfall has been low for two weeks.",
+    "Nexus, the soil test is missing.",
+    "Nexus, I planted rice on 3 hectares last month.",
+    "Nexus, estimate yield risk for my maize.",
+    "Nexus, show my field risk trend.",
+    "Nexus, predict my crop risk pattern.",
+    "Nexus, what is driving my agriculture risk?",
+    "Nexus, what data is missing from my farm prediction?",
+    "Nexus, compare this week to last week for the field.",
+    "Nexus, simulate what happens if rainfall stays low.",
+    "Nexus, simulate improvement if irrigation resumes.",
+    "Nexus, create an agronomist summary.",
+    "Nexus, show the agriculture reasoning trace.",
+    "Nexus, show agriculture expert checklist.",
+    "Nexus, show agriculture predictive receipts.",
+    "Nexus, is my crop market-ready?",
+    "Nexus, help me prepare maize for sale.",
+    "Nexus, assess food-security risk for this community."
+  ];
+  return `
+    <section class="nexus-agriculture-predictive-modeler" data-nexus-agriculture-predictive-modeler="true" data-local-only="true" data-expert-evaluation-mode="true" data-no-live-weather-claim="true" data-no-buyer-contact="true" data-no-external-execution="true" aria-label="${escapeHtml(translateText("Agriculture Predictive Intelligence Modeler"))}">
+      <header class="nexus-chronic-predictive-header">
+        <span class="eyebrow">${escapeHtml(translateText("Agriculture and food-security predictive support"))}</span>
+        <h3>${escapeHtml(translateText("Agriculture Predictive Intelligence Modeler"))}</h3>
+        <p>${escapeHtml(translateText("Nexus organizes farmer-reported field evidence, field risk trajectory, predictive agriculture support signals, missing context, scenario projections, and advisor summaries. It does not claim live weather, satellite/drone analysis, buyer contact, shipment, payment, yield guarantees, or external execution."))}</p>
+      </header>
+      <div class="nexus-chronic-predictive-grid">
+        <article data-nexus-farm-risk-snapshot="true"><strong>${escapeHtml(translateText("Current Farm Risk Snapshot"))}</strong><span>Crop/commodity focus: ${escapeHtml(state.farmProfile?.cropType || latestObservation?.cropType || latestObservation?.commodity || "not specified")}</span><span>Current risk level: ${escapeHtml(signal.riskLevel || "insufficient_data")}</span><span>Trajectory: ${escapeHtml(signal.trajectory || "unknown")}</span><span>Confidence: ${escapeHtml(state.confidence?.label || "insufficient_data")}</span><span>Data quality: ${escapeHtml(state.confidence?.dataQuality || "insufficient data")}</span><span>Latest observation: ${escapeHtml(latestObservation?.parsedValue || "No observation captured yet")}</span></article>
+        <article data-nexus-field-farm-trends="true"><strong>${escapeHtml(translateText("Field and Farm Trends"))}</strong><span>Crop health trend: ${escapeHtml(state.trends?.cropHealth?.trajectory || "unknown")}</span><span>Pest/disease pressure trend: ${escapeHtml(state.trends?.pestDisease?.trajectory || "unknown")}</span><span>Water stress trend: ${escapeHtml(state.trends?.waterStress?.trajectory || "unknown")}</span><span>Soil/fertility trend: ${escapeHtml(state.trends?.soilFertility?.trajectory || "unknown")}</span><span>Yield-risk trend: ${escapeHtml(state.trends?.yieldRisk?.trajectory || "unknown")}</span><span>Storage-loss trend: ${escapeHtml(state.trends?.storageLoss?.trajectory || "unknown")}</span><span>Market-readiness trend: ${escapeHtml(state.trends?.marketReadiness?.trajectory || "unknown")}</span><span>Food-security trend: ${escapeHtml(state.trends?.foodSecurity?.trajectory || "unknown")}</span></article>
+        <article data-nexus-agriculture-contributing-factors="true"><strong>${escapeHtml(translateText("Contributing Factors"))}</strong>${(factors.length ? factors : ["No contributing factors yet. Add crop, water, pest, soil, storage, market, or food-security observations."]).map(item => `<span>${escapeHtml(item)}</span>`).join("")}</article>
+        <article data-nexus-agriculture-missing-data="true"><strong>${escapeHtml(translateText("Missing Data"))}</strong>${(state.missingData?.length ? state.missingData : ["More field context needed."]).map(item => `<span>${escapeHtml(item)}</span>`).join("")}</article>
+      </div>
+      <div class="nexus-chronic-predictive-grid">
+        <article data-nexus-agriculture-scenario-simulator="true"><strong>${escapeHtml(translateText("Scenario Simulator"))}</strong>${(state.scenarioSimulations || []).map(item => `<span><b>${escapeHtml(item.scenario)}</b>: ${escapeHtml(item.projectedSignal)} ${escapeHtml(item.reason)}</span>`).join("")}</article>
+        <article data-nexus-agriculture-expert-checklist="true"><strong>${escapeHtml(translateText("Agriculture Expert Checklist"))}</strong>${checklist.map(item => `<span>${item.checked ? "Checked" : "Needs context"}: ${escapeHtml(item.label)}</span>`).join("")}</article>
+        <article data-nexus-agriculture-reasoning-trace="true"><strong>${escapeHtml(translateText("Predictive Reasoning Trace"))}</strong>${(state.reasoningTrace || []).map((item, index) => `<span>${index + 1}. ${escapeHtml(item)}</span>`).join("")}</article>
+        <article data-nexus-agriculture-predictive-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(state.receipts?.length ? state.receipts : [{ detail: "No agriculture predictive receipts yet." }]).slice(0, 6).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
+      </div>
+      <article class="nexus-chronic-physician-summary" data-nexus-agriculture-advisor-summary="true">
+        <strong>${escapeHtml(translateText("Agronomist / Advisor Summary"))}</strong>
+        <button type="button" data-nexus-copy-agriculture-advisor-summary="true">${escapeHtml(translateText("Copy summary"))}</button>
+        <pre>${escapeHtml(state.advisorSummary?.text || "Create an agronomist summary after entering field observations.")}</pre>
+      </article>
+      <article class="nexus-chronic-command-examples" data-nexus-agriculture-command-examples="true">
+        <strong>${escapeHtml(translateText("Command Examples"))}</strong>
+        <div>${examples.map(command => `<button type="button" data-nexus-command-prefill="${escapeHtml(command)}">${escapeHtml(command)}</button>`).join("")}</div>
+      </article>
+    </section>
+  `;
+}
+
 function setNexusAgenticCommandResult(mission, message = "") {
   const latestReceipt = mission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
   nexusAgenticBrainLastResult = {
@@ -28000,7 +28713,7 @@ function setNexusAgenticCommandResult(mission, message = "") {
 
 function submitNexusAgenticCommandRuntime(command = "", input = null, source = "command-submit", event = null) {
   const normalizedCommand = String(command || "").trim();
-  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand)) return false;
+  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand) && !isNexusAgriculturePredictiveModelerCommand(normalizedCommand)) return false;
   const handled = runNexusAgenticCommandRuntime(normalizedCommand, { source });
   if (!handled) return false;
   event?.preventDefault?.();
@@ -28149,6 +28862,7 @@ function showNexusAgenticMissionStatus(command = "") {
 
 function runNexusAgenticCommandRuntime(command = "", options = {}) {
   if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
+  if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
   const intent = parseNexusAgenticCommandIntent(command);
   if (!intent) return false;
   if (intent.actionType === "continue") return continueNexusAgenticMission(command);
@@ -28333,6 +29047,7 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   if (!normalized) return false;
   const normalizedLower = normalized.toLowerCase();
   if (isNexusChronicPredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
+  if (isNexusAgriculturePredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (shouldNexusAgenticCommandRuntimeHandle(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
@@ -46540,7 +47255,7 @@ function exposeNexusBrainIntelligenceRuntimeApis() {
 function installNexusBrainIntelligenceCommandBridge() {
   if (typeof document === "undefined" || document.body?.dataset.nexusBrainIntelligenceBound === "true") return;
   if (document.body) document.body.dataset.nexusBrainIntelligenceBound = "true";
-  const isExplicitBrainLaneCommand = command => /\b(blood pressure|bp\b|glucose|blood sugar|a1c|medication|medicine|missed|chest pain|shortness of breath|diabetes|hypertension|obesity|rpm|rtm|chronic|crop|maize|buyer|buyers|seller|sellers|shipment|tracking|trade route|logistics|job|application|employer|learning plan|drone|whatsapp|telegram|sms|message|email|call|phone|provider handoff|pharmacy|mobile clinic|telehealth|show receipts|what happened|continue mission|cancel mission|confirm mission|mark .*closed|out of business)\b/i.test(String(command || ""));
+  const isExplicitBrainLaneCommand = command => /\b(blood pressure|bp\b|glucose|blood sugar|a1c|medication|medicine|missed|chest pain|shortness of breath|diabetes|hypertension|obesity|rpm|rtm|chronic|crop|maize|cassava|tomato|rice|agriculture|farm|field|rainfall|irrigation|soil test|yield risk|market-ready|food-security|agronomist|buyer|buyers|seller|sellers|shipment|tracking|trade route|logistics|job|application|employer|learning plan|drone|whatsapp|telegram|sms|message|email|call|phone|provider handoff|pharmacy|mobile clinic|telehealth|show receipts|what happened|continue mission|cancel mission|confirm mission|mark .*closed|out of business)\b/i.test(String(command || ""));
 
   document.addEventListener("click", event => {
     const copySummary = event.target?.closest?.("[data-nexus-copy-predictive-summary]");
@@ -46556,12 +47271,25 @@ function installNexusBrainIntelligenceCommandBridge() {
       }, 1800);
       return;
     }
+    const copyAgricultureSummary = event.target?.closest?.("[data-nexus-copy-agriculture-advisor-summary]");
+    if (copyAgricultureSummary) {
+      event.preventDefault();
+      const text = nexusAgriculturePredictiveModelerState?.advisorSummary?.text || "";
+      if (navigator.clipboard && text) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      copyAgricultureSummary.textContent = text ? translateText("Summary copied") : translateText("No summary yet");
+      setTimeout(() => {
+        copyAgricultureSummary.textContent = translateText("Copy summary");
+      }, 1800);
+      return;
+    }
     const submit = event.target?.closest?.("[data-nexus-command-center-submit]");
     if (!submit) return;
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();
@@ -46577,7 +47305,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     if (!input) return;
     const command = input.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();

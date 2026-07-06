@@ -38,8 +38,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-380";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v354";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-381";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v355";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -34834,6 +34834,187 @@ function buildNexusChronicPredictiveApiSummary(state) {
   };
 }
 
+function emptyNexusAgriculturePredictiveState() {
+  return {
+    id: `nexus-agriculture-predictive-api-${Date.now()}`,
+    updatedAt: nexusNow(),
+    source: "nexus_agriculture_predictive_intelligence_modeler_api",
+    localOnly: true,
+    expertEvaluationMode: true,
+    farmProfile: { farmName: "", farmerName: "", location: "", fieldId: "", acreage: "", cropType: "", livestockType: "", season: "", plantingDate: "", expectedHarvestDate: "" },
+    observations: { cropHealth: [], pestDisease: [], waterIrrigation: [], soilFertility: [], yield: [], storage: [], market: [], foodSecurity: [], notes: [] },
+    trends: {},
+    riskSignals: [],
+    trajectory: [],
+    scenarioSimulations: [],
+    missingData: [],
+    confidence: { label: "insufficient_data", dataQuality: "insufficient data" },
+    advisorSummary: null,
+    reasoningTrace: [],
+    expertChecklist: [],
+    receipts: []
+  };
+}
+
+function nexusAgricultureApiCrop(command = "") {
+  const text = String(command || "").toLowerCase();
+  return ["maize", "tomato", "cassava", "rice", "beans", "sorghum", "wheat", "potato"].find(crop => text.includes(crop)) || "";
+}
+
+function parseNexusAgriculturePredictiveApiObservations(command = "") {
+  const text = String(command || "");
+  const observations = [];
+  let index = 0;
+  const now = nexusNow();
+  const cropType = nexusAgricultureApiCrop(text);
+  const base = (type, parsedValue, extra = {}) => ({ id: `api-agriculture-${type}-${Date.now()}-${index++}`, type, rawInput: text, parsedValue, cropType, commodity: cropType || extra.commodity || "", timestamp: now, source: "natural_command", localOnly: true, confidence: "moderate", ...extra });
+  const symptoms = ["yellowing", "wilting", "stunted growth", "spots/lesions", "leaf damage"].filter(label => new RegExp(label === "spots/lesions" ? "spots?|lesions?" : label.replace(" ", "\\s+"), "i").test(text));
+  if (symptoms.length || /\bcrop risk|field risk|crop health\b/i.test(text)) observations.push(base("crop_health", symptoms.join(", ") || "crop health risk query", { symptoms }));
+  const pestSigns = ["pest damage", "leaf damage"].filter(label => /pests?|insects?|damaging.*leaves|leaf damage/i.test(text));
+  const diseaseSigns = ["spots/lesions", "mold/fungal sign", "wilting"].filter(label => new RegExp(label === "spots/lesions" ? "spots?|lesions?" : label.split("/")[0], "i").test(text));
+  if (pestSigns.length || diseaseSigns.length) observations.push(base("pest_disease", [...pestSigns, ...diseaseSigns].join(", "), { pestSigns, diseaseSigns }));
+  if (/\brainfall|irrigation|drought|water|dry|flood|drainage|heat|wilting/i.test(text)) observations.push(base("water_irrigation", /low.*rainfall|rainfall.*low/i.test(text) ? "low rainfall" : /without irrigation|irrigation gap/i.test(text) ? "irrigation gap" : "water context", { rainfall: /rainfall/i.test(text) ? text : "", irrigation: /irrigation/i.test(text) ? text : "" }));
+  if (/\bsoil|fertility|fertilizer|ph\b|nutrient|erosion|salinity|compaction|rotation/i.test(text)) observations.push(base("soil_fertility", /soil test.*missing|missing.*soil test/i.test(text) ? "soil test missing" : "soil/fertility context", { notes: text }));
+  const acreageMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(hectares?|ha|acres?)\b/i);
+  if (/\byield|planted|planting|hectares?|acres?|harvest|plant population/i.test(text)) observations.push(base("yield", acreageMatch ? `planted ${acreageMatch[1]} ${acreageMatch[2]}` : "yield risk query", { acreage: acreageMatch ? `${acreageMatch[1]} ${acreageMatch[2]}` : "" }));
+  if (/\bstored|storage|mold|moisture|spoilage|ventilation|packaging|post[- ]?harvest/i.test(text)) observations.push(base("storage", /mold/i.test(text) ? "mold on stored commodity" : "storage/post-harvest context", { symptoms: /mold|spoilage|rot/i.test(text) ? ["mold/spoilage"] : [] }));
+  if (/\bmarket-ready|market ready|prepare .*sale|for sale|buyer|quality grade|price|transport|packaging|delivery|trade\b/i.test(text)) observations.push(base("market", /market-ready|market ready/i.test(text) ? "market readiness question" : "sale preparation question", { marketDetails: { buyer: /\bbuyer\b/i.test(text), transport: /\btransport\b/i.test(text), price: /\bprice\b/i.test(text), packaging: /\bpackaging\b/i.test(text) } }));
+  if (/\bfood-security|food security|community|stock|crop failure|price changes?|transport barriers?|vulnerable|household\b/i.test(text)) observations.push(base("food_security", "food-security risk assessment"));
+  if (!observations.length) observations.push(base("query", "agriculture predictive modeler query"));
+  return observations;
+}
+
+function nexusAgricultureApiSignal(domain, signalName, riskLevel, trajectory, explanation, contributingFactors, missingData) {
+  return {
+    id: `nexus-agriculture-predictive-signal-${domain}-${Date.now()}`,
+    domain,
+    signalName,
+    riskLevel,
+    trajectory,
+    severity: riskLevel === "high" || riskLevel === "urgent_review" ? "high" : riskLevel === "elevated" ? "moderate" : "low",
+    confidenceLabel: missingData.length > 4 ? "low" : "moderate",
+    dataQuality: missingData.length ? "partial farmer-reported context" : "usable farmer-reported context",
+    explanation,
+    contributingFactors,
+    missingData,
+    recommendedReview: "Use this as agriculture predictive support only; agronomist, extension officer, or qualified program review is required before field, market, or food-security decisions.",
+    suggestedNextQuestions: ["What crop and field are affected?", "What growth stage?", "How much area is affected?", "What water, soil, pest, storage, market, or food-security context is available?"],
+    noExternalExecutionAuthorized: true,
+    noLiveWeatherClaim: true,
+    noBuyerContact: true,
+    noDroneOrSatelliteAnalysisClaim: true
+  };
+}
+
+function evaluateNexusAgriculturePredictiveApiState(command = "", incomingState = {}) {
+  const state = { ...emptyNexusAgriculturePredictiveState(), ...(incomingState || {}) };
+  state.observations = { ...emptyNexusAgriculturePredictiveState().observations, ...(state.observations || {}) };
+  parseNexusAgriculturePredictiveApiObservations(command).forEach(observation => {
+    if (observation.cropType && !state.farmProfile.cropType) state.farmProfile.cropType = observation.cropType;
+    if (observation.type === "crop_health") state.observations.cropHealth.push(observation);
+    else if (observation.type === "pest_disease") state.observations.pestDisease.push(observation);
+    else if (observation.type === "water_irrigation") state.observations.waterIrrigation.push(observation);
+    else if (observation.type === "soil_fertility") state.observations.soilFertility.push(observation);
+    else if (observation.type === "yield") state.observations.yield.push(observation);
+    else if (observation.type === "storage") state.observations.storage.push(observation);
+    else if (observation.type === "market") state.observations.market.push(observation);
+    else if (observation.type === "food_security") state.observations.foodSecurity.push(observation);
+    else state.observations.notes.push(observation);
+  });
+  const obs = state.observations;
+  const missing = new Set(["Field location", "Growth stage", "Recent weather/water context", "Soil test", "Affected area percentage"]);
+  const signals = [];
+  if (obs.cropHealth.length) signals.push(nexusAgricultureApiSignal("cropHealth", "Crop stress signal", obs.cropHealth.some(item => /wilting|yellowing|spots|lesions|stunted/i.test(item.parsedValue)) ? "elevated" : "watch", obs.cropHealth.length >= 2 ? "worsening" : "variable", "Crop health observations were checked for stress signs and missing field context.", obs.cropHealth.flatMap(item => item.symptoms || []).map(item => `Crop observation: ${item}`), Array.from(missing)));
+  if (obs.pestDisease.length) signals.push(nexusAgricultureApiSignal("pestDisease", "Pest/disease pressure", obs.pestDisease.length >= 2 ? "high" : "elevated", "variable", "Pest and disease pressure was checked from reported pests, leaf damage, mold, spots, lesions, and spread context.", obs.pestDisease.flatMap(item => [...(item.pestSigns || []), ...(item.diseaseSigns || [])]).map(item => `Pest/disease sign: ${item}`), ["Photo or field inspection evidence", ...Array.from(missing)]));
+  if (obs.waterIrrigation.length) signals.push(nexusAgricultureApiSignal("waterStress", "Water stress signal", obs.waterIrrigation.some(item => /low|without|gap|dry|two weeks|three days/i.test(item.rawInput)) ? "elevated" : "watch", "variable", "Water stress was checked from rainfall, irrigation, wilting, drought, drainage, and soil moisture context.", obs.waterIrrigation.map(item => `Water context: ${item.parsedValue}`), ["Soil moisture measurement", ...Array.from(missing)]));
+  if (obs.soilFertility.length) signals.push(nexusAgricultureApiSignal("soilFertility", "Soil/fertility gap", obs.soilFertility.some(item => /missing/i.test(item.parsedValue)) ? "watch" : "stable", "unknown", "Soil/fertility risk was checked from soil tests, fertilizer, nutrients, pH, erosion, salinity, compaction, and rotation context.", obs.soilFertility.map(item => item.parsedValue), ["pH/nutrient data", ...Array.from(missing)]));
+  if (obs.yield.length || obs.cropHealth.length || obs.pestDisease.length || obs.waterIrrigation.length) signals.push(nexusAgricultureApiSignal("yieldRisk", "Yield-risk signal", [obs.cropHealth.length, obs.pestDisease.length, obs.waterIrrigation.length].filter(Boolean).length >= 2 ? "elevated" : "watch", "variable", "Yield risk considered crop stress, pest/disease pressure, water stress, acreage, planting date, growth stage, fertilizer, and prior yield.", obs.yield.map(item => item.parsedValue), ["Prior yield", "Planting date", ...Array.from(missing)]));
+  if (obs.storage.length) signals.push(nexusAgricultureApiSignal("storageLoss", "Storage-loss risk", obs.storage.some(item => /mold|spoilage|rot/i.test(item.parsedValue)) ? "elevated" : "watch", "worsening", "Storage-loss risk checked moisture, mold, pests, spoilage, temperature, ventilation, duration, packaging, commodity, and quantity.", obs.storage.map(item => item.parsedValue), ["Moisture level", "Storage method", ...Array.from(missing)]));
+  if (obs.market.length) signals.push(nexusAgricultureApiSignal("marketReadiness", "Market-readiness signal", "watch", "unknown", "Market readiness checked commodity, quantity, quality grade, buyer, price, packaging, transport, documents, delivery window, and payment terms.", obs.market.map(item => item.parsedValue), ["buyer", "quality grade", "price expectation", "transport", "packaging", "delivery window", "payment terms"]));
+  if (obs.foodSecurity.length || (obs.waterIrrigation.length && obs.storage.length)) signals.push(nexusAgricultureApiSignal("foodSecurity", "Food-security risk", obs.foodSecurity.length ? "watch" : "elevated", "unknown", "Food-security risk considered crop failure signs, water stress, pest/disease pressure, storage loss, price changes, transport barriers, and missing community context.", obs.foodSecurity.map(item => item.parsedValue), ["Household/community stock levels", "Local price changes", "Community size/vulnerable groups"]));
+  if (!signals.length) signals.push(nexusAgricultureApiSignal("general", "Agriculture predictive support signal", "insufficient_data", "unknown", "More farm and field context is needed.", [], Array.from(missing)));
+  state.riskSignals = signals;
+  state.missingData = [...new Set(signals.flatMap(signal => signal.missingData || []))];
+  state.confidence = { label: state.missingData.length > 4 ? "low" : "moderate", dataQuality: state.missingData.length ? "partial farmer-reported context" : "usable farmer-reported context" };
+  state.trends = { cropHealth: { trajectory: obs.cropHealth.length ? "variable" : "unknown" }, pestDisease: { trajectory: obs.pestDisease.length ? "variable" : "unknown" }, waterStress: { trajectory: obs.waterIrrigation.length ? "variable" : "unknown" }, soilFertility: { trajectory: obs.soilFertility.length ? "unknown" : "unknown" }, yieldRisk: { trajectory: obs.yield.length ? "variable" : "unknown" }, storageLoss: { trajectory: obs.storage.length ? "worsening" : "unknown" }, marketReadiness: { trajectory: obs.market.length ? "variable" : "unknown" }, foodSecurity: { trajectory: obs.foodSecurity.length ? "variable" : "unknown" } };
+  state.trajectory = Object.entries(state.trends).map(([domain, trend]) => ({ domain, ...trend }));
+  state.scenarioSimulations = buildNexusAgriculturePredictiveApiScenarios(state);
+  state.expertChecklist = buildNexusAgriculturePredictiveApiChecklist(state);
+  state.reasoningTrace = buildNexusAgriculturePredictiveApiReasoningTrace(state);
+  state.advisorSummary = buildNexusAgriculturePredictiveApiSummary(state);
+  state.receipts = [{ id: `nexus-agriculture-predictive-api-receipt-${Date.now()}`, eventType: "predictive_evaluation_completed", detail: "Agriculture predictive intelligence evaluation prepared locally.", didNot: "Nexus did not pull live weather, analyze live imagery, contact buyers, arrange shipment, prescribe inputs, guarantee yield, or execute externally.", createdAt: nexusNow() }];
+  return { ok: true, modeler: state, noExternalExecutionAuthorized: true, noLiveWeatherClaim: true, noBuyerContact: true, noDroneOrSatelliteAnalysisClaim: true, localOnly: true };
+}
+
+function buildNexusAgriculturePredictiveApiScenarios(state) {
+  return [
+    { scenario: "Rainfall remains low for the next 14 days", projectedSignal: "Water stress and yield-risk signals may worsen.", noLiveWeatherClaim: true },
+    { scenario: "Irrigation resumes consistently", projectedSignal: "Water stress trajectory may improve after field verification.", noExecutionAuthorized: true },
+    { scenario: "Pest pressure spreads", projectedSignal: "Pest/disease pressure and yield risk may worsen.", noPesticidePrescription: true },
+    { scenario: "Storage moisture remains high", projectedSignal: "Storage-loss risk may increase.", noBuyerContact: true },
+    { scenario: "Market transport becomes available", projectedSignal: "Market-readiness trajectory may improve after buyer/quality/payment review.", noPaymentAuthorized: true },
+    { scenario: "Missing field data is completed", projectedSignal: "Confidence/data-quality level may improve.", localOnly: true }
+  ];
+}
+
+function buildNexusAgriculturePredictiveApiChecklist(state) {
+  const obs = state.observations || {};
+  const all = Object.values(obs).flat();
+  return [
+    "Observation parsed",
+    "Crop/commodity detected",
+    "Location or field identified",
+    "Time/season captured or requested",
+    "Growth stage reviewed",
+    "Weather/water context reviewed",
+    "Soil/fertility context reviewed",
+    "Pest/disease signs reviewed",
+    "Yield factors reviewed",
+    "Storage/post-harvest factors reviewed",
+    "Market/trade readiness reviewed",
+    "Food-security context reviewed",
+    "Missing data identified",
+    "Risk signal generated",
+    "Confidence/data quality assigned",
+    "Contributing factors explained",
+    "Scenario projection generated",
+    "Advisor summary available",
+    "Receipt/timeline recorded",
+    "No external action falsely claimed"
+  ].map(label => ({ label, checked: label === "No external action falsely claimed" || Boolean(all.length || state.riskSignals?.length) }));
+}
+
+function buildNexusAgriculturePredictiveApiReasoningTrace(state) {
+  return [
+    "Parsed farmer-reported agriculture observations from the command.",
+    "Grouped observations by crop health, pest/disease, water, soil, yield, storage, market, and food-security domains.",
+    "Checked deterministic risk rules and trajectory direction.",
+    "Identified missing field context that weakens prediction quality.",
+    "Generated local advisor summary, checklist, scenarios, and receipt.",
+    "Preserved no-live-weather, no-satellite/drone-analysis, no-buyer-contact, no-shipment, no-payment, and no-external-execution boundaries."
+  ];
+}
+
+function buildNexusAgriculturePredictiveApiSummary(state) {
+  const signal = state.riskSignals?.[0] || {};
+  return {
+    title: "Agriculture Predictive Intelligence Summary",
+    text: [
+      "Agriculture Predictive Intelligence Summary",
+      `Crop/commodity focus: ${state.farmProfile?.cropType || "not specified"}`,
+      `Predictive agriculture support signal: ${signal.signalName || "Insufficient data"} - ${signal.riskLevel || "insufficient_data"}`,
+      `Trajectory: ${signal.trajectory || "unknown"}`,
+      `Confidence/data quality: ${state.confidence?.label || "insufficient_data"} / ${state.confidence?.dataQuality || "insufficient data"}`,
+      `Contributing factors: ${(signal.contributingFactors || []).join("; ") || "No contributing factors yet."}`,
+      `Missing information: ${(state.missingData || []).join("; ") || "No major missing data flagged."}`,
+      "Important: Nexus provides agriculture predictive support for expert review. It does not claim live weather, live imagery, buyer contact, shipment, payment, yield guarantee, or final input prescription."
+    ].join("\n"),
+    generatedAt: nexusNow(),
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+}
+
 function latestChronicCareProfile(store) {
   return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
 }
@@ -37366,6 +37547,74 @@ async function api(req, res, url) {
       noPrescription: true,
       noExternalProviderContact: true,
       noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/agriculture-predictive/status" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      status: "available",
+      service: "Agriculture Predictive Intelligence Modeler",
+      domains: ["crop health", "pest/disease pressure", "water stress", "soil/fertility", "yield risk", "storage loss", "market readiness", "food-security risk"],
+      backendRoutes: [
+        "/api/nexus/agriculture-predictive/status",
+        "/api/nexus/agriculture-predictive/evaluate",
+        "/api/nexus/agriculture-predictive/summary",
+        "/api/nexus/agriculture-predictive/scenarios",
+        "/api/nexus/agriculture-predictive/checklist"
+      ],
+      localOnly: true,
+      expertEvaluationMode: true,
+      noLiveWeatherClaim: true,
+      noSatelliteOrDroneAnalysisClaim: true,
+      noBuyerContact: true,
+      noShipmentArranged: true,
+      noPaymentAuthorized: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/agriculture-predictive/evaluate" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, evaluateNexusAgriculturePredictiveApiState(body.command || body.input || "", body.state || {}));
+  }
+
+  if (url.pathname === "/api/nexus/agriculture-predictive/summary" && req.method === "POST") {
+    const result = evaluateNexusAgriculturePredictiveApiState((await readBody(req)).command || "", {});
+    return send(res, 200, {
+      ok: true,
+      summary: result.modeler.advisorSummary,
+      reasoningTrace: result.modeler.reasoningTrace,
+      receipts: result.modeler.receipts,
+      noLiveWeatherClaim: true,
+      noSatelliteOrDroneAnalysisClaim: true,
+      noBuyerContact: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/agriculture-predictive/scenarios" && (req.method === "GET" || req.method === "POST")) {
+    const body = req.method === "POST" ? await readBody(req) : {};
+    const result = evaluateNexusAgriculturePredictiveApiState(body.command || "", body.state || {});
+    return send(res, 200, {
+      ok: true,
+      scenarios: result.modeler.scenarioSimulations,
+      noLiveWeatherClaim: true,
+      noBuyerContact: true,
+      noPaymentAuthorized: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/agriculture-predictive/checklist" && (req.method === "GET" || req.method === "POST")) {
+    const body = req.method === "POST" ? await readBody(req) : {};
+    const result = evaluateNexusAgriculturePredictiveApiState(body.command || "", body.state || {});
+    return send(res, 200, {
+      ok: true,
+      checklist: result.modeler.expertChecklist,
+      missingData: result.modeler.missingData,
+      noExternalExecutionAuthorized: true,
+      noExternalActionFalselyClaimed: true
     });
   }
 

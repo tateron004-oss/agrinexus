@@ -85,6 +85,7 @@
     "qa:nexus-agentic-command-runtime": "node scripts/nexus-agentic-command-runtime-qa.js",
     "qa:nexus-brain-intelligence-runtime": "node scripts/nexus-brain-intelligence-runtime-qa.js",
     "qa:nexus-chronic-health-predictive-modeler": "node scripts/nexus-chronic-health-predictive-modeler-qa.js",
+    "qa:nexus-agriculture-predictive-intelligence": "node scripts/nexus-agriculture-predictive-intelligence-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
