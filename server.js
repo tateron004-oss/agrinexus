@@ -13,6 +13,7 @@ const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
+const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -35675,6 +35676,50 @@ async function api(req, res, url) {
       ok: true,
       receipts: store.internetServiceReceipts.slice(0, 100),
       audit: store.auditLogs.filter(item => item.entityType === "internet-service" || item.entityType === "provider-readiness").slice(0, 100),
+      noSecretValues: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/internet-integration-audit" && req.method === "GET") {
+    const audit = nexusInternetIntegrationAudit.buildNexusInternetIntegrationAudit({
+      providerReadiness: nexusRealProviderStatus(db, process.env),
+      demoDataLoaded: false
+    });
+    return send(res, 200, {
+      ...audit,
+      message: "Integration status is not execution authority. Live actions require credentials, consent/confirmation, provider receipts, and audit.",
+      noSecretValues: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/internet-integration-audit/summary" && req.method === "GET") {
+    const audit = nexusInternetIntegrationAudit.buildNexusInternetIntegrationAudit();
+    return send(res, 200, {
+      ok: true,
+      summary: audit.summary,
+      statuses: audit.statuses,
+      noSecretValues: true,
+      noLiveExecutionEnabledByAudit: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/internet-integration-audit/modes" && req.method === "GET") {
+    const audit = nexusInternetIntegrationAudit.buildNexusInternetIntegrationAudit();
+    return send(res, 200, {
+      ok: true,
+      modes: audit.modes,
+      totalModes: audit.summary.totalModes,
+      noSecretValues: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/internet-integration-audit/gaps" && req.method === "GET") {
+    const audit = nexusInternetIntegrationAudit.buildNexusInternetIntegrationAudit();
+    return send(res, 200, {
+      ok: true,
+      gaps: audit.gaps,
+      gapsFound: audit.summary.gapsFound,
+      recommendedNextStep: audit.summary.recommendedNextStep,
       noSecretValues: true
     });
   }

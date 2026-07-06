@@ -22447,6 +22447,9 @@ function renderNexusFullInternetServicesActivationRuntime() {
     if (/oauth/i.test(category.status)) providerCounts.oauthRequired += 1;
     if (/public|local/i.test(category.status)) providerCounts.testReady += 1;
   });
+  const internetIntegrationAudit = window.NexusInternetIntegrationAudit?.buildNexusInternetIntegrationAudit?.({
+    demoDataLoaded: Boolean(nexusDemoDataState?.loaded)
+  }) || null;
   return `
     <section class="nexus-full-internet-services-runtime nexus-glass-card" data-nexus-full-internet-services-runtime="true" data-no-secret-values="true" data-live-provider-receipts-required="true" aria-label="${escapeHtml(translateText("Nexus Internet Services and Activation Center"))}">
       <div class="nexus-internet-services-heading">
@@ -22529,6 +22532,7 @@ function renderNexusFullInternetServicesActivationRuntime() {
         <span>${escapeHtml(translateText("Needs credentials"))}: ${escapeHtml(translateText("provider API keys, OAuth tokens, endpoints, sandbox accounts, or partner/vendor approval."))}</span>
         <span>${escapeHtml(translateText("Never hidden"))}: ${escapeHtml(translateText("messages, calls, payments, bookings, dispatch, provider handoff, uploads, or medical/pharmacy actions."))}</span>
       </div>
+      ${renderNexusInternetServicesIntegrationAuditPanel(internetIntegrationAudit)}
       <div class="nexus-internet-services-grid" data-nexus-internet-service-categories="true">
         ${NEXUS_FULL_INTERNET_SERVICE_UI_CATEGORIES.map(category => `
           <article data-nexus-internet-service-category="${escapeHtml(category.id)}" data-risk-level="${escapeHtml(category.risk)}">
@@ -22548,6 +22552,89 @@ function renderNexusFullInternetServicesActivationRuntime() {
         <span>${escapeHtml(translateText("Receipt model"))}: ${escapeHtml(translateText("internet used, public fallback, configured provider, missing credentials, what happened, what did not happen."))}</span>
         <span>${escapeHtml(translateText("Secret safety"))}: ${escapeHtml(translateText("env names and present/missing booleans only; secret values are never shown."))}</span>
       </div>
+    </section>
+  `;
+}
+
+function renderNexusInternetAuditStatusBadge(status = "unknown") {
+  const label = String(status || "unknown").replace(/^integrated_/, "").replace(/_/g, " ");
+  return `<span class="nexus-internet-audit-status" data-nexus-internet-audit-status="${escapeHtml(status)}">${escapeHtml(translateText(label))}</span>`;
+}
+
+function renderNexusInternetServicesIntegrationAuditPanel(audit = null) {
+  const report = audit || window.NexusInternetIntegrationAudit?.buildNexusInternetIntegrationAudit?.({ demoDataLoaded: Boolean(nexusDemoDataState?.loaded) });
+  if (!report?.modes?.length) {
+    return `
+      <section class="nexus-internet-integration-audit nexus-glass-card" data-nexus-internet-integration-audit="true" data-no-secret-values="true" data-live-execution-enabled="false">
+        <span class="eyebrow">${escapeHtml(translateText("Internet Services Integration Audit"))}</span>
+        <strong>${escapeHtml(translateText("Audit engine unavailable"))}</strong>
+        <p>${escapeHtml(translateText("The internet services integration audit module did not load. Existing provider readiness remains available, and no live execution was enabled."))}</p>
+      </section>
+    `;
+  }
+  const summary = report.summary || {};
+  const statusFilters = [
+    ["all", "Show all"],
+    ["integrated_live_ready", "Live-ready"],
+    ["integrated_test_ready", "Test-ready"],
+    ["integrated_missing_credentials", "Missing credentials"],
+    ["integrated_vendor_required", "Vendor required"],
+    ["integrated_local_fallback", "Local fallback"],
+    ["gaps", "Gaps only"],
+    ["health", "Health-gated"],
+    ["high", "High-risk"]
+  ];
+  const modeLines = report.modes.map(mode => `${mode.label}: ${mode.status}; lanes: ${(mode.providerLanes || []).join(", ")}; next: ${mode.recommendedNextStep}`).join("\n");
+  return `
+    <section class="nexus-internet-integration-audit nexus-glass-card" data-nexus-internet-integration-audit="true" data-no-secret-values="true" data-live-execution-enabled="false" aria-label="${escapeHtml(translateText("Internet Services Integration Audit"))}">
+      <div class="nexus-internet-audit-head">
+        <span class="eyebrow">${escapeHtml(translateText("Internet Services Integration Audit"))}</span>
+        <strong>${escapeHtml(translateText("Mode-by-mode provider mapping"))}</strong>
+        <p>${escapeHtml(translateText("Integrated means the mode is mapped to provider lanes, fallback behavior, receipts, and safety gates. It does not mean live execution is active."))}</p>
+      </div>
+      <div class="nexus-internet-audit-summary" data-nexus-internet-audit-summary-cards="true">
+        ${[
+          ["Total modes audited", summary.totalModes],
+          ["Fully integrated", summary.integrated],
+          ["Test-ready", summary.testReady],
+          ["Live-ready", summary.liveReady],
+          ["Missing credentials", summary.missingCredentials],
+          ["Vendor required", summary.vendorRequired],
+          ["Local fallback only", summary.localFallback],
+          ["Blocked for safety", summary.blockedForSafety],
+          ["Gaps found", summary.gapsFound]
+        ].map(([label, value]) => `<article><strong>${escapeHtml(String(value ?? 0))}</strong><span>${escapeHtml(translateText(label))}</span></article>`).join("")}
+      </div>
+      <div class="nexus-internet-audit-filters" data-nexus-internet-audit-filters="true">
+        ${statusFilters.map(([id, label]) => `<button type="button" data-nexus-internet-audit-filter="${escapeHtml(id)}">${escapeHtml(translateText(label))}</button>`).join("")}
+      </div>
+      <div class="nexus-internet-audit-grid" data-nexus-internet-audit-mode-cards="true">
+        ${report.modes.map(mode => `
+          <article data-nexus-internet-audit-mode="${escapeHtml(mode.modeId)}" data-nexus-internet-audit-mode-status="${escapeHtml(mode.status)}" data-risk-level="${escapeHtml(mode.riskLevel)}">
+            <div class="nexus-internet-audit-card-head">
+              <strong>${escapeHtml(translateText(mode.label))}</strong>
+              ${renderNexusInternetAuditStatusBadge(mode.status)}
+            </div>
+            <small>${escapeHtml(translateText("Mini-app group"))}: ${escapeHtml(mode.miniAppGroup)}</small>
+            <small>${escapeHtml(translateText("Provider lanes"))}: ${escapeHtml((mode.providerLanes || ["none"]).join(", "))}</small>
+            <small>${escapeHtml(translateText("Internet actions"))}: ${escapeHtml((mode.internetActions || ["none"]).join(", "))}</small>
+            <small>${escapeHtml(translateText("Local fallback"))}: ${escapeHtml((mode.localFallbackActions || ["none"]).join(", "))}</small>
+            <small>${escapeHtml(translateText("Credentials"))}: ${escapeHtml((mode.missingEnvNames?.length ? mode.missingEnvNames : mode.credentialRequiredActions || ["none"]).join(", "))}</small>
+            <small>${escapeHtml(translateText("Vendor required"))}: ${escapeHtml((mode.vendorRequiredActions || ["none"]).join(", "))}</small>
+            <small>${escapeHtml(translateText("Consent/confirmation"))}: ${escapeHtml([...(mode.consentRequiredActions || []), ...(mode.confirmationRequiredActions || [])].join(", ") || "not required for local fallback")}</small>
+            <small>${escapeHtml(translateText("Receipts/audit"))}: ${escapeHtml([...(mode.receiptTypes || []), ...(mode.auditEventTypes || [])].join(", ") || "explicit no-external-action reason")}</small>
+            <small>${escapeHtml(translateText("Ask Nexus"))}: ${escapeHtml((mode.askNexusCommands || ["explicitly local/status only"]).join(" | "))}</small>
+            <small>${escapeHtml(translateText("Demo coverage"))}: ${escapeHtml((mode.demoDataCoverage || []).join(", ") || "not applicable")}</small>
+            <small>${escapeHtml(translateText("Gaps"))}: ${escapeHtml((mode.gaps || []).join(", ") || "none")}</small>
+            <p>${escapeHtml(translateText(mode.recommendedNextStep || "Review provider lane before activation."))}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="nexus-internet-audit-export" data-nexus-internet-audit-export="true">
+        <button type="button" data-nexus-internet-audit-copy-report="true">${escapeHtml(translateText("Copy audit report"))}</button>
+        <textarea readonly aria-label="${escapeHtml(translateText("Nexus internet services integration audit markdown report"))}">${escapeHtml(`# Nexus Internet Services Integration Audit\n\nTotal modes: ${summary.totalModes}\nIntegrated: ${summary.integrated}\nMissing credentials: ${summary.missingCredentials}\nVendor required: ${summary.vendorRequired}\nBlocked for safety: ${summary.blockedForSafety}\n\n${modeLines}\n\nSafety: integration status is not execution authority; high-risk actions require credentials, consent/confirmation, provider receipt, and audit.`)}</textarea>
+      </div>
+      <p class="nexus-internet-audit-safety" data-nexus-internet-audit-safety-copy="true">${escapeHtml(translateText("Live-ready requires credentials, successful provider test, explicit approval where required, and provider receipt. Demo/sandbox records never count as live internet execution."))}</p>
     </section>
   `;
 }
@@ -26886,6 +26973,33 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
     nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
+  if (/\b(internet services integration audit|internet integration audit|mode by mode internet|internet services audit|what modes are connected|which modes are internet integrated)\b/i.test(normalized)) {
+    closeNexusFunctionWindow({ command: "Show internet services integration audit" });
+    const audit = window.NexusInternetIntegrationAudit?.buildNexusInternetIntegrationAudit?.({
+      demoDataLoaded: Boolean(nexusDemoDataState?.loaded)
+    });
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_internet_services_integration_audit_opened",
+      mode: "Internet Services Integration Audit",
+      message: audit?.summary ? `Internet Services Integration Audit is open. ${audit.summary.totalModes} modes audited; ${audit.summary.missingCredentials} missing-credential categories; ${audit.summary.vendorRequired} vendor-required categories; ${audit.summary.blockedForSafety} blocked-for-safety categories.` : "Internet Services Integration Audit is open in the Activation Center.",
+      preparedCards: [{ type: "internet_services_integration_audit", title: "Internet Services Integration Audit", status: "local audit view open", localOnly: true, noExecutionAuthorized: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_internet_services_integration_audit"
+    };
+    nexusActiveWorkflowState = {
+      id: "resource-assistant",
+      command: normalized,
+      source: "typed-command",
+      workflow: "activation-center",
+      action: "internet-integration-audit",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
     renderUserWorkspace();
     return true;
   }
@@ -42922,6 +43036,34 @@ if (typeof window !== "undefined") {
 
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
+  const auditFilter = event.target?.closest?.("[data-nexus-internet-audit-filter]");
+  if (auditFilter) {
+    event.preventDefault();
+    event.stopPropagation();
+    const filter = auditFilter.dataset.nexusInternetAuditFilter || "all";
+    $$("[data-nexus-internet-audit-filter]").forEach(button => button.classList.toggle("active", button === auditFilter));
+    $$("[data-nexus-internet-audit-mode]").forEach(card => {
+      const status = card.dataset.nexusInternetAuditModeStatus || "";
+      const risk = card.dataset.riskLevel || "";
+      const text = card.innerText.toLowerCase();
+      const show = filter === "all" ||
+        status === filter ||
+        (filter === "gaps" && !/\bgaps:\s*none\b/i.test(card.innerText)) ||
+        (filter === "health" && text.includes("health")) ||
+        (filter === "high" && risk === "high");
+      card.hidden = !show;
+    });
+    return true;
+  }
+  const copyAuditReport = event.target?.closest?.("[data-nexus-internet-audit-copy-report]");
+  if (copyAuditReport) {
+    event.preventDefault();
+    event.stopPropagation();
+    const reportText = document.querySelector("[data-nexus-internet-audit-export] textarea")?.value || "";
+    navigator.clipboard?.writeText?.(reportText).catch(() => {});
+    toast("Internet Services Integration Audit report is ready to copy. No secrets are included.");
+    return true;
+  }
   if (handleNexusDemoSandboxClick(event)) return true;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
   const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
