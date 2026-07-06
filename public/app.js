@@ -21013,8 +21013,13 @@ const NEXUS_MEDIA_MUSIC_INTENTS = Object.freeze([
 
 function isNexusMediaMusicCommand(command = "") {
   const text = String(command || "");
-  return /\b(play|open|music|song|track|playlist|youtube|spotify|apple music|pause|stop|resume|download|rip|cache)\b/i.test(text)
-    && /\b(music|song|track|playlist|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife|youtube|spotify|apple music)\b/i.test(text);
+  const lower = text.toLowerCase();
+  if (/\b(shipment|tracking number|trade route|logistics|delivery|transport)\b/i.test(lower)) return false;
+  const knownMusicIntent = NEXUS_MEDIA_MUSIC_INTENTS.some(intent => intent.patterns.some(pattern => pattern.test(text)));
+  const providerMusicIntent = /\b(youtube|spotify|apple music)\b/i.test(text)
+    && /\b(play|open|music|song|playlist|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
+  const genericMusicIntent = /\b(play|open|pause|stop|resume|download|rip|cache)\b.*\b(music|song|playlist|audio|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
+  return knownMusicIntent || providerMusicIntent || genericMusicIntent;
 }
 
 function detectNexusMediaMusicIntent(command = "") {
@@ -22684,6 +22689,21 @@ let nexusActionHistory = [];
 let nexusPartnerProfiles = [];
 let nexusLaneConfigOverrides = {};
 let nexusRecentWorkflows = [];
+let nexusAgenticCommandMissions = [];
+let nexusAgenticCommandLocalMemory = {
+  healthIntakes: [],
+  chronicReadings: [],
+  providerPackets: [],
+  buyers: [],
+  sellers: [],
+  marketplaceRecords: [],
+  shipments: [],
+  employmentRecords: [],
+  learningPlans: [],
+  droneMissions: [],
+  communicationDrafts: [],
+  receipts: []
+};
 const NEXUS_DEMO_DATA_STORAGE_KEY = "nexusDemoDataSandboxState";
 const NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY = "nexusDemoDataSandboxVisible";
 let nexusDemoDataVisible = localStorage.getItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY) !== "false";
@@ -23659,6 +23679,8 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusPartnerProfiles", JSON.stringify(nexusPartnerProfiles.slice(0, 25)));
     localStorage.setItem("nexusLaneConfigOverrides", JSON.stringify(nexusLaneConfigOverrides || {}));
     localStorage.setItem("nexusRecentWorkflows", JSON.stringify(nexusRecentWorkflows.slice(0, 8)));
+    localStorage.setItem("nexusAgenticCommandMissions", JSON.stringify(nexusAgenticCommandMissions.slice(0, 25)));
+    localStorage.setItem("nexusAgenticCommandLocalMemory", JSON.stringify(nexusAgenticCommandLocalMemory || {}));
     localStorage.setItem("nexusUserExperienceRole", nexusUserExperienceRole);
     localStorage.setItem("nexusLowBandwidthMode", nexusLowBandwidthMode ? "true" : "false");
     localStorage.setItem("nexusLanguagePreference", nexusLanguagePreference || "");
@@ -23676,6 +23698,11 @@ function restoreNexusRuntimeMemory() {
     nexusPartnerProfiles = JSON.parse(localStorage.getItem("nexusPartnerProfiles") || "[]") || [];
     nexusLaneConfigOverrides = JSON.parse(localStorage.getItem("nexusLaneConfigOverrides") || "{}") || {};
     nexusRecentWorkflows = JSON.parse(localStorage.getItem("nexusRecentWorkflows") || "[]") || [];
+    nexusAgenticCommandMissions = JSON.parse(localStorage.getItem("nexusAgenticCommandMissions") || "[]") || [];
+    nexusAgenticCommandLocalMemory = {
+      ...nexusAgenticCommandLocalMemory,
+      ...(JSON.parse(localStorage.getItem("nexusAgenticCommandLocalMemory") || "{}") || {})
+    };
     nexusUserExperienceRole = localStorage.getItem("nexusUserExperienceRole") || "Standard User";
     nexusLowBandwidthMode = localStorage.getItem("nexusLowBandwidthMode") === "true";
     nexusLanguagePreference = localStorage.getItem("nexusLanguagePreference") || "";
@@ -23686,6 +23713,21 @@ function restoreNexusRuntimeMemory() {
     nexusPartnerProfiles = [];
     nexusLaneConfigOverrides = {};
     nexusRecentWorkflows = [];
+    nexusAgenticCommandMissions = [];
+    nexusAgenticCommandLocalMemory = {
+      healthIntakes: [],
+      chronicReadings: [],
+      providerPackets: [],
+      buyers: [],
+      sellers: [],
+      marketplaceRecords: [],
+      shipments: [],
+      employmentRecords: [],
+      learningPlans: [],
+      droneMissions: [],
+      communicationDrafts: [],
+      receipts: []
+    };
     nexusGuidedWorkflowAnswers = {};
   }
 }
@@ -23696,6 +23738,21 @@ function clearNexusSensitiveLocalData() {
   nexusPartnerProfiles = [];
   nexusLaneConfigOverrides = {};
   nexusRecentWorkflows = [];
+  nexusAgenticCommandMissions = [];
+  nexusAgenticCommandLocalMemory = {
+    healthIntakes: [],
+    chronicReadings: [],
+    providerPackets: [],
+    buyers: [],
+    sellers: [],
+    marketplaceRecords: [],
+    shipments: [],
+    employmentRecords: [],
+    learningPlans: [],
+    droneMissions: [],
+    communicationDrafts: [],
+    receipts: []
+  };
   nexusGuidedWorkflowAnswers = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
@@ -23705,6 +23762,8 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusPartnerProfiles");
     localStorage.removeItem("nexusLaneConfigOverrides");
     localStorage.removeItem("nexusRecentWorkflows");
+    localStorage.removeItem("nexusAgenticCommandMissions");
+    localStorage.removeItem("nexusAgenticCommandLocalMemory");
     localStorage.removeItem("nexusGuidedWorkflowAnswers");
   } catch {}
   nexusAgenticBrainLastResult = {
@@ -26704,6 +26763,25 @@ function renderNexusDemoRecordsPanel() {
 
 function nexusCurrentMissionSnapshot() {
   const state = nexusActiveWorkflowState || {};
+  const activeAgenticMission = state?.agenticMission || nexusAgenticCommandMissions[0] || null;
+  if (activeAgenticMission) {
+    const latestReceipt = activeAgenticMission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.find?.(receipt => receipt.missionId === activeAgenticMission.id) || null;
+    return {
+      id: activeAgenticMission.id,
+      title: activeAgenticMission.title,
+      category: activeAgenticMission.mode,
+      status: activeAgenticMission.status,
+      goal: activeAgenticMission.goal,
+      understood: `Nexus understood: ${activeAgenticMission.goal}`,
+      collected: activeAgenticMission.collectedInfo?.length ? activeAgenticMission.collectedInfo.join(", ") : "No structured detail collected yet.",
+      missing: activeAgenticMission.missingInfo?.length ? activeAgenticMission.missingInfo.join(", ") : "No required missing detail detected for local preparation.",
+      nextStep: activeAgenticMission.nextStep,
+      readiness: activeAgenticMission.providerReadiness || "local_ready",
+      consent: activeAgenticMission.confirmationRequired ? `Confirmation ${activeAgenticMission.confirmationStatus || "required"} before sensitive or external action.` : "No confirmation required for this safe local step.",
+      receipt: latestReceipt ? `${latestReceipt.id}: ${latestReceipt.happened}` : "No receipt yet.",
+      safety: "Agentic command runtime. Local/sandbox behavior only unless configured provider credentials, consent, confirmation, and audit receipt are present."
+    };
+  }
   if (nexusDemoDataState?.loaded && nexusDemoDataVisible && (state?.recordSource === "demo" || state?.demo === true)) {
     const mission = (nexusDemoDataState.missions || []).find(item => item.id === state.id) || nexusDemoDataState.missions?.[0];
     if (mission) {
@@ -26775,6 +26853,9 @@ function renderNexusAgenticMissionWorkspace() {
         <article><strong>${escapeHtml(translateText("Safety note"))}</strong><span>${escapeHtml(translateText(mission.safety))}</span></article>
       </div>
       <div class="nexus-mission-actions">
+        <button type="button" class="primary" data-nexus-agentic-runtime-action="continue">${escapeHtml(translateText("Continue mission"))}</button>
+        <button type="button" data-nexus-agentic-runtime-action="confirm">${escapeHtml(translateText("Confirm local step"))}</button>
+        <button type="button" data-nexus-agentic-runtime-action="cancel">${escapeHtml(translateText("Cancel mission"))}</button>
         <button type="button" class="primary" data-nexus-command-prefill="${escapeHtml(mission.nextStep)}">${escapeHtml(translateText("Use recommended prompt"))}</button>
         <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Provider readiness"))}</button>
         <button type="button" data-nexus-mode-shortcut="view-receipts" data-nexus-command="Show action receipt.">${escapeHtml(translateText("View receipts"))}</button>
@@ -26970,10 +27051,296 @@ function buildNexusCapabilityOverviewResult(command = "") {
   };
 }
 
+function nexusAgenticCommandMemoryBucket(mode = "general") {
+  if (/marketplace/.test(mode)) return "marketplaceRecords";
+  if (/logistics|maps/.test(mode)) return "shipments";
+  if (/workforce/.test(mode)) return "employmentRecords";
+  if (/learning/.test(mode)) return "learningPlans";
+  if (/drone/.test(mode)) return "droneMissions";
+  if (/communication/.test(mode)) return "communicationDrafts";
+  if (/provider|pharmacy|mobile-clinic|telehealth/.test(mode)) return "providerPackets";
+  if (/health|chronic/.test(mode)) return "healthIntakes";
+  return "receipts";
+}
+
+function normalizeNexusAgenticCommandText(command = "") {
+  return String(command || "").trim().replace(/^nexus,\s*/i, "");
+}
+
+function parseNexusAgenticCommandIntent(command = "") {
+  const text = normalizeNexusAgenticCommandText(command);
+  const lower = text.toLowerCase();
+  if (!text) return null;
+  const isDelete = /\b(delete|remove|mark inactive|closed|deceased|archive)\b/.test(lower);
+  const isCancel = /\b(cancel|stop|clear)\b/.test(lower);
+  const isContinue = /\b(continue|resume)\b/.test(lower);
+  const isConfirm = /\b(confirm|yes|approve)\b/.test(lower);
+  const isStatus = /\b(what happened|did it send|what is still missing|what do i need to do next|show receipt|show receipts|last intake|show my last intake|what did nexus do|what did you do)\b/.test(lower);
+  let mode = "general";
+  if (/\b(blood pressure|bp\b|diabetes|glucose|blood sugar|hypertension|obesity|rpm|rtm|chronic|doctor|care summary|provider summary|intake|patient|health)\b/.test(lower)) mode = "health-care";
+  if (/\b(crop|maize|farmer|farm|agriculture|food security|field issue|pest|blight|irrigation)\b/.test(lower)) mode = "agriculture";
+  if (/\b(buyer|seller|sell|marketplace|agritrade|vendor|transaction)\b/.test(lower)) mode = "marketplace";
+  if (/\b(shipment|track|tracking|trade route|route|logistics|delivery|transport)\b/.test(lower)) mode = "logistics";
+  if (/\b(job|apply|employment|workforce|resume|career|interview)\b/.test(lower)) mode = "workforce";
+  if (/\b(learning|training|course|literacy|lesson|study plan)\b/.test(lower)) mode = "learning";
+  if (/\b(drone|field operations|flight|imagery)\b/.test(lower)) mode = "drone";
+  if (/\b(message|sms|whatsapp|telegram|email|call|phone|contact)\b/.test(lower)) mode = "communications";
+  if (/\b(provider handoff|provider activation|pharmacy|mobile clinic|telehealth)\b/.test(lower)) mode = lower.includes("pharmacy") ? "pharmacy" : lower.includes("mobile clinic") ? "mobile-clinic" : lower.includes("telehealth") ? "telehealth" : "provider-activation";
+  const actionType = isConfirm ? "confirm" : isContinue ? "continue" : isStatus ? "status" : isDelete ? "delete" : isCancel ? "cancel" : /\b(remember|save|record)\b/.test(lower) ? "remember" : /\b(prepare|create|build|draft)\b/.test(lower) ? "prepare" : "start";
+  const externalRisk = /\b(send|contact|call|whatsapp|telegram|email|provider|doctor|pharmacy|mobile clinic|payment|buy|sell|book|schedule|dispatch|drone|delete|cancel transaction|shipment|handoff)\b/.test(lower);
+  const healthRisk = /\b(diabetes|hypertension|obesity|blood pressure|glucose|rpm|rtm|pharmacy|telehealth|doctor|provider|patient)\b/.test(lower);
+  const riskLevel = externalRisk || healthRisk || isDelete || isCancel ? "high" : "low";
+  const confirmationRequired = riskLevel !== "low" || ["delete", "cancel", "confirm"].includes(actionType);
+  const collectedInfo = [];
+  const missingInfo = [];
+  const nameMatch = text.match(/\bnamed\s+([A-Za-z0-9 .'-]{2,60})/i);
+  if (nameMatch) collectedInfo.push(`Name: ${nameMatch[1].trim()}`);
+  if (/\bDemo Buyer One\b/i.test(text)) collectedInfo.push("Buyer: Demo Buyer One");
+  if (/\bblood pressure|bp\b/i.test(text)) missingInfo.push("blood pressure systolic/diastolic value", "reading time", "symptoms or concerns");
+  if (mode === "marketplace") missingInfo.push("buyer/seller contact", "crop or listing details", "quantity and location");
+  if (mode === "logistics") missingInfo.push("carrier or tracking number", "origin", "destination");
+  if (mode === "communications") missingInfo.push("recipient", "message purpose", "preferred channel");
+  if (mode === "workforce") missingInfo.push("role or career goal", "skills", "location or availability");
+  if (mode === "learning") missingInfo.push("learning goal", "current level", "preferred language");
+  if (mode === "drone") missingInfo.push("field location", "mission purpose", "approval path");
+  if (!missingInfo.length && riskLevel !== "low") missingInfo.push("explicit confirmation", "verified recipient/provider", "audit reason");
+  const titleMap = {
+    "health-care": "Health & chronic care mission",
+    agriculture: "Agriculture support mission",
+    marketplace: "Marketplace buyer/seller mission",
+    logistics: "Logistics and route mission",
+    workforce: "Workforce support mission",
+    learning: "Learning plan mission",
+    drone: "Drone and field operations mission",
+    communications: "Communications handoff mission",
+    pharmacy: "Pharmacy support mission",
+    "mobile-clinic": "Mobile clinic support mission",
+    telehealth: "Telehealth intake mission",
+    "provider-activation": "Provider handoff mission"
+  };
+  return {
+    mode,
+    userGoal: text,
+    actionType,
+    title: titleMap[mode] || "Nexus assistant mission",
+    collectedInfo,
+    missingInfo,
+    riskLevel,
+    confirmationRequired,
+    providerReadiness: riskLevel === "low" ? "local_ready" : "provider_credentials_or_confirmation_required",
+    source: "nexus_agentic_command_runtime"
+  };
+}
+
+function shouldNexusAgenticCommandRuntimeHandle(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (!text.trim()) return false;
+  if (isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return false;
+  const intent = parseNexusAgenticCommandIntent(command);
+  if (!intent) return false;
+  return intent.mode !== "general"
+    || ["continue", "cancel", "confirm", "status", "delete"].includes(intent.actionType)
+    || /\b(remember this|what happened|did it send|what is still missing|what do i need to do next|show receipts)\b/i.test(text);
+}
+
+function nexusAgenticCommandReceipt(mission, happened = "Mission updated locally.", didNot = "No external action occurred.") {
+  const receipt = {
+    id: `nexus-agentic-receipt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    missionId: mission.id,
+    title: mission.title,
+    status: mission.executionStatus || "completed_locally",
+    happened,
+    didNot,
+    next: mission.nextStep,
+    createdAt: new Date().toISOString(),
+    localOnly: true
+  };
+  nexusAgenticCommandLocalMemory.receipts = [receipt, ...(nexusAgenticCommandLocalMemory.receipts || [])].slice(0, 25);
+  return receipt;
+}
+
+function buildNexusAgenticMissionFromIntent(intent, command = "") {
+  const id = `nexus-mission-${intent.mode}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const requiresExternal = intent.riskLevel !== "low";
+  const mission = {
+    id,
+    title: intent.title,
+    mode: intent.mode,
+    goal: intent.userGoal,
+    status: requiresExternal ? "needs_confirmation" : "local_prepared",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userInput: command,
+    collectedInfo: intent.collectedInfo,
+    missingInfo: intent.missingInfo,
+    nextStep: requiresExternal ? "Review missing information, then confirm only when ready. Nexus will prepare or queue; it will not execute externally without configured providers." : "Continue locally or ask Nexus what to do next.",
+    riskLevel: intent.riskLevel,
+    confirmationRequired: intent.confirmationRequired,
+    confirmationStatus: intent.confirmationRequired ? "required" : "not_required",
+    executionStatus: intent.confirmationRequired ? "needs_confirmation" : "completed_locally",
+    providerReadiness: intent.providerReadiness,
+    receipts: [],
+    timeline: [],
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    source: intent.source,
+    actionType: intent.actionType
+  };
+  mission.timeline.push({ at: mission.createdAt, event: "mission_created", detail: "Nexus created a local mission from a natural command." });
+  if (!mission.confirmationRequired) {
+    const receipt = nexusAgenticCommandReceipt(mission, "Safe local mission was prepared.", "No provider, payment, call, message, booking, dispatch, location, camera, diagnosis, prescription, or external handoff occurred.");
+    mission.receipts.push(receipt);
+    mission.timeline.push({ at: receipt.createdAt, event: "local_receipt_created", detail: receipt.happened });
+  }
+  return mission;
+}
+
+function upsertNexusAgenticMission(mission) {
+  nexusAgenticCommandMissions = [mission, ...nexusAgenticCommandMissions.filter(item => item.id !== mission.id)].slice(0, 25);
+  nexusRecentWorkflows = [{
+    id: mission.id,
+    title: mission.title,
+    category: mission.mode,
+    status: mission.status,
+    summary: mission.goal,
+    updatedAt: mission.updatedAt,
+    agenticCommandRuntime: true
+  }, ...nexusRecentWorkflows.filter(item => item.id !== mission.id)].slice(0, 8);
+  const bucket = nexusAgenticCommandMemoryBucket(mission.mode);
+  const record = {
+    id: mission.id,
+    title: mission.title,
+    goal: mission.goal,
+    status: mission.status,
+    updatedAt: mission.updatedAt,
+    localOnly: true,
+    sandbox: mission.sandbox,
+    source: mission.source
+  };
+  nexusAgenticCommandLocalMemory[bucket] = [record, ...(nexusAgenticCommandLocalMemory[bucket] || []).filter(item => item.id !== mission.id)].slice(0, 20);
+  if (mission.mode === "marketplace" && /\bbuyer\b/i.test(mission.goal || "")) {
+    nexusAgenticCommandLocalMemory.buyers = [record, ...(nexusAgenticCommandLocalMemory.buyers || []).filter(item => item.id !== mission.id)].slice(0, 20);
+  }
+  if (mission.mode === "marketplace" && /\bseller\b/i.test(mission.goal || "")) {
+    nexusAgenticCommandLocalMemory.sellers = [record, ...(nexusAgenticCommandLocalMemory.sellers || []).filter(item => item.id !== mission.id)].slice(0, 20);
+  }
+}
+
+function setNexusAgenticCommandResult(mission, message = "") {
+  const latestReceipt = mission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: mission.executionStatus || mission.status,
+    mode: mission.mode,
+    message: message || `Nexus created ${mission.title}.`,
+    preparedCards: [{
+      type: "agentic_command_mission",
+      title: mission.title,
+      status: mission.status,
+      localOnly: true,
+      agenticCommandRuntime: true,
+      missingInfo: mission.missingInfo,
+      collectedInfo: mission.collectedInfo,
+      confirmationRequired: mission.confirmationRequired,
+      receiptId: latestReceipt?.id || ""
+    }],
+    mission,
+    noExecutionAuthorized: mission.executionStatus !== "executed_with_receipt",
+    localOnly: true,
+    source: "nexus_agentic_command_runtime"
+  };
+  upsertNexusAgenticMission(mission);
+  nexusActiveWorkflowState = null;
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
+function submitNexusAgenticCommandRuntime(command = "", input = null, source = "command-submit", event = null) {
+  const normalizedCommand = String(command || "").trim();
+  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand)) return false;
+  const handled = runNexusAgenticCommandRuntime(normalizedCommand, { source });
+  if (!handled) return false;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  event?.stopImmediatePropagation?.();
+  if (input) input.value = normalizedCommand;
+  setCommandInputs(normalizedCommand);
+  return true;
+}
+
+function continueNexusAgenticMission(command = "") {
+  const mission = nexusActiveWorkflowState?.agenticMission || nexusAgenticCommandMissions[0] || null;
+  if (!mission) return false;
+  mission.updatedAt = new Date().toISOString();
+  mission.timeline.unshift({ at: mission.updatedAt, event: "mission_continued", detail: command || "User asked to continue the mission." });
+  mission.nextStep = mission.missingInfo?.length ? `Collect: ${mission.missingInfo.slice(0, 3).join(", ")}.` : "Review the prepared local packet or confirm the next gated step.";
+  return setNexusAgenticCommandResult(mission, `Continuing ${mission.title}. ${mission.nextStep}`);
+}
+
+function confirmNexusAgenticMission(command = "") {
+  const mission = nexusActiveWorkflowState?.agenticMission || nexusAgenticCommandMissions[0] || null;
+  if (!mission) return false;
+  mission.confirmationStatus = "confirmed_for_local_preparation_only";
+  mission.executionStatus = mission.riskLevel === "high" ? "queued_or_prepared_not_sent" : "completed_locally";
+  mission.status = mission.executionStatus;
+  mission.updatedAt = new Date().toISOString();
+  const receipt = nexusAgenticCommandReceipt(mission, "Confirmation captured for local preparation/review.", "Nexus did not send, call, pay, book, dispatch, share location, contact a provider, diagnose, prescribe, or execute externally.");
+  mission.receipts.unshift(receipt);
+  mission.timeline.unshift({ at: receipt.createdAt, event: "confirmation_recorded", detail: receipt.didNot });
+  return setNexusAgenticCommandResult(mission, "Confirmation was recorded for the local mission. External execution remains blocked until provider credentials, consent, approval, and audit gates are complete.");
+}
+
+function cancelNexusAgenticMission(command = "") {
+  const mission = nexusActiveWorkflowState?.agenticMission || nexusAgenticCommandMissions[0] || null;
+  if (!mission) return false;
+  mission.status = "cancelled";
+  mission.executionStatus = "cancelled_locally";
+  mission.updatedAt = new Date().toISOString();
+  const receipt = nexusAgenticCommandReceipt(mission, "Mission was cancelled locally.", "No transaction, provider handoff, shipment, message, call, payment, or health action was executed.");
+  mission.receipts.unshift(receipt);
+  mission.timeline.unshift({ at: receipt.createdAt, event: "mission_cancelled", detail: receipt.happened });
+  return setNexusAgenticCommandResult(mission, `${mission.title} was cancelled locally. No external action occurred.`);
+}
+
+function showNexusAgenticMissionStatus(command = "") {
+  const mission = nexusActiveWorkflowState?.agenticMission || nexusAgenticCommandMissions[0] || null;
+  if (!mission) return false;
+  const missing = mission.missingInfo?.length ? mission.missingInfo.join(", ") : "nothing obvious for local preparation";
+  return setNexusAgenticCommandResult(mission, `Current mission: ${mission.title}. Status: ${mission.status}. Still missing: ${missing}. Next: ${mission.nextStep}`);
+}
+
+function runNexusAgenticCommandRuntime(command = "", options = {}) {
+  const intent = parseNexusAgenticCommandIntent(command);
+  if (!intent) return false;
+  if (intent.actionType === "continue") return continueNexusAgenticMission(command);
+  if (intent.actionType === "confirm") return confirmNexusAgenticMission(command);
+  if (intent.actionType === "cancel") return cancelNexusAgenticMission(command);
+  if (intent.actionType === "status") return showNexusAgenticMissionStatus(command);
+  const mission = buildNexusAgenticMissionFromIntent(intent, command);
+  if (intent.actionType === "delete") {
+    mission.status = "needs_confirmation";
+    mission.executionStatus = "delete_confirmation_required";
+    mission.confirmationRequired = true;
+    mission.confirmationStatus = "required";
+    mission.nextStep = "Confirm before Nexus marks any local record inactive or deletes it. Nexus will explain impact first.";
+  }
+  const didRemember = intent.actionType === "remember";
+  const message = didRemember
+    ? `${mission.title} started and a local memory record was prepared. No external action occurred.`
+    : `I understood that you want to: ${mission.goal}. I created a local mission and listed what is still missing.`;
+  return setNexusAgenticCommandResult(mission, message);
+}
+
+if (typeof window !== "undefined") {
+  window.runNexusAgenticCommandRuntime = runNexusAgenticCommandRuntime;
+  window.parseNexusAgenticCommandIntent = parseNexusAgenticCommandIntent;
+}
+
 function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
   const normalizedLower = normalized.toLowerCase();
+  if (shouldNexusAgenticCommandRuntimeHandle(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
     nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
@@ -43224,6 +43591,17 @@ function handleNexusStandardUserHomeClick(event) {
   }
   if (handleNexusDemoSandboxClick(event)) return true;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  const agenticRuntimeAction = eventTarget?.closest?.("[data-nexus-agentic-runtime-action]");
+  if (agenticRuntimeAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const action = agenticRuntimeAction.dataset.nexusAgenticRuntimeAction || "continue";
+    if (action === "confirm") return confirmNexusAgenticMission("Confirm current mission.");
+    if (action === "cancel") return cancelNexusAgenticMission("Cancel current mission.");
+    if (action === "status") return showNexusAgenticMissionStatus("What happened?");
+    return continueNexusAgenticMission("Continue current mission.");
+  }
   const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
   if (persistentOperationsShortcut) {
     event.preventDefault();
@@ -43279,6 +43657,7 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (submitNexusAgenticCommandRuntime(command, input, "command-submit", event)) return true;
     if (isNexusPersistentOperationsCommand(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -43778,6 +44157,7 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (submitNexusAgenticCommandRuntime(command, input, "command-submit", event)) return;
       if (isNexusPersistentOperationsCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -43806,6 +44186,7 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (submitNexusAgenticCommandRuntime(command, input, "command-submit", event)) return;
       if (isNexusPersistentOperationsCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -43980,6 +44361,7 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (submitNexusAgenticCommandRuntime(command, input, "command-submit", event)) return;
       if (input) input.value = command;
       setCommandInputs(command);
       if (isNexusPersistentOperationsCommand(command)) {
