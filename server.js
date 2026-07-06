@@ -38,8 +38,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-379";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v353";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-380";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v354";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -34653,6 +34653,187 @@ function nexusInternetIntentLane(command = "") {
   return "wikipedia-wikidata-fallback";
 }
 
+function emptyNexusChronicPredictiveState() {
+  return {
+    id: `nexus-chronic-predictive-api-${Date.now()}`,
+    updatedAt: nexusNow(),
+    source: "nexus_chronic_health_predictive_modeler_api",
+    localOnly: true,
+    physicianEvaluationMode: true,
+    conditionFocus: "insufficient_data",
+    readings: { bloodPressure: [], glucose: [], labs: [], weight: [], symptoms: [], adherence: [], notes: [] },
+    trends: {},
+    riskSignals: [],
+    scenarioSimulations: [],
+    missingData: [],
+    confidence: { label: "insufficient_data", dataQuality: "insufficient data" },
+    reasoningTrace: [],
+    physicianChecklist: [],
+    physicianSummary: null,
+    receipts: []
+  };
+}
+
+function parseNexusChronicPredictiveApiReadings(command = "") {
+  const text = String(command || "");
+  const readings = [];
+  let index = 0;
+  const now = nexusNow();
+  const bpPattern = /\b(?:blood pressure|bp)?\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
+  let bpMatch;
+  while ((bpMatch = bpPattern.exec(text)) !== null) {
+    const systolic = Number(bpMatch[1]);
+    const diastolic = Number(bpMatch[2]);
+    readings.push({ id: `api-bp-${Date.now()}-${index++}`, type: "blood_pressure", parsedValue: `${systolic}/${diastolic}`, systolic, diastolic, unit: "mmHg", context: /\byesterday\b/i.test(text.slice(0, bpMatch.index + bpMatch[0].length)) ? "yesterday" : /\btoday\b/i.test(text) ? "today" : "patient-reported", timestamp: now, source: "natural_command", localOnly: true });
+  }
+  const glucoseMatch = text.match(/\b(?:fasting|post[- ]?meal|random|morning)?\s*(?:glucose|blood sugar)\s*(?:is|was|=|:)?\s*(\d{2,3})\b/i);
+  if (glucoseMatch) readings.push({ id: `api-glucose-${Date.now()}`, type: "glucose", parsedValue: `${glucoseMatch[1]} mg/dL`, glucose: Number(glucoseMatch[1]), unit: "mg/dL", context: /\bfasting\b/i.test(text) ? "fasting" : /\bmorning\b/i.test(text) ? "morning" : "context missing", timestamp: now, source: "natural_command", localOnly: true });
+  const a1cMatch = text.match(/\bA1C\s*(?:is|was|=|:)?\s*(\d{1,2}(?:\.\d+)?)\b/i);
+  if (a1cMatch) readings.push({ id: `api-a1c-${Date.now()}`, type: "lab_a1c", parsedValue: `${a1cMatch[1]}%`, unit: "%", context: "A1C", timestamp: now, source: "natural_command", localOnly: true });
+  const weightMatch = text.match(/\bweight\s+(?:increased|went up|gained|decreased|lost)\s+(?:by\s+)?(\d{1,3}(?:\.\d+)?)\s*(pounds?|lbs?|kg|kilograms?)?/i);
+  if (weightMatch) {
+    const direction = /\b(decreased|lost)\b/i.test(text) ? "decreased" : "increased";
+    readings.push({ id: `api-weight-${Date.now()}`, type: "weight", parsedValue: `${direction} ${weightMatch[1]} ${weightMatch[2] || "pounds"}`, weight: Number(weightMatch[1]) * (direction === "decreased" ? -1 : 1), unit: weightMatch[2] || "pounds", context: "weight trend/change", timestamp: now, source: "natural_command", localOnly: true });
+  }
+  const adherenceMatch = text.match(/\bmissed\s+(?:my\s+)?(?:medication|medicine|dose|doses)?\s*(once|twice|three times|four times|\d+)?/i);
+  if (adherenceMatch || /\bmissed .*medication|missed .*dose/i.test(text)) {
+    const frequencyText = adherenceMatch?.[1] || "unspecified";
+    const frequency = frequencyText === "once" ? 1 : frequencyText === "twice" ? 2 : frequencyText === "three times" ? 3 : frequencyText === "four times" ? 4 : Number(frequencyText) || 1;
+    readings.push({ id: `api-adherence-${Date.now()}`, type: "adherence", parsedValue: `missed medication ${frequencyText}`, adherence: `missed_${frequency}`, context: /\bweek\b/i.test(text) ? "this week" : "adherence note", timestamp: now, source: "natural_command", localOnly: true });
+  }
+  const symptoms = ["chest pain", "shortness of breath", "fainting", "weakness", "confusion", "severe headache", "stroke", "severe dizziness", "vision changes"].filter(symptom => new RegExp(symptom.replace(" ", "\\s+"), "i").test(text));
+  if (symptoms.length) readings.push({ id: `api-symptom-${Date.now()}`, type: "symptom", parsedValue: symptoms.join(", "), symptoms, context: "symptom escalation check", timestamp: now, source: "natural_command", localOnly: true });
+  if (!readings.length) readings.push({ id: `api-query-${Date.now()}`, type: "query", parsedValue: "predictive modeler query", context: "modeler view request", timestamp: now, source: "natural_command", localOnly: true });
+  return readings;
+}
+
+function buildNexusChronicPredictiveRiskSignal(condition, signalName, riskLevel, trajectory, explanation, contributingFactors, missingData) {
+  return {
+    id: `nexus-chronic-predictive-signal-${condition}-${Date.now()}`,
+    condition,
+    signalName,
+    riskLevel,
+    trajectory,
+    confidenceLabel: missingData.length > 3 ? "low" : "moderate",
+    dataQuality: missingData.length ? "partial patient-reported context" : "usable patient-reported context",
+    explanation,
+    contributingFactors,
+    missingData,
+    recommendedReview: "Use this as physician-facing preparation only; clinician judgment is required before diagnosis, treatment, or medication decisions.",
+    suggestedNextQuestions: ["When were the readings taken?", "Any symptoms?", "Any medication doses missed?", "When was the last provider review?"],
+    noDiagnosis: true,
+    noPrescription: true,
+    noExternalProviderContact: true
+  };
+}
+
+function evaluateNexusChronicPredictiveApiState(command = "", incomingState = {}) {
+  const state = { ...emptyNexusChronicPredictiveState(), ...(incomingState || {}) };
+  state.readings = { ...emptyNexusChronicPredictiveState().readings, ...(state.readings || {}) };
+  parseNexusChronicPredictiveApiReadings(command).forEach(reading => {
+    if (reading.type === "blood_pressure") state.readings.bloodPressure.push(reading);
+    else if (reading.type === "glucose") state.readings.glucose.push(reading);
+    else if (reading.type === "lab_a1c") state.readings.labs.push(reading);
+    else if (reading.type === "weight") state.readings.weight.push(reading);
+    else if (reading.type === "symptom") state.readings.symptoms.push(reading);
+    else if (reading.type === "adherence") state.readings.adherence.push(reading);
+    else state.readings.notes.push(reading);
+  });
+  const missing = new Set(["Provider follow-up date"]);
+  const signals = [];
+  const bp = state.readings.bloodPressure || [];
+  const glucose = state.readings.glucose || [];
+  const labs = state.readings.labs || [];
+  const weight = state.readings.weight || [];
+  const symptoms = state.readings.symptoms || [];
+  const adherence = state.readings.adherence || [];
+  if (!symptoms.length) missing.add("Symptoms or absence of symptoms");
+  if (!adherence.length) missing.add("Medication/adherence context");
+  if (bp.length) {
+    const elevated = bp.filter(item => item.systolic >= 140 || item.diastolic >= 90);
+    signals.push(buildNexusChronicPredictiveRiskSignal("hypertension", "Hypertension predictive support signal", elevated.length >= 2 ? "high" : elevated.length ? "elevated" : "stable", bp.length >= 2 ? "variable" : "unknown", "Patient-reported BP readings were checked for repeated elevation and symptom context.", elevated.map(item => `Elevated BP: ${item.parsedValue}`), Array.from(missing)));
+  }
+  if (glucose.length || labs.length) {
+    if (!labs.length) missing.add("A1C");
+    if (glucose.some(item => /context missing/i.test(item.context))) missing.add("Fasting/post-meal/random glucose context");
+    const highGlucose = glucose.filter(item => item.glucose >= 180 || (/fasting/i.test(item.context) && item.glucose >= 126));
+    const highA1c = labs.some(item => Number.parseFloat(item.parsedValue) >= 8);
+    signals.push(buildNexusChronicPredictiveRiskSignal("diabetes", "Diabetes predictive support signal", highGlucose.length >= 2 || highA1c ? "high" : highGlucose.length ? "elevated" : "watch", glucose.length >= 2 ? "variable" : "unknown", "Glucose/A1C readings were checked for pattern, context, and missing clinical data.", [...highGlucose.map(item => `High glucose: ${item.parsedValue}`), ...labs.map(item => `A1C: ${item.parsedValue}`)], Array.from(missing)));
+  }
+  if (weight.length || (bp.length && glucose.length)) {
+    missing.add("Height/BMI context");
+    missing.add("Diet/activity/sleep context");
+    const rapidGain = weight.some(item => item.weight >= 5);
+    signals.push(buildNexusChronicPredictiveRiskSignal("cardiometabolic", "Obesity/cardiometabolic predictive support signal", rapidGain && bp.length && glucose.length ? "high" : rapidGain || (bp.length && glucose.length) ? "elevated" : "watch", "variable", "Weight trend and cardiometabolic overlap were checked without diagnosing obesity or prescribing treatment.", [rapidGain ? "Weight increased by 5+ pounds" : "", bp.length && glucose.length ? "BP/glucose overlap present" : ""].filter(Boolean), Array.from(missing)));
+  }
+  if (adherence.length) signals.push(buildNexusChronicPredictiveRiskSignal("adherence", "Medication adherence predictive support signal", adherence.length >= 1 ? "high" : "watch", "variable", "Missed medication reports were flagged for clinician/pharmacist review.", adherence.map(item => item.parsedValue), ["Medication name", ...Array.from(missing)]));
+  if (symptoms.some(item => /chest pain|shortness of breath|fainting|stroke/i.test(item.parsedValue))) signals.unshift(buildNexusChronicPredictiveRiskSignal("symptoms", "Symptom escalation signal", "urgent_review", "worsening", "Potentially serious symptoms were reported. Nexus does not diagnose or dispatch; local urgent/emergency care guidance should be followed.", symptoms.map(item => `Reported symptom: ${item.parsedValue}`), ["Onset time", "Current severity", "Emergency contact/care access"]));
+  if (!signals.length) signals.push(buildNexusChronicPredictiveRiskSignal("careGaps", "Care-gap predictive support signal", "insufficient_data", "unknown", "More readings and clinical context are needed before a meaningful risk pattern can be prepared.", [], Array.from(missing)));
+  state.riskSignals = signals;
+  state.conditionFocus = signals[0]?.condition || "insufficient_data";
+  state.missingData = [...new Set(signals.flatMap(signal => signal.missingData || []))];
+  state.confidence = { label: state.missingData.length > 4 ? "low" : "moderate", dataQuality: state.missingData.length ? "partial patient-reported context" : "usable patient-reported context" };
+  state.trends = { hypertension: { trajectory: bp.length >= 2 ? "variable" : "unknown" }, diabetes: { trajectory: glucose.length >= 2 ? "variable" : "unknown" }, obesity: { trajectory: weight.length >= 2 ? "variable" : "unknown" }, careGaps: { missingCount: state.missingData.length } };
+  state.scenarioSimulations = buildNexusChronicPredictiveApiScenarios(state);
+  state.physicianChecklist = buildNexusChronicPredictiveApiChecklist(state);
+  state.reasoningTrace = buildNexusChronicPredictiveApiReasoningTrace(state);
+  state.physicianSummary = buildNexusChronicPredictiveApiSummary(state);
+  state.receipts = [{ id: `nexus-chronic-predictive-api-receipt-${Date.now()}`, eventType: "predictive_evaluation_completed", detail: "Chronic predictive support evaluation prepared locally.", didNot: "Nexus did not diagnose, prescribe, contact a provider, send, call, dispatch, or execute externally.", createdAt: nexusNow() }];
+  return { ok: true, modeler: state, noDiagnosis: true, noPrescription: true, noExternalProviderContact: true, noExternalExecutionAuthorized: true, localOnly: true };
+}
+
+function buildNexusChronicPredictiveApiScenarios(state) {
+  const primary = state.riskSignals?.[0]?.riskLevel || "insufficient_data";
+  return [
+    { scenario: "If current pattern persists", projectedSignal: primary === "high" ? "continued high review signal" : "watch/elevated review signal", noTreatmentAdvice: true },
+    { scenario: "If readings improve", projectedSignal: "risk signal may trend lower after sustained improved readings and clinician review", noTreatmentAdvice: true },
+    { scenario: "If symptoms appear or worsen", projectedSignal: "urgent review signal; follow local urgent/emergency care guidance", noDispatchAuthorized: true }
+  ];
+}
+
+function buildNexusChronicPredictiveApiChecklist(state) {
+  return [
+    "Confirm measurement method and timing",
+    "Review symptoms and red flags",
+    "Review medication/adherence context",
+    "Review recent labs including A1C when relevant",
+    "Review BMI/weight/activity/sleep context when relevant",
+    "Use clinician judgment before diagnosis, treatment, or medication decisions"
+  ].map(label => ({ label, checked: Boolean(state.riskSignals?.length) }));
+}
+
+function buildNexusChronicPredictiveApiReasoningTrace(state) {
+  return [
+    "Parsed patient-reported chronic readings from the command.",
+    "Grouped readings by BP, glucose/A1C, weight, symptoms, and adherence.",
+    "Checked repeated abnormal values and severe symptom escalation language.",
+    "Identified missing context that weakens prediction quality.",
+    "Generated local physician-facing summary, checklist, scenarios, and receipt.",
+    "Preserved no-diagnosis, no-prescription, and no-external-execution boundaries."
+  ];
+}
+
+function buildNexusChronicPredictiveApiSummary(state) {
+  const signal = state.riskSignals?.[0] || {};
+  return {
+    title: "Chronic Health Predictive Modeler Summary",
+    text: [
+      "Chronic Health Predictive Modeler Summary",
+      `Condition focus: ${state.conditionFocus}`,
+      `Predictive support signal: ${signal.signalName || "Insufficient data"} - ${signal.riskLevel || "insufficient_data"}`,
+      `Confidence/data quality: ${state.confidence?.label || "insufficient_data"} / ${state.confidence?.dataQuality || "insufficient data"}`,
+      `Contributing factors: ${(signal.contributingFactors || []).join("; ") || "No contributing factors yet."}`,
+      `Missing information: ${(state.missingData || []).join("; ") || "No major missing data flagged."}`,
+      "Important: Nexus does not diagnose, prescribe, change medication, contact providers, transmit health data, or execute externally."
+    ].join("\n"),
+    generatedAt: nexusNow(),
+    localOnly: true,
+    noDiagnosis: true,
+    noPrescription: true,
+    noExternalProviderContact: true
+  };
+}
+
 function latestChronicCareProfile(store) {
   return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
 }
@@ -37118,6 +37299,74 @@ async function api(req, res, url) {
     const result = nexusProductionRuntime.verify(await readBody(req), db, process.env);
     await writeDb(db);
     return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/chronic-predictive/status" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      status: "available",
+      service: "Chronic Health Predictive Modeler",
+      domains: ["diabetes", "hypertension", "obesity", "RPM", "RTM", "CHW support", "physician review"],
+      backendRoutes: [
+        "/api/nexus/chronic-predictive/status",
+        "/api/nexus/chronic-predictive/evaluate",
+        "/api/nexus/chronic-predictive/summary",
+        "/api/nexus/chronic-predictive/scenarios",
+        "/api/nexus/chronic-predictive/checklist"
+      ],
+      localOnly: true,
+      physicianEvaluationMode: true,
+      noDiagnosis: true,
+      noPrescription: true,
+      noExternalProviderContact: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/chronic-predictive/evaluate" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, evaluateNexusChronicPredictiveApiState(body.command || body.input || "", body.state || {}));
+  }
+
+  if (url.pathname === "/api/nexus/chronic-predictive/summary" && req.method === "POST") {
+    const result = evaluateNexusChronicPredictiveApiState((await readBody(req)).command || "", {});
+    return send(res, 200, {
+      ok: true,
+      summary: result.modeler.physicianSummary,
+      reasoningTrace: result.modeler.reasoningTrace,
+      receipts: result.modeler.receipts,
+      noDiagnosis: true,
+      noPrescription: true,
+      noExternalProviderContact: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/chronic-predictive/scenarios" && (req.method === "GET" || req.method === "POST")) {
+    const body = req.method === "POST" ? await readBody(req) : {};
+    const result = evaluateNexusChronicPredictiveApiState(body.command || "", body.state || {});
+    return send(res, 200, {
+      ok: true,
+      scenarios: result.modeler.scenarioSimulations,
+      noTreatmentAdvice: true,
+      noDiagnosis: true,
+      noPrescription: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/chronic-predictive/checklist" && (req.method === "GET" || req.method === "POST")) {
+    const body = req.method === "POST" ? await readBody(req) : {};
+    const result = evaluateNexusChronicPredictiveApiState(body.command || "", body.state || {});
+    return send(res, 200, {
+      ok: true,
+      checklist: result.modeler.physicianChecklist,
+      missingData: result.modeler.missingData,
+      noDiagnosis: true,
+      noPrescription: true,
+      noExternalProviderContact: true,
+      noExternalExecutionAuthorized: true
+    });
   }
 
   if (url.pathname === "/api/nexus/brain/status" && req.method === "GET") {
