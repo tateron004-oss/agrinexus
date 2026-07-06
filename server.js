@@ -35458,6 +35458,73 @@ function nexusDroneMissionTimeline(store, droneMissionId = "") {
   ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
 }
 
+function nexusDemoDataSandboxStatus(env = process.env) {
+  const enabled = String(env.NEXUS_DEMO_DATA_ENABLED || "true").toLowerCase() !== "false";
+  const autoLoad = String(env.NEXUS_DEMO_DATA_AUTOLOAD || "false").toLowerCase() === "true";
+  const allowReset = String(env.NEXUS_DEMO_DATA_ALLOW_RESET || "true").toLowerCase() !== "false";
+  return {
+    ok: true,
+    enabled,
+    autoLoad,
+    allowReset,
+    mode: "sandbox",
+    recordSource: "demo",
+    externalExecution: false,
+    noLiveExecution: true,
+    secretValuesExposed: false,
+    env: {
+      NEXUS_DEMO_DATA_ENABLED: enabled ? "configured_or_default_true" : "false",
+      NEXUS_DEMO_DATA_AUTOLOAD: autoLoad ? "true" : "false",
+      NEXUS_DEMO_DATA_ALLOW_RESET: allowReset ? "configured_or_default_true" : "false"
+    },
+    controls: ["Load Demo Data", "Reset Demo Data", "Show Demo Records", "Hide Demo Records"],
+    safetyNote: "Demo/Sandbox data is fictional, resettable, and does not contact providers, employers, buyers, sellers, clinics, pharmacies, drone vendors, payment processors, shipment carriers, or external systems."
+  };
+}
+
+function nexusDemoDataSandboxSummary() {
+  return {
+    ok: true,
+    recordSource: "demo",
+    sections: [
+      "health",
+      "agriculture",
+      "marketplace",
+      "logistics",
+      "workforce",
+      "learning",
+      "drone",
+      "communications",
+      "providerActivation"
+    ],
+    requiredMissions: [
+      "Patient care preparation mission",
+      "Crop/weather risk mission",
+      "Buyer/seller transaction mission",
+      "Shipment tracking mission",
+      "Applicant job support mission",
+      "Learner training referral mission",
+      "Drone mission planning mission",
+      "Provider readiness mission",
+      "Communication preparation mission"
+    ],
+    receiptTypes: [
+      "Local packet prepared",
+      "Provider credentials missing",
+      "Consent required",
+      "Confirmation required",
+      "Vendor required",
+      "Test-ready provider check",
+      "Local fallback created",
+      "No external execution"
+    ],
+    externalExecution: false,
+    noSecrets: true,
+    noRealPhiPii: true,
+    resetBehavior: "Reset removes sandbox/demo records only and does not alter real records, credentials, env settings, or provider readiness."
+  };
+}
+
 async function api(req, res, url) {
   const db = await readDb();
   const usersChanged = ensureDefaultUsers(db);
@@ -35502,6 +35569,37 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/demo-data/status" && req.method === "GET") {
+    return send(res, 200, nexusDemoDataSandboxStatus(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/demo-data/summary" && req.method === "GET") {
+    return send(res, 200, nexusDemoDataSandboxSummary());
+  }
+
+  if (url.pathname === "/api/nexus/demo-data/load" && req.method === "POST") {
+    return send(res, 200, {
+      ...nexusDemoDataSandboxStatus(process.env),
+      action: "load",
+      loaded: true,
+      recordSource: "demo",
+      externalExecution: false,
+      message: "Demo data load is handled in the browser sandbox. No backend records, credentials, providers, or external systems were changed.",
+      summary: nexusDemoDataSandboxSummary()
+    });
+  }
+
+  if (url.pathname === "/api/nexus/demo-data/reset" && req.method === "POST") {
+    return send(res, 200, {
+      ...nexusDemoDataSandboxStatus(process.env),
+      action: "reset",
+      reset: true,
+      recordSource: "demo",
+      externalExecution: false,
+      message: "Demo data reset removes browser sandbox records only. Real records, credentials, env settings, and provider readiness are not changed."
+    });
   }
 
   if (url.pathname === "/api/nexus/provider-readiness" && req.method === "GET") {

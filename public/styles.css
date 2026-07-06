@@ -13136,6 +13136,102 @@ body.user-mode .nexus-online-readiness-next-steps small {
   border: 1px solid rgba(148, 163, 184, .16);
 }
 
+body.user-mode .nexus-demo-sandbox-controls {
+  border-color: rgba(250, 204, 21, .28);
+  display: grid;
+  gap: 14px;
+  margin: 16px 0;
+  position: relative;
+}
+
+body.user-mode .nexus-demo-sandbox-controls::before {
+  background: linear-gradient(90deg, rgba(250, 204, 21, .72), rgba(34, 211, 238, .42), transparent);
+  border-radius: 999px;
+  content: "";
+  height: 2px;
+  left: 16px;
+  position: absolute;
+  right: 16px;
+  top: 10px;
+}
+
+body.user-mode .nexus-demo-status-strip,
+body.user-mode .nexus-demo-sandbox-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-demo-sandbox-actions button {
+  min-height: 44px;
+}
+
+body.user-mode .nexus-demo-badge,
+body.user-mode .nexus-demo-count {
+  align-items: center;
+  background: rgba(250, 204, 21, .14);
+  border: 1px solid rgba(250, 204, 21, .32);
+  border-radius: 999px;
+  color: rgba(254, 249, 195, .96);
+  display: inline-flex;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  margin-top: 6px;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+body.user-mode .nexus-demo-count {
+  background: rgba(34, 211, 238, .1);
+  border-color: rgba(34, 211, 238, .28);
+  color: rgba(207, 250, 254, .94);
+  margin-left: 6px;
+}
+
+body.user-mode .nexus-demo-records-panel {
+  border-color: rgba(250, 204, 21, .2);
+}
+
+body.user-mode .nexus-demo-record-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.user-mode .nexus-demo-record-grid article {
+  background: rgba(15, 23, 42, .56);
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+}
+
+body.user-mode .nexus-demo-record-grid article > div {
+  display: grid;
+  gap: 4px;
+}
+
+body.user-mode .nexus-demo-record-grid strong {
+  color: rgba(255, 255, 255, .96);
+}
+
+body.user-mode .nexus-demo-record-grid small,
+body.user-mode .nexus-demo-record-grid span {
+  color: rgba(203, 213, 225, .86);
+}
+
+body.user-mode .nexus-demo-record-grid p {
+  border-top: 1px solid rgba(148, 163, 184, .12);
+  color: rgba(226, 232, 240, .88);
+  margin: 0;
+  padding-top: 9px;
+}
+
 body.user-mode .nexus-ux-status-badge {
   display: inline-flex;
   align-items: center;
@@ -13220,6 +13316,7 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-card {
 
 @media (max-width: 1180px) {
   body.user-mode .nexus-premium-miniapp-grid,
+  body.user-mode .nexus-demo-record-grid,
   body.user-mode .nexus-mission-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -13231,6 +13328,7 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-card {
 
 @media (max-width: 760px) {
   body.user-mode .nexus-premium-miniapp-grid,
+  body.user-mode .nexus-demo-record-grid,
   body.user-mode .nexus-mission-grid,
   body.user-mode .nexus-online-readiness-counts {
     grid-template-columns: 1fr;
@@ -13241,6 +13339,7 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-card {
   }
 
   body.user-mode .nexus-command-landing-actions button,
+  body.user-mode .nexus-demo-sandbox-actions button,
   body.user-mode .nexus-miniapp-actions button,
   body.user-mode .nexus-mission-actions button {
     width: 100%;

@@ -22597,6 +22597,23 @@ let nexusActionHistory = [];
 let nexusPartnerProfiles = [];
 let nexusLaneConfigOverrides = {};
 let nexusRecentWorkflows = [];
+const NEXUS_DEMO_DATA_STORAGE_KEY = "nexusDemoDataSandboxState";
+const NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY = "nexusDemoDataSandboxVisible";
+let nexusDemoDataVisible = localStorage.getItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY) !== "false";
+let nexusDemoDataState = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(NEXUS_DEMO_DATA_STORAGE_KEY) || "null") || {
+      loaded: false,
+      records: {},
+      missions: [],
+      receipts: [],
+      auditEvents: [],
+      loadedAt: ""
+    };
+  } catch {
+    return { loaded: false, records: {}, missions: [], receipts: [], auditEvents: [], loadedAt: "" };
+  }
+})();
 let nexusUserExperienceRole = "Standard User";
 let nexusLowBandwidthMode = false;
 let nexusLanguagePreference = "";
@@ -22691,6 +22708,276 @@ function nexusWorkflowRegistryEntry(workflowId = "") {
 
 function nexusIntegrationLaneById(laneId = "") {
   return nexusAllIntegrationLanes().find(lane => lane.id === laneId) || null;
+}
+
+function nexusDemoBaseRecord(extra = {}) {
+  return {
+    recordSource: "demo",
+    demo: true,
+    demoLabel: "Demo / Sandbox",
+    createdFor: "Nexus UI testing",
+    externalExecution: false,
+    safetyNote: "Demo record only. No real external action occurred.",
+    ...extra
+  };
+}
+
+function buildNexusDemoDataset() {
+  const now = new Date().toISOString();
+  const baseSafety = {
+    recordSource: "demo",
+    demo: true,
+    demoLabel: "Demo / Sandbox",
+    createdFor: "Nexus UI testing",
+    externalExecution: false,
+    safetyNote: "Demo record only. No real external action occurred."
+  };
+  const records = {
+    health: [
+      nexusDemoBaseRecord({ id: "demo-health-profile", type: "patient_profile", title: "Amina Demo - chronic care profile", summary: "Educational/demo only. Not a diagnosis. No provider reviewed this. Nothing was sent externally.", conditions: ["Diabetes support", "Hypertension support", "Obesity education"], status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-health-intake", type: "telehealth_readiness", title: "Rural Clinic Demo User intake", summary: "Telehealth readiness request draft. No clinician reviewed this and no visit was booked.", status: "needs_consent" }),
+      nexusDemoBaseRecord({ id: "demo-rpm-reading", type: "rpm_reading", title: "Demo RPM reading", summary: "Manual demo BP/glucose trend for UI testing only; no diagnosis and no medication change.", status: "review_only" }),
+      nexusDemoBaseRecord({ id: "demo-rtm-note", type: "rtm_activity", title: "Demo RTM mobility note", summary: "Pain/mobility note for provider-ready summary testing only.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-pharmacy-draft", type: "pharmacy_request_draft", title: "Demo pharmacy support draft", summary: "Prescription/refill workflow draft only. No pharmacy received this.", status: "confirmation_required" }),
+      nexusDemoBaseRecord({ id: "demo-deactivated-patient", type: "deactivated_patient_example", title: "Demo Patient A - deactivated example", summary: "Closed sandbox record used to test inactive/deactivated patient UI only.", status: "archived_demo" })
+    ],
+    agriculture: [
+      nexusDemoBaseRecord({ id: "demo-farm-profile", type: "farm_profile", title: "Demo maize and tomato farm", summary: "Local demo farm profile for crop planning and source-backed advisory UI testing.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-crop-issue", type: "crop_issue", title: "Tomato leaf spot demo issue", summary: "Pest/disease advisory packet marked local/demo unless live sources are configured.", status: "research_ready" }),
+      nexusDemoBaseRecord({ id: "demo-weather-risk", type: "weather_heat_risk_receipt", title: "Heat-risk lookup receipt", summary: "Demo/local weather risk receipt. Source-backed only when a live provider returns citations.", status: "local_fallback" }),
+      nexusDemoBaseRecord({ id: "demo-market-price", type: "market_price_inquiry", title: "Demo market price inquiry", summary: "Buyer linkage and price inquiry draft; no buyer was contacted.", status: "needs_credentials" })
+    ],
+    marketplace: [
+      nexusDemoBaseRecord({ id: "demo-buyer-profile", type: "buyer_profile", title: "Demo Buyer Cooperative", summary: "Fictional buyer profile for testing. No real buyer contact.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-seller-profile", type: "seller_profile", title: "Demo Seller Farm Group", summary: "Fictional seller profile for UI testing.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-product-listing", type: "product_listing", title: "Demo tomato crate listing", summary: "Marketplace listing packet only; no item was posted live.", status: "draft_preview" }),
+      nexusDemoBaseRecord({ id: "demo-order-packet", type: "order_packet", title: "Demo buyer/seller order packet", summary: "No payment workflow ran, no seller outreach occurred, no order placed.", status: "needs_confirmation" }),
+      nexusDemoBaseRecord({ id: "demo-refund-dispute", type: "dispute_refund_draft", title: "Demo dispute/refund draft", summary: "Review-only dispute packet; no refund or transaction was submitted.", status: "review_only" })
+    ],
+    logistics: [
+      nexusDemoBaseRecord({ id: "demo-shipment", type: "shipment_record", title: "Demo cold-chain shipment", summary: "Local shipment planning record. No carrier was booked or live-tracked.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-route", type: "trade_route_plan", title: "Demo Stockton to Sacramento route", summary: "Route readiness preview using typed locations only; no location permission requested.", status: "route_preview" }),
+      nexusDemoBaseRecord({ id: "demo-delivery-timeline", type: "delivery_status_timeline", title: "Demo delivery timeline", summary: "Fictional timeline for testing status cards; no carrier data was queried.", status: "local_fallback" })
+    ],
+    workforce: [
+      nexusDemoBaseRecord({ id: "demo-applicant", type: "applicant_profile", title: "Joseph Test Case - applicant profile", summary: "Fictional applicant profile for workforce support testing.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-resume", type: "resume_packet", title: "Demo resume packet", summary: "Resume readiness packet; no employer was contacted.", status: "ready_to_review" }),
+      nexusDemoBaseRecord({ id: "demo-job", type: "job_opportunity", title: "Demo farm operations role", summary: "Synthetic job opportunity for UI validation only.", status: "local_demo" }),
+      nexusDemoBaseRecord({ id: "demo-employer", type: "employer_profile", title: "Demo Employer Partner", summary: "Fictional employer profile. No employer was contacted.", status: "needs_confirmation" })
+    ],
+    learning: [
+      nexusDemoBaseRecord({ id: "demo-learner", type: "learner_profile", title: "Demo learner profile", summary: "Learning/literacy support profile for testing.", status: "local_prepared" }),
+      nexusDemoBaseRecord({ id: "demo-learning-path", type: "learning_path", title: "Demo agriculture literacy path", summary: "Training referral draft. No LMS course enrollment was created.", status: "draft_preview" }),
+      nexusDemoBaseRecord({ id: "demo-lms-enrollment", type: "lms_enrollment_draft", title: "Demo LMS enrollment draft", summary: "Enrollment packet only; no course account was created.", status: "needs_credentials" })
+    ],
+    drone: [
+      nexusDemoBaseRecord({ id: "demo-drone-mission", type: "drone_mission_request", title: "Demo field survey mission", summary: "Drone mission request draft. No drone was dispatched and no flight occurred.", status: "vendor_required" }),
+      nexusDemoBaseRecord({ id: "demo-drone-compliance", type: "flight_compliance_checklist", title: "Demo flight compliance checklist", summary: "Compliance checklist only; no real imagery capture.", status: "review_only" }),
+      nexusDemoBaseRecord({ id: "demo-drone-archived", type: "archived_cancelled_mission", title: "Demo archived mission", summary: "Cancelled sandbox mission example for archive UI testing.", status: "archived_demo" })
+    ],
+    communications: [
+      nexusDemoBaseRecord({ id: "demo-email-draft", type: "email_draft", title: "Demo email draft", summary: "Email draft only. Nothing sent.", status: "needs_confirmation" }),
+      nexusDemoBaseRecord({ id: "demo-sms-draft", type: "sms_draft", title: "Demo SMS draft", summary: "SMS draft only. Nothing sent.", status: "confirmation_required" }),
+      nexusDemoBaseRecord({ id: "demo-whatsapp-draft", type: "whatsapp_draft", title: "Demo WhatsApp draft", summary: "WhatsApp draft only. Nothing sent.", status: "confirmation_required" }),
+      nexusDemoBaseRecord({ id: "demo-media-request", type: "media_request", title: "Demo Afrobeats media request", summary: "Provider handoff preview only; Nexus does not download, rip, cache, or redistribute music.", status: "provider_handoff" })
+    ],
+    providerActivation: [
+      nexusDemoBaseRecord({ id: "demo-provider-ready", type: "provider_readiness_summary", title: "Demo test-ready provider", summary: "Example provider lane marked test-ready without hiding actual readiness.", status: "test_ready" }),
+      nexusDemoBaseRecord({ id: "demo-missing-credential", type: "missing_credential_example", title: "Demo missing credential", summary: "Example missing env names only: TAVILY_API_KEY, MAPBOX_ACCESS_TOKEN, SENDGRID_API_KEY.", status: "needs_credentials" }),
+      nexusDemoBaseRecord({ id: "demo-vendor-required", type: "vendor_required_example", title: "Demo vendor-required lane", summary: "Vendor endpoint required; no fake secret values shown.", status: "vendor_required" }),
+      nexusDemoBaseRecord({ id: "demo-render-checklist", type: "render_setup_preview", title: "Demo Render setup checklist", summary: "Checklist preview only; no hosting env values exposed.", status: "local_fallback" })
+    ]
+  };
+  const missions = [
+    ["patient-care", "Patient care preparation mission", "Prepare chronic care, RPM/RTM, telehealth, pharmacy, and mobile clinic summary.", "Health details collected from demo records.", "Verified provider connection and consent are still missing.", "Review provider-ready summary; do not diagnose, prescribe, or send."],
+    ["crop-weather", "Crop/weather risk mission", "Assess demo crop issue and heat/weather risk.", "Farm profile and crop issue collected.", "Live cited weather source may be missing.", "Review local agronomy guidance and sources before action."],
+    ["buyer-seller", "Buyer/seller transaction mission", "Prepare buyer/seller marketplace packet.", "Buyer, seller, listing, and order packet collected.", "Payment and live buyer/seller contact are not enabled.", "Review packet and keep payment/contact gated."],
+    ["shipment", "Shipment tracking mission", "Prepare route and shipment status review.", "Pickup, dropoff, and delivery timeline collected.", "Live carrier tracking credentials are missing.", "Use local route preview; no carrier booking."],
+    ["applicant-job", "Applicant job support mission", "Prepare applicant for job and interview.", "Applicant, resume, and job opportunity collected.", "Employer consent and partner endpoint missing.", "Review packet; no employer contacted."],
+    ["learner-training", "Learner training referral mission", "Prepare training referral and learning path.", "Learner profile and learning path collected.", "LMS provider credentials missing.", "Review referral; no LMS enrollment."],
+    ["drone-planning", "Drone mission planning mission", "Prepare drone field survey request.", "Survey target and checklist collected.", "Drone vendor endpoint and compliance approval missing.", "Review checklist; no drone was dispatched."],
+    ["provider-readiness", "Provider readiness mission", "Review connected, missing, vendor-required, and fallback lanes.", "Demo provider examples collected.", "Actual credentials remain separate.", "Use Render checklist; env names only."],
+    ["communication-prep", "Communication preparation mission", "Prepare email, SMS, WhatsApp, call, translation, and media drafts.", "Draft messages and media request collected.", "Recipient confirmation/provider credentials missing.", "Review draft; nothing sent."]
+  ].map(([id, title, goal, collected, missing, nextStep]) => nexusDemoBaseRecord({
+    id: `demo-mission-${id}`,
+    title,
+    goal,
+    understood: `Nexus understands: ${goal}`,
+    collected,
+    missing,
+    nextStep,
+    readiness: "Demo provider readiness attached; real credentials remain separate.",
+    receipt: "Demo timeline created for UI testing.",
+    status: "local_prepared"
+  }));
+  const receipts = [
+    ["local-packet", "Local packet prepared", "Demo local packet was prepared.", "No external provider, employer, buyer, seller, clinic, pharmacy, carrier, payment processor, or drone vendor was contacted.", "Review the packet."],
+    ["credentials-missing", "Provider credentials missing", "Credential gap was shown by env name only.", "No secret values were exposed.", "Add credentials in hosting/local env when ready."],
+    ["consent-required", "Consent required", "Consent gate was displayed.", "No consent was bypassed.", "Collect explicit consent before external action."],
+    ["confirmation-required", "Confirmation required", "Confirmation gate was displayed.", "No background communication, call, payment, or dispatch occurred.", "Require visible confirmation."],
+    ["vendor-required", "Vendor required", "Vendor endpoint need was identified.", "No fake vendor execution was claimed.", "Connect approved vendor endpoint."],
+    ["test-ready", "Test-ready provider check", "A demo test-ready lane was shown.", "No real provider test was run from demo data.", "Use real provider tests only with credentials."],
+    ["local-fallback", "Local fallback created", "Local fallback path was shown.", "No external execution occurred.", "Continue locally or configure provider."],
+    ["no-execution", "No external execution", "Demo audit event recorded that nothing was sent.", "No live action happened.", "Proceed only through gates."]
+  ].map(([id, title, happened, didNot, nextStep]) => nexusDemoBaseRecord({
+    id: `demo-receipt-${id}`,
+    title,
+    happened,
+    didNot,
+    nextStep,
+    status: id,
+    createdAt: now
+  }));
+  const auditEvents = receipts.map(receipt => nexusDemoBaseRecord({
+    id: `demo-audit-${receipt.id}`,
+    title: `Audit - ${receipt.title}`,
+    action: "demo_sandbox_event",
+    outcomeStatus: receipt.status,
+    resultMessage: `${receipt.happened} ${receipt.didNot}`,
+    createdAt: now,
+    externalExecution: false
+  }));
+  return { ...baseSafety, loaded: true, loadedAt: now, records, missions, receipts, auditEvents };
+}
+
+function saveNexusDemoDataState() {
+  localStorage.setItem(NEXUS_DEMO_DATA_STORAGE_KEY, JSON.stringify(nexusDemoDataState));
+  localStorage.setItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY, nexusDemoDataVisible ? "true" : "false");
+}
+
+function getNexusDemoSummary() {
+  const records = nexusDemoDataState?.records || {};
+  const sectionCounts = Object.fromEntries(Object.entries(records).map(([key, items]) => [key, Array.isArray(items) ? items.length : 0]));
+  const totalRecords = Object.values(sectionCounts).reduce((sum, count) => sum + count, 0);
+  return {
+    loaded: Boolean(nexusDemoDataState?.loaded),
+    visible: nexusDemoDataVisible,
+    loadedAt: nexusDemoDataState?.loadedAt || "",
+    sectionCounts,
+    totalRecords,
+    missionCount: nexusDemoDataState?.missions?.length || 0,
+    receiptCount: nexusDemoDataState?.receipts?.length || 0,
+    auditCount: nexusDemoDataState?.auditEvents?.length || 0
+  };
+}
+
+function nexusDemoRecordCountForMiniApp(appId = "") {
+  const counts = getNexusDemoSummary().sectionCounts || {};
+  const groups = {
+    "health-care": ["health"],
+    "agriculture-food-security": ["agriculture"],
+    "trade-marketplace": ["marketplace"],
+    "logistics-maps": ["logistics"],
+    "learning-workforce": ["learning", "workforce"],
+    "drone-field-operations": ["drone"],
+    "communications-media": ["communications"],
+    "provider-activation": ["providerActivation"]
+  };
+  return (groups[appId] || []).reduce((sum, key) => sum + (counts[key] || 0), 0);
+}
+
+function resetNexusDemoData({ render = true } = {}) {
+  const isRealRecord = item => !(item?.recordSource === "demo" || item?.demo === true);
+  nexusPreparedPackets = nexusPreparedPackets.filter(isRealRecord);
+  nexusActionHistory = nexusActionHistory.filter(isRealRecord);
+  nexusRecentWorkflows = nexusRecentWorkflows.filter(isRealRecord);
+  if (nexusActiveWorkflowState?.recordSource === "demo" || nexusActiveWorkflowState?.demo === true) {
+    nexusActiveWorkflowState = { id: "", command: "", source: "", openedAt: "" };
+  }
+  nexusDemoDataState = { loaded: false, records: {}, missions: [], receipts: [], auditEvents: [], loadedAt: "" };
+  saveNexusDemoDataState();
+  if (render) {
+    toast("Reset Demo Data removed sandbox records only. Real records and credentials were not changed.");
+    renderUserWorkspace();
+  }
+}
+
+function seedNexusDemoData({ render = true } = {}) {
+  resetNexusDemoData({ render: false });
+  const dataset = buildNexusDemoDataset();
+  nexusDemoDataState = dataset;
+  nexusDemoDataVisible = true;
+  const now = dataset.loadedAt || new Date().toISOString();
+  nexusPreparedPackets = [
+    ...dataset.missions.slice(0, 6).map(mission => ({
+      packetId: `demo-packet-${mission.id}`,
+      workflowId: mission.id,
+      workflowLabel: mission.title,
+      category: "demo-sandbox",
+      packetType: "demo_sandbox_packet",
+      summary: mission.goal,
+      outcomeStatus: "local_prepared",
+      destinationLaneId: "demo-sandbox",
+      confirmationRequired: false,
+      createdAt: now,
+      updatedAt: now,
+      ...nexusDemoBaseRecord()
+    })),
+    ...nexusPreparedPackets
+  ].slice(0, 30);
+  nexusActionHistory = [
+    ...dataset.receipts.map(receipt => ({
+      id: receipt.id,
+      actionId: receipt.id,
+      workflowLabel: receipt.title,
+      destinationLaneId: "demo-sandbox",
+      outcomeStatus: receipt.status || "local_prepared",
+      resultMessage: `${receipt.happened} ${receipt.didNot}`,
+      nextStep: receipt.nextStep,
+      createdAt: receipt.createdAt || now,
+      ...nexusDemoBaseRecord()
+    })),
+    ...dataset.auditEvents,
+    ...nexusActionHistory
+  ].slice(0, 50);
+  nexusRecentWorkflows = [
+    ...dataset.missions.map(mission => ({
+      id: mission.id,
+      title: mission.title,
+      category: "demo-sandbox",
+      summary: mission.goal,
+      status: mission.status,
+      updatedAt: now,
+      ...nexusDemoBaseRecord()
+    })),
+    ...nexusRecentWorkflows
+  ].slice(0, 20);
+  nexusActiveWorkflowState = { id: "", command: "", source: "", openedAt: "" };
+  saveNexusDemoDataState();
+  if (render) {
+    toast("Demo Data Loaded. Sandbox Mode only. No real external actions occurred.");
+    renderUserWorkspace();
+  }
+}
+
+function renderNexusDemoBadge(label = "Demo") {
+  return `<span class="nexus-demo-badge" data-nexus-demo-badge="true">${escapeHtml(translateText(label))}</span>`;
+}
+
+function renderNexusDemoSandboxControls(location = "command-landing") {
+  const summary = getNexusDemoSummary();
+  return `
+    <section class="nexus-demo-sandbox-controls nexus-glass-card" data-nexus-demo-sandbox-controls="${escapeHtml(location)}" aria-label="${escapeHtml(translateText("Nexus Demo Data Sandbox Mode"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Sandbox Mode"))}</span>
+        <strong>${escapeHtml(translateText("Nexus Demo Data / Sandbox Mode"))}</strong>
+        <p>${escapeHtml(translateText("Demo records are for testing only. Nexus did not contact providers, employers, buyers, sellers, clinics, pharmacies, drone vendors, payment processors, or shipment carriers."))}</p>
+      </div>
+      <div class="nexus-demo-status-strip" data-nexus-demo-status-chip="true">
+        ${renderNexusStatusBadge(summary.loaded ? "ready" : "local_only", { label: summary.loaded ? "Demo Data Loaded" : "Demo Data Ready" })}
+        ${renderNexusStatusBadge("local_only", { label: "Sandbox Mode" })}
+        ${renderNexusStatusBadge("blocked", { label: "No Real External Actions" })}
+        ${summary.loaded ? `<span>${escapeHtml(String(summary.totalRecords))} ${escapeHtml(translateText("demo records"))}</span>` : ""}
+      </div>
+      <div class="nexus-demo-sandbox-actions">
+        <button type="button" class="primary" data-nexus-demo-action="load">${escapeHtml(translateText("Load Demo Data"))}</button>
+        <button type="button" data-nexus-demo-action="reset">${escapeHtml(translateText("Reset Demo Data"))}</button>
+        <button type="button" data-nexus-demo-action="show">${escapeHtml(translateText("Show Demo Records"))}</button>
+        <button type="button" data-nexus-demo-action="hide">${escapeHtml(translateText("Hide Demo Records"))}</button>
+      </div>
+      <small>${escapeHtml(translateText("Reset Demo Data removes sandbox records only. Real records and credentials are not changed."))}</small>
+    </section>
+  `;
 }
 
 function nexusFormDataForWorkflow(workflowId = "") {
@@ -24164,6 +24451,7 @@ function renderNexusActivationCenter() {
     <details class="nexus-activation-center nexus-glass-card" data-nexus-activation-center="true" open>
       <summary>${escapeHtml(translateText("Activation Center"))}</summary>
       <p>${escapeHtml(translateText("Manage provider, vendor, communications, healthcare, agriculture, workforce, maps, and offline lanes locally. Secret values are never stored here."))}</p>
+      ${renderNexusDemoSandboxControls("activation-center")}
       <section class="nexus-online-readiness-summary" data-nexus-online-readiness-summary="true" aria-label="${escapeHtml(translateText("Nexus Online Readiness"))}">
         <div>
           <span class="eyebrow">${escapeHtml(translateText("Operator"))}</span>
@@ -26253,6 +26541,7 @@ function renderNexusPremiumMiniAppLauncher() {
               <div>
                 <strong>${escapeHtml(translateText(app.title))}</strong>
                 ${renderNexusStatusBadge(app.status)}
+                ${nexusDemoDataState?.loaded ? `${renderNexusDemoBadge("Demo")}<span class="nexus-demo-count" data-nexus-demo-count="${escapeHtml(app.id)}">${escapeHtml(String(nexusDemoRecordCountForMiniApp(app.id)))} ${escapeHtml(translateText("demo"))}</span>` : ""}
               </div>
             </div>
             <p>${escapeHtml(translateText(app.purpose))}</p>
@@ -26268,8 +26557,82 @@ function renderNexusPremiumMiniAppLauncher() {
   `;
 }
 
+function renderNexusDemoRecordsPanel() {
+  const summary = getNexusDemoSummary();
+  if (!summary.loaded || !nexusDemoDataVisible) return "";
+  const records = nexusDemoDataState.records || {};
+  const missions = Array.isArray(nexusDemoDataState.missions) ? nexusDemoDataState.missions : [];
+  const sections = [
+    ["health", "Health & Care"],
+    ["agriculture", "Agriculture & Food Security"],
+    ["marketplace", "Trade & Marketplace"],
+    ["logistics", "Logistics & Maps"],
+    ["workforce", "Jobs & Workforce"],
+    ["learning", "Learning & Literacy"],
+    ["drone", "Drone & Field Operations"],
+    ["communications", "Communications & Media"],
+    ["providerActivation", "Provider Activation"]
+  ];
+  return `
+    <section class="nexus-demo-records-panel nexus-glass-card" data-nexus-demo-records-panel="true" aria-label="${escapeHtml(translateText("Demo sandbox records"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Demo Records"))}</span>
+        <strong>${escapeHtml(translateText("Sandbox records for every Nexus mode"))}</strong>
+        <p>${escapeHtml(translateText("All records below are fictional and marked demo/sandbox. Nothing was sent externally."))}</p>
+      </div>
+      <div class="nexus-demo-record-grid">
+        <article data-nexus-demo-record-section="missions">
+          <div>
+            ${renderNexusDemoBadge("Demo")}
+            <strong>${escapeHtml(translateText("Demo Missions"))}</strong>
+            <small>${escapeHtml(String(missions.length))} ${escapeHtml(translateText("sandbox mission(s)"))}</small>
+          </div>
+          ${missions.slice(0, 4).map(mission => `
+            <p><b>${escapeHtml(translateText(mission.title || "Demo mission"))}</b><br><span>${escapeHtml(translateText(mission.goal || mission.safetyNote || "Demo mission only."))}</span></p>
+          `).join("")}
+        </article>
+        ${sections.map(([key, label]) => {
+          const items = Array.isArray(records[key]) ? records[key] : [];
+          return `
+            <article data-nexus-demo-record-section="${escapeHtml(key)}">
+              <div>
+                ${renderNexusDemoBadge("Demo")}
+                <strong>${escapeHtml(translateText(label))}</strong>
+                <small>${escapeHtml(String(items.length))} ${escapeHtml(translateText("sandbox record(s)"))}</small>
+              </div>
+              ${items.slice(0, 4).map(item => `
+                <p><b>${escapeHtml(translateText(item.title || item.type || "Demo record"))}</b><br><span>${escapeHtml(translateText(item.summary || item.safetyNote || "Demo record only."))}</span></p>
+              `).join("")}
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function nexusCurrentMissionSnapshot() {
   const state = nexusActiveWorkflowState || {};
+  if (nexusDemoDataState?.loaded && nexusDemoDataVisible && (state?.recordSource === "demo" || state?.demo === true)) {
+    const mission = (nexusDemoDataState.missions || []).find(item => item.id === state.id) || nexusDemoDataState.missions?.[0];
+    if (mission) {
+      return {
+        id: mission.id,
+        title: mission.title,
+        category: "demo-sandbox",
+        status: mission.status || "local_prepared",
+        goal: mission.goal,
+        understood: mission.understood,
+        collected: mission.collected,
+        missing: mission.missing,
+        nextStep: mission.nextStep,
+        readiness: mission.readiness,
+        consent: "Demo only. No consent was used to execute externally.",
+        receipt: mission.receipt,
+        safety: mission.safetyNote || "Demo record only. No real external action occurred."
+      };
+    }
+  }
   const id = state.id || state.workflow || nexusPreparedPackets[0]?.workflowId || nexusRecentWorkflows[0]?.id || "command-center";
   const definition = nexusWorkflowDefinition(id, state.command || "") || nexusFunctionWindowDefinition(state.functionId || id, state.command || "");
   const packet = nexusPreparedPackets.find(item => item.workflowId === id) || nexusPreparedPackets[0] || null;
@@ -27354,7 +27717,9 @@ function renderUserWorkspace() {
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
+        ${renderNexusDemoSandboxControls("command-landing")}
         ${renderNexusPremiumMiniAppLauncher()}
+        ${renderNexusDemoRecordsPanel()}
         ${renderNexusAgenticMissionWorkspace()}
         ${renderNexusPremiumActivityReceiptsPanel()}
         ${renderNexusMajorLaunchButtons()}
@@ -42493,8 +42858,71 @@ function handleNexusProviderActivationControlClick(event) {
   return true;
 }
 
+function handleNexusDemoSandboxClick(event) {
+  const target = event.target?.closest?.("[data-nexus-demo-action]");
+  if (!target) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  const action = target.dataset.nexusDemoAction || "";
+  if (action === "load") {
+    seedNexusDemoData();
+    return true;
+  }
+  if (action === "reset") {
+    resetNexusDemoData();
+    return true;
+  }
+  if (action === "show") {
+    nexusDemoDataVisible = true;
+    saveNexusDemoDataState();
+    toast(nexusDemoDataState.loaded ? "Showing demo sandbox records." : "Demo data is ready to load.");
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "hide") {
+    nexusDemoDataVisible = false;
+    saveNexusDemoDataState();
+    toast("Demo records hidden. Sandbox data remains separated and resettable.");
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
+function nexusDemoSandboxAction(action = "") {
+  if (action === "load") {
+    seedNexusDemoData();
+    return true;
+  }
+  if (action === "reset") {
+    resetNexusDemoData();
+    return true;
+  }
+  if (action === "show") {
+    nexusDemoDataVisible = true;
+    saveNexusDemoDataState();
+    toast(nexusDemoDataState.loaded ? "Showing demo sandbox records." : "Demo data is ready to load.");
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "hide") {
+    nexusDemoDataVisible = false;
+    saveNexusDemoDataState();
+    toast("Demo records hidden. Sandbox data remains separated and resettable.");
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
+if (typeof window !== "undefined") {
+  window.nexusDemoSandboxAction = nexusDemoSandboxAction;
+}
+
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
+  if (handleNexusDemoSandboxClick(event)) return true;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
   const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
   if (persistentOperationsShortcut) {
@@ -42973,6 +43401,13 @@ function bindNexusStandardUserHomeControls() {
         closeNexusFunctionWindow({ command: "What can Nexus do?" });
       }
     }, true);
+  });
+  $$("[data-nexus-demo-action]").forEach(element => {
+    if (element.dataset.nexusDemoBound === "true") return;
+    element.dataset.nexusDemoBound = "true";
+    element.addEventListener("click", event => {
+      handleNexusDemoSandboxClick(event);
+    });
   });
   $$("[data-nexus-command-center-submit], [data-nexus-mode-shortcut]").forEach(element => {
     if (element.dataset.nexusHomeBound === "true") return;
