@@ -137,16 +137,16 @@ formButtonMatches.forEach(buttonHtml => {
 });
 
 [
-  "nexus-behavior-377",
-  "agrinexus-pwa-v351"
-].forEach(version => {
-  includes(app, version, `app cache version ${version}`);
-  includes(server, version, `server cache version ${version}`);
+  ["nexus-behavior-378", "app build version", "server build version"],
+  ["agrinexus-pwa-v352", "app cache version", "server cache version"]
+].forEach(([version, appLabel, serverLabel]) => {
+  includes(app, version, `${appLabel} ${version}`);
+  includes(server, version, `${serverLabel} ${version}`);
 });
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v351"', "service worker cache bump");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-377"', "service worker build bump");
-includes(index, "/styles.css?v=nexus-behavior-377", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-377", "app cache bust");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-v352"', "service worker cache bump");
+includes(sw, 'BUILD_VERSION = "nexus-behavior-378"', "service worker build bump");
+includes(index, "/styles.css?v=nexus-behavior-378", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-378", "app cache bust");
 
 [
   "live emergency response enabled",

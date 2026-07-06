@@ -268,8 +268,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-377";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v351";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-378";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v352";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -26674,8 +26674,12 @@ function renderNexusDemoRecordsPanel() {
             <strong>${escapeHtml(translateText("Demo Missions"))}</strong>
             <small>${escapeHtml(String(missions.length))} ${escapeHtml(translateText("sandbox mission(s)"))}</small>
           </div>
-          ${missions.slice(0, 4).map(mission => `
-            <p><b>${escapeHtml(translateText(mission.title || "Demo mission"))}</b><br><span>${escapeHtml(translateText(mission.goal || mission.safetyNote || "Demo mission only."))}</span></p>
+          ${missions.map(mission => `
+            <button type="button" class="nexus-demo-mission-button" data-nexus-demo-mission-open="${escapeHtml(mission.id || "")}">
+              <b>${escapeHtml(translateText(mission.title || "Demo mission"))}</b>
+              <span>${escapeHtml(translateText(mission.goal || mission.safetyNote || "Demo mission only."))}</span>
+              <small>${escapeHtml(translateText("Open sandbox mission"))}</small>
+            </button>
           `).join("")}
         </article>
         ${sections.map(([key, label]) => {
@@ -27001,6 +27005,96 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     };
     saveNexusRuntimeMemory();
     renderUserWorkspace();
+    return true;
+  }
+  if (/\b(load demo data|load sandbox data|start sandbox mode|seed demo data)\b/i.test(normalized)) {
+    seedNexusDemoData();
+    return true;
+  }
+  if (/\b(reset demo data|clear demo data|reset sandbox data|clear sandbox records)\b/i.test(normalized)) {
+    resetNexusDemoData();
+    return true;
+  }
+  if (/\b(show demo records|open demo records|show sandbox records|open sandbox records|show demo missions|open demo missions)\b/i.test(normalized)) {
+    if (!nexusDemoDataState?.loaded) seedNexusDemoData();
+    nexusDemoDataVisible = true;
+    saveNexusDemoDataState();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_demo_sandbox_records_visible",
+      mode: "Demo Sandbox Records",
+      message: "Demo sandbox records and missions are visible. All records are fictional and no external action occurred.",
+      preparedCards: [{ type: "demo_sandbox_records", title: "Demo records", status: "visible", localOnly: true, noExecutionAuthorized: true, demo: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_demo_sandbox"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (/\b(hide demo records|hide sandbox records|hide demo missions)\b/i.test(normalized)) {
+    nexusDemoDataVisible = false;
+    saveNexusDemoDataState();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_demo_sandbox_records_hidden",
+      mode: "Demo Sandbox Records",
+      message: "Demo sandbox records are hidden. Sandbox data remains separated and resettable.",
+      preparedCards: [{ type: "demo_sandbox_records", title: "Demo records", status: "hidden", localOnly: true, noExecutionAuthorized: true, demo: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_demo_sandbox"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  const demoModeCommand = normalized.match(/\b(?:open|show)\s+(health|chronic care|rpm|rtm|agriculture|marketplace|agritrade|logistics|maps|workforce|jobs|learning|training|drone|communications|media|provider readiness|pharmacy|mobile clinic)\s+(?:demo|sandbox)(?:\s+records)?\b/i);
+  if (demoModeCommand) {
+    if (!nexusDemoDataState?.loaded) seedNexusDemoData();
+    nexusDemoDataVisible = true;
+    const requested = demoModeCommand[1].toLowerCase();
+    const modeMap = {
+      health: "health",
+      "chronic care": "health",
+      rpm: "health",
+      rtm: "health",
+      pharmacy: "health",
+      "mobile clinic": "health",
+      agriculture: "agriculture",
+      marketplace: "marketplace",
+      agritrade: "marketplace",
+      logistics: "logistics",
+      maps: "logistics",
+      workforce: "workforce",
+      jobs: "workforce",
+      learning: "learning",
+      training: "learning",
+      drone: "drone",
+      communications: "communications",
+      media: "communications",
+      "provider readiness": "providerActivation"
+    };
+    const recordSection = modeMap[requested] || "health";
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_demo_sandbox_mode_records_visible",
+      mode: "Demo Sandbox Records",
+      message: `${recordSection} demo sandbox records are visible. No live provider, payment, message, shipment, marketplace, health, pharmacy, mobile clinic, or drone action occurred.`,
+      preparedCards: [{
+        type: "demo_sandbox_mode_records",
+        title: `${recordSection} demo records`,
+        status: "visible",
+        localOnly: true,
+        noExecutionAuthorized: true,
+        demo: true
+      }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_demo_sandbox"
+    };
+    saveNexusDemoDataState();
+    renderUserWorkspace();
+    requestAnimationFrame(() => document.querySelector(`[data-nexus-demo-record-section="${recordSection}"]`)?.scrollIntoView?.({ block: "center" }));
     return true;
   }
   if (isNexusPersistentOperationsCommand(normalized)) {
@@ -43030,12 +43124,76 @@ function nexusDemoSandboxAction(action = "") {
   return false;
 }
 
+function openNexusDemoSandboxMission(missionId = "") {
+  if (!nexusDemoDataState?.loaded) seedNexusDemoData();
+  nexusDemoDataVisible = true;
+  const missions = Array.isArray(nexusDemoDataState?.missions) ? nexusDemoDataState.missions : [];
+  const mission = missions.find(item => item.id === missionId) || missions[0] || null;
+  if (!mission) {
+    toast("No demo mission is available yet. Load Demo Data first.");
+    return false;
+  }
+  nexusActiveWorkflowState = {
+    id: mission.id,
+    command: mission.title || "Open demo mission",
+    source: "demo-sandbox-mission-click",
+    workflow: "demo-sandbox",
+    action: "open-demo-mission",
+    recordSource: "demo",
+    demo: true,
+    openedAt: Date.now()
+  };
+  nexusRecentWorkflows = [
+    {
+      id: mission.id,
+      title: mission.title || "Demo mission",
+      category: "demo-sandbox",
+      status: mission.status || "local_prepared",
+      summary: mission.goal || "Sandbox mission opened.",
+      updatedAt: new Date().toISOString(),
+      demo: true,
+      recordSource: "demo"
+    },
+    ...nexusRecentWorkflows.filter(item => item.id !== mission.id)
+  ].slice(0, 8);
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_demo_sandbox_mission_opened",
+    mode: "Demo Sandbox Mission",
+    message: `${mission.title || "Demo mission"} is open. This is fictional sandbox data only; no external execution occurred.`,
+    preparedCards: [{
+      type: "demo_sandbox_mission",
+      title: mission.title || "Demo mission",
+      status: mission.status || "local_prepared",
+      localOnly: true,
+      noExecutionAuthorized: true,
+      demo: true
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_demo_sandbox"
+  };
+  saveNexusDemoDataState();
+  saveNexusRuntimeMemory();
+  toast("Opened demo sandbox mission. No real external action occurred.");
+  renderUserWorkspace();
+  return true;
+}
+
 if (typeof window !== "undefined") {
   window.nexusDemoSandboxAction = nexusDemoSandboxAction;
+  window.openNexusDemoSandboxMission = openNexusDemoSandboxMission;
 }
 
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
+  const demoMission = event.target?.closest?.("[data-nexus-demo-mission-open]");
+  if (demoMission) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return openNexusDemoSandboxMission(demoMission.dataset.nexusDemoMissionOpen || "");
+  }
   const auditFilter = event.target?.closest?.("[data-nexus-internet-audit-filter]");
   if (auditFilter) {
     event.preventDefault();
@@ -43482,6 +43640,23 @@ if (typeof window !== "undefined") {
 function bindNexusStandardUserHomeControls() {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
   exposeNexusAppWindowApis();
+  if (document.body.dataset.nexusDemoSandboxDelegateBound !== "true") {
+    document.body.dataset.nexusDemoSandboxDelegateBound = "true";
+    document.addEventListener("click", event => {
+      if (!document.body.classList.contains("user-mode")) return;
+      const mission = event.target?.closest?.("[data-nexus-demo-mission-open]");
+      if (mission) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        openNexusDemoSandboxMission(mission.dataset.nexusDemoMissionOpen || "");
+        return;
+      }
+      if (event.target?.closest?.("[data-nexus-demo-action]")) {
+        handleNexusDemoSandboxClick(event);
+      }
+    }, true);
+  }
   if (document.body.dataset.nexusFunctionWindowDelegateBound !== "true") {
     document.body.dataset.nexusFunctionWindowDelegateBound = "true";
     document.addEventListener("click", event => {

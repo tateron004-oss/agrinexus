@@ -223,9 +223,9 @@ check("Standard User first screen remains icon-first and uncluttered", hasAll(ap
   "Ask Nexus or choose a support area below"
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
 
-check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-377", "agrinexus-pwa-v351"])
-  && hasAll(app, ["nexus-behavior-377", "agrinexus-pwa-v351"])
-  && hasAll(sw, ["nexus-behavior-377", "agrinexus-pwa-v351"]));
+check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-378", "agrinexus-pwa-v352"])
+  && hasAll(app, ["nexus-behavior-378", "agrinexus-pwa-v352"])
+  && hasAll(sw, ["nexus-behavior-378", "agrinexus-pwa-v352"]));
 
 check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));

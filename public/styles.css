@@ -13388,6 +13388,28 @@ body.user-mode .nexus-demo-record-grid p {
   padding-top: 9px;
 }
 
+body.user-mode .nexus-demo-mission-button {
+  background: rgba(15, 23, 42, .5);
+  border: 1px solid rgba(250, 204, 21, .18);
+  border-radius: 14px;
+  color: rgba(226, 232, 240, .9);
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  text-align: left;
+}
+
+body.user-mode .nexus-demo-mission-button:hover,
+body.user-mode .nexus-demo-mission-button:focus-visible {
+  border-color: rgba(250, 204, 21, .42);
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, .12);
+}
+
+body.user-mode .nexus-demo-mission-button b {
+  color: rgba(255, 255, 255, .96);
+}
+
 body.user-mode .nexus-ux-status-badge {
   display: inline-flex;
   align-items: center;
