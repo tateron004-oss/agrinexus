@@ -38,8 +38,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-378";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v352";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-379";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v353";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -37126,6 +37126,68 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/brain/tasks" && req.method === "GET") {
     return send(res, 200, nexusAgenticBrainRuntime.listTasks(db));
+  }
+
+  if (url.pathname === "/api/nexus/brain/missions" && req.method === "GET") {
+    const state = nexusAgenticBrainRuntime.listTasks(db);
+    return send(res, 200, {
+      ok: true,
+      missions: state.tasks || [],
+      localOnly: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname.startsWith("/api/nexus/brain/missions/") && req.method === "GET") {
+    const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
+    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const mission = (state.tasks || []).find(task => task.taskId === missionId || task.caseId === missionId);
+    return send(res, mission ? 200 : 404, {
+      ok: Boolean(mission),
+      mission: mission || null,
+      status: mission ? mission.status : "not_found",
+      localOnly: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname.startsWith("/api/nexus/brain/missions/") && (req.method === "PATCH" || req.method === "POST")) {
+    const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
+    const body = await readBody(req);
+    const result = nexusAgenticBrainRuntime.updateTask({ ...body, taskId: missionId }, db);
+    await writeDb(db);
+    return send(res, 200, { ...result, localOnly: true, noExternalExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/nexus/brain/receipts" && req.method === "GET") {
+    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const receipts = (state.activity || []).map(event => ({
+      receiptId: event.activityId,
+      createdAt: event.createdAt,
+      eventType: event.eventType,
+      taskId: event.taskId || "",
+      status: event.status || "recorded_locally",
+      summary: event.summary || "",
+      localOnly: true,
+      noExternalExecutionAuthorized: true
+    }));
+    return send(res, 200, { ok: true, receipts, localOnly: true, noExternalExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/nexus/brain/memory" && req.method === "GET") {
+    const state = nexusAgenticBrainRuntime.listTasks(db);
+    return send(res, 200, {
+      ok: true,
+      memory: {
+        missions: state.tasks || [],
+        providerQueue: state.providerQueue || [],
+        receipts: state.activity || []
+      },
+      scopes: ["missions", "providerQueue", "receipts"],
+      localOnly: true,
+      sandboxOrLocal: true,
+      noExternalExecutionAuthorized: true
+    });
   }
 
   if (url.pathname === "/api/nexus/brain/command" && req.method === "POST") {
