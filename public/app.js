@@ -21276,6 +21276,105 @@ const NEXUS_HOME_SUGGESTED_ACTIONS = Object.freeze([
   { label: "Open music/media", command: "Play Afrobeats.", accent: "magenta" }
 ]);
 
+const NEXUS_PREMIUM_MINI_APPS = Object.freeze([
+  {
+    id: "health-care",
+    title: "Health & Care",
+    icon: "HC",
+    purpose: "Prepare chronic care, RPM/RTM, telehealth, pharmacy, and mobile clinic next steps for review.",
+    status: "local_only",
+    summary: "Provider-ready prep active",
+    primaryLabel: "Start Mission",
+    secondaryLabel: "View Status",
+    command: "Nexus, help with diabetes intake.",
+    statusCommand: "Nexus, show health provider readiness."
+  },
+  {
+    id: "agriculture-food-security",
+    title: "Agriculture & Food Security",
+    icon: "AG",
+    purpose: "Organize crop, weather, pest, field visit, and source-backed farm support.",
+    status: "internet_ready",
+    summary: "Crop support and weather risk",
+    primaryLabel: "Start Mission",
+    secondaryLabel: "Details",
+    command: "Nexus, help with crop support.",
+    statusCommand: "Nexus, test live knowledge."
+  },
+  {
+    id: "trade-marketplace",
+    title: "Trade & Marketplace",
+    icon: "TR",
+    purpose: "Prepare buyer, seller, listing, price, logistics, and receipt packets without payment.",
+    status: "needs_confirmation",
+    summary: "Buyer/seller packets ready",
+    primaryLabel: "Open Mini-App",
+    secondaryLabel: "View Status",
+    command: "Create buyer/seller packet.",
+    statusCommand: "Nexus, show provider receipts."
+  },
+  {
+    id: "logistics-maps",
+    title: "Logistics & Maps",
+    icon: "LM",
+    purpose: "Prepare typed routes, field visits, shipments, and cold-chain planning without location sharing.",
+    status: "needs_credentials",
+    summary: "Mapbox improves routes",
+    primaryLabel: "Start Mission",
+    secondaryLabel: "Details",
+    command: "Track shipment and plan route.",
+    statusCommand: "Nexus, test maps."
+  },
+  {
+    id: "learning-workforce",
+    title: "Learning & Workforce",
+    icon: "LW",
+    purpose: "Build literacy, training referrals, applicant packets, and employer readiness workflows.",
+    status: "ready",
+    summary: "Local prep active",
+    primaryLabel: "Open Mini-App",
+    secondaryLabel: "Details",
+    command: "Prepare applicant for job.",
+    statusCommand: "Open training support."
+  },
+  {
+    id: "drone-field-operations",
+    title: "Drone & Field Operations",
+    icon: "DR",
+    purpose: "Prepare drone mission planning, field evidence, and agronomy review without flight dispatch.",
+    status: "vendor_required",
+    summary: "Vendor endpoint required",
+    primaryLabel: "Start Mission",
+    secondaryLabel: "View Status",
+    command: "Plan drone mission.",
+    statusCommand: "Nexus, test drone."
+  },
+  {
+    id: "communications-media",
+    title: "Communications & Media",
+    icon: "CM",
+    purpose: "Draft SMS, WhatsApp, email, phone scripts, Telegram, and safe media provider handoffs.",
+    status: "needs_confirmation",
+    summary: "Draft-only without confirmation",
+    primaryLabel: "Open Mini-App",
+    secondaryLabel: "Details",
+    command: "Prepare an SMS.",
+    statusCommand: "Nexus, test SMS."
+  },
+  {
+    id: "provider-activation",
+    title: "Provider Activation",
+    icon: "PA",
+    purpose: "Review provider readiness, missing credentials, Render setup, receipts, and test-safe controls.",
+    status: "test_ready",
+    summary: "Activation Center available",
+    primaryLabel: "Open Mini-App",
+    secondaryLabel: "View Status",
+    command: "Show activation status",
+    statusCommand: "Nexus, what credentials are missing?"
+  }
+]);
+
 const NEXUS_HOME_MODE_PANEL_CONTENT = Object.freeze({
   agriculture: {
     explanation: "Get plain-language crop, soil, pest, irrigation, training, and field planning help.",
@@ -23016,7 +23115,18 @@ function nexusStatusBadgeLabel(status = "") {
   const text = String(status || "").toLowerCase();
   if (/waiting|confirmation/.test(text)) return "Needs confirmation";
   if (/consent/.test(text)) return "Needs consent";
-  if (/credential|missing|blocked/.test(text)) return "Blocked: missing credentials";
+  if (/credential|missing/.test(text)) return "Provider credentials are missing";
+  if (/blocked/.test(text)) return "Blocked for safety";
+  if (/local[_ -]?only/.test(text)) return "Prepared locally. Nothing was sent externally.";
+  if (/internet[_ -]?ready/.test(text)) return "Internet-ready";
+  if (/test[_ -]?ready/.test(text)) return "Connected and test-ready";
+  if (/live[_ -]?ready/.test(text)) return "Live action requires confirmation";
+  if (/vendor[_ -]?required/.test(text)) return "Vendor endpoint required";
+  if (/approval[_ -]?required/.test(text)) return "Approval required";
+  if (/executed/.test(text)) return "Executed with receipt";
+  if (/failed/.test(text)) return "Failed safely";
+  if (/low[_ -]?bandwidth/.test(text)) return "Low-bandwidth mode active";
+  if (/offline[_ -]?queue/.test(text)) return "Offline queue ready";
   if (/queued/.test(text)) return "Queued locally";
   if (/prepared/.test(text)) return "Prepared";
   if (/ready|configured/.test(text)) return "Ready";
@@ -24043,10 +24153,39 @@ function renderNexusConfirmationPanel(packet, lane) {
 function renderNexusActivationCenter() {
   const lanes = nexusAllIntegrationLanes().map(lane => ({ ...lane, ...(nexusLaneConfigOverrides[lane.id] || {}) }));
   const summary = nexusGlobalActivationCenterSummary(lanes);
+  const connected = lanes.filter(lane => lane.status === "live_ready" || lane.status === "configured_inactive").length;
+  const testReady = lanes.filter(lane => lane.testModeAvailable).length;
+  const liveReady = lanes.filter(lane => lane.liveModeAvailable).length;
+  const missingCredentials = lanes.filter(lane => (lane.missingCredentials || []).length || /credential/i.test(lane.status)).length;
+  const vendorRequired = lanes.filter(lane => /vendor|partner|endpoint/i.test(`${lane.status} ${(lane.requiredCredentials || []).join(" ")}`)).length;
+  const localFallback = lanes.filter(lane => !lane.liveModeAvailable && lane.testModeAvailable).length;
+  const failedTests = nexusActionHistory.filter(action => /failed|blocked|credential/i.test(`${action.outcomeStatus} ${action.resultMessage} ${action.errorMessage}`)).length;
   return `
     <details class="nexus-activation-center nexus-glass-card" data-nexus-activation-center="true" open>
       <summary>${escapeHtml(translateText("Activation Center"))}</summary>
       <p>${escapeHtml(translateText("Manage provider, vendor, communications, healthcare, agriculture, workforce, maps, and offline lanes locally. Secret values are never stored here."))}</p>
+      <section class="nexus-online-readiness-summary" data-nexus-online-readiness-summary="true" aria-label="${escapeHtml(translateText("Nexus Online Readiness"))}">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Operator"))}</span>
+          <strong>${escapeHtml(translateText("Nexus Online Readiness"))}</strong>
+          <p>${escapeHtml(translateText("Provider activation remains transparent: test configured lanes, refresh readiness, open the missing credential checklist, and keep live actions gated."))}</p>
+        </div>
+        <div class="nexus-online-readiness-counts">
+          <span>${renderNexusStatusBadge("ready", { label: "Connected" })}<strong>${escapeHtml(String(connected))}</strong></span>
+          <span>${renderNexusStatusBadge("test_ready")}<strong>${escapeHtml(String(testReady))}</strong></span>
+          <span>${renderNexusStatusBadge("live_ready")}<strong>${escapeHtml(String(liveReady))}</strong></span>
+          <span>${renderNexusStatusBadge("needs_credentials")}<strong>${escapeHtml(String(missingCredentials))}</strong></span>
+          <span>${renderNexusStatusBadge("vendor_required")}<strong>${escapeHtml(String(vendorRequired))}</strong></span>
+          <span>${renderNexusStatusBadge("local_only", { label: "Local fallback" })}<strong>${escapeHtml(String(localFallback))}</strong></span>
+          <span>${renderNexusStatusBadge("failed")}<strong>${escapeHtml(String(failedTests))}</strong></span>
+        </div>
+        <div class="nexus-online-readiness-next-steps">
+          <small>${escapeHtml(translateText("Add Tavily to enable live knowledge."))}</small>
+          <small>${escapeHtml(translateText("Add Mapbox to improve routes."))}</small>
+          <small>${escapeHtml(translateText("Add SendGrid to test email."))}</small>
+          <small>${escapeHtml(translateText("Keep health endpoints blank until partners are approved."))}</small>
+        </div>
+      </section>
       <section class="nexus-global-activation-summary" data-testid="nexus-global-activation-center-summary" aria-label="${escapeHtml(translateText("Global activation center summary"))}">
         <div>
           <span class="eyebrow">${escapeHtml(translateText("Global operational console"))}</span>
@@ -25700,6 +25839,14 @@ function handleNexusHomeModeSummaryClick(event) {
 
 function nexusCommandCenterExamples() {
   return [
+    "Prepare patient care summary",
+    "Check crop/weather risk",
+    "Track shipment",
+    "Create buyer/seller packet",
+    "Prepare applicant for job",
+    "Create training referral",
+    "Plan drone mission",
+    "Test connected services",
     "Nexus, open agriculture help.",
     "Start a telehealth intake.",
     "Nexus, record my blood pressure.",
@@ -25708,6 +25855,21 @@ function nexusCommandCenterExamples() {
     "Nexus, play music.",
     "Open gospel music on YouTube.",
     "Switch to Swahili."
+  ];
+}
+
+function nexusCommandLandingStatusChips() {
+  const providers = nexusRealProviderTestingStatus?.providers || [];
+  const connected = providers.filter(provider => provider.testabilityState === "ready" || provider.configured).length;
+  const missing = providers.filter(provider => provider.testabilityState === "missing_config").length;
+  const liveExecution = Boolean(nexusProductionRuntimeStatus?.liveExecutionEnabled || nexusRealProviderTestingStatus?.liveExecutionEnabled);
+  return [
+    { label: navigator.onLine === false ? "Local fallback" : "Online / Local fallback", status: navigator.onLine === false ? "local_only" : "ready" },
+    { label: connected ? `${connected} provider area(s) connected` : "Providers need credentials", status: connected ? "test_ready" : "needs_credentials" },
+    { label: liveExecution ? "Live execution enabled" : "Live execution disabled", status: liveExecution ? "approval_required" : "blocked" },
+    { label: nexusLowBandwidthMode ? "Low-bandwidth mode active" : "Low-bandwidth ready", status: nexusLowBandwidthMode ? "low_bandwidth" : "local_only" },
+    { label: nexusPreparedPackets.length ? "Receipts available" : "Receipts ready when actions occur", status: nexusPreparedPackets.length ? "executed" : "offline_queue" },
+    { label: missing ? `${missing} credential gap(s)` : "Credential checklist ready", status: missing ? "needs_credentials" : "ready" }
   ];
 }
 
@@ -25766,6 +25928,19 @@ function renderNexusCommandCenterHero() {
         <span class="eyebrow">${translateText("AI assistant home")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
         <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
+        <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
+          <button type="button" class="primary" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput">${escapeHtml(translateText("Start Mission"))}</button>
+          <button type="button" data-nexus-mode-shortcut="continue-mission" data-nexus-command="Continue my last workflow.">${escapeHtml(translateText("Continue Mission"))}</button>
+          <button type="button" data-nexus-mode-shortcut="view-receipts" data-nexus-command="Show action receipt.">${escapeHtml(translateText("View Receipts"))}</button>
+          <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Provider Readiness"))}</button>
+        </div>
+        <div class="nexus-command-landing-status-strip" data-nexus-command-landing-status="true">
+          ${nexusCommandLandingStatusChips().map(chip => `
+            <span class="nexus-command-status-chip nexus-status-token nexus-status-${escapeHtml(String(chip.status).replace(/_/g, "-"))}" title="${escapeHtml(translateText(chip.label))}">
+              ${renderNexusStatusBadge(chip.status, { label: chip.label })}
+            </span>
+          `).join("")}
+        </div>
       </div>
       <div class="nexus-orb-stage" data-nexus-orb="true" aria-hidden="true">
         <div class="nexus-orb">
@@ -26058,6 +26233,158 @@ function renderNexusMajorLaunchButtons() {
           </button>
         `).join("")}
       </div>
+    </section>
+  `;
+}
+
+function renderNexusPremiumMiniAppLauncher() {
+  return `
+    <section class="nexus-premium-miniapp-launcher" data-nexus-premium-miniapp-launcher="true" aria-label="${escapeHtml(translateText("Nexus mini-app launcher"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Mini-App Intelligence Launcher"))}</span>
+        <strong>${escapeHtml(translateText("Choose a mission area"))}</strong>
+        <p>${escapeHtml(translateText("Start with a simple card. Nexus opens the right focused workspace and keeps provider actions gated until credentials, consent, confirmation, and audit are ready."))}</p>
+      </div>
+      <div class="nexus-premium-miniapp-grid">
+        ${NEXUS_PREMIUM_MINI_APPS.map(app => `
+          <article class="nexus-premium-miniapp-card nexus-glass-card" data-nexus-mini-app-card="${escapeHtml(app.id)}">
+            <div class="nexus-miniapp-card-head">
+              <span class="nexus-miniapp-icon" aria-hidden="true">${escapeHtml(app.icon)}</span>
+              <div>
+                <strong>${escapeHtml(translateText(app.title))}</strong>
+                ${renderNexusStatusBadge(app.status)}
+              </div>
+            </div>
+            <p>${escapeHtml(translateText(app.purpose))}</p>
+            <small>${escapeHtml(translateText(app.summary))}</small>
+            <div class="nexus-miniapp-actions">
+              <button type="button" class="primary" data-nexus-mode-shortcut="${escapeHtml(app.id)}" data-nexus-command="${escapeHtml(app.command)}">${escapeHtml(translateText(app.primaryLabel))}</button>
+              <button type="button" data-nexus-mode-shortcut="${escapeHtml(app.id)}-status" data-nexus-command="${escapeHtml(app.statusCommand)}">${escapeHtml(translateText(app.secondaryLabel))}</button>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function nexusCurrentMissionSnapshot() {
+  const state = nexusActiveWorkflowState || {};
+  const id = state.id || state.workflow || nexusPreparedPackets[0]?.workflowId || nexusRecentWorkflows[0]?.id || "command-center";
+  const definition = nexusWorkflowDefinition(id, state.command || "") || nexusFunctionWindowDefinition(state.functionId || id, state.command || "");
+  const packet = nexusPreparedPackets.find(item => item.workflowId === id) || nexusPreparedPackets[0] || null;
+  const entry = packet ? nexusActionHistory.find(action => action.packetId === packet.packetId) : nexusActionHistory[0] || null;
+  const presentation = definition?.presentation || NEXUS_HOME_MODE_PRESENTATION[id] || {};
+  const title = presentation.title || packet?.workflowLabel || nexusRecentWorkflows[0]?.title || "Nexus mission";
+  const category = nexusWorkflowRegistryEntry(id)?.category || nexusRecentWorkflows[0]?.category || "Command Center";
+  const collected = packet?.reviewItems?.length || Object.keys(packet?.payload || {}).length || 0;
+  const missing = packet?.missingInputs?.length || definition?.fields?.length || 3;
+  const status = entry?.outcomeStatus || packet?.outcomeStatus || (state.id ? "collecting_info" : "draft");
+  return {
+    id,
+    title,
+    category,
+    status,
+    goal: state.command || packet?.summary || "Choose a mini-app, prompt chip, or Ask Nexus command to start a focused mission.",
+    understood: state.command ? `Nexus understood: ${state.command}` : "Nexus is waiting for your goal.",
+    collected: collected ? `${collected} detail(s) captured locally.` : "No mission details collected yet.",
+    missing: missing ? `${missing} detail(s) may still be needed before provider-ready prep.` : "No required missing details detected.",
+    nextStep: state.id ? "Continue the focused window, prepare a packet, or review confirmation before any external step." : "Start a mission from the launcher or type what you need.",
+    readiness: packet?.destinationLaneId ? "Provider readiness attached to packet." : "Provider readiness shown when a lane is selected.",
+    consent: packet?.confirmationRequired ? "Consent/confirmation required before any external action." : "No external action is authorized.",
+    receipt: entry?.resultMessage || (packet ? "Local packet exists; receipt appears after a queued/tested/confirmed step." : "No receipt yet."),
+    safety: "Prepared locally. Nothing was sent externally unless a configured provider, consent, confirmation, and audit receipt are present."
+  };
+}
+
+function renderNexusAgenticMissionWorkspace() {
+  const mission = nexusCurrentMissionSnapshot();
+  const statusOptions = ["draft", "collecting_info", "ready_to_prepare", "local_prepared", "needs_credentials", "needs_consent", "needs_confirmation", "vendor_required", "live_ready", "executed_with_receipt", "blocked_for_safety"];
+  return `
+    <section class="nexus-agentic-mission-workspace nexus-glass-card" data-nexus-agentic-mission-workspace="true" data-nexus-mission-status-options="${escapeHtml(statusOptions.join(","))}" aria-label="${escapeHtml(translateText("Nexus mission workspace"))}">
+      <div class="nexus-mission-head">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Agentic Mission Workspace"))}</span>
+          <h3>${escapeHtml(translateText(mission.title))}</h3>
+          <p>${escapeHtml(translateText(mission.goal))}</p>
+        </div>
+        ${renderNexusStatusBadge(mission.status)}
+      </div>
+      <div class="nexus-mission-grid">
+        <article><strong>${escapeHtml(translateText("What Nexus understands"))}</strong><span>${escapeHtml(translateText(mission.understood))}</span></article>
+        <article><strong>${escapeHtml(translateText("Information collected"))}</strong><span>${escapeHtml(translateText(mission.collected))}</span></article>
+        <article><strong>${escapeHtml(translateText("Information missing"))}</strong><span>${escapeHtml(translateText(mission.missing))}</span></article>
+        <article><strong>${escapeHtml(translateText("Recommended next step"))}</strong><span>${escapeHtml(translateText(mission.nextStep))}</span></article>
+        <article><strong>${escapeHtml(translateText("Provider readiness"))}</strong><span>${escapeHtml(translateText(mission.readiness))}</span></article>
+        <article><strong>${escapeHtml(translateText("Consent / confirmation"))}</strong><span>${escapeHtml(translateText(mission.consent))}</span></article>
+        <article><strong>${escapeHtml(translateText("Receipt / timeline"))}</strong><span>${escapeHtml(translateText(mission.receipt))}</span></article>
+        <article><strong>${escapeHtml(translateText("Safety note"))}</strong><span>${escapeHtml(translateText(mission.safety))}</span></article>
+      </div>
+      <div class="nexus-mission-actions">
+        <button type="button" class="primary" data-nexus-command-prefill="${escapeHtml(mission.nextStep)}">${escapeHtml(translateText("Use recommended prompt"))}</button>
+        <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Provider readiness"))}</button>
+        <button type="button" data-nexus-mode-shortcut="view-receipts" data-nexus-command="Show action receipt.">${escapeHtml(translateText("View receipts"))}</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusPremiumActivityReceiptsPanel() {
+  const recentMissions = nexusRecentWorkflows.slice(0, 3);
+  const recentPackets = nexusPreparedPackets.slice(0, 3);
+  const recentActions = nexusActionHistory.slice(0, 3);
+  const rows = [
+    ...recentMissions.map(item => ({
+      title: item.title,
+      meta: item.category || "mission",
+      happened: item.summary || "Mission is available to continue.",
+      didNot: "No hidden provider action occurred.",
+      next: "Continue mission or review provider readiness.",
+      status: item.status || "draft",
+      timestamp: item.updatedAt
+    })),
+    ...recentPackets.map(packet => ({
+      title: packet.workflowLabel || "Prepared packet",
+      meta: packet.destinationLaneId || "local packet",
+      happened: "Local packet was prepared for review.",
+      didNot: "No provider handoff, payment, call, message, location sharing, or dispatch occurred.",
+      next: packet.confirmationRequired ? "Review confirmation before any configured provider step." : "Review packet details.",
+      status: packet.outcomeStatus || "prepared",
+      timestamp: packet.createdAt
+    })),
+    ...recentActions.map(action => ({
+      title: action.workflowLabel || "Action receipt",
+      meta: action.destinationLaneId || "audit",
+      happened: action.resultMessage || "Action was recorded locally.",
+      didNot: "No secrets or unsupported execution were exposed.",
+      next: action.nextStep || "Review timeline.",
+      status: action.outcomeStatus || "prepared",
+      timestamp: action.createdAt
+    }))
+  ].slice(0, 6);
+  return `
+    <section class="nexus-premium-activity-receipts nexus-glass-card" data-nexus-premium-activity-receipts="true" data-no-secret-values="true" aria-label="${escapeHtml(translateText("Activity and receipts"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Activity & Receipts"))}</span>
+        <strong>${escapeHtml(translateText("What happened, what did not happen"))}</strong>
+        <p>${escapeHtml(translateText("Recent missions, local packets, blocked or gated actions, and provider tests appear here without exposing secrets."))}</p>
+      </div>
+      ${rows.length ? `
+        <div class="nexus-activity-receipt-list">
+          ${rows.map(row => `
+            <article>
+              <div>
+                <strong>${escapeHtml(translateText(row.title || "Nexus activity"))}</strong>
+                <small>${escapeHtml(translateText(row.meta || "local"))} - ${escapeHtml(row.timestamp ? new Date(row.timestamp).toLocaleString() : translateText("local timeline"))}</small>
+              </div>
+              ${renderNexusStatusBadge(row.status)}
+              <p><b>${escapeHtml(translateText("Happened:"))}</b> ${escapeHtml(translateText(row.happened))}</p>
+              <p><b>${escapeHtml(translateText("Did not happen:"))}</b> ${escapeHtml(translateText(row.didNot))}</p>
+              <p><b>${escapeHtml(translateText("Next step:"))}</b> ${escapeHtml(translateText(row.next))}</p>
+            </article>
+          `).join("")}
+        </div>
+      ` : `<p class="nexus-smart-empty-state" data-nexus-smart-empty-state="activity-receipts">${escapeHtml(translateText("No mission receipt yet. Start a mission, prepare a packet, or test a configured provider to create visible activity."))}</p>`}
     </section>
   `;
 }
@@ -27027,6 +27354,9 @@ function renderUserWorkspace() {
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
+        ${renderNexusPremiumMiniAppLauncher()}
+        ${renderNexusAgenticMissionWorkspace()}
+        ${renderNexusPremiumActivityReceiptsPanel()}
         ${renderNexusMajorLaunchButtons()}
         ${renderNexusRecentWorkflowsPanel()}
         ${renderNexusRoleAwareControls()}

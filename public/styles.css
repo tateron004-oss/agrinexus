@@ -12912,3 +12912,337 @@ body.user-mode .nexus-landing-next-actions button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* Premium mini-app agentic UI consolidation */
+body.user-mode {
+  --nexus-premium-ink: #f8fbff;
+  --nexus-premium-muted: rgba(226, 232, 240, .86);
+  --nexus-premium-panel: rgba(9, 18, 38, .72);
+  --nexus-premium-panel-soft: rgba(15, 23, 42, .56);
+  --nexus-premium-line: rgba(125, 211, 252, .22);
+  --nexus-premium-radius: 8px;
+  --nexus-premium-shadow: 0 24px 80px rgba(2, 8, 23, .34);
+}
+
+body.user-mode .nexus-command-landing-actions,
+body.user-mode .nexus-command-landing-status-strip,
+body.user-mode .nexus-miniapp-actions,
+body.user-mode .nexus-mission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+body.user-mode .nexus-command-landing-actions button,
+body.user-mode .nexus-miniapp-actions button,
+body.user-mode .nexus-mission-actions button {
+  min-height: 44px;
+  border-radius: var(--nexus-premium-radius);
+  border: 1px solid rgba(148, 163, 184, .24);
+  background: rgba(15, 23, 42, .72);
+  color: var(--nexus-premium-ink);
+  box-shadow: 0 12px 30px rgba(2, 8, 23, .22);
+  font-weight: 950;
+}
+
+body.user-mode .nexus-command-landing-actions button.primary,
+body.user-mode .nexus-miniapp-actions button.primary,
+body.user-mode .nexus-mission-actions button.primary {
+  border-color: rgba(56, 189, 248, .42);
+  background: linear-gradient(135deg, rgba(34, 211, 238, .96), rgba(37, 99, 235, .92));
+  color: #ffffff;
+}
+
+body.user-mode .nexus-command-status-chip .nexus-ux-status-badge {
+  white-space: normal;
+}
+
+body.user-mode .nexus-premium-miniapp-launcher,
+body.user-mode .nexus-agentic-mission-workspace,
+body.user-mode .nexus-premium-activity-receipts,
+body.user-mode .nexus-online-readiness-summary {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--nexus-premium-line);
+  border-radius: var(--nexus-premium-radius);
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, .13), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(251, 191, 36, .1), transparent 34%),
+    var(--nexus-premium-panel);
+  box-shadow: var(--nexus-premium-shadow), inset 0 1px 0 rgba(255, 255, 255, .08);
+  padding: clamp(16px, 3vw, 24px);
+  color: var(--nexus-premium-ink);
+}
+
+body.user-mode .nexus-dashboard-section-head p,
+body.user-mode .nexus-premium-miniapp-card p,
+body.user-mode .nexus-agentic-mission-workspace p,
+body.user-mode .nexus-premium-activity-receipts p,
+body.user-mode .nexus-online-readiness-summary p {
+  color: var(--nexus-premium-muted);
+}
+
+body.user-mode .nexus-premium-miniapp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+body.user-mode .nexus-premium-miniapp-card {
+  display: grid;
+  gap: 12px;
+  min-height: 236px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: var(--nexus-premium-radius);
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, .82), rgba(30, 41, 59, .58)),
+    rgba(15, 23, 42, .72);
+  box-shadow: 0 18px 44px rgba(2, 8, 23, .24);
+  align-content: start;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+body.user-mode .nexus-premium-miniapp-card:hover,
+body.user-mode .nexus-premium-miniapp-card:focus-within {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, .42);
+  box-shadow: 0 24px 64px rgba(2, 8, 23, .34);
+}
+
+body.user-mode .nexus-miniapp-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+body.user-mode .nexus-miniapp-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--nexus-premium-radius);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, .46), transparent 34%),
+    linear-gradient(135deg, rgba(52, 211, 153, .92), rgba(56, 189, 248, .86));
+  color: #ffffff;
+  font-size: .78rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  box-shadow: 0 0 24px rgba(34, 211, 238, .28);
+}
+
+body.user-mode .nexus-miniapp-card-head strong,
+body.user-mode .nexus-agentic-mission-workspace h3,
+body.user-mode .nexus-premium-activity-receipts strong,
+body.user-mode .nexus-online-readiness-summary strong {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(34, 211, 238, .18), 0 1px 2px rgba(0, 0, 0, .42);
+}
+
+body.user-mode .nexus-premium-miniapp-card small,
+body.user-mode .nexus-agentic-mission-workspace span,
+body.user-mode .nexus-premium-activity-receipts small,
+body.user-mode .nexus-online-readiness-summary small {
+  color: var(--nexus-premium-muted);
+}
+
+body.user-mode .nexus-agentic-mission-workspace {
+  display: grid;
+  gap: 16px;
+}
+
+body.user-mode .nexus-mission-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+body.user-mode .nexus-mission-head h3 {
+  margin: 4px 0 6px;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.1;
+}
+
+body.user-mode .nexus-mission-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-mission-grid article,
+body.user-mode .nexus-activity-receipt-list article,
+body.user-mode .nexus-online-readiness-counts span {
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: var(--nexus-premium-radius);
+  background: var(--nexus-premium-panel-soft);
+  padding: 12px;
+}
+
+body.user-mode .nexus-mission-grid article {
+  display: grid;
+  gap: 6px;
+}
+
+body.user-mode .nexus-mission-grid strong {
+  color: rgba(248, 250, 252, .96);
+}
+
+body.user-mode .nexus-premium-activity-receipts,
+body.user-mode .nexus-activity-receipt-list,
+body.user-mode .nexus-online-readiness-summary {
+  display: grid;
+  gap: 12px;
+}
+
+body.user-mode .nexus-activity-receipt-list article {
+  display: grid;
+  gap: 8px;
+}
+
+body.user-mode .nexus-activity-receipt-list p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-online-readiness-counts {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.user-mode .nexus-online-readiness-counts span {
+  display: grid;
+  gap: 8px;
+}
+
+body.user-mode .nexus-online-readiness-counts strong {
+  font-size: 1.5rem;
+}
+
+body.user-mode .nexus-online-readiness-next-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-online-readiness-next-steps small {
+  padding: 8px 10px;
+  border-radius: var(--nexus-premium-radius);
+  background: rgba(15, 23, 42, .54);
+  border: 1px solid rgba(148, 163, 184, .16);
+}
+
+body.user-mode .nexus-ux-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(15, 23, 42, .68);
+  color: rgba(248, 250, 252, .96);
+  font-size: .72rem;
+  font-weight: 950;
+  line-height: 1.15;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+body.user-mode .nexus-ux-status-ready,
+body.user-mode .nexus-ux-status-connected,
+body.user-mode .nexus-ux-status-connected-and-test-ready,
+body.user-mode .nexus-ux-status-prepared,
+body.user-mode .nexus-ux-status-prepared-locally-nothing-was-sent-externally {
+  background: rgba(16, 185, 129, .18);
+  color: #d1fae5;
+  border-color: rgba(52, 211, 153, .34);
+}
+
+body.user-mode .nexus-ux-status-internet-ready,
+body.user-mode .nexus-ux-status-live-action-requires-confirmation,
+body.user-mode .nexus-ux-status-approval-required {
+  background: rgba(14, 165, 233, .18);
+  color: #dff6ff;
+  border-color: rgba(56, 189, 248, .34);
+}
+
+body.user-mode .nexus-ux-status-blocked-missing-credentials,
+body.user-mode .nexus-ux-status-provider-credentials-are-missing,
+body.user-mode .nexus-ux-status-vendor-endpoint-required,
+body.user-mode .nexus-ux-status-blocked-for-safety,
+body.user-mode .nexus-ux-status-failed-safely {
+  background: rgba(251, 191, 36, .18);
+  color: #fef3c7;
+  border-color: rgba(251, 191, 36, .36);
+}
+
+body.user-mode .nexus-ux-status-needs-confirmation,
+body.user-mode .nexus-ux-status-needs-consent,
+body.user-mode .nexus-ux-status-queued-locally,
+body.user-mode .nexus-ux-status-offline-queue-ready,
+body.user-mode .nexus-ux-status-low-bandwidth-mode-active {
+  background: rgba(168, 85, 247, .16);
+  color: #f3e8ff;
+  border-color: rgba(216, 180, 254, .3);
+}
+
+body.user-mode .nexus-command-landing-actions button:focus-visible,
+body.user-mode .nexus-premium-miniapp-card button:focus-visible,
+body.user-mode .nexus-agentic-mission-workspace button:focus-visible,
+body.user-mode .nexus-premium-activity-receipts button:focus-visible,
+body.user-mode .nexus-online-readiness-summary button:focus-visible {
+  outline: 3px solid rgba(251, 191, 36, .72);
+  outline-offset: 3px;
+}
+
+body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-launcher,
+body.user-mode.nexus-low-bandwidth-mode .nexus-agentic-mission-workspace,
+body.user-mode.nexus-low-bandwidth-mode .nexus-premium-activity-receipts,
+body.user-mode.nexus-low-bandwidth-mode .nexus-online-readiness-summary,
+body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-card {
+  background: rgba(15, 23, 42, .9);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.user-mode .nexus-premium-miniapp-card,
+  body.user-mode .nexus-command-landing-actions button,
+  body.user-mode .nexus-miniapp-actions button,
+  body.user-mode .nexus-mission-actions button {
+    transition: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  body.user-mode .nexus-premium-miniapp-grid,
+  body.user-mode .nexus-mission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.user-mode .nexus-online-readiness-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  body.user-mode .nexus-premium-miniapp-grid,
+  body.user-mode .nexus-mission-grid,
+  body.user-mode .nexus-online-readiness-counts {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-mission-head {
+    display: grid;
+  }
+
+  body.user-mode .nexus-command-landing-actions button,
+  body.user-mode .nexus-miniapp-actions button,
+  body.user-mode .nexus-mission-actions button {
+    width: 100%;
+  }
+}
