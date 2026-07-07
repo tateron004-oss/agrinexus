@@ -22715,6 +22715,13 @@ const NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY = "nexusAgriculturePredictiveInte
 let nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
 const NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY = "nexusMultiDomainPredictiveIntelligenceState";
 let nexusMultiDomainPredictiveState = {};
+const NEXUS_PREDICTIVE_MATURITY_STORAGE_KEY = "nexusPredictiveIntelligenceMaturityMemory";
+let nexusPredictiveMaturityMemory = buildEmptyNexusPredictiveMaturityMemory();
+const NEXUS_PERSISTENT_MEMORY_STORAGE_KEY = "nexusPersistentMemoryState";
+const nexusPersistentMemoryService = window.NexusPersistentMemory || null;
+let nexusPersistentMemoryState = nexusPersistentMemoryService
+  ? nexusPersistentMemoryService.emptyState(nexusPersistentMemoryService.persistenceStatus({}, "local_browser"))
+  : { records: [], receipts: [], status: { persistenceScope: "local_browser", message: "Local memory active. Production database not connected." } };
 const NEXUS_DEMO_DATA_STORAGE_KEY = "nexusDemoDataSandboxState";
 const NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY = "nexusDemoDataSandboxVisible";
 let nexusDemoDataVisible = localStorage.getItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY) !== "false";
@@ -23695,6 +23702,8 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusChronicPredictiveModelerState || buildEmptyNexusChronicPredictiveModelerState()));
     localStorage.setItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusAgriculturePredictiveModelerState || buildEmptyNexusAgriculturePredictiveModelerState()));
     localStorage.setItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusMultiDomainPredictiveState || {}));
+    localStorage.setItem(NEXUS_PREDICTIVE_MATURITY_STORAGE_KEY, JSON.stringify(nexusPredictiveMaturityMemory || buildEmptyNexusPredictiveMaturityMemory()));
+    localStorage.setItem(NEXUS_PERSISTENT_MEMORY_STORAGE_KEY, JSON.stringify(nexusPersistentMemoryState || {}));
     localStorage.setItem("nexusUserExperienceRole", nexusUserExperienceRole);
     localStorage.setItem("nexusLowBandwidthMode", nexusLowBandwidthMode ? "true" : "false");
     localStorage.setItem("nexusLanguagePreference", nexusLanguagePreference || "");
@@ -23726,6 +23735,14 @@ function restoreNexusRuntimeMemory() {
       ...(JSON.parse(localStorage.getItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY) || "{}") || {})
     };
     nexusMultiDomainPredictiveState = JSON.parse(localStorage.getItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY) || "{}") || {};
+    nexusPredictiveMaturityMemory = {
+      ...buildEmptyNexusPredictiveMaturityMemory(),
+      ...(JSON.parse(localStorage.getItem(NEXUS_PREDICTIVE_MATURITY_STORAGE_KEY) || "{}") || {})
+    };
+    if (nexusPersistentMemoryService) {
+      nexusPersistentMemoryState = JSON.parse(localStorage.getItem(NEXUS_PERSISTENT_MEMORY_STORAGE_KEY) || "null")
+        || nexusPersistentMemoryService.emptyState(nexusPersistentMemoryService.persistenceStatus({}, "local_browser"));
+    }
     nexusUserExperienceRole = localStorage.getItem("nexusUserExperienceRole") || "Standard User";
     nexusLowBandwidthMode = localStorage.getItem("nexusLowBandwidthMode") === "true";
     nexusLanguagePreference = localStorage.getItem("nexusLanguagePreference") || "";
@@ -23759,6 +23776,8 @@ function restoreNexusRuntimeMemory() {
     nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
     nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
     nexusMultiDomainPredictiveState = {};
+    nexusPredictiveMaturityMemory = buildEmptyNexusPredictiveMaturityMemory();
+    nexusPersistentMemoryState = nexusPersistentMemoryService ? nexusPersistentMemoryService.emptyState(nexusPersistentMemoryService.persistenceStatus({}, "local_browser")) : nexusPersistentMemoryState;
     nexusGuidedWorkflowAnswers = {};
   }
 }
@@ -23792,6 +23811,7 @@ function clearNexusSensitiveLocalData() {
   nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
   nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
   nexusMultiDomainPredictiveState = {};
+  nexusPredictiveMaturityMemory = buildEmptyNexusPredictiveMaturityMemory();
   nexusGuidedWorkflowAnswers = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
@@ -23806,6 +23826,8 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY);
     localStorage.removeItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY);
     localStorage.removeItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY);
+    localStorage.removeItem(NEXUS_PREDICTIVE_MATURITY_STORAGE_KEY);
+    localStorage.removeItem(NEXUS_PERSISTENT_MEMORY_STORAGE_KEY);
     localStorage.removeItem("nexusGuidedWorkflowAnswers");
   } catch {}
   nexusAgenticBrainLastResult = {
@@ -26638,10 +26660,28 @@ function renderNexusProfileUtilityPanel() {
   `;
 }
 
+function renderNexusMemoryUtilityPanel() {
+  const store = nexusPersistentMemoryStore();
+  const snapshot = store ? store.snapshot() : nexusPersistentMemoryState;
+  const status = snapshot.status || {};
+  return `
+    <section class="nexus-utility-card" data-nexus-memory-utility-card="true">
+      <span class="eyebrow">${escapeHtml(translateText("Memory"))}</span>
+      <strong>${escapeHtml(translateText("Memory & Records"))}</strong>
+      <small>${escapeHtml(translateText(status.persistenceScope || "local_browser"))}</small>
+      <p>${escapeHtml(translateText(status.message || "Local memory active. Production database not connected."))}</p>
+      <div><span>${escapeHtml(translateText("Saved records"))}</span><strong>${escapeHtml(String((snapshot.records || []).length))}</strong></div>
+      <div><span>${escapeHtml(translateText("Receipts"))}</span><strong>${escapeHtml(String((snapshot.receipts || []).length))}</strong></div>
+      <button type="button" data-nexus-command-prefill="Show saved records.">${escapeHtml(translateText("Open records"))}</button>
+    </section>
+  `;
+}
+
 function renderNexusRightUtilityColumn() {
   return `
     <aside class="nexus-command-right-rail nexus-right-rail" data-nexus-command-right-rail="true" aria-label="${escapeHtml(translateText("Nexus utilities"))}">
       ${renderNexusProfileUtilityPanel()}
+      ${renderNexusMemoryUtilityPanel()}
       ${renderNexusSavedQuestionsUtilityPanel()}
       ${renderNexusProviderSupportUtilityPanel()}
       ${renderNexusPlatformStatusUtilityPanel()}
@@ -26924,6 +26964,8 @@ function renderNexusAgenticMissionWorkspace() {
       ${(mission.submode === "chronic_health_predictive_modeler" || nexusChronicPredictiveModelerState?.riskSignals?.length) ? renderNexusChronicPredictiveModelerPanel() : ""}
       ${(mission.submode === "agriculture_predictive_intelligence_modeler" || nexusAgriculturePredictiveModelerState?.riskSignals?.length) ? renderNexusAgriculturePredictiveModelerPanel() : ""}
       ${Object.keys(NEXUS_PREDICTIVE_ADAPTERS).map(mode => (mission.submode === `${mode}_predictive_intelligence_modeler` || nexusMultiDomainPredictiveState?.[mode]?.riskSignals?.length) ? renderPredictivePanel(mode, nexusMultiDomainPredictiveState[mode]) : "").join("")}
+      ${(mission.submode === "predictive_intelligence_maturity_layer" || nexusPredictiveMaturityMemory?.history?.length || nexusPredictiveMaturityMemory?.feedback?.length) ? renderNexusPredictiveMaturityPanel() : ""}
+      ${(mission.submode === "persistent_memory_layer" || nexusPersistentMemoryState?.records?.length || nexusPersistentMemoryState?.receipts?.length) ? renderNexusPersistentMemoryPanel() : ""}
       ${Object.keys(nexusMultiDomainPredictiveState || {}).length ? renderNexusPredictiveIntelligenceIndex() : ""}
       <div class="nexus-mission-actions">
         <button type="button" class="primary" data-nexus-agentic-runtime-action="continue">${escapeHtml(translateText("Continue mission"))}</button>
@@ -27861,6 +27903,7 @@ function applyNexusChronicPredictiveCommand(command = "", options = {}) {
   nexusChronicPredictiveReceipt("risk_signal_generated", `${nexusChronicPredictiveModelerState.riskSignals?.[0]?.signalName || "Predictive support signal"}: ${nexusChronicPredictiveModelerState.riskSignals?.[0]?.riskLevel || "insufficient_data"}.`);
   if (/simulate/i.test(command)) nexusChronicPredictiveReceipt("scenario_generated", "Predictive scenario projection generated locally.");
   if (/summary/i.test(command)) nexusChronicPredictiveReceipt("physician_summary_generated", "Clinician-facing predictive summary generated locally.");
+  recordNexusPredictiveMaturityHistory("health", command, nexusChronicPredictiveModelerState, readings.slice(-1)[0] || {});
   saveNexusRuntimeMemory();
   const mission = buildNexusChronicPredictiveMission(command, options);
   return setNexusAgenticCommandResult(mission, "Chronic Health Predictive Modeler updated. Review risk signal, confidence, contributing factors, missing data, scenario projections, reasoning trace, physician checklist, and receipts.");
@@ -27975,6 +28018,7 @@ function renderNexusChronicPredictiveModelerPanel() {
         <article data-nexus-reasoning-trace="true"><strong>${escapeHtml(translateText("Predictive Reasoning Trace"))}</strong>${(state.reasoningTrace || []).map((item, index) => `<span>${index + 1}. ${escapeHtml(item)}</span>`).join("")}</article>
         <article data-nexus-predictive-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(state.receipts?.length ? state.receipts : [{ detail: "No predictive receipts yet." }]).slice(0, 6).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
       </div>
+      ${renderNexusPredictiveMaturityInline("health")}
       <article class="nexus-chronic-physician-summary" data-nexus-physician-summary="true">
         <strong>${escapeHtml(translateText("Physician Summary"))}</strong>
         <button type="button" data-nexus-copy-predictive-summary="true">${escapeHtml(translateText("Copy summary"))}</button>
@@ -28053,6 +28097,450 @@ function nexusAgricultureTrajectoryValues() {
 
 function nexusAgricultureConfidenceValues() {
   return ["high", "moderate", "low", "insufficient_data"];
+}
+
+function nexusPredictiveMaturityModes() {
+  return ["health", "agriculture", "marketplace", "logistics", "workforce", "learning", "drone", "communications"];
+}
+
+function buildEmptyNexusPredictiveMaturityMemory() {
+  const now = new Date().toISOString();
+  return {
+    id: `nexus-predictive-maturity-memory-${Date.now()}`,
+    createdAt: now,
+    updatedAt: now,
+    localOnly: true,
+    sandbox: false,
+    history: [],
+    comparisons: [],
+    crossDomainInsights: [],
+    feedback: [],
+    intelligenceSummaries: [],
+    receipts: []
+  };
+}
+
+function nexusPredictiveMaturityModeLabel(mode = "") {
+  return {
+    health: "Chronic Health",
+    agriculture: "Agriculture & Food Security",
+    marketplace: "Marketplace & Trade",
+    logistics: "Logistics / Maps / Shipment",
+    workforce: "Workforce / Employment",
+    learning: "Learning & Development",
+    drone: "Drone & Field Operations",
+    communications: "Communications / Media"
+  }[mode] || mode || "Predictive";
+}
+
+function nexusPredictiveRiskRank(level = "") {
+  const text = String(level || "").toLowerCase();
+  if (/emergency|urgent|high/.test(text)) return 5;
+  if (/elevated|delay|operation|outreach|completion|skill|credential|verification|needs/.test(text)) return 4;
+  if (/watch|risk|incomplete|missing|blocked|cold/.test(text)) return 3;
+  if (/ready|stable|draft/.test(text)) return 2;
+  if (/insufficient|unknown/.test(text)) return 1;
+  return 0;
+}
+
+function calculatePredictiveConfidence({
+  requiredFields = [],
+  presentFields = [],
+  missingData = [],
+  historicalRecordCount = 0,
+  conflictingSignals = [],
+  expertFeedbackScore = 0,
+  crossDomainSupport = 0
+} = {}) {
+  const requiredCount = Math.max(requiredFields.length, 1);
+  const completeness = Math.min(1, presentFields.length / requiredCount);
+  let score = Math.round(35 + completeness * 30 + Math.min(historicalRecordCount, 6) * 4 + Math.max(0, crossDomainSupport) * 5 + Math.max(-3, Math.min(3, expertFeedbackScore)) * 4);
+  score -= Math.min(30, (missingData || []).length * 4);
+  score -= Math.min(20, (conflictingSignals || []).length * 7);
+  score = Math.max(5, Math.min(98, score));
+  const confidenceLabel = score >= 78 ? "high" : score >= 55 ? "moderate" : score >= 30 ? "low" : "insufficient_data";
+  const dataQualityLabel = score >= 78 ? "strong trend evidence" : score >= 55 ? "usable local/sandbox evidence" : score >= 30 ? "partial local/sandbox evidence" : "insufficient data";
+  const evidenceStrength = historicalRecordCount >= 3 && score >= 55 ? "trend_history" : historicalRecordCount > 1 ? "limited_history" : "single_input";
+  const uncertaintyReasons = [
+    ...(missingData || []).length ? [`Missing data: ${(missingData || []).slice(0, 5).join(", ")}`] : [],
+    ...(conflictingSignals || []).length ? [`Conflicting signals: ${(conflictingSignals || []).join(", ")}`] : [],
+    historicalRecordCount < 2 ? ["Only one or no prior predictive record is available."] : [],
+    crossDomainSupport ? [] : ["No strong cross-domain support has been recorded yet."]
+  ];
+  return { confidenceLabel, confidenceScore: score, dataQualityLabel, evidenceStrength, uncertaintyReasons };
+}
+
+function normalizeNexusPredictiveHistoryEntry(mode = "", sourceCommand = "", state = {}, structuredRecord = {}) {
+  const signal = state?.riskSignals?.[0] || {};
+  const records = state?.records || state?.readings || state?.observations || [];
+  const flatRecords = Array.isArray(records)
+    ? records
+    : Object.values(records || {}).flat().filter(Boolean);
+  const presentFields = [
+    signal.signalName,
+    signal.riskLevel,
+    signal.trajectory,
+    ...(signal.contributingFactors || []),
+    ...(flatRecords || []).map(record => record.parsedValue || record.rawInput || record.type || "")
+  ].filter(Boolean);
+  const missingData = signal.missingData || state?.missingData || [];
+  const priorModeHistory = (nexusPredictiveMaturityMemory?.history || []).filter(item => item.mode === mode);
+  const feedbackScore = (nexusPredictiveMaturityMemory?.feedback || []).filter(item => item.mode === mode).reduce((score, item) => {
+    if (/accurate|useful/i.test(item.feedbackValue || "")) return score + 1;
+    if (/too high|too low|correction|unclear|missing/i.test(item.feedbackValue || "")) return score - 1;
+    return score;
+  }, 0);
+  const confidence = calculatePredictiveConfidence({
+    requiredFields: ["signal", "trajectory", "contributing factors", "missing data", "summary"],
+    presentFields,
+    missingData,
+    historicalRecordCount: priorModeHistory.length + 1,
+    conflictingSignals: [],
+    expertFeedbackScore: feedbackScore,
+    crossDomainSupport: countNexusCrossDomainSupport(mode)
+  });
+  return {
+    id: `nexus-predictive-history-${mode}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    mode,
+    recordType: "predictive_history_entry",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    sourceCommand,
+    structuredRecord,
+    riskSignal: signal,
+    trajectory: signal.trajectory || state?.trends?.latestTrajectory || "unknown",
+    confidence,
+    dataQuality: confidence.dataQualityLabel,
+    contributingFactors: signal.contributingFactors || [],
+    missingData,
+    scenarioOutputs: state?.scenarioSimulations || [],
+    expertChecklist: state?.expertChecklist || state?.physicianChecklist || [],
+    reasoningTrace: state?.reasoningTrace || [],
+    summary: state?.expertSummary || state?.advisorSummary || state?.physicianSummary || {},
+    receipts: state?.receipts || [],
+    localOnly: true,
+    sandbox: Boolean(nexusDemoDataState?.loaded)
+  };
+}
+
+function recordNexusPredictiveMaturityHistory(mode = "", sourceCommand = "", state = {}, structuredRecord = {}) {
+  const entry = normalizeNexusPredictiveHistoryEntry(mode, sourceCommand, state, structuredRecord);
+  const receipt = createNexusPredictiveMaturityReceipt("predictive_history_recorded", `${nexusPredictiveMaturityModeLabel(mode)} predictive history recorded with ${entry.confidence.confidenceLabel} confidence.`, mode);
+  nexusPredictiveMaturityMemory = {
+    ...buildEmptyNexusPredictiveMaturityMemory(),
+    ...(nexusPredictiveMaturityMemory || {}),
+    updatedAt: new Date().toISOString(),
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    history: [entry, ...(nexusPredictiveMaturityMemory?.history || [])].slice(0, 80),
+    receipts: [receipt, ...(nexusPredictiveMaturityMemory?.receipts || [])].slice(0, 80)
+  };
+  return entry;
+}
+
+function createNexusPredictiveMaturityReceipt(eventType = "predictive_maturity_event", detail = "", mode = "platform") {
+  return {
+    id: `nexus-predictive-maturity-receipt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    eventType,
+    detail,
+    mode,
+    happened: detail,
+    didNot: "Nexus did not contact providers, send messages, call, dispatch, book, purchase, share location, diagnose, prescribe, enroll, fly drones, or execute externally.",
+    createdAt: new Date().toISOString(),
+    localOnly: true,
+    sandbox: Boolean(nexusDemoDataState?.loaded)
+  };
+}
+
+function getNexusPredictiveHistory(mode = "") {
+  const history = nexusPredictiveMaturityMemory?.history || [];
+  return mode ? history.filter(entry => entry.mode === mode) : history;
+}
+
+function inferNexusPredictiveMaturityMode(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/health|bp|blood pressure|glucose|obesity|diabetes|hypertension|rpm|rtm/.test(text)) return "health";
+  if (/farm|crop|agriculture|maize|field|agronomist/.test(text)) return "agriculture";
+  if (/market|buyer|seller|trade/.test(text)) return "marketplace";
+  if (/shipment|logistics|route|delivery/.test(text)) return "logistics";
+  if (/job|workforce|employment|candidate|resume/.test(text)) return "workforce";
+  if (/learning|course|training|study/.test(text)) return "learning";
+  if (/drone|field mission|flight/.test(text)) return "drone";
+  if (/message|communication|whatsapp|sms|call|email|contact/.test(text)) return "communications";
+  return "";
+}
+
+function compareNexusPredictiveSignals(mode = "", command = "") {
+  const history = getNexusPredictiveHistory(mode);
+  const current = history[0] || null;
+  const prior = history[1] || null;
+  const currentFactors = new Set(current?.contributingFactors || []);
+  const priorFactors = new Set(prior?.contributingFactors || []);
+  const currentMissing = new Set(current?.missingData || []);
+  const priorMissing = new Set(prior?.missingData || []);
+  const signalChange = !prior ? "No prior signal is available yet." : nexusPredictiveRiskRank(current?.riskSignal?.riskLevel) > nexusPredictiveRiskRank(prior?.riskSignal?.riskLevel) ? "risk increased" : nexusPredictiveRiskRank(current?.riskSignal?.riskLevel) < nexusPredictiveRiskRank(prior?.riskSignal?.riskLevel) ? "risk improved" : "risk stayed the same";
+  const comparison = {
+    id: `nexus-predictive-comparison-${mode || "platform"}-${Date.now()}`,
+    mode: mode || "platform",
+    priorSignal: prior?.riskSignal || null,
+    currentSignal: current?.riskSignal || null,
+    signalChange,
+    trajectoryChange: prior ? `${prior.trajectory || "unknown"} -> ${current?.trajectory || "unknown"}` : "No prior trajectory.",
+    confidenceChange: prior ? `${prior.confidence?.confidenceLabel || "unknown"} (${prior.confidence?.confidenceScore || 0}) -> ${current?.confidence?.confidenceLabel || "unknown"} (${current?.confidence?.confidenceScore || 0})` : "No prior confidence score.",
+    newFactors: [...currentFactors].filter(item => !priorFactors.has(item)),
+    resolvedFactors: [...priorFactors].filter(item => !currentFactors.has(item)),
+    persistentMissingData: [...currentMissing].filter(item => priorMissing.has(item)),
+    newMissingData: [...currentMissing].filter(item => !priorMissing.has(item)),
+    summary: prior ? `${nexusPredictiveMaturityModeLabel(mode)} comparison: ${signalChange}. ${current?.confidence?.dataQualityLabel || current?.dataQuality || "Data quality unknown"}.` : `${nexusPredictiveMaturityModeLabel(mode)} has no prior comparison baseline yet.`,
+    nextRecommendedAction: current?.missingData?.length ? `Collect: ${current.missingData.slice(0, 3).join(", ")}.` : "Review the latest summary and decide the next safe local step.",
+    sourceCommand: command,
+    createdAt: new Date().toISOString(),
+    localOnly: true
+  };
+  const receipt = createNexusPredictiveMaturityReceipt("predictive_comparison_generated", `${nexusPredictiveMaturityModeLabel(mode || "platform")} current vs prior comparison generated.`, mode || "platform");
+  nexusPredictiveMaturityMemory.comparisons = [comparison, ...(nexusPredictiveMaturityMemory.comparisons || [])].slice(0, 50);
+  nexusPredictiveMaturityMemory.receipts = [receipt, ...(nexusPredictiveMaturityMemory.receipts || [])].slice(0, 80);
+  return comparison;
+}
+
+function countNexusCrossDomainSupport(mode = "") {
+  const history = nexusPredictiveMaturityMemory?.history || [];
+  if (!mode || !history.length) return 0;
+  const related = buildCrossDomainPredictiveInsights(history.map(item => ({ mode: item.mode, riskSignal: item.riskSignal, missingData: item.missingData })));
+  return (related.linkedSignals || []).filter(item => item.from === mode || item.to === mode).length;
+}
+
+function buildCrossDomainPredictiveInsights(activeSignals = []) {
+  const signalModes = new Set((activeSignals || []).map(item => item.mode).filter(Boolean));
+  const links = [
+    ["agriculture", "marketplace", "Crop stress or storage-loss risk can reduce market readiness."],
+    ["agriculture", "logistics", "Yield or field risk can change shipment volume and timing."],
+    ["marketplace", "logistics", "Marketplace readiness depends on delivery and route readiness."],
+    ["logistics", "marketplace", "Shipment delay can affect buyer/seller trust."],
+    ["learning", "workforce", "Learning readiness can improve job readiness."],
+    ["workforce", "learning", "Workforce skill gaps can guide learning recommendations."],
+    ["drone", "agriculture", "Drone field observations can influence agriculture risk."],
+    ["communications", "marketplace", "Communication readiness affects vendor or buyer coordination."],
+    ["communications", "health", "Communication readiness affects provider coordination preparation."],
+    ["health", "workforce", "Chronic health risk can influence workforce participation planning."]
+  ];
+  const linkedSignals = links.filter(([from, to]) => signalModes.has(from) && signalModes.has(to)).map(([from, to, reason]) => ({ from, to, reason }));
+  const elevated = (activeSignals || []).filter(item => nexusPredictiveRiskRank(item.riskSignal?.riskLevel) >= 4);
+  const insight = {
+    id: `nexus-cross-domain-predictive-insights-${Date.now()}`,
+    linkedSignals,
+    crossDomainRisks: elevated.map(item => `${nexusPredictiveMaturityModeLabel(item.mode)} has elevated signal ${item.riskSignal?.riskLevel || "unknown"}.`),
+    opportunities: linkedSignals.map(item => `Use ${nexusPredictiveMaturityModeLabel(item.from)} context to improve ${nexusPredictiveMaturityModeLabel(item.to)} planning.`),
+    dependencies: linkedSignals.map(item => `${nexusPredictiveMaturityModeLabel(item.to)} depends on ${nexusPredictiveMaturityModeLabel(item.from)} evidence: ${item.reason}`),
+    recommendedNextActions: elevated.length ? elevated.map(item => `Review ${nexusPredictiveMaturityModeLabel(item.mode)} missing data before any external action.`) : ["Review current summaries and collect missing data before external action."],
+    reasoningTrace: [
+      "Collected latest predictive signals from local/sandbox memory.",
+      "Matched deterministic cross-domain dependency rules.",
+      "Flagged elevated signals and safe next actions.",
+      "Preserved no-external-execution boundaries."
+    ],
+    receipts: [createNexusPredictiveMaturityReceipt("cross_domain_insights_generated", "Cross-domain predictive insights generated locally.", "platform")],
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+  nexusPredictiveMaturityMemory.crossDomainInsights = [insight, ...(nexusPredictiveMaturityMemory.crossDomainInsights || [])].slice(0, 30);
+  nexusPredictiveMaturityMemory.receipts = [...insight.receipts, ...(nexusPredictiveMaturityMemory.receipts || [])].slice(0, 80);
+  return insight;
+}
+
+function captureNexusPredictiveExpertFeedback(command = "") {
+  const text = String(command || "").toLowerCase();
+  const mode = inferNexusPredictiveMaturityMode(command) || nexusPredictiveMaturityMemory?.history?.[0]?.mode || "platform";
+  const feedbackValue = /too high/.test(text) ? "risk too high" : /too low/.test(text) ? "risk too low" : /useful/.test(text) ? "summary useful" : /missing.*factor|important factor/.test(text) ? "missing factor" : /unclear/.test(text) ? "unclear reasoning" : /correction|correct/.test(text) ? "needs correction" : "accurate";
+  const target = getNexusPredictiveHistory(mode)[0] || nexusPredictiveMaturityMemory?.history?.[0] || {};
+  const feedback = {
+    id: `nexus-predictive-feedback-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    mode,
+    targetType: /reasoning/.test(text) ? "reasoning trace" : /summary/.test(text) ? "summary" : /missing/.test(text) ? "missing data" : "risk signal",
+    targetId: target.id || "",
+    feedbackValue,
+    comment: command,
+    createdAt: new Date().toISOString(),
+    reviewerRole: nexusUserExperienceRole || "Standard User",
+    localOnly: true,
+    sandbox: Boolean(nexusDemoDataState?.loaded)
+  };
+  const receipt = createNexusPredictiveMaturityReceipt("expert_feedback_recorded", `${nexusPredictiveMaturityModeLabel(mode)} feedback recorded: ${feedbackValue}.`, mode);
+  nexusPredictiveMaturityMemory.feedback = [feedback, ...(nexusPredictiveMaturityMemory.feedback || [])].slice(0, 80);
+  nexusPredictiveMaturityMemory.receipts = [receipt, ...(nexusPredictiveMaturityMemory.receipts || [])].slice(0, 80);
+  saveNexusRuntimeMemory();
+  return feedback;
+}
+
+function buildNexusPredictiveIntelligenceSummary(command = "") {
+  const history = nexusPredictiveMaturityMemory?.history || [];
+  const latestByMode = nexusPredictiveMaturityModes().map(mode => history.find(item => item.mode === mode)).filter(Boolean);
+  const activeSignals = latestByMode.map(item => ({ mode: item.mode, riskSignal: item.riskSignal, missingData: item.missingData }));
+  const crossDomain = buildCrossDomainPredictiveInsights(activeSignals);
+  const elevatedSignals = latestByMode.filter(item => nexusPredictiveRiskRank(item.riskSignal?.riskLevel) >= 4);
+  const missingData = [...new Set(latestByMode.flatMap(item => item.missingData || []))].slice(0, 12);
+  const recentChanges = (nexusPredictiveMaturityMemory?.comparisons || []).slice(0, 4).map(item => item.summary);
+  const needsExpertReview = latestByMode.filter(item => nexusPredictiveRiskRank(item.riskSignal?.riskLevel) >= 4 || (item.missingData || []).length >= 4).map(item => nexusPredictiveMaturityModeLabel(item.mode));
+  const summary = {
+    id: `nexus-intelligence-summary-${Date.now()}`,
+    title: "Nexus Intelligence Summary",
+    generatedAt: new Date().toISOString(),
+    platformSignalCount: latestByMode.length,
+    elevatedSignals: elevatedSignals.map(item => `${nexusPredictiveMaturityModeLabel(item.mode)}: ${item.riskSignal?.riskLevel || "unknown"}`),
+    connectedSignals: crossDomain.linkedSignals,
+    missingData,
+    recentChanges,
+    needsExpertReview,
+    safeNextAction: missingData.length ? `Collect missing data first: ${missingData.slice(0, 3).join(", ")}.` : "Review summaries, then choose a gated next step.",
+    text: [
+      "Nexus Intelligence Summary",
+      `Signals active: ${latestByMode.length || 0}`,
+      `Elevated signals: ${elevatedSignals.map(item => `${nexusPredictiveMaturityModeLabel(item.mode)} ${item.riskSignal?.riskLevel}`).join("; ") || "none yet"}`,
+      `Connected signals: ${crossDomain.linkedSignals.map(item => `${item.from}->${item.to}`).join("; ") || "none yet"}`,
+      `Still missing: ${missingData.join("; ") || "no major missing data recorded"}`,
+      `Safe next action: ${missingData.length ? `Collect ${missingData.slice(0, 3).join(", ")}` : "Review current summaries and keep high-risk actions gated."}`
+    ].join("\n"),
+    sourceCommand: command,
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+  const receipt = createNexusPredictiveMaturityReceipt("intelligence_summary_generated", "Nexus Intelligence Summary generated locally.", "platform");
+  nexusPredictiveMaturityMemory.intelligenceSummaries = [summary, ...(nexusPredictiveMaturityMemory.intelligenceSummaries || [])].slice(0, 30);
+  nexusPredictiveMaturityMemory.receipts = [receipt, ...(nexusPredictiveMaturityMemory.receipts || [])].slice(0, 80);
+  saveNexusRuntimeMemory();
+  return summary;
+}
+
+function isNexusPredictiveMaturityCommand(command = "") {
+  return /\b(show my predictive history|show predictive history|show previous prediction|show last risk signal|compare .*last|compare .*prior|compare this week|what changed|what improved|what worsened|still missing|trend history|prior receipts|continue previous predictive mission|cross-domain insights|other nexus modes|affected|connect this learning plan|agriculture risk affect|shipment delay affect|mark this prediction accurate|risk is too high|risk is too low|summary is useful|summary not useful|reasoning is missing|expert feedback history|summarize my predictive intelligence|what needs attention today|elevated signals|what should i do next across nexus)\b/i.test(String(command || ""));
+}
+
+function routeNexusPredictiveMaturityCommand(command = "", source = "predictive-maturity-command") {
+  const text = String(command || "");
+  let mode = inferNexusPredictiveMaturityMode(text);
+  let title = "Nexus Intelligence Summary";
+  let message = "Nexus predictive intelligence maturity layer updated.";
+  let comparison = null;
+  let crossDomain = null;
+  let feedback = null;
+  let intelligenceSummary = null;
+  if (/\b(mark this prediction accurate|risk is too high|risk is too low|summary is useful|summary not useful|reasoning is missing|expert feedback history)\b/i.test(text)) {
+    if (/expert feedback history/i.test(text)) {
+      message = `Nexus has ${(nexusPredictiveMaturityMemory.feedback || []).length} local expert feedback record(s).`;
+    } else {
+      feedback = captureNexusPredictiveExpertFeedback(text);
+      mode = feedback.mode;
+      message = `Feedback recorded: ${feedback.feedbackValue}.`;
+    }
+    title = "Nexus Expert Feedback Loop";
+  } else if (/\b(cross-domain insights|other nexus modes|affected|connect this learning plan|agriculture risk affect|shipment delay affect)\b/i.test(text)) {
+    crossDomain = buildCrossDomainPredictiveInsights((nexusPredictiveMaturityMemory.history || []).map(item => ({ mode: item.mode, riskSignal: item.riskSignal, missingData: item.missingData })));
+    message = "Cross-domain predictive insights generated locally.";
+    title = "Nexus Cross-Domain Predictive Insights";
+  } else if (/\b(summarize my predictive intelligence|what needs attention today|elevated signals|what should i do next across nexus)\b/i.test(text)) {
+    intelligenceSummary = buildNexusPredictiveIntelligenceSummary(text);
+    message = "Nexus Intelligence Summary generated.";
+    title = "Nexus Intelligence Summary";
+  } else if (/\b(compare|what changed|what improved|what worsened|still missing)\b/i.test(text)) {
+    if (!mode && /farm|observation/i.test(text)) mode = "agriculture";
+    comparison = compareNexusPredictiveSignals(mode || nexusPredictiveMaturityMemory.history?.[0]?.mode || "platform", text);
+    message = comparison.summary;
+    title = "Nexus Current vs Prior Comparison";
+  } else {
+    message = `Nexus has ${(nexusPredictiveMaturityMemory.history || []).length} predictive history record(s).`;
+    title = "Nexus Predictive History";
+  }
+  saveNexusRuntimeMemory();
+  const mission = {
+    id: `nexus-predictive-maturity-mission-${Date.now()}`,
+    title,
+    mode: "predictive-intelligence",
+    submode: "predictive_intelligence_maturity_layer",
+    goal: text,
+    status: "predictive_maturity_ready",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userInput: text,
+    source,
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    localOnly: true,
+    expertEvaluationMode: true,
+    collectedInfo: [
+      `History records: ${(nexusPredictiveMaturityMemory.history || []).length}`,
+      `Feedback records: ${(nexusPredictiveMaturityMemory.feedback || []).length}`,
+      `Comparisons: ${(nexusPredictiveMaturityMemory.comparisons || []).length}`,
+      `Cross-domain insight sets: ${(nexusPredictiveMaturityMemory.crossDomainInsights || []).length}`
+    ],
+    missingInfo: [...new Set((nexusPredictiveMaturityMemory.history || []).flatMap(item => item.missingData || []))].slice(0, 8),
+    suggestedQuestions: [
+      "Nexus, show my predictive history.",
+      "Nexus, what changed since my last health reading?",
+      "Nexus, show cross-domain insights.",
+      "Nexus, summarize my predictive intelligence."
+    ],
+    nextStep: "Review history, comparison, cross-domain insights, feedback, and the safe next action before any gated external workflow.",
+    riskLevel: "medium",
+    confirmationRequired: false,
+    confirmationStatus: "not_required_for_local_predictive_review",
+    executionStatus: "completed_local_predictive_maturity_support",
+    providerReadiness: "local_predictive_support_only",
+    actionPlan: ["Read predictive memory", "Compare current and prior signals", "Build cross-domain insights", "Capture feedback", "Summarize safe next actions"],
+    receipts: nexusPredictiveMaturityMemory.receipts || [],
+    timeline: (nexusPredictiveMaturityMemory.receipts || []).map(receipt => ({ at: receipt.createdAt, event: receipt.eventType, detail: receipt.detail })),
+    relatedRecords: nexusPredictiveMaturityMemory.history || [],
+    outcome: { status: "local_predictive_maturity_ready", verified: true, noExternalExecution: true },
+    safetyNote: "Nexus predictive maturity is local/sandbox intelligence support only. It does not execute provider, health, marketplace, logistics, drone, communications, payment, or location actions.",
+    actionType: "predictive_maturity_layer",
+    comparison,
+    crossDomain,
+    feedback,
+    intelligenceSummary
+  };
+  return setNexusAgenticCommandResult(mission, message);
+}
+
+function renderNexusPredictiveMaturityPanel() {
+  const history = nexusPredictiveMaturityMemory?.history || [];
+  const latest = history[0] || {};
+  const comparison = nexusPredictiveMaturityMemory?.comparisons?.[0] || null;
+  const crossDomain = nexusPredictiveMaturityMemory?.crossDomainInsights?.[0] || { linkedSignals: [], crossDomainRisks: [], opportunities: [], dependencies: [], recommendedNextActions: ["Collect more predictive records to reveal domain links."], reasoningTrace: [] };
+  const summary = nexusPredictiveMaturityMemory?.intelligenceSummaries?.[0] || { text: "Nexus Intelligence Summary\nSignals active: 0\nElevated signals: none yet\nConnected signals: none yet\nStill missing: collect predictive records first\nSafe next action: Enter a predictive command, then ask Nexus to summarize predictive intelligence." };
+  const feedback = nexusPredictiveMaturityMemory?.feedback || [];
+  return `
+    <section class="nexus-predictive-panel" data-nexus-predictive-maturity-layer="true" data-local-only="true" data-no-external-execution="true" aria-label="${escapeHtml(translateText("Nexus Predictive Intelligence Maturity Layer"))}">
+      <header class="nexus-chronic-predictive-header">
+        <span class="eyebrow">${escapeHtml(translateText("Predictive intelligence brain"))}</span>
+        <h3>${escapeHtml(translateText("Nexus Intelligence Summary"))}</h3>
+        <p>${escapeHtml(translateText("Nexus remembers predictive history, compares current and prior signals, links domains, captures expert feedback, and explains safe next actions without executing externally. Review locally before any configured external action."))}</p>
+      </header>
+      <div class="nexus-chronic-predictive-grid">
+        <article data-nexus-predictive-history="true"><strong>${escapeHtml(translateText("Predictive History"))}</strong><span>History records: ${escapeHtml(String(history.length))}</span><span>Last mode: ${escapeHtml(nexusPredictiveMaturityModeLabel(latest.mode || "platform"))}</span><span>Last signal: ${escapeHtml(latest.riskSignal?.riskLevel || "none yet")}</span>${history.slice(0, 5).map(item => `<span>${escapeHtml(nexusPredictiveMaturityModeLabel(item.mode))}: ${escapeHtml(item.riskSignal?.riskLevel || "unknown")} / ${escapeHtml(item.trajectory || "unknown")}</span>`).join("")}</article>
+        <article data-nexus-predictive-comparison="true"><strong>${escapeHtml(translateText("Current vs Prior Comparison"))}</strong><span>${escapeHtml(comparison?.summary || "No comparison has been generated yet.")}</span><span>Signal change: ${escapeHtml(comparison?.signalChange || "unknown")}</span><span>Confidence change: ${escapeHtml(comparison?.confidenceChange || "unknown")}</span><span>Still missing: ${escapeHtml((comparison?.persistentMissingData || []).join(", ") || "none recorded")}</span></article>
+        <article data-nexus-predictive-confidence-explanation="true"><strong>${escapeHtml(translateText("Confidence / Data Quality"))}</strong><span>Latest confidence: ${escapeHtml(latest.confidence?.confidenceLabel || "insufficient_data")}</span><span>Score: ${escapeHtml(String(latest.confidence?.confidenceScore || 0))}</span><span>Evidence: ${escapeHtml(latest.confidence?.evidenceStrength || "single_input")}</span>${(latest.confidence?.uncertaintyReasons || ["More records improve confidence."]).slice(0, 4).map(item => `<span>${escapeHtml(item)}</span>`).join("")}</article>
+        <article data-nexus-predictive-feedback-controls="true"><strong>${escapeHtml(translateText("Expert Feedback Loop"))}</strong><button type="button" data-nexus-command-prefill="Nexus, mark this prediction accurate.">${escapeHtml(translateText("Accurate"))}</button><button type="button" data-nexus-command-prefill="Nexus, this risk is too high.">${escapeHtml(translateText("Risk too high"))}</button><button type="button" data-nexus-command-prefill="Nexus, this summary is useful.">${escapeHtml(translateText("Summary useful"))}</button><span>Feedback records: ${escapeHtml(String(feedback.length))}</span>${feedback.slice(0, 4).map(item => `<span>${escapeHtml(item.feedbackValue)} - ${escapeHtml(nexusPredictiveMaturityModeLabel(item.mode))}</span>`).join("")}</article>
+      </div>
+      <div class="nexus-chronic-predictive-grid">
+        <article data-nexus-cross-domain-impact="true"><strong>${escapeHtml(translateText("Cross-Domain Impact"))}</strong>${(crossDomain.linkedSignals?.length ? crossDomain.linkedSignals : [{ from: "platform", to: "platform", reason: "Collect more predictive records to reveal domain links." }]).slice(0, 6).map(item => `<span>${escapeHtml(nexusPredictiveMaturityModeLabel(item.from))} -> ${escapeHtml(nexusPredictiveMaturityModeLabel(item.to))}: ${escapeHtml(item.reason)}</span>`).join("")}</article>
+        <article data-nexus-intelligence-summary="true"><strong>${escapeHtml(translateText("What Nexus Is Seeing"))}</strong><pre>${escapeHtml(summary.text || "No intelligence summary yet.")}</pre></article>
+        <article data-nexus-predictive-maturity-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(nexusPredictiveMaturityMemory.receipts?.length ? nexusPredictiveMaturityMemory.receipts : [{ detail: "No maturity receipts yet." }]).slice(0, 8).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
+        <article data-nexus-predictive-maturity-commands="true"><strong>${escapeHtml(translateText("Maturity Commands"))}</strong>${["Nexus, show my predictive history.", "Nexus, what changed since my last health reading?", "Nexus, show cross-domain insights.", "Nexus, summarize my predictive intelligence."].map(command => `<button type="button" data-nexus-command-prefill="${escapeHtml(command)}">${escapeHtml(command)}</button>`).join("")}</article>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusPredictiveMaturityInline(mode = "") {
+  const history = getNexusPredictiveHistory(mode);
+  const latest = history[0] || {};
+  const comparison = (nexusPredictiveMaturityMemory?.comparisons || []).find(item => item.mode === mode) || null;
+  const crossLinks = (nexusPredictiveMaturityMemory?.crossDomainInsights || []).flatMap(item => item.linkedSignals || []).filter(item => item.from === mode || item.to === mode);
+  return `
+    <div class="nexus-chronic-predictive-grid" data-nexus-predictive-maturity-inline="${escapeHtml(mode)}">
+      <article data-nexus-predictive-history-inline="true"><strong>${escapeHtml(translateText("Predictive History"))}</strong><span>Records: ${escapeHtml(String(history.length))}</span><span>Last signal: ${escapeHtml(latest.riskSignal?.riskLevel || "none yet")}</span><button type="button" data-nexus-command-prefill="Nexus, show my predictive history.">${escapeHtml(translateText("Show history"))}</button></article>
+      <article data-nexus-predictive-comparison-inline="true"><strong>${escapeHtml(translateText("Current vs Prior"))}</strong><span>${escapeHtml(comparison?.signalChange || "Ask Nexus what changed since last time.")}</span><button type="button" data-nexus-command-prefill="Nexus, what changed since my last ${escapeHtml(mode)} reading?">${escapeHtml(translateText("Compare"))}</button></article>
+      <article data-nexus-predictive-confidence-inline="true"><strong>${escapeHtml(translateText("Confidence / Data Quality"))}</strong><span>${escapeHtml(latest.confidence?.confidenceLabel || "insufficient_data")} ${latest.confidence?.confidenceScore ? `(${latest.confidence.confidenceScore})` : ""}</span><span>${escapeHtml(latest.confidence?.dataQualityLabel || latest.dataQuality || "More records improve confidence.")}</span></article>
+      <article data-nexus-predictive-feedback-inline="true"><strong>${escapeHtml(translateText("Expert Feedback"))}</strong><button type="button" data-nexus-command-prefill="Nexus, mark this prediction accurate.">${escapeHtml(translateText("Accurate"))}</button><button type="button" data-nexus-command-prefill="Nexus, this risk is too high.">${escapeHtml(translateText("Too high"))}</button><button type="button" data-nexus-command-prefill="Nexus, this summary is useful.">${escapeHtml(translateText("Useful"))}</button><span>Cross-domain links: ${escapeHtml(String(crossLinks.length))}</span></article>
+    </div>
+  `;
 }
 
 function isNexusAgriculturePredictiveModelerCommand(command = "") {
@@ -28570,6 +29058,7 @@ function applyNexusAgriculturePredictiveCommand(command = "", options = {}) {
   nexusAgriculturePredictiveReceipt("field_risk_signal_generated", `${nexusAgriculturePredictiveModelerState.riskSignals?.[0]?.signalName || "Predictive agriculture support signal"}: ${nexusAgriculturePredictiveModelerState.riskSignals?.[0]?.riskLevel || "insufficient_data"}.`);
   if (/simulate/i.test(command)) nexusAgriculturePredictiveReceipt("scenario_projection_generated", "Agriculture scenario projection generated locally.");
   if (/summary|sale|market-ready|food-security/i.test(command)) nexusAgriculturePredictiveReceipt("advisor_summary_generated", "Agronomist/advisor predictive summary generated locally.");
+  recordNexusPredictiveMaturityHistory("agriculture", command, nexusAgriculturePredictiveModelerState, observations.slice(-1)[0] || {});
   saveNexusRuntimeMemory();
   const mission = buildNexusAgriculturePredictiveMission(command, options);
   return setNexusAgenticCommandResult(mission, "Agriculture Predictive Intelligence Modeler updated. Review farm risk signal, trajectory, confidence, contributing factors, missing data, scenarios, expert checklist, reasoning trace, advisor summary, and receipts.");
@@ -28677,6 +29166,7 @@ function renderNexusAgriculturePredictiveModelerPanel() {
         <article data-nexus-agriculture-reasoning-trace="true"><strong>${escapeHtml(translateText("Predictive Reasoning Trace"))}</strong>${(state.reasoningTrace || []).map((item, index) => `<span>${index + 1}. ${escapeHtml(item)}</span>`).join("")}</article>
         <article data-nexus-agriculture-predictive-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(state.receipts?.length ? state.receipts : [{ detail: "No agriculture predictive receipts yet." }]).slice(0, 6).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
       </div>
+      ${renderNexusPredictiveMaturityInline("agriculture")}
       <article class="nexus-chronic-physician-summary" data-nexus-agriculture-advisor-summary="true">
         <strong>${escapeHtml(translateText("Agronomist / Advisor Summary"))}</strong>
         <button type="button" data-nexus-copy-agriculture-advisor-summary="true">${escapeHtml(translateText("Copy summary"))}</button>
@@ -29117,6 +29607,14 @@ function routePredictiveCommand(input = "", source = "predictive-command") {
     recordPredictiveReceipt(mode, { eventType: "predictive_signal_generated", detail: `${evaluation.signal.signalName}: ${evaluation.signal.riskLevel}.` }),
     ...(currentState.receipts || [])
   ].slice(0, 30);
+  const maturityEntry = recordNexusPredictiveMaturityHistory(mode, input, state, parsed.observation);
+  state.confidence = {
+    label: maturityEntry.confidence.confidenceLabel,
+    score: maturityEntry.confidence.confidenceScore,
+    dataQuality: maturityEntry.confidence.dataQualityLabel,
+    evidenceStrength: maturityEntry.confidence.evidenceStrength,
+    uncertaintyReasons: maturityEntry.confidence.uncertaintyReasons
+  };
   nexusMultiDomainPredictiveState = { ...nexusMultiDomainPredictiveState, [mode]: state };
   saveNexusRuntimeMemory();
   const mission = buildNexusMultiDomainPredictiveMission(mode, input, state, source);
@@ -29182,6 +29680,7 @@ function renderPredictivePanel(mode = "", state = null) {
         <article class="nexus-predictive-reasoning-trace" data-nexus-predictive-reasoning-trace="true"><strong>${escapeHtml(translateText("Reasoning Trace"))}</strong>${(panelState.reasoningTrace || []).map((item, index) => `<span>${index + 1}. ${escapeHtml(item)}</span>`).join("")}</article>
         <article class="nexus-predictive-receipts" data-nexus-predictive-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(panelState.receipts?.length ? panelState.receipts : [{ detail: "No predictive receipts yet." }]).slice(0, 6).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
       </div>
+      ${renderNexusPredictiveMaturityInline(adapter.mode)}
       <article class="nexus-predictive-summary" data-nexus-predictive-summary="true">
         <strong>${escapeHtml(translateText("Expert Summary"))}</strong>
         <pre>${escapeHtml(panelState.expertSummary?.text || "Enter a predictive command to generate a summary.")}</pre>
@@ -29240,7 +29739,7 @@ function setNexusAgenticCommandResult(mission, message = "") {
 
 function submitNexusAgenticCommandRuntime(command = "", input = null, source = "command-submit", event = null) {
   const normalizedCommand = String(command || "").trim();
-  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand) && !isNexusAgriculturePredictiveModelerCommand(normalizedCommand) && !isNexusMultiDomainPredictiveCommand(normalizedCommand)) return false;
+  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusPersistentMemoryCommand(normalizedCommand) && !isNexusPredictiveMaturityCommand(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand) && !isNexusAgriculturePredictiveModelerCommand(normalizedCommand) && !isNexusMultiDomainPredictiveCommand(normalizedCommand)) return false;
   const handled = runNexusAgenticCommandRuntime(normalizedCommand, { source });
   if (!handled) return false;
   event?.preventDefault?.();
@@ -29266,6 +29765,175 @@ function getNexusMemory(scope = "missions") {
   if (/\bdrone/.test(normalized)) return nexusAgenticCommandLocalMemory.droneMissions || [];
   if (/\bmessage|communication|whatsapp|telegram|email|call/.test(normalized)) return nexusAgenticCommandLocalMemory.communicationDrafts || [];
   return nexusAgenticCommandMissions || nexusAgenticCommandLocalMemory.missions || [];
+}
+
+function nexusPersistentMemoryStore() {
+  if (!nexusPersistentMemoryService) return null;
+  return nexusPersistentMemoryService.createMemoryStore(nexusPersistentMemoryState, { persistenceScope: "local_browser", ownerRole: nexusUserExperienceRole || "Standard User" });
+}
+
+function syncNexusPersistentMemoryStore(store) {
+  if (!store) return null;
+  nexusPersistentMemoryState = store.snapshot();
+  saveNexusRuntimeMemory();
+  return nexusPersistentMemoryState;
+}
+
+function inferNexusPersistentMemoryType(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(deceased|inactive patient|patient intake|symptom|diabetes|hypertension|obesity|blood pressure|bp|rpm|rtm|chronic)\b/.test(text)) return "health_patient_intake";
+  if (/\b(farmer profile|farm profile|crop issue|crop|field|pest|disease|soil|irrigation|drone mission link)\b/.test(text)) return "crop_issue_record";
+  if (/\b(buyer)\b/.test(text)) return "buyer_profile";
+  if (/\b(seller|out of business)\b/.test(text)) return "seller_profile";
+  if (/\b(listing|marketplace|agritrade)\b/.test(text)) return "marketplace_listing";
+  if (/\b(transaction|payment|cancellation|add-on|addon|order|dispute)\b/.test(text)) return "transaction_record";
+  if (/\b(shipment|delivery|route|eta|proof of delivery|tracking)\b/.test(text)) return "shipment_record";
+  if (/\b(learner|course|certification|training progress|learning)\b/.test(text)) return "learning_progress";
+  if (/\b(applicant|job readiness|resume|interview|workforce|employer)\b/.test(text)) return /\bemployer\b/.test(text) ? "employer_profile" : "workforce_applicant";
+  if (/\b(provider|clinic|pharmacy|mobile clinic)\b/.test(text)) return /\bpharmacy\b/.test(text) ? "pharmacy_profile" : /\bmobile clinic\b/.test(text) ? "mobile_clinic_profile" : /\bclinic\b/.test(text) ? "clinic_profile" : "provider_profile";
+  if (/\b(drone|field survey|no-fly|operator)\b/.test(text)) return "drone_mission_record";
+  if (/\bpredictive|risk signal|intelligence summary\b/.test(text)) return "predictive_intelligence_record";
+  return "general_memory_record";
+}
+
+function inferNexusPersistentMemorySourceMode(type = "") {
+  if (/health|chronic|patient/.test(type)) return "health";
+  if (/farmer|farm|crop/.test(type)) return "agriculture";
+  if (/buyer|seller|marketplace|transaction/.test(type)) return "marketplace";
+  if (/shipment|route/.test(type)) return "logistics";
+  if (/learning/.test(type)) return "learning";
+  if (/workforce|employer/.test(type)) return "workforce";
+  if (/provider|clinic|pharmacy|mobile/.test(type)) return "provider_access";
+  if (/drone/.test(type)) return "drone";
+  if (/predictive/.test(type)) return "predictive_intelligence";
+  return "standard_user";
+}
+
+function nexusPersistentMemoryTitle(type = "", command = "") {
+  const label = type.split("_").filter(Boolean).map(part => part[0]?.toUpperCase() + part.slice(1)).join(" ");
+  const compact = String(command || "").replace(/^nexus,?\s*/i, "").trim();
+  return compact ? `${label}: ${compact.slice(0, 72)}` : label;
+}
+
+function isNexusPersistentMemoryCommand(command = "") {
+  return /\b(memory|memories|saved records?|save .*(record|profile|listing|transaction|shipment|mission|intake)|remember this|save this|update .*record|archive .*record|mark .*inactive|mark .*deceased|out of business|clear local demo records|show .*records?|show receipts|predictive context)\b/i.test(String(command || ""));
+}
+
+function routeNexusPersistentMemoryCommand(command = "", source = "persistent-memory-command") {
+  const store = nexusPersistentMemoryStore();
+  if (!store) return false;
+  const text = String(command || "").trim();
+  const lower = text.toLowerCase();
+  let result;
+  if (/\bclear local demo records\b/.test(lower)) {
+    const records = store.snapshot().records;
+    records.forEach(record => store.deleteLocalRecord(record.id, true));
+    result = { ok: true, action: "clear_local_demo_records", records: [], receipt: store.snapshot().receipts[0] };
+  } else if (/\b(show|list|open|view).*(memory|memories|saved records?|records)\b/.test(lower)) {
+    result = { ok: true, action: "list_records", records: store.snapshot().records, receipt: null };
+  } else if (/\b(show|view).*receipts?\b/.test(lower)) {
+    result = { ok: true, action: "list_receipts", records: store.snapshot().records, receipts: store.snapshot().receipts, receipt: null };
+  } else if (/\bpredictive context\b/.test(lower)) {
+    result = { ok: true, action: "predictive_context", records: store.predictiveContext().activeRecords, predictiveContext: store.predictiveContext(), receipt: null };
+  } else if (/\b(mark|archive).*(deceased|inactive|out of business|closed|archive)\b/.test(lower)) {
+    const latest = store.snapshot().records[0];
+    if (!latest) {
+      result = store.createRecord({
+        type: inferNexusPersistentMemoryType(text),
+        title: nexusPersistentMemoryTitle(inferNexusPersistentMemoryType(text), text),
+        status: /deceased/.test(lower) ? "deceased" : /out of business|closed/.test(lower) ? "closed" : "inactive",
+        sourceMode: inferNexusPersistentMemorySourceMode(inferNexusPersistentMemoryType(text)),
+        payload: { command: text, note: "Archived/inactivated from command.", missingData: [] },
+        riskLevel: /deceased|patient|health/.test(lower) ? "sensitive" : "moderate"
+      });
+    } else {
+      result = store.archiveRecord(latest.id, /deceased/.test(lower) ? "deceased" : /out of business|closed/.test(lower) ? "closed" : "inactive", text);
+    }
+  } else if (/\bupdate .*record|save update|add note\b/.test(lower)) {
+    const latest = store.snapshot().records[0];
+    result = latest
+      ? store.updateRecord(latest.id, { payload: { ...(latest.payload || {}), lastUpdateCommand: text }, status: latest.status || "active" })
+      : store.createRecord({ type: inferNexusPersistentMemoryType(text), title: nexusPersistentMemoryTitle(inferNexusPersistentMemoryType(text), text), payload: { command: text }, sourceMode: inferNexusPersistentMemorySourceMode(inferNexusPersistentMemoryType(text)) });
+  } else {
+    const type = inferNexusPersistentMemoryType(text);
+    const sourceMode = inferNexusPersistentMemorySourceMode(type);
+    result = store.createRecord({
+      type,
+      title: nexusPersistentMemoryTitle(type, text),
+      status: /queued/.test(lower) ? "queued" : /payment pending/.test(lower) ? "payment_pending" : "active",
+      sourceMode,
+      payload: {
+        command: text,
+        missingData: /crop/.test(type) ? ["crop type", "location", "field photo", "timeline", "symptoms"] : [],
+        productionDatabaseActive: false,
+        note: "Saved in browser-local Nexus memory."
+      },
+      riskLevel: /health|transaction|shipment|provider|pharmacy/.test(type) ? "moderate" : "low"
+    });
+  }
+  syncNexusPersistentMemoryStore(store);
+  const snapshot = store.snapshot();
+  const mission = {
+    id: `nexus-persistent-memory-${Date.now()}`,
+    title: "Memory & Records",
+    mode: "activity-receipts",
+    submode: "persistent_memory_layer",
+    goal: text,
+    status: "completed_local",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userInput: text,
+    source,
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    localOnly: true,
+    collectedInfo: [
+      `Records: ${snapshot.records.length}`,
+      `Receipts: ${snapshot.receipts.length}`,
+      snapshot.status?.message || "Local memory active. Production database not connected."
+    ],
+    missingInfo: snapshot.status?.database?.configured ? [] : ["Production database credentials are not configured."],
+    suggestedQuestions: ["Show saved records.", "Show receipts.", "Show predictive context."],
+    nextStep: "Review, update, archive, or use saved records for local predictive planning.",
+    riskLevel: "low",
+    confirmationRequired: false,
+    confirmationStatus: "not_required",
+    executionStatus: "completed_local",
+    providerReadiness: snapshot.status?.persistenceScope || "local_browser",
+    actionPlan: ["Save/read local memory.", "Create a receipt.", "Keep production database status truthful."],
+    receipts: result.receipt ? [result.receipt] : [],
+    timeline: [{ at: new Date().toISOString(), event: result.action || "persistent_memory", detail: "Persistent memory command handled locally." }],
+    relatedRecords: snapshot.records.slice(0, 10),
+    outcome: { status: "local_memory_updated", verified: true, noExternalExecution: true },
+    safetyNote: "Local memory is not a production medical, financial, legal, payment, provider, shipment, drone, or emergency record system unless production database and compliance controls are configured.",
+    actionType: "persistent_memory"
+  };
+  return setNexusAgenticCommandResult(mission, snapshot.status?.message || "Local memory active. Production database not connected.");
+}
+
+function renderNexusPersistentMemoryPanel() {
+  const store = nexusPersistentMemoryStore();
+  const snapshot = store ? store.snapshot() : nexusPersistentMemoryState;
+  const status = snapshot.status || {};
+  const records = snapshot.records || [];
+  const receipts = snapshot.receipts || [];
+  const active = records.filter(record => !/archived|inactive|deceased|closed|cancelled/i.test(record.status));
+  const archived = records.filter(record => /archived|inactive|deceased|closed|cancelled/i.test(record.status));
+  return `
+    <section class="nexus-predictive-panel" data-nexus-persistent-memory-layer="true" data-persistence-scope="${escapeHtml(status.persistenceScope || "local_browser")}" aria-label="${escapeHtml(translateText("Memory and Records"))}">
+      <header class="nexus-chronic-predictive-header">
+        <span class="eyebrow">${escapeHtml(translateText("Persistent Memory"))}</span>
+        <h3>${escapeHtml(translateText("Memory & Records"))}</h3>
+        <p>${escapeHtml(translateText(status.message || "Local memory active. Production database not connected."))}</p>
+        <small>${escapeHtml(translateText("Local memory is not a production medical, financial, legal, provider, payment, shipment, drone, or emergency record system unless production database and compliance controls are configured."))}</small>
+      </header>
+      <div class="nexus-chronic-predictive-grid">
+        <article data-nexus-memory-status-card="true"><strong>${escapeHtml(translateText("Memory Status"))}</strong><span>Persistence: ${escapeHtml(status.persistenceScope || "local_browser")}</span><span>Database: ${escapeHtml(status.database?.configured ? "configured" : "not connected")}</span><span>Saved records: ${escapeHtml(String(records.length))}</span><span>Active: ${escapeHtml(String(active.length))} / Archived: ${escapeHtml(String(archived.length))}</span></article>
+        <article data-nexus-memory-recent-records="true"><strong>${escapeHtml(translateText("Recent Records"))}</strong>${(records.length ? records : [{ title: "No saved records yet", type: "memory", status: "empty" }]).slice(0, 6).map(record => `<span>${escapeHtml(record.title || record.name)} - ${escapeHtml(record.type)} - ${escapeHtml(record.status)}</span>`).join("")}</article>
+        <article data-nexus-memory-recent-receipts="true"><strong>${escapeHtml(translateText("Recent Receipts"))}</strong>${(receipts.length ? receipts : [{ result: "No memory receipts yet." }]).slice(0, 6).map(receipt => `<span>${escapeHtml(receipt.result || receipt.action || "Receipt")}</span>`).join("")}</article>
+        <article data-nexus-memory-actions="true"><strong>${escapeHtml(translateText("Safe Memory Actions"))}</strong>${["Save patient intake memory.", "Save crop issue record.", "Save buyer profile.", "Save shipment record.", "Show saved records.", "Show predictive context.", "Archive this record.", "Clear local demo records."].map(command => `<button type="button" data-nexus-command-prefill="${escapeHtml(command)}">${escapeHtml(translateText(command))}</button>`).join("")}</article>
+      </div>
+    </section>
+  `;
 }
 
 function saveNexusMemory(record = {}) {
@@ -29388,6 +30056,8 @@ function showNexusAgenticMissionStatus(command = "") {
 }
 
 function runNexusAgenticCommandRuntime(command = "", options = {}) {
+  if (isNexusPersistentMemoryCommand(command)) return routeNexusPersistentMemoryCommand(command, options.source || "agentic-command-runtime");
+  if (isNexusPredictiveMaturityCommand(command)) return routeNexusPredictiveMaturityCommand(command, options.source || "agentic-command-runtime");
   if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
   if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
   if (isNexusMultiDomainPredictiveCommand(command)) return routePredictiveCommand(command, options.source || "agentic-command-runtime");
@@ -29574,6 +30244,8 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
   const normalizedLower = normalized.toLowerCase();
+  if (isNexusPersistentMemoryCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
+  if (isNexusPredictiveMaturityCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusChronicPredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusAgriculturePredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusMultiDomainPredictiveCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
@@ -47818,7 +48490,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusPredictiveMaturityCommand(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();
@@ -47834,7 +48506,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     if (!input) return;
     const command = input.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusPredictiveMaturityCommand(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();

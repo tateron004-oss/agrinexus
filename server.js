@@ -14,6 +14,7 @@ const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js")
 const nexusRealProviders = require("./server/providers");
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
+const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -132,6 +133,19 @@ function providerReadinessCard({
     requiresSandboxAccount,
     recipient
   };
+}
+
+function nexusPersistentMemoryStatus(env = process.env, fallbackScope = "local_file_or_dev_store") {
+  return nexusPersistentMemory.persistenceStatus(env, fallbackScope);
+}
+
+function nexusPersistentMemoryStore(db, env = process.env) {
+  db.profile = db.profile || {};
+  db.profile.nexusPersistentMemory = db.profile.nexusPersistentMemory || nexusPersistentMemory.emptyState(nexusPersistentMemoryStatus(env));
+  const current = db.profile.nexusPersistentMemory;
+  current.status = nexusPersistentMemoryStatus(env);
+  const store = nexusPersistentMemory.createMemoryStore(current, { persistenceScope: current.status.persistenceScope, ownerRole: "Standard User" });
+  return store;
 }
 
 function nexusRealProviderStatus(db, env = process.env) {
@@ -35096,6 +35110,162 @@ function buildNexusMultiDomainPredictiveApiSummary(adapter, signal, records, sce
   return { title: `${adapter.title.replace(" Modeler", "")} Summary`, text: [`${adapter.title.replace(" Modeler", "")} Summary`, `Risk/readiness signal: ${signal.signalName} - ${signal.riskLevel}`, `Trajectory: ${signal.trajectory}`, `Confidence/data quality: ${signal.confidenceLabel} / ${signal.dataQuality}`, `Recent records: ${records.slice(-3).map(record => record.rawInput).join(" | ")}`, `Missing data: ${signal.missingData.join("; ") || "No major missing data flagged."}`, `Scenario projections: ${scenarios.map(item => `${item.scenario}: ${item.projectedSignal}`).join(" | ")}`, `Important system note: ${adapter.noClaims}`].join("\n"), generatedAt: nexusNow(), localOnly: true, noExternalExecutionAuthorized: true };
 }
 
+function calculatePredictiveConfidence({
+  requiredFields = [],
+  presentFields = [],
+  missingData = [],
+  historicalRecordCount = 0,
+  conflictingSignals = [],
+  expertFeedbackScore = 0,
+  crossDomainSupport = 0
+} = {}) {
+  const requiredCount = Math.max(requiredFields.length, 1);
+  const completeness = Math.min(1, presentFields.length / requiredCount);
+  let score = Math.round(35 + completeness * 30 + Math.min(historicalRecordCount, 6) * 4 + Math.max(0, crossDomainSupport) * 5 + Math.max(-3, Math.min(3, expertFeedbackScore)) * 4);
+  score -= Math.min(30, (missingData || []).length * 4);
+  score -= Math.min(20, (conflictingSignals || []).length * 7);
+  score = Math.max(5, Math.min(98, score));
+  const confidenceLabel = score >= 78 ? "high" : score >= 55 ? "moderate" : score >= 30 ? "low" : "insufficient_data";
+  const dataQualityLabel = score >= 78 ? "strong trend evidence" : score >= 55 ? "usable local/sandbox evidence" : score >= 30 ? "partial local/sandbox evidence" : "insufficient data";
+  const evidenceStrength = historicalRecordCount >= 3 && score >= 55 ? "trend_history" : historicalRecordCount > 1 ? "limited_history" : "single_input";
+  const uncertaintyReasons = [
+    ...(missingData || []).length ? [`Missing data: ${(missingData || []).slice(0, 5).join(", ")}`] : [],
+    ...(conflictingSignals || []).length ? [`Conflicting signals: ${(conflictingSignals || []).join(", ")}`] : [],
+    historicalRecordCount < 2 ? ["Only one or no prior predictive record is available."] : [],
+    crossDomainSupport ? [] : ["No strong cross-domain support has been recorded yet."]
+  ];
+  return { confidenceLabel, confidenceScore: score, dataQualityLabel, evidenceStrength, uncertaintyReasons };
+}
+
+function nexusPredictiveMaturityModeLabel(mode = "") {
+  return {
+    health: "Chronic Health",
+    agriculture: "Agriculture & Food Security",
+    marketplace: "Marketplace & Trade",
+    logistics: "Logistics / Maps / Shipment",
+    workforce: "Workforce / Employment",
+    learning: "Learning & Development",
+    drone: "Drone & Field Operations",
+    communications: "Communications / Media"
+  }[mode] || mode || "Predictive";
+}
+
+function buildNexusPredictiveMemoryFixture() {
+  const now = nexusNow();
+  const modes = ["health", "agriculture", "marketplace", "logistics", "workforce", "learning", "drone", "communications"];
+  return modes.map((mode, index) => {
+    const missingData = index % 2 ? ["recipient/context", "confirmation state"] : ["historical trend", "verified source"];
+    const confidence = calculatePredictiveConfidence({
+      requiredFields: ["signal", "trajectory", "summary", "missing data"],
+      presentFields: ["signal", "trajectory", "summary"],
+      missingData,
+      historicalRecordCount: index + 1,
+      conflictingSignals: [],
+      expertFeedbackScore: index % 3 === 0 ? 1 : 0,
+      crossDomainSupport: index % 2
+    });
+    return {
+      id: `api-predictive-memory-${mode}-${index}`,
+      mode,
+      recordType: "predictive_history_entry",
+      createdAt: now,
+      updatedAt: now,
+      sourceCommand: `Nexus fixture predictive command for ${mode}`,
+      structuredRecord: { mode, localOnly: true },
+      riskSignal: { signalName: `${nexusPredictiveMaturityModeLabel(mode)} fixture signal`, riskLevel: index % 3 === 0 ? "elevated_risk" : "watch", trajectory: index % 2 ? "variable" : "stable", contributingFactors: [`${mode} local factor`], missingData },
+      trajectory: index % 2 ? "variable" : "stable",
+      confidence,
+      dataQuality: confidence.dataQualityLabel,
+      contributingFactors: [`${mode} local factor`],
+      missingData,
+      scenarioOutputs: [{ scenario: "Missing data is completed", projectedSignal: "Signal confidence improves after review." }],
+      expertChecklist: [{ label: "Review before external action", checked: true }],
+      reasoningTrace: ["Read local/sandbox predictive memory.", "Generated deterministic fixture history for API validation."],
+      summary: { title: `${nexusPredictiveMaturityModeLabel(mode)} summary`, text: "Local predictive summary for API validation." },
+      receipts: [{ id: `api-predictive-memory-receipt-${mode}`, eventType: "predictive_history_recorded", detail: `${nexusPredictiveMaturityModeLabel(mode)} history recorded locally.`, createdAt: now }],
+      localOnly: true,
+      sandbox: true
+    };
+  });
+}
+
+function compareNexusPredictiveMemoryEntries(mode = "platform", history = buildNexusPredictiveMemoryFixture()) {
+  const scoped = mode && mode !== "platform" ? history.filter(item => item.mode === mode) : history;
+  const current = scoped[0] || history[0] || {};
+  const prior = scoped[1] || history[1] || null;
+  return {
+    mode: current.mode || mode,
+    priorSignal: prior?.riskSignal || null,
+    currentSignal: current.riskSignal || null,
+    signalChange: prior ? "risk stayed the same or requires review" : "No prior signal is available yet.",
+    trajectoryChange: prior ? `${prior.trajectory || "unknown"} -> ${current.trajectory || "unknown"}` : "No prior trajectory.",
+    confidenceChange: prior ? `${prior.confidence?.confidenceLabel || "unknown"} -> ${current.confidence?.confidenceLabel || "unknown"}` : "No prior confidence.",
+    newFactors: current.contributingFactors || [],
+    resolvedFactors: [],
+    persistentMissingData: current.missingData || [],
+    newMissingData: current.missingData || [],
+    summary: `${nexusPredictiveMaturityModeLabel(current.mode || mode)} comparison generated locally.`,
+    nextRecommendedAction: "Collect missing data and review before any gated external action.",
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+}
+
+function buildCrossDomainPredictiveInsights(activeSignals = []) {
+  const modes = new Set((activeSignals || []).map(item => item.mode));
+  const rules = [
+    ["agriculture", "marketplace", "Crop stress can influence marketplace readiness."],
+    ["agriculture", "logistics", "Yield risk can influence logistics planning."],
+    ["marketplace", "logistics", "Marketplace readiness can influence logistics readiness."],
+    ["logistics", "marketplace", "Shipment delay can affect buyer/seller trust."],
+    ["learning", "workforce", "Learning readiness can influence workforce readiness."],
+    ["workforce", "learning", "Workforce skill gaps can influence learning recommendations."],
+    ["drone", "agriculture", "Drone field observations can influence agriculture risk."],
+    ["communications", "marketplace", "Communications readiness can influence provider/vendor coordination."],
+    ["health", "workforce", "Chronic health risk can influence workforce participation planning."]
+  ];
+  const linkedSignals = rules.filter(([from, to]) => modes.has(from) && modes.has(to)).map(([from, to, reason]) => ({ from, to, reason }));
+  return {
+    linkedSignals,
+    crossDomainRisks: activeSignals.filter(item => /elevated|high|urgent|risk/i.test(item.riskSignal?.riskLevel || "")).map(item => `${nexusPredictiveMaturityModeLabel(item.mode)} needs review.`),
+    opportunities: linkedSignals.map(item => `Use ${nexusPredictiveMaturityModeLabel(item.from)} context to improve ${nexusPredictiveMaturityModeLabel(item.to)} planning.`),
+    dependencies: linkedSignals.map(item => `${item.from}->${item.to}: ${item.reason}`),
+    recommendedNextActions: ["Review connected signals locally before any external action."],
+    reasoningTrace: ["Collected active predictive signals.", "Applied deterministic cross-domain dependency rules.", "Preserved no-execution boundaries."],
+    receipts: [{ id: `api-cross-domain-receipt-${Date.now()}`, eventType: "cross_domain_insights_generated", detail: "Cross-domain predictive insights generated locally.", createdAt: nexusNow(), localOnly: true }],
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+}
+
+function buildNexusPredictiveIntelligenceSummary(history = buildNexusPredictiveMemoryFixture()) {
+  const activeSignals = history.map(item => ({ mode: item.mode, riskSignal: item.riskSignal, missingData: item.missingData }));
+  const crossDomain = buildCrossDomainPredictiveInsights(activeSignals);
+  const elevatedSignals = history.filter(item => /elevated|high|urgent|risk/i.test(item.riskSignal?.riskLevel || ""));
+  const missingData = [...new Set(history.flatMap(item => item.missingData || []))];
+  return {
+    title: "Nexus Intelligence Summary",
+    generatedAt: nexusNow(),
+    platformSignalCount: history.length,
+    elevatedSignals: elevatedSignals.map(item => `${nexusPredictiveMaturityModeLabel(item.mode)}: ${item.riskSignal.riskLevel}`),
+    connectedSignals: crossDomain.linkedSignals,
+    missingData,
+    recentChanges: ["Predictive memory can compare current vs prior signals."],
+    needsExpertReview: elevatedSignals.map(item => nexusPredictiveMaturityModeLabel(item.mode)),
+    safeNextAction: missingData.length ? `Collect missing data first: ${missingData.slice(0, 3).join(", ")}.` : "Review summaries before external action.",
+    text: [
+      "Nexus Intelligence Summary",
+      `Signals active: ${history.length}`,
+      `Elevated signals: ${elevatedSignals.map(item => nexusPredictiveMaturityModeLabel(item.mode)).join("; ") || "none"}`,
+      `Connected signals: ${crossDomain.linkedSignals.map(item => `${item.from}->${item.to}`).join("; ") || "none"}`,
+      `Still missing: ${missingData.join("; ") || "none"}`,
+      "Safe next action: Review locally; no external action is authorized."
+    ].join("\n"),
+    localOnly: true,
+    noExternalExecutionAuthorized: true
+  };
+}
+
 function latestChronicCareProfile(store) {
   return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
 }
@@ -37765,6 +37935,186 @@ async function api(req, res, url) {
         noFakeProviderExecution: true,
         noExternalActionFalselyClaimed: true,
         noClaims: adapter.noClaims
+      });
+    }
+  }
+
+  if (url.pathname.startsWith("/api/nexus/predictive-memory/")) {
+    const action = url.pathname.replace("/api/nexus/predictive-memory/", "");
+    const fixtureHistory = buildNexusPredictiveMemoryFixture();
+    const readPredictiveBody = async () => (req.method === "POST" || req.method === "PATCH") ? await readBody(req) : {};
+    const normalizeHistory = body => Array.isArray(body.history) && body.history.length ? body.history : fixtureHistory;
+    if (action === "status" && req.method === "GET") {
+      return send(res, 200, {
+        ok: true,
+        service: "nexus_predictive_intelligence_maturity",
+        status: "local_sandbox_ready",
+        supportedModes: ["health", "agriculture", "marketplace", "logistics", "workforce", "learning", "drone", "communications"],
+        backendRoutes: [
+          "/api/nexus/predictive-memory/status",
+          "/api/nexus/predictive-memory/history",
+          "/api/nexus/predictive-memory/compare",
+          "/api/nexus/predictive-memory/cross-domain",
+          "/api/nexus/predictive-memory/feedback",
+          "/api/nexus/predictive-memory/intelligence-summary"
+        ],
+        capabilities: [
+          "predictive history",
+          "current vs prior comparison",
+          "cross-domain insight mapping",
+          "confidence and data-quality scoring",
+          "expert feedback capture",
+          "platform intelligence summary"
+        ],
+        noExternalExecutionAuthorized: true,
+        noProviderHandoffAuthorized: true,
+        noSecretsExposed: true,
+        localOnly: true
+      });
+    }
+    if (action === "history" && (req.method === "GET" || req.method === "POST")) {
+      const body = await readPredictiveBody();
+      const mode = body.mode || url.searchParams.get("mode") || "";
+      const history = normalizeHistory(body).filter(item => !mode || mode === "platform" || item.mode === mode);
+      return send(res, 200, {
+        ok: true,
+        mode: mode || "platform",
+        history,
+        count: history.length,
+        receipts: history.flatMap(item => item.receipts || []),
+        noExternalExecutionAuthorized: true,
+        localOnly: true
+      });
+    }
+    if (action === "compare" && (req.method === "GET" || req.method === "POST")) {
+      const body = await readPredictiveBody();
+      const mode = body.mode || url.searchParams.get("mode") || "platform";
+      return send(res, 200, {
+        ok: true,
+        comparison: compareNexusPredictiveMemoryEntries(mode, normalizeHistory(body)),
+        noExternalExecutionAuthorized: true,
+        localOnly: true
+      });
+    }
+    if (action === "cross-domain" && (req.method === "GET" || req.method === "POST")) {
+      const body = await readPredictiveBody();
+      const history = normalizeHistory(body);
+      const activeSignals = history.map(item => ({ mode: item.mode, riskSignal: item.riskSignal, missingData: item.missingData || [] }));
+      return send(res, 200, {
+        ok: true,
+        crossDomain: buildCrossDomainPredictiveInsights(activeSignals),
+        activeSignals,
+        noExternalExecutionAuthorized: true,
+        localOnly: true
+      });
+    }
+    if (action === "feedback" && (req.method === "GET" || req.method === "POST")) {
+      const body = await readPredictiveBody();
+      const feedbackType = body.feedbackType || url.searchParams.get("feedbackType") || "useful";
+      const mode = body.mode || url.searchParams.get("mode") || "platform";
+      const feedback = {
+        id: `api-predictive-feedback-${Date.now()}`,
+        mode,
+        feedbackType,
+        note: body.note || "Predictive feedback captured for local review.",
+        confidenceAdjustment: feedbackType === "accurate" ? 1 : feedbackType === "too_high" ? -1 : 0,
+        createdAt: nexusNow(),
+        localOnly: true,
+        noExternalExecutionAuthorized: true
+      };
+      return send(res, 200, {
+        ok: true,
+        feedback,
+        receipts: [{ id: `api-predictive-feedback-receipt-${Date.now()}`, eventType: "predictive_feedback_recorded", detail: "Expert feedback recorded locally.", createdAt: nexusNow(), localOnly: true }],
+        noExternalExecutionAuthorized: true,
+        localOnly: true
+      });
+    }
+    if (action === "intelligence-summary" && (req.method === "GET" || req.method === "POST")) {
+      const body = await readPredictiveBody();
+      return send(res, 200, {
+        ok: true,
+        summary: buildNexusPredictiveIntelligenceSummary(normalizeHistory(body)),
+        noExternalExecutionAuthorized: true,
+        localOnly: true
+      });
+    }
+  }
+
+  if (url.pathname.startsWith("/api/nexus/persistent-memory")) {
+    const store = nexusPersistentMemoryStore(db, process.env);
+    const persist = async result => {
+      db.profile.nexusPersistentMemory = result.state || store.snapshot();
+      await writeDb(db);
+      return result;
+    };
+    if (url.pathname === "/api/nexus/persistent-memory/status" && req.method === "GET") {
+      return send(res, 200, {
+        ok: true,
+        ...store.status(),
+        database: nexusPersistentMemory.databaseReadiness(process.env),
+        supportedTypes: nexusPersistentMemory.MEMORY_TYPES,
+        noSecretsExposed: true
+      });
+    }
+    if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "GET") {
+      return send(res, 200, {
+        ok: true,
+        ...store.searchRecords({
+          type: url.searchParams.get("type") || "",
+          status: url.searchParams.get("status") || "",
+          query: url.searchParams.get("query") || "",
+          includeArchived: url.searchParams.get("activeOnly") !== "true"
+        }),
+        persistenceScope: store.status().persistenceScope,
+        noExternalExecutionAuthorized: true
+      });
+    }
+    if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await persist(store.createRecord(body));
+      return send(res, 200, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
+    }
+    const recordMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)$/);
+    if (recordMatch && req.method === "GET") {
+      return send(res, 200, { ...store.readRecord(decodeURIComponent(recordMatch[1])), noExternalExecutionAuthorized: true });
+    }
+    if (recordMatch && (req.method === "PATCH" || req.method === "POST")) {
+      const body = await readBody(req);
+      const result = await persist(store.updateRecord(decodeURIComponent(recordMatch[1]), body));
+      return send(res, result.ok ? 200 : 404, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
+    }
+    const archiveMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)\/archive$/);
+    if (archiveMatch && (req.method === "PATCH" || req.method === "POST")) {
+      const body = await readBody(req);
+      const result = await persist(store.archiveRecord(decodeURIComponent(archiveMatch[1]), body.status || "archived", body.reason || ""));
+      return send(res, result.ok ? 200 : 404, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
+    }
+    const clearMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)\/clear-local$/);
+    if (clearMatch && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await persist(store.deleteLocalRecord(decodeURIComponent(clearMatch[1]), body.confirmedLocalClear === true));
+      return send(res, result.ok ? 200 : 409, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
+    }
+    if (url.pathname === "/api/nexus/persistent-memory/receipts" && req.method === "GET") {
+      return send(res, 200, {
+        ok: true,
+        receipts: store.snapshot().receipts,
+        persistenceScope: store.status().persistenceScope,
+        noExternalExecutionAuthorized: true
+      });
+    }
+    if (url.pathname === "/api/nexus/persistent-memory/receipts" && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await persist(store.createReceipt(body));
+      return send(res, 200, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
+    }
+    if (url.pathname === "/api/nexus/persistent-memory/predictive-context" && req.method === "GET") {
+      return send(res, 200, {
+        ok: true,
+        predictiveContext: store.predictiveContext(),
+        persistenceScope: store.status().persistenceScope,
+        noExternalExecutionAuthorized: true
       });
     }
   }
