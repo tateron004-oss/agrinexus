@@ -85,6 +85,7 @@
     "qa:nexus-agentic-command-runtime": "node scripts/nexus-agentic-command-runtime-qa.js",
     "qa:nexus-brain-intelligence-runtime": "node scripts/nexus-brain-intelligence-runtime-qa.js",
     "qa:nexus-persistent-memory-layer": "node scripts/nexus-persistent-memory-layer-qa.js",
+    "qa:nexus-universal-navigation-runtime": "node scripts/nexus-universal-navigation-runtime-qa.js",
     "qa:nexus-chronic-health-predictive-modeler": "node scripts/nexus-chronic-health-predictive-modeler-qa.js",
     "qa:nexus-agriculture-predictive-intelligence": "node scripts/nexus-agriculture-predictive-intelligence-qa.js",
     "qa:nexus-marketplace-predictive-intelligence": "node scripts/nexus-marketplace-predictive-intelligence-qa.js",

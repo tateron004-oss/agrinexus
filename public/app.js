@@ -24408,6 +24408,142 @@ function launchCapabilityFromClick(eventOrElement) {
   return capability ? openNexusCapability(capability.id, { command, source: "mode-click", sourceSurface: "click" }) : false;
 }
 
+function nexusUniversalNavigationRuntime() {
+  return typeof window !== "undefined" ? window.NexusUniversalNavigationRuntime : null;
+}
+
+function nexusCurrentUniversalWorkspaceId() {
+  return nexusActiveWorkflowState?.id
+    || nexusActiveWorkflowState?.functionId
+    || currentSectionId?.()
+    || "health-home";
+}
+
+function buildNexusUniversalExplanationResult(explanation = {}, route = {}) {
+  const isGlobal = explanation.type === "global";
+  const cards = isGlobal
+    ? (nexusUniversalNavigationRuntime()?.WORKSPACES || []).slice(0, 12).map(item => ({
+      type: "universal_navigation_workspace",
+      title: item.title,
+      status: item.statusLabel,
+      routeTarget: item.routeTarget,
+      localOnly: true,
+      noExecutionAuthorized: true
+    }))
+    : [{
+      type: "universal_navigation_workspace_explanation",
+      title: explanation.title,
+      status: explanation.statusLabel || "Workspace explained",
+      routeTarget: route.routeTarget || explanation.id || "",
+      localOnly: true,
+      noExecutionAuthorized: true
+    }];
+  return {
+    ok: true,
+    status: isGlobal ? "nexus_global_capability_explained" : "nexus_workspace_explained",
+    mode: explanation.title || "Nexus Universal Navigation",
+    message: explanation.message || "Nexus explained this workspace. No external action was executed.",
+    explanation,
+    routeIntent: route,
+    preparedCards: cards,
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_universal_navigation_runtime"
+  };
+}
+
+function handleNexusUniversalNavigationCommand(input = "", options = {}) {
+  const runtime = nexusUniversalNavigationRuntime();
+  if (!runtime) return false;
+  const text = String(input || "").trim();
+  if (!text) return false;
+  const route = runtime.route(text, {
+    inputType: options.inputType || "text",
+    sourceElement: options.sourceElement || options.source || "",
+    modeId: options.modeId || "",
+    routeTarget: options.routeTarget || "",
+    currentWorkspaceId: options.currentWorkspaceId || nexusCurrentUniversalWorkspaceId(),
+    explanationRequired: options.explanationRequired
+  });
+  if (!route || route.confidence < 0.6) return false;
+  if (route.kind === "global-explanation" || route.requiredAction === "show_global_capabilities") {
+    nexusAgenticBrainLastResult = buildNexusUniversalExplanationResult(runtime.globalExplanation(), route);
+    nexusActiveWorkflowState = {
+      id: "resource-assistant",
+      command: text,
+      source: options.source || `${route.inputType}-universal-navigation`,
+      workflow: "universal-navigation",
+      action: "explain-global-capabilities",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
+    if (experienceMode === "user" || document.body.classList.contains("user-mode")) renderUserWorkspace();
+    return true;
+  }
+  if (route.kind === "workspace-explanation" || route.requiredAction === "explain_workspace") {
+    const workspaceId = route.workspace?.id || nexusCurrentUniversalWorkspaceId();
+    nexusAgenticBrainLastResult = buildNexusUniversalExplanationResult(runtime.workspaceExplanation(workspaceId), route);
+    saveNexusRuntimeMemory();
+    if (experienceMode === "user" || document.body.classList.contains("user-mode")) renderUserWorkspace();
+    return true;
+  }
+  if (route.routeTarget && nexusWorkflowDefinition(route.routeTarget, text)) {
+    const opened = openNexusWorkflow(route.routeTarget, {
+      command: text,
+      source: options.source || `${route.inputType}-universal-navigation`,
+      universalNavigationIntent: route
+    });
+    if (opened) {
+      nexusActiveWorkflowState = {
+        ...(nexusActiveWorkflowState || {}),
+        universalNavigationIntent: route,
+        matchedMiniApp: route.matchedMiniApp,
+        matchedMode: route.matchedMode,
+        requiredAction: route.requiredAction,
+        providerRequired: route.providerRequired,
+        explanationRequired: route.explanationRequired,
+        safetyLevel: route.safetyLevel
+      };
+      saveNexusRuntimeMemory();
+    }
+    return opened;
+  }
+  return false;
+}
+
+function routeNexusPredictiveSuggestion(suggestion = {}) {
+  const runtime = nexusUniversalNavigationRuntime();
+  if (!runtime) return false;
+  const route = runtime.predictiveSuggestionRoute(suggestion);
+  return handleNexusUniversalNavigationCommand(route.rawInput || suggestion.command || suggestion.title || "", {
+    inputType: "suggestion",
+    sourceElement: suggestion.id || "predictive-suggestion",
+    routeTarget: route.matchedMiniApp
+  });
+}
+
+function routeNexusProviderReadinessCard(provider = {}) {
+  const runtime = nexusUniversalNavigationRuntime();
+  if (!runtime) return false;
+  const route = runtime.providerReadinessRoute(provider);
+  return handleNexusUniversalNavigationCommand(route.rawInput || provider.name || provider.id || "provider readiness", {
+    inputType: "providerCard",
+    sourceElement: provider.id || provider.providerId || "provider-card",
+    routeTarget: route.matchedMiniApp
+  });
+}
+
+function routeNexusSavedRecordLink(record = {}) {
+  const runtime = nexusUniversalNavigationRuntime();
+  if (!runtime) return false;
+  const route = runtime.savedRecordRoute(record);
+  return handleNexusUniversalNavigationCommand(route.rawInput || record.title || record.type || "", {
+    inputType: record.receiptType ? "receipt" : "savedRecord",
+    sourceElement: record.id || record.recordId || "saved-record",
+    routeTarget: route.matchedMiniApp
+  });
+}
+
 function resolveNexusIntent(input, options = {}) {
   const text = String(input || "").trim();
   const functionId = normalizeNexusFunctionId(options.functionId || options.modeId || options.workflowId || "", text);
@@ -24463,6 +24599,10 @@ if (typeof window !== "undefined") {
   window["minimizeNexusAppWindow"] = minimizeNexusAppWindow;
   window["restoreNexusAppWindow"] = restoreNexusAppWindow;
   window["resolveNexusAppIntent"] = resolveNexusAppIntent;
+  window["handleNexusUniversalNavigationCommand"] = handleNexusUniversalNavigationCommand;
+  window["routeNexusPredictiveSuggestion"] = routeNexusPredictiveSuggestion;
+  window["routeNexusProviderReadinessCard"] = routeNexusProviderReadinessCard;
+  window["routeNexusSavedRecordLink"] = routeNexusSavedRecordLink;
 }
 
 function updateNexusWorkflowState(workflowId, data = {}) {
@@ -30462,6 +30602,13 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
       localOnly: true
     };
     renderUserWorkspace();
+    return true;
+  }
+  if (!isNexusLiveKnowledgeQuestion(normalized) && handleNexusUniversalNavigationCommand(normalized, {
+    inputType: "text",
+    source: "standard-user-local-command",
+    currentWorkspaceId: nexusCurrentUniversalWorkspaceId()
+  })) {
     return true;
   }
   if (/\b(clear local sensitive data|clear sensitive data|reset local nexus data)\b/i.test(normalized)) {
@@ -46562,6 +46709,39 @@ function handleNexusStandardUserHomeClick(event) {
     return handleNexusGlobalOfflineAccessClick(event);
   }
   if (handleNexusProviderActivationControlClick(event)) return true;
+  const universalProviderCard = eventTarget?.closest?.("[data-nexus-provider-readiness-route],[data-production-provider-readiness-id],[data-provider-account-api-access-id]");
+  if (universalProviderCard) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return routeNexusProviderReadinessCard({
+      id: universalProviderCard.dataset.nexusProviderReadinessRoute
+        || universalProviderCard.dataset.productionProviderReadinessId
+        || universalProviderCard.dataset.providerAccountApiAccessId
+        || "provider-readiness",
+      name: universalProviderCard.textContent || "provider readiness"
+    });
+  }
+  const universalSuggestion = eventTarget?.closest?.("[data-nexus-predictive-route],[data-nexus-predictive-index-card]");
+  if (universalSuggestion) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return routeNexusPredictiveSuggestion({
+      id: universalSuggestion.dataset.nexusPredictiveRoute || universalSuggestion.dataset.nexusPredictiveIndexCard || "predictive-suggestion",
+      command: universalSuggestion.dataset.nexusCommand || universalSuggestion.textContent || "What should I do next?"
+    });
+  }
+  const universalSavedRecord = eventTarget?.closest?.("[data-nexus-saved-record-route],[data-nexus-memory-record-route]");
+  if (universalSavedRecord) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return routeNexusSavedRecordLink({
+      id: universalSavedRecord.dataset.nexusSavedRecordRoute || universalSavedRecord.dataset.nexusMemoryRecordRoute || "saved-record",
+      title: universalSavedRecord.dataset.nexusCommand || universalSavedRecord.textContent || "saved record"
+    });
+  }
   const submit = eventTarget?.closest?.("[data-nexus-command-center-submit]");
   if (submit) {
     const input = nexusCommandInputForSubmit(submit);
