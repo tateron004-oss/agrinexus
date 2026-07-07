@@ -268,8 +268,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-381";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v355";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-382";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22713,6 +22713,8 @@ const NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY = "nexusChronicHealthPredictiveModele
 let nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
 const NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY = "nexusAgriculturePredictiveIntelligenceModelerState";
 let nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
+const NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY = "nexusMultiDomainPredictiveIntelligenceState";
+let nexusMultiDomainPredictiveState = {};
 const NEXUS_DEMO_DATA_STORAGE_KEY = "nexusDemoDataSandboxState";
 const NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY = "nexusDemoDataSandboxVisible";
 let nexusDemoDataVisible = localStorage.getItem(NEXUS_DEMO_DATA_VISIBLE_STORAGE_KEY) !== "false";
@@ -23692,6 +23694,7 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusAgenticCommandLocalMemory", JSON.stringify(nexusAgenticCommandLocalMemory || {}));
     localStorage.setItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusChronicPredictiveModelerState || buildEmptyNexusChronicPredictiveModelerState()));
     localStorage.setItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusAgriculturePredictiveModelerState || buildEmptyNexusAgriculturePredictiveModelerState()));
+    localStorage.setItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY, JSON.stringify(nexusMultiDomainPredictiveState || {}));
     localStorage.setItem("nexusUserExperienceRole", nexusUserExperienceRole);
     localStorage.setItem("nexusLowBandwidthMode", nexusLowBandwidthMode ? "true" : "false");
     localStorage.setItem("nexusLanguagePreference", nexusLanguagePreference || "");
@@ -23722,6 +23725,7 @@ function restoreNexusRuntimeMemory() {
       ...buildEmptyNexusAgriculturePredictiveModelerState(),
       ...(JSON.parse(localStorage.getItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY) || "{}") || {})
     };
+    nexusMultiDomainPredictiveState = JSON.parse(localStorage.getItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY) || "{}") || {};
     nexusUserExperienceRole = localStorage.getItem("nexusUserExperienceRole") || "Standard User";
     nexusLowBandwidthMode = localStorage.getItem("nexusLowBandwidthMode") === "true";
     nexusLanguagePreference = localStorage.getItem("nexusLanguagePreference") || "";
@@ -23754,6 +23758,7 @@ function restoreNexusRuntimeMemory() {
     };
     nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
     nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
+    nexusMultiDomainPredictiveState = {};
     nexusGuidedWorkflowAnswers = {};
   }
 }
@@ -23786,6 +23791,7 @@ function clearNexusSensitiveLocalData() {
   };
   nexusChronicPredictiveModelerState = buildEmptyNexusChronicPredictiveModelerState();
   nexusAgriculturePredictiveModelerState = buildEmptyNexusAgriculturePredictiveModelerState();
+  nexusMultiDomainPredictiveState = {};
   nexusGuidedWorkflowAnswers = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
@@ -23799,6 +23805,7 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusAgenticCommandLocalMemory");
     localStorage.removeItem(NEXUS_CHRONIC_PREDICTIVE_STORAGE_KEY);
     localStorage.removeItem(NEXUS_AGRICULTURE_PREDICTIVE_STORAGE_KEY);
+    localStorage.removeItem(NEXUS_MULTI_DOMAIN_PREDICTIVE_STORAGE_KEY);
     localStorage.removeItem("nexusGuidedWorkflowAnswers");
   } catch {}
   nexusAgenticBrainLastResult = {
@@ -26916,6 +26923,8 @@ function renderNexusAgenticMissionWorkspace() {
       ` : ""}
       ${(mission.submode === "chronic_health_predictive_modeler" || nexusChronicPredictiveModelerState?.riskSignals?.length) ? renderNexusChronicPredictiveModelerPanel() : ""}
       ${(mission.submode === "agriculture_predictive_intelligence_modeler" || nexusAgriculturePredictiveModelerState?.riskSignals?.length) ? renderNexusAgriculturePredictiveModelerPanel() : ""}
+      ${Object.keys(NEXUS_PREDICTIVE_ADAPTERS).map(mode => (mission.submode === `${mode}_predictive_intelligence_modeler` || nexusMultiDomainPredictiveState?.[mode]?.riskSignals?.length) ? renderPredictivePanel(mode, nexusMultiDomainPredictiveState[mode]) : "").join("")}
+      ${Object.keys(nexusMultiDomainPredictiveState || {}).length ? renderNexusPredictiveIntelligenceIndex() : ""}
       <div class="nexus-mission-actions">
         <button type="button" class="primary" data-nexus-agentic-runtime-action="continue">${escapeHtml(translateText("Continue mission"))}</button>
         <button type="button" data-nexus-agentic-runtime-action="confirm">${escapeHtml(translateText("Confirm local step"))}</button>
@@ -28681,6 +28690,524 @@ function renderNexusAgriculturePredictiveModelerPanel() {
   `;
 }
 
+const NEXUS_PREDICTIVE_ADAPTERS = Object.freeze({
+  marketplace: {
+    mode: "marketplace",
+    title: "Marketplace & Trade Predictive Intelligence Modeler",
+    missionMode: "trade-marketplace",
+    panelSelector: "data-nexus-marketplace-predictive-modeler",
+    commandPattern: /\b(sell maize|buyer|seller|product listing|marketplace|trade risk|transaction risk|buyer summary|seller summary|marketplace reasoning|marketplace expert checklist|marketplace predictive receipts|mark this seller closed|cancel this transaction)\b/i,
+    domains: ["buyer readiness", "seller readiness", "product listing completeness", "transaction readiness", "trust/verification gaps", "payment-readiness gaps", "delivery/fulfillment risk"],
+    riskLevels: ["market_ready", "watch", "incomplete", "elevated_risk", "high_risk", "needs_verification", "blocked_missing_data"],
+    examples: [
+      "Nexus, help me sell maize to a buyer.",
+      "Nexus, remember this buyer named Demo Buyer One.",
+      "Nexus, show my buyers.",
+      "Nexus, is this buyer ready for trade?",
+      "Nexus, assess this seller.",
+      "Nexus, create a product listing for maize.",
+      "Nexus, what data is missing before selling?",
+      "Nexus, predict transaction risk.",
+      "Nexus, what is driving the trade risk?",
+      "Nexus, simulate what happens if transport is delayed.",
+      "Nexus, simulate what happens if buyer verification is missing.",
+      "Nexus, create a buyer summary.",
+      "Nexus, create a seller summary.",
+      "Nexus, show marketplace reasoning trace.",
+      "Nexus, show marketplace expert checklist.",
+      "Nexus, show marketplace predictive receipts.",
+      "Nexus, mark this seller closed.",
+      "Nexus, cancel this transaction."
+    ],
+    noClaims: "Nexus did not contact buyers or sellers, process payment, execute a transaction, arrange delivery, or claim trade acceptance."
+  },
+  logistics: {
+    mode: "logistics",
+    title: "Logistics Predictive Intelligence Modeler",
+    missionMode: "logistics-maps",
+    panelSelector: "data-nexus-logistics-predictive-modeler",
+    commandPattern: /\b(track this shipment|plan a trade route|shipment is delayed|missing to track|delivery risk|logistics risk|shipment delayed|cold storage fails|shipment summary|logistics reasoning|logistics expert checklist|logistics predictive receipts)\b/i,
+    domains: ["shipment readiness", "route-risk assessment", "tracking completeness", "delivery delay risk", "cold-chain risk", "origin/destination quality"],
+    riskLevels: ["route_ready", "watch", "incomplete", "elevated_delay_risk", "high_delay_risk", "cold_chain_risk", "blocked_missing_data"],
+    examples: [
+      "Nexus, track this shipment.",
+      "Nexus, plan a trade route.",
+      "Nexus, shipment is delayed.",
+      "Nexus, what information is missing to track this shipment?",
+      "Nexus, predict delivery risk.",
+      "Nexus, what is driving logistics risk?",
+      "Nexus, simulate what happens if the shipment is delayed two days.",
+      "Nexus, simulate what happens if cold storage fails.",
+      "Nexus, create a shipment summary.",
+      "Nexus, show logistics reasoning trace.",
+      "Nexus, show logistics expert checklist.",
+      "Nexus, show logistics predictive receipts."
+    ],
+    noClaims: "Nexus did not run live tracking, calculate a fake provider route, contact a carrier, or update a shipment externally."
+  },
+  workforce: {
+    mode: "workforce",
+    title: "Workforce Predictive Intelligence Modeler",
+    missionMode: "learning-workforce",
+    panelSelector: "data-nexus-workforce-predictive-modeler",
+    commandPattern: /\b(apply for a job|remember this employer|job readiness|skills am i missing|application readiness|employment risk|complete this training|resume is missing experience|candidate summary|employer outreach summary|workforce reasoning|workforce expert checklist|workforce predictive receipts)\b/i,
+    domains: ["job-readiness signal", "resume completeness", "skill-gap detection", "employer-fit signal", "application readiness", "credential gap"],
+    riskLevels: ["job_ready", "watch", "incomplete", "skill_gap", "credential_gap", "placement_risk", "blocked_missing_data"],
+    examples: [
+      "Nexus, help me apply for a job.",
+      "Nexus, remember this employer.",
+      "Nexus, assess my job readiness.",
+      "Nexus, what skills am I missing?",
+      "Nexus, predict my application readiness.",
+      "Nexus, what is driving my employment risk?",
+      "Nexus, simulate what happens if I complete this training.",
+      "Nexus, simulate what happens if my resume is missing experience.",
+      "Nexus, create a candidate summary.",
+      "Nexus, create an employer outreach summary.",
+      "Nexus, show workforce reasoning trace.",
+      "Nexus, show workforce expert checklist.",
+      "Nexus, show workforce predictive receipts."
+    ],
+    noClaims: "Nexus did not contact an employer, submit a job application, schedule an interview, or claim job placement."
+  },
+  learning: {
+    mode: "learning",
+    title: "Learning Predictive Intelligence Modeler",
+    missionMode: "learning-workforce",
+    panelSelector: "data-nexus-learning-predictive-modeler",
+    commandPattern: /\b(build a learning plan|continue my learning plan|learning readiness|skills do i need to learn|course completion risk|learning gap|study three days|learning plan summary|learning reasoning|learning expert checklist|learning predictive receipts)\b/i,
+    domains: ["learner readiness", "skill-gap prediction", "course pathway fit", "completion risk", "assessment readiness", "digital literacy gaps"],
+    riskLevels: ["learning_ready", "watch", "skill_gap", "completion_risk", "assessment_risk", "blocked_missing_data"],
+    examples: [
+      "Nexus, build a learning plan.",
+      "Nexus, continue my learning plan.",
+      "Nexus, assess my learning readiness.",
+      "Nexus, what skills do I need to learn next?",
+      "Nexus, predict my course completion risk.",
+      "Nexus, what is driving my learning gap?",
+      "Nexus, simulate what happens if I study three days per week.",
+      "Nexus, create a learning plan summary.",
+      "Nexus, show learning reasoning trace.",
+      "Nexus, show learning expert checklist.",
+      "Nexus, show learning predictive receipts."
+    ],
+    noClaims: "Nexus did not enroll the learner, issue certification, contact an instructor, or claim course completion."
+  },
+  drone: {
+    mode: "drone",
+    title: "Drone & Field Operations Predictive Intelligence Modeler",
+    missionMode: "drone-field-operations",
+    panelSelector: "data-nexus-drone-predictive-modeler",
+    commandPattern: /\b(open drone support|drone field mission|drone mission readiness|data is missing before flying|field operation risk|drone mission risk|weather is poor|battery readiness|drone mission summary|drone reasoning|drone expert checklist|drone predictive receipts)\b/i,
+    domains: ["mission readiness", "field-operation risk", "missing flight data", "equipment-readiness gaps", "battery readiness", "approval/review requirement"],
+    riskLevels: ["mission_ready", "watch", "incomplete", "elevated_operation_risk", "high_operation_risk", "needs_approval", "blocked_missing_data"],
+    examples: [
+      "Nexus, open drone support.",
+      "Nexus, prepare a drone field mission.",
+      "Nexus, assess drone mission readiness.",
+      "Nexus, what data is missing before flying?",
+      "Nexus, predict field operation risk.",
+      "Nexus, what is driving drone mission risk?",
+      "Nexus, simulate what happens if weather is poor.",
+      "Nexus, simulate what happens if battery readiness is missing.",
+      "Nexus, create a drone mission summary.",
+      "Nexus, show drone reasoning trace.",
+      "Nexus, show drone expert checklist.",
+      "Nexus, show drone predictive receipts."
+    ],
+    noClaims: "Nexus did not dispatch a drone, retrieve live weather, analyze imagery, or claim regulatory approval."
+  },
+  communications: {
+    mode: "communications",
+    title: "Communications Predictive Intelligence Modeler",
+    missionMode: "communications-media",
+    panelSelector: "data-nexus-communications-predictive-modeler",
+    commandPattern: /\b(prepare a message|call this person through whatsapp|message draft|message before sending|before i contact them|communication risk|message readiness|phone number is missing|communication summary|communication reasoning|communication expert checklist|communication predictive receipts)\b/i,
+    domains: ["message readiness", "recipient/contact completeness", "tone/context fit", "outreach risk", "confirmation requirement", "call/message handoff readiness"],
+    riskLevels: ["message_ready", "draft_ready", "watch", "incomplete", "outreach_risk", "needs_confirmation", "blocked_missing_data"],
+    examples: [
+      "Nexus, prepare a message to a provider.",
+      "Nexus, call this person through WhatsApp.",
+      "Nexus, create a message draft.",
+      "Nexus, assess this message before sending.",
+      "Nexus, what is missing before I contact them?",
+      "Nexus, predict communication risk.",
+      "Nexus, what is driving message readiness?",
+      "Nexus, simulate what happens if the phone number is missing.",
+      "Nexus, create a communication summary.",
+      "Nexus, show communication reasoning trace.",
+      "Nexus, show communication expert checklist.",
+      "Nexus, show communication predictive receipts."
+    ],
+    noClaims: "Nexus did not send a message, place a call, execute WhatsApp, send email, or contact anyone externally."
+  }
+});
+
+function nexusPredictiveTrajectoryValues() {
+  return ["improving", "stable", "worsening", "variable", "unknown"];
+}
+
+function nexusPredictiveConfidenceValues() {
+  return ["high", "moderate", "low", "insufficient_data"];
+}
+
+function createPredictiveState(mode = "marketplace") {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const now = new Date().toISOString();
+  return {
+    id: `nexus-${adapter.mode}-predictive-${Date.now()}`,
+    mode: adapter.mode,
+    title: adapter.title,
+    createdAt: now,
+    updatedAt: now,
+    source: "nexus_multi_domain_predictive_intelligence_engine",
+    localOnly: true,
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    expertEvaluationMode: true,
+    records: [],
+    trends: {},
+    riskSignals: [],
+    trajectory: [],
+    scenarioSimulations: [],
+    missingData: [],
+    confidence: {},
+    expertChecklist: [],
+    reasoningTrace: [],
+    expertSummary: {},
+    receipts: []
+  };
+}
+
+function parsePredictiveCommand(input = "", mode = "") {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || predictiveAdapterForCommand(input);
+  const text = String(input || "");
+  const lower = text.toLowerCase();
+  const record = {
+    id: `nexus-${adapter.mode}-predictive-record-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    mode: adapter.mode,
+    rawInput: text,
+    parsedValue: text,
+    recordType: "predictive_observation",
+    timestamp: new Date().toISOString(),
+    source: "natural_command",
+    localOnly: true,
+    entities: {
+      commodity: /\bmaize|cassava|rice|tomato|beans|produce|product\b/i.exec(text)?.[0] || "",
+      personOrOrg: /\bDemo Buyer One|buyer|seller|employer|provider|carrier|instructor|operator\b/i.exec(text)?.[0] || "",
+      status: /\bdelayed|missing|closed|cancel|ready|risk|apply|training|draft|whatsapp|phone number\b/i.exec(text)?.[0] || ""
+    },
+    flags: {
+      missing: /\bmissing|without|incomplete|no\b/i.test(lower),
+      simulate: /\bsimulate\b/i.test(lower),
+      summary: /\bsummary\b/i.test(lower),
+      risk: /\brisk|assess|predict|readiness|ready\b/i.test(lower),
+      cancelOrClosed: /\bcancel|closed|inactive\b/i.test(lower),
+      confirmationNeeded: /\bsend|call|contact|whatsapp|payment|dispatch|submit|apply\b/i.test(lower)
+    }
+  };
+  return { adapter, observation: record };
+}
+
+function predictiveAdapterForCommand(input = "") {
+  const command = String(input || "");
+  return Object.values(NEXUS_PREDICTIVE_ADAPTERS).find(adapter => adapter.commandPattern.test(command)) || null;
+}
+
+function isNexusMultiDomainPredictiveCommand(command = "") {
+  return Boolean(predictiveAdapterForCommand(command));
+}
+
+function evaluatePredictiveSignal(mode = "", observation = {}, state = null) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const records = [...(state?.records || []), observation].filter(Boolean);
+  const text = records.map(record => record.rawInput || "").join(" ").toLowerCase();
+  const missing = new Set();
+  const factors = [];
+  let riskLevel = adapter.riskLevels[1] || "watch";
+  let signalName = `${adapter.title.replace(" Modeler", "")} signal`;
+  let trajectory = records.length >= 2 ? "variable" : "unknown";
+
+  if (adapter.mode === "marketplace") {
+    ["buyer identity", "seller identity", "quantity", "quality grade", "price expectation", "transport availability", "payment terms", "verification status"].forEach(item => { if (!new RegExp(item.split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/maize|product|listing/.test(text) ? "Product/listing intent detected" : "Trade intent detected");
+    if (/verification.*missing|buyer verification is missing/.test(text)) riskLevel = "needs_verification";
+    else if (/cancel|closed/.test(text)) riskLevel = "high_risk";
+    else if (/buyer|seller|sell|listing/.test(text)) riskLevel = missing.size > 5 ? "incomplete" : "market_ready";
+    signalName = "Transaction readiness signal";
+  }
+  if (adapter.mode === "logistics") {
+    ["tracking number", "carrier", "origin", "destination", "expected delivery date", "cold-chain status", "destination contact"].forEach(item => { if (!new RegExp(item.split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/delayed/.test(text) ? "Delay report detected" : "Shipment/route intent detected");
+    if (/cold storage fails|cold chain/.test(text)) riskLevel = "cold_chain_risk";
+    else if (/delayed|delay/.test(text)) riskLevel = "elevated_delay_risk";
+    else riskLevel = missing.size > 4 ? "incomplete" : "route_ready";
+    signalName = "Shipment readiness and route risk signal";
+  }
+  if (adapter.mode === "workforce") {
+    ["target role", "resume", "experience", "skills", "certifications", "availability", "employer requirements"].forEach(item => { if (!new RegExp(item.split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/skills|training/.test(text) ? "Skill/training gap detected" : "Candidate application intent detected");
+    if (/skills.*missing|skill/.test(text)) riskLevel = "skill_gap";
+    else if (/certification|credential/.test(text)) riskLevel = "credential_gap";
+    else riskLevel = missing.size > 4 ? "incomplete" : "job_ready";
+    signalName = "Application readiness signal";
+  }
+  if (adapter.mode === "learning") {
+    ["learning goal", "current skill level", "available time", "digital literacy", "prior training", "language needs", "assessment score"].forEach(item => { if (!new RegExp(item.split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/study three days|learning plan/.test(text) ? "Study plan signal detected" : "Learning pathway intent detected");
+    if (/completion risk/.test(text)) riskLevel = "completion_risk";
+    else if (/skills|gap/.test(text)) riskLevel = "skill_gap";
+    else riskLevel = missing.size > 4 ? "blocked_missing_data" : "learning_ready";
+    signalName = "Learning pathway fit signal";
+  }
+  if (adapter.mode === "drone") {
+    ["field location", "mission purpose", "operator readiness", "equipment readiness", "battery status", "weather status", "approval", "flight area"].forEach(item => { if (!new RegExp(item.split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/weather|battery|approval/.test(text) ? "Operational readiness gap detected" : "Drone mission preparation intent detected");
+    if (/approval/.test(text)) riskLevel = "needs_approval";
+    else if (/weather is poor|battery readiness is missing/.test(text)) riskLevel = "elevated_operation_risk";
+    else riskLevel = missing.size > 4 ? "incomplete" : "mission_ready";
+    signalName = "Drone mission readiness signal";
+  }
+  if (adapter.mode === "communications") {
+    ["recipient", "contact method", "phone/email/handle", "message purpose", "tone", "confirmation status", "privacy/sensitivity"].forEach(item => { if (!new RegExp(item.split("/")[0].split(" ")[0], "i").test(text)) missing.add(item); });
+    factors.push(/whatsapp|call|send|provider/.test(text) ? "Communication handoff intent detected" : "Message draft readiness intent detected");
+    if (/phone number is missing|missing.*contact/.test(text)) riskLevel = "blocked_missing_data";
+    else if (/send|call|whatsapp|contact/.test(text)) riskLevel = "needs_confirmation";
+    else riskLevel = missing.size > 4 ? "incomplete" : "draft_ready";
+    signalName = "Message readiness signal";
+  }
+
+  const signal = {
+    id: `nexus-${adapter.mode}-predictive-signal-${Date.now()}`,
+    domain: adapter.mode,
+    signalName,
+    riskLevel,
+    trajectory,
+    confidenceLabel: missing.size > 5 ? "low" : missing.size ? "moderate" : "high",
+    dataQuality: missing.size ? "partial local/sandbox context" : "usable local/sandbox context",
+    explanation: `${adapter.title} evaluated structured local input for readiness, risk, missing data, and next safe action.`,
+    contributingFactors: factors,
+    missingData: Array.from(missing),
+    recommendedReview: "Review the local predictive summary before any configured external action.",
+    suggestedNextQuestions: adapter.examples.slice(0, 3),
+    createdAt: new Date().toISOString()
+  };
+  return { adapter, records, signal };
+}
+
+function buildScenarioSimulations(mode = "", evaluation = {}) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || evaluation.adapter || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const labels = {
+    marketplace: ["Transport is delayed", "Buyer verification is missing", "Payment terms are completed"],
+    logistics: ["Shipment is delayed two days", "Cold storage fails", "Origin and destination are verified"],
+    workforce: ["Training is completed", "Resume is missing experience", "Certification is added"],
+    learning: ["Study happens three days per week", "Digital literacy is low", "Assessment score improves"],
+    drone: ["Weather is poor", "Battery readiness is missing", "Approval is confirmed"],
+    communications: ["Phone number is missing", "Message is confirmed", "Recipient and purpose are clear"]
+  }[adapter.mode] || ["Missing data remains", "Required data is completed", "Review is confirmed"];
+  return labels.map(label => ({
+    scenario: label,
+    projectedSignal: `${adapter.mode} predictive signal may ${/missing|fails|delayed|poor|low/i.test(label) ? "worsen or remain blocked" : "improve after review"}.`,
+    reason: "Scenario projection uses local deterministic readiness signals and does not execute externally.",
+    reviewNote: adapter.noClaims
+  }));
+}
+
+function buildExpertChecklist(mode = "", evaluation = {}) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || evaluation.adapter || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  return [
+    "Input parsed",
+    "Structured record created",
+    "Risk/readiness signal generated",
+    "Trajectory assigned",
+    "Confidence/data quality assigned",
+    "Contributing factors explained",
+    "Missing data identified",
+    "Scenario projection generated",
+    "Expert summary available",
+    "Receipt/timeline recorded",
+    "Next safe action routed",
+    "No external action falsely claimed"
+  ].map(label => ({ label, checked: label === "No external action falsely claimed" || Boolean(evaluation.signal) || Boolean(adapter) }));
+}
+
+function buildReasoningTrace(mode = "", evaluation = {}) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || evaluation.adapter || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  return [
+    `Parsed command for ${adapter.title}.`,
+    "Created a structured local/sandbox predictive record.",
+    `Evaluated domains: ${adapter.domains.join(", ")}.`,
+    `Assigned signal: ${evaluation.signal?.signalName || "predictive signal"} / ${evaluation.signal?.riskLevel || "watch"}.`,
+    `Assigned trajectory: ${evaluation.signal?.trajectory || "unknown"}.`,
+    `Assigned confidence: ${evaluation.signal?.confidenceLabel || "insufficient_data"}.`,
+    "Identified missing data and contributing factors.",
+    "Generated scenarios, expert checklist, summary, and receipt.",
+    adapter.noClaims
+  ];
+}
+
+function buildExpertSummary(mode = "", evaluation = {}, state = {}) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || evaluation.adapter || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const signal = evaluation.signal || state.riskSignals?.[0] || {};
+  const text = [
+    `${adapter.title.replace(" Modeler", "")} Summary`,
+    "",
+    `Mode:\n${adapter.mode}`,
+    "",
+    `Recent local records:\n${(state.records || []).slice(-5).map(record => record.rawInput).join("\n") || "No records captured yet."}`,
+    "",
+    `Risk/readiness signal:\n${signal.signalName || "Insufficient data"} - ${signal.riskLevel || "blocked_missing_data"}`,
+    "",
+    `Trajectory:\n${signal.trajectory || "unknown"}`,
+    "",
+    `Confidence/data quality:\n${signal.confidenceLabel || "insufficient_data"} / ${signal.dataQuality || "insufficient data"}`,
+    "",
+    `Contributing factors:\n${(signal.contributingFactors || []).join("\n") || "No contributing factors yet."}`,
+    "",
+    `Missing data:\n${(signal.missingData || []).join("\n") || "No major missing data flagged."}`,
+    "",
+    `Scenario projections:\n${(state.scenarioSimulations || []).map(item => `${item.scenario}: ${item.projectedSignal}`).join("\n")}`,
+    "",
+    `Important system note:\n${adapter.noClaims}`
+  ].join("\n");
+  return { title: `${adapter.title.replace(" Modeler", "")} Summary`, text, generatedAt: new Date().toISOString(), localOnly: true, noExternalExecutionAuthorized: true };
+}
+
+function recordPredictiveReceipt(mode = "", event = {}) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  return {
+    id: `nexus-${adapter.mode}-predictive-receipt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    eventType: event.eventType || "predictive_evaluation_completed",
+    detail: event.detail || `${adapter.title} evaluated locally.`,
+    happened: event.detail || `${adapter.title} evaluated locally.`,
+    didNot: adapter.noClaims,
+    createdAt: new Date().toISOString(),
+    localOnly: true,
+    expertEvaluationMode: true
+  };
+}
+
+function routePredictiveCommand(input = "", source = "predictive-command") {
+  const parsed = parsePredictiveCommand(input);
+  if (!parsed.adapter) return false;
+  const mode = parsed.adapter.mode;
+  const currentState = {
+    ...createPredictiveState(mode),
+    ...(nexusMultiDomainPredictiveState[mode] || {})
+  };
+  const evaluation = evaluatePredictiveSignal(mode, parsed.observation, currentState);
+  const state = {
+    ...currentState,
+    mode,
+    title: parsed.adapter.title,
+    updatedAt: new Date().toISOString(),
+    records: evaluation.records,
+    riskSignals: [evaluation.signal, ...(currentState.riskSignals || [])].slice(0, 20),
+    trends: { latestTrajectory: evaluation.signal.trajectory, recordCount: evaluation.records.length },
+    trajectory: [{ mode, trajectory: evaluation.signal.trajectory, createdAt: new Date().toISOString() }],
+    missingData: evaluation.signal.missingData,
+    confidence: { label: evaluation.signal.confidenceLabel, dataQuality: evaluation.signal.dataQuality },
+    scenarioSimulations: buildScenarioSimulations(mode, evaluation),
+    expertChecklist: buildExpertChecklist(mode, evaluation),
+    reasoningTrace: buildReasoningTrace(mode, evaluation),
+    receipts: []
+  };
+  state.expertSummary = buildExpertSummary(mode, evaluation, state);
+  state.receipts = [
+    recordPredictiveReceipt(mode, { eventType: "predictive_record_captured", detail: `${parsed.adapter.title} captured a local predictive record.` }),
+    recordPredictiveReceipt(mode, { eventType: "predictive_signal_generated", detail: `${evaluation.signal.signalName}: ${evaluation.signal.riskLevel}.` }),
+    ...(currentState.receipts || [])
+  ].slice(0, 30);
+  nexusMultiDomainPredictiveState = { ...nexusMultiDomainPredictiveState, [mode]: state };
+  saveNexusRuntimeMemory();
+  const mission = buildNexusMultiDomainPredictiveMission(mode, input, state, source);
+  return setNexusAgenticCommandResult(mission, `${parsed.adapter.title} updated. Review snapshot, trajectory, factors, missing data, scenarios, checklist, reasoning trace, summary, and receipts.`);
+}
+
+function buildNexusMultiDomainPredictiveMission(mode = "", command = "", state = null, source = "predictive-command") {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const signal = state?.riskSignals?.[0] || {};
+  return {
+    id: `nexus-${adapter.mode}-predictive-mission-${Date.now()}`,
+    title: adapter.title,
+    mode: adapter.missionMode,
+    submode: `${adapter.mode}_predictive_intelligence_modeler`,
+    goal: command,
+    status: "predictive_support_ready",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userInput: command,
+    source,
+    sandbox: Boolean(nexusDemoDataState?.loaded),
+    localOnly: true,
+    expertEvaluationMode: true,
+    collectedInfo: [`Signal: ${signal.riskLevel || "blocked_missing_data"}`, `Trajectory: ${signal.trajectory || "unknown"}`, `Confidence: ${state?.confidence?.label || "insufficient_data"}`],
+    missingInfo: state?.missingData || [],
+    suggestedQuestions: adapter.examples.slice(0, 4),
+    nextStep: "Review the predictive summary and collect missing data before any gated external action.",
+    riskLevel: /risk|blocked|needs|high/i.test(signal.riskLevel || "") ? "high" : "medium",
+    confirmationRequired: false,
+    confirmationStatus: "not_required_for_local_predictive_review",
+    executionStatus: "completed_local_predictive_support",
+    providerReadiness: "local_predictive_support_only",
+    actionPlan: ["Parse input", "Create structured record", "Generate signal", "Explain reasoning", "Prepare next safe action"],
+    receipts: state?.receipts || [],
+    timeline: (state?.receipts || []).map(receipt => ({ at: receipt.createdAt, event: receipt.eventType, detail: receipt.detail })),
+    relatedRecords: state?.records || [],
+    outcome: { status: signal.riskLevel || "blocked_missing_data", verified: true, noExternalExecution: true },
+    safetyNote: adapter.noClaims,
+    actionType: `${adapter.mode}_predictive_modeler`
+  };
+}
+
+function renderPredictivePanel(mode = "", state = null) {
+  const adapter = NEXUS_PREDICTIVE_ADAPTERS[mode] || NEXUS_PREDICTIVE_ADAPTERS.marketplace;
+  const panelState = state || nexusMultiDomainPredictiveState[mode] || createPredictiveState(mode);
+  const signal = panelState.riskSignals?.[0] || {};
+  return `
+    <section class="nexus-predictive-panel" ${adapter.panelSelector}="true" data-nexus-predictive-mode="${escapeHtml(adapter.mode)}" data-local-only="true" data-no-external-execution="true" aria-label="${escapeHtml(translateText(adapter.title))}">
+      <header class="nexus-chronic-predictive-header">
+        <span class="eyebrow">${escapeHtml(translateText("Multi-domain predictive intelligence"))}</span>
+        <h3>${escapeHtml(translateText(adapter.title))}</h3>
+        <p>${escapeHtml(translateText(`${adapter.title} structures local input, detects risk/readiness signals, explains reasoning, and prepares the next safe action. ${adapter.noClaims}`))}</p>
+      </header>
+      <div class="nexus-chronic-predictive-grid">
+        <article class="nexus-predictive-snapshot" data-nexus-predictive-snapshot="true"><strong>${escapeHtml(translateText("Current Snapshot"))}</strong><span>Signal: ${escapeHtml(signal.signalName || "No signal yet")}</span><span>Risk/readiness: ${escapeHtml(signal.riskLevel || "blocked_missing_data")}</span><span>Trajectory: ${escapeHtml(signal.trajectory || "unknown")}</span><span>Confidence: ${escapeHtml(panelState.confidence?.label || "insufficient_data")}</span><span>Records: ${escapeHtml(String(panelState.records?.length || 0))}</span></article>
+        <article class="nexus-predictive-trends" data-nexus-predictive-trends="true"><strong>${escapeHtml(translateText("Trends / Trajectory"))}</strong><span>Latest trajectory: ${escapeHtml(panelState.trends?.latestTrajectory || "unknown")}</span><span>Trajectory values: ${escapeHtml(nexusPredictiveTrajectoryValues().join(", "))}</span><span>Confidence values: ${escapeHtml(nexusPredictiveConfidenceValues().join(", "))}</span></article>
+        <article class="nexus-predictive-factors" data-nexus-predictive-factors="true"><strong>${escapeHtml(translateText("Contributing Factors"))}</strong>${(signal.contributingFactors?.length ? signal.contributingFactors : ["No contributing factors yet. Add domain context."]).map(item => `<span>${escapeHtml(item)}</span>`).join("")}</article>
+        <article class="nexus-predictive-missing-data" data-nexus-predictive-missing-data="true"><strong>${escapeHtml(translateText("Missing Data"))}</strong>${(panelState.missingData?.length ? panelState.missingData : ["No major missing data flagged yet."]).map(item => `<span>${escapeHtml(item)}</span>`).join("")}</article>
+      </div>
+      <div class="nexus-chronic-predictive-grid">
+        <article class="nexus-predictive-scenarios" data-nexus-predictive-scenarios="true"><strong>${escapeHtml(translateText("Scenario Simulator"))}</strong>${(panelState.scenarioSimulations || []).map(item => `<span><b>${escapeHtml(item.scenario)}</b>: ${escapeHtml(item.projectedSignal)}</span>`).join("")}</article>
+        <article class="nexus-predictive-checklist" data-nexus-predictive-checklist="true"><strong>${escapeHtml(translateText("Expert Checklist"))}</strong>${(panelState.expertChecklist || []).map(item => `<span>${item.checked ? "Checked" : "Needs context"}: ${escapeHtml(item.label)}</span>`).join("")}</article>
+        <article class="nexus-predictive-reasoning-trace" data-nexus-predictive-reasoning-trace="true"><strong>${escapeHtml(translateText("Reasoning Trace"))}</strong>${(panelState.reasoningTrace || []).map((item, index) => `<span>${index + 1}. ${escapeHtml(item)}</span>`).join("")}</article>
+        <article class="nexus-predictive-receipts" data-nexus-predictive-receipts="true"><strong>${escapeHtml(translateText("Receipts / Timeline"))}</strong>${(panelState.receipts?.length ? panelState.receipts : [{ detail: "No predictive receipts yet." }]).slice(0, 6).map(item => `<span>${escapeHtml(item.detail || item.happened || "Receipt recorded locally.")}</span>`).join("")}</article>
+      </div>
+      <article class="nexus-predictive-summary" data-nexus-predictive-summary="true">
+        <strong>${escapeHtml(translateText("Expert Summary"))}</strong>
+        <pre>${escapeHtml(panelState.expertSummary?.text || "Enter a predictive command to generate a summary.")}</pre>
+      </article>
+      <article class="nexus-predictive-command-examples" data-nexus-predictive-command-examples="true">
+        <strong>${escapeHtml(translateText("Command Examples"))}</strong>
+        <div>${adapter.examples.map(command => `<button type="button" data-nexus-command-prefill="${escapeHtml(command)}">${escapeHtml(command)}</button>`).join("")}</div>
+      </article>
+    </section>
+  `;
+}
+
+function renderNexusPredictiveIntelligenceIndex() {
+  const cards = [
+    ["chronic", "Chronic Health", nexusChronicPredictiveModelerState?.riskSignals?.[0], nexusChronicPredictiveModelerState?.receipts?.length || 0, "Nexus, show my chronic risk trend."],
+    ["agriculture", "Agriculture", nexusAgriculturePredictiveModelerState?.riskSignals?.[0], nexusAgriculturePredictiveModelerState?.receipts?.length || 0, "Nexus, show my field risk trend."],
+    ...Object.values(NEXUS_PREDICTIVE_ADAPTERS).map(adapter => [adapter.mode, adapter.title.replace(" Predictive Intelligence Modeler", ""), nexusMultiDomainPredictiveState[adapter.mode]?.riskSignals?.[0], nexusMultiDomainPredictiveState[adapter.mode]?.receipts?.length || 0, adapter.examples[0]])
+  ];
+  return `
+    <section class="nexus-predictive-panel" data-nexus-platform-predictive-index="true" aria-label="${escapeHtml(translateText("Nexus Predictive Intelligence Engine"))}">
+      <header class="nexus-chronic-predictive-header"><span class="eyebrow">${escapeHtml(translateText("Predictive Intelligence"))}</span><h3>${escapeHtml(translateText("Nexus Predictive Intelligence Engine"))}</h3><p>${escapeHtml(translateText("Open predictive engines for chronic health, agriculture, marketplace, logistics, workforce, learning, drone operations, and communications."))}</p></header>
+      <div class="nexus-chronic-predictive-grid">${cards.map(([mode, label, signal, receipts, command]) => `<article data-nexus-predictive-index-card="${escapeHtml(mode)}"><strong>${escapeHtml(label)}</strong><span>Latest signal: ${escapeHtml(signal?.riskLevel || "not started")}</span><span>Trajectory: ${escapeHtml(signal?.trajectory || "unknown")}</span><span>Receipts: ${escapeHtml(String(receipts))}</span><button type="button" data-nexus-command-prefill="${escapeHtml(command)}">${escapeHtml(translateText("Open modeler"))}</button></article>`).join("")}</div>
+    </section>
+  `;
+}
+
 function setNexusAgenticCommandResult(mission, message = "") {
   const latestReceipt = mission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
   nexusAgenticBrainLastResult = {
@@ -28713,7 +29240,7 @@ function setNexusAgenticCommandResult(mission, message = "") {
 
 function submitNexusAgenticCommandRuntime(command = "", input = null, source = "command-submit", event = null) {
   const normalizedCommand = String(command || "").trim();
-  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand) && !isNexusAgriculturePredictiveModelerCommand(normalizedCommand)) return false;
+  if (!shouldNexusAgenticCommandRuntimeHandle(normalizedCommand) && !isNexusChronicPredictiveModelerCommand(normalizedCommand) && !isNexusAgriculturePredictiveModelerCommand(normalizedCommand) && !isNexusMultiDomainPredictiveCommand(normalizedCommand)) return false;
   const handled = runNexusAgenticCommandRuntime(normalizedCommand, { source });
   if (!handled) return false;
   event?.preventDefault?.();
@@ -28863,6 +29390,7 @@ function showNexusAgenticMissionStatus(command = "") {
 function runNexusAgenticCommandRuntime(command = "", options = {}) {
   if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
   if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
+  if (isNexusMultiDomainPredictiveCommand(command)) return routePredictiveCommand(command, options.source || "agentic-command-runtime");
   const intent = parseNexusAgenticCommandIntent(command);
   if (!intent) return false;
   if (intent.actionType === "continue") return continueNexusAgenticMission(command);
@@ -29048,6 +29576,7 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalizedLower = normalized.toLowerCase();
   if (isNexusChronicPredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusAgriculturePredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
+  if (isNexusMultiDomainPredictiveCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (shouldNexusAgenticCommandRuntimeHandle(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
@@ -47289,7 +47818,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();
@@ -47305,7 +47834,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     if (!input) return;
     const command = input.value?.trim() || "";
     if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
-    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
+    const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
     event.stopPropagation();
