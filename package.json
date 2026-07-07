@@ -87,6 +87,7 @@
     "qa:nexus-persistent-memory-layer": "node scripts/nexus-persistent-memory-layer-qa.js",
     "qa:nexus-universal-navigation-runtime": "node scripts/nexus-universal-navigation-runtime-qa.js",
     "qa:nexus-demo-provider-dataset": "node scripts/nexus-demo-provider-dataset-qa.js",
+    "qa:nexus-user-testing-runtime": "node scripts/nexus-user-testing-runtime-qa.js",
     "qa:nexus-chronic-health-predictive-modeler": "node scripts/nexus-chronic-health-predictive-modeler-qa.js",
     "qa:nexus-agriculture-predictive-intelligence": "node scripts/nexus-agriculture-predictive-intelligence-qa.js",
     "qa:nexus-marketplace-predictive-intelligence": "node scripts/nexus-marketplace-predictive-intelligence-qa.js",

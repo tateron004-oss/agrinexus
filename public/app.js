@@ -82,6 +82,9 @@ let selectedNexusDashboardModeId = "agriculture-support";
 let nexusRealProviderTestingStatus = null;
 let nexusRealProviderTestingStatusLoading = false;
 let nexusRealProviderTestingLastResult = null;
+let nexusUserTestingRuntimeStatus = null;
+let nexusUserTestingRuntimeLoading = false;
+let nexusUserTestingRuntimeLastResult = null;
 let nexusProductionRuntimeStatus = null;
 let nexusProductionRuntimeCapabilities = [];
 let nexusProductionRuntimeLastPlan = null;
@@ -23138,6 +23141,174 @@ function renderNexusDemoSandboxControls(location = "command-landing") {
   `;
 }
 
+function renderNexusUserTestingRuntimePanel() {
+  const status = nexusUserTestingRuntimeStatus || {};
+  const counts = status.counts || {};
+  const database = status.database || {};
+  const lanes = status.providers?.lanes || [];
+  const roles = status.roles || [];
+  const result = nexusUserTestingRuntimeLastResult;
+  const localMemoryMessage = database.userMessage || "Local memory active. Production database not connected.";
+  const topLanes = lanes.slice(0, 8);
+  return `
+    <section class="nexus-user-testing-runtime nexus-glass-card" data-nexus-user-testing-runtime="true" data-no-secret-values="true" aria-label="${escapeHtml(translateText("End-to-end user testing runtime"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Runtime Layer"))}</span>
+        <strong>${escapeHtml(translateText("End-to-end user testing layer"))}</strong>
+        <p>${escapeHtml(translateText("Persistent memory, predictive next steps, provider credential gates, consent, receipts, roles, and verification are active for local-safe testing."))}</p>
+      </div>
+      <div class="nexus-demo-status-strip" data-nexus-user-testing-database-status="true">
+        ${renderNexusStatusBadge(database.configured ? "configured" : "local_only", { label: database.configured ? "Database configured" : "Local memory active" })}
+        ${renderNexusStatusBadge("not_executed", { label: "No silent execution" })}
+        ${renderNexusStatusBadge("confirmation_required", { label: "Consent gates" })}
+        <span>${escapeHtml(translateText(localMemoryMessage))}</span>
+      </div>
+      <div class="nexus-command-status-summary" data-nexus-user-testing-counts="true">
+        <article><strong>${escapeHtml(String(counts.records || 0))}</strong><span>${escapeHtml(translateText("Memory records"))}</span></article>
+        <article><strong>${escapeHtml(String(counts.receipts || 0))}</strong><span>${escapeHtml(translateText("Receipts"))}</span></article>
+        <article><strong>${escapeHtml(String(counts.predictions || 0))}</strong><span>${escapeHtml(translateText("Predictions"))}</span></article>
+        <article><strong>${escapeHtml(String(counts.consentGates || 0))}</strong><span>${escapeHtml(translateText("Consent gates"))}</span></article>
+      </div>
+      <div class="nexus-demo-sandbox-actions" data-nexus-user-testing-actions="true">
+        <button type="button" class="primary" data-nexus-user-testing-action="refresh">${escapeHtml(translateText("Refresh runtime"))}</button>
+        <button type="button" data-nexus-user-testing-action="run-harness">${escapeHtml(translateText("Run E2E harness"))}</button>
+        <button type="button" data-nexus-user-testing-action="save-sample-record">${escapeHtml(translateText("Save sample memory"))}</button>
+        <button type="button" data-nexus-user-testing-action="predict-next-step">${escapeHtml(translateText("Predict next step"))}</button>
+        <button type="button" data-nexus-user-testing-action="prepare-action">${escapeHtml(translateText("Prepare gated action"))}</button>
+        <button type="button" data-nexus-user-testing-action="create-consent">${escapeHtml(translateText("Create consent gate"))}</button>
+        <button type="button" data-nexus-user-testing-action="verify-outcome">${escapeHtml(translateText("Verify outcome"))}</button>
+      </div>
+      ${result ? `
+        <article class="nexus-smart-empty-state" data-nexus-user-testing-last-result="true">
+          <strong>${escapeHtml(translateText(result.title || "Latest runtime result"))}</strong>
+          <span>${escapeHtml(translateText(result.message || result.status || "Runtime action completed locally."))}</span>
+        </article>
+      ` : ""}
+      <div class="nexus-demo-record-grid" data-nexus-user-testing-role-surfaces="true">
+        <article>
+          <div>
+            <strong>${escapeHtml(translateText("Role-based dashboards"))}</strong>
+            <small>${escapeHtml(translateText("Surfaces remain review/preparation focused unless configured and approved."))}</small>
+          </div>
+          ${roles.slice(0, 11).map(role => `
+            <button type="button" class="nexus-demo-mission-button" data-nexus-role-surface="${escapeHtml(role.name || role)}" data-nexus-user-testing-action="refresh">
+              <b>${escapeHtml(translateText(role.name || role))}</b>
+              <span>${escapeHtml(translateText((role.availableActions || ["review memory"]).join(", ")))}</span>
+              <small>${escapeHtml(translateText("No silent provider handoff"))}</small>
+            </button>
+          `).join("")}
+        </article>
+        <article data-nexus-user-testing-provider-lanes="true">
+          <div>
+            <strong>${escapeHtml(translateText("Provider activation gates"))}</strong>
+            <small>${escapeHtml(translateText(`${status.providers?.readyCount || 0} configured, ${status.providers?.blockedCount || 0} credential-gated`))}</small>
+          </div>
+          ${topLanes.map(lane => `
+            <p data-nexus-user-testing-provider-lane="${escapeHtml(lane.id)}">
+              <b>${escapeHtml(translateText(lane.name))}</b><br>
+              <span>${escapeHtml(translateText(lane.testabilityState || "missing_config"))}</span>
+              ${(lane.missingEnvNames || []).length ? `<small>${escapeHtml(translateText("Missing:"))} ${escapeHtml(lane.missingEnvNames.join(", "))}</small>` : `<small>${escapeHtml(translateText("Configured env shape detected"))}</small>`}
+            </p>
+          `).join("")}
+        </article>
+      </div>
+      <small>${escapeHtml(translateText("Safety: Nexus does not diagnose, prescribe, pay, book, dispatch, share location, send messages, contact providers, or execute external actions from this layer without configured credentials, consent, confirmation, audit, and verification."))}</small>
+    </section>
+  `;
+}
+
+async function refreshNexusUserTestingRuntimeStatus(options = {}) {
+  if (nexusUserTestingRuntimeLoading) return nexusUserTestingRuntimeStatus;
+  nexusUserTestingRuntimeLoading = true;
+  try {
+    const status = await request("/api/nexus/user-testing/status");
+    nexusUserTestingRuntimeStatus = status;
+    return status;
+  } catch (error) {
+    nexusUserTestingRuntimeLastResult = {
+      title: "Runtime status unavailable",
+      message: error.message || "Nexus could not load the user testing runtime."
+    };
+    return nexusUserTestingRuntimeStatus;
+  } finally {
+    nexusUserTestingRuntimeLoading = false;
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+  }
+}
+
+function ensureNexusUserTestingRuntimeBootstrap() {
+  if (nexusUserTestingRuntimeStatus || nexusUserTestingRuntimeLoading) return;
+  setTimeout(() => {
+    if (experienceMode === "user" && document.querySelector("[data-nexus-user-testing-runtime='true']")) {
+      refreshNexusUserTestingRuntimeStatus({ rerender: true }).catch(() => {});
+    }
+  }, 0);
+}
+
+async function runNexusUserTestingRuntimeAction(action = "refresh") {
+  const safeAction = String(action || "refresh");
+  try {
+    let response;
+    if (safeAction === "run-harness") {
+      response = await request("/api/nexus/user-testing/e2e-harness");
+      nexusUserTestingRuntimeLastResult = { title: "E2E harness complete", message: `${response.flowsCreated || 0} local-safe flows prepared. No live provider action occurred.` };
+    } else if (safeAction === "save-sample-record") {
+      response = await request("/api/nexus/user-testing/memory", {
+        method: "POST",
+        body: {
+          type: "health_chronic_care",
+          title: "Controlled user testing memory",
+          summary: "Local memory record for chronic care, agriculture, workforce, and provider-ready workflow testing.",
+          ownerRole: "Standard User",
+          data: { diabetes: "tracking only", hypertension: "tracking only", noDiagnosis: true }
+        }
+      });
+      nexusUserTestingRuntimeLastResult = { title: "Memory saved", message: response.record?.title || "Local memory record saved." };
+    } else if (safeAction === "predict-next-step") {
+      response = await request("/api/nexus/user-testing/predict", {
+        method: "POST",
+        body: { domain: "controlled_user_testing", signals: ["chronic care", "crop issue", "marketplace", "workforce"] }
+      });
+      nexusUserTestingRuntimeLastResult = { title: "Prediction prepared", message: `${response.prediction?.riskLevel || "watch"} risk, ${response.prediction?.confidence || "low"} confidence.` };
+    } else if (safeAction === "prepare-action") {
+      response = await request("/api/nexus/user-testing/execute", {
+        method: "POST",
+        body: { actionType: "send_sms", confirmed: false }
+      });
+      nexusUserTestingRuntimeLastResult = { title: "Action gated", message: response.execution?.outcome || "Sensitive action requires confirmation." };
+    } else if (safeAction === "create-consent") {
+      response = await request("/api/nexus/user-testing/consent", {
+        method: "POST",
+        body: {
+          actionType: "provider_referral_preparation",
+          riskTier: "high",
+          actionSummary: "Prepare a provider-ready summary for review.",
+          dataIncluded: ["summary", "user-entered details", "receipt id"],
+          recipientDisplay: "Provider not selected",
+          providerDisplay: "Provider not connected"
+        }
+      });
+      nexusUserTestingRuntimeLastResult = { title: "Consent gate created", message: response.consentGate?.actionSummary || "Consent gate created." };
+    } else if (safeAction === "verify-outcome") {
+      response = await request("/api/nexus/user-testing/verify", {
+        method: "POST",
+        body: { status: "completed_local", summary: "Local user testing runtime verified without external execution." }
+      });
+      nexusUserTestingRuntimeLastResult = { title: "Outcome verified", message: response.verification?.summary || "Outcome verified locally." };
+    } else {
+      response = await refreshNexusUserTestingRuntimeStatus({ rerender: false });
+      nexusUserTestingRuntimeLastResult = { title: "Runtime refreshed", message: response?.database?.userMessage || "Runtime status refreshed." };
+    }
+    await refreshNexusUserTestingRuntimeStatus({ rerender: false });
+    toast(nexusUserTestingRuntimeLastResult.message);
+  } catch (error) {
+    nexusUserTestingRuntimeLastResult = { title: "Runtime action failed safely", message: error.message || "Nexus kept the workflow safe." };
+    toast(nexusUserTestingRuntimeLastResult.message);
+  }
+  renderUserWorkspace();
+  return true;
+}
+
 function nexusFormDataForWorkflow(workflowId = "") {
   const workspace = $("#nexus-workspace");
   const values = {};
@@ -31401,6 +31572,7 @@ function renderUserWorkspace() {
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
         ${renderNexusDemoSandboxControls("command-landing")}
+        ${renderNexusUserTestingRuntimePanel()}
         ${renderNexusPremiumMiniAppLauncher()}
         ${renderNexusDemoRecordsPanel()}
         ${renderNexusAgenticMissionWorkspace()}
@@ -31470,6 +31642,7 @@ function renderUserWorkspace() {
       }
     }, 0);
   }
+  ensureNexusUserTestingRuntimeBootstrap();
   if (!nexusProductionReadinessStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-production-rails='true']")) {
@@ -46699,6 +46872,13 @@ function handleNexusStandardUserHomeClick(event) {
   }
   if (handleNexusDemoSandboxClick(event)) return true;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  const userTestingAction = eventTarget?.closest?.("[data-nexus-user-testing-action]");
+  if (userTestingAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return runNexusUserTestingRuntimeAction(userTestingAction.dataset.nexusUserTestingAction || "refresh");
+  }
   const agenticRuntimeAction = eventTarget?.closest?.("[data-nexus-agentic-runtime-action]");
   if (agenticRuntimeAction) {
     event.preventDefault();
@@ -47245,6 +47425,16 @@ function bindNexusStandardUserHomeControls() {
     element.addEventListener("click", event => {
       handleNexusDemoSandboxClick(event);
     });
+  });
+  $$("[data-nexus-user-testing-action]").forEach(element => {
+    if (element.dataset.nexusUserTestingBound === "true") return;
+    element.dataset.nexusUserTestingBound = "true";
+    element.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      runNexusUserTestingRuntimeAction(element.dataset.nexusUserTestingAction || "refresh");
+    }, true);
   });
   $$("[data-nexus-command-center-submit], [data-nexus-mode-shortcut]").forEach(element => {
     if (element.dataset.nexusHomeBound === "true") return;

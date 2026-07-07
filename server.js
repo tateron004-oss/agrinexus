@@ -13,6 +13,7 @@ const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
 const nexusDemoProviderDataset = require("./server/nexus-demo-provider-dataset.js");
+const nexusUserTestingRuntime = require("./server/nexus-user-testing-runtime.js");
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
@@ -36186,6 +36187,94 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/status" && req.method === "GET") {
+    return send(res, 200, nexusUserTestingRuntime.userTestingReadinessSnapshot(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/memory" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      records: nexusUserTestingRuntime.listMemoryRecords(db, {
+        type: url.searchParams.get("type") || "",
+        includeArchived: url.searchParams.get("includeArchived") === "true"
+      }),
+      queryResults: url.searchParams.get("q") ? nexusUserTestingRuntime.searchMemoryRecords(db, url.searchParams.get("q")) : null,
+      noSecretValues: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/memory" && req.method === "POST") {
+    const body = await readBody(req);
+    const record = nexusUserTestingRuntime.createMemoryRecord(db, body, user);
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, noSecretValues: true });
+  }
+
+  const userTestingUpdateMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/update$/);
+  if (userTestingUpdateMatch && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusUserTestingRuntime.updateMemoryRecord(db, userTestingUpdateMatch[1], body);
+    await writeDb(db);
+    return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
+  }
+
+  const userTestingArchiveMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/archive$/);
+  if (userTestingArchiveMatch && req.method === "POST") {
+    const result = nexusUserTestingRuntime.archiveMemoryRecord(db, userTestingArchiveMatch[1]);
+    await writeDb(db);
+    return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/predict" && req.method === "POST") {
+    const body = await readBody(req);
+    const prediction = nexusUserTestingRuntime.generatePrediction(db, body, process.env);
+    await writeDb(db);
+    return send(res, 200, { ok: true, prediction, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/providers" && req.method === "GET") {
+    return send(res, 200, nexusUserTestingRuntime.providerActivationSnapshot(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/execute" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusUserTestingRuntime.runExecutionRequest(db, body, user);
+    await writeDb(db);
+    return send(res, 200, { ...result, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/consent" && req.method === "POST") {
+    const body = await readBody(req);
+    const consentGate = nexusUserTestingRuntime.createConsentGate(db, body);
+    await writeDb(db);
+    return send(res, 200, { ok: true, consentGate, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/verify" && req.method === "POST") {
+    const body = await readBody(req);
+    const verification = nexusUserTestingRuntime.verifyOutcome(db, body, user);
+    await writeDb(db);
+    return send(res, 200, { ok: true, verification, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/roles" && req.method === "GET") {
+    return send(res, 200, nexusUserTestingRuntime.roleDashboardSnapshot(db, url.searchParams.get("role") || "Standard User", process.env));
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/e2e-harness" && req.method === "GET") {
+    const result = nexusUserTestingRuntime.runUserTestingHarness(db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/security" && req.method === "GET") {
+    return send(res, 200, nexusUserTestingRuntime.securityAuditSnapshot(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/user-testing/readiness" && req.method === "GET") {
+    return send(res, 200, nexusUserTestingRuntime.userTestingReadinessSnapshot(db, process.env));
   }
 
   if (url.pathname === "/api/nexus/demo-providers/catalog" && req.method === "GET") {
