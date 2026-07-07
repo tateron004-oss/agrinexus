@@ -12,6 +12,7 @@ const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-a
 const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
+const nexusDemoProviderDataset = require("./server/nexus-demo-provider-dataset.js");
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
@@ -591,6 +592,8 @@ function nexusRealProviderStatus(db, env = process.env) {
     status: "completed",
     cards,
     readiness: cards,
+    demoProviderCatalog: nexusDemoProviderDataset.summarizeDemoProviders(),
+    demoProviderSample: nexusDemoProviderDataset.getNexusDemoProviders().slice(0, 12),
     ownerTestRecipient: ownerRecipient,
     generatedAt: new Date().toISOString(),
     safety: {
@@ -36183,6 +36186,10 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/demo-providers/catalog" && req.method === "GET") {
+    return send(res, 200, nexusDemoProviderDataset.getNexusDemoProviderCatalog());
   }
 
   if (url.pathname === "/api/nexus/demo-data/status" && req.method === "GET") {

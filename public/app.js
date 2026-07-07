@@ -80,6 +80,7 @@ let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let selectedNexusDashboardModeId = "agriculture-support";
 let nexusRealProviderTestingStatus = null;
+let nexusRealProviderTestingStatusLoading = false;
 let nexusRealProviderTestingLastResult = null;
 let nexusProductionRuntimeStatus = null;
 let nexusProductionRuntimeCapabilities = [];
@@ -17405,6 +17406,38 @@ function renderNexusRealProviderStatusCards() {
   }).join("");
 }
 
+function renderNexusDemoProviderCoveragePanel() {
+  const catalog = nexusRealProviderTestingStatus?.demoProviderCatalog;
+  if (!catalog || !Array.isArray(catalog.lanes)) {
+    return `
+      <section class="nexus-demo-provider-coverage" data-nexus-demo-provider-coverage="loading" aria-label="${translateText("Demo provider coverage")}">
+        <strong>${translateText("Demo provider coverage")}</strong>
+        <p>${translateText("Click Refresh provider status to load local-safe demo provider records for end-to-end testing.")}</p>
+      </section>
+    `;
+  }
+  return `
+    <section class="nexus-demo-provider-coverage" data-nexus-demo-provider-coverage="loaded" aria-label="${translateText("Demo provider coverage")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Local-safe test data")}</span>
+        <strong>${translateText("Demo provider coverage")}</strong>
+      </div>
+      <p>${escapeHtml(catalog.totalProviders)} ${translateText("demo providers across")} ${escapeHtml(catalog.totalLanes)} ${translateText("service lanes. These are local-safe test records, not live connected providers.")}</p>
+      <div class="nexus-real-provider-card-grid" aria-label="${translateText("Demo provider lanes")}">
+        ${catalog.lanes.map(lane => `
+          <article class="nexus-real-provider-card" data-demo-provider-lane="${escapeHtml(lane.serviceLane)}">
+            <strong>${escapeHtml(lane.serviceLane.replace(/_/g, " "))}</strong>
+            <span>${escapeHtml(String(lane.count))} ${translateText("demo provider records")}</span>
+            <small>${translateText("Status")}: ${escapeHtml((lane.statuses || []).join(", ") || "local_only")}</small>
+            <small>${translateText("Sample")}: ${escapeHtml((lane.sampleProviderNames || []).join("; "))}</small>
+            <small>${translateText("Demo provider")} · ${translateText("Local-safe test data")} · ${translateText("Not live connected")}</small>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusRealProviderTestControls() {
   return NEXUS_REAL_PROVIDER_TEST_CONTROLS.map(control => `
     <article class="nexus-real-provider-control" data-real-provider-control="${escapeHtml(control.id)}">
@@ -24802,6 +24835,7 @@ function renderNexusActivationCenter() {
       <summary>${escapeHtml(translateText("Activation Center"))}</summary>
       <p>${escapeHtml(translateText("Manage provider, vendor, communications, healthcare, agriculture, workforce, maps, and offline lanes locally. Secret values are never stored here."))}</p>
       ${renderNexusDemoSandboxControls("activation-center")}
+      ${renderNexusDemoProviderCoveragePanel()}
       <section class="nexus-online-readiness-summary" data-nexus-online-readiness-summary="true" aria-label="${escapeHtml(translateText("Nexus Online Readiness"))}">
         <div>
           <span class="eyebrow">${escapeHtml(translateText("Operator"))}</span>
@@ -30881,6 +30915,7 @@ function renderNexusRealProviderTestingPanel() {
       <div class="nexus-real-provider-card-grid" aria-label="${translateText("Provider status cards")}">
         ${renderNexusRealProviderStatusCards()}
       </div>
+      ${renderNexusDemoProviderCoveragePanel()}
       <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
         ${renderNexusRealProviderTestControls()}
       </div>
@@ -30898,14 +30933,30 @@ function renderNexusRealProviderTestingPanel() {
 async function refreshNexusRealProviderTestingStatus() {
   const status = $("#nexusRealProviderTestingStatus");
   if (status) status.textContent = "Checking provider status...";
+  nexusRealProviderTestingStatusLoading = true;
   try {
     nexusRealProviderTestingStatus = await request("/api/nexus/tools/status");
     renderUserWorkspace();
     const refreshed = $("#nexusRealProviderTestingStatus");
     if (refreshed) refreshed.textContent = "Provider status loaded.";
   } catch (error) {
+    nexusRealProviderTestingStatus = {
+      ok: false,
+      cards: [],
+      errorMessage: error.message || "Provider status failed safely."
+    };
     if (status) status.textContent = error.message || "Provider status failed safely.";
+  } finally {
+    nexusRealProviderTestingStatusLoading = false;
   }
+}
+
+function ensureNexusRealProviderStatusBootstrap() {
+  if (nexusRealProviderTestingStatus || nexusRealProviderTestingStatusLoading) return;
+  nexusRealProviderTestingStatusLoading = true;
+  window.setTimeout(() => {
+    void refreshNexusRealProviderTestingStatus();
+  }, 0);
 }
 
 function realProviderControlPayload(controlId) {
@@ -31335,6 +31386,7 @@ function handleNexusPlatformDashboardClick(event) {
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
+  ensureNexusRealProviderStatusBootstrap();
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
   // Review farm, crop, route, and field support options.
