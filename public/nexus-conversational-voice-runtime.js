@@ -223,6 +223,30 @@
     }
     renderTranscript(text, meta.confidence);
     setState("reasoning", "Nexus is reasoning safely");
+    const agricultureRuntime = root?.NexusAgricultureCollaborationRuntime;
+    if (agricultureRuntime?.shouldHandleBeforeLegacy?.(text, { language: currentLanguage(), inputType: meta.source || "voice" })) {
+      const result = await agricultureRuntime.process(text, {
+        language: currentLanguage(),
+        inputType: meta.source || "voice",
+        sourceMode: "conversation_shell"
+      });
+      agricultureRuntime.mount?.();
+      agricultureRuntime.render?.(result);
+      const answer = result.userVisibleStatus || result.answer || result.message || "Nexus prepared an agriculture packet locally. No external agriculture action was executed.";
+      renderDialogueResult({
+        answer,
+        spokenSummary: answer,
+        recommendedNextStep: "Review the agriculture packet, source labels, missing credentials, and receipt.",
+        blockedActions: ["No agriculture execution was authorized."],
+        sources: result.sourceLabels || []
+      });
+      if (!muted && meta.source !== "typed") {
+        speak(answer, { language: currentLanguage() });
+      } else {
+        setState("idle", "Agriculture packet prepared safely");
+      }
+      return result;
+    }
     const dialogue = root?.NexusOpenDialogueRuntime;
     let result = null;
     if (dialogue?.respondAsync) {

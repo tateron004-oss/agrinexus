@@ -21,6 +21,7 @@ const nexusTelephonyCallRuntime = require("./public/nexus-telephony-call-runtime
 const nexusMessagePreparationRuntime = require("./public/nexus-message-preparation-runtime.js");
 const nexusFullCommunicationRuntime = require("./public/nexus-full-communication-runtime.js");
 const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-collaboration-runtime.js");
+const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -43548,6 +43549,62 @@ async function api(req, res, url) {
       env: process.env,
       confirmed: Boolean(body.confirmed),
       clinicianReviewed: Boolean(body.clinicianReviewed)
+    });
+    return send(res, result.noExecutionAuthorized ? 409 : 200, result);
+  }
+
+  if (url.pathname === "/api/agriculture-collaboration/status" && req.method === "GET") {
+    const registry = nexusAgricultureCollaborationRuntime.providerRegistry(process.env);
+    const sourceReadiness = nexusAgricultureCollaborationRuntime.sourceReadinessMatrix(process.env);
+    const providerEvidence = nexusAgricultureCollaborationRuntime.providerEvidence(process.env);
+    return send(res, 200, {
+      ok: true,
+      runtime: "nexus-agriculture-collaboration-runtime",
+      flags: registry.flags,
+      registry,
+      sourceReadiness,
+      providerEvidence,
+      cards: nexusAgricultureCollaborationRuntime.RUNTIME_CARDS,
+      reviewQueue: {
+        expert: nexusAgricultureCollaborationRuntime.getExpertReviewQueue(),
+        admin: nexusAgricultureCollaborationRuntime.getAdminReviewQueue()
+      },
+      receipts: nexusAgricultureCollaborationRuntime.getReceipts(),
+      noSecretValues: true,
+      noFakeLiveWeather: true,
+      noFakeSatelliteScan: true,
+      noFakeMarketplaceTransaction: true,
+      noFakeShipmentTracking: true,
+      noFakeDroneFlight: true
+    });
+  }
+
+  if (url.pathname === "/api/agriculture-collaboration/sources" && req.method === "GET") {
+    return send(res, 200, nexusAgricultureCollaborationRuntime.sourceReadinessMatrix(process.env));
+  }
+
+  if (url.pathname === "/api/agriculture-collaboration/evidence" && req.method === "GET") {
+    return send(res, 200, nexusAgricultureCollaborationRuntime.providerEvidence(process.env));
+  }
+
+  if (url.pathname === "/api/agriculture-collaboration/action" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusAgricultureCollaborationRuntime.prepareAction(body, {
+      env: process.env,
+      confirmed: Boolean(body.confirmed),
+      expertReviewed: Boolean(body.expertReviewed),
+      humanPilotApproved: Boolean(body.humanPilotApproved)
+    });
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/agriculture-collaboration/execute" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusAgricultureCollaborationRuntime.attemptExecution(body, {
+      env: process.env,
+      confirmed: Boolean(body.confirmed),
+      expertReviewed: Boolean(body.expertReviewed),
+      humanPilotApproved: Boolean(body.humanPilotApproved)
     });
     return send(res, result.noExecutionAuthorized ? 409 : 200, result);
   }

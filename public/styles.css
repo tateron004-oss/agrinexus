@@ -136,6 +136,128 @@
   }
 }
 
+.nexus-agriculture-collaboration-runtime {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(134, 239, 172, 0.28);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(20, 83, 45, 0.74), rgba(15, 23, 42, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 16px 48px rgba(20, 83, 45, 0.24);
+  color: rgba(241, 245, 249, 0.96);
+}
+
+.nexus-agriculture-collaboration-head,
+.nexus-agriculture-collaboration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.nexus-agriculture-collaboration-head strong {
+  display: block;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.nexus-agriculture-collaboration-head span,
+.nexus-agriculture-collaboration-boundary {
+  color: rgba(226, 232, 240, 0.86);
+}
+
+.nexus-agriculture-collaboration-actions,
+.nexus-agriculture-collaboration-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nexus-agriculture-collaboration-actions button,
+.nexus-agriculture-collaboration-card-actions button {
+  border: 1px solid rgba(134, 239, 172, 0.34);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.58);
+  color: rgba(240, 253, 244, 0.96);
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.14);
+}
+
+.nexus-agriculture-collaboration-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.nexus-agriculture-collaboration-card,
+.nexus-agriculture-collaboration-grid section,
+.nexus-agriculture-collaboration-result {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.56);
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.nexus-agriculture-collaboration-card strong,
+.nexus-agriculture-collaboration-grid strong,
+.nexus-agriculture-collaboration-result strong {
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.22);
+}
+
+.nexus-agriculture-collaboration-card p,
+.nexus-agriculture-collaboration-card small,
+.nexus-agriculture-collaboration-list small,
+.nexus-agriculture-collaboration-result p,
+.nexus-agriculture-collaboration-result dd {
+  color: rgba(226, 232, 240, 0.86);
+}
+
+.nexus-agriculture-collaboration-card p {
+  margin: 6px 0;
+}
+
+.nexus-agriculture-collaboration-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.nexus-agriculture-collaboration-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nexus-agriculture-collaboration-list span,
+.nexus-agriculture-source-labels span {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.nexus-agriculture-source-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.nexus-agriculture-collaboration-result dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 720px) {
+  .nexus-agriculture-collaboration-head {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Nexus premium command center redesign */
 body.user-mode .user-workspace {
   position: relative;

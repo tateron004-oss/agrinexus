@@ -307,6 +307,42 @@
           </div>
           <div data-nexus-healthcare-result class="nexus-healthcare-collaboration-result" aria-live="polite">Prepared healthcare collaboration packets appear here.</div>
         </section>
+        <section id="nexusAgricultureCollaborationRuntime" class="nexus-agriculture-collaboration-runtime" data-nexus-agriculture-collaboration-runtime="true" aria-label="Nexus agriculture intelligence and collaboration runtime">
+          <div class="nexus-agriculture-collaboration-head">
+            <div>
+              <strong>Agriculture Intelligence</strong>
+              <span data-nexus-agriculture-status>Agriculture collaboration local-ready; live execution gated.</span>
+            </div>
+            <div class="nexus-agriculture-collaboration-actions" role="group" aria-label="Agriculture collaboration actions">
+              <button type="button" data-nexus-agriculture-action="status">Status</button>
+              <button type="button" data-nexus-agriculture-action="source-matrix">Sources</button>
+              <button type="button" data-nexus-agriculture-action="provider-evidence">Evidence</button>
+              <button type="button" data-nexus-agriculture-action="review-queue">Review queue</button>
+              <button type="button" data-nexus-agriculture-action="receipts">Receipts</button>
+            </div>
+          </div>
+          <p class="nexus-agriculture-collaboration-boundary">Nexus prepares crop, pest/disease, irrigation, soil, livestock, marketplace, shipment, drone observation, extension, finance, and farm intake packets with source labels and receipts. It does not claim live weather, satellite imagery, marketplace posting, shipment tracking, drone flight, payment, pesticide authority, veterinary diagnosis, or provider execution unless the required provider credentials, authorization, confirmation, expert/admin review, and audit gates are active.</p>
+          <div data-nexus-agriculture-cards class="nexus-agriculture-collaboration-cards" aria-label="Agriculture collaboration workflow cards"></div>
+          <div class="nexus-agriculture-collaboration-grid">
+            <section>
+              <strong>Source readiness matrix</strong>
+              <div data-nexus-agriculture-sources class="nexus-agriculture-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Provider evidence</strong>
+              <div data-nexus-agriculture-evidence class="nexus-agriculture-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Expert/Admin review queue</strong>
+              <div data-nexus-agriculture-review-queue class="nexus-agriculture-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Agriculture receipts</strong>
+              <div data-nexus-agriculture-receipts class="nexus-agriculture-collaboration-list"></div>
+            </section>
+          </div>
+          <div data-nexus-agriculture-result class="nexus-agriculture-collaboration-result" aria-live="polite">Prepared agriculture packets appear here.</div>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -2039,6 +2075,7 @@
   <script src="/nexus-message-preparation-runtime.js?v=nexus-message-preparation-runtime-1"></script>
   <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
   <script src="/nexus-healthcare-collaboration-runtime.js?v=nexus-healthcare-collaboration-runtime-1"></script>
+  <script src="/nexus-agriculture-collaboration-runtime.js?v=nexus-agriculture-collaboration-runtime-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>

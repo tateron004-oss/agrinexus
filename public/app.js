@@ -26138,6 +26138,15 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  if (window.NexusAgricultureCollaborationRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    void handleNexusAgricultureCollaborationRuntimeCommand(command, { source });
+    return true;
+  }
   if (window.NexusHealthcareCollaborationRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -44056,6 +44065,9 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     return true;
   }
 
+  if (await handleNexusAgricultureCollaborationRuntimeCommand(command || localized || rawCommand, { ...context, source: context.source || "typed_chat" })) return true;
+  if (await handleNexusHealthcareCollaborationRuntimeCommand(command || localized || rawCommand, { ...context, source: context.source || "typed_chat" })) return true;
+
   const commonPhrase = nexusCommonPhraseResponse(command || localized);
   if (commonPhrase) {
     setVoiceResponse(commonPhrase, true, { allowHandoff: false, source: "unified-brain" });
@@ -44644,6 +44656,41 @@ async function handleNexusHealthcareCollaborationRuntimeCommand(command = "", op
   return true;
 }
 
+async function handleNexusAgricultureCollaborationRuntimeCommand(command = "", options = {}) {
+  const runtime = window.NexusAgricultureCollaborationRuntime;
+  const text = String(command || "").trim();
+  if (!runtime || !text) return false;
+  const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
+    ? runtime.shouldHandleBeforeLegacy(text, { language: languageCode(), inputType: options.source || "typed_chat" })
+    : false;
+  if (!shouldHandle) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  const panel = runtime.mount?.();
+  const result = await runtime.process(text, {
+    language: languageCode(),
+    inputType: options.source === "voice" ? "voice_transcript" : "typed_chat",
+    sourceMode: options.source || "ask_nexus"
+  });
+  runtime.render?.(result, panel);
+  renderLiveVoiceSuggestions([
+    "help me with a crop issue",
+    "prepare an irrigation plan",
+    "create a marketplace listing",
+    "prepare a drone field observation"
+  ]);
+  updateNexusBehaviorLayer("agriculture-collaboration", "Nexus prepared agriculture collaboration locally with source, expert review, marketplace, logistics, drone, and receipt gates.");
+  setVoiceResponse(result.userVisibleStatus || result.answer || result.message || "Nexus prepared the agriculture collaboration packet locally. No external agriculture action was executed.", true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-agriculture-collaboration-runtime",
+    agricultureCollaborationResult: result
+  });
+  return true;
+}
+
 function handleNexusConversationRuntimeDelegatedClick(event) {
   const button = event?.target?.closest?.("[data-nexus-conversation-action]");
   if (!button) return false;
@@ -44800,6 +44847,48 @@ function handleNexusHealthcareCollaborationRuntimeDelegatedClick(event) {
 
 document.addEventListener("click", handleNexusHealthcareCollaborationRuntimeDelegatedClick, true);
 
+function handleNexusAgricultureCollaborationRuntimeDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-agriculture-action]");
+  if (!button) return false;
+  const runtime = window.NexusAgricultureCollaborationRuntime;
+  if (!runtime) return false;
+  const action = button.getAttribute("data-nexus-agriculture-action") || "status";
+  const actionType = button.getAttribute("data-nexus-agriculture-action-type") || "";
+  runtime.mount?.();
+  if (action === "status" || action === "source-matrix" || action === "provider-evidence") {
+    void runtime.refreshStatus?.();
+    setVoiceResponse("Agriculture source readiness is open. Missing provider configuration is shown by variable name only, and no agriculture execution occurred.", true, {
+      allowHandoff: false,
+      source: "nexus-agriculture-collaboration-runtime"
+    });
+    return true;
+  }
+  if (action === "review-queue") {
+    setVoiceResponse("Agriculture expert and admin review queue is open. Regulated, marketplace, logistics, drone, and finance packets wait here before any external action.", true, {
+      allowHandoff: false,
+      source: "nexus-agriculture-collaboration-runtime"
+    });
+    return true;
+  }
+  if (action === "receipts") {
+    setVoiceResponse("Agriculture receipts are visible. They record prepared packets, source modes, and blocked execution decisions without exposing secrets.", true, {
+      allowHandoff: false,
+      source: "nexus-agriculture-collaboration-runtime"
+    });
+    return true;
+  }
+  const result = runtime.handlePanelAction?.(action, actionType);
+  runtime.render?.(result);
+  setVoiceResponse(result?.userVisibleStatus || "Agriculture collaboration packet prepared locally. No external action was executed.", true, {
+    allowHandoff: false,
+    source: "nexus-agriculture-collaboration-runtime",
+    agricultureCollaborationResult: result
+  });
+  return true;
+}
+
+document.addEventListener("click", handleNexusAgricultureCollaborationRuntimeDelegatedClick, true);
+
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   clearLevelOneAgentActionSuggestionLabel();
@@ -44832,6 +44921,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusMessagePreparationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusFullCommunicationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
@@ -44976,6 +45066,8 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pauseNexusForSideConversation(command || localizedCommand || rawCommand);
     return;
   }
+  if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, source: options.source || "typed_chat" })) return;
+  if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, source: options.source || "typed_chat" })) return;
   if (handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)) return;
   if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
@@ -47815,6 +47907,7 @@ function bindStatic() {
     window.NexusMessagePreparationRuntime?.mount?.();
     window.NexusFullCommunicationRuntime?.mount?.();
     window.NexusHealthcareCollaborationRuntime?.mount?.();
+    window.NexusAgricultureCollaborationRuntime?.mount?.();
   }
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
@@ -47834,6 +47927,14 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -47887,6 +47988,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -48107,6 +48216,11 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = command;
         setCommandInputs(command);
@@ -49349,6 +49463,14 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
+    if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return;
+    }
     if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();
