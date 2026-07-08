@@ -18,6 +18,7 @@ const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
 const nexusTelephonyCallRuntime = require("./public/nexus-telephony-call-runtime.js");
+const nexusFullCommunicationRuntime = require("./public/nexus-full-communication-runtime.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -36209,6 +36210,24 @@ async function api(req, res, url) {
   if (url.pathname === "/api/telephony/inbound-webhook" && req.method === "POST") {
     const result = nexusTelephonyCallRuntime.inboundReadiness({ env: process.env });
     return send(res, result.ok ? 200 : 501, { ...result, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/communication/status" && req.method === "GET") {
+    return send(res, 200, nexusFullCommunicationRuntime.communicationProviderReadiness(process.env, {
+      speechRecognition: false,
+      speechSynthesis: false,
+      indefiniteBackgroundListening: false
+    }));
+  }
+
+  if (url.pathname === "/api/communication/prepare-message" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusFullCommunicationRuntime.prepareMessage(body, {
+      env: process.env,
+      inputType: body.inputType || "message_action",
+      language: body.language || user.language || "en"
+    });
+    return send(res, 200, { ...result, noSecretValues: true, noExecutionAuthorized: true });
   }
 
   if (url.pathname === "/api/nexus/user-testing/status" && req.method === "GET") {

@@ -227,6 +227,26 @@
           <div data-nexus-telephony-receipts class="nexus-telephony-receipts" aria-live="polite"></div>
           <p class="nexus-telephony-boundary">Not for emergency calls. Real outbound calls require provider credentials, recipient verification, consent, explicit confirmation, and audit.</p>
         </section>
+        <section id="nexusFullCommunicationRuntime" class="nexus-full-communication-runtime" data-nexus-full-communication-runtime="true" aria-label="Nexus full communication runtime">
+          <div class="nexus-full-communication-head">
+            <div>
+              <strong>Full Communication</strong>
+              <span data-nexus-full-communication-status>Checking communication providers</span>
+            </div>
+            <div class="nexus-full-communication-controls" role="group" aria-label="Communication controls">
+              <button type="button" data-nexus-full-communication-action="status">Refresh</button>
+              <button type="button" data-nexus-full-communication-action="repeat">Repeat</button>
+              <button type="button" data-nexus-full-communication-action="stop">Stop</button>
+              <button type="button" data-nexus-full-communication-action="mute">Mute</button>
+            </div>
+          </div>
+          <p data-nexus-full-communication-transcript>Typed, clicked, and spoken communication requests appear here.</p>
+          <p data-nexus-full-communication-response>Nexus can answer, route, prepare messages and calls, and show provider readiness.</p>
+          <pre data-nexus-full-communication-draft>Message or call script appears here after preparation.</pre>
+          <p data-nexus-full-communication-confirmation>External communication requires provider credentials, consent, and confirmation.</p>
+          <div data-nexus-full-communication-providers class="nexus-full-communication-providers" aria-label="Communication provider readiness"></div>
+          <div data-nexus-full-communication-receipts class="nexus-full-communication-receipts" aria-live="polite"></div>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -1956,6 +1976,7 @@
   <script src="/nexus-open-dialogue-runtime.js?v=nexus-multilingual-dialogue-1"></script>
   <script src="/nexus-conversational-voice-runtime.js?v=nexus-multilingual-voice-1"></script>
   <script src="/nexus-telephony-call-runtime.js?v=nexus-telephony-call-runtime-1"></script>
+  <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
