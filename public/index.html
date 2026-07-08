@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-382">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-383">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -297,6 +297,61 @@
               <div data-nexus-brain-receipts class="nexus-unified-brain-list">No mission receipts yet.</div>
             </section>
           </div>
+        </section>
+
+        <section id="nexusStandardUserPilotReadiness" class="nexus-pilot-readiness" data-nexus-pilot-readiness="true" aria-label="Nexus Standard User pilot readiness">
+          <div class="nexus-unified-brain-head">
+            <div>
+              <strong>Standard User Pilot Readiness</strong>
+              <span>Nexus can be tested as one safe conversational mission-planning assistant.</span>
+            </div>
+            <div class="nexus-unified-brain-actions" role="group" aria-label="Pilot readiness actions">
+              <button type="button" data-nexus-pilot-action="refresh">Refresh Pilot Readiness</button>
+              <button type="button" data-nexus-pilot-action="run-all-scenarios">Run Pilot Scenarios</button>
+            </div>
+          </div>
+          <div class="nexus-pilot-readiness-grid">
+            <section class="nexus-pilot-readiness-card">
+              <strong>Pilot Status</strong>
+              <div class="nexus-unified-brain-list" data-nexus-pilot-status>
+                <span><b>Ready for local Standard User testing</b><small>Safe local mode active. External actions remain gated.</small></span>
+              </div>
+            </section>
+            <section class="nexus-pilot-readiness-card">
+              <strong>Suggested First Activation</strong>
+              <div class="nexus-unified-brain-list" data-nexus-pilot-recommendation>
+                <span><b>Activate communication provider first.</b><small>Email or SMS is the safest first live provider because it benefits every domain and creates clear confirmation receipts.</small></span>
+              </div>
+            </section>
+          </div>
+          <div class="nexus-pilot-readiness-grid">
+            <section class="nexus-pilot-readiness-card">
+              <strong>What Nexus Can Test Now</strong>
+              <div class="nexus-unified-brain-list" data-nexus-pilot-can-test>
+                <span><b>Open-ended typed and voice requests</b><small>Mission planning, drafts, missing prompts, blocked states, and receipts are available now.</small></span>
+              </div>
+            </section>
+            <section class="nexus-pilot-readiness-card">
+              <strong>Test Nexus Guide</strong>
+              <div class="nexus-unified-brain-list" data-nexus-pilot-testing-guide>
+                <span><b>Look for understanding, a clear plan, next best step, blocked-state clarity, missing-info prompts, and readable receipts.</b><small>Nexus must not claim it sent, called, scheduled, paid, dispatched, diagnosed, or prescribed anything without proper gates.</small></span>
+              </div>
+            </section>
+          </div>
+          <section class="nexus-pilot-readiness-card">
+            <strong>Pilot Scenario Harness</strong>
+            <div class="nexus-pilot-scenario-grid" data-nexus-pilot-scenarios></div>
+          </section>
+          <section class="nexus-pilot-readiness-card">
+            <strong>Provider Activation Readiness Matrix</strong>
+            <div class="nexus-pilot-matrix-grid" data-nexus-pilot-activation-matrix></div>
+          </section>
+          <section class="nexus-pilot-readiness-card">
+            <strong>Pilot Receipts</strong>
+            <div class="nexus-unified-brain-list" data-nexus-pilot-receipts>
+              <span><b>No pilot receipt yet</b><small>Run a pilot scenario or ask Nexus a mission question.</small></span>
+            </div>
+          </section>
         </section>
 
         <section id="nexusFullCommunicationRuntime" class="nexus-full-communication-runtime" data-nexus-full-communication-runtime="true" aria-label="Nexus full communication runtime">
@@ -2149,7 +2204,7 @@
   <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
   <script src="/nexus-healthcare-collaboration-runtime.js?v=nexus-healthcare-collaboration-runtime-1"></script>
   <script src="/nexus-agriculture-collaboration-runtime.js?v=nexus-agriculture-collaboration-runtime-1"></script>
-  <script src="/app.js?v=nexus-behavior-382"></script>
+  <script src="/app.js?v=nexus-behavior-383"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
 </html>

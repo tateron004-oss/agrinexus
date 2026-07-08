@@ -677,6 +677,315 @@
     });
   }
 
+  const PILOT_SCENARIOS = Object.freeze([
+    {
+      id: "farmer-crop-to-market",
+      label: "Farmer Crop-to-Market",
+      input: "Help me with my farm. The tomatoes are sick and I need to sell what I can.",
+      expected: ["agriculture + marketplace + communication plan", "crop advisory preparation", "buyer message draft", "shipment plan draft", "expert review if needed", "readable receipts"]
+    },
+    {
+      id: "patient-clinic-pharmacy",
+      label: "Patient Clinic + Pharmacy",
+      input: "My blood pressure is high and I need the clinic and pharmacy.",
+      expected: ["healthcare + pharmacy + communication plan", "clinic message draft", "pharmacy call script", "care follow-up packet", "readable receipts"]
+    },
+    {
+      id: "job-seeker-learning-employment",
+      label: "Job Seeker Learning-to-Employment",
+      input: "I need a job and training.",
+      expected: ["workforce + learning + communication plan", "training/job support packet", "employer message draft", "missing info prompts", "readable receipts"]
+    },
+    {
+      id: "mobile-health-access",
+      label: "Mobile Health Access",
+      input: "I need mobile care because I cannot get to the clinic.",
+      expected: ["mobile health + healthcare + communication plan", "mobile clinic packet", "transportation/access needs prompt", "provider activation blocked state", "no fake scheduling"]
+    },
+    {
+      id: "agriculture-logistics",
+      label: "Agriculture Logistics",
+      input: "I need to ship my produce to a buyer.",
+      expected: ["marketplace + logistics + communication plan", "shipment plan", "buyer/seller message draft", "cold chain checklist if relevant", "no fake tracking or dispatch"]
+    },
+    {
+      id: "blocked-items",
+      label: "Blocked Items",
+      input: "What is blocked?",
+      expected: ["plain-language blocked summary", "provider/source/review needs", "no raw internal field names"]
+    },
+    {
+      id: "missing-info",
+      label: "Missing Info",
+      input: "What do you need from me?",
+      expected: ["concise missing info prompts", "prioritized by next best step"]
+    },
+    {
+      id: "multi-domain-life-services",
+      label: "Multi-Domain Life Services",
+      input: "I need help with my farm, my health, training, and finding work.",
+      expected: ["cross-domain mission plan", "grouped steps", "next best step", "safe local preparation", "receipts"]
+    }
+  ]);
+
+  const PROVIDER_ACTIVATION_MATRIX = Object.freeze([
+    {
+      category: "Communication",
+      providers: "email, SMS, WhatsApp, Telegram, call/telephony",
+      env: ["NEXUS_EMAIL_PROVIDER", "SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SENDGRID_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "NEXUS_MESSAGES_ENABLED", "NEXUS_WHATSAPP_ENABLED", "NEXUS_CALLS_ENABLED"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: false,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 1,
+      domainsImpacted: ["healthcare", "agriculture", "jobs", "pharmacy", "marketplace", "logistics"],
+      receiptSupport: true
+    },
+    {
+      category: "Healthcare",
+      providers: "telehealth, FHIR/EHR, HIE, pharmacy, RPM, secure messaging",
+      env: ["NEXUS_TELEHEALTH_PROVIDER", "DAILY_API_KEY", "DAILY_ROOM_DOMAIN", "FHIR_BASE_URL", "FHIR_CLIENT_ID", "FHIR_CLIENT_SECRET", "NEXUS_PHARMACY_PROVIDER"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: true,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 4,
+      domainsImpacted: ["healthcare", "pharmacy", "mobile care", "RPM", "RTM"],
+      receiptSupport: true
+    },
+    {
+      category: "Agriculture",
+      providers: "weather, soil, satellite, crop advisory, extension service",
+      env: ["NEXUS_WEATHER_PROVIDER_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER", "TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_SOIL_PROVIDER_API_KEY", "NEXUS_SATELLITE_PROVIDER_API_KEY"],
+      authorizationRequired: true,
+      confirmationRequired: false,
+      reviewRequired: true,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 2,
+      domainsImpacted: ["agriculture", "crop support", "farm planning"],
+      receiptSupport: true
+    },
+    {
+      category: "Marketplace",
+      providers: "buyer/seller, listings, payments/escrow",
+      env: ["NEXUS_MARKETPLACE_PROVIDER", "NEXUS_MARKETPLACE_API_KEY", "STRIPE_SECRET_KEY", "NEXUS_MARKETPLACE_PAYMENTS_ENABLED"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: true,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 5,
+      domainsImpacted: ["AgriTrade", "buyer/seller", "payments"],
+      receiptSupport: true
+    },
+    {
+      category: "Logistics",
+      providers: "shipment tracking, carrier, cold chain",
+      env: ["NEXUS_LOGISTICS_PROVIDER", "NEXUS_LOGISTICS_API_KEY", "NEXUS_CARRIER_API_KEY"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: false,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 6,
+      domainsImpacted: ["marketplace", "farm logistics", "cold chain"],
+      receiptSupport: true
+    },
+    {
+      category: "Learning/Workforce",
+      providers: "training provider, employer partner",
+      env: ["NEXUS_LMS_ENABLED", "MOODLE_BASE_URL", "MOODLE_TOKEN", "NEXUS_EMPLOYER_PROVIDER_API_KEY"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: false,
+      safeTestAvailable: true,
+      liveExecutionAllowed: false,
+      recommendedPriority: 3,
+      domainsImpacted: ["training", "literacy", "jobs", "employer partners"],
+      receiptSupport: true
+    },
+    {
+      category: "Drone",
+      providers: "field observation, drone mission provider",
+      env: ["NEXUS_DRONES_ENABLED", "DJI_CLIENT_ID", "DJI_CLIENT_SECRET", "NEXUS_DRONE_PROVIDER_API_KEY"],
+      authorizationRequired: true,
+      confirmationRequired: true,
+      reviewRequired: true,
+      safeTestAvailable: false,
+      liveExecutionAllowed: false,
+      recommendedPriority: 8,
+      domainsImpacted: ["field observation", "agriculture"],
+      receiptSupport: true
+    }
+  ]);
+
+  function envConfigured(env = {}, names = []) {
+    return names.some(name => Boolean(String(env[name] || "").trim()));
+  }
+
+  function providerActivationMatrix(env = {}) {
+    return PROVIDER_ACTIVATION_MATRIX.map(item => {
+      const configured = envConfigured(env, item.env);
+      const missingEnvVars = item.env.filter(name => !String(env[name] || "").trim());
+      return {
+        ...item,
+        configured,
+        missingEnvVars,
+        blockedReason: configured
+          ? "Credentials detected; live execution still requires authorization, explicit confirmation, review where needed, and audit."
+          : "Provider credentials are not configured. Nexus can still prepare local drafts, packets, and receipts.",
+        liveExecutionAllowed: false,
+        noSecretValues: true
+      };
+    });
+  }
+
+  function firstActivationRecommendation(env = {}) {
+    const matrix = providerActivationMatrix(env);
+    const communication = matrix.find(item => item.category === "Communication");
+    const ordered = matrix.slice().sort((a, b) => a.recommendedPriority - b.recommendedPriority);
+    return {
+      recommended: communication?.category || ordered[0]?.category || "Communication",
+      title: "Activate communication provider first.",
+      userExplanation: "Communication is the best first activation because it lets Nexus move from prepared local drafts to confirmed real sends across healthcare, agriculture, jobs, pharmacy, marketplace, and logistics.",
+      adminDetail: {
+        requiredEnvVars: communication?.missingEnvVars || [],
+        expectedProvider: "email or SMS provider first",
+        affectedRuntimes: ["Full Communication Runtime", "Unified Brain Runtime", "Healthcare Collaboration Runtime", "Agriculture Collaboration Runtime"],
+        qaNeeded: ["provider status QA", "confirmation gate QA", "single live send smoke test", "receipt verification"],
+        safetyGates: ["explicit user confirmation", "recipient review", "audit receipt", "no silent send", "no emergency routing"]
+      },
+      rankedOptions: ordered.map(item => ({
+        category: item.category,
+        priority: item.recommendedPriority,
+        configured: item.configured,
+        reason: item.category === "Communication" ? "Highest cross-domain impact with the lowest practical first live-execution risk." : item.blockedReason
+      }))
+    };
+  }
+
+  function pilotCapabilitiesNow() {
+    return [
+      "Open-ended typed conversation",
+      "Voice command routing",
+      "Mission planning",
+      "Agriculture advisory preparation",
+      "Healthcare packet preparation",
+      "Pharmacy call script preparation",
+      "Buyer/seller message draft",
+      "Shipment plan draft",
+      "Job/training plan",
+      "Missing info prompts",
+      "Blocked-state explanations",
+      "Readable receipts"
+    ];
+  }
+
+  function pilotReadinessStatus(env = {}) {
+    const matrix = providerActivationMatrix(env);
+    const configuredCount = matrix.filter(item => item.configured).length;
+    return {
+      status: configuredCount ? "Ready for local Standard User testing; some provider credentials detected but live actions remain gated." : "Ready for local Standard User testing in safe local mode.",
+      states: [
+        "Ready for local Standard User testing",
+        "Needs provider activation",
+        "Needs user input",
+        "Needs review",
+        "Blocked by external provider",
+        "Safe local mode active"
+      ],
+      canTestNow: pilotCapabilitiesNow(),
+      requiresActivation: matrix.map(item => ({
+        category: item.category,
+        providers: item.providers,
+        missingEnvVars: item.missingEnvVars,
+        blockedReason: item.blockedReason,
+        recommendedPriority: item.recommendedPriority
+      })),
+      recommendation: firstActivationRecommendation(env),
+      noFakeExecution: true
+    };
+  }
+
+  function fakeExecutionDetectedInMission(mission = {}) {
+    const text = JSON.stringify(mission).toLowerCase();
+    return /sent successfully|call was placed|payment completed|appointment booked|provider accepted|dispatched|refill approved|shipment tracking created/.test(text);
+  }
+
+  function pilotReceiptForMission(scenario = {}, mission = {}) {
+    const receipt = {
+      pilotReceiptId: makeId("pilot-receipt"),
+      scenario: scenario.label || scenario.id || "Standard User pilot scenario",
+      input: scenario.input || mission.userGoal || "",
+      domainsDetected: mission.domains || [],
+      missionPlanCreated: Boolean(mission.missionId && mission.steps?.length),
+      preparedItems: (mission.preparedItems || mission.steps || []).map(item => item.title || item.stepId).filter(Boolean),
+      blockedItems: (mission.blockedItems || []).map(item => preparedInsteadCopy(item)),
+      missingInfo: (mission.missingInputs || []).map(friendlyMissingPrompt),
+      receiptsCreated: mission.receipt?.missionReceiptId ? [mission.receipt.missionReceiptId] : [],
+      fakeExecutionDetected: fakeExecutionDetectedInMission(mission),
+      userComprehensionNotes: "Tester notes: did the user understand the mission summary, next step, blocked items, and receipts?",
+      testerNotes: "Tester notes: record confusing wording, missing information, or blocked-state issues here.",
+      timestamp: now(),
+      result: mission.missionId && !fakeExecutionDetectedInMission(mission) ? "pass" : "fail"
+    };
+    return receipt;
+  }
+
+  function runPilotScenario(scenarioId, options = {}) {
+    const scenario = PILOT_SCENARIOS.find(item => item.id === scenarioId) || PILOT_SCENARIOS[0];
+    const mission = createMissionPlan(scenario.input, options);
+    const pilotReceipt = pilotReceiptForMission(scenario, mission);
+    return { ok: true, scenario, mission, pilotReceipt, noExecutionAuthorized: true };
+  }
+
+  function runPilotScenarioHarness(options = {}) {
+    const receipts = [];
+    const results = PILOT_SCENARIOS.map(scenario => {
+      const command = /what is blocked/i.test(scenario.input) && missionMemory.activeMission
+        ? answerMissionQuestion(scenario.input, options)
+        : /what do you need/i.test(scenario.input) && missionMemory.activeMission
+          ? answerMissionQuestion(scenario.input, options)
+          : createMissionPlan(scenario.input, options);
+      const mission = command?.missionId ? command : missionMemory.activeMission || createMissionPlan(scenario.input, options);
+      const pilotReceipt = pilotReceiptForMission(scenario, mission);
+      receipts.push(pilotReceipt);
+      return { scenario, mission, pilotReceipt };
+    });
+    return {
+      ok: true,
+      scenarioCount: PILOT_SCENARIOS.length,
+      passCount: receipts.filter(item => item.result === "pass").length,
+      warnCount: receipts.filter(item => item.result === "warn").length,
+      failCount: receipts.filter(item => item.result === "fail").length,
+      results,
+      receipts,
+      noExecutionAuthorized: true
+    };
+  }
+
+  function testingGuideItems() {
+    return {
+      commands: PILOT_SCENARIOS.map(item => item.input),
+      lookFor: [
+        "Did Nexus understand you?",
+        "Did the plan make sense?",
+        "Did the next step make sense?",
+        "Did you understand what was blocked?",
+        "Did you understand what Nexus needed from you?",
+        "Did receipts make sense?",
+        "Did Nexus avoid claiming it sent, called, scheduled, paid, dispatched, or diagnosed something it did not?"
+      ],
+      success: "A tester can understand the mission summary, plan, next step, blocked states, missing info, and receipts without believing a live action occurred.",
+      problem: "Confusing copy, raw internal fields, fake execution claims, hidden provider gates, unreadable receipts, or missing next steps.",
+      receiptLocation: "Receipts appear in the Nexus Mission Workspace and Pilot Readiness panel.",
+      liveActionReminder: "Live sends, calls, bookings, payments, dispatch, pharmacy actions, clinical actions, and provider handoffs are blocked unless providers are connected and confirmation/review/audit gates pass."
+    };
+  }
+
   function recommendedNextStep(steps = [], missing = []) {
     if (missing.length) return `Provide missing information: ${missing.slice(0, 3).join(", ")}.`;
     const blocked = steps.find(item => item.confirmationRequired || item.reviewRequired || item.blockedReason);
@@ -770,6 +1079,7 @@
     if (!panel) return null;
     renderStatus(runtimeStatus(), panel);
     renderMission(missionMemory.activeMission, panel);
+    renderPilotReadiness();
     return panel;
   }
 
@@ -870,6 +1180,81 @@
     }
   }
 
+  function pilotHost() {
+    return root?.document?.querySelector?.("[data-nexus-pilot-readiness]");
+  }
+
+  function renderPilotReadiness(options = {}, panel = pilotHost()) {
+    if (!panel) return;
+    const readiness = pilotReadinessStatus(options.env || {});
+    const statusTarget = panel.querySelector("[data-nexus-pilot-status]");
+    const canTestTarget = panel.querySelector("[data-nexus-pilot-can-test]");
+    const activationTarget = panel.querySelector("[data-nexus-pilot-activation-matrix]");
+    const recommendationTarget = panel.querySelector("[data-nexus-pilot-recommendation]");
+    const scenariosTarget = panel.querySelector("[data-nexus-pilot-scenarios]");
+    const receiptsTarget = panel.querySelector("[data-nexus-pilot-receipts]");
+    const guideTarget = panel.querySelector("[data-nexus-pilot-testing-guide]");
+
+    if (statusTarget) {
+      statusTarget.innerHTML = `
+        <span><b>${escapeHtml(readiness.status)}</b><small>${escapeHtml(readiness.states.join(" | "))}</small></span>
+      `;
+    }
+    if (canTestTarget) {
+      canTestTarget.innerHTML = readiness.canTestNow.map(item => `<span><b>${escapeHtml(item)}</b><small>Available now in safe local mode.</small></span>`).join("");
+    }
+    if (activationTarget) {
+      activationTarget.innerHTML = providerActivationMatrix(options.env || {}).map(item => `
+        <article class="nexus-pilot-matrix-card" data-provider-category="${escapeHtml(item.category)}">
+          <div>
+            <b>${escapeHtml(item.category)}</b>
+            <small>${escapeHtml(item.providers)}</small>
+          </div>
+          <span class="nexus-brain-status-pill">${escapeHtml(item.configured ? "Configured - still gated" : "Missing credentials")}</span>
+          <small><strong>Missing env names:</strong> ${escapeHtml(item.missingEnvVars.slice(0, 8).join(", ") || "none detected")}</small>
+          <small><strong>Review:</strong> ${escapeHtml(item.reviewRequired ? "required where applicable" : "not always required")} | <strong>Confirmation:</strong> ${escapeHtml(item.confirmationRequired ? "required" : "not for read-only tests")}</small>
+          <small><strong>Safe test:</strong> ${escapeHtml(item.safeTestAvailable ? "available" : "not available yet")} | <strong>Live execution:</strong> disabled until configured, approved, confirmed, and audited</small>
+          <small><strong>Blocked reason:</strong> ${escapeHtml(item.blockedReason)}</small>
+          <small><strong>Domains impacted:</strong> ${escapeHtml(item.domainsImpacted.join(", "))}</small>
+        </article>
+      `).join("");
+    }
+    if (recommendationTarget) {
+      const rec = readiness.recommendation;
+      recommendationTarget.innerHTML = `
+        <span><b>${escapeHtml(rec.title)}</b><small>${escapeHtml(rec.userExplanation)}</small></span>
+        <span><b>Admin detail</b><small>Expected provider: ${escapeHtml(rec.adminDetail.expectedProvider)}. QA: ${escapeHtml(rec.adminDetail.qaNeeded.join(", "))}. Safety gates: ${escapeHtml(rec.adminDetail.safetyGates.join(", "))}.</small></span>
+      `;
+    }
+    if (scenariosTarget) {
+      scenariosTarget.innerHTML = PILOT_SCENARIOS.map(item => `
+        <article class="nexus-pilot-scenario-card" data-pilot-scenario-id="${escapeHtml(item.id)}">
+          <b>${escapeHtml(item.label)}</b>
+          <small>${escapeHtml(item.input)}</small>
+          <small>Expected: ${escapeHtml(item.expected.join("; "))}</small>
+          <button type="button" data-nexus-pilot-action="run-scenario" data-pilot-scenario="${escapeHtml(item.id)}">Run scenario</button>
+        </article>
+      `).join("");
+    }
+    if (receiptsTarget) {
+      const active = missionMemory.activeMission;
+      const receipt = active?.missionId ? pilotReceiptForMission({ label: "Current active mission", input: active.userGoal }, active) : null;
+      receiptsTarget.innerHTML = receipt
+        ? `<span><b>${escapeHtml(receipt.scenario)}</b><small>${escapeHtml(receipt.result)} - ${escapeHtml(receipt.timestamp)}</small><small>Prepared: ${escapeHtml(receipt.preparedItems.slice(0, 4).join(", ") || "none")}</small><small>Blocked: ${escapeHtml(receipt.blockedItems.length ? `${receipt.blockedItems.length} gated item(s)` : "none for local preparation")}</small></span>`
+        : "<span><b>No pilot receipt yet</b><small>Run a pilot scenario or ask Nexus a mission question.</small></span>";
+    }
+    if (guideTarget) {
+      const guide = testingGuideItems();
+      guideTarget.innerHTML = `
+        <span><b>Suggested commands</b><small>${escapeHtml(guide.commands.slice(0, 5).join(" | "))}</small></span>
+        <span><b>Tester success questions</b><small>${escapeHtml(guide.lookFor.join(" | "))}</small></span>
+        <span><b>Success</b><small>${escapeHtml(guide.success)}</small></span>
+        <span><b>Problem</b><small>${escapeHtml(guide.problem)}</small></span>
+        <span><b>Live action reminder</b><small>${escapeHtml(guide.liveActionReminder)}</small></span>
+      `;
+    }
+  }
+
   function render(result, panel = host()) {
     if (!panel) return;
     if (result?.answerType && result.userVisibleStatus) {
@@ -878,6 +1263,7 @@
     }
     renderStatus(runtimeStatus(), panel);
     renderMission(result?.missionId ? result : missionMemory.activeMission, panel);
+    renderPilotReadiness();
   }
 
   async function handlePanelAction(action = "review-plan") {
@@ -906,14 +1292,40 @@
     return result;
   }
 
+  async function handlePilotAction(action = "refresh", detail = {}) {
+    if (action === "run-all-scenarios") {
+      const result = runPilotScenarioHarness();
+      render(result.results?.[0]?.mission || missionMemory.activeMission);
+      renderPilotReadiness();
+      return result;
+    }
+    if (action === "run-scenario") {
+      const result = runPilotScenario(detail.scenarioId || detail.pilotScenario || "farmer-crop-to-market");
+      render(result.mission);
+      renderPilotReadiness();
+      return result;
+    }
+    renderPilotReadiness();
+    return { ok: true, readiness: pilotReadinessStatus(), noExecutionAuthorized: true };
+  }
+
   return Object.freeze({
     DOMAINS,
     SAFETY_LEVELS,
+    PILOT_SCENARIOS,
+    PROVIDER_ACTIVATION_MATRIX,
     missionMemory,
     classifyDomains,
     isUnifiedBrainCommand,
     shouldHandleBeforeLegacy,
     runtimeStatus,
+    pilotReadinessStatus,
+    providerActivationMatrix,
+    firstActivationRecommendation,
+    runPilotScenario,
+    runPilotScenarioHarness,
+    pilotReceiptForMission,
+    testingGuideItems,
     createMissionPlan,
     process,
     executeStep: prepareMissionStep,
@@ -923,8 +1335,10 @@
     clearMission,
     mount,
     render,
+    renderPilotReadiness,
     refreshStatus: () => runtimeStatus(),
     handlePanelAction,
+    handlePilotAction,
     getLastResult: () => lastResult
   });
 });

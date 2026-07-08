@@ -272,7 +272,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-382";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-383";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -44631,6 +44631,36 @@ async function handleNexusMessagePreparationRuntimeCommand(command = "", options
   return true;
 }
 
+function renderNexusAgenticCommandResult(result = {}) {
+  const message = result.message || result.response || result.unifiedBrainResult?.userVisibleStatus || result.unifiedBrainResult?.conversationalResponse || "Nexus prepared this locally. No external action was executed.";
+  nexusAgenticBrainLastResult = {
+    ok: result.ok !== false,
+    status: result.status || "prepared_local",
+    mode: result.mode || result.source || "nexus_agentic_command_result",
+    message,
+    preparedCards: Array.isArray(result.preparedCards) ? result.preparedCards : [{
+      type: result.source || "nexus_agentic_command_result",
+      title: result.command || "Nexus local result",
+      status: "prepared_local",
+      localOnly: true,
+      confirmationRequired: false,
+      receiptId: result.result?.pilotReceipt?.receiptId || result.unifiedBrainResult?.receipt?.missionReceiptId || ""
+    }],
+    command: result.command || "",
+    result,
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: result.source || "nexus_agentic_command_result"
+  };
+  setVoiceResponse(message, true, {
+    allowHandoff: false,
+    command: result.command || "",
+    source: result.source || "nexus_agentic_command_result"
+  });
+  renderUserWorkspace?.();
+  return nexusAgenticBrainLastResult;
+}
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const runtime = window.NexusUnifiedBrainRuntime;
   const text = String(command || "").trim();
@@ -44905,6 +44935,33 @@ function handleNexusUnifiedBrainRuntimeDelegatedClick(event) {
 }
 
 document.addEventListener("click", handleNexusUnifiedBrainRuntimeDelegatedClick, true);
+
+function handleNexusPilotReadinessDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-pilot-action]");
+  if (!button) return false;
+  const runtime = window.NexusUnifiedBrainRuntime;
+  if (!runtime) return false;
+  const action = button.getAttribute("data-nexus-pilot-action") || "refresh";
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  void Promise.resolve(runtime.handlePilotAction?.(action, {
+    scenarioId: button.getAttribute("data-pilot-scenario") || ""
+  })).then(result => {
+    runtime.mount?.();
+    renderNexusAgenticCommandResult({
+      ok: true,
+      command: action === "run-all-scenarios" ? "Run Standard User pilot scenarios" : `Run pilot scenario: ${button.getAttribute("data-pilot-scenario") || "readiness"}`,
+      response: result?.scenario
+        ? `${result.scenario.label} pilot scenario prepared locally. No external action was executed.`
+        : "Pilot readiness refreshed. No external action was executed.",
+      result
+    });
+  });
+  return true;
+}
+
+document.addEventListener("click", handleNexusPilotReadinessDelegatedClick, true);
 
 function handleNexusAgricultureCollaborationRuntimeDelegatedClick(event) {
   const button = event?.target?.closest?.("[data-nexus-agriculture-action]");
