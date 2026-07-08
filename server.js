@@ -22,6 +22,7 @@ const nexusMessagePreparationRuntime = require("./public/nexus-message-preparati
 const nexusFullCommunicationRuntime = require("./public/nexus-full-communication-runtime.js");
 const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-collaboration-runtime.js");
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
+const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -43607,6 +43608,41 @@ async function api(req, res, url) {
       humanPilotApproved: Boolean(body.humanPilotApproved)
     });
     return send(res, result.noExecutionAuthorized ? 409 : 200, result);
+  }
+
+  const nexusUnifiedBrainOptions = () => ({
+    env: process.env,
+    communicationRuntime: nexusFullCommunicationRuntime,
+    agricultureRuntime: nexusAgricultureCollaborationRuntime,
+    healthcareRuntime: nexusHealthcareCollaborationRuntime
+  });
+
+  if (url.pathname === "/api/nexus-brain/status" && req.method === "GET") {
+    return send(res, 200, nexusUnifiedBrainRuntime.runtimeStatus(nexusUnifiedBrainOptions()));
+  }
+
+  if (url.pathname === "/api/nexus-brain/plan" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = await nexusUnifiedBrainRuntime.process(body.rawInput || body.command || body.goal || "", nexusUnifiedBrainOptions());
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus-brain/execute-step" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusUnifiedBrainRuntime["executeStep"](body.stepId, {
+      ...nexusUnifiedBrainOptions(),
+      confirmed: Boolean(body.confirmed)
+    });
+    return send(res, result.noExecutionAuthorized ? 409 : 200, result);
+  }
+
+  if (url.pathname === "/api/nexus-brain/mission-receipt" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      receipt: nexusUnifiedBrainRuntime.getMissionReceipt(url.searchParams.get("missionId") || undefined),
+      receipts: nexusUnifiedBrainRuntime.getReceipts(),
+      noSecretValues: true
+    });
   }
 
   if (url.pathname === "/api/voice/realtime/status" && req.method === "GET") {

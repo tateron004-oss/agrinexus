@@ -223,6 +223,27 @@
     }
     renderTranscript(text, meta.confidence);
     setState("reasoning", "Nexus is reasoning safely");
+    const brainRuntime = root?.NexusUnifiedBrainRuntime;
+    if (brainRuntime?.shouldHandleBeforeLegacy?.(text, { language: currentLanguage(), inputType: meta.source || "voice" })) {
+      const result = await brainRuntime.process(text, {
+        language: currentLanguage(),
+        inputType: meta.source || "voice",
+        sourceMode: "conversation_shell"
+      });
+      if (brainRuntime.mount) brainRuntime.mount();
+      if (brainRuntime.render) brainRuntime.render(result);
+      renderResponse({
+        text: result?.understoodGoal || result?.userVisibleStatus || "Nexus prepared a unified mission plan.",
+        language: currentLanguage(),
+        intent: "unified_brain_mission",
+        safety: {
+          noExecution: true,
+          message: "No external action was authorized by the Unified Brain."
+        }
+      });
+      setState("idle", "Unified mission prepared safely");
+      return result;
+    }
     const agricultureRuntime = root?.NexusAgricultureCollaborationRuntime;
     if (agricultureRuntime?.shouldHandleBeforeLegacy?.(text, { language: currentLanguage(), inputType: meta.source || "voice" })) {
       const result = await agricultureRuntime.process(text, {

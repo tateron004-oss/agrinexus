@@ -26138,6 +26138,15 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  if (window.NexusUnifiedBrainRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    void handleNexusUnifiedBrainRuntimeCommand(command, { source });
+    return true;
+  }
   if (window.NexusAgricultureCollaborationRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -44065,6 +44074,7 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     return true;
   }
 
+  if (await handleNexusUnifiedBrainRuntimeCommand(command || localized || rawCommand, { ...context, source: context.source || "typed_chat" })) return true;
   if (await handleNexusAgricultureCollaborationRuntimeCommand(command || localized || rawCommand, { ...context, source: context.source || "typed_chat" })) return true;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(command || localized || rawCommand, { ...context, source: context.source || "typed_chat" })) return true;
 
@@ -44621,6 +44631,31 @@ async function handleNexusMessagePreparationRuntimeCommand(command = "", options
   return true;
 }
 
+async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
+  const runtime = window.NexusUnifiedBrainRuntime;
+  const text = String(command || "").trim();
+  if (!runtime || !text) return false;
+  const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
+    ? runtime.shouldHandleBeforeLegacy(text, options)
+    : false;
+  if (!shouldHandle && !options.force) return false;
+  const result = await runtime.process(text, {
+    language: languageCode(),
+    inputType: options.source || "typed_chat",
+    sourceMode: "standard_user_workspace"
+  });
+  runtime.mount?.();
+  runtime.render?.(result);
+  renderNexusAgenticCommandResult({
+    ok: true,
+    command: text,
+    source: "nexus-unified-brain-runtime",
+    unifiedBrainResult: result,
+    message: result?.userVisibleStatus || result?.understoodGoal || "Nexus prepared a unified mission plan."
+  });
+  return true;
+}
+
 async function handleNexusHealthcareCollaborationRuntimeCommand(command = "", options = {}) {
   const runtime = window.NexusHealthcareCollaborationRuntime;
   const text = String(command || "").trim();
@@ -44847,6 +44882,30 @@ function handleNexusHealthcareCollaborationRuntimeDelegatedClick(event) {
 
 document.addEventListener("click", handleNexusHealthcareCollaborationRuntimeDelegatedClick, true);
 
+function handleNexusUnifiedBrainRuntimeDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-brain-action]");
+  if (!button) return false;
+  const runtime = window.NexusUnifiedBrainRuntime;
+  if (!runtime) return false;
+  const action = button.getAttribute("data-nexus-brain-action") || "review-plan";
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  void Promise.resolve(runtime.handlePanelAction?.(action)).then(result => {
+    runtime.mount?.();
+    runtime.render?.(result);
+    renderNexusAgenticCommandResult({
+      ok: true,
+      command: action,
+      source: "nexus-unified-brain-runtime",
+      unifiedBrainResult: result
+    });
+  });
+  return true;
+}
+
+document.addEventListener("click", handleNexusUnifiedBrainRuntimeDelegatedClick, true);
+
 function handleNexusAgricultureCollaborationRuntimeDelegatedClick(event) {
   const button = event?.target?.closest?.("[data-nexus-agriculture-action]");
   if (!button) return false;
@@ -44921,6 +44980,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (await handleNexusUnifiedBrainRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusMessagePreparationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
@@ -45066,6 +45126,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pauseNexusForSideConversation(command || localizedCommand || rawCommand);
     return;
   }
+  if (await handleNexusUnifiedBrainRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, source: options.source || "typed_chat" })) return;
   if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, source: options.source || "typed_chat" })) return;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, source: options.source || "typed_chat" })) return;
   if (handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)) return;
@@ -47906,6 +47967,7 @@ function bindStatic() {
     window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
     window.NexusMessagePreparationRuntime?.mount?.();
     window.NexusFullCommunicationRuntime?.mount?.();
+    window.NexusUnifiedBrainRuntime?.mount?.();
     window.NexusHealthcareCollaborationRuntime?.mount?.();
     window.NexusAgricultureCollaborationRuntime?.mount?.();
   }
@@ -47927,6 +47989,12 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        return;
+      }
       if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -47988,6 +48056,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -48216,6 +48292,11 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = command;
         setCommandInputs(command);
@@ -49463,6 +49544,14 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
+    if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return;
+    }
     if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();

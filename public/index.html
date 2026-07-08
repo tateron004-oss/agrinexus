@@ -227,6 +227,58 @@
           <div data-nexus-telephony-receipts class="nexus-telephony-receipts" aria-live="polite"></div>
           <p class="nexus-telephony-boundary">Not for emergency calls. Real outbound calls require provider credentials, recipient verification, consent, explicit confirmation, and audit.</p>
         </section>
+        <section id="nexusUnifiedBrainRuntime" class="nexus-unified-brain-runtime" data-nexus-unified-brain-runtime="true" aria-label="Nexus unified brain runtime">
+          <div class="nexus-unified-brain-head">
+            <div>
+              <strong>Nexus Unified Brain</strong>
+              <span data-nexus-brain-status>Unified Brain local-ready; external execution gated.</span>
+            </div>
+            <div class="nexus-unified-brain-actions" role="group" aria-label="Unified Brain mission actions">
+              <button type="button" data-nexus-brain-action="start">Start Mission</button>
+              <button type="button" data-nexus-brain-action="prepare-next">Prepare Next Step</button>
+              <button type="button" data-nexus-brain-action="review-plan">Review Plan</button>
+              <button type="button" data-nexus-brain-action="blocked">Show What Is Blocked</button>
+              <button type="button" data-nexus-brain-action="receipts">Show Receipts</button>
+              <button type="button" data-nexus-brain-action="clear">Clear Mission</button>
+            </div>
+          </div>
+          <p class="nexus-unified-brain-boundary">Nexus coordinates communication, agriculture, healthcare, learning, workforce, marketplace, logistics, and provider-ready workflows as one mission. It prepares packets, drafts, plans, and receipts locally; external sends, calls, visits, payments, provider handoffs, drone actions, clinical actions, and regulated steps remain gated by credentials, consent, confirmation, review, and audit.</p>
+          <div class="nexus-unified-brain-grid">
+            <section>
+              <strong>What Nexus understood</strong>
+              <p data-nexus-brain-understood>Ask Nexus an open-ended goal to start a unified mission.</p>
+            </section>
+            <section>
+              <strong>Domains involved</strong>
+              <p data-nexus-brain-domains>No active mission.</p>
+            </section>
+            <section>
+              <strong>Provider/source readiness</strong>
+              <div data-nexus-brain-evidence class="nexus-unified-brain-list"></div>
+            </section>
+            <section>
+              <strong>Missing information</strong>
+              <p data-nexus-brain-missing>No missing information yet.</p>
+            </section>
+          </div>
+          <div class="nexus-unified-brain-workspace">
+            <section>
+              <strong>Plan</strong>
+              <div data-nexus-brain-plan class="nexus-unified-brain-plan">
+                <span><b>No plan yet</b><small>Mission steps appear here.</small></span>
+              </div>
+            </section>
+            <section>
+              <strong>Blocked items</strong>
+              <p data-nexus-brain-blocked>No blocked items yet.</p>
+            </section>
+            <section>
+              <strong>Receipts</strong>
+              <div data-nexus-brain-receipts class="nexus-unified-brain-list">No mission receipts yet.</div>
+            </section>
+          </div>
+        </section>
+
         <section id="nexusFullCommunicationRuntime" class="nexus-full-communication-runtime" data-nexus-full-communication-runtime="true" aria-label="Nexus full communication runtime">
           <div class="nexus-full-communication-head">
             <div>
@@ -2070,6 +2122,7 @@
   <script src="/nexus-persistent-memory.js?v=nexus-persistent-memory-1"></script>
   <script src="/nexus-universal-navigation-runtime.js?v=nexus-universal-navigation-2"></script>
   <script src="/nexus-open-dialogue-runtime.js?v=nexus-multilingual-dialogue-1"></script>
+  <script src="/nexus-unified-brain-runtime.js?v=nexus-unified-brain-runtime-1"></script>
   <script src="/nexus-conversational-voice-runtime.js?v=nexus-multilingual-voice-1"></script>
   <script src="/nexus-telephony-call-runtime.js?v=nexus-telephony-call-runtime-1"></script>
   <script src="/nexus-message-preparation-runtime.js?v=nexus-message-preparation-runtime-1"></script>
