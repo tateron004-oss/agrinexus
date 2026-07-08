@@ -467,6 +467,8 @@
       missionId: makeId("nexus-mission"),
       userGoal,
       understoodGoal: understoodGoal(userGoal, domains),
+      conversationalResponse: "",
+      missionStatus: "",
       template,
       domains,
       steps,
@@ -486,6 +488,8 @@
       localSessionMemory: true,
       memoryLabel: "session/local mission memory only unless a configured persistence layer is active"
     };
+    mission.conversationalResponse = conversationalSummary(mission);
+    mission.missionStatus = missionStatus(mission);
     mission.receipt = buildMissionReceipt(mission);
     mission.receipts = [mission.receipt];
     missionMemory.activeMission = mission;
@@ -502,6 +506,175 @@
   function understoodGoal(goal, domains) {
     if (domains.includes("emergency_safety")) return "Nexus detected possible emergency/safety language and will block routine handling.";
     return `Nexus understood a ${domains.join(", ")} mission and prepared a safe multi-step plan.`;
+  }
+
+  function conversationalSummary(mission = {}) {
+    const domains = mission.domains || [];
+    if (domains.includes("emergency_safety")) {
+      return "I noticed possible emergency or safety language. I cannot handle that as a routine workflow. Please contact local emergency services now if anyone may be in danger.";
+    }
+    if (domains.includes("agriculture") && domains.includes("marketplace_trade")) {
+      return "I can help with that. I'll prepare a crop issue plan, create a safe advisory draft, prepare a buyer message, and set up a shipment planning checklist. I'll also show what needs more information or expert review.";
+    }
+    if (domains.includes("healthcare") || domains.includes("pharmacy") || domains.includes("mobile_health")) {
+      return "I can help prepare a clinic message, a pharmacy call script, and a care follow-up packet. If you are having chest pain, severe shortness of breath, stroke symptoms, or feel unsafe, seek emergency help now.";
+    }
+    if (domains.includes("learning") || domains.includes("workforce_jobs")) {
+      return "I can help turn that into a learning-to-employment plan. I'll identify training needs, prepare a job support packet, and draft an employer message if needed.";
+    }
+    if (domains.includes("communication")) {
+      return "I can prepare the message or call script, show what still needs confirmation, and keep a receipt. I will not send or call without a connected provider and your approval.";
+    }
+    return "I can help organize this into a safe Nexus mission, prepare the next useful steps, show what is blocked, and keep receipts for what was prepared locally.";
+  }
+
+  function missionStatus(mission = {}) {
+    if (!mission.missionId) return "New";
+    if (mission.safetyFlags?.emergency) return "Blocked";
+    if (mission.missingInputs?.length) return "Waiting on You";
+    if (mission.blockedItems?.length) return "Ready to Review";
+    return "Complete Locally";
+  }
+
+  function domainLabel(domain = "") {
+    const labels = {
+      communication: "Communication",
+      healthcare: "Health",
+      agriculture: "Agriculture",
+      mobile_health: "Mobile Clinic",
+      pharmacy: "Pharmacy",
+      learning: "Learning",
+      workforce_jobs: "Jobs",
+      marketplace_trade: "Marketplace",
+      logistics_shipment: "Logistics",
+      drone_field_operations: "Field Observation",
+      provider_admin: "Provider Review",
+      general_help: "General Help",
+      emergency_safety: "Safety"
+    };
+    return labels[domain] || "Nexus";
+  }
+
+  function sourceLabel(sourceMode = "") {
+    if (/live/i.test(sourceMode)) return "Connected source";
+    if (/synthetic|sample/i.test(sourceMode)) return "Sample data only";
+    if (/fallback|local/i.test(sourceMode)) return "Prepared locally";
+    return "Prepared locally";
+  }
+
+  function statusLabel(step = {}) {
+    if (step.safetyLevel === SAFETY_LEVELS.EMERGENCY_ESCALATION || /emergency|blocked_safety/i.test(step.status)) return "Blocked";
+    if (step.reviewRequired || /review/i.test(step.status || "")) {
+      if (step.reviewType === "clinician_review") return "Needs Clinician Review";
+      if (step.reviewType === "expert_admin_review") return "Needs Expert Review";
+      return "Needs Review";
+    }
+    if (step.providerRequired || /missing_credentials|provider/i.test(step.status || "")) return "Needs Provider";
+    if (step.confirmationRequired || /confirmation|gated/i.test(step.status || "")) return "Needs Confirmation";
+    if (/prepared|local/i.test(step.status || "")) return "Prepared";
+    if (/done|complete/i.test(step.status || "")) return "Done Locally";
+    return "Ready";
+  }
+
+  function plainStepExplanation(step = {}) {
+    const reason = readableStatus(step.blockedReason);
+    if (reason) return simplifyUserCopy(reason, step);
+    if (step.runtime === "communication") return "Nexus prepared a communication draft. It was not sent.";
+    if (step.runtime === "healthcare") return "Nexus prepared a health access packet for review. It is not a diagnosis or prescription.";
+    if (step.runtime === "agriculture") return "Nexus prepared agriculture guidance or planning support.";
+    if (step.runtime === "local_workforce") return "Nexus prepared a learning or workforce support packet.";
+    return "Nexus prepared this locally for review.";
+  }
+
+  function simplifyUserCopy(value = "", step = {}) {
+    const text = normalizeText(value)
+      .replace(/\blocalFallback\b/g, "Prepared locally")
+      .replace(/\bmissingEnv\b/g, "Provider not connected")
+      .replace(/\bexecutionMode\b/g, "Action status")
+      .replace(/\bclinicianReviewRequired\b/g, "A clinician must review this")
+      .replace(/\bexpertReviewRequired\b/g, "An expert must review this")
+      .replace(/\bcommunicationReceiptId\b/g, "Communication draft receipt")
+      .replace(/blocked_missing_credentials_or_compliance/gi, "Provider or compliance gate not ready")
+      .replace(/prepared_local_missing_credentials/gi, "Prepared locally; provider not connected")
+      .replace(/prepared_local_fallback/gi, "Prepared locally")
+      .replace(/queued_for_expert_review/gi, "Ready for expert review");
+    if (/Review recipient, channel/i.test(text)) return "Review recipient, channel, and message purpose before any send.";
+    if (/Review is required/i.test(text)) return step.reviewType === "clinician_review" ? "A clinician must review this before any care action." : "An expert or admin reviewer must review this before any external action.";
+    return text || "Prepared locally; review before external action.";
+  }
+
+  function preparedInsteadCopy(step = {}) {
+    const title = step.title || "Next step";
+    if (step.runtime === "communication") return `Prepared instead: ${title}. It was not sent because a provider connection and confirmation are required.`;
+    if (step.runtime === "healthcare") return `Prepared instead: ${title}. Clinical or provider action is blocked until the right review, consent, and connection are active.`;
+    if (step.runtime === "agriculture" && step.reviewRequired) return `Prepared instead: ${title}. Expert review is needed before this becomes a recommendation or handoff.`;
+    if (step.runtime === "agriculture") return `Prepared instead: ${title}. Live provider or marketplace action is not connected yet.`;
+    if (step.runtime === "local_workforce") return `Prepared instead: ${title}. Enrollment or employer contact still needs a connected provider and confirmation.`;
+    return `Prepared instead: ${title}. External action remains gated.`;
+  }
+
+  function unlockCopy(step = {}) {
+    const items = [];
+    if (step.providerRequired || /provider|credential|missing/i.test(step.status || step.blockedReason || "")) items.push("connect provider");
+    if (step.confirmationRequired) items.push("confirm action");
+    if (step.reviewRequired) items.push(step.reviewType === "clinician_review" ? "clinician review" : "expert/admin review");
+    if (!items.length) items.push("review the prepared packet");
+    return `What unlocks this: ${items.join(", ")}.`;
+  }
+
+  function canDoNow(mission = {}) {
+    const actions = [];
+    if ((mission.domains || []).includes("communication") || mission.steps?.some(step => step.runtime === "communication")) actions.push("Prepare a message or call script");
+    if ((mission.domains || []).includes("agriculture")) actions.push("Prepare crop advisory and farm planning support");
+    if ((mission.domains || []).includes("healthcare") || (mission.domains || []).includes("pharmacy")) actions.push("Prepare a care packet, clinic message, or pharmacy script");
+    if ((mission.domains || []).includes("marketplace_trade")) actions.push("Prepare listing, buyer message, and shipment checklist");
+    if ((mission.domains || []).includes("learning") || (mission.domains || []).includes("workforce_jobs")) actions.push("Prepare training, job, and employer support packet");
+    actions.push("Create a local receipt");
+    return unique(actions);
+  }
+
+  function friendlyMissingPrompt(item = "") {
+    const text = item.toLowerCase();
+    if (/location|field/.test(text)) return "What location or field area should Nexus use?";
+    if (/crop|livestock|commodity/.test(text)) return "What crop, livestock, or commodity is involved?";
+    if (/symptom|reading|concern/.test(text)) return "What symptom, concern, or reading should Nexus include?";
+    if (/clinic|provider/.test(text)) return "Which clinic or provider should Nexus prepare for?";
+    if (/pharmacy|medication/.test(text)) return "Which pharmacy or medication question should Nexus prepare around?";
+    if (/buyer|seller/.test(text)) return "Who is the buyer or seller, if you know?";
+    if (/destination|shipment|origin/.test(text)) return "What shipment origin, destination, or timing matters?";
+    if (/job|training|skill/.test(text)) return "What job goal or training interest should Nexus focus on?";
+    if (/recipient|channel|message/.test(text)) return "Who should receive the draft, and by which channel?";
+    return `Please add: ${item}.`;
+  }
+
+  function nextBestStep(mission = {}) {
+    if (!mission.missionId) {
+      return { title: "Tell Nexus your goal", why: "A clear goal lets Nexus create one safe mission plan.", button: "Start Mission", action: "start" };
+    }
+    if (mission.missingInputs?.length) {
+      return { title: "Add missing information", why: friendlyMissingPrompt(mission.missingInputs[0]), button: "Add Missing Info", action: "review-plan" };
+    }
+    const review = mission.steps?.find(step => step.reviewRequired || step.confirmationRequired || step.providerRequired);
+    if (review) {
+      return { title: `Review ${review.title}`, why: plainStepExplanation(review), button: "Review", action: "review-plan" };
+    }
+    return { title: "Review your prepared plan", why: "Nexus prepared this locally and created a receipt.", button: "Show Receipt", action: "receipts" };
+  }
+
+  function receiptCards() {
+    return missionMemory.receipts.slice(0, 6).map(item => {
+      const title = item.planSteps?.[0] || item.userGoal || "Mission prepared";
+      const status = item.executedSteps?.length ? "Sent/Scheduled" : item.blockedSteps?.length ? "Safety Gate Triggered" : "Local Draft";
+      const source = item.sourceModes?.map(sourceLabel).join(", ") || "Prepared locally";
+      return {
+        id: item.missionReceiptId,
+        title,
+        status,
+        timestamp: item.timestamp,
+        source,
+        outcome: "Nexus prepared the mission locally, created a receipt, and did not complete any external action."
+      };
+    });
   }
 
   function recommendedNextStep(steps = [], missing = []) {
@@ -533,13 +706,13 @@
 
   function blockedSummary(mission) {
     const blocked = mission?.blockedItems || [];
-    if (!blocked.length) return "No external action is authorized yet. Nexus can prepare local packets and receipts.";
-    return `Blocked or gated items: ${blocked.map(item => `${item.title}: ${item.blockedReason || "confirmation/review required"}`).join(" | ")}`;
+    if (!blocked.length) return "Nothing is blocked for local preparation. Nexus still will not send, call, schedule, pay, dispatch, or hand off externally without the right provider connection and confirmation.";
+    return blocked.map(item => `${preparedInsteadCopy(item)} ${unlockCopy(item)}`).join(" ");
   }
 
   function missingSummary(mission) {
     const missing = mission?.missingInputs || [];
-    return missing.length ? `Nexus needs: ${missing.join(", ")}.` : "Nexus has enough to prepare local packets; external actions still need confirmation and provider gates.";
+    return missing.length ? `Nexus needs a little more detail: ${missing.map(friendlyMissingPrompt).join(" ")}` : "Nexus has enough to prepare local packets; external actions still need confirmation and provider gates.";
   }
 
   function caseSummary(mission) {
@@ -604,13 +777,30 @@
     if (!panel) return;
     const target = panel.querySelector("[data-nexus-brain-evidence]");
     if (!target) return;
-    target.innerHTML = Object.entries(status.availableRuntimes).map(([key, value]) => `<span><b>${escapeHtml(key)}</b><small>${escapeHtml(value)}</small></span>`).join("");
+    const labels = {
+      communication: "Communication Runtime",
+      agriculture: "Agriculture Runtime",
+      healthcare: "Healthcare Runtime",
+      workforceLearning: "Workforce/Learning Support",
+      marketplaceLogistics: "Marketplace/Logistics Support"
+    };
+    target.innerHTML = Object.entries(status.availableRuntimes).map(([key, value]) => {
+      const ready = value === true || /available|fallback|via_/i.test(String(value));
+      const display = ready ? "Available for preparation" : "Provider not connected";
+      return `<span><b>${escapeHtml(labels[key] || domainLabel(key))}</b><small>${escapeHtml(display)}</small></span>`;
+    }).join("");
     const statusTarget = panel.querySelector("[data-nexus-brain-status]");
-    if (statusTarget) statusTarget.textContent = "Unified Brain local-ready; external execution gated.";
+    if (statusTarget) statusTarget.textContent = "Nexus can prepare locally; external actions stay gated.";
   }
 
   function renderMission(mission = missionMemory.activeMission, panel = host()) {
     if (!panel) return;
+    const response = panel.querySelector("[data-nexus-brain-response]");
+    const summary = panel.querySelector("[data-nexus-brain-summary]");
+    const missionStatusTarget = panel.querySelector("[data-nexus-brain-mission-status]");
+    const nextStepTarget = panel.querySelector("[data-nexus-brain-next-step]");
+    const nextAction = panel.querySelector("[data-nexus-brain-next-action]");
+    const canDo = panel.querySelector("[data-nexus-brain-can-do]");
     const understood = panel.querySelector("[data-nexus-brain-understood]");
     const domains = panel.querySelector("[data-nexus-brain-domains]");
     const plan = panel.querySelector("[data-nexus-brain-plan]");
@@ -618,35 +808,73 @@
     const blocked = panel.querySelector("[data-nexus-brain-blocked]");
     const receiptsTarget = panel.querySelector("[data-nexus-brain-receipts]");
     if (!mission) {
+      if (response) response.textContent = "I can help turn your request into one safe plan, prepare useful local drafts or packets, show what is blocked, and keep receipts.";
+      if (summary) summary.textContent = "Tell Nexus what you want to accomplish.";
+      if (missionStatusTarget) missionStatusTarget.textContent = "New";
+      if (nextStepTarget) nextStepTarget.textContent = "Tell Nexus your goal so it can prepare the first safe step.";
+      if (nextAction) {
+        nextAction.textContent = "Start Mission";
+        nextAction.setAttribute("data-nexus-brain-action", "start");
+      }
       if (understood) understood.textContent = "Ask Nexus an open-ended goal to start a unified mission.";
       if (domains) domains.textContent = "No active mission.";
       if (plan) plan.innerHTML = "<span><b>No plan yet</b><small>Mission steps appear here.</small></span>";
-      if (missing) missing.textContent = "No missing information yet.";
-      if (blocked) blocked.textContent = "No blocked items yet.";
+      if (canDo) canDo.innerHTML = "<span><b>Prepare local drafts</b><small>Nexus can prepare plans, packets, and receipts before any external action.</small></span>";
+      if (missing) missing.innerHTML = "<span><b>No missing information yet</b><small>Start a mission first.</small></span>";
+      if (blocked) blocked.innerHTML = "<span><b>No blocked items yet</b><small>Nexus will show gates after a mission is prepared.</small></span>";
       if (receiptsTarget) receiptsTarget.textContent = "No mission receipts yet.";
       return;
     }
+    const next = nextBestStep(mission);
+    if (response) response.textContent = mission.userVisibleStatus || mission.conversationalResponse || conversationalSummary(mission);
+    if (summary) summary.textContent = `${mission.understoodGoal} Goal: ${mission.userGoal || "Prepare a safe Nexus mission."}`;
+    if (missionStatusTarget) missionStatusTarget.textContent = mission.missionStatus || missionStatus(mission);
+    if (nextStepTarget) nextStepTarget.textContent = `${next.title}. ${next.why}`;
+    if (nextAction) {
+      nextAction.textContent = next.button;
+      nextAction.setAttribute("data-nexus-brain-action", next.action);
+    }
     if (understood) understood.textContent = mission.understoodGoal;
-    if (domains) domains.textContent = mission.domains.join(", ");
+    if (domains) domains.innerHTML = mission.domains.map(domain => `<span class="nexus-brain-domain-chip">${escapeHtml(domainLabel(domain))}</span>`).join("");
+    if (canDo) {
+      canDo.innerHTML = canDoNow(mission).map(item => `<span><b>${escapeHtml(item)}</b><small>Available now as local preparation.</small></span>`).join("");
+    }
     if (plan) {
       plan.innerHTML = mission.steps.map(item => `
         <article class="nexus-brain-step" data-status="${escapeHtml(item.status)}">
-          <b>${escapeHtml(item.order)}. ${escapeHtml(item.title)}</b>
-          <small>${escapeHtml(item.runtime)} - ${escapeHtml(item.status)} - ${escapeHtml(item.sourceMode)}</small>
-          <em>${escapeHtml(item.blockedReason || "Prepared locally; review before external action.")}</em>
+          <div class="nexus-brain-step-top">
+            <b>${escapeHtml(item.order)}. ${escapeHtml(item.title)}</b>
+            <span class="nexus-brain-status-pill">${escapeHtml(statusLabel(item))}</span>
+          </div>
+          <small><span>${escapeHtml(domainLabel(item.runtime))}</span><span>${escapeHtml(sourceLabel(item.sourceMode))}</span></small>
+          <em>${escapeHtml(plainStepExplanation(item))}</em>
+          <button type="button" data-nexus-brain-action="${item.confirmationRequired ? "review-plan" : "prepare-next"}">${escapeHtml(item.confirmationRequired ? "Review" : "Prepare")}</button>
         </article>
       `).join("");
     }
-    if (missing) missing.textContent = mission.missingInputs.length ? mission.missingInputs.join(", ") : "No critical missing information for local preparation.";
-    if (blocked) blocked.textContent = blockedSummary(mission);
-    if (receiptsTarget) receiptsTarget.innerHTML = missionMemory.receipts.slice(0, 6).map(item => `<span><b>${escapeHtml(item.missionReceiptId)}</b><small>${escapeHtml(item.outcome)}</small></span>`).join("");
+    if (missing) {
+      missing.innerHTML = mission.missingInputs.length
+        ? mission.missingInputs.map(item => `<span><b>${escapeHtml(friendlyMissingPrompt(item))}</b><small>Answer this to improve the prepared plan.</small></span>`).join("")
+        : "<span><b>No critical missing information</b><small>Nexus can prepare locally. External actions still need the right gates.</small></span>";
+    }
+    if (blocked) {
+      blocked.innerHTML = mission.blockedItems.length
+        ? mission.blockedItems.map(item => `<span><b>${escapeHtml(preparedInsteadCopy(item))}</b><small>${escapeHtml(unlockCopy(item))} Still useful now: local draft, checklist, packet, or receipt is ready.</small></span>`).join("")
+        : "<span><b>No blocked items for local preparation</b><small>External actions still require confirmation and provider gates.</small></span>";
+    }
+    if (receiptsTarget) {
+      const cards = receiptCards();
+      receiptsTarget.innerHTML = cards.length
+        ? cards.map(item => `<span class="nexus-brain-receipt"><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.status)} - ${escapeHtml(item.source)}</small><small>${escapeHtml(item.timestamp)}</small><em>${escapeHtml(item.outcome)}</em></span>`).join("")
+        : "No mission receipts yet.";
+    }
   }
 
   function render(result, panel = host()) {
     if (!panel) return;
     if (result?.answerType && result.userVisibleStatus) {
-      const understood = panel.querySelector("[data-nexus-brain-understood]");
-      if (understood) understood.textContent = result.userVisibleStatus;
+      const response = panel.querySelector("[data-nexus-brain-response]");
+      if (response) response.textContent = result.userVisibleStatus;
     }
     renderStatus(runtimeStatus(), panel);
     renderMission(result?.missionId ? result : missionMemory.activeMission, panel);

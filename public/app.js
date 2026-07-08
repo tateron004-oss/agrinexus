@@ -44651,7 +44651,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     command: text,
     source: "nexus-unified-brain-runtime",
     unifiedBrainResult: result,
-    message: result?.userVisibleStatus || result?.understoodGoal || "Nexus prepared a unified mission plan."
+    message: result?.userVisibleStatus || result?.conversationalResponse || result?.understoodGoal || "Nexus prepared a unified mission plan."
   });
   return true;
 }
@@ -44883,11 +44883,11 @@ function handleNexusHealthcareCollaborationRuntimeDelegatedClick(event) {
 document.addEventListener("click", handleNexusHealthcareCollaborationRuntimeDelegatedClick, true);
 
 function handleNexusUnifiedBrainRuntimeDelegatedClick(event) {
-  const button = event?.target?.closest?.("[data-nexus-brain-action]");
+  const button = event?.target?.closest?.("[data-nexus-brain-action],[data-nexus-brain-next-action]");
   if (!button) return false;
   const runtime = window.NexusUnifiedBrainRuntime;
   if (!runtime) return false;
-  const action = button.getAttribute("data-nexus-brain-action") || "review-plan";
+  const action = button.getAttribute("data-nexus-brain-action") || button.getAttribute("data-nexus-brain-next-action") || "review-plan";
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();

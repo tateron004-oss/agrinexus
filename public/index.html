@@ -227,11 +227,11 @@
           <div data-nexus-telephony-receipts class="nexus-telephony-receipts" aria-live="polite"></div>
           <p class="nexus-telephony-boundary">Not for emergency calls. Real outbound calls require provider credentials, recipient verification, consent, explicit confirmation, and audit.</p>
         </section>
-        <section id="nexusUnifiedBrainRuntime" class="nexus-unified-brain-runtime" data-nexus-unified-brain-runtime="true" aria-label="Nexus unified brain runtime">
+        <section id="nexusUnifiedBrainRuntime" class="nexus-unified-brain-runtime" data-nexus-unified-brain-runtime="true" aria-label="Nexus unified mission workspace">
           <div class="nexus-unified-brain-head">
             <div>
-              <strong>Nexus Unified Brain</strong>
-              <span data-nexus-brain-status>Unified Brain local-ready; external execution gated.</span>
+              <strong>Nexus Mission Workspace</strong>
+              <span data-nexus-brain-status>Nexus is ready to prepare a safe plan.</span>
             </div>
             <div class="nexus-unified-brain-actions" role="group" aria-label="Unified Brain mission actions">
               <button type="button" data-nexus-brain-action="start">Start Mission</button>
@@ -242,7 +242,23 @@
               <button type="button" data-nexus-brain-action="clear">Clear Mission</button>
             </div>
           </div>
-          <p class="nexus-unified-brain-boundary">Nexus coordinates communication, agriculture, healthcare, learning, workforce, marketplace, logistics, and provider-ready workflows as one mission. It prepares packets, drafts, plans, and receipts locally; external sends, calls, visits, payments, provider handoffs, drone actions, clinical actions, and regulated steps remain gated by credentials, consent, confirmation, review, and audit.</p>
+          <p class="nexus-unified-brain-response" data-nexus-brain-response>I can help turn your request into one safe plan, prepare useful local drafts or packets, show what is blocked, and keep receipts.</p>
+          <p class="nexus-unified-brain-boundary">Nexus prepares plans, drafts, packets, and receipts locally. Sending, calling, scheduling, payments, provider handoffs, drone actions, clinical actions, and regulated steps require the right connection, consent, confirmation, review, and audit.</p>
+          <p class="nexus-unified-brain-trust-copy">I prepared this locally. I did not send anything. This may need a connected provider, confirmation, expert review, or clinician review before any external action.</p>
+          <section class="nexus-brain-summary-card" aria-label="Mission summary">
+            <div>
+              <strong>Mission Summary</strong>
+              <p data-nexus-brain-summary>Nexus is waiting for your goal.</p>
+            </div>
+            <span class="nexus-brain-status-pill" data-nexus-brain-mission-status>New</span>
+          </section>
+          <section class="nexus-brain-next-step" aria-label="Next best step">
+            <div>
+              <strong>Next Best Step</strong>
+              <p data-nexus-brain-next-step>Tell Nexus what you want to accomplish.</p>
+            </div>
+            <button type="button" data-nexus-brain-next-action data-nexus-brain-action="start">Start Mission</button>
+          </section>
           <div class="nexus-unified-brain-grid">
             <section>
               <strong>What Nexus understood</strong>
@@ -257,20 +273,24 @@
               <div data-nexus-brain-evidence class="nexus-unified-brain-list"></div>
             </section>
             <section>
-              <strong>Missing information</strong>
-              <p data-nexus-brain-missing>No missing information yet.</p>
+              <strong>What Nexus Can Do Now</strong>
+              <div data-nexus-brain-can-do class="nexus-unified-brain-list">Prepare local drafts and receipts.</div>
             </section>
           </div>
           <div class="nexus-unified-brain-workspace">
             <section>
-              <strong>Plan</strong>
+              <strong>Nexus Plan</strong>
               <div data-nexus-brain-plan class="nexus-unified-brain-plan">
                 <span><b>No plan yet</b><small>Mission steps appear here.</small></span>
               </div>
             </section>
             <section>
-              <strong>Blocked items</strong>
-              <p data-nexus-brain-blocked>No blocked items yet.</p>
+              <strong>What Nexus Needs From You</strong>
+              <div data-nexus-brain-missing class="nexus-unified-brain-list">No missing information yet.</div>
+            </section>
+            <section>
+              <strong>What Is Blocked</strong>
+              <div data-nexus-brain-blocked class="nexus-unified-brain-list">No blocked items yet.</div>
             </section>
             <section>
               <strong>Receipts</strong>

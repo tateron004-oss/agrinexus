@@ -222,7 +222,7 @@
       return null;
     }
     renderTranscript(text, meta.confidence);
-    setState("reasoning", "Nexus is reasoning safely");
+    setState("reasoning", "Nexus is preparing your plan");
     const brainRuntime = root?.NexusUnifiedBrainRuntime;
     if (brainRuntime?.shouldHandleBeforeLegacy?.(text, { language: currentLanguage(), inputType: meta.source || "voice" })) {
       const result = await brainRuntime.process(text, {
@@ -232,8 +232,9 @@
       });
       if (brainRuntime.mount) brainRuntime.mount();
       if (brainRuntime.render) brainRuntime.render(result);
+      const summary = result?.conversationalResponse || result?.userVisibleStatus || result?.understoodGoal || "Nexus prepared a unified mission plan.";
       renderResponse({
-        text: result?.understoodGoal || result?.userVisibleStatus || "Nexus prepared a unified mission plan.",
+        text: summary,
         language: currentLanguage(),
         intent: "unified_brain_mission",
         safety: {
@@ -241,7 +242,7 @@
           message: "No external action was authorized by the Unified Brain."
         }
       });
-      setState("idle", "Unified mission prepared safely");
+      setState("idle", "Mission plan prepared safely");
       return result;
     }
     const agricultureRuntime = root?.NexusAgricultureCollaborationRuntime;

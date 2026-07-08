@@ -3673,7 +3673,7 @@ body.user-mode .user-preview-summary.compact {
 
 body.user-mode .nexus-unified-brain-runtime {
   margin: 18px 0;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid rgba(125, 249, 255, 0.28);
   border-radius: 22px;
   background:
@@ -3686,6 +3686,8 @@ body.user-mode .nexus-unified-brain-runtime {
 }
 
 body.user-mode .nexus-unified-brain-head,
+body.user-mode .nexus-brain-summary-card,
+body.user-mode .nexus-brain-next-step,
 body.user-mode .nexus-unified-brain-grid,
 body.user-mode .nexus-unified-brain-workspace {
   display: grid;
@@ -3706,9 +3708,23 @@ body.user-mode .nexus-unified-brain-head strong {
 
 body.user-mode .nexus-unified-brain-head span,
 body.user-mode .nexus-unified-brain-boundary,
+body.user-mode .nexus-unified-brain-response,
+body.user-mode .nexus-unified-brain-trust-copy,
 body.user-mode .nexus-unified-brain-runtime small,
 body.user-mode .nexus-unified-brain-runtime p {
   color: rgba(226, 232, 240, 0.86);
+}
+
+body.user-mode .nexus-unified-brain-response {
+  margin: 14px 0 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(125, 249, 255, 0.24);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(168, 85, 247, 0.12));
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1rem;
+  line-height: 1.5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 body.user-mode .nexus-unified-brain-actions {
@@ -3727,9 +3743,76 @@ body.user-mode .nexus-unified-brain-actions button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+body.user-mode .nexus-unified-brain-actions button:hover,
+body.user-mode .nexus-brain-step button:hover,
+body.user-mode .nexus-brain-next-step button:hover {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(14, 116, 144, 0.34);
+}
+
 body.user-mode .nexus-unified-brain-boundary {
   margin: 12px 0;
   max-width: 980px;
+}
+
+body.user-mode .nexus-unified-brain-trust-copy {
+  margin: 8px 0 12px;
+  font-size: 0.92rem;
+}
+
+body.user-mode .nexus-brain-summary-card,
+body.user-mode .nexus-brain-next-step {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.16), transparent 38%),
+    rgba(15, 23, 42, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 30px rgba(8, 47, 73, 0.16);
+}
+
+body.user-mode .nexus-brain-next-step {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(250, 204, 21, 0.14), transparent 38%),
+    rgba(15, 23, 42, 0.58);
+}
+
+body.user-mode .nexus-brain-next-step button,
+body.user-mode .nexus-brain-step button {
+  min-height: 40px;
+  width: fit-content;
+  border: 1px solid rgba(125, 249, 255, 0.28);
+  border-radius: 999px;
+  padding: 8px 13px;
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(8, 145, 178, 0.22);
+}
+
+body.user-mode .nexus-brain-status-pill,
+body.user-mode .nexus-brain-domain-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 26px;
+  border: 1px solid rgba(125, 249, 255, 0.28);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: rgba(236, 253, 245, 0.96);
+  background: rgba(15, 118, 110, 0.24);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.18);
+}
+
+body.user-mode [data-nexus-brain-domains] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 body.user-mode .nexus-unified-brain-grid {
@@ -3779,6 +3862,15 @@ body.user-mode .nexus-unified-brain-plan > span {
   display: grid;
   gap: 4px;
   padding: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body.user-mode .nexus-brain-step-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 body.user-mode .nexus-brain-step b,
@@ -3786,13 +3878,30 @@ body.user-mode .nexus-unified-brain-list b {
   color: rgba(255, 255, 255, 0.96);
 }
 
-body.user-mode .nexus-brain-step em {
+body.user-mode .nexus-brain-step small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+body.user-mode .nexus-brain-step small span {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: rgba(226, 232, 240, 0.88);
+  background: rgba(15, 23, 42, 0.42);
+}
+
+body.user-mode .nexus-brain-step em,
+body.user-mode .nexus-brain-receipt em {
   color: rgba(186, 230, 253, 0.86);
   font-style: normal;
 }
 
 @media (max-width: 900px) {
   body.user-mode .nexus-unified-brain-head,
+  body.user-mode .nexus-brain-summary-card,
+  body.user-mode .nexus-brain-next-step,
   body.user-mode .nexus-unified-brain-grid,
   body.user-mode .nexus-unified-brain-workspace {
     grid-template-columns: 1fr;
@@ -3800,6 +3909,15 @@ body.user-mode .nexus-brain-step em {
 
   body.user-mode .nexus-unified-brain-actions {
     justify-content: flex-start;
+  }
+
+  body.user-mode .nexus-brain-step-top {
+    display: grid;
+  }
+
+  body.user-mode .nexus-brain-next-step button,
+  body.user-mode .nexus-brain-step button {
+    width: 100%;
   }
 }
 .learning-path-card,

@@ -143,6 +143,11 @@ const suites = {
     "scripts/nexus-unified-brain-communication-integration-qa.js",
     "scripts/nexus-unified-brain-agriculture-integration-qa.js",
     "scripts/nexus-unified-brain-healthcare-integration-qa.js",
+    "scripts/nexus-unified-brain-ui-hardening-qa.js",
+    "scripts/nexus-unified-brain-copy-qa.js",
+    "scripts/nexus-unified-brain-mobile-layout-qa.js",
+    "scripts/nexus-unified-brain-receipt-readability-qa.js",
+    "scripts/nexus-unified-brain-blocked-state-copy-qa.js",
     "scripts/nexus-healthcare-collaboration-registry-qa.js",
     "scripts/nexus-healthcare-collaboration-runtime-qa.js",
     "scripts/nexus-healthcare-fhir-sandbox-qa.js",
@@ -902,7 +907,12 @@ const suites = {
     "scripts/nexus-unified-brain-receipts-qa.js",
     "scripts/nexus-unified-brain-communication-integration-qa.js",
     "scripts/nexus-unified-brain-agriculture-integration-qa.js",
-    "scripts/nexus-unified-brain-healthcare-integration-qa.js"
+    "scripts/nexus-unified-brain-healthcare-integration-qa.js",
+    "scripts/nexus-unified-brain-ui-hardening-qa.js",
+    "scripts/nexus-unified-brain-copy-qa.js",
+    "scripts/nexus-unified-brain-mobile-layout-qa.js",
+    "scripts/nexus-unified-brain-receipt-readability-qa.js",
+    "scripts/nexus-unified-brain-blocked-state-copy-qa.js"
   ],
   healthcare: [
     "scripts/nexus-healthcare-collaboration-registry-qa.js",
