@@ -37,6 +37,7 @@ const suites = {
     "scripts/voice-phase3-tts-qa.js",
     "scripts/voice-phase4-browser-runtime-qa.js",
     "scripts/nexus-voice-open-dialogue-runtime-qa.js",
+    "scripts/nexus-telephony-call-runtime-qa.js",
     "scripts/phone-greeting-qa.js"
   ],
   core: [

@@ -17,6 +17,7 @@ const nexusUserTestingRuntime = require("./server/nexus-user-testing-runtime.js"
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
+const nexusTelephonyCallRuntime = require("./public/nexus-telephony-call-runtime.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -36187,6 +36188,27 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/telephony/status" && req.method === "GET") {
+    return send(res, 200, nexusTelephonyCallRuntime.detectTelephonyProviderStatus(process.env));
+  }
+
+  if (url.pathname === "/api/telephony/prepare-call" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusTelephonyCallRuntime.prepareCall(body, { env: process.env, sourceMode: body.sourceMode || "server" });
+    return send(res, result.ok ? 200 : 409, { ...result, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/telephony/outbound-call" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusTelephonyCallRuntime.attemptOutboundCall(body, { env: process.env, confirmed: body.confirmed === true });
+    return send(res, 409, { ...result, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/telephony/inbound-webhook" && req.method === "POST") {
+    const result = nexusTelephonyCallRuntime.inboundReadiness({ env: process.env });
+    return send(res, result.ok ? 200 : 501, { ...result, noSecretValues: true, noExecutionAuthorized: true });
   }
 
   if (url.pathname === "/api/nexus/user-testing/status" && req.method === "GET") {

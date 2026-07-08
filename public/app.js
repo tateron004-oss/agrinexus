@@ -44513,6 +44513,55 @@ function handleNexusConversationRuntimeDelegatedClick(event) {
 
 document.addEventListener("click", handleNexusConversationRuntimeDelegatedClick, true);
 
+async function handleNexusTelephonyCallRuntimeCommand(text = "", options = {}) {
+  const runtime = window.NexusTelephonyCallRuntime;
+  if (!runtime?.shouldHandleCallCommand || !runtime.shouldHandleCallCommand(text)) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  const mountEl = await runtime.mount?.();
+  let providerStatus = null;
+  try {
+    const response = await fetch("/api/telephony/status");
+    providerStatus = await response.json();
+  } catch (error) {
+    providerStatus = null;
+  }
+  const result = runtime.prepareCall(text, {
+    providerStatus,
+    language: languageCode(),
+    sourceMode: options.source || "voice"
+  });
+  runtime.renderPreparedCall?.(result, mountEl);
+  if (providerStatus) runtime.renderStatus?.(providerStatus, mountEl);
+  renderLiveVoiceSuggestions([
+    "prepare a pharmacy call",
+    "prepare a clinic follow-up call",
+    "prepare a buyer call",
+    "what calls are configured"
+  ]);
+  updateNexusBehaviorLayer("call-prep", "Nexus prepared a local-safe call script and did not place a call.");
+  setVoiceResponse(result.message || "I prepared the call locally. Real outbound calling requires telephony provider credentials.", true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-telephony-call-runtime",
+    telephonyCall: result.call
+  });
+  return true;
+}
+
+function handleNexusTelephonyRuntimeDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-telephony-action]");
+  if (!button) return false;
+  if (window.NexusTelephonyCallRuntime?.mount) {
+    window.NexusTelephonyCallRuntime.mount();
+  }
+  return true;
+}
+
+document.addEventListener("click", handleNexusTelephonyRuntimeDelegatedClick, true);
+
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   clearLevelOneAgentActionSuggestionLabel();
@@ -44545,6 +44594,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (await handleNexusTelephonyCallRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusMultilingualOpenDialogueRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (handleNexusOpenDialogueAgentCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
@@ -47586,6 +47636,13 @@ function bindStatic() {
         return;
       }
       if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
+      if (await handleNexusTelephonyCallRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
         if (input) input.value = command;

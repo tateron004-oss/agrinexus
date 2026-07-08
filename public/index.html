@@ -171,6 +171,62 @@
           <p data-nexus-conversation-blocked>No execution was authorized.</p>
           <p data-nexus-conversation-sources>No live citations shown unless a configured provider returns sources.</p>
         </section>
+        <section id="nexusTelephonyCallRuntime" class="nexus-telephony-call-runtime" data-nexus-telephony-call-runtime="true" aria-label="Nexus telephony call preparation">
+          <div class="nexus-telephony-head">
+            <div>
+              <strong>Call Preparation</strong>
+              <span data-nexus-telephony-provider>Telephony status loading</span>
+            </div>
+            <button type="button" data-nexus-telephony-action="status">Refresh</button>
+          </div>
+          <div class="nexus-telephony-status">
+            <span data-nexus-telephony-outbound>I can prepare calls locally.</span>
+            <span data-nexus-telephony-inbound>Inbound phone calls are not active. A telephony provider number and webhook are required.</span>
+            <small>Missing: <b data-nexus-telephony-missing>Checking env names</b></small>
+          </div>
+          <div class="nexus-telephony-grid">
+            <label>Recipient
+              <input data-nexus-telephony-recipient-name placeholder="Clinic, pharmacy, buyer, employer">
+            </label>
+            <label>Type
+              <select data-nexus-telephony-recipient-type>
+                <option value="clinic">Clinic</option>
+                <option value="pharmacy">Pharmacy</option>
+                <option value="mobile_clinic">Mobile clinic</option>
+                <option value="seller">Seller</option>
+                <option value="buyer">Buyer</option>
+                <option value="logistics_provider">Logistics provider</option>
+                <option value="employer">Employer</option>
+                <option value="provider_follow_up">Provider follow-up</option>
+              </select>
+            </label>
+            <label>Purpose
+              <input data-nexus-telephony-purpose placeholder="Prepare a provider follow-up call">
+            </label>
+            <label>Language
+              <select data-nexus-telephony-language>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="ar">Arabic</option>
+                <option value="pt">Portuguese</option>
+                <option value="sw">Kiswahili</option>
+              </select>
+            </label>
+          </div>
+          <label class="nexus-telephony-notes">Context
+            <textarea data-nexus-telephony-notes placeholder="What should Nexus prepare for this call?"></textarea>
+          </label>
+          <div class="nexus-telephony-actions">
+            <button type="button" data-nexus-telephony-action="prepare">Prepare call script</button>
+            <label><input type="checkbox" data-nexus-telephony-confirm> I confirm the recipient, purpose, and consent</label>
+            <button type="button" data-nexus-telephony-action="attempt">Check real-call gate</button>
+            <button type="button" data-nexus-telephony-action="clear">Clear</button>
+          </div>
+          <pre data-nexus-telephony-script>Call script will appear here.</pre>
+          <div data-nexus-telephony-receipts class="nexus-telephony-receipts" aria-live="polite"></div>
+          <p class="nexus-telephony-boundary">Not for emergency calls. Real outbound calls require provider credentials, recipient verification, consent, explicit confirmation, and audit.</p>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -1899,6 +1955,7 @@
   <script src="/nexus-universal-navigation-runtime.js?v=nexus-universal-navigation-2"></script>
   <script src="/nexus-open-dialogue-runtime.js?v=nexus-multilingual-dialogue-1"></script>
   <script src="/nexus-conversational-voice-runtime.js?v=nexus-multilingual-voice-1"></script>
+  <script src="/nexus-telephony-call-runtime.js?v=nexus-telephony-call-runtime-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
