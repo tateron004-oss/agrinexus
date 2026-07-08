@@ -146,6 +146,31 @@
         </div>
         <span id="nexusVoiceDemoStatus" data-nexus-voice-demo-status>Voice ready</span>
         <span id="nexusVoiceDemoTranscript" data-nexus-voice-demo-transcript>Click Talk to Nexus for one safe voice command. Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.</span>
+        <section id="nexusMultilingualVoiceRuntime" class="nexus-conversation-runtime" data-nexus-conversational-voice-runtime="true" aria-label="Nexus multilingual conversational voice">
+          <div class="nexus-conversation-runtime-head">
+            <strong>Conversational Nexus</strong>
+            <span data-nexus-conversation-locale>en-US</span>
+          </div>
+          <div class="nexus-conversation-runtime-controls" role="group" aria-label="Conversational voice controls">
+            <button type="button" data-nexus-conversation-action="listen" data-nexus-conversation-label="listen">Listen</button>
+            <button type="button" data-nexus-conversation-action="stop" data-nexus-conversation-label="stop">Stop</button>
+            <button type="button" data-nexus-conversation-action="repeat" data-nexus-conversation-label="repeat">Repeat</button>
+            <button type="button" data-nexus-conversation-action="mute" data-nexus-conversation-label="mute">Mute</button>
+          </div>
+          <label class="nexus-conversation-runtime-input" for="nexusConversationTextInput">
+            <span>Type when voice is unavailable</span>
+            <input id="nexusConversationTextInput" placeholder="Ask Nexus a question">
+            <button type="button" data-nexus-conversation-action="send" data-nexus-conversation-label="send">Ask</button>
+          </label>
+          <p data-nexus-conversation-state>Conversation ready</p>
+          <p data-nexus-conversation-support>Voice support is checked in this browser.</p>
+          <p data-nexus-conversation-transcript>Transcript will appear here.</p>
+          <p data-nexus-conversation-confidence></p>
+          <p data-nexus-conversation-response>Nexus can answer open questions and route safely when you ask.</p>
+          <p data-nexus-conversation-next>Try: What should I do if my crop leaves are turning yellow?</p>
+          <p data-nexus-conversation-blocked>No execution was authorized.</p>
+          <p data-nexus-conversation-sources>No live citations shown unless a configured provider returns sources.</p>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -1872,6 +1897,8 @@
   <script src="/nexus-internet-services-integration-audit.js?v=nexus-internet-audit"></script>
   <script src="/nexus-persistent-memory.js?v=nexus-persistent-memory-1"></script>
   <script src="/nexus-universal-navigation-runtime.js?v=nexus-universal-navigation-2"></script>
+  <script src="/nexus-open-dialogue-runtime.js?v=nexus-multilingual-dialogue-1"></script>
+  <script src="/nexus-conversational-voice-runtime.js?v=nexus-multilingual-voice-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>

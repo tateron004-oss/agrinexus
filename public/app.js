@@ -44463,6 +44463,56 @@ function runCompanionWorkflowOfferIfNeeded(command = "", route = {}) {
   return true;
 }
 
+async function handleNexusMultilingualOpenDialogueRuntimeCommand(command = "", options = {}) {
+  const runtime = window.NexusOpenDialogueRuntime;
+  const text = String(command || "").trim();
+  if (!runtime || !text) return false;
+  const navigationRuntime = window.NexusUniversalNavigationRuntime;
+  const language = languageCode();
+  const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
+    ? runtime.shouldHandleBeforeLegacy(text, { language, navigationRuntime, inputType: options.source || "voice" })
+    : false;
+  if (!shouldHandle) return false;
+  const result = typeof runtime.respondAsync === "function"
+    ? await runtime.respondAsync(text, { language, navigationRuntime, inputType: options.source || "voice", skipLiveKnowledge: false })
+    : runtime.respond(text, { language, navigationRuntime, inputType: options.source || "voice" });
+  if (!result?.answer && !result?.spokenSummary) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  if (window.NexusConversationalVoiceRuntime?.renderDialogueResult) {
+    window.NexusConversationalVoiceRuntime.renderDialogueResult(result);
+  }
+  renderLiveVoiceSuggestions([
+    result.recommendedNextStep,
+    ...(Array.isArray(result.availableActions) ? result.availableActions : [])
+  ].filter(Boolean).slice(0, 5));
+  updateNexusBehaviorLayer(
+    result.intentType === "direct_navigation_command" ? "routing" : "reasoning",
+    "Nexus answered through the multilingual open dialogue runtime."
+  );
+  setVoiceResponse(result.answer || result.spokenSummary, true, {
+    allowHandoff: false,
+    command: text,
+    source: "multilingual-open-dialogue-runtime",
+    openDialogueResult: result
+  });
+  return true;
+}
+
+function handleNexusConversationRuntimeDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-conversation-action]");
+  if (!button) return false;
+  const labelButton = event?.target?.closest?.("[data-nexus-conversation-label]");
+  if (labelButton && window.NexusConversationalVoiceRuntime?.mount) {
+    window.NexusConversationalVoiceRuntime.mount();
+  }
+  return true;
+}
+
+document.addEventListener("click", handleNexusConversationRuntimeDelegatedClick, true);
+
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   clearLevelOneAgentActionSuggestionLabel();
@@ -44495,6 +44545,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (await handleNexusMultilingualOpenDialogueRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (handleNexusOpenDialogueAgentCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
   const safeMapIntent = safeMapCapabilityIntent(spokenCommand || command || localizedCommand || rawCommand);

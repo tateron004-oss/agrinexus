@@ -4213,6 +4213,103 @@ body.user-mode .user-voice-dock #nexusVoiceDemoTalkBtn {
   background: linear-gradient(135deg, #173240, #2c6d78);
   color: #ffffff;
 }
+body.user-mode .user-voice-dock .nexus-conversation-runtime {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(28, 182, 203, .32);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(34, 211, 238, .15), transparent 36%),
+    linear-gradient(135deg, rgba(15, 35, 44, .94), rgba(29, 57, 76, .92));
+  color: #f8fdff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 12px 26px rgba(15, 35, 44, .16);
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-head,
+body.user-mode .user-voice-dock .nexus-conversation-runtime-controls,
+body.user-mode .user-voice-dock .nexus-conversation-runtime-input {
+  display: grid;
+  gap: 6px;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-head strong {
+  color: #ffffff;
+  font-size: .86rem;
+  letter-spacing: 0;
+  text-shadow: 0 0 12px rgba(34, 211, 238, .32);
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-head span {
+  padding: 3px 7px;
+  border: 1px solid rgba(125, 211, 252, .38);
+  border-radius: 999px;
+  color: #bff7ff;
+  font-size: .68rem;
+  font-weight: 950;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime button {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid rgba(125, 211, 252, .42);
+  border-radius: 999px;
+  background: rgba(8, 20, 29, .68);
+  color: #ecfeff;
+  font-size: .74rem;
+  line-height: 1.1;
+  box-shadow: 0 0 14px rgba(34, 211, 238, .12);
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime button:first-child {
+  background: linear-gradient(135deg, rgba(34, 211, 238, .92), rgba(53, 211, 153, .78));
+  color: #06242c;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-input {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-input span {
+  grid-column: 1 / -1;
+  color: rgba(226, 244, 248, .82);
+  font-size: .68rem;
+  font-weight: 850;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime-input input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(125, 211, 252, .35);
+  border-radius: 12px;
+  background: rgba(2, 16, 23, .72);
+  color: #ffffff;
+  font-size: .84rem;
+  font-weight: 850;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime p {
+  margin: 0;
+  max-height: 2.6rem;
+  overflow: hidden;
+  color: rgba(236, 254, 255, .9);
+  font-size: .72rem;
+  line-height: 1.2;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime [data-nexus-conversation-response] {
+  max-height: 4rem;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .07);
+  color: #ffffff;
+  font-size: .78rem;
+  font-weight: 850;
+}
+body.user-mode .user-voice-dock .nexus-conversation-runtime [data-nexus-conversation-blocked],
+body.user-mode .user-voice-dock .nexus-conversation-runtime [data-nexus-conversation-sources] {
+  color: rgba(191, 247, 255, .78);
+}
 body.user-mode .user-mobile-dock button {
   min-height: 44px;
   padding: 6px 3px;
@@ -13521,5 +13618,34 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-premium-miniapp-card {
   body.user-mode .nexus-miniapp-actions button,
   body.user-mode .nexus-mission-actions button {
     width: 100%;
+  }
+}
+
+/* Multilingual conversational voice runtime: keep the dock compact but usable. */
+body.user-mode .user-voice-dock {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(640px, calc(100vw - 24px));
+  max-height: min(54vh, 520px);
+  overflow: auto;
+}
+
+body.user-mode .user-voice-dock .nexus-conversation-runtime {
+  display: grid !important;
+  grid-column: 1 / -1;
+}
+
+body.user-mode .user-voice-dock .nexus-conversation-runtime-input input {
+  display: block !important;
+}
+
+@media (max-width: 560px) {
+  body.user-mode .user-voice-dock {
+    grid-template-columns: 1fr 1fr;
+    max-height: 48vh;
+  }
+
+  body.user-mode .user-voice-dock .nexus-conversation-runtime-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

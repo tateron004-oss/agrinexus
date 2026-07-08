@@ -149,6 +149,7 @@
     "qa:nexus-persistent-task-memory": "node scripts/nexus-persistent-task-memory-qa.js",
     "qa:nexus-real-action-adapters": "node scripts/nexus-real-action-adapters-qa.js",
     "qa:nexus-voice-command-loop": "node scripts/nexus-voice-command-loop-qa.js",
+    "qa:nexus-voice-open-dialogue-runtime": "node scripts/nexus-voice-open-dialogue-runtime-qa.js",
     "qa:nexus-reminder-calendar-integration": "node scripts/nexus-reminder-calendar-integration-qa.js",
     "qa:nexus-map-location-permission-execution": "node scripts/nexus-map-location-permission-execution-qa.js",
     "qa:nexus-messaging-call-handoff": "node scripts/nexus-messaging-call-handoff-qa.js",
