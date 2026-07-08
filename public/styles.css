@@ -13770,20 +13770,39 @@ body.user-mode .user-voice-dock .nexus-full-communication-runtime {
   padding: 14px;
 }
 
+body.user-mode .user-voice-dock .nexus-message-preparation-runtime {
+  background: linear-gradient(135deg, rgba(30, 41, 59, .84), rgba(20, 83, 45, .5));
+  border: 1px solid rgba(74, 222, 128, .24);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 14px 34px rgba(2, 6, 23, .28);
+  color: rgba(226, 232, 240, .92);
+  display: grid !important;
+  gap: 10px;
+  grid-column: 1 / -1;
+  padding: 14px;
+}
+
 body.user-mode .nexus-full-communication-head,
 body.user-mode .nexus-full-communication-controls,
 body.user-mode .nexus-full-communication-providers,
-body.user-mode .nexus-full-communication-receipts {
+body.user-mode .nexus-full-communication-receipts,
+body.user-mode .nexus-message-prep-head,
+body.user-mode .nexus-message-prep-actions,
+body.user-mode .nexus-message-prep-grid,
+body.user-mode .nexus-message-prep-providers,
+body.user-mode .nexus-message-prep-receipts {
   display: grid;
   gap: 8px;
 }
 
-body.user-mode .nexus-full-communication-head {
+body.user-mode .nexus-full-communication-head,
+body.user-mode .nexus-message-prep-head {
   align-items: start;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-body.user-mode .nexus-full-communication-head strong {
+body.user-mode .nexus-full-communication-head strong,
+body.user-mode .nexus-message-prep-head strong {
   color: rgba(255, 255, 255, .98);
   display: block;
   font-size: .98rem;
@@ -13791,15 +13810,20 @@ body.user-mode .nexus-full-communication-head strong {
 
 body.user-mode .nexus-full-communication-head span,
 body.user-mode .nexus-full-communication-runtime p,
-body.user-mode .nexus-full-communication-runtime small {
+body.user-mode .nexus-full-communication-runtime small,
+body.user-mode .nexus-message-prep-head span,
+body.user-mode .nexus-message-preparation-runtime p,
+body.user-mode .nexus-message-preparation-runtime small {
   color: rgba(203, 213, 225, .9);
 }
 
-body.user-mode .nexus-full-communication-controls {
+body.user-mode .nexus-full-communication-controls,
+body.user-mode .nexus-message-prep-actions {
   grid-template-columns: repeat(4, minmax(0, auto));
 }
 
-body.user-mode .nexus-full-communication-runtime button {
+body.user-mode .nexus-full-communication-runtime button,
+body.user-mode .nexus-message-preparation-runtime button {
   background: rgba(14, 165, 233, .12);
   border: 1px solid rgba(125, 211, 252, .28);
   border-radius: 999px;
@@ -13809,7 +13833,8 @@ body.user-mode .nexus-full-communication-runtime button {
   padding: 7px 10px;
 }
 
-body.user-mode .nexus-full-communication-runtime pre {
+body.user-mode .nexus-full-communication-runtime pre,
+body.user-mode .nexus-message-preparation-runtime pre {
   background: rgba(2, 6, 23, .48);
   border: 1px solid rgba(148, 163, 184, .18);
   border-radius: 12px;
@@ -13821,12 +13846,17 @@ body.user-mode .nexus-full-communication-runtime pre {
   white-space: pre-wrap;
 }
 
-body.user-mode .nexus-full-communication-providers {
+body.user-mode .nexus-full-communication-providers,
+body.user-mode .nexus-message-prep-providers,
+body.user-mode .nexus-message-prep-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 body.user-mode .nexus-full-communication-providers span,
-body.user-mode .nexus-full-communication-receipts article {
+body.user-mode .nexus-full-communication-receipts article,
+body.user-mode .nexus-message-prep-providers span,
+body.user-mode .nexus-message-prep-grid span,
+body.user-mode .nexus-message-prep-receipts article {
   background: rgba(15, 23, 42, .58);
   border: 1px solid rgba(148, 163, 184, .16);
   border-radius: 12px;
@@ -13836,11 +13866,15 @@ body.user-mode .nexus-full-communication-receipts article {
 }
 
 body.user-mode .nexus-full-communication-providers b,
-body.user-mode .nexus-full-communication-receipts strong {
+body.user-mode .nexus-full-communication-receipts strong,
+body.user-mode .nexus-message-prep-providers b,
+body.user-mode .nexus-message-prep-grid b,
+body.user-mode .nexus-message-prep-receipts strong {
   color: rgba(255, 255, 255, .96);
 }
 
-body.user-mode .nexus-full-communication-receipts span {
+body.user-mode .nexus-full-communication-receipts span,
+body.user-mode .nexus-message-prep-receipts span {
   color: rgba(226, 232, 240, .9);
 }
 
@@ -13855,11 +13889,15 @@ body.user-mode .nexus-full-communication-receipts span {
   }
 
   body.user-mode .nexus-full-communication-head,
-  body.user-mode .nexus-full-communication-providers {
+  body.user-mode .nexus-full-communication-providers,
+  body.user-mode .nexus-message-prep-head,
+  body.user-mode .nexus-message-prep-providers,
+  body.user-mode .nexus-message-prep-grid {
     grid-template-columns: 1fr;
   }
 
-  body.user-mode .nexus-full-communication-controls {
+  body.user-mode .nexus-full-communication-controls,
+  body.user-mode .nexus-message-prep-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

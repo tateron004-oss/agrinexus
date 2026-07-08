@@ -18,6 +18,7 @@ const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 const nexusInternetIntegrationAudit = require("./public/nexus-internet-services-integration-audit.js");
 const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
 const nexusTelephonyCallRuntime = require("./public/nexus-telephony-call-runtime.js");
+const nexusMessagePreparationRuntime = require("./public/nexus-message-preparation-runtime.js");
 const nexusFullCommunicationRuntime = require("./public/nexus-full-communication-runtime.js");
 
 function loadEnvFile(filePath) {
@@ -36228,6 +36229,31 @@ async function api(req, res, url) {
       language: body.language || user.language || "en"
     });
     return send(res, 200, { ...result, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/message-preparation/status" && req.method === "GET") {
+    return send(res, 200, nexusMessagePreparationRuntime.providerReadiness(process.env));
+  }
+
+  if (url.pathname === "/api/message-preparation/prepare" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusMessagePreparationRuntime.prepareMessage(body, {
+      env: process.env,
+      inputType: body.inputType || "typed_chat",
+      language: body.language || user.language || "en"
+    });
+    return send(res, 200, { ...result, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/message-preparation/attempt-send" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusMessagePreparationRuntime.attemptSend(body, {
+      env: process.env,
+      inputType: body.inputType || "typed_chat",
+      language: body.language || user.language || "en",
+      confirmed: body.confirmed === true
+    });
+    return send(res, result.ok ? 200 : 409, { ...result, noSecretValues: true, noExecutionAuthorized: true });
   }
 
   if (url.pathname === "/api/nexus/user-testing/status" && req.method === "GET") {

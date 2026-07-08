@@ -247,6 +247,30 @@
           <div data-nexus-full-communication-providers class="nexus-full-communication-providers" aria-label="Communication provider readiness"></div>
           <div data-nexus-full-communication-receipts class="nexus-full-communication-receipts" aria-live="polite"></div>
         </section>
+        <section id="nexusMessagePreparationRuntime" class="nexus-message-preparation-runtime" data-nexus-message-preparation-runtime="true" aria-label="Nexus message preparation runtime">
+          <div class="nexus-message-prep-head">
+            <div>
+              <strong>Message Prep</strong>
+              <span data-nexus-message-prep-status>Message preparation ready</span>
+            </div>
+            <div class="nexus-message-prep-actions" role="group" aria-label="Message preparation actions">
+              <button type="button" data-nexus-message-prep-action="status">Provider status</button>
+              <button type="button" data-nexus-message-prep-action="copy">Copy draft</button>
+              <button type="button" data-nexus-message-prep-action="queue">Queue review</button>
+              <button type="button" data-nexus-message-prep-action="cancel">Cancel</button>
+            </div>
+          </div>
+          <div class="nexus-message-prep-grid">
+            <span><b>Channel</b><small data-nexus-message-prep-channel>No channel selected</small></span>
+            <span><b>Recipient</b><small data-nexus-message-prep-recipient>Recipient not selected</small></span>
+            <span><b>Subject</b><small data-nexus-message-prep-subject>Subject appears here for email or routed message.</small></span>
+            <span><b>Purpose</b><small data-nexus-message-prep-purpose>Purpose appears here after Ask Nexus prepares a message.</small></span>
+          </div>
+          <pre data-nexus-message-prep-draft>Draft body appears here.</pre>
+          <p data-nexus-message-prep-confirmation>Confirmation, missing info, and provider gate details appear here.</p>
+          <div data-nexus-message-prep-providers class="nexus-message-prep-providers" aria-label="Message provider readiness"></div>
+          <div data-nexus-message-prep-receipts class="nexus-message-prep-receipts" aria-live="polite"></div>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -1976,6 +2000,7 @@
   <script src="/nexus-open-dialogue-runtime.js?v=nexus-multilingual-dialogue-1"></script>
   <script src="/nexus-conversational-voice-runtime.js?v=nexus-multilingual-voice-1"></script>
   <script src="/nexus-telephony-call-runtime.js?v=nexus-telephony-call-runtime-1"></script>
+  <script src="/nexus-message-preparation-runtime.js?v=nexus-message-preparation-runtime-1"></script>
   <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>

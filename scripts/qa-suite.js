@@ -39,6 +39,7 @@ const suites = {
     "scripts/nexus-voice-open-dialogue-runtime-qa.js",
     "scripts/nexus-telephony-call-runtime-qa.js",
     "scripts/nexus-full-communication-runtime-qa.js",
+    "scripts/nexus-message-preparation-runtime-qa.js",
     "scripts/phone-greeting-qa.js"
   ],
   core: [
@@ -178,6 +179,7 @@ const suites = {
     "scripts/nexus-real-action-adapters-qa.js",
     "scripts/nexus-voice-command-loop-qa.js",
     "scripts/nexus-full-communication-runtime-qa.js",
+    "scripts/nexus-message-preparation-runtime-qa.js",
     "scripts/nexus-reminder-calendar-integration-qa.js",
     "scripts/nexus-map-location-permission-execution-qa.js",
     "scripts/nexus-messaging-call-handoff-qa.js",

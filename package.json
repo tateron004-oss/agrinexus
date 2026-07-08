@@ -152,6 +152,7 @@
     "qa:nexus-voice-open-dialogue-runtime": "node scripts/nexus-voice-open-dialogue-runtime-qa.js",
     "qa:nexus-telephony-call-runtime": "node scripts/nexus-telephony-call-runtime-qa.js",
     "qa:nexus-full-communication-runtime": "node scripts/nexus-full-communication-runtime-qa.js",
+    "qa:nexus-message-preparation-runtime": "node scripts/nexus-message-preparation-runtime-qa.js",
     "qa:nexus-reminder-calendar-integration": "node scripts/nexus-reminder-calendar-integration-qa.js",
     "qa:nexus-map-location-permission-execution": "node scripts/nexus-map-location-permission-execution-qa.js",
     "qa:nexus-messaging-call-handoff": "node scripts/nexus-messaging-call-handoff-qa.js",
