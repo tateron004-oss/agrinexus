@@ -359,6 +359,7 @@
   function actionForText(text = "") {
     const lower = String(text || "").toLowerCase();
     if (/\b(source readiness|agriculture sources|provider evidence|weather sources connected|satellite sources connected|agriculture actions blocked)\b/.test(lower)) return action("generate_agriculture_provider_evidence_report", "Agriculture Provider Evidence", ACTION_LEVELS.ONE_PREPARE, "provider_evidence");
+    if (/\b(extension service|extension handoff|extension-service handoff|plant clinic handoff)\b/.test(lower)) return action("prepare_extension_service_handoff", "Extension Service Handoff", ACTION_LEVELS.TWO_COMMUNICATE, "crop_advisory_extension");
     if (/\b(weather|heat|rain|rainfall|drought|frost|wind|climate)\b/.test(lower)) return action(/\b(heat)\b/.test(lower) ? "prepare_heat_index_risk_summary" : "prepare_weather_risk_summary", "Weather / Heat Risk", ACTION_LEVELS.ONE_PREPARE, "weather_climate_risk");
     if (/\b(soil|irrigation|water|moisture)\b/.test(lower)) return action(/\b(soil)\b/.test(lower) ? "prepare_soil_summary" : "prepare_irrigation_advisory", "Soil / Irrigation", ACTION_LEVELS.ONE_PREPARE, "soil_land_water");
     if (/\b(pest|disease|yellow leaves|fungus|blight|pesticide|chemical|what is wrong with my plants)\b/.test(lower)) return action("prepare_pest_disease_advisory", "Pest / Disease Help", ACTION_LEVELS.FIVE_REGULATED_EXPERT, "pest_disease_plant_health");
@@ -367,7 +368,8 @@
     if (/\b(shipment|shipping|logistics|cold chain|carrier|track this shipment|delivery|route plan)\b/.test(lower)) return action(/\b(cold chain)\b/.test(lower) ? "prepare_cold_chain_checklist" : /\b(track|tracking)\b/.test(lower) ? "prepare_shipment_tracking_summary" : "prepare_shipment_plan", "Shipment / Logistics", ACTION_LEVELS.FOUR_MARKETPLACE_LOGISTICS, "logistics_shipment_cold_chain");
     if (/\b(buyer|seller|marketplace|listing|trade match|offer|agritrade)\b/.test(lower)) {
       const type = /\bbuyer\b/.test(lower) ? "prepare_buyer_message" : /\bseller\b/.test(lower) ? "prepare_seller_message" : /\btrade match|match\b/.test(lower) ? "prepare_trade_match_summary" : "prepare_marketplace_listing";
-      return action(type, "Marketplace Buyer/Seller", ACTION_LEVELS.FOUR_MARKETPLACE_LOGISTICS, "marketplace_buyer_seller_trade");
+      const level = /message$/.test(type) ? ACTION_LEVELS.TWO_COMMUNICATE : ACTION_LEVELS.FOUR_MARKETPLACE_LOGISTICS;
+      return action(type, "Marketplace Buyer/Seller", level, "marketplace_buyer_seller_trade");
     }
     if (/\b(farm profile|farm intake|remember this farm|delete this buyer|deactivate this seller|deactivate|delete)\b/.test(lower)) return action(/\b(delete|deactivate)\b/.test(lower) ? "deactivate_farm_profile" : "prepare_farm_profile_summary", "Farm Profile / Intake", ACTION_LEVELS.ONE_PREPARE, "farm_management_records");
     if (/\b(training|workforce|extension training|farmer field school|certification)\b/.test(lower)) return action("prepare_agriculture_training_recommendation", "Training / Workforce", ACTION_LEVELS.ONE_PREPARE, "learning_workforce_extension_training");
@@ -410,6 +412,7 @@
       "Nexus did not send, post, buy, sell, ship, pay, schedule, fly, diagnose, prescribe, or submit anything."
     ];
     const sections = payloadSections(actionDef);
+    const communicationAction = isAgricultureCommunicationAction(actionDef);
     return {
       packetId: `agriculture-packet-${Date.now()}-${receipts.length + 1}`,
       title: actionDef.title,
@@ -432,6 +435,18 @@
       summary: summaryForAction(actionDef),
       sections,
       checklist: checklistForAction(actionDef),
+      communicationRuntimeUsed: communicationAction,
+      communicationRuntimeStatus: communicationAction ? "prepared_locally_not_sent" : "not_required",
+      communicationDraft: communicationAction ? {
+        runtime: "nexus-full-communication-runtime",
+        route: "/api/communication/prepare-message",
+        status: "prepared_locally_not_sent",
+        recipientType: /buyer/.test(actionDef.actionType) ? "buyer" : /seller/.test(actionDef.actionType) ? "seller" : "extension_service",
+        channel: "message_or_call_script",
+        confirmationRequired: true,
+        sent: false,
+        safeStatus: "Communication was prepared through the Nexus Full Communication Runtime pattern but not sent."
+      } : null,
       safetyNotes: commonSafety,
       missingData: missingDataForAction(actionDef),
       reviewWarning: reviewWarningForAction(actionDef)
@@ -515,7 +530,12 @@
     return liveReady ? "prepared_live_source_gated" : "prepared_local_fallback";
   }
 
+  function isAgricultureCommunicationAction(actionDef = {}) {
+    return /buyer_message|seller_message|extension_service_handoff|logistics_partner_message|farmer_reminder|training_message|admin_notification|marketplace_followup|shipment_update_message|call_script/.test(actionDef.actionType || "");
+  }
+
   function makeReceipt(actionDef, payload, status, options = {}) {
+    const communicationRuntimeUsed = isAgricultureCommunicationAction(actionDef);
     const receipt = {
       receiptId: `agriculture-receipt-${Date.now()}-${receipts.length + 1}`,
       timestamp: new Date().toISOString(),
@@ -536,6 +556,9 @@
       expertReviewStatus: options.expertReviewed ? "reviewed" : actionDef.level >= ACTION_LEVELS.FIVE_REGULATED_EXPERT ? "required" : "not_required",
       authorizationRequired: actionDef.level >= ACTION_LEVELS.TWO_COMMUNICATE,
       authorizationStatus: "not_authorized_for_execution",
+      communicationRuntimeUsed,
+      communicationReceiptId: communicationRuntimeUsed ? `communication-draft-local-${payload.packetId}` : null,
+      communicationStatus: communicationRuntimeUsed ? "prepared_locally_not_sent" : "not_required",
       marketplaceExecutionBlocked: status === "blocked_marketplace_execution",
       logisticsExecutionBlocked: status === "blocked_logistics_execution",
       droneExecutionBlocked: status === "blocked_drone_execution",
@@ -638,6 +661,9 @@
       regulatedActionBlocked: actionDef.level >= ACTION_LEVELS.FIVE_REGULATED_EXPERT,
       preparedPayload: payload,
       sentPayloadSummary: "No external send/share/schedule/post/payment/logistics/drone action was executed.",
+      communicationRuntimeUsed: receipt.communicationRuntimeUsed,
+      communicationReceiptId: receipt.communicationReceiptId,
+      communicationStatus: receipt.communicationStatus,
       sourceLabels: payload.sourceLabels,
       receipt,
       nextSteps: receipt.nextSteps,
@@ -922,6 +948,7 @@
     attemptExecution,
     process: processCommand,
     isAgricultureCollaborationCommand,
+    isAgricultureCommunicationAction,
     shouldHandleBeforeLegacy,
     getWeatherStatus,
     getCurrentWeather,

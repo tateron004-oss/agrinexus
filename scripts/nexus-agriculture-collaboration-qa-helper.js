@@ -159,6 +159,45 @@ function assertProviderEvidenceAndReceipts() {
   assert(Array.isArray(runtime.getAdminReviewQueue()), "admin queue should be readable");
 }
 
+function assertCommunicationIntegration() {
+  [
+    "public/nexus-full-communication-runtime.js",
+    "public/nexus-agriculture-collaboration-runtime.js"
+  ].forEach(file => assert(fs.existsSync(path.join(root, file)), `${file} should exist`));
+  const server = read("server.js");
+  const index = read("public/index.html");
+  const runtimeSource = read("public/nexus-agriculture-collaboration-runtime.js");
+  includes(server, "/api/communication/status", "server communication status route");
+  includes(server, "/api/communication/prepare-message", "server communication prepare route");
+  includes(index, "/nexus-full-communication-runtime.js", "index communication runtime script");
+  includes(runtimeSource, "nexus-full-communication-runtime", "agriculture runtime communication metadata");
+  includes(runtimeSource, "/api/communication/prepare-message", "agriculture runtime communication route metadata");
+
+  const buyer = runtime.prepareBuyerMessage("Message a buyer about maize price", {});
+  assert.equal(buyer.action, "prepare_buyer_message", "buyer message should route to agriculture communication action");
+  assert.equal(buyer.confirmationRequired, true, "buyer message should require confirmation before send");
+  assert.equal(buyer.communicationRuntimeUsed, true, "buyer message should mark communication runtime usage");
+  assert.equal(buyer.communicationStatus, "prepared_locally_not_sent", "buyer message should remain a local draft");
+  assert(buyer.communicationReceiptId && buyer.communicationReceiptId.startsWith("communication-draft-local-"), "buyer message should cross-reference local communication receipt");
+  assert.equal(buyer.preparedPayload.communicationDraft.runtime, "nexus-full-communication-runtime", "buyer message should identify communication runtime");
+  assert.equal(buyer.preparedPayload.communicationDraft.sent, false, "buyer message draft should not be sent");
+  includes(buyer.preparedPayload.communicationDraft.safeStatus, "not sent", "buyer communication safe status");
+
+  const seller = runtime.prepareSellerMessage("Message a seller about produce quality", {});
+  assert.equal(seller.communicationRuntimeUsed, true, "seller message should mark communication runtime usage");
+  assert.equal(seller.receipt.communicationRuntimeUsed, true, "seller receipt should mark communication runtime usage");
+  assert.equal(seller.receipt.communicationStatus, "prepared_locally_not_sent", "seller receipt should show prepared-only status");
+
+  const extension = runtime.buildExtensionHandoff("Prepare extension service handoff", {});
+  assert.equal(extension.action, "prepare_extension_service_handoff", "extension service handoff should route");
+  assert.equal(extension.communicationRuntimeUsed, true, "extension handoff should mark communication runtime usage");
+  assert.equal(extension.preparedPayload.communicationDraft.sent, false, "extension handoff should not be sent");
+
+  const execute = runtime.attemptExecution("Message a buyer", { confirmed: true });
+  assert.equal(execute.noExecutionAuthorized, true, "communication execution should remain blocked without provider execution authority");
+  assert.notEqual(execute.userVisibleStatus.toLowerCase().includes("sent successfully"), true, "agriculture communication should not claim sent success");
+}
+
 function assertNoUnsafeClaims() {
   const files = [
     "public/nexus-agriculture-collaboration-runtime.js",
@@ -199,6 +238,7 @@ function run(section = "all") {
     ui: assertUiAndServerWiring,
     evidence: assertProviderEvidenceAndReceipts,
     receipts: assertProviderEvidenceAndReceipts,
+    communication: assertCommunicationIntegration,
     safety: assertNoUnsafeClaims
   };
   if (section === "all") {

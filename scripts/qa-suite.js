@@ -158,6 +158,7 @@ const suites = {
     "scripts/nexus-agriculture-provider-evidence-qa.js",
     "scripts/nexus-agriculture-receipts-qa.js",
     "scripts/nexus-agriculture-safety-gates-qa.js",
+    "scripts/nexus-agriculture-communication-integration-qa.js",
     "scripts/nexus-marketplace-predictive-intelligence-qa.js",
     "scripts/nexus-logistics-predictive-intelligence-qa.js",
     "scripts/nexus-workforce-predictive-intelligence-qa.js",
@@ -909,7 +910,8 @@ const suites = {
     "scripts/nexus-agriculture-ui-readiness-qa.js",
     "scripts/nexus-agriculture-provider-evidence-qa.js",
     "scripts/nexus-agriculture-receipts-qa.js",
-    "scripts/nexus-agriculture-safety-gates-qa.js"
+    "scripts/nexus-agriculture-safety-gates-qa.js",
+    "scripts/nexus-agriculture-communication-integration-qa.js"
   ]
 };
 

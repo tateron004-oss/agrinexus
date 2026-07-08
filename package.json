@@ -177,6 +177,7 @@
     "qa:nexus-agriculture-provider-evidence": "node scripts/nexus-agriculture-provider-evidence-qa.js",
     "qa:nexus-agriculture-receipts": "node scripts/nexus-agriculture-receipts-qa.js",
     "qa:nexus-agriculture-safety-gates": "node scripts/nexus-agriculture-safety-gates-qa.js",
+    "qa:nexus-agriculture-communication-integration": "node scripts/nexus-agriculture-communication-integration-qa.js",
     "qa:nexus-reminder-calendar-integration": "node scripts/nexus-reminder-calendar-integration-qa.js",
     "qa:nexus-map-location-permission-execution": "node scripts/nexus-map-location-permission-execution-qa.js",
     "qa:nexus-messaging-call-handoff": "node scripts/nexus-messaging-call-handoff-qa.js",
