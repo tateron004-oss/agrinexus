@@ -20,6 +20,7 @@ const nexusPersistentMemory = require("./public/nexus-persistent-memory.js");
 const nexusTelephonyCallRuntime = require("./public/nexus-telephony-call-runtime.js");
 const nexusMessagePreparationRuntime = require("./public/nexus-message-preparation-runtime.js");
 const nexusFullCommunicationRuntime = require("./public/nexus-full-communication-runtime.js");
+const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-collaboration-runtime.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -43498,6 +43499,57 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.conversationCore = decision;
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/status" && req.method === "GET") {
+    const registry = nexusHealthcareCollaborationRuntime.providerRegistry(process.env);
+    const sourceReadiness = nexusHealthcareCollaborationRuntime.sourceReadinessMatrix(process.env);
+    const providerEvidence = nexusHealthcareCollaborationRuntime.providerEvidence(process.env);
+    return send(res, 200, {
+      ok: true,
+      runtime: "nexus-healthcare-collaboration-runtime",
+      flags: registry.flags,
+      registry,
+      sourceReadiness,
+      providerEvidence,
+      cards: nexusHealthcareCollaborationRuntime.RUNTIME_CARDS,
+      noSecretValues: true,
+      noDiagnosis: true,
+      noPrescribing: true,
+      noEmergencyDispatch: true
+    });
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/sources" && req.method === "GET") {
+    return send(res, 200, nexusHealthcareCollaborationRuntime.sourceReadinessMatrix(process.env));
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/evidence" && req.method === "GET") {
+    return send(res, 200, nexusHealthcareCollaborationRuntime.providerEvidence(process.env));
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/fhir/summary" && req.method === "GET") {
+    return send(res, 200, nexusHealthcareCollaborationRuntime.fhirSandboxSummary({ env: process.env }));
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/action" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusHealthcareCollaborationRuntime.prepareAction(body, {
+      env: process.env,
+      confirmed: Boolean(body.confirmed),
+      clinicianReviewed: Boolean(body.clinicianReviewed)
+    });
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/healthcare-collaboration/execute" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusHealthcareCollaborationRuntime.attemptExecution(body, {
+      env: process.env,
+      confirmed: Boolean(body.confirmed),
+      clinicianReviewed: Boolean(body.clinicianReviewed)
+    });
+    return send(res, result.noExecutionAuthorized ? 409 : 200, result);
   }
 
   if (url.pathname === "/api/voice/realtime/status" && req.method === "GET") {

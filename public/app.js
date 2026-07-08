@@ -26138,6 +26138,15 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  if (window.NexusHealthcareCollaborationRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    void handleNexusHealthcareCollaborationRuntimeCommand(command, { source });
+    return true;
+  }
   if (window.NexusMessagePreparationRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -44600,6 +44609,41 @@ async function handleNexusMessagePreparationRuntimeCommand(command = "", options
   return true;
 }
 
+async function handleNexusHealthcareCollaborationRuntimeCommand(command = "", options = {}) {
+  const runtime = window.NexusHealthcareCollaborationRuntime;
+  const text = String(command || "").trim();
+  if (!runtime || !text) return false;
+  const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
+    ? runtime.shouldHandleBeforeLegacy(text, { language: languageCode(), inputType: options.source || "typed_chat" })
+    : false;
+  if (!shouldHandle) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  const panel = runtime.mount?.();
+  const result = await runtime.process(text, {
+    language: languageCode(),
+    inputType: options.source === "voice" ? "voice_transcript" : "typed_chat",
+    sourceMode: options.source || "ask_nexus"
+  });
+  runtime.render?.(result, panel);
+  renderLiveVoiceSuggestions([
+    "prepare a referral packet",
+    "pull FHIR chart summary",
+    "prepare a blood pressure escalation",
+    "prepare a pharmacy handoff"
+  ]);
+  updateNexusBehaviorLayer("healthcare-collaboration", "Nexus prepared healthcare collaboration locally with provider, consent, clinician review, and audit gates.");
+  setVoiceResponse(result.answer || result.message || "Nexus prepared the healthcare collaboration packet locally. No external healthcare action was executed.", true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-healthcare-collaboration-runtime",
+    healthcareCollaborationResult: result
+  });
+  return true;
+}
+
 function handleNexusConversationRuntimeDelegatedClick(event) {
   const button = event?.target?.closest?.("[data-nexus-conversation-action]");
   if (!button) return false;
@@ -44714,6 +44758,48 @@ function handleNexusMessagePreparationRuntimeDelegatedClick(event) {
 
 document.addEventListener("click", handleNexusMessagePreparationRuntimeDelegatedClick, true);
 
+function handleNexusHealthcareCollaborationRuntimeDelegatedClick(event) {
+  const button = event?.target?.closest?.("[data-nexus-healthcare-action]");
+  if (!button) return false;
+  const runtime = window.NexusHealthcareCollaborationRuntime;
+  if (!runtime) return false;
+  const action = button.getAttribute("data-nexus-healthcare-action") || "status";
+  const actionType = button.getAttribute("data-nexus-healthcare-action-type") || "";
+  runtime.mount?.();
+  if (action === "status" || action === "source-matrix" || action === "provider-evidence") {
+    void runtime.refreshStatus?.();
+    setVoiceResponse("Healthcare collaboration status is open. Missing provider configuration is shown by variable name only, and no regulated action was executed.", true, {
+      allowHandoff: false,
+      source: "nexus-healthcare-collaboration-runtime"
+    });
+    return true;
+  }
+  if (action === "clinician-queue") {
+    setVoiceResponse("Clinician review queue is open. Regulated packets wait here before any external healthcare action can move forward.", true, {
+      allowHandoff: false,
+      source: "nexus-healthcare-collaboration-runtime"
+    });
+    return true;
+  }
+  if (action === "receipts") {
+    setVoiceResponse("Healthcare receipts are visible. They record local preparation and blocked execution decisions without exposing secrets.", true, {
+      allowHandoff: false,
+      source: "nexus-healthcare-collaboration-runtime"
+    });
+    return true;
+  }
+  const result = runtime.handlePanelAction?.(action, actionType);
+  runtime.render?.(result);
+  setVoiceResponse(result?.message || "Healthcare collaboration packet prepared locally. No external action was executed.", true, {
+    allowHandoff: false,
+    source: "nexus-healthcare-collaboration-runtime",
+    healthcareCollaborationResult: result
+  });
+  return true;
+}
+
+document.addEventListener("click", handleNexusHealthcareCollaborationRuntimeDelegatedClick, true);
+
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   clearLevelOneAgentActionSuggestionLabel();
@@ -44746,6 +44832,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusMessagePreparationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusFullCommunicationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusTelephonyCallRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
@@ -47727,6 +47814,7 @@ function bindStatic() {
     window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
     window.NexusMessagePreparationRuntime?.mount?.();
     window.NexusFullCommunicationRuntime?.mount?.();
+    window.NexusHealthcareCollaborationRuntime?.mount?.();
   }
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
@@ -47746,6 +47834,14 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusMessagePreparationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -47791,6 +47887,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusMessagePreparationRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -48003,6 +48107,11 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (routeNexusCommandCenterCommunicationSubmit(event, commandCenterSubmit, "typed-command-submit")) return;
       if (submitNexusAgenticCommandRuntime(command, input, "command-submit", event)) return;
       if (input) input.value = command;
@@ -49240,6 +49349,14 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
+    if (await handleNexusHealthcareCollaborationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return;
+    }
     if (await handleNexusMessagePreparationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();

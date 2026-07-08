@@ -271,6 +271,42 @@
           <div data-nexus-message-prep-providers class="nexus-message-prep-providers" aria-label="Message provider readiness"></div>
           <div data-nexus-message-prep-receipts class="nexus-message-prep-receipts" aria-live="polite"></div>
         </section>
+        <section id="nexusHealthcareCollaborationRuntime" class="nexus-healthcare-collaboration-runtime" data-nexus-healthcare-collaboration-runtime="true" aria-label="Nexus healthcare collaboration runtime">
+          <div class="nexus-healthcare-collaboration-head">
+            <div>
+              <strong>Healthcare Collaboration</strong>
+              <span data-nexus-healthcare-status>Healthcare collaboration local-ready; live actions gated.</span>
+            </div>
+            <div class="nexus-healthcare-collaboration-actions" role="group" aria-label="Healthcare collaboration actions">
+              <button type="button" data-nexus-healthcare-action="status">Status</button>
+              <button type="button" data-nexus-healthcare-action="source-matrix">Sources</button>
+              <button type="button" data-nexus-healthcare-action="provider-evidence">Evidence</button>
+              <button type="button" data-nexus-healthcare-action="clinician-queue">Review queue</button>
+              <button type="button" data-nexus-healthcare-action="receipts">Receipts</button>
+            </div>
+          </div>
+          <p class="nexus-healthcare-collaboration-boundary">Nexus prepares healthcare collaboration packets, intake, RPM/RTM summaries, FHIR/HIE requests, telehealth review, pharmacy handoff, and provider messages. It does not diagnose, prescribe, dispatch emergency services, submit clinical orders, or send PHI without configured provider, BAA, consent, confirmation, clinician review, and audit gates.</p>
+          <div data-nexus-healthcare-cards class="nexus-healthcare-collaboration-cards" aria-label="Healthcare collaboration workflow cards"></div>
+          <div class="nexus-healthcare-collaboration-grid">
+            <section>
+              <strong>Source readiness matrix</strong>
+              <div data-nexus-healthcare-sources class="nexus-healthcare-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Provider evidence</strong>
+              <div data-nexus-healthcare-evidence class="nexus-healthcare-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Clinician review queue</strong>
+              <div data-nexus-healthcare-clinician-queue class="nexus-healthcare-collaboration-list"></div>
+            </section>
+            <section>
+              <strong>Healthcare receipts</strong>
+              <div data-nexus-healthcare-receipts class="nexus-healthcare-collaboration-list"></div>
+            </section>
+          </div>
+          <div data-nexus-healthcare-result class="nexus-healthcare-collaboration-result" aria-live="polite">Prepared healthcare collaboration packets appear here.</div>
+        </section>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -2002,6 +2038,7 @@
   <script src="/nexus-telephony-call-runtime.js?v=nexus-telephony-call-runtime-1"></script>
   <script src="/nexus-message-preparation-runtime.js?v=nexus-message-preparation-runtime-1"></script>
   <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
+  <script src="/nexus-healthcare-collaboration-runtime.js?v=nexus-healthcare-collaboration-runtime-1"></script>
   <script src="/app.js?v=nexus-behavior-382"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>

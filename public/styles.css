@@ -22,6 +22,120 @@
   --nexus-muted: #adc5dc;
 }
 
+.nexus-healthcare-collaboration-runtime {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(8, 47, 73, 0.74), rgba(15, 23, 42, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 16px 48px rgba(8, 47, 73, 0.24);
+  color: rgba(241, 245, 249, 0.96);
+}
+
+.nexus-healthcare-collaboration-head,
+.nexus-healthcare-collaboration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.nexus-healthcare-collaboration-head strong {
+  display: block;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.nexus-healthcare-collaboration-head span,
+.nexus-healthcare-collaboration-boundary {
+  color: rgba(226, 232, 240, 0.84);
+}
+
+.nexus-healthcare-collaboration-actions,
+.nexus-healthcare-collaboration-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nexus-healthcare-collaboration-actions button,
+.nexus-healthcare-collaboration-card-actions button {
+  border: 1px solid rgba(103, 232, 249, 0.34);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.58);
+  color: rgba(236, 254, 255, 0.96);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.12);
+}
+
+.nexus-healthcare-collaboration-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.nexus-healthcare-collaboration-card,
+.nexus-healthcare-collaboration-grid section,
+.nexus-healthcare-collaboration-result {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.56);
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.nexus-healthcare-collaboration-card strong,
+.nexus-healthcare-collaboration-grid strong,
+.nexus-healthcare-collaboration-result strong {
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+}
+
+.nexus-healthcare-collaboration-card p,
+.nexus-healthcare-collaboration-card small,
+.nexus-healthcare-collaboration-list small,
+.nexus-healthcare-collaboration-result p,
+.nexus-healthcare-collaboration-result dd {
+  color: rgba(226, 232, 240, 0.84);
+}
+
+.nexus-healthcare-collaboration-card p {
+  margin: 6px 0;
+}
+
+.nexus-healthcare-collaboration-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.nexus-healthcare-collaboration-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nexus-healthcare-collaboration-list span {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.nexus-healthcare-collaboration-result dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 720px) {
+  .nexus-healthcare-collaboration-head {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Nexus premium command center redesign */
 body.user-mode .user-workspace {
   position: relative;
