@@ -293,7 +293,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-388";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-390";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -26169,6 +26169,16 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     void handleNexusUnifiedBrainRuntimeCommand(command, { source });
     return true;
   }
+  if (handleNexusExperienceStarterCommand(command, { source })
+    || handleNexusExperienceStatusCommand(command, { source })
+    || handleNexusPresenceFollowUp(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
     || isNexusAgriculturePredictiveModelerCommand(routedCommand)
     || isNexusChronicPredictiveModelerCommand(routedCommand)
@@ -26945,22 +26955,15 @@ function renderNexusConversationalPresenceLayer() {
 function handleNexusPresenceWakePhrase(command = "", options = {}) {
   if (!isNexusPresenceWakePhrase(command)) return false;
   const greeting = nexusPresenceGreeting();
+  const starter = buildNexusExperienceStarterResponse(command, { greeting });
   setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
     lastUserInput: String(command || "").trim(),
-    lastResponse: greeting,
-    nextQuestion: "What would you like Nexus to prepare or assess?",
-    activeMission: "Conversational greeting"
+    lastResponse: starter.message,
+    nextQuestion: starter.nextQuestion,
+    activeMission: "Ready to help"
   });
   if (typeof renderLiveVoiceSuggestions === "function") {
-    renderLiveVoiceSuggestions([
-      "check health risk",
-      "predict crop risk",
-      "assess trade readiness",
-      "plan logistics",
-      "build a learning plan",
-      "prepare a message",
-      "show receipts"
-    ]);
+    renderLiveVoiceSuggestions(starter.suggestions);
   }
   setVoiceResponse(greeting, options.speak !== false, {
     allowHandoff: false,
@@ -26971,34 +26974,309 @@ function handleNexusPresenceWakePhrase(command = "", options = {}) {
   return true;
 }
 
+function normalizeNexusExperienceMode(mode = "") {
+  const text = String(mode || "").toLowerCase();
+  if (/\b(diabetes|hypertension|obesity|blood pressure|bp|rpm|rtm|chronic|health|clinic|provider|telehealth|pharmacy|mobile clinic|chw)\b/.test(text)) return "health";
+  if (/\b(crop|agriculture|farm|field|irrigation|soil|pest|disease|yield|storage|food security)\b/.test(text)) return "agriculture";
+  if (/\b(marketplace|agritrade|buyer|seller|listing|trade|vendor)\b/.test(text)) return "marketplace";
+  if (/\b(logistics|shipment|delivery|route|transport|field visit|maps)\b/.test(text)) return "logistics";
+  if (/\b(workforce|job|resume|employer|application|interview)\b/.test(text)) return "workforce";
+  if (/\b(learning|training|literacy|course|study|class|lms)\b/.test(text)) return "learning";
+  if (/\b(drone|aerial|imagery|flight|survey)\b/.test(text)) return "drone";
+  if (/\b(message|sms|whatsapp|telegram|email|call|communication|phone)\b/.test(text)) return "communications";
+  return text || "general";
+}
+
+function nexusExperienceModeFromMission(mission = null) {
+  if (!mission) return "general";
+  return normalizeNexusExperienceMode([
+    mission.mode,
+    mission.submode,
+    mission.actionType,
+    mission.title,
+    mission.goal,
+    mission.command,
+    mission.source
+  ].filter(Boolean).join(" "));
+}
+
+function nexusExperienceModeFromCommand(command = "", mission = null) {
+  return normalizeNexusExperienceMode([command, mission?.mode, mission?.title, mission?.goal].filter(Boolean).join(" "));
+}
+
+function getNexusExperienceAcknowledgment(mode = "general", command = "") {
+  const normalized = normalizeNexusExperienceMode(mode || command);
+  const map = {
+    health: "I hear you. I’ll organize this as health preparation and keep it educational, intake-focused, and provider-review ready.",
+    agriculture: "Got it. I’ll structure the crop or farm details and keep the guidance educational until a local expert or source confirms it.",
+    marketplace: "Understood. I’ll prepare marketplace details for review without contacting buyers, sellers, or payment systems.",
+    logistics: "I’ll prepare the route or shipment context locally and avoid live dispatch, tracking, or carrier handoff.",
+    workforce: "I’ll organize the workforce goal into skills, gaps, and next preparation steps without submitting anything.",
+    learning: "I’ll shape this into a learning path and keep enrollment or LMS actions gated.",
+    drone: "I’ll prepare a drone-service review packet only. No flight, imaging, or operator dispatch will start.",
+    communications: "I’ll draft the communication and keep it unsent until the required provider, recipient, and confirmation gates are satisfied."
+  };
+  return map[normalized] || "I’m on it. I’ll prepare the safest local next step and tell you clearly what happened.";
+}
+
+function getNexusExperienceProgressSteps(mode = "general") {
+  const normalized = normalizeNexusExperienceMode(mode);
+  const map = {
+    health: ["Understanding health goal", "Checking safety limits", "Preparing provider-ready summary"],
+    agriculture: ["Reading farm context", "Checking missing field data", "Preparing source-ready guidance"],
+    marketplace: ["Checking listing or partner details", "Reviewing trade-readiness gaps", "Preparing a safe review packet"],
+    logistics: ["Checking route context", "Reviewing missing origin/destination details", "Preparing local handoff notes"],
+    workforce: ["Checking career goal", "Finding skill gaps", "Preparing a readiness summary"],
+    learning: ["Checking learning goal", "Matching pathway needs", "Preparing next study steps"],
+    drone: ["Checking field request", "Reviewing safety prerequisites", "Preparing a no-flight review packet"],
+    communications: ["Checking recipient and purpose", "Reviewing confirmation gates", "Preparing an unsent draft"]
+  };
+  return map[normalized] || ["Understanding request", "Checking safety gates", "Preparing the next local step"];
+}
+
+function getNextBestQuestion(mode = "general", missingData = [], currentState = {}) {
+  const missing = Array.isArray(missingData) ? missingData.filter(Boolean) : [];
+  if (missing.length) return `What can you share about ${String(missing[0]).replace(/[_-]/g, " ")}?`;
+  const normalized = normalizeNexusExperienceMode(mode);
+  const map = {
+    health: "What is the main health detail you want organized for provider review?",
+    agriculture: "What crop, field condition, or local weather detail should I use next?",
+    marketplace: "Who is the buyer or seller, and what product details should I prepare?",
+    logistics: "What origin, destination, and timing should I use for the route plan?",
+    workforce: "What job role, skill, or training goal should I focus on next?",
+    learning: "What topic do you want to learn, and how much time can you study each week?",
+    drone: "What field size, crop, and observation goal should the review packet cover?",
+    communications: "Who is the recipient, and what should the draft say?"
+  };
+  return currentState?.nextQuestion || map[normalized] || "What detail should I use for the next step?";
+}
+
+function getNexusExperienceConfidenceExplanation(mode = "general", mission = {}) {
+  const missing = Array.isArray(mission?.missingInfo) ? mission.missingInfo.length : 0;
+  const collected = Array.isArray(mission?.collectedInfo) ? mission.collectedInfo.length : 0;
+  if (missing > 2) return "Confidence is limited because several details are still missing. I can improve it as you answer the next question.";
+  if (missing > 0) return "Confidence is moderate because I have some useful context, but one or more details would make the next step clearer.";
+  if (collected > 1 || /completed|ready|predictive/i.test(String(mission?.status || mission?.executionStatus || ""))) {
+    return "Confidence is stronger for local preparation because the request has enough structure for a review-ready next step.";
+  }
+  return "Confidence is preliminary because I’m working from a short request and no live external system has been used.";
+}
+
+function getSuggestedNextActions(mode = "general", state = {}) {
+  const normalized = normalizeNexusExperienceMode(mode);
+  const map = {
+    health: ["Add a reading", "Prepare provider summary", "Ask what is missing"],
+    agriculture: ["Add crop details", "Review risk factors", "Prepare expert checklist"],
+    marketplace: ["Prepare listing", "Check buyer readiness", "Review trade risk"],
+    logistics: ["Add origin and destination", "Prepare route plan", "Review dispatch gates"],
+    workforce: ["Check skill gaps", "Prepare resume summary", "Find training steps"],
+    learning: ["Build study plan", "Review completion risk", "Choose next lesson"],
+    drone: ["Prepare field checklist", "Review no-fly gates", "Ask for field size"],
+    communications: ["Review draft", "Add recipient", "Confirm no send yet"]
+  };
+  const suggested = map[normalized] || ["Show next step", "Show last receipt", "Ask what is missing"];
+  return Array.isArray(state?.suggestedActions) && state.suggestedActions.length ? state.suggestedActions : suggested;
+}
+
+function getNexusExperienceReceiptMessage(mode = "general", mission = {}, kind = "local_update") {
+  const normalized = normalizeNexusExperienceMode(mode);
+  const didNot = "No provider handoff, message, call, payment, booking, dispatch, location sharing, camera capture, diagnosis, prescription, or external execution occurred.";
+  const map = {
+    health: "I organized the health details locally for review and kept care decisions gated.",
+    agriculture: "I updated the local agriculture support view and prepared source-ready next steps.",
+    marketplace: "I prepared the marketplace review context locally without contacting anyone.",
+    logistics: "I prepared the logistics context locally without live tracking or dispatch.",
+    workforce: "I updated the workforce preparation context locally.",
+    learning: "I prepared the learning pathway context locally.",
+    drone: "I prepared the drone-service review context locally without starting any flight workflow.",
+    communications: "I prepared communication context locally and did not send anything."
+  };
+  return `${map[normalized] || "I prepared the local Nexus result."} ${didNot}`;
+}
+
+function isNexusExperienceHelpCommand(command = "") {
+  return /^(nexus,?\s*)?(what can (nexus|you) do|show me nexus modes|show me what you can help with|help me get started|what can nexus do across all modes)\??$/i.test(String(command || "").trim());
+}
+
+function isNexusExperienceStatusCommand(command = "") {
+  return /\b(what happened|what did you do|did it send|what do i need to do next|show my last receipt|last receipt|show receipt)\b/i.test(String(command || ""));
+}
+
+function buildNexusExperienceStarterResponse(command = "", options = {}) {
+  const greeting = options.greeting || nexusPresenceGreeting();
+  return {
+    message: `${greeting} You can ask me for health intake, chronic care tracking, crop support, marketplace preparation, logistics, jobs, learning, drone review, or unsent communications. I’ll ask for missing details, prepare safe local outputs, and keep high-risk actions gated.`,
+    nextQuestion: "What would you like Nexus to prepare or assess first?",
+    suggestions: [
+      "help with diabetes intake",
+      "predict crop risk",
+      "prepare a marketplace listing",
+      "plan logistics",
+      "build a learning plan",
+      "prepare an SMS",
+      "show my last receipt"
+    ]
+  };
+}
+
+function handleNexusExperienceStarterCommand(command = "", options = {}) {
+  if (!isNexusExperienceHelpCommand(command)) return false;
+  const starter = buildNexusExperienceStarterResponse(command);
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
+    lastUserInput: String(command || "").trim(),
+    lastResponse: starter.message,
+    nextQuestion: starter.nextQuestion,
+    activeMission: "Ready to help"
+  });
+  renderLiveVoiceSuggestions?.(starter.suggestions);
+  setVoiceResponse(starter.message, options.speak !== false, {
+    allowHandoff: false,
+    command,
+    source: options.source || "nexus-experience-polish-layer",
+    skipPresenceUpdate: true
+  });
+  return true;
+}
+
+function latestNexusExperienceMission() {
+  return nexusActiveWorkflowState?.agenticMission || nexusAgenticCommandMissions[0] || null;
+}
+
+function handleNexusExperienceStatusCommand(command = "", options = {}) {
+  if (!isNexusExperienceStatusCommand(command)) return false;
+  const mission = latestNexusExperienceMission();
+  const receipt = mission?.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
+  if (!mission && !receipt) {
+    const message = "I do not have a recent local Nexus action to report yet. Ask me to prepare a health, agriculture, marketplace, logistics, workforce, learning, drone, or communication step first.";
+    setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
+      lastUserInput: String(command || "").trim(),
+      lastResponse: message,
+      nextQuestion: "What should Nexus prepare first?",
+      activeMission: "Ready to help"
+    });
+    setVoiceResponse(message, options.speak !== false, { allowHandoff: false, command, source: "nexus-experience-polish-layer", skipPresenceUpdate: true });
+    return true;
+  }
+  const mode = nexusExperienceModeFromMission(mission || {});
+  const missing = mission?.missingInfo?.length ? mission.missingInfo.join(", ") : "nothing required for the current local review";
+  const message = [
+    `What happened: ${receipt?.happened || mission?.receiptMessage || getNexusExperienceReceiptMessage(mode, mission)}.`,
+    `What did not happen: ${receipt?.didNot || "No external action was executed."}`,
+    `Confidence: ${mission?.confidenceExplanation || getNexusExperienceConfidenceExplanation(mode, mission)}.`,
+    `Still needed: ${missing}.`,
+    `Next: ${mission?.nextBestQuestion || mission?.nextStep || getNextBestQuestion(mode, mission?.missingInfo, mission)}`
+  ].join(" ");
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
+    lastUserInput: String(command || "").trim(),
+    lastResponse: message,
+    nextQuestion: mission?.nextBestQuestion || mission?.nextStep || getNextBestQuestion(mode, mission?.missingInfo, mission),
+    activeMission: mission?.title || "Nexus local result"
+  });
+  setVoiceResponse(message, options.speak !== false, { allowHandoff: false, command, source: "nexus-experience-polish-layer", skipPresenceUpdate: true });
+  return true;
+}
+
+function applyNexusExperiencePolishToMission(mission = {}, command = "", message = "") {
+  const mode = nexusExperienceModeFromCommand(command || mission.goal || mission.command || "", mission);
+  const missingInfo = Array.isArray(mission.missingInfo) ? mission.missingInfo : [];
+  const nextBestQuestion = getNextBestQuestion(mode, missingInfo, mission);
+  const suggestedNextActions = getSuggestedNextActions(mode, mission);
+  const confidenceExplanation = getNexusExperienceConfidenceExplanation(mode, mission);
+  const receiptMessage = getNexusExperienceReceiptMessage(mode, mission);
+  const progressSteps = getNexusExperienceProgressSteps(mode);
+  mission.experienceMode = mode;
+  mission.experienceAcknowledgment = getNexusExperienceAcknowledgment(mode, command || mission.goal || "");
+  mission.experienceProgress = progressSteps;
+  mission.nextBestQuestion = nextBestQuestion;
+  mission.confidenceExplanation = confidenceExplanation;
+  mission.suggestedNextActions = suggestedNextActions;
+  mission.receiptMessage = receiptMessage;
+  mission.nextStep = mission.nextStep || nextBestQuestion;
+  mission.timeline = [
+    { at: new Date().toISOString(), event: "experience_polish_applied", detail: "Nexus added acknowledgment, progress, confidence, next question, suggested actions, and receipt copy." },
+    ...(mission.timeline || [])
+  ].slice(0, 20);
+  const summaryParts = [
+    mission.experienceAcknowledgment,
+    message || `I prepared ${mission.title || "a local Nexus result"}.`,
+    `Progress: ${progressSteps.join(" > ")}.`,
+    `Confidence: ${confidenceExplanation}`,
+    `Next: ${nextBestQuestion}`,
+    `Suggested next actions: ${suggestedNextActions.slice(0, 3).join(", ")}.`,
+    receiptMessage
+  ];
+  return summaryParts.filter(Boolean).join(" ");
+}
+
+function parseNexusExperienceFollowUp(mode = "general", text = "") {
+  const normalized = normalizeNexusExperienceMode(mode);
+  const value = String(text || "").trim();
+  if (!value) return null;
+  if (normalized === "health" && /\b(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})\b|\b(bp|blood pressure|glucose|weight|symptom|rpm|rtm)\b/i.test(value)) {
+    return { label: "Health follow-up", removeMissing: /(reading|symptom|time|bp|blood pressure|rpm|rtm)/i };
+  }
+  if (normalized === "agriculture" && /\b(crop|field|rain|rainfall|irrigation|soil|pest|disease|acre|hectare|maize|tomato|cassava|yield)\b/i.test(value)) {
+    return { label: "Agriculture follow-up", removeMissing: /(crop|field|rain|soil|pest|disease|irrigation|location)/i };
+  }
+  if (normalized === "marketplace" && /\b(buyer|seller|bags?|kg|price|location|market|transport|maize|produce|listing)\b/i.test(value)) {
+    return { label: "Marketplace follow-up", removeMissing: /(buyer|seller|product|quantity|price|location|transport)/i };
+  }
+  if (normalized === "logistics" && /\b(carrier|dhl|origin|destination|from|to|tracking|shipment|route|delivery|nairobi|mombasa|stockton|sacramento)\b/i.test(value)) {
+    return { label: "Logistics follow-up", removeMissing: /(carrier|origin|destination|route|tracking|delivery)/i };
+  }
+  if (normalized === "workforce" && /\b(job|role|resume|skill|credential|certificate|training|experience|employer|interview|osha)\b/i.test(value)) {
+    return { label: "Workforce follow-up", removeMissing: /(role|skill|credential|experience|resume|employer)/i };
+  }
+  if (normalized === "learning" && /\b(study|course|lesson|days?|hours?|literacy|training|certificate|learn|class)\b/i.test(value)) {
+    return { label: "Learning follow-up", removeMissing: /(topic|schedule|time|course|skill)/i };
+  }
+  if (normalized === "drone" && /\b(drone|field|hectare|acre|battery|operator|flight|survey|image|imagery)\b/i.test(value)) {
+    return { label: "Drone follow-up", removeMissing: /(field|size|operator|purpose|safety|battery)/i };
+  }
+  if (normalized === "communications" && /\b(recipient|manager|clinic|buyer|seller|message|sms|whatsapp|email|call|tone|send|draft)\b/i.test(value)) {
+    return { label: "Communication follow-up", removeMissing: /(recipient|purpose|message|tone|provider|language)/i };
+  }
+  return null;
+}
+
 function handleNexusPresenceFollowUp(command = "", options = {}) {
-  const presenceMission = nexusPresenceState.activeMission || "";
+  const presenceMission = String(nexusPresenceState.activeMission || "");
+  const presenceMatchedMission = presenceMission
+    ? nexusAgenticCommandMissions.find(mission => {
+      const label = String([mission?.title, mission?.mode, mission?.submode].filter(Boolean).join(" "));
+      return label && (label.includes(presenceMission) || presenceMission.includes(label));
+    })
+    : null;
   const activeMission = nexusActiveWorkflowState?.agenticMission
-    || nexusAgenticCommandMissions.find(mission => /logistics|shipment|delivery/i.test(String(mission?.title || mission?.mode || "")))
+    || presenceMatchedMission
     || nexusAgenticCommandMissions[0]
     || null;
   const followUpReady = nexusPresenceState.state === NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP
-    || (nexusPresenceState.state === NEXUS_PRESENCE_STATES.LISTENING && /logistics|shipment|delivery/i.test(presenceMission));
+    || nexusPresenceState.state === NEXUS_PRESENCE_STATES.LISTENING;
   if (!activeMission || !followUpReady) return false;
   const text = String(command || "").trim();
-  if (!text || /^(nexus|hello nexus|hey nexus)$/i.test(text)) return false;
-  if (!/(carrier|dhl|origin|destination|from|to|tracking|shipment|nairobi|mombasa)/i.test(text)) return false;
+  if (!text || /^(nexus|hello nexus|hey nexus)$/i.test(text) || isNexusExperienceHelpCommand(text) || isNexusExperienceStatusCommand(text)) return false;
+  if (/^(?:hello\s+|hey\s+)?nexus\b|^(?:open|start|help|record|prepare|plan|show)\b/i.test(text)) return false;
+  const mode = nexusExperienceModeFromCommand(text, activeMission);
+  const parsedFollowUp = parseNexusExperienceFollowUp(mode, text);
+  if (!parsedFollowUp) return false;
   activeMission.collectedInfo = [...(activeMission.collectedInfo || []), text].slice(-8);
-  activeMission.missingInfo = (activeMission.missingInfo || []).filter(item => !/(carrier|origin|destination)/i.test(String(item)));
+  activeMission.missingInfo = (activeMission.missingInfo || []).filter(item => !parsedFollowUp.removeMissing.test(String(item)));
+  activeMission.nextBestQuestion = getNextBestQuestion(mode, activeMission.missingInfo, activeMission);
   activeMission.nextStep = activeMission.missingInfo?.length
     ? `Thanks. I still need ${activeMission.missingInfo.slice(0, 3).join(", ")}.`
-    : "Review the local shipment readiness plan and confirm before any external carrier handoff.";
+    : activeMission.nextBestQuestion;
   activeMission.timeline = [
-    { at: new Date().toISOString(), event: "follow_up_added", detail: "User follow-up attached locally; no carrier was contacted." },
+    { at: new Date().toISOString(), event: "experience_follow_up_added", detail: `${parsedFollowUp.label} attached locally; no external action occurred.` },
     ...(activeMission.timeline || [])
   ].slice(0, 20);
   nexusActiveWorkflowState = { agenticMission: activeMission };
-  const message = `${activeMission.nextStep} No live tracking, dispatch, carrier contact, payment, or external handoff occurred.`;
+  const message = `${getNexusExperienceAcknowledgment(mode, text)} ${activeMission.nextStep} ${getNexusExperienceReceiptMessage(mode, activeMission)}`;
   setNexusPresenceState(activeMission.missingInfo?.length ? NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP : NEXUS_PRESENCE_STATES.COMPLETED_LOCAL, {
     lastUserInput: text,
     lastResponse: message,
-    nextQuestion: activeMission.nextStep,
-    activeMission: activeMission.title || "Logistics mission"
+    nextQuestion: activeMission.nextBestQuestion || activeMission.nextStep,
+    activeMission: activeMission.title || "Nexus local mission"
   });
   setNexusAgenticCommandResult(activeMission, message);
   return true;
@@ -27053,8 +27331,9 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     return true;
   }
   if (await handleNexusUnifiedBrainRuntimeCommand(command, { source })) {
-    if (input) input.value = command;
-    setCommandInputs(command);
+    const directExperienceCommand = isNexusExperienceHelpCommand(command) || isNexusExperienceStatusCommand(command);
+    if (input) input.value = directExperienceCommand ? "" : command;
+    setCommandInputs(directExperienceCommand ? "" : command);
     return true;
   }
   return false;
@@ -30373,12 +30652,13 @@ function renderNexusPredictiveIntelligenceIndex() {
 }
 
 function setNexusAgenticCommandResult(mission, message = "") {
+  const polishedMessage = applyNexusExperiencePolishToMission(mission, mission.goal || mission.command || "", message);
   const latestReceipt = mission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
   nexusAgenticBrainLastResult = {
     ok: true,
     status: mission.executionStatus || mission.status,
     mode: mission.mode,
-    message: message || `Nexus created ${mission.title}.`,
+    message: polishedMessage || message || `Nexus created ${mission.title}.`,
     preparedCards: [{
       type: "agentic_command_mission",
       title: mission.title,
@@ -30388,7 +30668,11 @@ function setNexusAgenticCommandResult(mission, message = "") {
       missingInfo: mission.missingInfo,
       collectedInfo: mission.collectedInfo,
       confirmationRequired: mission.confirmationRequired,
-      receiptId: latestReceipt?.id || ""
+      receiptId: latestReceipt?.id || "",
+      nextBestQuestion: mission.nextBestQuestion,
+      confidenceExplanation: mission.confidenceExplanation,
+      suggestedNextActions: mission.suggestedNextActions,
+      receiptMessage: mission.receiptMessage
     }],
     mission,
     noExecutionAuthorized: mission.executionStatus !== "executed_with_receipt",
@@ -30402,8 +30686,8 @@ function setNexusAgenticCommandResult(mission, message = "") {
   const missingCount = Array.isArray(mission.missingInfo) ? mission.missingInfo.length : 0;
   setNexusPresenceState(mission.confirmationRequired ? NEXUS_PRESENCE_STATES.AWAITING_CONFIRMATION : (missingCount ? NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP : NEXUS_PRESENCE_STATES.COMPLETED_LOCAL), {
     lastUserInput: mission.goal || mission.command || nexusPresenceState.lastUserInput,
-    lastResponse: message || nexusAgenticBrainLastResult.message,
-    nextQuestion: mission.nextStep || (missingCount ? "I need one more detail." : "Ask Nexus what you need next."),
+    lastResponse: polishedMessage || message || nexusAgenticBrainLastResult.message,
+    nextQuestion: mission.nextBestQuestion || mission.nextStep || (missingCount ? "I need one more detail." : "Ask Nexus what you need next."),
     activeMission: mission.title || mission.mode || "Nexus local mission"
   });
   return true;
@@ -30724,7 +31008,8 @@ function showNexusAgenticMissionStatus(command = "") {
   if (!mission) return false;
   const missing = mission.missingInfo?.length ? mission.missingInfo.join(", ") : "nothing obvious for local preparation";
   const receipt = mission.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.find?.(item => item.missionId === mission.id);
-  return setNexusAgenticCommandResult(mission, `What happened: ${receipt?.happened || "Nexus has a local mission record."} What did not happen: ${receipt?.didNot || "No external action was executed."} Still missing: ${missing}. Next: ${mission.nextStep}`);
+  const mode = nexusExperienceModeFromMission(mission);
+  return setNexusAgenticCommandResult(mission, `What happened: ${receipt?.happened || mission.receiptMessage || "Nexus has a local mission record."} What did not happen: ${receipt?.didNot || "No external action was executed."} Confidence: ${mission.confidenceExplanation || getNexusExperienceConfidenceExplanation(mode, mission)}. Still missing: ${missing}. Next: ${mission.nextBestQuestion || mission.nextStep || getNextBestQuestion(mode, mission.missingInfo, mission)}`);
 }
 
 function runNexusAgenticCommandRuntime(command = "", options = {}) {
@@ -44944,12 +45229,16 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   const text = String(command || "").trim();
   if (!text) return false;
   if (handleNexusPresenceWakePhrase(text, options)) return true;
+  if (handleNexusExperienceStarterCommand(text, options)) return true;
+  if (handleNexusExperienceStatusCommand(text, options)) return true;
   if (handleNexusPresenceFollowUp(text, options)) return true;
   const routedText = normalizeNexusPresenceRoutableCommand(text);
+  const experienceMode = nexusExperienceModeFromCommand(routedText);
+  const progressSteps = getNexusExperienceProgressSteps(experienceMode);
   setNexusPresenceState(NEXUS_PRESENCE_STATES.THINKING, {
     lastUserInput: text,
-    lastResponse: nexusPresenceState.lastResponse,
-    nextQuestion: "Nexus is checking the safest local workflow.",
+    lastResponse: getNexusExperienceAcknowledgment(experienceMode, text),
+    nextQuestion: `${progressSteps[0]}. ${progressSteps[1]}. ${progressSteps[2]}.`,
     activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || ""
   });
   if (!runtime) return false;

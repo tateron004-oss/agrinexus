@@ -137,13 +137,20 @@ check("agentic command results update presence and receipts", hasAll(app, [
   "renderUserWorkspace()"
 ]));
 
-check("follow-up loop attaches logistics details locally", hasAll(app, [
+check("follow-up loop attaches cross-domain details locally", hasAll(app, [
   "function handleNexusPresenceFollowUp",
-  "nexusAgenticCommandMissions.find(mission => /logistics|shipment|delivery/i.test",
+  "function parseNexusExperienceFollowUp",
   "nexusPresenceState.state === NEXUS_PRESENCE_STATES.LISTENING",
-  "carrier|dhl|origin|destination|from|to|tracking|shipment|nairobi|mombasa",
-  "follow_up_added",
-  "No live tracking, dispatch, carrier contact, payment, or external handoff occurred.",
+  "Health follow-up",
+  "Agriculture follow-up",
+  "Marketplace follow-up",
+  "Logistics follow-up",
+  "Workforce follow-up",
+  "Learning follow-up",
+  "Drone follow-up",
+  "Communication follow-up",
+  "experience_follow_up_added",
+  "getNexusExperienceReceiptMessage(mode, activeMission)",
   "setNexusAgenticCommandResult(activeMission, message)",
   "return true;"
 ]));
@@ -195,7 +202,7 @@ check("presence layer has reduced motion protection", hasAll(styles, [
 
 check("presence block avoids fake external execution claims", presenceBlock
   && !/\b(message sent|call placed|provider contacted|shipment tracked live|buyer contacted|employer contacted|drone launched|payment completed|external action completed)\b/i.test(presenceBlock)
-  && /No live tracking, dispatch, carrier contact, payment, or external handoff occurred\./.test(presenceBlock));
+  && /No provider handoff, message, call, payment, booking, dispatch, location sharing, camera capture, diagnosis, prescription, or external execution occurred\./.test(presenceBlock));
 
 if (failures) {
   console.error(`Nexus conversational presence layer QA failed with ${failures} issue(s).`);
