@@ -96,6 +96,27 @@ let nexusAgenticBrainProviderQueue = [];
 let nexusAgenticBrainActivity = [];
 let nexusAgenticBrainMatrix = [];
 let nexusAgenticBrainLastResult = null;
+const NEXUS_PRESENCE_STATES = Object.freeze({
+  IDLE: "idle",
+  LISTENING: "listening",
+  THINKING: "thinking",
+  SPEAKING: "speaking",
+  AWAITING_FOLLOWUP: "awaiting_followup",
+  AWAITING_CONFIRMATION: "awaiting_confirmation",
+  COMPLETED_LOCAL: "completed_local",
+  BLOCKED: "blocked",
+  ERROR: "error"
+});
+let nexusPresenceState = {
+  state: NEXUS_PRESENCE_STATES.IDLE,
+  status: "Ask Nexus what you need.",
+  lastUserInput: "",
+  lastResponse: "",
+  nextQuestion: "",
+  activeMission: "",
+  suggestions: "You can ask me to check health risk, predict crop risk, assess trade readiness, plan logistics, build a learning plan, prepare a message, or show receipts.",
+  updatedAt: new Date().toISOString()
+};
 let nexusPilotPlatformLastRecord = null;
 let nexusPilotPlatformStatus = null;
 let nexusPilotReviewQueue = [];
@@ -272,7 +293,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-383";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-388";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -26138,6 +26159,28 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  const routedCommand = normalizeNexusPresenceRoutableCommand(command);
+  if (isNexusPresenceWakePhrase(command)) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    void handleNexusUnifiedBrainRuntimeCommand(command, { source });
+    return true;
+  }
+  const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
+    || isNexusAgriculturePredictiveModelerCommand(routedCommand)
+    || isNexusChronicPredictiveModelerCommand(routedCommand)
+    || isNexusPredictiveMaturityCommand(routedCommand);
+  if (predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
   if (window.NexusUnifiedBrainRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -26799,6 +26842,224 @@ function renderNexusCommandCenterHeader() {
   `;
 }
 
+function nexusPresenceStateLabel(state = nexusPresenceState.state) {
+  const labels = {
+    idle: "Ask Nexus what you need.",
+    listening: "Listening...",
+    thinking: "Thinking through your request...",
+    speaking: "Nexus is responding...",
+    awaiting_followup: "I need one more detail.",
+    awaiting_confirmation: "Confirmation needed before I continue.",
+    completed_local: "Done locally. Receipt recorded.",
+    blocked: "I can prepare this, but I cannot execute it externally yet.",
+    error: "I hit a local issue. Nothing external was executed."
+  };
+  return labels[state] || labels.idle;
+}
+
+function nexusPresenceUserName() {
+  const first = userFirstName();
+  return first && first !== "there" ? first : "";
+}
+
+function isNexusPresenceWakePhrase(input = "") {
+  const normalized = String(input || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  return /^(nexus|hello nexus|hey nexus)$/.test(normalized);
+}
+
+function normalizeNexusPresenceRoutableCommand(input = "") {
+  const text = String(input || "").trim();
+  if (!text || isNexusPresenceWakePhrase(text)) return text;
+  const normalized = text.replace(/^(?:hello\s+|hey\s+)?nexus\s*[,;:.-]?\s+/i, "").trim();
+  return normalized || text;
+}
+
+function nexusPresenceGreeting() {
+  const first = nexusPresenceUserName();
+  return first ? `Hello ${first}, how can I help?` : "Hello, how can I help?";
+}
+
+function setNexusPresenceState(state = NEXUS_PRESENCE_STATES.IDLE, updates = {}) {
+  nexusPresenceState = {
+    ...nexusPresenceState,
+    ...updates,
+    state,
+    status: updates.status || nexusPresenceStateLabel(state),
+    updatedAt: new Date().toISOString()
+  };
+  updateNexusPresenceDom();
+  return nexusPresenceState;
+}
+
+function inferNexusPresenceStateFromMessage(message = "", options = {}) {
+  const text = String(message || "").toLowerCase();
+  if (/confirmation|confirm before|say yes|approval|required before/i.test(text)) return NEXUS_PRESENCE_STATES.AWAITING_CONFIRMATION;
+  if (/need one more|need the|what do you have|tell me|missing|provide/i.test(text)) return NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP;
+  if (/blocked|cannot execute|no external action|provider not connected|credentials|required/i.test(text)) return NEXUS_PRESENCE_STATES.BLOCKED;
+  if (options.source || options.command || /receipt|done locally|prepared|recorded locally|local/i.test(text)) return NEXUS_PRESENCE_STATES.COMPLETED_LOCAL;
+  return NEXUS_PRESENCE_STATES.SPEAKING;
+}
+
+function updateNexusPresenceDom() {
+  if (typeof document === "undefined") return;
+  const layer = document.querySelector("[data-nexus-presence-layer]");
+  if (!layer) return;
+  const state = nexusPresenceState.state || NEXUS_PRESENCE_STATES.IDLE;
+  layer.dataset.nexusPresenceState = state;
+  layer.classList.toggle("nexus-conversation-active", state !== NEXUS_PRESENCE_STATES.IDLE);
+  const status = layer.querySelector("[data-nexus-presence-status]");
+  if (status) status.textContent = nexusPresenceState.status || nexusPresenceStateLabel(state);
+  const lastInput = layer.querySelector("[data-nexus-presence-last-input]");
+  if (lastInput) lastInput.textContent = nexusPresenceState.lastUserInput || "No request yet.";
+  const response = layer.querySelector("[data-nexus-presence-response]");
+  if (response) response.textContent = nexusPresenceState.lastResponse || "Nexus is ready.";
+  const next = layer.querySelector("[data-nexus-presence-next-question]");
+  if (next) next.textContent = nexusPresenceState.nextQuestion || "Ask Nexus what you need next.";
+  const mission = layer.querySelector("[data-nexus-presence-active-mission]");
+  if (mission) mission.textContent = nexusPresenceState.activeMission || "No active mission yet.";
+}
+
+function renderNexusConversationalPresenceLayer() {
+  const state = nexusPresenceState.state || NEXUS_PRESENCE_STATES.IDLE;
+  return `
+    <div class="nexus-presence-layer nexus-conversational-presence ${state !== NEXUS_PRESENCE_STATES.IDLE ? "nexus-conversation-active" : ""}" data-nexus-presence-layer="true" data-nexus-presence-state="${escapeHtml(state)}" aria-live="polite">
+      <div class="nexus-command-orb nexus-orb-${escapeHtml(state)}" data-nexus-command-orb="true" aria-hidden="true">
+        <span class="nexus-presence-pulse"></span>
+        <span class="nexus-command-orb-core">NX</span>
+      </div>
+      <div class="nexus-presence-copy">
+        <strong class="nexus-presence-status" data-nexus-presence-status="true">${escapeHtml(nexusPresenceState.status || nexusPresenceStateLabel(state))}</strong>
+        <small>${escapeHtml(nexusPresenceState.suggestions)}</small>
+      </div>
+      <div class="nexus-voice-waveform" data-nexus-voice-waveform="true" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="nexus-presence-continuity" data-nexus-presence-continuity="true">
+        <span><b>Active mission</b><small data-nexus-presence-active-mission>${escapeHtml(nexusPresenceState.activeMission || "No active mission yet.")}</small></span>
+        <span><b>Last input</b><small data-nexus-presence-last-input>${escapeHtml(nexusPresenceState.lastUserInput || "No request yet.")}</small></span>
+        <span><b>Nexus response</b><small data-nexus-presence-response>${escapeHtml(nexusPresenceState.lastResponse || "Nexus is ready.")}</small></span>
+        <span><b>Next question</b><small data-nexus-presence-next-question>${escapeHtml(nexusPresenceState.nextQuestion || "Ask Nexus what you need next.")}</small></span>
+      </div>
+    </div>
+  `;
+}
+
+function handleNexusPresenceWakePhrase(command = "", options = {}) {
+  if (!isNexusPresenceWakePhrase(command)) return false;
+  const greeting = nexusPresenceGreeting();
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
+    lastUserInput: String(command || "").trim(),
+    lastResponse: greeting,
+    nextQuestion: "What would you like Nexus to prepare or assess?",
+    activeMission: "Conversational greeting"
+  });
+  if (typeof renderLiveVoiceSuggestions === "function") {
+    renderLiveVoiceSuggestions([
+      "check health risk",
+      "predict crop risk",
+      "assess trade readiness",
+      "plan logistics",
+      "build a learning plan",
+      "prepare a message",
+      "show receipts"
+    ]);
+  }
+  setVoiceResponse(greeting, options.speak !== false, {
+    allowHandoff: false,
+    command,
+    source: options.source || "nexus-conversational-presence",
+    skipPresenceUpdate: true
+  });
+  return true;
+}
+
+function handleNexusPresenceFollowUp(command = "", options = {}) {
+  const presenceMission = nexusPresenceState.activeMission || "";
+  const activeMission = nexusActiveWorkflowState?.agenticMission
+    || nexusAgenticCommandMissions.find(mission => /logistics|shipment|delivery/i.test(String(mission?.title || mission?.mode || "")))
+    || nexusAgenticCommandMissions[0]
+    || null;
+  const followUpReady = nexusPresenceState.state === NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP
+    || (nexusPresenceState.state === NEXUS_PRESENCE_STATES.LISTENING && /logistics|shipment|delivery/i.test(presenceMission));
+  if (!activeMission || !followUpReady) return false;
+  const text = String(command || "").trim();
+  if (!text || /^(nexus|hello nexus|hey nexus)$/i.test(text)) return false;
+  if (!/(carrier|dhl|origin|destination|from|to|tracking|shipment|nairobi|mombasa)/i.test(text)) return false;
+  activeMission.collectedInfo = [...(activeMission.collectedInfo || []), text].slice(-8);
+  activeMission.missingInfo = (activeMission.missingInfo || []).filter(item => !/(carrier|origin|destination)/i.test(String(item)));
+  activeMission.nextStep = activeMission.missingInfo?.length
+    ? `Thanks. I still need ${activeMission.missingInfo.slice(0, 3).join(", ")}.`
+    : "Review the local shipment readiness plan and confirm before any external carrier handoff.";
+  activeMission.timeline = [
+    { at: new Date().toISOString(), event: "follow_up_added", detail: "User follow-up attached locally; no carrier was contacted." },
+    ...(activeMission.timeline || [])
+  ].slice(0, 20);
+  nexusActiveWorkflowState = { agenticMission: activeMission };
+  const message = `${activeMission.nextStep} No live tracking, dispatch, carrier contact, payment, or external handoff occurred.`;
+  setNexusPresenceState(activeMission.missingInfo?.length ? NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP : NEXUS_PRESENCE_STATES.COMPLETED_LOCAL, {
+    lastUserInput: text,
+    lastResponse: message,
+    nextQuestion: activeMission.nextStep,
+    activeMission: activeMission.title || "Logistics mission"
+  });
+  setNexusAgenticCommandResult(activeMission, message);
+  return true;
+}
+
+function handleNexusPresenceInputActivity(event) {
+  const input = event?.target?.closest?.("#nexusCommandCenterInput, [data-nexus-command-input]");
+  if (!input) return;
+  const text = input.value?.trim?.() || "";
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.LISTENING, {
+    lastUserInput: text || nexusPresenceState.lastUserInput,
+    lastResponse: nexusPresenceState.lastResponse,
+    nextQuestion: text ? "Press Send when you are ready." : "Tell Nexus what you need.",
+    activeMission: nexusPresenceState.activeMission
+  });
+}
+
+function handleNexusPresenceVoiceButton(event) {
+  const button = event?.target?.closest?.("[data-nexus-command-center-voice]");
+  if (!button) return;
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.LISTENING, {
+    lastResponse: nexusPresenceState.lastResponse,
+    nextQuestion: "Speak when the browser voice prompt is ready.",
+    activeMission: nexusPresenceState.activeMission
+  });
+}
+
+async function handleNexusPresenceCommandSendSubmit(event) {
+  const submit = event?.target?.closest?.(".nexus-command-send[data-nexus-command-center-submit]");
+  if (!submit) return false;
+  const input = nexusCommandInputForSubmit(submit);
+  const command = input?.value?.trim() || "";
+  if (!command) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  const source = "typed-command-send-button";
+  if (isNexusPresenceWakePhrase(command)) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    await handleNexusUnifiedBrainRuntimeCommand(command, { source });
+    return true;
+  }
+  const routedCommand = normalizeNexusPresenceRoutableCommand(command);
+  const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
+    || isNexusAgriculturePredictiveModelerCommand(routedCommand)
+    || isNexusChronicPredictiveModelerCommand(routedCommand)
+    || isNexusPredictiveMaturityCommand(routedCommand);
+  if (predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })) {
+    if (input) input.value = "";
+    setCommandInputs(command);
+    return true;
+  }
+  if (await handleNexusUnifiedBrainRuntimeCommand(command, { source })) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
+  return false;
+}
+
 function openNexusOnboardingModal() {
   const modal = $("#nexusOnboardingModal");
   if (!modal) return;
@@ -26831,6 +27092,7 @@ function renderNexusCommandCenterHero() {
         <span class="eyebrow">${translateText("AI assistant home")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
         <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
+        ${renderNexusConversationalPresenceLayer()}
         <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
           <button type="button" class="primary" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput">${escapeHtml(translateText("Start Mission"))}</button>
           <button type="button" data-nexus-mode-shortcut="continue-mission" data-nexus-command="Continue my last workflow.">${escapeHtml(translateText("Continue Mission"))}</button>
@@ -30137,6 +30399,13 @@ function setNexusAgenticCommandResult(mission, message = "") {
   nexusActiveWorkflowState = null;
   saveNexusRuntimeMemory();
   renderUserWorkspace();
+  const missingCount = Array.isArray(mission.missingInfo) ? mission.missingInfo.length : 0;
+  setNexusPresenceState(mission.confirmationRequired ? NEXUS_PRESENCE_STATES.AWAITING_CONFIRMATION : (missingCount ? NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP : NEXUS_PRESENCE_STATES.COMPLETED_LOCAL), {
+    lastUserInput: mission.goal || mission.command || nexusPresenceState.lastUserInput,
+    lastResponse: message || nexusAgenticBrainLastResult.message,
+    nextQuestion: mission.nextStep || (missingCount ? "I need one more detail." : "Ask Nexus what you need next."),
+    activeMission: mission.title || mission.mode || "Nexus local mission"
+  });
   return true;
 }
 
@@ -30461,9 +30730,9 @@ function showNexusAgenticMissionStatus(command = "") {
 function runNexusAgenticCommandRuntime(command = "", options = {}) {
   if (isNexusPersistentMemoryCommand(command)) return routeNexusPersistentMemoryCommand(command, options.source || "agentic-command-runtime");
   if (isNexusPredictiveMaturityCommand(command)) return routeNexusPredictiveMaturityCommand(command, options.source || "agentic-command-runtime");
-  if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
-  if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
   if (isNexusMultiDomainPredictiveCommand(command)) return routePredictiveCommand(command, options.source || "agentic-command-runtime");
+  if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
+  if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
   const intent = parseNexusAgenticCommandIntent(command);
   if (!intent) return false;
   if (intent.actionType === "continue") return continueNexusAgenticMission(command);
@@ -30649,9 +30918,9 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalizedLower = normalized.toLowerCase();
   if (isNexusPersistentMemoryCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusPredictiveMaturityCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
-  if (isNexusChronicPredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
-  if (isNexusAgriculturePredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (isNexusMultiDomainPredictiveCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
+  if (isNexusAgriculturePredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
+  if (isNexusChronicPredictiveModelerCommand(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (shouldNexusAgenticCommandRuntimeHandle(normalized) && runNexusAgenticCommandRuntime(normalized, { source: "text" })) return true;
   if (/\b(open command center|show command center|nexus home|open nexus home)\b/i.test(normalized)) {
     closeNexusFunctionWindow({ command: "What can Nexus do?" });
@@ -39554,6 +39823,15 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const now = Date.now();
   const duplicateSpeech = Boolean(speak && compactResponse && compactResponse === String(lastVoiceResponse || "").replace(/\s+/g, " ").trim() && now - lastVoiceResponseAt < 8000);
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
+  if (!options.skipPresenceUpdate) {
+    const inferredPresence = inferNexusPresenceStateFromMessage(responseMessage, options);
+    setNexusPresenceState(inferredPresence, {
+      lastUserInput: options.command || nexusPresenceState.lastUserInput || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "",
+      lastResponse: responseMessage,
+      nextQuestion: options.handoffText || (inferredPresence === NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP ? nexusPresenceStateLabel(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP) : "Ask Nexus what you need next."),
+      activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || nexusPresenceState.activeMission || ""
+    });
+  }
   lastVoiceResponse = responseMessage;
   lastVoiceResponseAt = now;
   rememberNexusAnswerContext(responseMessage, options);
@@ -44664,12 +44942,22 @@ function renderNexusAgenticCommandResult(result = {}) {
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const runtime = window.NexusUnifiedBrainRuntime;
   const text = String(command || "").trim();
-  if (!runtime || !text) return false;
+  if (!text) return false;
+  if (handleNexusPresenceWakePhrase(text, options)) return true;
+  if (handleNexusPresenceFollowUp(text, options)) return true;
+  const routedText = normalizeNexusPresenceRoutableCommand(text);
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.THINKING, {
+    lastUserInput: text,
+    lastResponse: nexusPresenceState.lastResponse,
+    nextQuestion: "Nexus is checking the safest local workflow.",
+    activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || ""
+  });
+  if (!runtime) return false;
   const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
-    ? runtime.shouldHandleBeforeLegacy(text, options)
+    ? runtime.shouldHandleBeforeLegacy(routedText, options)
     : false;
   if (!shouldHandle && !options.force) return false;
-  const result = await runtime.process(text, {
+  const result = await runtime.process(routedText, {
     language: languageCode(),
     inputType: options.source || "typed_chat",
     sourceMode: "standard_user_workspace"
@@ -48028,6 +48316,12 @@ function bindStatic() {
     window.NexusHealthcareCollaborationRuntime?.mount?.();
     window.NexusAgricultureCollaborationRuntime?.mount?.();
   }
+  document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
+  document.addEventListener("input", handleNexusPresenceInputActivity, true);
+  document.addEventListener("click", handleNexusPresenceVoiceButton, true);
+  document.addEventListener("click", event => {
+    void handleNexusPresenceCommandSendSubmit(event);
+  }, true);
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
