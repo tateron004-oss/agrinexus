@@ -241,6 +241,102 @@ const NEXUS_PRESENCE_PROFILE_REGISTRY = Object.freeze({
     })
   })
 });
+const NEXUS_VOICE_CAPABILITY_REGISTRY = Object.freeze({
+  schemaVersion: "nexus-voice-capability-registry.v1",
+  registryName: "NexusVoiceCapabilityRegistry",
+  defaultFallbackOrder: Object.freeze([
+    "browser-speech-recognition",
+    "browser-speech-synthesis",
+    "openai-tts",
+    "openai-realtime-webrtc",
+    "native-voice-bridge",
+    "typed-fallback"
+  ]),
+  providers: Object.freeze({
+    "browser-speech-recognition": Object.freeze({
+      id: "browser-speech-recognition",
+      label: "Browser speech recognition",
+      kind: "speech-to-text",
+      adapter: "NexusBrowserSpeechRecognitionAdapter",
+      controller: "NexusSpeechRecognitionController",
+      runtimeSource: "window.SpeechRecognition || window.webkitSpeechRecognition",
+      requiresUserGesture: true,
+      requiresMicrophonePermission: true,
+      executionAuthority: false,
+      fallback: "typed-fallback"
+    }),
+    "browser-speech-synthesis": Object.freeze({
+      id: "browser-speech-synthesis",
+      label: "Browser speech synthesis",
+      kind: "text-to-speech",
+      adapter: "NexusBrowserSpeechSynthesisAdapter",
+      controller: "NexusSpeechSynthesisController",
+      runtimeSource: "window.speechSynthesis",
+      requiresUserGesture: true,
+      requiresMicrophonePermission: false,
+      executionAuthority: false,
+      fallback: "captions"
+    }),
+    "openai-tts": Object.freeze({
+      id: "openai-tts",
+      label: "Configured server text-to-speech",
+      kind: "server-text-to-speech",
+      adapter: "NexusServerTtsAdapter",
+      controller: "NexusSpeechSynthesisController",
+      runtimeSource: "/api/voice/speak",
+      requiresServerProvider: true,
+      requiresSecretOnServer: true,
+      secretExposedToBrowser: false,
+      executionAuthority: false,
+      fallback: "browser-speech-synthesis"
+    }),
+    "openai-realtime-webrtc": Object.freeze({
+      id: "openai-realtime-webrtc",
+      label: "Configured realtime conversation voice",
+      kind: "conversation-voice",
+      adapter: "NexusRealtimeVoiceAdapter",
+      controller: "NexusSpeechRecognitionController",
+      runtimeSource: "RTCPeerConnection + server session",
+      conversationOnly: true,
+      requiresUserGesture: true,
+      requiresMicrophonePermission: true,
+      executionAuthority: false,
+      fallback: "browser-speech-recognition"
+    }),
+    "native-voice-bridge": Object.freeze({
+      id: "native-voice-bridge",
+      label: "Native voice bridge",
+      kind: "native-bridge",
+      adapter: "NexusNativeVoiceBridgeAdapter",
+      controller: "NexusSpeechRecognitionController",
+      runtimeSource: "AgriNexusNativeVoice/NexusNativeVoice bridge",
+      requiresHostApp: true,
+      executionAuthority: false,
+      fallback: "browser-speech-recognition"
+    }),
+    "typed-fallback": Object.freeze({
+      id: "typed-fallback",
+      label: "Typed fallback",
+      kind: "accessibility-fallback",
+      adapter: "NexusTypedFallbackAdapter",
+      controller: "NexusPresenceAccessibilityAdapter",
+      runtimeSource: "Ask Nexus text input",
+      alwaysAvailable: true,
+      requiresUserGesture: false,
+      requiresMicrophonePermission: false,
+      executionAuthority: false,
+      fallback: ""
+    })
+  }),
+  safetyPolicy: Object.freeze({
+    noSilentMicrophoneStart: true,
+    noAlwaysOnListening: true,
+    noSpeechOnlyBlocking: true,
+    noSecretExposure: true,
+    noVoiceProviderExecutionAuthority: true,
+    captionsRemainAvailable: true
+  })
+});
 const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
   idle: {
     label: "Nexus is idle and ready.",
@@ -28946,6 +29042,7 @@ function getNexusPresenceRuntimeBaseline() {
   const availableComponents = [
     "NexusPresenceRuntime",
     "NexusVoiceProfileRegistry",
+    "NexusVoiceCapabilityRegistry",
     "NexusSpeechRecognitionController",
     "NexusSpeechSynthesisController",
     "NexusConversationStyleEngine",
@@ -29043,15 +29140,100 @@ function setNexusPresenceProfile(profileId = NEXUS_PRESENCE_PROFILE_CONTRACT.def
   return profile;
 }
 
+function detectNexusVoiceProviderAvailability(providerId = "") {
+  const provider = NEXUS_VOICE_CAPABILITY_REGISTRY.providers[providerId] || null;
+  if (!provider) return { providerId, available: false, state: "unknown_provider", reason: "Provider is not registered." };
+  if (provider.alwaysAvailable) return { providerId, available: true, state: "ready", reason: "Always available as a text/accessibility fallback." };
+  if (providerId === "browser-speech-recognition") {
+    const profile = typeof browserVoiceRuntimeProfile === "function" ? browserVoiceRuntimeProfile() : {};
+    return {
+      providerId,
+      available: Boolean(profile.supported && profile.secureEnough),
+      state: profile.supported && profile.secureEnough ? "ready" : "unavailable",
+      reason: profile.supported ? (profile.secureEnough ? "Browser speech recognition is available." : "Secure context is required.") : "Browser speech recognition is unavailable.",
+      browserName: profile.browserName || "",
+      recognitionName: profile.recognitionName || ""
+    };
+  }
+  if (providerId === "browser-speech-synthesis") {
+    const available = Boolean(typeof window !== "undefined" && window.speechSynthesis && window.SpeechSynthesisUtterance);
+    return { providerId, available, state: available ? "ready" : "unavailable", reason: available ? "Browser speech synthesis is available." : "Browser speech synthesis is unavailable." };
+  }
+  if (providerId === "openai-tts") {
+    const enabled = !voiceDemoQuietMode;
+    return {
+      providerId,
+      available: enabled,
+      state: enabled ? "server_route_available" : "muted",
+      reason: enabled ? "Server TTS route is available when configured; secrets stay server-side." : "Voice output is muted.",
+      endpoint: "/api/voice/speak"
+    };
+  }
+  if (providerId === "openai-realtime-webrtc") {
+    const available = Boolean(typeof realtimeVoiceSupported === "function" && realtimeVoiceSupported());
+    return { providerId, available, state: available ? "browser_ready_provider_gated" : "browser_unavailable", reason: available ? realtimeVoiceStatusMessage() : "Realtime browser capability is unavailable.", conversationOnly: true };
+  }
+  if (providerId === "native-voice-bridge") {
+    const bridge = typeof nativeVoiceBridge === "function" ? nativeVoiceBridge() : null;
+    return { providerId, available: Boolean(bridge || nativeVoiceBridgeReady), state: bridge || nativeVoiceBridgeReady ? "ready" : "host_app_missing", reason: bridge || nativeVoiceBridgeReady ? "Native voice bridge is connected." : "Native host bridge is not present in this browser." };
+  }
+  return { providerId, available: false, state: "not_detected", reason: "Provider detection is not implemented." };
+}
+
+function getNexusVoiceCapabilityRegistry() {
+  const providers = Object.values(NEXUS_VOICE_CAPABILITY_REGISTRY.providers).map(provider => ({
+    ...provider,
+    availability: detectNexusVoiceProviderAvailability(provider.id)
+  }));
+  return {
+    ...NEXUS_VOICE_CAPABILITY_REGISTRY,
+    providers,
+    providerIds: providers.map(provider => provider.id),
+    selectedLocale: voiceLocale(),
+    selectedLanguage: voiceLanguageName(),
+    activeProfileId: resolveNexusPresenceProfileId(),
+    textFallbackAvailable: true,
+    noSecretValues: true
+  };
+}
+
+function resolveNexusVoiceProviderAdapters() {
+  const registry = getNexusVoiceCapabilityRegistry();
+  return registry.providers.map(provider => ({
+    providerId: provider.id,
+    label: provider.label,
+    adapter: provider.adapter,
+    controller: provider.controller,
+    available: Boolean(provider.availability?.available),
+    state: provider.availability?.state || "unknown",
+    fallback: provider.fallback || "typed-fallback",
+    executionAuthority: false
+  }));
+}
+
+function nexusVoiceCapabilitySummary() {
+  const adapters = resolveNexusVoiceProviderAdapters();
+  const ready = adapters.filter(adapter => adapter.available).map(adapter => adapter.providerId);
+  return {
+    readyProviderIds: ready,
+    fallbackProviderId: "typed-fallback",
+    recognitionReady: ready.includes("browser-speech-recognition") || ready.includes("openai-realtime-webrtc") || ready.includes("native-voice-bridge"),
+    synthesisReady: ready.includes("browser-speech-synthesis") || ready.includes("openai-tts"),
+    typedFallbackAvailable: true,
+    noExecutionAuthority: adapters.every(adapter => adapter.executionAuthority === false)
+  };
+}
+
 function renderNexusPresenceRuntimeBadge() {
   const baseline = getNexusPresenceRuntimeBaseline();
   const profile = resolveNexusPresenceProfile();
   const runtime = baseline.runtimeStatus || {};
+  const voiceCapabilities = nexusVoiceCapabilitySummary();
   return `
-    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(profile.displayName)}" data-nexus-presence-profile-id="${escapeHtml(profile.id)}" data-nexus-presence-profile-contract="${escapeHtml(profile.contractVersion)}" data-nexus-presence-registry="${escapeHtml(profile.registryName)}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
+    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(profile.displayName)}" data-nexus-presence-profile-id="${escapeHtml(profile.id)}" data-nexus-presence-profile-contract="${escapeHtml(profile.contractVersion)}" data-nexus-presence-registry="${escapeHtml(profile.registryName)}" data-nexus-voice-capability-registry="${escapeHtml(NEXUS_VOICE_CAPABILITY_REGISTRY.schemaVersion)}" data-nexus-voice-ready-providers="${escapeHtml(voiceCapabilities.readyProviderIds.join(" "))}" data-nexus-voice-no-execution-authority="${voiceCapabilities.noExecutionAuthority ? "true" : "false"}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
       <strong>${escapeHtml(translateText(profile.displayName))}</strong>
       <span>${escapeHtml(translateText("Shared voice, captions, orb, and mission state"))}</span>
-      <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${runtime.recognitionSupported ? "speech available" : "typed fallback available"}`))}</small>
+      <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${voiceCapabilities.recognitionReady ? "speech available" : "typed fallback available"} - ${voiceCapabilities.synthesisReady ? "speech output ready" : "caption fallback ready"}`))}</small>
     </div>
   `;
 }
@@ -29064,6 +29246,10 @@ if (typeof window !== "undefined") {
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
   window.resolveNexusPresenceProfile = resolveNexusPresenceProfile;
   window.setNexusPresenceProfile = setNexusPresenceProfile;
+  window.NEXUS_VOICE_CAPABILITY_REGISTRY = NEXUS_VOICE_CAPABILITY_REGISTRY;
+  window.getNexusVoiceCapabilityRegistry = getNexusVoiceCapabilityRegistry;
+  window.resolveNexusVoiceProviderAdapters = resolveNexusVoiceProviderAdapters;
+  window.nexusVoiceCapabilitySummary = nexusVoiceCapabilitySummary;
 }
 
 function handleNexusPresenceWakePhrase(command = "", options = {}) {
@@ -53682,6 +53868,10 @@ function exposeNexusAppWindowApis() {
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
   window.resolveNexusPresenceProfile = resolveNexusPresenceProfile;
   window.setNexusPresenceProfile = setNexusPresenceProfile;
+  window.NEXUS_VOICE_CAPABILITY_REGISTRY = NEXUS_VOICE_CAPABILITY_REGISTRY;
+  window.getNexusVoiceCapabilityRegistry = getNexusVoiceCapabilityRegistry;
+  window.resolveNexusVoiceProviderAdapters = resolveNexusVoiceProviderAdapters;
+  window.nexusVoiceCapabilitySummary = nexusVoiceCapabilitySummary;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
