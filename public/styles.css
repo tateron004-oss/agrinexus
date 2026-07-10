@@ -12106,6 +12106,64 @@ body.user-mode .nexus-guided-progress span {
   background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6);
 }
 
+body.user-mode .nexus-contextual-interview-engine {
+  border-color: rgba(52, 211, 153, .26);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(52, 211, 153, .12), transparent 34%),
+    linear-gradient(145deg, rgba(15, 23, 42, .7), rgba(2, 6, 23, .44));
+}
+
+body.user-mode .nexus-interview-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(251, 191, 36, .36);
+  border-radius: 14px;
+  color: #fef3c7;
+  background: rgba(245, 158, 11, .13);
+}
+
+body.user-mode .nexus-interview-helper {
+  margin: 0;
+  color: rgba(209, 250, 229, .9);
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-interview-review {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .22);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, .12), rgba(16, 185, 129, .08)),
+    rgba(2, 6, 23, .38);
+}
+
+body.user-mode .nexus-interview-review dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body.user-mode .nexus-interview-review dl div {
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .46);
+}
+
+body.user-mode .nexus-interview-review dt {
+  color: rgba(255, 255, 255, .94);
+  font-weight: 900;
+}
+
+body.user-mode .nexus-interview-review dd {
+  margin: 4px 0 0;
+  color: rgba(226, 232, 240, .88);
+}
+
 body.user-mode .nexus-smart-empty-state {
   margin: 8px 0;
   padding: 10px 12px;
@@ -12149,6 +12207,10 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-recent-workflows {
   body.user-mode .nexus-guided-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  body.user-mode .nexus-interview-review dl {
+    grid-template-columns: 1fr;
   }
 
   body.user-mode .nexus-active-workflow-modal {

@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-405";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-406";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v357";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -24189,42 +24189,173 @@ function renderNexusStatusBadge(status = "Draft", options = {}) {
   return `<span class="nexus-ux-status-badge nexus-ux-status-${escapeHtml(tone)}" data-nexus-status-badge="${escapeHtml(label)}">${escapeHtml(translateText(`Status: ${label}`))}</span>`;
 }
 
+const NEXUS_CONVERSATIONAL_INTERVIEW_FIELD_CATALOG = Object.freeze({
+  name: { name: "name", label: "Name", question: "What name should Nexus put on this workflow?", required: true, type: "text" },
+  contact: { name: "contact", label: "Contact", question: "What phone or email should Nexus keep for local review?", required: false, type: "contact" },
+  location: { name: "location", label: "Location", question: "What location should Nexus use as typed context?", required: false, type: "location" },
+  preferredLanguage: { name: "preferredLanguage", label: "Preferred language", question: "What language should Nexus use for this workflow?", required: false, type: "language" },
+  crop: { name: "crop", label: "Crop", question: "What crop or livestock should Nexus focus on?", required: true, type: "text" },
+  quantity: { name: "quantity", label: "Quantity", question: "What quantity should Nexus record?", required: false, type: "numberish" },
+  price: { name: "price", label: "Price", question: "What price or price range should Nexus record?", required: false, type: "money" },
+  farmSize: { name: "farmSize", label: "Farm size", question: "What farm size should Nexus record?", required: false, type: "numberish" },
+  healthMeasurement: { name: "healthMeasurement", label: "Health measurement", question: "What reading should Nexus record, such as blood pressure, glucose, weight, RPM, or RTM context?", required: true, type: "measurement" },
+  symptoms: { name: "symptoms", label: "Symptoms", question: "What symptoms or concerns should Nexus summarize for provider review?", required: false, type: "text" },
+  medicationInformation: { name: "medicationInformation", label: "Medication information", question: "What medication information should Nexus record without changing any dose?", required: false, type: "text" },
+  shipmentId: { name: "shipmentId", label: "Shipment ID", question: "What shipment ID or tracking reference should Nexus review?", required: false, type: "text" },
+  jobPreference: { name: "jobPreference", label: "Job preference", question: "What job or role is the user looking for?", required: true, type: "text" },
+  skills: { name: "skills", label: "Skills", question: "What skills, experience, or training should Nexus include?", required: false, type: "text" },
+  employerRequirement: { name: "employerRequirement", label: "Employer requirement", question: "What does the employer need from workers?", required: true, type: "text" },
+  providerSelection: { name: "providerSelection", label: "Provider selection", question: "Which provider, clinic, pharmacy, school, employer, or partner should Nexus prepare for?", required: false, type: "text" },
+  paymentAmount: { name: "paymentAmount", label: "Payment amount", question: "What amount should Nexus prepare for review without paying?", required: true, type: "money" },
+  transactionItem: { name: "transactionItem", label: "Transaction item", question: "What item, invoice, order, or service is this about?", required: true, type: "text" }
+});
+
 function nexusGuidedFieldsForDefinition(definition = {}) {
-  return (definition.fields || []).slice(0, 5).map((field, index) => ({
-    name: field.name || `field${index + 1}`,
-    label: field.label || `Question ${index + 1}`,
-    question: field.question || `What should Nexus record for ${field.label || "this step"}?`
-  }));
+  const id = normalizeNexusWorkflowId(definition.id || "", definition?.command || "");
+  const category = definition.category || nexusFunctionWindowCategory(definition.functionId || id);
+  const text = `${id} ${category} ${definition?.presentation?.title || ""}`.toLowerCase();
+  const fieldNames = new Set(["name", "contact", "preferredLanguage"]);
+  if (/agriculture|crop|farm|field|drone/.test(text)) ["location", "crop", "farmSize", "symptoms"].forEach(name => fieldNames.add(name));
+  if (/marketplace|agritrade|buyer|seller|trade/.test(text)) ["location", "crop", "quantity", "price", "transactionItem"].forEach(name => fieldNames.add(name));
+  if (/logistics|shipment|route|map|delivery|pickup/.test(text)) ["location", "shipmentId", "transactionItem"].forEach(name => fieldNames.add(name));
+  if (/learning|training|literacy|workforce|job|employment/.test(text)) ["jobPreference", "skills", "employerRequirement", "providerSelection"].forEach(name => fieldNames.add(name));
+  if (/health|chronic|diabetes|hypertension|obesity|rpm|rtm|telehealth|mobile-clinic|pharmacy|provider/.test(text)) ["location", "healthMeasurement", "symptoms", "medicationInformation", "providerSelection"].forEach(name => fieldNames.add(name));
+  if (/payment|invoice|checkout|transaction/.test(text)) ["paymentAmount", "transactionItem", "providerSelection"].forEach(name => fieldNames.add(name));
+  (definition.fields || []).forEach((field, index) => {
+    const rawName = field.name || `field${index + 1}`;
+    const normalized = String(rawName).replace(/[-_\s]+([a-z])/g, (_, c) => c.toUpperCase());
+    if (NEXUS_CONVERSATIONAL_INTERVIEW_FIELD_CATALOG[normalized]) fieldNames.add(normalized);
+  });
+  return Array.from(fieldNames).map((name, index) => {
+    const catalogField = NEXUS_CONVERSATIONAL_INTERVIEW_FIELD_CATALOG[name];
+    if (catalogField) return { ...catalogField, order: index };
+    const field = (definition.fields || [])[index] || {};
+    return {
+      name,
+      label: field.label || name,
+      question: field.question || `What should Nexus record for ${field.label || name}?`,
+      required: field.required !== false,
+      type: field.type || "text",
+      order: index
+    };
+  }).slice(0, 8);
+}
+
+function nexusInterviewStateForWorkflow(id = "") {
+  const raw = nexusGuidedWorkflowAnswers[id] || {};
+  if (raw.schemaVersion === "nexus-contextual-interview.v1") return raw;
+  const legacyValues = Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string"));
+  const interview = {
+    schemaVersion: "nexus-contextual-interview.v1",
+    values: legacyValues,
+    skipped: [],
+    corrections: [],
+    errors: {},
+    currentIndex: Object.keys(legacyValues).length,
+    reviewReady: false,
+    cancelled: false,
+    updatedAt: new Date().toISOString()
+  };
+  nexusGuidedWorkflowAnswers[id] = interview;
+  return interview;
+}
+
+function nexusInterviewValues(interview = {}) {
+  return interview.values || {};
+}
+
+function validateNexusInterviewAnswer(field = {}, value = "") {
+  const answer = String(value || "").trim();
+  if (!answer && field.required) return `${field.label || "This field"} is required before Nexus can prepare a review summary.`;
+  if (!answer) return "";
+  if (field.type === "contact" && answer.length < 5) return "Please enter a longer phone or email for local review, or skip this optional field.";
+  if (field.type === "money" && !/[\d]/.test(answer)) return "Please include a number or amount so Nexus can prepare the review safely.";
+  if (field.type === "numberish" && !/[\d]/.test(answer)) return "Please include a number, range, or unit so Nexus can understand the quantity.";
+  if (field.type === "measurement" && !/[\d]|blood pressure|bp|glucose|weight|pain|steps|rpm|rtm/i.test(answer)) return "Please include a reading, symptom scale, or measurement context for provider review.";
+  return "";
+}
+
+function nextNexusInterviewIndex(fields = [], interview = {}) {
+  const values = nexusInterviewValues(interview);
+  const skipped = new Set(interview.skipped || []);
+  const preferred = Math.max(0, Number(interview.currentIndex || 0));
+  const fromPreferred = fields.findIndex((field, index) => index >= preferred && !values[field.name] && !skipped.has(field.name));
+  if (fromPreferred >= 0) return fromPreferred;
+  const firstOpen = fields.findIndex(field => !values[field.name] && !skipped.has(field.name));
+  return firstOpen >= 0 ? firstOpen : Math.max(fields.length - 1, 0);
+}
+
+function buildNexusInterviewStructuredData(fields = [], interview = {}) {
+  const values = nexusInterviewValues(interview);
+  return fields.reduce((record, field) => {
+    if (values[field.name]) record[field.name] = values[field.name];
+    return record;
+  }, {});
+}
+
+function renderNexusInterviewReviewSummary(id = "", fields = [], interview = {}) {
+  const structured = buildNexusInterviewStructuredData(fields, interview);
+  const skipped = new Set(interview.skipped || []);
+  const missingRequired = fields.filter(field => field.required && !structured[field.name]);
+  return `
+    <section class="nexus-interview-review" data-nexus-interview-review-summary="true" data-nexus-interview-structured-data="${escapeHtml(JSON.stringify(structured))}" data-nexus-review-before-action="true">
+      <strong>${escapeHtml(translateText("Review before action"))}</strong>
+      <p>${escapeHtml(translateText(missingRequired.length ? "Nexus still needs required details before a packet can be prepared." : "Nexus has enough local interview details for a concise review. No external action has been executed."))}</p>
+      <dl>
+        ${fields.map(field => `
+          <div>
+            <dt>${escapeHtml(translateText(field.label))}${field.required ? " *" : ""}</dt>
+            <dd>${escapeHtml(translateText(structured[field.name] || (skipped.has(field.name) ? "Skipped optional field" : "Not answered yet")))}</dd>
+          </div>
+        `).join("")}
+      </dl>
+      <div class="nexus-guided-actions">
+        <button type="button" data-nexus-guided-mode="guided" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Continue interview"))}</button>
+        <button type="button" data-nexus-action-controller="prepare-packet" data-workflow-id="${escapeHtml(id)}" ${missingRequired.length ? 'disabled aria-disabled="true" data-nexus-disabled-reason="required-interview-fields-missing"' : ""}>${escapeHtml(translateText("Prepare local packet"))}</button>
+      </div>
+    </section>
+  `;
 }
 
 function renderNexusGuidedIntakePanel(definition = {}, state = {}) {
   const id = definition.id || "";
   const fields = nexusGuidedFieldsForDefinition(definition);
-  const answers = nexusGuidedWorkflowAnswers[id] || {};
-  const answeredCount = fields.filter(field => String(answers[field.name] || "").trim()).length;
-  const currentIndex = Math.min(answeredCount, Math.max(fields.length - 1, 0));
-  const currentField = fields[currentIndex] || fields[0] || { label: "Next detail", question: "What should Nexus record next?" };
+  const interview = nexusInterviewStateForWorkflow(id);
+  const answers = nexusInterviewValues(interview);
+  const skipped = new Set(interview.skipped || []);
+  const answeredCount = fields.filter(field => String(answers[field.name] || "").trim() || skipped.has(field.name)).length;
+  const currentIndex = nextNexusInterviewIndex(fields, interview);
+  const currentField = fields[currentIndex] || fields[0] || { name: "nextDetail", label: "Next detail", question: "What should Nexus record next?", required: true, type: "text" };
   const progress = fields.length ? Math.round((answeredCount / fields.length) * 100) : 0;
+  const currentError = interview.errors?.[currentField.name] || "";
   return `
-    <section class="nexus-guided-intake" data-nexus-guided-intake="true" data-nexus-guided-workflow="${escapeHtml(id)}">
+    <section class="nexus-guided-intake nexus-contextual-interview-engine" data-nexus-guided-intake="true" data-nexus-contextual-interview-engine="true" data-nexus-guided-workflow="${escapeHtml(id)}" data-nexus-interview-current-field="${escapeHtml(currentField.name)}" data-nexus-interview-resumable="true" data-nexus-interview-voice-answer="true" data-nexus-interview-typed-answer="true">
       <div class="nexus-guided-header">
         <div>
-          <strong>${escapeHtml(translateText("Guided intake"))}</strong>
-          <span>${escapeHtml(translateText(`Step ${Math.min(currentIndex + 1, fields.length || 1)} of ${fields.length || 1}`))}</span>
+          <strong>${escapeHtml(translateText("Conversational interview"))}</strong>
+          <span>${escapeHtml(translateText(`One question at a time - step ${Math.min(currentIndex + 1, fields.length || 1)} of ${fields.length || 1}`))}</span>
         </div>
         <button type="button" data-nexus-guided-mode="form" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Switch to form mode"))}</button>
       </div>
       <div class="nexus-guided-progress" aria-label="${escapeHtml(translateText(`Guided progress ${progress}%`))}"><span style="width:${escapeHtml(String(progress))}%"></span></div>
       <p>${escapeHtml(translateText(currentField.question))}</p>
+      ${currentError ? `<p class="nexus-interview-error" data-nexus-interview-error="true">${escapeHtml(translateText(currentError))}</p>` : ""}
       <label class="nexus-landing-field">
-        <span>${escapeHtml(translateText(currentField.label))}</span>
-        <input data-nexus-guided-answer="${escapeHtml(currentField.name)}" data-nexus-mode-field="${escapeHtml(currentField.name)}" value="${escapeHtml(answers[currentField.name] || "")}" placeholder="${escapeHtml(translateText("Type your answer here"))}">
+        <span>${escapeHtml(translateText(`${currentField.label}${currentField.required ? " (required)" : " (optional)"}`))}</span>
+        <input data-nexus-guided-answer="${escapeHtml(currentField.name)}" data-nexus-mode-field="${escapeHtml(currentField.name)}" data-nexus-interview-field-type="${escapeHtml(currentField.type || "text")}" value="${escapeHtml(answers[currentField.name] || "")}" placeholder="${escapeHtml(translateText("Type or speak your answer here"))}">
       </label>
       <div class="nexus-guided-actions">
-        <button type="button" data-nexus-guided-back data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Back"))}</button>
-        <button type="button" data-nexus-guided-save data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Save answer"))}</button>
+        <button type="button" data-nexus-guided-back data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Back"))}</button>
+        <button type="button" data-nexus-guided-save data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Save answer"))}</button>
+        <button type="button" data-nexus-interview-skip data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}" ${currentField.required ? 'disabled aria-disabled="true" data-nexus-disabled-reason="required-field-cannot-skip"' : ""}>${escapeHtml(translateText("Skip optional"))}</button>
+        <button type="button" data-nexus-interview-correct data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Correct previous"))}</button>
+        <button type="button" data-nexus-voice-control="listen" data-nexus-interview-voice-button="true">${escapeHtml(translateText("Answer by voice"))}</button>
+        <button type="button" data-nexus-interview-review data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Review summary"))}</button>
+        <button type="button" data-nexus-interview-cancel data-nexus-preserve-guided-mode="true" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Cancel interview"))}</button>
         <button type="button" data-nexus-guided-mode="form" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Edit all fields"))}</button>
       </div>
+      <p class="nexus-interview-helper" data-nexus-interview-helper="true">${escapeHtml(translateText("Nexus reuses known context, accepts typed or voice answers, validates simply, allows correction, and shows a review before any action. No external action is executed from this interview."))}</p>
+      ${(interview.reviewReady || answeredCount >= fields.length) ? renderNexusInterviewReviewSummary(id, fields, interview) : ""}
     </section>
   `;
 }
@@ -49817,6 +49948,10 @@ if (typeof window !== "undefined") {
 
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
+  const interviewEventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  if (interviewEventTarget?.closest?.("[data-nexus-guided-save],[data-nexus-interview-skip],[data-nexus-interview-correct],[data-nexus-interview-review],[data-nexus-interview-cancel],[data-nexus-guided-back]")) {
+    return handleNexusUserExperienceMaximizationClick(event);
+  }
   const demoMission = event.target?.closest?.("[data-nexus-demo-mission-open]");
   if (demoMission) {
     event.preventDefault();
@@ -50246,14 +50381,152 @@ function handleNexusUserExperienceMaximizationClick(event) {
   if (guidedSave) {
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation?.();
     const workflowId = guidedSave.dataset.workflowId || nexusActiveWorkflowState?.id || "";
     const input = document.querySelector("[data-nexus-guided-answer]");
     if (workflowId && input) {
-      nexusGuidedWorkflowAnswers[workflowId] = {
-        ...(nexusGuidedWorkflowAnswers[workflowId] || {}),
-        [input.dataset.nexusGuidedAnswer || "answer"]: input.value || ""
+      const definition = nexusFunctionWindowDefinition(workflowId, nexusActiveWorkflowState?.command || "");
+      const fields = nexusGuidedFieldsForDefinition(definition);
+      const interview = nexusInterviewStateForWorkflow(workflowId);
+      const fieldName = input.dataset.nexusGuidedAnswer || "answer";
+      const field = fields.find(item => item.name === fieldName) || { name: fieldName, label: fieldName, required: true, type: input.dataset.nexusInterviewFieldType || "text" };
+      const value = input.value || "";
+      const error = validateNexusInterviewAnswer(field, value);
+      interview.errors = { ...(interview.errors || {}) };
+      if (error) {
+        interview.errors[fieldName] = error;
+      } else {
+        delete interview.errors[fieldName];
+        interview.values = {
+          ...(interview.values || {}),
+          [fieldName]: String(value || "").trim()
+        };
+        interview.skipped = (interview.skipped || []).filter(name => name !== fieldName);
+        interview.currentIndex = Math.min((fields.findIndex(item => item.name === fieldName) + 1), Math.max(fields.length - 1, 0));
+        interview.updatedAt = new Date().toISOString();
+        interview.cancelled = false;
+      }
+      nexusGuidedWorkflowAnswers[workflowId] = interview;
+      nexusActiveWorkflowState = {
+        ...(nexusActiveWorkflowState || {}),
+        id: workflowId,
+        guidedMode: true
       };
-      recordNexusRecentWorkflow(workflowId, { status: "draft", summary: "Guided intake answer saved locally." });
+      recordNexusRecentWorkflow(workflowId, { status: "draft", summary: error ? "Interview answer needs a simple correction." : "Conversational interview answer saved locally." });
+      saveNexusRuntimeMemory();
+      renderUserWorkspace();
+      scheduleNexusActiveWorkflowFocus({ instant: true });
+    }
+    return true;
+  }
+  const interviewSkip = target?.closest?.("[data-nexus-interview-skip]");
+  if (interviewSkip) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const workflowId = interviewSkip.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    const input = document.querySelector("[data-nexus-guided-answer]");
+    const fieldName = input?.dataset?.nexusGuidedAnswer || "";
+    if (workflowId && fieldName) {
+      const definition = nexusFunctionWindowDefinition(workflowId, nexusActiveWorkflowState?.command || "");
+      const fields = nexusGuidedFieldsForDefinition(definition);
+      const field = fields.find(item => item.name === fieldName);
+      const interview = nexusInterviewStateForWorkflow(workflowId);
+      if (!field?.required) {
+        interview.skipped = Array.from(new Set([...(interview.skipped || []), fieldName]));
+        interview.errors = { ...(interview.errors || {}) };
+        delete interview.errors[fieldName];
+        interview.currentIndex = Math.min((fields.findIndex(item => item.name === fieldName) + 1), Math.max(fields.length - 1, 0));
+        interview.updatedAt = new Date().toISOString();
+        nexusGuidedWorkflowAnswers[workflowId] = interview;
+        nexusActiveWorkflowState = {
+          ...(nexusActiveWorkflowState || {}),
+          id: workflowId,
+          guidedMode: true
+        };
+        recordNexusRecentWorkflow(workflowId, { status: "draft", summary: "Optional interview field skipped locally." });
+        saveNexusRuntimeMemory();
+        renderUserWorkspace();
+        scheduleNexusActiveWorkflowFocus({ instant: true });
+      }
+    }
+    return true;
+  }
+  const interviewCorrect = target?.closest?.("[data-nexus-interview-correct]");
+  if (interviewCorrect) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const workflowId = interviewCorrect.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    if (workflowId) {
+      const definition = nexusFunctionWindowDefinition(workflowId, nexusActiveWorkflowState?.command || "");
+      const fields = nexusGuidedFieldsForDefinition(definition);
+      const interview = nexusInterviewStateForWorkflow(workflowId);
+      const values = nexusInterviewValues(interview);
+      const answeredIndexes = fields.map((field, index) => values[field.name] ? index : -1).filter(index => index >= 0);
+      const previousIndex = answeredIndexes.length ? answeredIndexes[answeredIndexes.length - 1] : Math.max(0, (interview.currentIndex || 0) - 1);
+      interview.currentIndex = previousIndex;
+      interview.reviewReady = false;
+      interview.corrections = [
+        { field: fields[previousIndex]?.name || "previous", at: new Date().toISOString(), reason: "user_requested_correction" },
+        ...(interview.corrections || [])
+      ].slice(0, 8);
+      nexusGuidedWorkflowAnswers[workflowId] = interview;
+      nexusActiveWorkflowState = {
+        ...(nexusActiveWorkflowState || {}),
+        id: workflowId,
+        guidedMode: true
+      };
+      saveNexusRuntimeMemory();
+      renderUserWorkspace();
+      scheduleNexusActiveWorkflowFocus({ instant: true });
+    }
+    return true;
+  }
+  const interviewReview = target?.closest?.("[data-nexus-interview-review]");
+  if (interviewReview) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const workflowId = interviewReview.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    if (workflowId) {
+      const interview = nexusInterviewStateForWorkflow(workflowId);
+      interview.reviewReady = true;
+      interview.updatedAt = new Date().toISOString();
+      nexusGuidedWorkflowAnswers[workflowId] = interview;
+      nexusActiveWorkflowState = {
+        ...(nexusActiveWorkflowState || {}),
+        id: workflowId,
+        guidedMode: true
+      };
+      saveNexusRuntimeMemory();
+      renderUserWorkspace();
+      scheduleNexusActiveWorkflowFocus({ instant: true });
+    }
+    return true;
+  }
+  const interviewCancel = target?.closest?.("[data-nexus-interview-cancel]");
+  if (interviewCancel) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const workflowId = interviewCancel.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    if (workflowId) {
+      const interview = nexusInterviewStateForWorkflow(workflowId);
+      interview.cancelled = true;
+      interview.values = {};
+      interview.skipped = [];
+      interview.errors = {};
+      interview.currentIndex = 0;
+      interview.reviewReady = false;
+      interview.updatedAt = new Date().toISOString();
+      nexusGuidedWorkflowAnswers[workflowId] = interview;
+      nexusActiveWorkflowState = {
+        ...(nexusActiveWorkflowState || {}),
+        id: workflowId,
+        guidedMode: true
+      };
+      recordNexusRecentWorkflow(workflowId, { status: "draft", summary: "Interview cancelled locally before any packet or external action." });
       saveNexusRuntimeMemory();
       renderUserWorkspace();
       scheduleNexusActiveWorkflowFocus({ instant: true });
@@ -50264,11 +50537,17 @@ function handleNexusUserExperienceMaximizationClick(event) {
   if (guidedBack) {
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation?.();
     const workflowId = guidedBack.dataset.workflowId || nexusActiveWorkflowState?.id || "";
-    const answers = nexusGuidedWorkflowAnswers[workflowId] || {};
-    const keys = Object.keys(answers);
-    if (keys.length) delete answers[keys[keys.length - 1]];
-    nexusGuidedWorkflowAnswers[workflowId] = answers;
+    const interview = nexusInterviewStateForWorkflow(workflowId);
+    interview.currentIndex = Math.max(0, Number(interview.currentIndex || 0) - 1);
+    interview.reviewReady = false;
+    nexusGuidedWorkflowAnswers[workflowId] = interview;
+    nexusActiveWorkflowState = {
+      ...(nexusActiveWorkflowState || {}),
+      id: workflowId,
+      guidedMode: true
+    };
     saveNexusRuntimeMemory();
     renderUserWorkspace();
     scheduleNexusActiveWorkflowFocus({ instant: true });

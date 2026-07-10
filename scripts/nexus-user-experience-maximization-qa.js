@@ -48,8 +48,8 @@ function excludes(source, token, label) {
   "let nexusGuidedWorkflowAnswers = {}",
   "function renderNexusGuidedIntakePanel",
   "data-nexus-guided-intake=\"true\"",
-  "Guided intake",
-  "Step ${Math.min",
+  "Conversational interview",
+  "One question at a time - step ${Math.min",
   "Switch to form mode",
   "data-nexus-guided-save",
   "data-nexus-guided-back"
