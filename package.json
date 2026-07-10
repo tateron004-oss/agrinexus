@@ -122,6 +122,7 @@
     "qa:nexus-presence-profile-registry": "node scripts/nexus-presence-profile-registry-qa.js",
     "qa:nexus-voice-capability-registry": "node scripts/nexus-voice-capability-registry-qa.js",
     "qa:nexus-regional-voice-resolution": "node scripts/nexus-regional-voice-resolution-qa.js",
+    "qa:nexus-conversation-style-engine": "node scripts/nexus-conversation-style-engine-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

@@ -29300,6 +29300,86 @@ function handleNexusPresenceWakePhrase(command = "", options = {}) {
   return true;
 }
 
+const NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-conversation-style-engine.v1",
+  engineName: "NexusConversationStyleEngine",
+  composer: "composeNexusConversationStyleResponse",
+  modes: Object.freeze(["STANDARD", "CLINICAL", "GUIDE", "FOCUS", "URGENT"]),
+  outputFields: Object.freeze(["acknowledgment", "plainLanguageSummary", "safetyBoundary", "nextQuestion", "spokenText", "captionText"]),
+  safetyPolicy: Object.freeze({
+    noDiagnosis: true,
+    noPrescribing: true,
+    noMedicationChanges: true,
+    noFakeCompletion: true,
+    noProviderHandoffClaim: true,
+    highRiskActionsRemainGated: true
+  })
+});
+
+function inferNexusConversationStyleMode(context = {}) {
+  const text = [
+    context.mode,
+    context.command,
+    context.message,
+    context.domain,
+    context.intent,
+    context.source
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/\b(emergency|urgent|severe|cannot breathe|chest pain|stroke|danger)\b/.test(text)) return "URGENT";
+  if (/\b(diabetes|hypertension|obesity|blood pressure|bp|rpm|rtm|clinic|telehealth|pharmacy|provider|symptom|medicine|medication)\b/.test(text)) return "CLINICAL";
+  if (/\b(step|guide|teach|learn|literacy|training|explain|help me understand)\b/.test(text)) return "GUIDE";
+  if (/\b(status|summary|receipt|what happened|quick|short|brief)\b/.test(text)) return "FOCUS";
+  return "STANDARD";
+}
+
+function nexusConversationStyleModeConfig(styleMode = "STANDARD") {
+  return NEXUS_PRESENCE_RUNTIME_BASELINE.deliveryModes[styleMode] || NEXUS_PRESENCE_RUNTIME_BASELINE.deliveryModes.STANDARD;
+}
+
+function nexusConversationStyleSafetyBoundary(styleMode = "STANDARD", domain = "general") {
+  if (styleMode === "CLINICAL") {
+    return "I can organize health information for education and provider review, but I do not diagnose, prescribe, change medication, or handle emergencies.";
+  }
+  if (styleMode === "URGENT") {
+    return "If this may be an emergency, contact local emergency services or urgent professional care now. Nexus cannot dispatch help.";
+  }
+  if (domain === "marketplace") return "I can prepare review details, but I do not buy, sell, pay, or contact anyone without the required gates.";
+  if (domain === "communications") return "I can draft and review communication, but I do not send messages or start calls without provider setup and explicit confirmation.";
+  return "I will keep high-risk actions gated and report clearly what did and did not happen.";
+}
+
+function normalizeNexusConversationText(text = "") {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function composeNexusConversationStyleResponse(context = {}) {
+  const styleMode = context.styleMode || inferNexusConversationStyleMode(context);
+  const modeConfig = nexusConversationStyleModeConfig(styleMode);
+  const domain = normalizeNexusExperienceMode(context.domain || context.mode || context.command || "general");
+  const acknowledgment = context.acknowledgment || getNexusExperienceAcknowledgment(domain, context.command || "");
+  const plainLanguageSummary = normalizeNexusConversationText(context.message || context.summary || "I prepared the safest local next step.");
+  const safetyBoundary = context.safetyBoundary || nexusConversationStyleSafetyBoundary(styleMode, domain);
+  const nextQuestion = context.nextQuestion || getNextBestQuestion(domain, context.missingInfo || [], context.currentState || {});
+  const pieces = [acknowledgment, plainLanguageSummary, safetyBoundary, `Next: ${nextQuestion}`].filter(Boolean);
+  const spokenText = normalizeNexusConversationText(pieces.join(" "));
+  return {
+    schemaVersion: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.schemaVersion,
+    engineName: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.engineName,
+    styleMode,
+    tone: modeConfig.tone,
+    pace: modeConfig.pace,
+    speechRate: modeConfig.speechRate,
+    acknowledgment,
+    plainLanguageSummary,
+    safetyBoundary,
+    nextQuestion,
+    spokenText,
+    captionText: spokenText,
+    highRiskActionsRemainGated: true,
+    noFakeCompletion: true
+  };
+}
+
 function normalizeNexusExperienceMode(mode = "") {
   const text = String(mode || "").toLowerCase();
   if (/\b(diabetes|hypertension|obesity|blood pressure|bp|rpm|rtm|chronic|health|clinic|provider|telehealth|pharmacy|mobile clinic|chw)\b/.test(text)) return "health";
@@ -29430,9 +29510,17 @@ function isNexusExperienceStatusCommand(command = "") {
 
 function buildNexusExperienceStarterResponse(command = "", options = {}) {
   const greeting = options.greeting || nexusPresenceGreeting();
+  const styled = composeNexusConversationStyleResponse({
+    command,
+    mode: "general",
+    message: "You can ask me for health intake, chronic care tracking, crop support, marketplace preparation, logistics, jobs, learning, drone review, or unsent communications.",
+    acknowledgment: greeting,
+    nextQuestion: "What would you like Nexus to prepare or assess first?"
+  });
   return {
-    message: `${greeting} You can ask me for health intake, chronic care tracking, crop support, marketplace preparation, logistics, jobs, learning, drone review, or unsent communications. I’ll ask for missing details, prepare safe local outputs, and keep high-risk actions gated.`,
-    nextQuestion: "What would you like Nexus to prepare or assess first?",
+    message: styled.spokenText,
+    nextQuestion: styled.nextQuestion,
+    style: styled,
     suggestions: [
       "help with diabetes intake",
       "predict crop risk",
@@ -29473,11 +29561,17 @@ function handleNexusExperienceStatusCommand(command = "", options = {}) {
   const mission = latestNexusExperienceMission();
   const receipt = mission?.receipts?.[0] || nexusAgenticCommandLocalMemory.receipts?.[0] || null;
   if (!mission && !receipt) {
-    const message = "I do not have a recent local Nexus action to report yet. Ask me to prepare a health, agriculture, marketplace, logistics, workforce, learning, drone, or communication step first.";
+    const styled = composeNexusConversationStyleResponse({
+      command,
+      styleMode: "FOCUS",
+      message: "I do not have a recent local Nexus action to report yet. Ask me to prepare a health, agriculture, marketplace, logistics, workforce, learning, drone, or communication step first.",
+      nextQuestion: "What should Nexus prepare first?"
+    });
+    const message = styled.spokenText;
     setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
       lastUserInput: String(command || "").trim(),
       lastResponse: message,
-      nextQuestion: "What should Nexus prepare first?",
+      nextQuestion: styled.nextQuestion,
       activeMission: "Ready to help"
     });
     setVoiceResponse(message, options.speak !== false, { allowHandoff: false, command, source: "nexus-experience-polish-layer", skipPresenceUpdate: true });
@@ -29485,17 +29579,25 @@ function handleNexusExperienceStatusCommand(command = "", options = {}) {
   }
   const mode = nexusExperienceModeFromMission(mission || {});
   const missing = mission?.missingInfo?.length ? mission.missingInfo.join(", ") : "nothing required for the current local review";
-  const message = [
+  const rawMessage = [
     `What happened: ${receipt?.happened || mission?.receiptMessage || getNexusExperienceReceiptMessage(mode, mission)}.`,
     `What did not happen: ${receipt?.didNot || "No external action was executed."}`,
     `Confidence: ${mission?.confidenceExplanation || getNexusExperienceConfidenceExplanation(mode, mission)}.`,
     `Still needed: ${missing}.`,
     `Next: ${mission?.nextBestQuestion || mission?.nextStep || getNextBestQuestion(mode, mission?.missingInfo, mission)}`
   ].join(" ");
+  const styled = composeNexusConversationStyleResponse({
+    command,
+    styleMode: "FOCUS",
+    mode,
+    message: rawMessage,
+    nextQuestion: mission?.nextBestQuestion || mission?.nextStep || getNextBestQuestion(mode, mission?.missingInfo, mission)
+  });
+  const message = styled.spokenText;
   setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
     lastUserInput: String(command || "").trim(),
     lastResponse: message,
-    nextQuestion: mission?.nextBestQuestion || mission?.nextStep || getNextBestQuestion(mode, mission?.missingInfo, mission),
+    nextQuestion: styled.nextQuestion,
     activeMission: mission?.title || "Nexus local result"
   });
   setVoiceResponse(message, options.speak !== false, { allowHandoff: false, command, source: "nexus-experience-polish-layer", skipPresenceUpdate: true });
@@ -29510,24 +29612,31 @@ function applyNexusExperiencePolishToMission(mission = {}, command = "", message
   const confidenceExplanation = getNexusExperienceConfidenceExplanation(mode, mission);
   const receiptMessage = getNexusExperienceReceiptMessage(mode, mission);
   const progressSteps = getNexusExperienceProgressSteps(mode);
+  const styled = composeNexusConversationStyleResponse({
+    command,
+    mode,
+    message: message || mission.message || mission.summary || mission.title || "Nexus prepared the local result.",
+    acknowledgment: getNexusExperienceAcknowledgment(mode, command || mission.goal || ""),
+    nextQuestion: nextBestQuestion,
+    missingInfo
+  });
   mission.experienceMode = mode;
-  mission.experienceAcknowledgment = getNexusExperienceAcknowledgment(mode, command || mission.goal || "");
+  mission.experienceAcknowledgment = styled.acknowledgment;
   mission.experienceProgress = progressSteps;
   mission.nextBestQuestion = nextBestQuestion;
   mission.confidenceExplanation = confidenceExplanation;
   mission.suggestedNextActions = suggestedNextActions;
   mission.receiptMessage = receiptMessage;
+  mission.conversationStyle = styled;
   mission.nextStep = mission.nextStep || nextBestQuestion;
   mission.timeline = [
     { at: new Date().toISOString(), event: "experience_polish_applied", detail: "Nexus added acknowledgment, progress, confidence, next question, suggested actions, and receipt copy." },
     ...(mission.timeline || [])
   ].slice(0, 20);
   const summaryParts = [
-    mission.experienceAcknowledgment,
-    message || `I prepared ${mission.title || "a local Nexus result"}.`,
+    styled.spokenText,
     `Progress: ${progressSteps.join(" > ")}.`,
     `Confidence: ${confidenceExplanation}`,
-    `Next: ${nextBestQuestion}`,
     `Suggested next actions: ${suggestedNextActions.slice(0, 3).join(", ")}.`,
     receiptMessage
   ];
@@ -53968,6 +54077,9 @@ function exposeNexusAppWindowApis() {
   window.NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT = NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT;
   window.resolveNexusRegionalVoice = resolveNexusRegionalVoice;
   window.nexusRegionalVoiceSummary = nexusRegionalVoiceSummary;
+  window.NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT = NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT;
+  window.composeNexusConversationStyleResponse = composeNexusConversationStyleResponse;
+  window.inferNexusConversationStyleMode = inferNexusConversationStyleMode;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
