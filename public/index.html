@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-393">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-394">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -133,9 +133,9 @@
             <option value="sw">Swahili</option>
           </select>
         </label>
-        <button type="button" data-user-voice-action="listen">Speak</button>
-        <button type="button" data-user-voice-action="type">Ask</button>
-        <button type="button" data-user-voice-action="read">Read</button>
+        <button type="button" data-user-voice-action="listen" data-nexus-os-voice-control="toggle-listening">Speak</button>
+        <button type="button" data-user-voice-action="type" data-nexus-os-voice-control="typed-fallback">Ask</button>
+        <button type="button" data-user-voice-action="read" data-nexus-os-voice-control="repeat-response">Read</button>
         <button id="nexusVoiceDemoStopMusicBtn" type="button" data-nexus-voice-demo-action="stop-music">Stop Music</button>
         <div class="nexus-voice-demo-prompts" aria-label="Meeting-safe Nexus demo prompts">
           <button type="button" data-nexus-voice-demo-prompt="Nexus, I need telehealth">I need telehealth</button>
@@ -1452,10 +1452,10 @@
                 <input id="voiceTextCommand" placeholder="Try: create a plan for a rural Nigeria learner">
               </label>
               <div class="action-row">
-                <button id="voiceListenBtn" class="primary" type="button">Mic: Start listening</button>
+                <button id="voiceListenBtn" class="primary" type="button" data-nexus-os-voice-control="toggle-listening">Mic: Start listening</button>
                 <button id="voiceRunBtn" type="button">Run command</button>
                 <button id="voiceFirstBtn" type="button">Voice-first mode</button>
-                <button id="voiceSpeakBtn" type="button">Read response</button>
+                <button id="voiceSpeakBtn" type="button" data-nexus-os-voice-control="repeat-response">Read response</button>
                 <button id="voiceHelpBtn" type="button">Voice help</button>
               </div>
             </div>
@@ -2035,12 +2035,12 @@
           </label>
           <div class="global-assistant-actions">
             <button id="globalBackBtn" class="ghost" type="button">Back to app</button>
-            <button id="globalListenBtn" class="primary" type="button">Mic: Start listening</button>
+            <button id="globalListenBtn" class="primary" type="button" data-nexus-os-voice-control="toggle-listening">Mic: Start listening</button>
             <button id="globalRunBtn" type="button">Run command</button>
             <button id="globalVoiceFirstBtn" type="button">Nexus voice: On</button>
             <button id="globalYesBtn" type="button">Yes, do it</button>
             <button id="globalNoBtn" type="button">No, cancel</button>
-            <button id="globalReadBtn" type="button">Read response</button>
+            <button id="globalReadBtn" type="button" data-nexus-os-voice-control="repeat-response">Read response</button>
             <button id="globalVoiceHelpBtn" type="button">Voice help</button>
             <button id="globalInstallBtn" type="button">Install app</button>
           </div>
@@ -2100,10 +2100,10 @@
         <input id="jarvisCommandInput" placeholder="Nexus, run full mission">
       </label>
       <div class="action-row">
-        <button id="jarvisListenBtn" class="primary" type="button">Listen</button>
+        <button id="jarvisListenBtn" class="primary" type="button" data-nexus-os-voice-control="toggle-listening">Listen</button>
         <button id="jarvisRunBtn" type="button">Run</button>
         <button id="jarvisMissionBtn" type="button">Full mission</button>
-        <button id="jarvisReadBtn" type="button">Read</button>
+        <button id="jarvisReadBtn" type="button" data-nexus-os-voice-control="repeat-response">Read</button>
       </div>
       <div id="jarvisInsightPanel" class="task-list"></div>
     </section>
@@ -2133,7 +2133,7 @@
           <input id="workflowVoiceInput" placeholder="Say or type: yes, no, read, or cancel">
         </label>
         <div class="action-row">
-          <button id="workflowListenBtn" type="button">Mic</button>
+          <button id="workflowListenBtn" type="button" data-nexus-os-voice-control="toggle-listening">Mic</button>
           <button id="workflowRunVoiceBtn" type="button">Run response</button>
           <button id="workflowReadBtn" type="button">Read workflow</button>
         </div>
@@ -2204,7 +2204,7 @@
   <script src="/nexus-full-communication-runtime.js?v=nexus-full-communication-runtime-1"></script>
   <script src="/nexus-healthcare-collaboration-runtime.js?v=nexus-healthcare-collaboration-runtime-1"></script>
   <script src="/nexus-agriculture-collaboration-runtime.js?v=nexus-agriculture-collaboration-runtime-1"></script>
-  <script src="/app.js?v=nexus-behavior-393"></script>
+  <script src="/app.js?v=nexus-behavior-394"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
 </html>

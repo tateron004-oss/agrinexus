@@ -401,6 +401,24 @@ let nexusVoiceSession = JSON.parse(localStorage.getItem("agrinexusVoiceSession")
   lastAssistantSpeechAt: 0,
   queuedSpeechAt: 0
 };
+let nexusOsVoiceStartInFlight = false;
+let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRuntimeState") || "null") || {
+  schemaVersion: "nexus-os-voice-runtime.v1",
+  runtimeOwner: "nexus-os-canonical-voice",
+  mode: "standby",
+  listeningState: "idle",
+  hearingState: "idle",
+  speechConfidence: null,
+  wakePhrases: ["Nexus", "Hello Nexus"],
+  language: "en",
+  locale: "en-US",
+  permissionState: "unknown",
+  recognitionSupported: false,
+  synthesisSupported: false,
+  microphoneUnavailable: false,
+  privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
+  updatedAt: new Date().toISOString()
+};
 let queuedVoiceSpeechTimer = null;
 let queuedVoiceSpeechPayload = null;
 let agentPerformanceState = {
@@ -472,7 +490,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-393";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-394";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -11172,6 +11190,7 @@ function renderNexusOsUnifiedConversationSurface() {
         </div>
       </div>
       <div class="nexus-os-transcript-strip" data-nexus-os-voice-transcript="true">${escapeHtml(translateText(transcriptText))}</div>
+      ${renderNexusOsVoiceRuntimeStatus()}
       <div class="nexus-os-conversation-log" data-nexus-os-conversation-log="true" tabindex="0" aria-live="polite">
         ${renderNexusOsConversationTurns()}
       </div>
@@ -11206,7 +11225,8 @@ async function handleNexusOsUnifiedConversationAction(action = "") {
   const input = $("#nexusCommandCenterInput");
   if (normalized === "stop-response") {
     stopNexusSpeaking?.("Stopped. I am ready when you are.");
-    stopVoicePlayback?.({ silent: true });
+    stopVoicePlayback?.({ silent: true, reason: "nexus-os-conversation-stop" });
+    updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle" }, "nexus-os-conversation-stop");
     setNexusPresenceState(NEXUS_PRESENCE_STATES.WAITING, { nextQuestion: "Tell Nexus what to do next." });
     recordNexusOsConversationTurn("assistant", "Stopped. I am ready when you are.", { source: "nexus-os-stop-response" });
     return true;
@@ -27191,7 +27211,7 @@ function renderNexusCommandCenterHeader() {
           title="${escapeHtml(translateText("Learn what Nexus can do"))}"
         >${escapeHtml(translateText("▶️ Start here"))}</button>
         <button type="button" data-toggle-user-language aria-label="${escapeHtml(translateText("Change language"))}">${escapeHtml(languageCode().toUpperCase())}</button>
-        <button type="button" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}">Mic</button>
+          <button type="button" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" aria-label="${escapeHtml(translateText("Talk to Nexus"))}">Mic</button>
       </div>
     </header>
   `;
@@ -27845,7 +27865,7 @@ function renderNexusCommandCenterHero() {
         <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
         <div class="nexus-command-input-row">
           <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, music, messages, reminders, or safety."))}"></textarea>
-          <button type="button" class="nexus-command-mic" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Speak to Nexus"))}">Mic</button>
+          <button type="button" class="nexus-command-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" aria-label="${escapeHtml(translateText("Speak to Nexus"))}">Mic</button>
           <button type="button" class="nexus-command-send" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">Send</button>
         </div>
         <div class="nexus-command-context">
@@ -27968,7 +27988,7 @@ function renderNexusCoreFeatureCards() {
 function renderNexusVoiceInteractionBar() {
   return `
     <section class="nexus-voice-interaction-bar nexus-voice-bar nexus-glass-card" data-nexus-voice-interaction-bar="true" aria-label="${escapeHtml(translateText("Voice interaction"))}">
-      <button type="button" class="nexus-voice-pulse" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}"></button>
+      <button type="button" class="nexus-voice-pulse" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" aria-label="${escapeHtml(translateText("Talk to Nexus"))}"></button>
       <div>
         <strong>${escapeHtml(translateText("Tap to speak with Nexus"))}</strong>
         <small>${escapeHtml(translateText("Voice stays user-initiated. You can also type any request above."))}</small>
@@ -32806,6 +32826,36 @@ function ensureNexusOsVisualBoundaryStyles() {
       background: rgba(2, 6, 23, 0.3);
       color: rgba(203, 213, 225, 0.88);
       margin-bottom: 12px;
+    }
+    .nexus-os-voice-runtime-status {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 10px;
+      align-items: center;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 16px;
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.66), rgba(8, 47, 73, 0.3));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      color: rgba(226, 232, 240, 0.9);
+      font-size: 0.78rem;
+    }
+    .nexus-os-voice-runtime-status span {
+      color: rgba(125, 211, 252, 0.92);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .nexus-os-voice-runtime-status strong {
+      color: rgba(255, 255, 255, 0.96);
+      text-transform: capitalize;
+    }
+    .nexus-os-voice-runtime-status small,
+    .nexus-os-voice-runtime-status em {
+      grid-column: 1 / -1;
+      color: rgba(203, 213, 225, 0.84);
+      font-style: normal;
     }
     .nexus-os-conversation-log {
       display: grid;
@@ -41180,6 +41230,102 @@ function updateNexusVoiceSession(patch = {}, reason = "") {
   return nexusVoiceSession;
 }
 
+function persistNexusOsVoiceRuntimeState() {
+  localStorage.setItem("nexusOsVoiceRuntimeState", JSON.stringify({
+    ...nexusOsVoiceRuntimeState,
+    speechConfidence: typeof nexusOsVoiceRuntimeState.speechConfidence === "number" ? nexusOsVoiceRuntimeState.speechConfidence : null
+  }));
+}
+
+function updateNexusOsVoiceRuntimeState(patch = {}, reason = "voice-runtime-update") {
+  const profile = typeof browserVoiceRuntimeProfile === "function" ? browserVoiceRuntimeProfile() : {};
+  nexusOsVoiceRuntimeState = {
+    ...nexusOsVoiceRuntimeState,
+    ...patch,
+    schemaVersion: "nexus-os-voice-runtime.v1",
+    runtimeOwner: "nexus-os-canonical-voice",
+    language: languageCode(),
+    locale: voiceLocale(),
+    recognitionSupported: Boolean(profile.supported || realtimeVoiceSupported?.()),
+    synthesisSupported: Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance),
+    voiceFirst: voiceFirstMode,
+    muted: nexusOsConversationMuted || voiceDemoQuietMode,
+    privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
+    reason,
+    updatedAt: new Date().toISOString()
+  };
+  persistNexusOsVoiceRuntimeState();
+  const surface = document.querySelector("[data-nexus-os-voice-runtime-status]");
+  if (surface) surface.textContent = nexusOsVoiceRuntimeSummary();
+  document.body?.setAttribute?.("data-nexus-os-voice-state", nexusOsVoiceRuntimeState.mode || "standby");
+  return nexusOsVoiceRuntimeState;
+}
+
+function nexusOsVoiceRuntimeSummary() {
+  const state = nexusOsVoiceRuntimeState || {};
+  const confidence = typeof state.speechConfidence === "number"
+    ? ` Confidence ${Math.round(state.speechConfidence * 100)}%.`
+    : "";
+  const support = state.recognitionSupported
+    ? "Speech recognition available."
+    : "Typed fallback available.";
+  return `${state.mode || "standby"} in ${voiceLanguageName()} (${voiceLocale()}). ${support}${confidence}`;
+}
+
+function renderNexusOsVoiceRuntimeStatus() {
+  updateNexusOsVoiceRuntimeState({ mode: nexusOsVoiceRuntimeState.mode || "standby" }, "render-status");
+  return `
+    <div class="nexus-os-voice-runtime-status" data-nexus-os-voice-runtime-status="true">
+      <span>${escapeHtml(translateText("Voice"))}</span>
+      <strong>${escapeHtml(translateText(nexusOsVoiceRuntimeState.mode || "standby"))}</strong>
+      <small>${escapeHtml(translateText(nexusOsVoiceRuntimeSummary()))}</small>
+      <em>${escapeHtml(translateText("Push-to-talk. No always-on listening without explicit consent."))}</em>
+    </div>
+  `;
+}
+
+async function handleNexusOsVoiceControlAction(action = "toggle-listening", options = {}) {
+  const normalized = String(action || "toggle-listening").toLowerCase();
+  const source = options.source || "nexus-os-voice-control";
+  if (normalized === "stop-speaking") {
+    stopVoicePlayback({ hard: true, reason: source });
+    updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle", hearingState: "idle" }, source);
+    setVoiceResponse("Stopped speaking. Type or press Mic when you are ready.", false, { allowVoiceFirst: false, source });
+    return true;
+  }
+  if (normalized === "repeat-response") {
+    updateNexusOsVoiceRuntimeState({ mode: "speaking", listeningState: "idle" }, source);
+    speakVoiceResponse(options.text || lastVoiceResponse || "Nexus is ready.");
+    return true;
+  }
+  if (normalized === "mute") {
+    nexusOsConversationMuted = true;
+    disableNexusVoiceForDemo("Nexus voice is muted. Text responses remain available.", { silent: true });
+    updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle" }, source);
+    recordNexusOsConversationTurn("assistant", "Nexus voice is muted. Text responses remain available.", { source });
+    renderUserWorkspace();
+    return true;
+  }
+  if (normalized === "unmute") {
+    nexusOsConversationMuted = false;
+    voiceDemoQuietMode = false;
+    localStorage.setItem("agrinexusDemoQuiet", "off");
+    saveNexusOsConversationTurns();
+    updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle" }, source);
+    recordNexusOsConversationTurn("assistant", "Nexus voice is unmuted. Press Mic or type your request.", { source });
+    renderUserWorkspace();
+    return true;
+  }
+  if (normalized === "typed-fallback") {
+    openAskNexus();
+    $("#nexusCommandCenterInput")?.focus?.();
+    updateNexusOsVoiceRuntimeState({ mode: "typed-fallback", listeningState: "typed" }, source);
+    return true;
+  }
+  await startVoiceListening({ source });
+  return true;
+}
+
 function userIsActivelySpeaking() {
   return Boolean(nexusVoiceSession.userSpeaking || (voiceLastPartialAt && Date.now() - voiceLastPartialAt < NEXUS_USER_SPEAKING_HOLD_MS));
 }
@@ -41193,6 +41339,12 @@ function cancelQueuedNexusSpeech(reason = "newer voice turn") {
 
 function markNexusUserSpeech(text = "", source = "voice") {
   const phrase = normalizeVoicePartial(text);
+  updateNexusOsVoiceRuntimeState({
+    mode: "hearing",
+    listeningState: "active",
+    hearingState: "interim",
+    lastPartial: phrase || nexusOsVoiceRuntimeState.lastPartial || ""
+  }, source);
   updateNexusVoiceSession({
     state: "user-speaking",
     userSpeaking: true,
@@ -41209,6 +41361,13 @@ function markNexusUserSpeech(text = "", source = "voice") {
 function markNexusUserSpeechFinal(text = "", turnToken = null) {
   const phrase = normalizeVoicePartial(text);
   cancelQueuedNexusSpeech("final-user-command");
+  updateNexusOsVoiceRuntimeState({
+    mode: "thinking",
+    listeningState: "final",
+    hearingState: "final",
+    lastFinal: phrase,
+    lastPartial: ""
+  }, "final-user-command");
   updateNexusVoiceSession({
     state: "thinking",
     userSpeaking: false,
@@ -41372,6 +41531,12 @@ function updateStreamingVoicePartial(text = "", options = {}) {
     if (element) element.textContent = translateText(message);
   });
   updateNativeVoiceBridgeState("partial", { transcript: partial, source: options.source || "web-speech" });
+  updateNexusOsVoiceRuntimeState({
+    mode: "hearing",
+    listeningState: "active",
+    hearingState: "interim",
+    lastPartial: partial
+  }, options.source || "interim-speech");
   markNexusUserSpeech(partial, options.source || "interim-speech");
 }
 
@@ -41379,6 +41544,10 @@ function clearStreamingVoicePartial() {
   voiceInterimTranscript = "";
   voiceInterimStartedAt = 0;
   voiceLastPartialAt = 0;
+  updateNexusOsVoiceRuntimeState({
+    hearingState: "idle",
+    lastPartial: ""
+  }, "partial-cleared");
   updateNexusVoiceSession({ userSpeaking: false, lastPartial: "" }, "partial-cleared");
 }
 
@@ -41434,6 +41603,11 @@ function stopVoicePlayback(options = {}) {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   voiceSpeaking = false;
   voiceAutoRestart = voiceFirstMode;
+  updateNexusOsVoiceRuntimeState({
+    mode: options.hard ? "interrupted" : "speech-stopped",
+    hearingState: "idle",
+    assistantSpeaking: false
+  }, options.reason || "voice-playback-stop");
   updateNexusVoiceSession({
     state: options.hard ? "interrupted" : "speech-stopped",
     assistantSpeaking: false
@@ -41553,6 +41727,7 @@ function interruptNexusSpeech(reason = "I stopped speaking and I am ready for th
 function speakVoiceResponse(textOverride) {
   if (voiceDemoQuietMode) {
     stopVoicePlayback({ hard: true });
+    updateNexusOsVoiceRuntimeState({ mode: "muted", assistantSpeaking: false }, "speech-muted");
     return;
   }
   const text = textOverride || lastVoiceResponse;
@@ -41578,6 +41753,13 @@ function speakVoiceResponse(textOverride) {
   const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
   voiceAutoRestart = keepListeningForAnswer || keepStreamingOpen || false;
+  updateNexusOsVoiceRuntimeState({
+    mode: "speaking",
+    listeningState: voiceAutoRestart ? "active" : "idle",
+    hearingState: "idle",
+    assistantSpeaking: true,
+    lastSpokenPreview: compact.slice(0, 180)
+  }, "speech-playback-start");
   updateNexusVoiceSession({
     state: "assistant-speaking",
     assistantSpeaking: true,
@@ -41673,6 +41855,11 @@ function speakVoiceResponse(textOverride) {
 }
 
 function setVoiceStatus(status) {
+  updateNexusOsVoiceRuntimeState({
+    mode: status || "standby",
+    listeningState: status === "listening" || status === "voice-first" ? "active" : "idle",
+    microphoneUnavailable: status === "unavailable"
+  }, "set-voice-status");
   const statusEl = $("#voiceStatus");
   if (statusEl) statusEl.textContent = status;
   const globalStatus = $("#globalAssistantStatus");
@@ -48435,15 +48622,26 @@ function scheduleFinalVoiceCommand(command = "", options = {}) {
   }, Number(options.delay ?? VOICE_FINAL_DEBOUNCE_MS));
 }
 
-async function startVoiceListening() {
+async function startVoiceListening(options = {}) {
+  const source = options.source || "nexus-os-voice-runtime";
   if (voiceDemoQuietMode) {
+    updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle", hearingState: "idle" }, source);
     setVoiceStatus("standby");
     refreshMicSupport();
+    return;
+  }
+  if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
+    updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
     return;
   }
   const profile = browserVoiceRuntimeProfile();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!profile.secureEnough) {
+    updateNexusOsVoiceRuntimeState({
+      mode: "unsupported-browser",
+      listeningState: "blocked",
+      permissionState: "secure-context-required"
+    }, source);
     refreshMicSupport();
     setVoiceResponse(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or local server URL, then allow microphone access.`);
     return;
@@ -48469,13 +48667,32 @@ async function startVoiceListening() {
     voiceStopRequested = true;
     voiceRecognition.stop();
     voiceRecognition = null;
+    updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle" }, source);
     setVoiceStatus("standby");
     refreshMicSupport();
     return;
   }
+  nexusOsVoiceStartInFlight = true;
+  updateNexusOsVoiceRuntimeState({
+    mode: "starting",
+    listeningState: "starting",
+    hearingState: "idle",
+    permissionState: "prompt-or-existing"
+  }, source);
   const realtimeStarted = await startRealtimeVoiceSession();
-  if (realtimeStarted) return;
+  if (realtimeStarted) {
+    nexusOsVoiceStartInFlight = false;
+    updateNexusOsVoiceRuntimeState({ mode: "listening", listeningState: "realtime", hearingState: "idle" }, source);
+    return;
+  }
   if (!Recognition) {
+    nexusOsVoiceStartInFlight = false;
+    updateNexusOsVoiceRuntimeState({
+      mode: "unsupported-browser",
+      listeningState: "typed-fallback",
+      permissionState: "unsupported",
+      microphoneUnavailable: true
+    }, source);
     refreshMicSupport();
     setVoiceResponse(`${profile.browserName} does not expose microphone speech recognition here, and OpenAI Realtime voice is not available. Type your request in Ask AgriNexus and click Run command.`);
     return;
@@ -48484,7 +48701,15 @@ async function startVoiceListening() {
   voiceRecognition = new Recognition();
   applyChromeVoiceRuntimeDefaults(voiceRecognition);
   voiceRecognition.onstart = () => {
+    nexusOsVoiceStartInFlight = false;
     registerNativeVoiceSession("web-streaming-start");
+    updateNexusOsVoiceRuntimeState({
+      mode: "listening",
+      listeningState: "active",
+      hearingState: "waiting",
+      permissionState: "granted-or-browser-managed",
+      microphoneUnavailable: false
+    }, source);
     updateNativeVoiceBridgeState("listening", { locale: voiceLocale(), browser: profile.browserName, recognition: profile.recognitionName });
     setVoiceStatus(voiceConversationPaused ? "paused" : "listening");
     const status = $("#globalMicStatus");
@@ -48496,6 +48721,7 @@ async function startVoiceListening() {
     refreshMicSupport();
   };
   voiceRecognition.onerror = event => {
+    nexusOsVoiceStartInFlight = false;
     setVoiceStatus("standby");
     const error = event.error || "microphone unavailable";
     const recoverableErrors = new Set(["no-speech", "aborted", "network", "audio-capture"]);
@@ -48511,6 +48737,14 @@ async function startVoiceListening() {
           : `Voice input paused: ${error}. I am reconnecting voice now.`;
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
+    updateNexusOsVoiceRuntimeState({
+      mode: permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "recognition-interrupted",
+      listeningState: permissionBlocked ? "blocked" : "recovering",
+      hearingState: "idle",
+      permissionState: permissionBlocked ? "denied" : "unknown",
+      microphoneUnavailable: error === "audio-capture",
+      lastError: error
+    }, source);
     updateNativeVoiceBridgeState(permissionBlocked ? "permission-blocked" : "recovering", { error });
     scheduleVoiceRecovery(message, {
       recoverable: !permissionBlocked && recoverableErrors.has(error),
@@ -48518,9 +48752,15 @@ async function startVoiceListening() {
     });
   };
   voiceRecognition.onend = () => {
+    nexusOsVoiceStartInFlight = false;
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
     clearStreamingVoicePartial();
+    updateNexusOsVoiceRuntimeState({
+      mode: voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby",
+      listeningState: voiceFirstMode && voiceAutoRestart ? "auto-restart" : "ended",
+      hearingState: "idle"
+    }, "recognition-ended");
     updateNativeVoiceBridgeState(voiceConversationPaused ? "paused" : voiceFirstMode ? "auto-restart" : "standby", { reason: "recognition-ended" });
     refreshMicSupport();
     if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
@@ -48537,13 +48777,29 @@ async function startVoiceListening() {
       const result = event.results[index];
       const transcript = normalizeVoicePartial(result?.[0]?.transcript || "");
       if (!transcript) continue;
+      if (typeof result?.[0]?.confidence === "number") {
+        updateNexusOsVoiceRuntimeState({ speechConfidence: result[0].confidence }, "speech-confidence");
+      }
       if (result.isFinal) finalTranscript = `${finalTranscript} ${transcript}`.trim();
       else interimTranscript = `${interimTranscript} ${transcript}`.trim();
     }
     if (interimTranscript) updateStreamingVoicePartial(interimTranscript, { source: "interim" });
+    if (finalTranscript) recordNexusOsConversationTurn("user", finalTranscript, { source: "voice-final-transcript" });
     if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: "voice" });
   };
-  voiceRecognition.start();
+  try {
+    voiceRecognition.start();
+  } catch (error) {
+    nexusOsVoiceStartInFlight = false;
+    voiceRecognition = null;
+    updateNexusOsVoiceRuntimeState({
+      mode: "recognition-interrupted",
+      listeningState: "failed",
+      hearingState: "idle",
+      lastError: error.message || "recognition-start-failed"
+    }, source);
+    setVoiceResponse("Voice recognition could not start. Type your request in Ask Nexus, and the same safety routing will apply.", false, { allowVoiceFirst: false });
+  }
 }
 
 async function sendModuleNotification(moduleName) {
@@ -49775,12 +50031,7 @@ function bindStatic() {
     if (commandCenterVoice) {
       event.preventDefault();
       event.stopPropagation();
-      const talkButton = $("#nexusVoiceDemoTalkBtn");
-      if (talkButton) {
-        talkButton.click();
-      } else {
-        openAskNexus();
-      }
+      await handleNexusOsVoiceControlAction("toggle-listening", { source: "command-center-mic" });
       return;
     }
     const modeShortcut = event.target.closest("[data-nexus-mode-shortcut]");
@@ -50232,13 +50483,13 @@ function bindStatic() {
       const action = userVoiceButton.dataset.userVoiceAction;
       if (action === "listen") {
         updateUserCaptionPanel("Listening. Speak your request.");
-        startVoiceListening();
+        await handleNexusOsVoiceControlAction("toggle-listening", { source: "user-voice-dock" });
       } else if (action === "read") {
         updateUserCaptionPanel(lastVoiceResponse || "Nexus is ready.");
-        speakVoiceResponse();
+        await handleNexusOsVoiceControlAction("repeat-response", { source: "user-voice-dock" });
       } else {
         updateUserCaptionPanel(lastVoiceResponse || "Ask Nexus anything.");
-        openAskNexus();
+        await handleNexusOsVoiceControlAction("typed-fallback", { source: "user-voice-dock" });
         $("#globalCommandInput")?.focus();
       }
       return;
@@ -50252,9 +50503,9 @@ function bindStatic() {
         closeUserCaptionPanel();
       } else if (action === "listen") {
         updateUserCaptionPanel("Listening. Speak your request.");
-        startVoiceListening();
+        await handleNexusOsVoiceControlAction("toggle-listening", { source: "caption-panel" });
       } else if (action === "speak") {
-        speakVoiceResponse($("#userCaptionText")?.textContent || lastVoiceResponse);
+        await handleNexusOsVoiceControlAction("repeat-response", { source: "caption-panel", text: $("#userCaptionText")?.textContent || lastVoiceResponse });
       } else if (action === "send") {
         const input = $("#userCaptionInput");
         const command = input?.value.trim();
@@ -50387,7 +50638,7 @@ function bindStatic() {
     if (event.target.closest("#globalListenBtn") || event.target.closest("#jarvisListenBtn")) {
       event.preventDefault();
       event.stopPropagation();
-      startVoiceListening();
+      handleNexusOsVoiceControlAction("toggle-listening", { source: "legacy-global-listen-button" });
       return;
     }
     if (event.target.closest("#jarvisRunBtn")) {
@@ -50427,7 +50678,7 @@ function bindStatic() {
     if (event.target.closest("#globalReadBtn") || event.target.closest("#jarvisReadBtn")) {
       event.preventDefault();
       event.stopPropagation();
-      speakVoiceResponse();
+      handleNexusOsVoiceControlAction("repeat-response", { source: "legacy-read-button" });
       return;
     }
     if (event.target.closest("#globalInstallBtn")) {
@@ -50482,7 +50733,7 @@ function bindStatic() {
     if (event.target.closest("#workflowListenBtn")) {
       event.preventDefault();
       event.stopPropagation();
-      startVoiceListening();
+      handleNexusOsVoiceControlAction("toggle-listening", { source: "workflow-listen-button" });
       return;
     }
     if (event.target.closest("[data-close-workflow]")) {
@@ -50738,20 +50989,20 @@ function bindStatic() {
   $("#cloudAgentTemplateBtn").onclick = createCloudAgentTemplate;
   $("#runCollectiveIntelligenceBtn").onclick = runCollectiveIntelligence;
   $("#runFrontierBrainBtn").onclick = runFrontierBrain;
-  $("#voiceListenBtn").onclick = startVoiceListening;
+  $("#voiceListenBtn").onclick = () => handleNexusOsVoiceControlAction("toggle-listening", { source: "voice-panel-listen-button" });
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;
-  $("#voiceSpeakBtn").onclick = speakVoiceResponse;
+  $("#voiceSpeakBtn").onclick = () => handleNexusOsVoiceControlAction("repeat-response", { source: "voice-panel-read-button" });
   $("#voiceHelpBtn").onclick = openVoiceHelp;
   $("#voiceTextCommand").addEventListener("keydown", event => {
     if (event.key === "Enter") runVoiceTextCommand();
   });
-  $("#globalListenBtn").onclick = startVoiceListening;
+  $("#globalListenBtn").onclick = () => handleNexusOsVoiceControlAction("toggle-listening", { source: "global-listen-button" });
   $("#globalRunBtn").onclick = runGlobalCommand;
   $("#globalVoiceFirstBtn").onclick = toggleVoiceFirstMode;
   $("#globalYesBtn").onclick = () => answerGlobalConversation("yes");
   $("#globalNoBtn").onclick = () => answerGlobalConversation("no");
-  $("#globalReadBtn").onclick = speakVoiceResponse;
+  $("#globalReadBtn").onclick = () => handleNexusOsVoiceControlAction("repeat-response", { source: "global-read-button" });
   $("#globalVoiceHelpBtn").onclick = openVoiceHelp;
   $("#voiceHelpCloseBtn").onclick = closeVoiceHelp;
   $("#globalInstallBtn").onclick = installAgriNexusApp;
@@ -50785,10 +51036,10 @@ function bindStatic() {
   refreshMicSupport();
   $("#jarvisToggle").onclick = toggleAskNexus;
   $("#jarvisCloseBtn").onclick = closeAskNexus;
-  $("#jarvisListenBtn").onclick = startVoiceListening;
+  $("#jarvisListenBtn").onclick = () => handleNexusOsVoiceControlAction("toggle-listening", { source: "legacy-jarvis-listen-button" });
   $("#jarvisRunBtn").onclick = runJarvisCommand;
   $("#jarvisMissionBtn").onclick = runJarvisFullMission;
-  $("#jarvisReadBtn").onclick = speakVoiceResponse;
+  $("#jarvisReadBtn").onclick = () => handleNexusOsVoiceControlAction("repeat-response", { source: "legacy-jarvis-read-button" });
   $("#jarvisCommandInput").addEventListener("keydown", event => {
     if (event.key === "Enter") runJarvisCommand();
   });
