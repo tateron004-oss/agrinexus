@@ -45003,6 +45003,101 @@ function applyChromeVoiceRuntimeDefaults(recognition) {
   return recognition;
 }
 
+const NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-listening-wake-runtime.v1",
+  controllerName: "NexusSpeechRecognitionController",
+  canonicalRuntimeOwner: "nexus-os-canonical-voice",
+  supportedInputModes: Object.freeze(["press-to-talk", "wake-phrase-gated", "typed-fallback"]),
+  wakePhrases: Object.freeze(["Nexus", "Hello Nexus", "Hey Nexus", "Hey AgriNexus"]),
+  stateModel: Object.freeze(["idle", "starting", "listening", "speech-detected", "partial-transcript", "final-transcript", "stopping", "typed-fallback", "permission-denied", "microphone-unavailable", "recognition-timeout", "failed"]),
+  safeguards: Object.freeze({
+    requiresUserGestureForBrowserMic: true,
+    noAlwaysOnListeningClaim: true,
+    noHiddenMicrophoneStart: true,
+    noHeardClaimOnFailure: true,
+    duplicateSessionPrevention: true,
+    typedFallbackRequired: true,
+    transcriptCorrectionSupported: true,
+    languageSwitchSupported: true,
+    noWorkflowExecutionAuthority: true
+  })
+});
+
+function nexusListeningWakeControllerState(extra = {}) {
+  const profile = typeof browserVoiceRuntimeProfile === "function" ? browserVoiceRuntimeProfile() : {};
+  return {
+    schemaVersion: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.schemaVersion,
+    controllerName: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.controllerName,
+    runtimeOwner: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.canonicalRuntimeOwner,
+    recognitionSupported: Boolean(profile.supported || realtimeVoiceSupported?.()),
+    browserName: profile.browserName || "this browser",
+    recognitionName: profile.recognitionName || "none",
+    secureEnough: Boolean(profile.secureEnough),
+    inputMode: voiceRecognition ? "press-to-talk" : "typed-fallback",
+    wakePhrases: [...NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.wakePhrases],
+    listeningState: nexusOsVoiceRuntimeState.listeningState || "idle",
+    hearingState: nexusOsVoiceRuntimeState.hearingState || "idle",
+    permissionState: nexusOsVoiceRuntimeState.permissionState || "unknown",
+    lastPartial: nexusOsVoiceRuntimeState.lastPartial || "",
+    lastFinal: nexusOsVoiceRuntimeState.lastFinal || "",
+    language: languageCode(),
+    locale: voiceLocale(),
+    noAlwaysOnListeningClaim: true,
+    noHiddenMicrophoneStart: true,
+    noWorkflowExecutionAuthority: true,
+    ...extra
+  };
+}
+
+function createNexusRecognitionConfig(options = {}) {
+  return {
+    lang: options.locale || voiceLocale(),
+    interimResults: Boolean(streamingVoiceEnabled() || chromeVoiceRuntimeReady()),
+    continuous: Boolean(voiceFirstMode || streamingVoiceEnabled() || chromeVoiceRuntimeReady()),
+    maxAlternatives: chromeVoiceRuntimeReady() ? 5 : streamingVoiceEnabled() ? 5 : 3,
+    inputMode: options.inputMode || "press-to-talk",
+    wakePhraseRequiredForBackground: true,
+    typedFallbackAvailable: true
+  };
+}
+
+function markNexusListeningControllerEvent(eventName = "idle", details = {}) {
+  const safeEvent = String(eventName || "idle");
+  const partial = normalizeVoicePartial(details.partialTranscript || details.lastPartial || "");
+  const finalTranscript = normalizeVoicePartial(details.finalTranscript || details.lastFinal || "");
+  const patch = {
+    speechRecognitionController: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.controllerName,
+    listeningControllerEvent: safeEvent,
+    listeningControllerState: safeEvent,
+    inputMode: details.inputMode || (voiceRecognition ? "press-to-talk" : "typed-fallback"),
+    lastPartial: partial || nexusOsVoiceRuntimeState.lastPartial || "",
+    lastFinal: finalTranscript || nexusOsVoiceRuntimeState.lastFinal || "",
+    transcriptCorrectionAvailable: true,
+    noAlwaysOnListeningClaim: true,
+    noHiddenMicrophoneStart: true,
+    noWorkflowExecutionAuthority: true
+  };
+  if (details.permissionState) patch.permissionState = details.permissionState;
+  if (details.confidence !== undefined) patch.speechConfidence = details.confidence;
+  if (details.microphoneUnavailable !== undefined) patch.microphoneUnavailable = Boolean(details.microphoneUnavailable);
+  return updateNexusOsVoiceRuntimeState(patch, `listening-controller:${safeEvent}`);
+}
+
+function normalizeNexusWakeTranscript(command = "") {
+  const raw = String(command || "").trim();
+  const normalized = normalizedWakeText(raw);
+  return {
+    raw,
+    normalized,
+    wakeOnly: isWakePhraseOnly(raw),
+    greetingOnly: isNexusGreetingOnly(raw),
+    greetingPrefix: isNexusGreetingPrefix(raw),
+    cleanedCommand: cleanWakeCommand(raw),
+    wakeMatched: isWakePhraseOnly(raw) || isNexusGreetingOnly(raw) || isNexusGreetingPrefix(raw),
+    noHeardClaimOnFailure: true
+  };
+}
+
 async function chromeMicrophonePermissionState() {
   if (!navigator.permissions?.query) return "unknown";
   try {
@@ -51534,18 +51629,21 @@ function scheduleFinalVoiceCommand(command = "", options = {}) {
 async function startVoiceListening(options = {}) {
   const source = options.source || "nexus-os-voice-runtime";
   if (voiceDemoQuietMode) {
+    markNexusListeningControllerEvent("typed-fallback", { inputMode: "typed-fallback" });
     updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle", hearingState: "idle" }, source);
     setVoiceStatus("standby");
     refreshMicSupport();
     return;
   }
   if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
+    markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "press-to-talk" });
     updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
     return;
   }
   const profile = browserVoiceRuntimeProfile();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!profile.secureEnough) {
+    markNexusListeningControllerEvent("unsupported-secure-context", { permissionState: "secure-context-required", inputMode: "typed-fallback" });
     updateNexusOsVoiceRuntimeState({
       mode: "unsupported-browser",
       listeningState: "blocked",
@@ -51574,6 +51672,7 @@ async function startVoiceListening(options = {}) {
   }
   if (voiceRecognition) {
     voiceStopRequested = true;
+    markNexusListeningControllerEvent("stopping", { inputMode: "press-to-talk" });
     voiceRecognition.stop();
     voiceRecognition = null;
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle" }, source);
@@ -51582,6 +51681,7 @@ async function startVoiceListening(options = {}) {
     return;
   }
   nexusOsVoiceStartInFlight = true;
+  markNexusListeningControllerEvent("starting", { permissionState: "prompt-or-existing", inputMode: "press-to-talk" });
   updateNexusOsVoiceRuntimeState({
     mode: "starting",
     listeningState: "starting",
@@ -51596,6 +51696,7 @@ async function startVoiceListening(options = {}) {
   }
   if (!Recognition) {
     nexusOsVoiceStartInFlight = false;
+    markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
     updateNexusOsVoiceRuntimeState({
       mode: "unsupported-browser",
       listeningState: "typed-fallback",
@@ -51609,9 +51710,11 @@ async function startVoiceListening(options = {}) {
   voiceStopRequested = false;
   voiceRecognition = new Recognition();
   applyChromeVoiceRuntimeDefaults(voiceRecognition);
+  Object.assign(voiceRecognition, createNexusRecognitionConfig({ inputMode: "press-to-talk" }));
   voiceRecognition.onstart = () => {
     nexusOsVoiceStartInFlight = false;
     registerNativeVoiceSession("web-streaming-start");
+    markNexusListeningControllerEvent("listening", { permissionState: "granted-or-browser-managed", inputMode: "press-to-talk" });
     updateNexusOsVoiceRuntimeState({
       mode: "listening",
       listeningState: "active",
@@ -51646,6 +51749,11 @@ async function startVoiceListening(options = {}) {
           : `Voice input paused: ${error}. I am reconnecting voice now.`;
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
+    markNexusListeningControllerEvent(permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "failed", {
+      permissionState: permissionBlocked ? "denied" : "unknown",
+      microphoneUnavailable: error === "audio-capture",
+      inputMode: "typed-fallback"
+    });
     updateNexusOsVoiceRuntimeState({
       mode: permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "recognition-interrupted",
       listeningState: permissionBlocked ? "blocked" : "recovering",
@@ -51665,6 +51773,7 @@ async function startVoiceListening(options = {}) {
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
     clearStreamingVoicePartial();
+    markNexusListeningControllerEvent("stopped", { inputMode: voiceFirstMode && voiceAutoRestart ? "wake-phrase-gated" : "typed-fallback" });
     updateNexusOsVoiceRuntimeState({
       mode: voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby",
       listeningState: voiceFirstMode && voiceAutoRestart ? "auto-restart" : "ended",
@@ -51687,13 +51796,21 @@ async function startVoiceListening(options = {}) {
       const transcript = normalizeVoicePartial(result?.[0]?.transcript || "");
       if (!transcript) continue;
       if (typeof result?.[0]?.confidence === "number") {
+        markNexusListeningControllerEvent("speech-detected", { confidence: result[0].confidence, inputMode: "press-to-talk" });
         updateNexusOsVoiceRuntimeState({ speechConfidence: result[0].confidence }, "speech-confidence");
       }
       if (result.isFinal) finalTranscript = `${finalTranscript} ${transcript}`.trim();
       else interimTranscript = `${interimTranscript} ${transcript}`.trim();
     }
-    if (interimTranscript) updateStreamingVoicePartial(interimTranscript, { source: "interim" });
-    if (finalTranscript) recordNexusOsConversationTurn("user", finalTranscript, { source: "voice-final-transcript" });
+    if (interimTranscript) {
+      markNexusListeningControllerEvent("partial-transcript", { partialTranscript: interimTranscript, inputMode: "press-to-talk" });
+      updateStreamingVoicePartial(interimTranscript, { source: "interim" });
+    }
+    if (finalTranscript) {
+      const wake = normalizeNexusWakeTranscript(finalTranscript);
+      markNexusListeningControllerEvent("final-transcript", { finalTranscript, inputMode: wake.wakeMatched ? "wake-phrase-gated" : "press-to-talk" });
+      recordNexusOsConversationTurn("user", finalTranscript, { source: "voice-final-transcript" });
+    }
     if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: "voice" });
   };
   try {
@@ -51701,6 +51818,7 @@ async function startVoiceListening(options = {}) {
   } catch (error) {
     nexusOsVoiceStartInFlight = false;
     voiceRecognition = null;
+    markNexusListeningControllerEvent("failed", { inputMode: "typed-fallback" });
     updateNexusOsVoiceRuntimeState({
       mode: "recognition-interrupted",
       listeningState: "failed",
@@ -54351,6 +54469,10 @@ function exposeNexusAppWindowApis() {
   window.nexusSpeechSynthesisControllerState = nexusSpeechSynthesisControllerState;
   window.createNexusSpeechSynthesisUtterance = createNexusSpeechSynthesisUtterance;
   window.runNexusSpeechSynthesisController = runNexusSpeechSynthesisController;
+  window.NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT = NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT;
+  window.nexusListeningWakeControllerState = nexusListeningWakeControllerState;
+  window.createNexusRecognitionConfig = createNexusRecognitionConfig;
+  window.normalizeNexusWakeTranscript = normalizeNexusWakeTranscript;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
