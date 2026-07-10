@@ -602,6 +602,68 @@ const NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = Object.freeze({
     "Domain pack owns a separate voice runtime"
   ])
 });
+const NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-presence-acceptance-release.v1",
+  standardName: "Nexus Presence Standard 1.0",
+  releaseName: "Full Presence Acceptance And Release",
+  releaseStatus: "accepted-for-safe-runtime",
+  enforcementContract: "NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT",
+  acceptanceQa: "scripts/nexus-presence-acceptance-qa.js",
+  acceptedRuntimeSurfaces: Object.freeze([
+    "Standard User command center",
+    "Nexus voice runtime",
+    "Ask Nexus typed fallback",
+    "Mission lifecycle",
+    "Nexus orb",
+    "Captions and transcript strip",
+    "Domain tone safety adapters",
+    "Regional voice fallback",
+    "Voice preferences and accessibility controls"
+  ]),
+  requiredAcceptanceScenarios: Object.freeze([
+    "standard-user-presence-load",
+    "agriculture-presence-response",
+    "health-presence-response",
+    "learning-presence-response",
+    "employment-presence-response",
+    "provider-unavailable-honesty",
+    "regional-voice-fallback-honesty",
+    "accessibility-text-caption-fallback",
+    "deployment-profile-no-runtime-duplication",
+    "performance-lightweight-contract"
+  ]),
+  releaseGates: Object.freeze({
+    designBibleEnforced: true,
+    noDuplicateVoiceRuntime: true,
+    captionsRequired: true,
+    typedFallbackRequired: true,
+    screenReaderStatusRequired: true,
+    reducedMotionRequired: true,
+    noFakeSpeech: true,
+    noFakeHearing: true,
+    noFakeAccent: true,
+    noFakeCompletion: true,
+    highRiskActionsRemainGated: true,
+    noProviderClaimWithoutAvailability: true,
+    noDomainPackVoiceEngine: true
+  }),
+  browserValidationExpectations: Object.freeze([
+    "Standard User dashboard opens",
+    "Ask Nexus remains usable by typing",
+    "voice control remains user-initiated",
+    "captions and live region are present",
+    "orb and mission state synchronize without unverified completion",
+    "provider unavailable language stays honest",
+    "regional voice fallback stays disclosed",
+    "no unsafe user-facing Presence claims are visible"
+  ]),
+  releaseNotes: Object.freeze([
+    "Nexus Presence is the canonical assistant identity and voice layer.",
+    "All domain packs must use the shared Presence runtime instead of creating separate voice engines.",
+    "Speech, captions, orb state, mission state, and accessibility fallbacks must stay synchronized.",
+    "Completion language requires verified outcome evidence."
+  ])
+});
 let nexusCoreRuntimeState = {
   current: "idle",
   previous: "",
@@ -29231,6 +29293,23 @@ function getNexusPresenceDesignEnforcementContract() {
   };
 }
 
+function getNexusPresenceAcceptanceReleaseContract() {
+  return {
+    ...NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT,
+    baselineSchema: NEXUS_PRESENCE_RUNTIME_BASELINE.schemaVersion,
+    profileSchema: NEXUS_PRESENCE_PROFILE_CONTRACT.schemaVersion,
+    voiceCapabilitySchema: NEXUS_VOICE_CAPABILITY_REGISTRY.schemaVersion,
+    regionalVoiceSchema: NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT.schemaVersion,
+    conversationStyleSchema: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.schemaVersion,
+    domainToneSchema: NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT.schemaVersion,
+    speechSynthesisSchema: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.schemaVersion,
+    listeningWakeSchema: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.schemaVersion,
+    synchronizationSchema: NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.schemaVersion,
+    voicePreferencesSchema: NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.schemaVersion,
+    enforcementSchema: NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT.schemaVersion
+  };
+}
+
 function getNexusPresenceProfileRegistry() {
   return {
     contract: NEXUS_PRESENCE_PROFILE_CONTRACT,
@@ -29387,6 +29466,8 @@ if (typeof window !== "undefined") {
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
   window.NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT;
   window.getNexusPresenceDesignEnforcementContract = getNexusPresenceDesignEnforcementContract;
+  window.NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT = NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT;
+  window.getNexusPresenceAcceptanceReleaseContract = getNexusPresenceAcceptanceReleaseContract;
   window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
   window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
@@ -54977,6 +55058,8 @@ function exposeNexusAppWindowApis() {
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
   window.NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT;
   window.getNexusPresenceDesignEnforcementContract = getNexusPresenceDesignEnforcementContract;
+  window.NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT = NEXUS_PRESENCE_ACCEPTANCE_RELEASE_CONTRACT;
+  window.getNexusPresenceAcceptanceReleaseContract = getNexusPresenceAcceptanceReleaseContract;
   window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
   window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
