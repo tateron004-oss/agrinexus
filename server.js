@@ -24,6 +24,7 @@ const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-c
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
+const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -48,8 +49,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-411";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v362";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-412";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v363";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -36764,6 +36765,25 @@ async function api(req, res, url) {
       noSecretValues: true,
       noExecutionAuthorized: true
     });
+  }
+
+  if (url.pathname === "/api/nexus-os/safety/health-workforce" && req.method === "GET") {
+    const validation = nexusOsHealthWorkforceSafetyPack.validateHealthWorkforceSafetyPack();
+    return send(res, 200, {
+      ok: validation.ok,
+      validation,
+      healthWorkflows: nexusOsHealthWorkforceSafetyPack.getNexusOsHealthWorkflows(),
+      workforceWorkflows: nexusOsHealthWorkforceSafetyPack.getNexusOsWorkforceWorkflows(),
+      policies: nexusOsHealthWorkforceSafetyPack.getNexusOsHealthWorkforcePolicies(),
+      noSecretValues: true,
+      noExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus-os/safety/health-workforce/evaluate" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = nexusOsHealthWorkforceSafetyPack.evaluateHealthWorkforceSafety(body.command || body.goal || "", { role: body.role || "standard_user" });
+    return send(res, 200, result);
   }
 
   if ((url.pathname === "/api/nexus/health" || url.pathname === "/api/nexus/readiness" || url.pathname === "/api/nexus/production-readiness") && req.method === "GET") {

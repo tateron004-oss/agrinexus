@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-411";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v362";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-412";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v363";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -34472,16 +34472,24 @@ function validateNexusOsActiveDeploymentProfile() {
   return { ok: false, domainPackCount: 0, workflowCount: 0, policyCount: 0, providerRequirementCount: 0, issues: ["profile_module_unavailable"] };
 }
 
+function validateNexusOsHealthWorkforceSafetyPack() {
+  const module = typeof window !== "undefined" ? window.NexusOsHealthWorkforceSafetyPack : null;
+  if (module?.validateHealthWorkforceSafetyPack) return module.validateHealthWorkforceSafetyPack();
+  return { ok: false, healthWorkflowCount: 0, workforceWorkflowCount: 0, policyCount: 0, issues: ["health_workforce_safety_pack_unavailable"] };
+}
+
 function renderNexusOsDeploymentProfileSummary() {
   const deployment = getNexusOsActiveDeploymentProfile();
   const validation = validateNexusOsActiveDeploymentProfile();
+  const safetyValidation = validateNexusOsHealthWorkforceSafetyPack();
   const domains = Array.isArray(deployment.enabledDomains) ? deployment.enabledDomains : [];
   const safeDomains = domains.slice(0, 6).map(domain => domain.replace(/_/g, " ")).join(", ");
   return `
-    <div class="nexus-os-deployment-summary" data-nexus-os-deployment-profile="${escapeHtml(deployment.deploymentId || "unknown")}" data-nexus-os-domain-pack-count="${escapeHtml(String(validation.domainPackCount || 0))}" data-nexus-os-workflow-count="${escapeHtml(String(validation.workflowCount || 0))}" data-nexus-os-profile-valid="${validation.ok ? "true" : "false"}">
+    <div class="nexus-os-deployment-summary" data-nexus-os-deployment-profile="${escapeHtml(deployment.deploymentId || "unknown")}" data-nexus-os-domain-pack-count="${escapeHtml(String(validation.domainPackCount || 0))}" data-nexus-os-workflow-count="${escapeHtml(String(validation.workflowCount || 0))}" data-nexus-os-profile-valid="${validation.ok ? "true" : "false"}" data-nexus-os-health-workforce-safety="${safetyValidation.ok ? "true" : "false"}">
       <strong>${escapeHtml(translateText(deployment.displayName || "Nexus"))}</strong>
       <span>${escapeHtml(translateText("assembled from Nexus OS core, domain packs, provider requirements, policies, and deployment configuration"))}</span>
       <small>${escapeHtml(translateText(`Enabled packs: ${safeDomains || "configured by deployment profile"}.`))}</small>
+      <small>${escapeHtml(translateText(`Health/workforce safety: ${safetyValidation.healthWorkflowCount || 0} health workflows, ${safetyValidation.workforceWorkflowCount || 0} workforce workflows, ${safetyValidation.policyCount || 0} policies.`))}</small>
     </div>
   `;
 }

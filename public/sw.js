@@ -1,5 +1,5 @@
-const CACHE_NAME = "agrinexus-pwa-v362";
-const BUILD_VERSION = "nexus-behavior-411";
+const CACHE_NAME = "agrinexus-pwa-v363";
+const BUILD_VERSION = "nexus-behavior-412";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "/manifest.webmanifest",
   "/native-bridge.json",
   `/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1`,
+  `/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1`,
   "/icons/agri-nexus-192.png",
   "/icons/agri-nexus-512.png",
   "/icons/agri-nexus-icon.svg",
