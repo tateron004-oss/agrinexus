@@ -337,6 +337,28 @@ const NEXUS_VOICE_CAPABILITY_REGISTRY = Object.freeze({
     captionsRemainAvailable: true
   })
 });
+const NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-regional-voice-resolution.v1",
+  registryName: "NexusRegionalVoiceResolver",
+  resolver: "resolveNexusRegionalVoice",
+  voiceSelectionHelper: "chooseSpeechVoice",
+  supportedLocales: Object.freeze(["en-US", "fr-FR", "sw-KE", "ar-EG", "es-ES", "pt-BR"]),
+  fallbackOrder: Object.freeze([
+    "exact-locale-browser-voice",
+    "language-family-browser-voice",
+    "stored-browser-voice-preference",
+    "browser-default-voice",
+    "caption-and-typed-fallback"
+  ]),
+  honestyPolicy: Object.freeze({
+    noFakeAccent: true,
+    noRegionalAccentClaimWithoutProvider: true,
+    noVoiceCloning: true,
+    noCharacterImitation: true,
+    discloseFallbackVoice: true,
+    captionsRemainAvailable: true
+  })
+});
 const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
   idle: {
     label: "Nexus is idle and ready.",
@@ -29229,11 +29251,12 @@ function renderNexusPresenceRuntimeBadge() {
   const profile = resolveNexusPresenceProfile();
   const runtime = baseline.runtimeStatus || {};
   const voiceCapabilities = nexusVoiceCapabilitySummary();
+  const regionalVoice = nexusRegionalVoiceSummary();
   return `
-    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(profile.displayName)}" data-nexus-presence-profile-id="${escapeHtml(profile.id)}" data-nexus-presence-profile-contract="${escapeHtml(profile.contractVersion)}" data-nexus-presence-registry="${escapeHtml(profile.registryName)}" data-nexus-voice-capability-registry="${escapeHtml(NEXUS_VOICE_CAPABILITY_REGISTRY.schemaVersion)}" data-nexus-voice-ready-providers="${escapeHtml(voiceCapabilities.readyProviderIds.join(" "))}" data-nexus-voice-no-execution-authority="${voiceCapabilities.noExecutionAuthority ? "true" : "false"}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
+    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(profile.displayName)}" data-nexus-presence-profile-id="${escapeHtml(profile.id)}" data-nexus-presence-profile-contract="${escapeHtml(profile.contractVersion)}" data-nexus-presence-registry="${escapeHtml(profile.registryName)}" data-nexus-voice-capability-registry="${escapeHtml(NEXUS_VOICE_CAPABILITY_REGISTRY.schemaVersion)}" data-nexus-voice-ready-providers="${escapeHtml(voiceCapabilities.readyProviderIds.join(" "))}" data-nexus-voice-no-execution-authority="${voiceCapabilities.noExecutionAuthority ? "true" : "false"}" data-nexus-regional-voice-resolution="${escapeHtml(regionalVoice.schemaVersion)}" data-nexus-regional-voice-locale="${escapeHtml(regionalVoice.requestedLocale)}" data-nexus-regional-voice-match="${escapeHtml(regionalVoice.matchType)}" data-nexus-regional-voice-provider-supplied="${regionalVoice.providerSuppliedRegionalVoice ? "true" : "false"}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
       <strong>${escapeHtml(translateText(profile.displayName))}</strong>
       <span>${escapeHtml(translateText("Shared voice, captions, orb, and mission state"))}</span>
-      <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${voiceCapabilities.recognitionReady ? "speech available" : "typed fallback available"} - ${voiceCapabilities.synthesisReady ? "speech output ready" : "caption fallback ready"}`))}</small>
+      <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${voiceCapabilities.recognitionReady ? "speech available" : "typed fallback available"} - ${voiceCapabilities.synthesisReady ? "speech output ready" : "caption fallback ready"} - ${regionalVoice.fallbackReason}`))}</small>
     </div>
   `;
 }
@@ -29250,6 +29273,9 @@ if (typeof window !== "undefined") {
   window.getNexusVoiceCapabilityRegistry = getNexusVoiceCapabilityRegistry;
   window.resolveNexusVoiceProviderAdapters = resolveNexusVoiceProviderAdapters;
   window.nexusVoiceCapabilitySummary = nexusVoiceCapabilitySummary;
+  window.NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT = NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT;
+  window.resolveNexusRegionalVoice = resolveNexusRegionalVoice;
+  window.nexusRegionalVoiceSummary = nexusRegionalVoiceSummary;
 }
 
 function handleNexusPresenceWakePhrase(command = "", options = {}) {
@@ -43340,6 +43366,11 @@ function browserVoiceStorageKey(locale) {
   return `agrinexusBrowserVoice:${String(locale || "en-US").toLowerCase()}`;
 }
 
+function normalizeNexusVoiceLocale(locale = voiceLocale()) {
+  const requested = String(locale || voiceLocale() || "en-US").trim();
+  return requested || "en-US";
+}
+
 function voiceMatchesLocale(voice, locale) {
   const exact = String(locale || "").toLowerCase();
   const language = exact.split("-")[0];
@@ -43347,29 +43378,91 @@ function voiceMatchesLocale(voice, locale) {
   return voiceLang === exact || Boolean(language && voiceLang.startsWith(`${language}-`));
 }
 
+function nexusRegionalVoiceMatchType(voice, locale) {
+  const exact = String(locale || "").toLowerCase();
+  const language = exact.split("-")[0];
+  const voiceLang = String(voice?.lang || "").toLowerCase();
+  if (voiceLang && voiceLang === exact) return "exact-locale-browser-voice";
+  if (language && voiceLang.startsWith(`${language}-`)) return "language-family-browser-voice";
+  return "browser-default-voice";
+}
+
+function scoreNexusRegionalVoiceCandidate(voice, locale, savedName = "") {
+  const name = String(voice?.name || "").toLowerCase();
+  const matchType = nexusRegionalVoiceMatchType(voice, locale);
+  const score = [
+    matchType === "exact-locale-browser-voice" ? 50 : 0,
+    matchType === "language-family-browser-voice" ? 28 : 0,
+    savedName && voice?.name === savedName ? 18 : 0,
+    voice?.localService ? 8 : 0,
+    /\b(neural|natural|online|enhanced|premium|google|microsoft|zira|susan|samantha|joanna|ava|aria|guy|jenny|sonia)\b/.test(name) ? 6 : 0,
+    /\b(default|compact|legacy)\b/.test(name) ? -6 : 0
+  ].reduce((sum, value) => sum + value, 0);
+  return { voice, score, matchType };
+}
+
+function resolveNexusRegionalVoice(locale = voiceLocale(), options = {}) {
+  const requestedLocale = normalizeNexusVoiceLocale(locale);
+  const language = requestedLocale.split("-")[0].toLowerCase();
+  const synthesisAvailable = Boolean(typeof window !== "undefined" && window.speechSynthesis && window.SpeechSynthesisUtterance);
+  const voices = synthesisAvailable ? (window.speechSynthesis.getVoices?.() || []) : [];
+  const storageKey = browserVoiceStorageKey(requestedLocale);
+  const savedName = String(localStorage.getItem(storageKey) || "").trim();
+  const localeMatches = voices.filter(voice => voiceMatchesLocale(voice, requestedLocale));
+  const saved = localeMatches.find(voice => savedName && voice.name === savedName);
+  const candidates = localeMatches
+    .map(voice => scoreNexusRegionalVoiceCandidate(voice, requestedLocale, savedName))
+    .sort((a, b) => b.score - a.score || String(a.voice.name || "").localeCompare(String(b.voice.name || "")));
+  const fallbackCandidates = candidates.length
+    ? candidates
+    : voices
+      .map(voice => scoreNexusRegionalVoiceCandidate(voice, requestedLocale, savedName))
+      .sort((a, b) => b.score - a.score || String(a.voice.name || "").localeCompare(String(b.voice.name || "")));
+  const selectedEntry = saved
+    ? scoreNexusRegionalVoiceCandidate(saved, requestedLocale, savedName)
+    : fallbackCandidates[0] || null;
+  const selectedVoice = selectedEntry?.voice || null;
+  const fallbackMatchType = selectedEntry?.matchType || (selectedVoice ? "browser-default-voice" : "caption-and-typed-fallback");
+  const fallbackReason = selectedVoice
+    ? (selectedEntry.matchType === "exact-locale-browser-voice"
+      ? "Exact locale browser voice is available."
+      : selectedEntry.matchType === "language-family-browser-voice"
+        ? "Exact regional voice is unavailable; using the closest available language voice."
+        : "Regional voice is unavailable; using the browser default voice with captions.")
+    : synthesisAvailable
+      ? "No browser voice list is available yet; captions and typed fallback remain available."
+      : "Speech synthesis is unsupported; captions and typed fallback remain available.";
+  const resolution = {
+    schemaVersion: NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT.schemaVersion,
+    resolver: NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT.resolver,
+    requestedLocale,
+    requestedLanguage: voiceLanguageNames[language] || voiceLanguageName(),
+    selectedVoiceName: selectedVoice?.name || "",
+    selectedVoiceLang: selectedVoice?.lang || "",
+    selectedVoiceLocalService: Boolean(selectedVoice?.localService),
+    matchType: fallbackMatchType,
+    providerSuppliedRegionalVoice: fallbackMatchType === "exact-locale-browser-voice",
+    fallbackReason,
+    noFakeAccent: true,
+    noRegionalAccentClaimWithoutProvider: true,
+    captionsRemainAvailable: true,
+    textFallbackAvailable: true,
+    voiceCount: voices.length
+  };
+  if (selectedVoice?.name && options.persist !== false) localStorage.setItem(storageKey, selectedVoice.name);
+  return { ...resolution, voice: selectedVoice };
+}
+
+function nexusRegionalVoiceSummary(locale = voiceLocale()) {
+  const resolved = resolveNexusRegionalVoice(locale, { persist: false });
+  const { voice, ...summary } = resolved;
+  return summary;
+}
+
 function chooseSpeechVoice(locale) {
   if (!("speechSynthesis" in window)) return null;
-  const voices = window.speechSynthesis.getVoices?.() || [];
-  const storageKey = browserVoiceStorageKey(locale);
-  const savedName = String(localStorage.getItem(storageKey) || "").trim();
-  const saved = voices.find(voice => savedName && voice.name === savedName && voiceMatchesLocale(voice, locale));
-  if (saved) return saved;
-  const candidates = voices
-    .filter(voice => voiceMatchesLocale(voice, locale))
-    .map(voice => {
-      const name = String(voice.name || "").toLowerCase();
-      const score = [
-        String(voice.lang || "").toLowerCase() === String(locale || "").toLowerCase() ? 40 : 0,
-        voice.localService ? 8 : 0,
-        /\b(neural|natural|online|google|microsoft|zira|susan|samantha|joanna|ava)\b/.test(name) ? 6 : 0,
-        /\b(default|compact|legacy)\b/.test(name) ? -6 : 0
-      ].reduce((sum, value) => sum + value, 0);
-      return { voice, score };
-    })
-    .sort((a, b) => b.score - a.score || String(a.voice.name || "").localeCompare(String(b.voice.name || "")));
-  const selected = candidates[0]?.voice || null;
-  if (selected?.name) localStorage.setItem(storageKey, selected.name);
-  return selected;
+  const resolved = resolveNexusRegionalVoice(locale);
+  return resolved.voice || null;
 }
 
 function installStableSpeechVoicePreference() {
@@ -53872,6 +53965,9 @@ function exposeNexusAppWindowApis() {
   window.getNexusVoiceCapabilityRegistry = getNexusVoiceCapabilityRegistry;
   window.resolveNexusVoiceProviderAdapters = resolveNexusVoiceProviderAdapters;
   window.nexusVoiceCapabilitySummary = nexusVoiceCapabilitySummary;
+  window.NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT = NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT;
+  window.resolveNexusRegionalVoice = resolveNexusRegionalVoice;
+  window.nexusRegionalVoiceSummary = nexusRegionalVoiceSummary;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
