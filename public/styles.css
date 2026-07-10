@@ -12155,6 +12155,20 @@ body.user-mode.nexus-low-bandwidth-mode .nexus-recent-workflows {
     width: calc(100vw - 18px);
     max-height: calc(100vh - 18px);
   }
+
+  body.user-mode .nexus-dynamic-workflow-body {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-dynamic-workflow-access {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.user-mode .nexus-dynamic-workflow-access input,
+  body.user-mode .nexus-dynamic-workflow-access button {
+    width: 100%;
+  }
 }
 
 body.user-mode .nexus-active-workflow.nexus-workflow-focus-ring {
@@ -12231,6 +12245,125 @@ body.user-mode .nexus-function-window-preview p {
   margin: 0;
   color: rgba(226, 232, 240, .86);
   line-height: 1.45;
+}
+
+body.user-mode .nexus-dynamic-workflow-renderer {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(103, 232, 249, .28);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34, 211, 238, .16), transparent 36%),
+    linear-gradient(145deg, rgba(15, 23, 42, .74), rgba(2, 6, 23, .48));
+  box-shadow:
+    0 0 28px rgba(34, 211, 238, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-dynamic-workflow-topline,
+body.user-mode .nexus-dynamic-workflow-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+body.user-mode .nexus-dynamic-workflow-topline span,
+body.user-mode .nexus-dynamic-workflow-topline b,
+body.user-mode .nexus-dynamic-workflow-guardrails span {
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid rgba(125, 211, 252, .28);
+  border-radius: 999px;
+  color: #ecfeff;
+  background: rgba(14, 165, 233, .14);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-dynamic-workflow-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(220px, .8fr);
+  gap: 12px;
+}
+
+body.user-mode .nexus-dynamic-workflow-main,
+body.user-mode .nexus-dynamic-workflow-guardrails {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .38);
+}
+
+body.user-mode .nexus-dynamic-workflow-main strong {
+  color: rgba(255, 255, 255, .98);
+  font-size: 1.08rem;
+}
+
+body.user-mode .nexus-dynamic-workflow-main p,
+body.user-mode .nexus-dynamic-workflow-main li,
+body.user-mode .nexus-dynamic-workflow-long-copy {
+  color: rgba(226, 232, 240, .9);
+  line-height: 1.48;
+}
+
+body.user-mode .nexus-dynamic-workflow-question {
+  padding: 12px;
+  border: 1px solid rgba(52, 211, 153, .28);
+  border-radius: 16px;
+  color: #ecfdf5;
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, .16), rgba(34, 211, 238, .08)),
+    rgba(2, 6, 23, .36);
+}
+
+body.user-mode .nexus-dynamic-workflow-main ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+body.user-mode .nexus-dynamic-workflow-access input {
+  flex: 1 1 260px;
+  min-height: 42px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 14px;
+  color: #f8fbff;
+  background: rgba(2, 6, 23, .72);
+}
+
+body.user-mode .nexus-dynamic-workflow-access button {
+  min-height: 40px;
+  border: 1px solid rgba(103, 232, 249, .28);
+  border-radius: 999px;
+  color: #ecfeff;
+  background: linear-gradient(135deg, rgba(34, 211, 238, .16), rgba(139, 92, 246, .14));
+}
+
+body.user-mode .nexus-dynamic-workflow-long-copy {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 780px) {
+  body.user-mode .nexus-dynamic-workflow-body {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-dynamic-workflow-access {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.user-mode .nexus-dynamic-workflow-access input,
+  body.user-mode .nexus-dynamic-workflow-access button {
+    width: 100%;
+  }
 }
 
 body.user-mode .nexus-workflow-icon {

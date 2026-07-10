@@ -531,7 +531,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-404";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-405";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -26577,6 +26577,220 @@ function renderNexusLiveKnowledgeLandingArea(config = {}, state = {}) {
   `;
 }
 
+const NEXUS_DYNAMIC_WORKFLOW_PRESENTATION_TYPES = Object.freeze([
+  "conversational_interview",
+  "one_question_prompt",
+  "multi_step_intake",
+  "option_comparison",
+  "profile_review",
+  "measurement_entry",
+  "timeline",
+  "shipment_tracking",
+  "map_and_route",
+  "learning_activity",
+  "document_review",
+  "provider_handoff",
+  "confirmation",
+  "receipt",
+  "completion_summary",
+  "error_recovery",
+  "blocked_state_explanation"
+]);
+
+function buildNexusDynamicWorkflowMissionState(definition = {}, state = {}) {
+  const activeMission = typeof getActiveNexusOsMission === "function" ? getActiveNexusOsMission() : null;
+  const route = nexusIntentDrivenWorkflowLastRoute || buildNexusIntentDrivenRoutingResult(state.command || definition?.content?.nextPrompt || "");
+  return {
+    workflowId: definition.id || "",
+    functionId: definition.functionId || definition.id || "",
+    command: state.command || "",
+    title: definition?.presentation?.title || "Nexus workflow",
+    category: definition.category || nexusFunctionWindowCategory(definition.functionId || definition.id || ""),
+    route,
+    mission: activeMission,
+    currentState: activeMission?.currentState || "collect",
+    missingInformation: route?.missingInformation || activeMission?.missingInformation || [],
+    safetyCategory: route?.safetyCategory || activeMission?.safetyClassification || "low-risk",
+    confirmationRequirement: route?.confirmationRequirement || activeMission?.requiredConsent || "review-before-external-action",
+    providerRequirement: route?.providerRequirement || activeMission?.providerRequirement || "none",
+    executionPath: route?.executionPath || "local-review-only",
+    recommendedWorkflow: route?.recommendedWorkflow || definition.id || ""
+  };
+}
+
+function nexusDynamicWorkflowPresentationType(definition = {}, missionState = {}) {
+  const id = normalizeNexusWorkflowId(definition.id || missionState.workflowId || "", missionState.command || "");
+  const functionId = normalizeNexusFunctionId(definition.functionId || id, missionState.command || "");
+  const category = missionState.category || definition.category || nexusFunctionWindowCategory(functionId || id);
+  const text = `${id} ${functionId} ${category} ${missionState.command || ""}`.toLowerCase();
+  if (missionState.currentState === "failed") return "error_recovery";
+  if (/blocked|missing|not_configured/.test(missionState.executionPath || "") || /blocked|high-risk|regulated/i.test(missionState.safetyCategory || "")) return "blocked_state_explanation";
+  if (/complete|return_home/.test(missionState.currentState || "")) return "completion_summary";
+  if (/receipt|history|audit/.test(text)) return "receipt";
+  if (/confirm|approval|payment|booking|dispatch/.test(text) || /required/i.test(missionState.confirmationRequirement || "")) return "confirmation";
+  if (/provider|telehealth|pharmacy|clinic|doctor|physician|refill|mobile-clinic/.test(text)) return "provider_handoff";
+  if (/map|route|field-visit|location/.test(text)) return "map_and_route";
+  if (/shipment|tracking|logistics|cold-chain|delivery|pickup/.test(text)) return "shipment_tracking";
+  if (/learning|training|literacy|course|lms|workforce|job|employment/.test(text)) return "learning_activity";
+  if (/blood pressure|glucose|rpm|rtm|diabetes|hypertension|obesity|measurement|vitals/.test(text)) return "measurement_entry";
+  if (/marketplace|agritrade|buyer|seller|quote|compare|vendor/.test(text)) return "option_comparison";
+  if (/profile|patient|farmer|employer|applicant/.test(text)) return "profile_review";
+  if (/knowledge|research|source|document|citation|internet/.test(text)) return "document_review";
+  if ((missionState.missingInformation || []).length === 1) return "one_question_prompt";
+  if ((missionState.missingInformation || []).length > 1 || /intake|support|prepare/.test(text)) return "multi_step_intake";
+  if (/timeline|follow-up|plan/.test(text)) return "timeline";
+  return "conversational_interview";
+}
+
+function nexusDynamicWorkflowTypeCopy(type = "conversational_interview", missionState = {}) {
+  const title = missionState.title || "Nexus workflow";
+  const nextQuestion = missionState.route?.nextQuestion || (missionState.missingInformation || [])[0] || "What detail should Nexus collect next?";
+  const copy = {
+    conversational_interview: {
+      label: "Conversational interview",
+      summary: `Nexus is guiding ${title} as a short conversation instead of a large form.`,
+      primary: nextQuestion,
+      items: ["Listen to the request", "Ask one useful follow-up", "Keep voice and text available"]
+    },
+    one_question_prompt: {
+      label: "One-question prompt",
+      summary: "Nexus needs one missing detail before it can prepare the next safe step.",
+      primary: nextQuestion,
+      items: missionState.missingInformation || ["One missing detail"]
+    },
+    multi_step_intake: {
+      label: "Multi-step intake",
+      summary: `Nexus is collecting only the details relevant to ${title}.`,
+      primary: nextQuestion,
+      items: ["Purpose", "Context", "Recipient or lane", "Review before action"]
+    },
+    option_comparison: {
+      label: "Option comparison",
+      summary: "Nexus can compare choices without buying, contacting, or committing.",
+      primary: "Which option or criteria should Nexus compare first?",
+      items: ["Price or value", "Availability", "Distance or timing", "Risk notes"]
+    },
+    profile_review: {
+      label: "Profile review",
+      summary: "Nexus can review local profile details and identify what is still missing.",
+      primary: "Which profile detail should be reviewed or corrected?",
+      items: ["Identity or role", "Needs", "Preferences", "Consent state"]
+    },
+    measurement_entry: {
+      label: "Measurement entry",
+      summary: "Nexus can record or review measurements for education and provider-ready summaries.",
+      primary: "What reading, date, or context should be added?",
+      items: ["Reading", "Time", "Context", "Provider review note"]
+    },
+    timeline: {
+      label: "Timeline",
+      summary: "Nexus can organize steps, follow-ups, and checkpoints.",
+      primary: "What milestone should Nexus place on the timeline?",
+      items: ["Now", "Next", "Follow-up", "Review"]
+    },
+    shipment_tracking: {
+      label: "Shipment tracking",
+      summary: "Nexus can prepare shipment tracking and route review without dispatching.",
+      primary: "What shipment ID, pickup point, or delivery point should be reviewed?",
+      items: ["Shipment ID", "Pickup", "Delivery", "Status note"]
+    },
+    map_and_route: {
+      label: "Map and route",
+      summary: "Nexus can prepare typed route details without requesting browser location.",
+      primary: "What origin and destination should Nexus review?",
+      items: ["Typed origin", "Typed destination", "Travel purpose", "No geolocation requested"]
+    },
+    learning_activity: {
+      label: "Learning activity",
+      summary: "Nexus can guide training, literacy, jobs, and workforce steps.",
+      primary: "What skill, course, or job goal should Nexus focus on?",
+      items: ["Skill goal", "Learning level", "Provider or course", "Next practice step"]
+    },
+    document_review: {
+      label: "Document review",
+      summary: "Nexus can review source-backed material and show citations only when real sources exist.",
+      primary: "What source, document, or research question should Nexus review?",
+      items: ["Question", "Source status", "Citation readiness", "No fake citations"]
+    },
+    provider_handoff: {
+      label: "Provider handoff",
+      summary: "Nexus can prepare a provider-ready packet; live submission remains gated.",
+      primary: "Which provider, service, or review lane should be prepared?",
+      items: ["Recipient", "Purpose", "Consent", "Final confirmation"]
+    },
+    confirmation: {
+      label: "Confirmation",
+      summary: "Nexus is holding the action for explicit review and approval.",
+      primary: "Review the purpose, recipient, and risk before any future execution.",
+      items: ["Visible action", "Cancellation path", "Audit note", "No silent execution"]
+    },
+    receipt: {
+      label: "Receipt",
+      summary: "Nexus can show what it did and what it did not do.",
+      primary: "Review the latest safe action receipt.",
+      items: ["Did", "Did not", "Outcome", "Audit reference"]
+    },
+    completion_summary: {
+      label: "Completion summary",
+      summary: "Nexus can summarize the completed workflow and return home.",
+      primary: "Review the outcome before closing.",
+      items: ["Outcome", "Limitations", "Next follow-up", "Return home"]
+    },
+    error_recovery: {
+      label: "Error recovery",
+      summary: "Nexus can recover safely without claiming a completed action.",
+      primary: "What should Nexus retry, revise, or cancel?",
+      items: ["Problem", "Retry option", "Revise option", "Cancel path"]
+    },
+    blocked_state_explanation: {
+      label: "Blocked-state explanation",
+      summary: "Nexus cannot execute this action until the required gate is satisfied.",
+      primary: "Review what is blocked and what can be prepared locally.",
+      items: ["Missing credential or approval", "Safe local preparation", "Cancellation path", "No external execution"]
+    }
+  };
+  return copy[type] || copy.conversational_interview;
+}
+
+function renderNexusDynamicWorkflowRenderer(definition = {}, state = {}) {
+  const missionState = buildNexusDynamicWorkflowMissionState(definition, state);
+  const type = nexusDynamicWorkflowPresentationType(definition, missionState);
+  const copy = nexusDynamicWorkflowTypeCopy(type, missionState);
+  const translatedLongTextProbe = "Long translated content stays wrapped in this focused panel so mobile users can keep reading, speaking, cancelling, or returning home without background interaction.";
+  return `
+    <section class="nexus-dynamic-workflow-renderer nexus-dynamic-workflow-${escapeHtml(type)}" data-nexus-dynamic-workflow-renderer="true" data-nexus-dynamic-workflow-type="${escapeHtml(type)}" data-nexus-dynamic-workflow-consumes-mission-state="true" data-nexus-background-interaction="blocked" data-nexus-keyboard-navigation="true" data-nexus-mobile-rendering="true" data-execution-authority="false" aria-label="${escapeHtml(translateText(copy.label))}">
+      <div class="nexus-dynamic-workflow-topline">
+        <span>${escapeHtml(translateText(copy.label))}</span>
+        <b>${escapeHtml(translateText(missionState.currentState || "collect"))}</b>
+      </div>
+      <div class="nexus-dynamic-workflow-body">
+        <article class="nexus-dynamic-workflow-main">
+          <strong>${escapeHtml(translateText(missionState.title))}</strong>
+          <p>${escapeHtml(translateText(copy.summary))}</p>
+          <div class="nexus-dynamic-workflow-question" data-nexus-dynamic-next-question="true">${escapeHtml(translateText(copy.primary))}</div>
+          <ul>
+            ${(copy.items || []).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
+          </ul>
+        </article>
+        <aside class="nexus-dynamic-workflow-guardrails" data-nexus-dynamic-workflow-guardrails="true">
+          <span>${escapeHtml(translateText(`Safety: ${missionState.safetyCategory}`))}</span>
+          <span>${escapeHtml(translateText(`Confirmation: ${missionState.confirmationRequirement}`))}</span>
+          <span>${escapeHtml(translateText(`Provider: ${missionState.providerRequirement}`))}</span>
+          <span>${escapeHtml(translateText("No background execution"))}</span>
+        </aside>
+      </div>
+      <div class="nexus-dynamic-workflow-access" data-nexus-dynamic-voice-text-access="true">
+        <input data-nexus-dynamic-workflow-text-input aria-label="${escapeHtml(translateText("Continue workflow by typing"))}" placeholder="${escapeHtml(translateText("Type the next detail for Nexus"))}" value="${escapeHtml(state.command || "")}">
+        <button type="button" data-nexus-command-prefill="${escapeHtml(copy.primary)}">${escapeHtml(translateText("Continue typing"))}</button>
+        <button type="button" data-nexus-voice-control="listen" data-nexus-dynamic-workflow-speak="true">${escapeHtml(translateText("Continue speaking"))}</button>
+        <button type="button" data-nexus-workflow-close data-nexus-dynamic-workflow-cancel="true">${escapeHtml(translateText("Cancel"))}</button>
+        <button type="button" data-nexus-workflow-back data-nexus-dynamic-workflow-return-home="true">${escapeHtml(translateText("Return home"))}</button>
+      </div>
+      <p class="nexus-dynamic-workflow-long-copy" data-nexus-dynamic-workflow-long-copy="true">${escapeHtml(translateText(translatedLongTextProbe))}</p>
+    </section>
+  `;
+}
+
 function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
   const config = nexusWorkflowLandingConfig(definition, state);
   const id = definition.id || "";
@@ -27164,6 +27378,7 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Assistant summary"))}</strong>
         <p>${escapeHtml(translateText(`Nexus resolved this request to ${presentation.title}. Complete the relevant fields here, review the packet preview, then choose a safe next action.`))}</p>
       </section>
+      ${renderNexusDynamicWorkflowRenderer(definition, state)}
       ${id === "operations-memory" ? renderNexusOperationsMemoryWindow() : `
         ${renderNexusWorkflowLandingWindow(definition, state)}
         ${renderNexusWorkflowLaneStatus(id)}
