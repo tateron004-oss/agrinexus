@@ -106,6 +106,7 @@
     "qa:nexus-os-conversation-surface": "node scripts/nexus-os-conversation-surface-qa.js",
     "qa:nexus-os-voice-runtime-consolidation": "node scripts/nexus-os-voice-runtime-consolidation-qa.js",
     "qa:nexus-os-mission-lifecycle": "node scripts/nexus-os-mission-lifecycle-qa.js",
+    "qa:nexus-os-intent-workflow-routing": "node scripts/nexus-os-intent-workflow-routing-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

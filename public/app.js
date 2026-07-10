@@ -531,7 +531,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-395";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-404";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -16610,6 +16610,7 @@ function handleA100RpmRtmManualIntake(event) {
 window.handleA100RpmRtmManualIntake = handleA100RpmRtmManualIntake;
 
 document.addEventListener("click", event => {
+  if (handleNexusIntentDrivenCommandCenterSubmit(event)) return;
   const target = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
   const button = target?.closest?.("[data-a100-rpm-update='true']");
   if (!button) return;
@@ -26123,6 +26124,209 @@ function normalizeNexusFunctionId(functionId = "", command = "") {
   return "";
 }
 
+let nexusIntentDrivenWorkflowLastRoute = null;
+let nexusIntentDrivenLastCommandText = "";
+
+const NEXUS_INTENT_WORKFLOW_ROUTE_RULES = Object.freeze([
+  { id: "health-care", domain: "Health and Care", intent: "health_support", workflowId: "chronic-care", confidence: 0.8, pattern: "\\b(health|care|chronic|diabetes|blood pressure|hypertension|obesity|rpm|rtm|bp|glucose)\\b", missing: ["health concern or reading"], nextQuestion: "What health topic, reading, or concern should Nexus help organize?" },
+  { id: "marketplace-trade", domain: "Marketplace and Trade", intent: "marketplace_trade", workflowId: "agritrade", confidence: 0.82, pattern: "\\b(sell|selling|buyer|seller|marketplace|agritrade|trade|vendor|quote|price)\\b", missing: ["product or trade detail"], nextQuestion: "What product, buyer, seller, quantity, or price should Nexus prepare?" },
+  { id: "agriculture-food-security", domain: "Agriculture and Food Security", intent: "agriculture_support", workflowId: "agriculture", confidence: 0.82, pattern: "\\b(agriculture|farm|farmer|crop|maize|tomato|cassava|irrigation|soil|pest|disease|food security)\\b", missing: ["crop or farm context"], nextQuestion: "Which crop, field, or farm issue should Nexus focus on?" },
+  { id: "logistics-maps-shipments", domain: "Logistics, Maps, and Shipments", intent: "logistics_maps_shipments", workflowId: "logistics", confidence: 0.8, pattern: "\\b(logistics|shipment|delivery|pickup|cold chain|cold-chain|route|map|directions|field visit|mobile clinic route)\\b", missing: ["origin and destination"], nextQuestion: "What origin and destination should Nexus use?" },
+  { id: "learning-workforce-development", domain: "Learning and Workforce Development", intent: "learning_workforce_development", workflowId: "training", confidence: 0.78, pattern: "\\b(learn|learning|training|teach|course|literacy|electrical safety|certificate|certification|lms)\\b", missing: ["training topic"], nextQuestion: "What skill or training topic should Nexus prepare?" },
+  { id: "employment-hiring", domain: "Employment and Hiring", intent: "employment_hiring", workflowId: "jobs", confidence: 0.8, pattern: "\\b(job|jobs|work|worker|workers|hiring|hire|employment|career|applicant|resume|interview)\\b", missing: ["role or hiring need"], nextQuestion: "Are you looking for work, hiring workers, or preparing an applicant?" },
+  { id: "drone-field-operations", domain: "Drone and Field Operations", intent: "drone_field_operations", workflowId: "field-visit", confidence: 0.78, pattern: "\\b(drone|survey|field operation|field ops|aerial|farm visit|field team)\\b", missing: ["field operation purpose"], nextQuestion: "What field operation should Nexus prepare for review?" },
+  { id: "communications-media", domain: "Communications and Media", intent: "communications_media", workflowId: "communications", confidence: 0.82, pattern: "\\b(call|phone|sms|text message|message|email|whatsapp|telegram|media|music|youtube|spotify)\\b", missing: ["recipient or provider preference"], nextQuestion: "Who or which provider should Nexus prepare this for?" },
+  { id: "payments-transactions", domain: "Payments and Transactions", intent: "payments_transactions", workflowId: "payment-gate", confidence: 0.84, pattern: "\\b(pay|payment|checkout|purchase|buy|invoice|stripe|wallet|refund|transaction)\\b", missing: ["payment amount and purpose"], nextQuestion: "What payment or transaction should Nexus hold for review?" },
+  { id: "providers-community-services", domain: "Providers and Community Services", intent: "providers_community_services", workflowId: "provider-support", confidence: 0.78, pattern: "\\b(provider|doctor|clinic|pharmacy|community service|mobile clinic|telehealth|care team)\\b", missing: ["provider or service type"], nextQuestion: "What provider or community service should Nexus prepare?" },
+  { id: "authorized-administration", domain: "Administration for authorized roles only", intent: "authorized_administration", workflowId: "provider-review", confidence: 0.74, pattern: "\\b(admin|administrator|review queue|case queue|audit|provider queue|approval center)\\b", missing: ["authorized role and review queue"], nextQuestion: "Which authorized review queue should Nexus show?" }
+]);
+
+function nexusIntentRouterSafetyCategory(workflowId = "", command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(emergency|dispatch|diagnose|prescribe|refill|pay|payment|checkout|purchase|buy|send|sms|whatsapp|telegram|email|call|phone|share location|camera|book|schedule|submit)\b/.test(text)) return "confirmation-gated";
+  if (/\b(health|provider|clinic|pharmacy|location|route|buyer|seller|marketplace|admin)\b/.test(text) || /payment|booking|dispatch|communications/.test(workflowId)) return "review-gated";
+  return "low-risk-local";
+}
+
+function nexusIntentRouterMissingInformation(rule = {}, command = "") {
+  const text = String(command || "").toLowerCase();
+  const missing = [];
+  if (rule.id === "health-care" && !/\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|glucose|bp)\b/.test(text)) missing.push("health topic or reading");
+  if (rule.id === "agriculture-food-security" && !/\b(maize|tomato|cassava|crop|field|soil|pest|disease|irrigation|farm)\b/.test(text)) missing.push("crop or farm context");
+  if (rule.id === "marketplace-trade" && !/\b(maize|tomato|buyer|seller|price|quantity|product|invoice)\b/.test(text)) missing.push("product, party, or trade detail");
+  if (rule.id === "logistics-maps-shipments" && !/\b(from|to|origin|destination|shipment|delivery|pickup|route|clinic)\b/.test(text)) missing.push("origin and destination");
+  if (rule.id === "learning-workforce-development" && !/\b(electrical safety|literacy|training|course|certificate|skill)\b/.test(text)) missing.push("training topic");
+  if (rule.id === "employment-hiring" && !/\b(job|workers|hiring|resume|interview|applicant)\b/.test(text)) missing.push("job seeker or hiring need");
+  if (rule.id === "communications-media" && !/\b(doctor|provider|buyer|seller|pharmacy|youtube|spotify|music|sms|email|whatsapp|telegram|phone|call)\b/.test(text)) missing.push("recipient or media provider");
+  return missing.length ? missing : [];
+}
+
+function resolveNexusIntentDrivenWorkflowRoute(command = "", options = {}) {
+  const text = String(command || "").trim();
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  const matches = NEXUS_INTENT_WORKFLOW_ROUTE_RULES
+    .map(rule => ({ rule, matched: new RegExp(rule.pattern, "i").test(lower) }))
+    .filter(item => item.matched);
+  if (!matches.length) {
+    return {
+      interpretedGoal: "Clarify broad support request",
+      domain: "General Nexus Assistant",
+      intent: "clarify_goal",
+      confidence: /\b(i need help|help me|support)\b/.test(lower) ? 0.42 : 0.28,
+      missingInformation: ["support area"],
+      nextQuestion: "What would you like help with: health, farming, jobs, training, trade, maps, communications, or providers?",
+      safetyCategory: "low-risk-local",
+      confirmationRequired: false,
+      providerRequirement: "none",
+      executionPath: "clarify_before_opening_workflow",
+      recommendedWorkflow: "",
+      source: options.source || "nexus-intent-driven-router"
+    };
+  }
+  const rule = matches[0].rule;
+  const workflowId = normalizeNexusWorkflowId(rule.workflowId, lower) || rule.workflowId;
+  const missingInformation = nexusIntentRouterMissingInformation(rule, lower);
+  const safetyCategory = nexusIntentRouterSafetyCategory(workflowId, lower);
+  const confirmationRequired = safetyCategory !== "low-risk-local";
+  return {
+    interpretedGoal: `${rule.intent.replace(/_/g, " ")} from "${text}"`,
+    domain: rule.domain,
+    intent: rule.intent,
+    confidence: Math.max(0.1, Math.min(0.99, missingInformation.length ? rule.confidence - 0.08 : rule.confidence)),
+    missingInformation,
+    nextQuestion: missingInformation.length ? rule.nextQuestion : "Review the focused workflow and add any missing details.",
+    safetyCategory,
+    confirmationRequired,
+    providerRequirement: confirmationRequired ? "provider credentials, consent, final confirmation, and audit may be required before execution" : "not required for local guidance",
+    executionPath: confirmationRequired ? "prepare_review_confirm_before_any_external_action" : "open_local_workflow",
+    recommendedWorkflow: workflowId,
+    source: options.source || "nexus-intent-driven-router"
+  };
+}
+
+function buildNexusIntentDrivenRoutingResult(route = {}, command = "") {
+  return {
+    ok: true,
+    status: route.recommendedWorkflow ? "nexus_intent_workflow_route_ready" : "nexus_intent_workflow_clarification_needed",
+    mode: "Intent-driven workflow routing",
+    message: route.recommendedWorkflow
+      ? `${route.domain} selected. Nexus opened ${route.recommendedWorkflow.replace(/-/g, " ")} without executing an external action.`
+      : route.nextQuestion,
+    preparedCards: [{
+      type: "nexus_intent_workflow_route",
+      title: route.domain || "Nexus route",
+      status: route.recommendedWorkflow ? "workflow selected" : "clarification needed",
+      interpretedGoal: route.interpretedGoal,
+      domain: route.domain,
+      intent: route.intent,
+      confidence: route.confidence,
+      missingInformation: route.missingInformation || [],
+      nextQuestion: route.nextQuestion,
+      safetyCategory: route.safetyCategory,
+      confirmationRequired: route.confirmationRequired,
+      providerRequirement: route.providerRequirement,
+      executionPath: route.executionPath,
+      recommendedWorkflow: route.recommendedWorkflow,
+      localOnly: true,
+      noExecutionAuthorized: true
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_intent_driven_workflow_router"
+  };
+}
+
+function renderNexusIntentDrivenWorkflowStatus() {
+  const route = nexusIntentDrivenWorkflowLastRoute;
+  if (!route) return "";
+  return `
+    <div class="nexus-intent-route-status nexus-glass-card" data-nexus-intent-route-status="true">
+      <span class="eyebrow">${escapeHtml(translateText("Intent-driven workflow routing"))}</span>
+      <strong>${escapeHtml(translateText(route.domain || "Nexus workflow"))}</strong>
+      <p>${escapeHtml(translateText(route.recommendedWorkflow ? `${route.domain} workflow selected.` : route.nextQuestion || "Nexus needs one detail before opening a workflow."))}</p>
+      <div class="nexus-intent-route-grid">
+        <span>${escapeHtml(translateText("Intent"))}: ${escapeHtml(String(route.intent || "clarify_goal").replace(/_/g, " "))}</span>
+        <span>${escapeHtml(translateText("Confidence"))}: ${escapeHtml(String(Math.round(Number(route.confidence || 0) * 100)))}%</span>
+        <span>${escapeHtml(translateText("Safety"))}: ${escapeHtml(translateText(route.safetyCategory || "low-risk-local"))}</span>
+        <span>${escapeHtml(translateText("Confirmation"))}: ${escapeHtml(translateText(route.confirmationRequired ? "Required before execution" : "Not required for local guidance"))}</span>
+      </div>
+      <small>${escapeHtml(translateText("No external action was executed. Nexus only opened or prepared the focused workflow."))}</small>
+    </div>
+  `;
+}
+
+function updateNexusIntentDrivenWorkflowStatusDom() {
+  if (typeof document === "undefined") return;
+  const commandInputValue = document.querySelector("#nexusCommandCenterInput")?.value || nexusIntentDrivenLastCommandText || "";
+  if (/\b(blood pressure|bp|hypertension|diabetes|glucose|obesity|rpm|rtm|chronic)\b/i.test(commandInputValue)) {
+    setNexusIntentDrivenWorkflowStatusForCommand(commandInputValue, {
+      source: "visible-command-input-intent-router"
+    });
+  }
+  const existing = document.querySelector("[data-nexus-intent-route-status='true']");
+  if (!nexusIntentDrivenWorkflowLastRoute) {
+    existing?.remove?.();
+    return;
+  }
+  const composer = document.querySelector("[data-nexus-command-composer='true']");
+  if (!composer) return;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderNexusIntentDrivenWorkflowStatus().trim();
+  const panel = wrapper.firstElementChild;
+  if (!panel) return;
+  if (existing) {
+    existing.replaceWith(panel);
+    return;
+  }
+  composer.insertAdjacentElement("afterend", panel);
+}
+
+function routeNexusIntentDrivenWorkflowCommand(command = "", options = {}) {
+  const route = resolveNexusIntentDrivenWorkflowRoute(command, options);
+  if (!route) return false;
+  if (!route.recommendedWorkflow && route.confidence < 0.4) return false;
+  nexusIntentDrivenWorkflowLastRoute = route;
+  const result = buildNexusIntentDrivenRoutingResult(route, command);
+  if (!route.recommendedWorkflow || route.confidence < 0.55) {
+    nexusAgenticBrainLastResult = result;
+    renderUserWorkspace();
+    return true;
+  }
+  const opened = openNexusWorkflow(route.recommendedWorkflow, {
+    command,
+    source: options.source || "intent-driven-router",
+    preparedResult: result
+  });
+  if (opened) return true;
+  nexusAgenticBrainLastResult = result;
+  renderUserWorkspace();
+  updateNexusIntentDrivenWorkflowStatusDom();
+  return true;
+}
+
+function setNexusIntentDrivenWorkflowStatusForCommand(command = "", options = {}) {
+  const route = resolveNexusIntentDrivenWorkflowRoute(command, options);
+  if (!route || (!route.recommendedWorkflow && route.confidence < 0.4)) return false;
+  nexusIntentDrivenWorkflowLastRoute = route;
+  return true;
+}
+
+function handleNexusIntentDrivenCommandCenterSubmit(event) {
+  const submit = event?.target?.closest?.("[data-nexus-command-center-submit]");
+  if (!submit) return false;
+  const input = nexusCommandInputForSubmit(submit);
+  const command = input?.value?.trim() || "";
+  if (!command) return false;
+  if (!routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) return false;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  event?.stopImmediatePropagation?.();
+  if (input) input.value = command;
+  setCommandInputs(command);
+  return true;
+}
+
 function nexusFunctionWindowCategory(functionId = "") {
   const id = normalizeNexusFunctionId(functionId);
   if (/virtual-care|telehealth|video-visit|chronic|diabetes|hypertension|obesity|rpm|rtm|physician|follow-up|emergency/.test(id)) return "healthcare";
@@ -26585,6 +26789,14 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     event?.stopImmediatePropagation?.();
     if (input) input.value = "";
     setCommandInputs("");
+    return true;
+  }
+  if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
     return true;
   }
   const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
@@ -27390,6 +27602,12 @@ function nexusPresenceGreeting() {
 }
 
 function setNexusPresenceState(state = NEXUS_PRESENCE_STATES.IDLE, updates = {}) {
+  const routeSeed = updates.lastUserInput || updates.lastResponse || "";
+  if (routeSeed) {
+    setNexusIntentDrivenWorkflowStatusForCommand(routeSeed, {
+      source: updates.source || "presence-intent-router"
+    });
+  }
   nexusPresenceState = {
     ...nexusPresenceState,
     ...updates,
@@ -27399,6 +27617,7 @@ function setNexusPresenceState(state = NEXUS_PRESENCE_STATES.IDLE, updates = {})
   };
   syncNexusCoreStateFromPresence(state, updates);
   updateNexusPresenceDom();
+  updateNexusIntentDrivenWorkflowStatusDom();
   return nexusPresenceState;
 }
 
@@ -27787,6 +28006,13 @@ function handleNexusPresenceInputActivity(event) {
   const input = event?.target?.closest?.("#nexusCommandCenterInput, [data-nexus-command-input]");
   if (!input) return;
   const text = input.value?.trim?.() || "";
+  if (text) {
+    nexusIntentDrivenLastCommandText = text;
+    setNexusIntentDrivenWorkflowStatusForCommand(text, {
+      source: "visible-command-input-activity-intent-router"
+    });
+    updateNexusIntentDrivenWorkflowStatusDom();
+  }
   setNexusPresenceState(NEXUS_PRESENCE_STATES.LISTENING, {
     lastUserInput: text || nexusPresenceState.lastUserInput,
     lastResponse: nexusPresenceState.lastResponse,
@@ -27823,6 +28049,11 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     return true;
   }
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
+  if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
   const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
     || isNexusAgriculturePredictiveModelerCommand(routedCommand)
     || isNexusChronicPredictiveModelerCommand(routedCommand)
@@ -27920,6 +28151,7 @@ function renderNexusCommandCenterHero() {
           ${nexusCommandCenterExamples().map(prompt => `<button type="button" data-nexus-command-prefill="${escapeHtml(prompt)}">${translateText(prompt)}</button>`).join("")}
         </div>
       </div>
+      ${renderNexusIntentDrivenWorkflowStatus()}
       ${renderNexusOsUnifiedConversationSurface()}
     </section>
   `;
@@ -29356,7 +29588,13 @@ function applyNexusChronicPredictiveCommand(command = "", options = {}) {
   recordNexusPredictiveMaturityHistory("health", command, nexusChronicPredictiveModelerState, readings.slice(-1)[0] || {});
   saveNexusRuntimeMemory();
   const mission = buildNexusChronicPredictiveMission(command, options);
-  return setNexusAgenticCommandResult(mission, "Chronic Health Predictive Modeler updated. Review risk signal, confidence, contributing factors, missing data, scenario projections, reasoning trace, physician checklist, and receipts.");
+  const updated = setNexusAgenticCommandResult(mission, "Chronic Health Predictive Modeler updated. Review risk signal, confidence, contributing factors, missing data, scenario projections, reasoning trace, physician checklist, and receipts.");
+  setNexusIntentDrivenWorkflowStatusForCommand(command, {
+    ...options,
+    source: options.source || "chronic-predictive-intent-router"
+  });
+  updateNexusIntentDrivenWorkflowStatusDom();
+  return updated;
 }
 
 function buildNexusChronicPredictiveMission(command = "", options = {}) {
@@ -31187,6 +31425,9 @@ function setNexusAgenticCommandResult(mission, message = "") {
   };
   upsertNexusAgenticMission(mission);
   nexusActiveWorkflowState = null;
+  setNexusIntentDrivenWorkflowStatusForCommand(mission.goal || mission.command || "", {
+    source: "agentic-result-intent-router"
+  });
   saveNexusRuntimeMemory();
   renderUserWorkspace();
   const missingCount = Array.isArray(mission.missingInfo) ? mission.missingInfo.length : 0;
@@ -31523,7 +31764,13 @@ function runNexusAgenticCommandRuntime(command = "", options = {}) {
   if (isNexusPredictiveMaturityCommand(command)) return routeNexusPredictiveMaturityCommand(command, options.source || "agentic-command-runtime");
   if (isNexusMultiDomainPredictiveCommand(command)) return routePredictiveCommand(command, options.source || "agentic-command-runtime");
   if (isNexusAgriculturePredictiveModelerCommand(command)) return applyNexusAgriculturePredictiveCommand(command, options);
-  if (isNexusChronicPredictiveModelerCommand(command)) return applyNexusChronicPredictiveCommand(command, options);
+  if (isNexusChronicPredictiveModelerCommand(command)) {
+    setNexusIntentDrivenWorkflowStatusForCommand(command, {
+      ...options,
+      source: options.source || "chronic-predictive-intent-router"
+    });
+    return applyNexusChronicPredictiveCommand(command, options);
+  }
   const intent = parseNexusAgenticCommandIntent(command);
   if (!intent) return false;
   if (intent.actionType === "continue") return continueNexusAgenticMission(command);
@@ -31836,6 +32083,7 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     requestAnimationFrame(() => document.querySelector(`[data-nexus-demo-record-section="${recordSection}"]`)?.scrollIntoView?.({ block: "center" }));
     return true;
   }
+  if (routeNexusIntentDrivenWorkflowCommand(normalized, { source: "standard-user-intent-router" })) return true;
   if (isNexusPersistentOperationsCommand(normalized)) {
     runNexusPersistentOperationsCommand(normalized, { source: "operations-command" }).catch(error => {
       nexusAgenticBrainLastResult = {
@@ -43507,6 +43755,7 @@ function resumeVoiceAfterUiAction(shouldResume, options = {}) {
 
 function setCommandInputs(command) {
   const value = command || "";
+  if (String(value || "").trim()) nexusIntentDrivenLastCommandText = String(value || "").trim();
   if (!value.trim()) clearLevelOneAgentActionSuggestionLabel();
   if ($("#globalCommandInput")) $("#globalCommandInput").value = value;
   if ($("#voiceTextCommand")) $("#voiceTextCommand").value = value;
@@ -46545,6 +46794,13 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   if (handleNexusExperienceStarterCommand(text, options)) return true;
   if (handleNexusExperienceStatusCommand(text, options)) return true;
   if (handleNexusPresenceFollowUp(text, options)) return true;
+  const intentRoute = resolveNexusIntentDrivenWorkflowRoute(text, options);
+  if (intentRoute && (intentRoute.recommendedWorkflow || intentRoute.confidence >= 0.4)) {
+    return routeNexusIntentDrivenWorkflowCommand(text, {
+      ...options,
+      source: options.source || "unified-brain-intent-router"
+    });
+  }
   const routedText = normalizeNexusPresenceRoutableCommand(text);
   const experienceMode = nexusExperienceModeFromCommand(routedText);
   const progressSteps = getNexusExperienceProgressSteps(experienceMode);
@@ -50028,6 +50284,14 @@ function bindStatic() {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
       advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
+      if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -50096,6 +50360,14 @@ function bindStatic() {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
       advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
+      if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -50332,6 +50604,11 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = command;
         setCommandInputs(command);

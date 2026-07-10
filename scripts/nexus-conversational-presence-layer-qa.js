@@ -106,9 +106,11 @@ check("lower Send button has direct presence-aware parity path", hasAll(app, [
   "event.stopImmediatePropagation?.()",
   'const source = "typed-command-send-button"',
   "const routedCommand = normalizeNexusPresenceRoutableCommand(command)",
+  "routeNexusIntentDrivenWorkflowCommand(command, { source })",
   "predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })",
   "await handleNexusUnifiedBrainRuntimeCommand(command, { source })",
-  'document.addEventListener("click", event => {\n    void handleNexusPresenceCommandSendSubmit(event);\n  }, true);\n  document.addEventListener("click", handleNexusStandardUserHomeClick, true);'
+  "void handleNexusPresenceCommandSendSubmit(event);",
+  'document.addEventListener("click", handleNexusStandardUserHomeClick, true);'
 ]));
 
 check("voice and typing activity update listening state", hasAll(app, [
