@@ -29316,6 +29316,124 @@ const NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT = Object.freeze({
   })
 });
 
+const NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-domain-tone-safety-adapter.v1",
+  adapterName: "NexusDomainToneSafetyAdapter",
+  domains: Object.freeze(["health", "agriculture", "marketplace", "logistics", "workforce", "learning", "drone", "communications", "general"]),
+  outputFields: Object.freeze(["domain", "tone", "pace", "plainLanguageFrame", "safetyBoundary", "forbiddenClaims", "confirmationRequirement"]),
+  safetyPolicy: Object.freeze({
+    noDiagnosis: true,
+    noPrescribing: true,
+    noEmergencyDispatch: true,
+    noProviderHandoffClaim: true,
+    noPurchaseOrPaymentClaim: true,
+    noMessageOrCallWithoutConfirmation: true,
+    noDroneFlightOrImagingClaim: true
+  })
+});
+
+const NEXUS_DOMAIN_TONE_SAFETY_ADAPTERS = Object.freeze({
+  health: Object.freeze({
+    domain: "health",
+    tone: "calm clinical preparation",
+    pace: "steady",
+    plainLanguageFrame: "organize health details for education, tracking, and provider review",
+    safetyBoundary: "I can organize health information for education, intake, RPM or RTM tracking, and provider review, but I do not diagnose, prescribe, change medication, contact providers, or handle emergencies.",
+    forbiddenClaims: Object.freeze(["diagnosis claim", "prescription approval claim", "medication change claim", "provider contact claim", "urgent response claim"]),
+    confirmationRequirement: "Provider, pharmacy, telehealth, medication, emergency, or patient-data actions require consent, review, configured providers, and final confirmation."
+  }),
+  agriculture: Object.freeze({
+    domain: "agriculture",
+    tone: "practical field advisor",
+    pace: "clear",
+    plainLanguageFrame: "turn field details into source-ready crop, soil, weather, pest, or market guidance",
+    safetyBoundary: "I can prepare crop, farm, weather, market, and field-visit guidance, but I do not guarantee yield, prescribe chemical use, dispatch field teams, contact buyers, or execute purchases.",
+    forbiddenClaims: Object.freeze(["yield guarantee claim", "chemical prescription claim", "field team dispatch claim", "buyer contact claim", "purchase execution claim"]),
+    confirmationRequirement: "Expert review, buyer contact, logistics handoff, marketplace, payment, or field-service actions require configured providers and final confirmation."
+  }),
+  marketplace: Object.freeze({
+    domain: "marketplace",
+    tone: "careful trade preparation",
+    pace: "direct",
+    plainLanguageFrame: "prepare listing, buyer, seller, price, and trade-readiness details",
+    safetyBoundary: "I can prepare review details, but I do not buy, sell, pay, or contact anyone without the required gates.",
+    forbiddenClaims: Object.freeze(["payment execution claim", "order submission claim", "vendor contact claim", "buyer acceptance claim", "inventory reservation claim"]),
+    confirmationRequirement: "Any marketplace contact, purchase, payment, listing submission, or vendor handoff requires review, provider configuration, and explicit confirmation."
+  }),
+  logistics: Object.freeze({
+    domain: "logistics",
+    tone: "route planning support",
+    pace: "focused",
+    plainLanguageFrame: "prepare route, field visit, transportation, shipment, or delivery context",
+    safetyBoundary: "I can plan route and logistics context from user-provided details, but I do not share location, book rides, dispatch transport, track people, or contact carriers automatically.",
+    forbiddenClaims: Object.freeze(["location sharing claim", "ride booking claim", "transport dispatch claim", "carrier contact claim", "tracking activation claim"]),
+    confirmationRequirement: "Location sharing, transport dispatch, carrier handoff, or route navigation requires permission, configured provider support, and final confirmation."
+  }),
+  workforce: Object.freeze({
+    domain: "workforce",
+    tone: "encouraging career coach",
+    pace: "supportive",
+    plainLanguageFrame: "organize goals into skills, job readiness, applications, and next learning steps",
+    safetyBoundary: "I can prepare workforce, resume, interview, and training guidance, but I do not submit applications, enroll users, contact employers, or certify completion automatically.",
+    forbiddenClaims: Object.freeze(["application submission claim", "employer contact claim", "course enrollment claim", "certificate issuance claim", "job placement claim"]),
+    confirmationRequirement: "Applications, employer contact, enrollment, certificates, or partner handoffs require configured providers and explicit confirmation."
+  }),
+  learning: Object.freeze({
+    domain: "learning",
+    tone: "patient tutor",
+    pace: "step by step",
+    plainLanguageFrame: "explain concepts, build study steps, and prepare learning paths",
+    safetyBoundary: "I can explain topics and prepare learning paths, but I do not enroll users, issue certificates, submit coursework, or claim official credential completion.",
+    forbiddenClaims: Object.freeze(["enrollment completion claim", "certificate issuance claim", "coursework submission claim", "credential verification claim", "LMS action execution claim"]),
+    confirmationRequirement: "Enrollment, LMS, assessment, certificate, or partner-training actions require provider setup and final confirmation."
+  }),
+  drone: Object.freeze({
+    domain: "drone",
+    tone: "safety-first field operations",
+    pace: "precise",
+    plainLanguageFrame: "prepare no-flight drone service review packets and observation requirements",
+    safetyBoundary: "I can prepare drone service requirements for review, but I do not control aircraft, capture imagery, launch missions, dispatch operators, or claim aviation approval.",
+    forbiddenClaims: Object.freeze(["flight launch claim", "imagery capture claim", "operator dispatch claim", "aviation approval claim", "mission completion claim"]),
+    confirmationRequirement: "Drone imaging, operator dispatch, mission approval, or field operation requires licensed provider setup, safety review, and explicit confirmation."
+  }),
+  communications: Object.freeze({
+    domain: "communications",
+    tone: "careful message drafting",
+    pace: "deliberate",
+    plainLanguageFrame: "draft calls, SMS, WhatsApp, Telegram, or email content for review",
+    safetyBoundary: "I can draft and review communication, but I do not send messages or start calls without provider setup and explicit confirmation.",
+    forbiddenClaims: Object.freeze(["message delivery claim", "call start claim", "WhatsApp handoff claim", "email delivery claim", "recipient contact claim"]),
+    confirmationRequirement: "Every communication requires visible recipient, provider, purpose preview, cancellation path, audit event, and final confirmation."
+  }),
+  general: Object.freeze({
+    domain: "general",
+    tone: "warm capable assistant",
+    pace: "balanced",
+    plainLanguageFrame: "prepare the safest useful next step and ask for missing information",
+    safetyBoundary: "I will keep high-risk actions gated, avoid unsupported completion claims, and clearly report what did and did not happen.",
+    forbiddenClaims: Object.freeze(["completion without confirmation claim", "provider acceptance claim", "payment execution claim", "dispatch activation claim", "live action execution claim"]),
+    confirmationRequirement: "Any external, regulated, paid, provider, communication, location, or dispatch action requires the proper gates and final confirmation."
+  })
+});
+
+function resolveNexusDomainToneSafetyAdapter(domain = "general", context = {}) {
+  const normalized = normalizeNexusExperienceMode(domain || context.mode || context.command || context.message || "general");
+  const adapter = NEXUS_DOMAIN_TONE_SAFETY_ADAPTERS[normalized] || NEXUS_DOMAIN_TONE_SAFETY_ADAPTERS.general;
+  return {
+    schemaVersion: NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT.schemaVersion,
+    adapterName: NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT.adapterName,
+    domain: adapter.domain,
+    tone: adapter.tone,
+    pace: adapter.pace,
+    plainLanguageFrame: adapter.plainLanguageFrame,
+    safetyBoundary: adapter.safetyBoundary,
+    forbiddenClaims: Array.from(adapter.forbiddenClaims),
+    confirmationRequirement: adapter.confirmationRequirement,
+    highRiskActionsRemainGated: true,
+    noFakeCompletion: true
+  };
+}
+
 function inferNexusConversationStyleMode(context = {}) {
   const text = [
     context.mode,
@@ -29337,15 +29455,16 @@ function nexusConversationStyleModeConfig(styleMode = "STANDARD") {
 }
 
 function nexusConversationStyleSafetyBoundary(styleMode = "STANDARD", domain = "general") {
+  const domainAdapter = resolveNexusDomainToneSafetyAdapter(domain);
   if (styleMode === "CLINICAL") {
     return "I can organize health information for education and provider review, but I do not diagnose, prescribe, change medication, or handle emergencies.";
   }
   if (styleMode === "URGENT") {
     return "If this may be an emergency, contact local emergency services or urgent professional care now. Nexus cannot dispatch help.";
   }
-  if (domain === "marketplace") return "I can prepare review details, but I do not buy, sell, pay, or contact anyone without the required gates.";
-  if (domain === "communications") return "I can draft and review communication, but I do not send messages or start calls without provider setup and explicit confirmation.";
-  return "I will keep high-risk actions gated and report clearly what did and did not happen.";
+  if (domainAdapter.domain === "marketplace") return "I do not buy, sell, pay, or contact anyone without the required gates.";
+  if (domainAdapter.domain === "communications") return "I do not send messages or start calls without provider setup and explicit confirmation.";
+  return domainAdapter.safetyBoundary;
 }
 
 function normalizeNexusConversationText(text = "") {
@@ -29356,8 +29475,9 @@ function composeNexusConversationStyleResponse(context = {}) {
   const styleMode = context.styleMode || inferNexusConversationStyleMode(context);
   const modeConfig = nexusConversationStyleModeConfig(styleMode);
   const domain = normalizeNexusExperienceMode(context.domain || context.mode || context.command || "general");
+  const domainAdapter = resolveNexusDomainToneSafetyAdapter(domain, context);
   const acknowledgment = context.acknowledgment || getNexusExperienceAcknowledgment(domain, context.command || "");
-  const plainLanguageSummary = normalizeNexusConversationText(context.message || context.summary || "I prepared the safest local next step.");
+  const plainLanguageSummary = normalizeNexusConversationText(context.message || context.summary || `I can ${domainAdapter.plainLanguageFrame}.`);
   const safetyBoundary = context.safetyBoundary || nexusConversationStyleSafetyBoundary(styleMode, domain);
   const nextQuestion = context.nextQuestion || getNextBestQuestion(domain, context.missingInfo || [], context.currentState || {});
   const pieces = [acknowledgment, plainLanguageSummary, safetyBoundary, `Next: ${nextQuestion}`].filter(Boolean);
@@ -29366,9 +29486,18 @@ function composeNexusConversationStyleResponse(context = {}) {
     schemaVersion: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.schemaVersion,
     engineName: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.engineName,
     styleMode,
-    tone: modeConfig.tone,
-    pace: modeConfig.pace,
+    domain,
+    tone: domainAdapter.tone || modeConfig.tone,
+    styleTone: modeConfig.tone,
+    domainTone: domainAdapter.tone,
+    pace: domainAdapter.pace || modeConfig.pace,
+    stylePace: modeConfig.pace,
+    domainPace: domainAdapter.pace,
     speechRate: modeConfig.speechRate,
+    domainAdapter,
+    plainLanguageFrame: domainAdapter.plainLanguageFrame,
+    forbiddenClaims: domainAdapter.forbiddenClaims,
+    confirmationRequirement: domainAdapter.confirmationRequirement,
     acknowledgment,
     plainLanguageSummary,
     safetyBoundary,
@@ -54078,6 +54207,8 @@ function exposeNexusAppWindowApis() {
   window.resolveNexusRegionalVoice = resolveNexusRegionalVoice;
   window.nexusRegionalVoiceSummary = nexusRegionalVoiceSummary;
   window.NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT = NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT;
+  window.NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT = NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT;
+  window.resolveNexusDomainToneSafetyAdapter = resolveNexusDomainToneSafetyAdapter;
   window.composeNexusConversationStyleResponse = composeNexusConversationStyleResponse;
   window.inferNexusConversationStyleMode = inferNexusConversationStyleMode;
 }
