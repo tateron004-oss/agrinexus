@@ -11828,7 +11828,8 @@ body.user-mode .nexus-command-status-summary,
 body.user-mode .nexus-window-helper,
 body.user-mode .nexus-guided-intake,
 body.user-mode .nexus-confirmation-summary,
-body.user-mode .nexus-action-receipt {
+body.user-mode .nexus-action-receipt,
+body.user-mode .nexus-verified-execution-status {
   margin: 14px 0;
   padding: 14px;
   border: 1px solid rgba(125, 211, 252, .22);
@@ -11874,7 +11875,8 @@ body.user-mode .nexus-command-status-summary strong,
 body.user-mode .nexus-window-helper strong,
 body.user-mode .nexus-guided-intake strong,
 body.user-mode .nexus-confirmation-summary strong,
-body.user-mode .nexus-action-receipt strong {
+body.user-mode .nexus-action-receipt strong,
+body.user-mode .nexus-verified-execution-status strong {
   color: rgba(255, 255, 255, .97);
 }
 
@@ -11885,9 +11887,48 @@ body.user-mode .nexus-window-helper p,
 body.user-mode .nexus-guided-intake p,
 body.user-mode .nexus-confirmation-summary li,
 body.user-mode .nexus-action-receipt li,
-body.user-mode .nexus-action-receipt p {
+body.user-mode .nexus-action-receipt p,
+body.user-mode .nexus-verified-execution-status p,
+body.user-mode .nexus-verified-execution-status dd {
   color: rgba(226, 232, 240, .88);
   line-height: 1.45;
+}
+
+body.user-mode .nexus-verified-execution-status {
+  border-color: rgba(167, 139, 250, .28);
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, .72), rgba(30, 41, 59, .46)),
+    radial-gradient(circle at 95% 0%, rgba(168, 85, 247, .16), transparent 36%),
+    radial-gradient(circle at 0% 100%, rgba(34, 211, 238, .12), transparent 32%);
+}
+
+body.user-mode .nexus-verified-execution-status dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+body.user-mode .nexus-verified-execution-status dl div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .16);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, .32);
+}
+
+body.user-mode .nexus-verified-execution-status dt {
+  margin: 0 0 4px;
+  color: rgba(125, 211, 252, .9);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+body.user-mode .nexus-verified-execution-status dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 body.user-mode .nexus-role-low-bandwidth-panel {

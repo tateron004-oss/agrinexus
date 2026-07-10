@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-407";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v358";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-408";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v359";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -23820,6 +23820,82 @@ function requestNexusConfirmation(packet) {
   };
 }
 
+const NEXUS_VERIFIED_EXECUTION_STATES = Object.freeze([
+  "draft",
+  "prepared",
+  "handoff_required",
+  "queued",
+  "attempting",
+  "provider_accepted",
+  "provider_rejected",
+  "failed",
+  "user_completed_external_step",
+  "verified_complete"
+]);
+
+function normalizeNexusExecutionState(status = "", result = {}, lane = null) {
+  const text = `${status || ""} ${result.status || ""} ${result.outcomeStatus || ""} ${result.verificationStatus || ""} ${result.errorCode || ""}`.toLowerCase();
+  if (!text.trim()) return "draft";
+  if (/verified_complete|test_verified|verified/.test(text)) return "verified_complete";
+  if (/user_completed_external_step|external_completion_confirmed/.test(text)) return "user_completed_external_step";
+  if (/provider_rejected|rejected|declined/.test(text)) return "provider_rejected";
+  if (/failed|error|timeout/.test(text)) return "failed";
+  if (/provider_accepted|test_submitted|submitted|accepted/.test(text)) return "provider_accepted";
+  if (/attempting|in_progress|sending|processing/.test(text)) return "attempting";
+  if (/queued|queue|inactive|offline/.test(text)) return "queued";
+  if (/waiting|confirmation|credential_required|handoff_prepared|pending_external_completion/.test(text)) return "handoff_required";
+  if (/prepared|draft|cancelled/.test(text)) return /prepared/.test(text) ? "prepared" : "draft";
+  return lane?.status === "active_live" ? "attempting" : "prepared";
+}
+
+function buildNexusVerifiedExecutionAttemptRecord(packet = {}, result = {}, lane = null) {
+  const adapter = nexusAdapterForPacket(packet, lane);
+  const executionState = normalizeNexusExecutionState(result.outcomeStatus || result.status, result, lane);
+  const providerName = lane?.partnerName || lane?.label || packet.destinationLabel || "Local Nexus";
+  const providerAvailable = Boolean(lane && ["active_test_mode", "active_live", "configured_inactive"].includes(lane.status));
+  const providerResponse = result.resultMessage || result.userMessage || "No provider response recorded.";
+  const failureReason = result.errorMessage || result.errorCode || (providerAvailable ? "" : "Provider unavailable or credentials missing.");
+  return {
+    schemaVersion: "nexus-verified-execution-attempt.v1",
+    action: packet.packetType || result.actionType || "nexus_action",
+    provider: providerName,
+    providerAvailable,
+    adapterType: result.adapterType || adapter.adapterType,
+    attemptTime: result.timestamp || new Date().toISOString(),
+    requestStatus: result.status || result.outcomeStatus || executionState,
+    normalizedExecutionState: executionState,
+    providerResponse,
+    verificationEvidence: result.verificationStatus || "not_started",
+    failureReason,
+    retryEligibility: Boolean(packet.retryEligible !== false && !["provider_accepted", "verified_complete"].includes(executionState)),
+    receiptReference: result.resultId || result.externalReference || packet.packetId || "",
+    noFakeSuccess: !["provider_accepted", "verified_complete", "user_completed_external_step"].includes(executionState) || Boolean(result.externalReference || result.verificationStatus === "test_verified"),
+    noExecutionWithoutConfirmation: true,
+    localOnlyUnlessProviderAccepted: executionState !== "provider_accepted" || lane?.status !== "active_live"
+  };
+}
+
+function renderNexusVerifiedExecutionStatus(attempt = null) {
+  if (!attempt) return "";
+  return `
+    <section class="nexus-verified-execution-status" data-nexus-verified-execution-status="true" data-nexus-normalized-execution-state="${escapeHtml(attempt.normalizedExecutionState)}" data-no-fake-success="true">
+      <strong>${escapeHtml(translateText("Verified execution status"))}</strong>
+      <dl>
+        <div><dt>${escapeHtml(translateText("Action"))}</dt><dd>${escapeHtml(translateText(attempt.action))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Provider"))}</dt><dd>${escapeHtml(translateText(attempt.provider))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Attempt time"))}</dt><dd>${escapeHtml(translateText(attempt.attemptTime))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Request status"))}</dt><dd>${escapeHtml(translateText(attempt.requestStatus))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Provider response"))}</dt><dd>${escapeHtml(translateText(attempt.providerResponse))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Verification evidence"))}</dt><dd>${escapeHtml(translateText(attempt.verificationEvidence))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Failure reason"))}</dt><dd>${escapeHtml(translateText(attempt.failureReason || "None recorded"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Retry eligibility"))}</dt><dd>${escapeHtml(translateText(attempt.retryEligibility ? "Retry can be attempted after gates are satisfied." : "Retry is not needed for this state."))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Receipt reference"))}</dt><dd>${escapeHtml(translateText(attempt.receiptReference || "pending"))}</dd></div>
+      </dl>
+      <p>${escapeHtml(translateText(`Nexus state: ${attempt.normalizedExecutionState}. Nexus will not claim provider acceptance, completion, payment, send, booking, dispatch, or handoff unless provider evidence exists.`))}</p>
+    </section>
+  `;
+}
+
 function nexusAdapterTypeForLane(lane = {}, packet = {}) {
   const text = `${lane.id || ""} ${lane.category || ""} ${packet.packetType || ""}`.toLowerCase();
   if (/\bemail\b/.test(text)) return "email";
@@ -23985,6 +24061,17 @@ function executeNexusAction(packet, lane, options = {}) {
       externalActionOccurred: false
     };
   }
+  if (lane?.status === "configured_inactive") {
+    const handoff = adapter.prepareBrowserHandoff(lane, packet);
+    return {
+      ...handoff,
+      laneStatus: lane.status,
+      outcomeStatus: handoff.status,
+      resultMessage: handoff.userMessage,
+      externalActionOccurred: false,
+      followUpStatus: "user may complete external handoff after review; Nexus will verify manually"
+    };
+  }
   if (!lane || !["active_test_mode", "active_live"].includes(lane.status)) {
     return handleInactiveNexusLane(packet, lane);
   }
@@ -24080,6 +24167,8 @@ function editNexusPacket(packetId) {
 }
 
 function recordNexusOutcome(packet, result) {
+  const lane = nexusIntegrationLaneById(result.laneId || packet.destinationLaneId);
+  const executionAttempt = buildNexusVerifiedExecutionAttemptRecord(packet, result, lane);
   const entry = {
     id: `nexus-action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     packetId: packet.packetId,
@@ -24089,9 +24178,17 @@ function recordNexusOutcome(packet, result) {
     laneStatus: result.laneStatus || packet.integrationStatus,
     confirmationStatus: result.outcomeStatus === "waiting_for_confirmation" ? "waiting_for_confirmation" : packet.confirmationStatus,
     outcomeStatus: result.outcomeStatus || "prepared",
-    destinationLabel: nexusIntegrationLaneById(result.laneId || packet.destinationLaneId)?.label || "Local Nexus review",
+    normalizedExecutionState: executionAttempt.normalizedExecutionState,
+    destinationLabel: lane?.label || "Local Nexus review",
     timestamp: new Date().toISOString(),
     resultMessage: result.resultMessage || "Outcome recorded.",
+    provider: executionAttempt.provider,
+    providerResponse: executionAttempt.providerResponse,
+    verificationEvidence: executionAttempt.verificationEvidence,
+    failureReason: executionAttempt.failureReason,
+    retryEligibility: executionAttempt.retryEligibility,
+    receiptReference: executionAttempt.receiptReference,
+    executionAttempt,
     errorMessage: result.errorMessage || "",
     followUpStatus: result.followUpStatus || "review next step"
   };
@@ -24116,6 +24213,8 @@ function showNexusOutcome(packet, result) {
       type: "nexus_action_outcome",
       title: packet.workflowLabel,
       status: entry.outcomeStatus,
+      normalizedExecutionState: entry.normalizedExecutionState,
+      executionAttempt: entry.executionAttempt,
       localOnly: entry.laneStatus !== "active_live",
       noExecutionAuthorized: entry.laneStatus !== "active_live"
     }],
@@ -24571,6 +24670,22 @@ function renderNexusUniversalActionReviewLayer(review = nexusUniversalActionRevi
 
 function renderNexusActionReceipt(packet = null, entry = null) {
   const status = entry?.outcomeStatus || packet?.outcomeStatus || "draft";
+  const receiptAttempt = entry?.executionAttempt || buildNexusVerifiedExecutionAttemptRecord(
+    packet || {
+      packetId: "nexus-draft-workflow",
+      packetType: "workflow_opened",
+      destinationLabel: "Local Nexus review"
+    },
+    {
+      status,
+      outcomeStatus: status,
+      resultMessage: status === "draft"
+        ? "Workflow opened locally. No provider response recorded."
+        : "Outcome pending local review.",
+      verificationStatus: "not_started"
+    },
+    packet ? nexusIntegrationLaneById(packet.destinationLaneId) : null
+  );
   return `
     <section class="nexus-action-receipt" data-nexus-action-receipt="true">
       <strong>${escapeHtml(translateText("Action receipt"))}</strong>
@@ -24589,6 +24704,7 @@ function renderNexusActionReceipt(packet = null, entry = null) {
         </ul>
       </div>
       <p>${escapeHtml(translateText(`Status: ${nexusStatusBadgeLabel(status)}`))}${entry?.resultMessage ? ` - ${escapeHtml(translateText(entry.resultMessage))}` : ""}</p>
+      ${renderNexusVerifiedExecutionStatus(receiptAttempt)}
     </section>
   `;
 }
