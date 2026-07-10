@@ -529,6 +529,79 @@ const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
     allowed: ["idle", "listening", "blocked"]
   }
 });
+const NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-presence-design-enforcement.v1",
+  standardName: "Nexus Presence Standard 1.0",
+  designBiblePath: "docs/NEXUS_PRESENCE_DESIGN_BIBLE.md",
+  runtimeOwner: "nexus-os-canonical-voice",
+  enforcementQa: "scripts/nexus-presence-enforcement-qa.js",
+  runtimeFiles: Object.freeze([
+    "public/app.js",
+    "scripts/qa-suite.js",
+    "package.json"
+  ]),
+  requiredContracts: Object.freeze([
+    "NEXUS_PRESENCE_RUNTIME_BASELINE",
+    "NEXUS_PRESENCE_PROFILE_CONTRACT",
+    "NEXUS_VOICE_CAPABILITY_REGISTRY",
+    "NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT",
+    "NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT",
+    "NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT",
+    "NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT",
+    "NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT",
+    "NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT",
+    "NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT"
+  ]),
+  prohibitedStandardUserPhrases: Object.freeze([
+    "Module initialized.",
+    "Execution completed.",
+    "Workflow failed.",
+    "Missing required fields.",
+    "Payload submitted."
+  ]),
+  approvedPlainLanguageReplacements: Object.freeze({
+    "Module initialized.": "Let's work through that.",
+    "Provider unavailable.": "I can't reach that service right now.",
+    "Execution completed.": "That was completed and confirmed.",
+    "Workflow failed.": "I wasn't able to complete that step.",
+    "Missing required fields.": "I need one more detail before I can continue.",
+    "Payload submitted.": "Information is sent only after confirmation and receipt evidence."
+  }),
+  unsupportedRegionalVoiceLabels: Object.freeze([
+    "guaranteed Kenyan voice",
+    "guaranteed Nigerian voice",
+    "guaranteed South African voice",
+    "fake regional voice",
+    "accent simulation"
+  ]),
+  noFakeCompletionRules: Object.freeze({
+    completionRequiresVerifiedState: true,
+    preparedIsNotSent: true,
+    providerUnavailableIsNotCompleted: true,
+    browserHandoffIsNotProviderCompletion: true,
+    receiptRequiresOutcomeEvidence: true
+  }),
+  duplicateRuntimeRules: Object.freeze({
+    canonicalSpeechRecognitionController: "NexusSpeechRecognitionController",
+    canonicalSpeechSynthesisController: "NexusSpeechSynthesisController",
+    domainAdaptersMayNotCreateVoiceEngines: true,
+    deploymentProfilesMayNotCopyVoiceRuntime: true
+  }),
+  requiredAccessibilitySelectors: Object.freeze([
+    "[data-nexus-presence-status-announcement]",
+    "[data-nexus-presence-caption-sync]",
+    "[data-nexus-voice-preferences-controls]",
+    "[data-nexus-os-conversation-live-region]",
+    "[data-nexus-os-voice-control]"
+  ]),
+  prohibitedClaims: Object.freeze([
+    "Nexus heard you when recognition failed",
+    "Nexus is speaking when synthesis failed",
+    "Regional accent is available without provider support",
+    "Provider action completed without verified provider state",
+    "Domain pack owns a separate voice runtime"
+  ])
+});
 let nexusCoreRuntimeState = {
   current: "idle",
   previous: "",
@@ -29143,6 +29216,21 @@ function getNexusPresenceRuntimeBaseline() {
   };
 }
 
+function getNexusPresenceDesignEnforcementContract() {
+  return {
+    ...NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT,
+    activeProfileSchema: NEXUS_PRESENCE_PROFILE_CONTRACT.schemaVersion,
+    voiceCapabilitySchema: NEXUS_VOICE_CAPABILITY_REGISTRY.schemaVersion,
+    regionalVoiceSchema: NEXUS_REGIONAL_VOICE_RESOLUTION_CONTRACT.schemaVersion,
+    conversationStyleSchema: NEXUS_CONVERSATION_STYLE_ENGINE_CONTRACT.schemaVersion,
+    domainToneSchema: NEXUS_DOMAIN_TONE_SAFETY_ADAPTER_CONTRACT.schemaVersion,
+    speechSynthesisSchema: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.schemaVersion,
+    listeningWakeSchema: NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT.schemaVersion,
+    synchronizationSchema: NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.schemaVersion,
+    voicePreferencesSchema: NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.schemaVersion
+  };
+}
+
 function getNexusPresenceProfileRegistry() {
   return {
     contract: NEXUS_PRESENCE_PROFILE_CONTRACT,
@@ -29297,6 +29385,8 @@ function renderNexusPresenceRuntimeBadge() {
 if (typeof window !== "undefined") {
   window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
+  window.NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT;
+  window.getNexusPresenceDesignEnforcementContract = getNexusPresenceDesignEnforcementContract;
   window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
   window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
@@ -54885,6 +54975,8 @@ function exposeNexusAppWindowApis() {
   window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
   window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
+  window.NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT = NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT;
+  window.getNexusPresenceDesignEnforcementContract = getNexusPresenceDesignEnforcementContract;
   window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
   window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
   window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
