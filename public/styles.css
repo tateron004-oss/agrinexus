@@ -12017,8 +12017,94 @@ body.user-mode .nexus-mission-history-actions button {
   text-transform: capitalize;
 }
 
+body.user-mode .nexus-approved-memory-panel {
+  display: grid;
+  gap: 14px;
+}
+
+body.user-mode .nexus-approved-memory-header,
+body.user-mode .nexus-approved-memory-counts,
+body.user-mode .nexus-approved-memory-actions,
+body.user-mode .nexus-approved-memory-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+body.user-mode .nexus-approved-memory-header {
+  justify-content: space-between;
+}
+
+body.user-mode .nexus-approved-memory-counts span,
+body.user-mode .nexus-approved-memory-scope,
+body.user-mode .nexus-approved-memory-list article {
+  border: 1px solid rgba(125, 211, 252, .18);
+  background: rgba(15, 23, 42, .45);
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 18px rgba(34, 211, 238, .08);
+}
+
+body.user-mode .nexus-approved-memory-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-approved-memory-form label {
+  display: grid;
+  gap: 5px;
+  color: rgba(226, 232, 240, .92);
+}
+
+body.user-mode .nexus-approved-memory-form label:has(textarea),
+body.user-mode .nexus-approved-memory-consent,
+body.user-mode .nexus-approved-memory-actions {
+  grid-column: 1 / -1;
+}
+
+body.user-mode .nexus-approved-memory-form input,
+body.user-mode .nexus-approved-memory-form select,
+body.user-mode .nexus-approved-memory-form textarea {
+  width: 100%;
+  border: 1px solid rgba(125, 211, 252, .24);
+  background: rgba(2, 6, 23, .5);
+  color: rgba(248, 250, 252, .94);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+body.user-mode .nexus-approved-memory-consent {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+body.user-mode .nexus-approved-memory-list {
+  display: grid;
+  gap: 10px;
+}
+
+body.user-mode .nexus-approved-memory-list article[data-sensitive="true"] {
+  border-color: rgba(251, 191, 36, .35);
+}
+
+body.user-mode .nexus-approved-memory-record-actions button,
+body.user-mode .nexus-approved-memory-actions button {
+  min-height: 36px;
+  border: 1px solid rgba(103, 232, 249, .24);
+  border-radius: 999px;
+  color: rgba(240, 249, 255, .96);
+  background: rgba(15, 23, 42, .48);
+  padding: 0 12px;
+  text-transform: capitalize;
+}
+
 @media (max-width: 720px) {
   body.user-mode .nexus-readable-receipt-fields {
+    grid-template-columns: 1fr;
+  }
+  body.user-mode .nexus-approved-memory-form {
     grid-template-columns: 1fr;
   }
 }

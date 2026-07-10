@@ -58,12 +58,12 @@ function assertBefore(source, first, second, label) {
 assertBefore(
   renderUserWorkspaceBlock,
   'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
-  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)',
+  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
   "workspace should be near the top of the main command area"
 );
 assertBefore(
   renderUserWorkspaceBlock,
-  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)',
+  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
   'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)',
   "workspace should appear before deferred contextual logs/history panels"
 );

@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-409";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v360";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-410";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v361";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22122,6 +22122,24 @@ let nexusActiveWorkflowState = {
   minimized: false
 };
 let nexusMinimizedFunctionWindowState = null;
+let nexusApprovedMemoryRecords = [];
+
+const NEXUS_APPROVED_MEMORY_TYPES = Object.freeze([
+  { id: "current_turn_context", label: "Current turn context", sensitive: false, providerBacked: false },
+  { id: "current_mission_context", label: "Current mission context", sensitive: false, providerBacked: false },
+  { id: "current_session_memory", label: "Current session memory", sensitive: false, providerBacked: false },
+  { id: "saved_preference", label: "Saved preference", sensitive: false, providerBacked: false },
+  { id: "saved_contact", label: "Saved contact", sensitive: true, providerBacked: false },
+  { id: "saved_profile", label: "Saved profile", sensitive: true, providerBacked: false },
+  { id: "saved_organization", label: "Saved organization", sensitive: false, providerBacked: false },
+  { id: "saved_patient_record", label: "Saved patient record", sensitive: true, providerBacked: true },
+  { id: "saved_buyer_or_seller", label: "Saved buyer or seller", sensitive: false, providerBacked: false },
+  { id: "saved_shipment", label: "Saved shipment", sensitive: false, providerBacked: true },
+  { id: "saved_learning_history", label: "Saved learning history", sensitive: false, providerBacked: false },
+  { id: "saved_employment_profile", label: "Saved employment profile", sensitive: true, providerBacked: false },
+  { id: "sensitive_health_data", label: "Sensitive health data", sensitive: true, providerBacked: true },
+  { id: "provider_backed_record", label: "Provider-backed record", sensitive: true, providerBacked: true }
+]);
 
 const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
   "virtual-care", "telehealth", "video-visit", "chronic-disease", "diabetes", "hypertension", "obesity", "rpm", "rtm", "physician-review", "follow-up", "emergency-guidance",
@@ -23910,6 +23928,229 @@ const NEXUS_MISSION_HISTORY_STATUSES = Object.freeze([
   "archived"
 ]);
 
+function nexusApprovedMemoryType(typeId = "") {
+  return NEXUS_APPROVED_MEMORY_TYPES.find(item => item.id === typeId) || NEXUS_APPROVED_MEMORY_TYPES[0];
+}
+
+function buildNexusApprovedMemoryRecord(input = {}) {
+  const type = nexusApprovedMemoryType(input.type || "saved_preference");
+  const now = new Date().toISOString();
+  return {
+    id: input.id || `memory-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+    schemaVersion: "nexus-approved-memory-record.v1",
+    type: type.id,
+    typeLabel: type.label,
+    title: String(input.title || type.label || "Approved memory").trim().slice(0, 120),
+    value: String(input.value || "").trim().slice(0, 1000),
+    status: input.status || "active",
+    consentStatus: input.consentStatus || "approved_by_user",
+    persistenceScope: input.persistenceScope || "local_browser",
+    storageScopeExplanation: "Stored in this browser only unless a future provider-backed connector is configured and separately approved.",
+    localVsProviderBackedStorage: type.providerBacked
+      ? "Provider-backed storage is not active here. Nexus keeps this local and review-only."
+      : "Local browser memory only.",
+    sensitive: Boolean(type.sensitive),
+    providerBacked: Boolean(type.providerBacked),
+    modelTraining: false,
+    noSilentPersistence: true,
+    noExternalExecutionAuthorized: true,
+    createdAt: input.createdAt || now,
+    updatedAt: now,
+    lastReviewedAt: input.lastReviewedAt || "",
+    retentionNote: input.retentionNote || (type.providerBacked ? "Provider-managed retention rules may restrict deletion; archive is available." : "User can forget or delete this local memory."),
+    authorizedHandling: input.authorizedHandling || ""
+  };
+}
+
+function nexusApprovedMemoryCounts() {
+  return nexusApprovedMemoryRecords.reduce((counts, record) => {
+    counts.total += 1;
+    counts[record.status] = (counts[record.status] || 0) + 1;
+    if (record.sensitive) counts.sensitive += 1;
+    if (record.providerBacked) counts.providerBacked += 1;
+    return counts;
+  }, { total: 0, active: 0, archived: 0, deactivated: 0, forgotten: 0, sensitive: 0, providerBacked: 0 });
+}
+
+function renderNexusApprovedMemoryPanel() {
+  const counts = nexusApprovedMemoryCounts();
+  const records = nexusApprovedMemoryRecords.slice(0, 8);
+  return `
+    <section class="nexus-approved-memory-panel nexus-glass-card" data-nexus-approved-memory-panel="true" data-no-silent-persistence="true" data-model-training="false" data-execution-authority="false">
+      <div class="nexus-approved-memory-header">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Approved memory"))}</span>
+          <strong>${escapeHtml(translateText("Memory, preference learning, and forgetting"))}</strong>
+          <p>${escapeHtml(translateText("Nexus remembers only what you approve. Saved context is not model training and never authorizes calls, messages, payments, diagnosis, prescriptions, provider handoff, location sharing, dispatch, booking, or purchases."))}</p>
+        </div>
+        <div class="nexus-approved-memory-counts">
+          <span>${escapeHtml(String(counts.total))} ${escapeHtml(translateText("total"))}</span>
+          <span>${escapeHtml(String(counts.sensitive))} ${escapeHtml(translateText("sensitive"))}</span>
+          <span>${escapeHtml(String(counts.providerBacked))} ${escapeHtml(translateText("provider-backed"))}</span>
+        </div>
+      </div>
+      <form class="nexus-approved-memory-form" data-nexus-approved-memory-form="true">
+        <label>
+          <span>${escapeHtml(translateText("Memory type"))}</span>
+          <select data-nexus-approved-memory-type>
+            ${NEXUS_APPROVED_MEMORY_TYPES.map(type => `<option value="${escapeHtml(type.id)}">${escapeHtml(translateText(type.label))}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Title"))}</span>
+          <input data-nexus-approved-memory-title placeholder="${escapeHtml(translateText("Example: prefers short answers"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Approved information"))}</span>
+          <textarea data-nexus-approved-memory-value rows="3" placeholder="${escapeHtml(translateText("Write only the information you want Nexus to remember."))}"></textarea>
+        </label>
+        <label class="nexus-approved-memory-consent">
+          <input type="checkbox" data-nexus-approved-memory-consent>
+          <span>${escapeHtml(translateText("I approve saving this memory locally in this browser."))}</span>
+        </label>
+        <div class="nexus-approved-memory-actions">
+          <button type="button" class="primary" data-nexus-approved-memory-action="save">${escapeHtml(translateText("Save approved memory"))}</button>
+          <button type="button" data-nexus-approved-memory-action="decline-save">${escapeHtml(translateText("Decline save"))}</button>
+          <button type="button" data-nexus-approved-memory-action="clear-session">${escapeHtml(translateText("Clear session context"))}</button>
+        </div>
+      </form>
+      <div class="nexus-approved-memory-scope" data-nexus-approved-memory-storage-scope="true">
+        <strong>${escapeHtml(translateText("Storage scope"))}</strong>
+        <p>${escapeHtml(translateText("Current turn context, mission context, session memory, preferences, contacts, profiles, organizations, patient records, buyers/sellers, shipments, learning history, employment profiles, sensitive health data, and provider-backed records are separated."))}</p>
+        <p>${escapeHtml(translateText("Provider-backed storage is not active unless configured and separately approved. Authorized handling includes deceased patient, closed business, buyer leaving platform, seller leaving platform, user-requested deletion, and provider-managed retention rules."))}</p>
+      </div>
+      <div class="nexus-approved-memory-list" data-nexus-approved-memory-list="true">
+        ${records.length ? records.map(record => `
+          <article data-nexus-approved-memory-record="true" data-memory-id="${escapeHtml(record.id)}" data-memory-status="${escapeHtml(record.status)}" data-sensitive="${record.sensitive ? "true" : "false"}" data-provider-backed="${record.providerBacked ? "true" : "false"}">
+            <div>
+              <strong>${escapeHtml(translateText(record.title || record.typeLabel))}</strong>
+              <small>${escapeHtml(translateText(`${record.typeLabel} - ${record.status} - ${record.persistenceScope}`))}</small>
+            </div>
+            <p>${escapeHtml(translateText(record.value || "No value stored."))}</p>
+            <small>${escapeHtml(translateText(record.storageScopeExplanation))}</small>
+            <div class="nexus-approved-memory-record-actions">
+              ${["review", "edit", "correct", "forget", "deactivate", "archive", "delete"].map(action => `<button type="button" data-nexus-approved-memory-action="${escapeHtml(action)}" data-memory-id="${escapeHtml(record.id)}">${escapeHtml(translateText(action.replace("-", " ")))}</button>`).join("")}
+            </div>
+          </article>
+        `).join("") : `<p>${escapeHtml(translateText("No approved memory saved yet."))}</p>`}
+      </div>
+    </section>
+  `;
+}
+
+function handleNexusApprovedMemoryAction(action = "", source = null) {
+  const form = source?.closest?.("[data-nexus-approved-memory-panel]");
+  const memoryId = source?.dataset?.memoryId || "";
+  const now = new Date().toISOString();
+  if (action === "save") {
+    const approved = Boolean(form?.querySelector("[data-nexus-approved-memory-consent]")?.checked);
+    if (!approved) {
+      nexusAgenticBrainLastResult = {
+        ok: true,
+        status: "nexus_memory_save_declined_no_consent",
+        mode: "Approved Memory",
+        message: "Nexus did not save this memory because approval was not checked.",
+        preparedCards: [{ type: "memory_consent_declined", title: "Memory not saved", status: "declined", localOnly: true }],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      toast("Memory was not saved without approval.");
+      renderUserWorkspace();
+      return true;
+    }
+    const record = buildNexusApprovedMemoryRecord({
+      type: form?.querySelector("[data-nexus-approved-memory-type]")?.value || "saved_preference",
+      title: form?.querySelector("[data-nexus-approved-memory-title]")?.value || "",
+      value: form?.querySelector("[data-nexus-approved-memory-value]")?.value || ""
+    });
+    nexusApprovedMemoryRecords = [record, ...nexusApprovedMemoryRecords.filter(item => item.id !== record.id)].slice(0, 50);
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_approved_memory_saved",
+      mode: "Approved Memory",
+      message: `${record.typeLabel} saved locally with explicit approval. This is not model training and does not authorize execution.`,
+      preparedCards: [{ type: "approved_memory", title: record.title, status: record.status, localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    toast("Approved memory saved locally.");
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "decline-save") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_memory_save_declined",
+      mode: "Approved Memory",
+      message: "Save declined. Nexus kept the current turn available but did not create saved memory.",
+      preparedCards: [{ type: "memory_decline", title: "Declined save", status: "not_saved", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    toast("Memory save declined.");
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "clear-session") {
+    nexusActiveWorkflowState = { id: "", command: "", source: "memory-clear-session", workflow: "", action: "", openedAt: 0 };
+    nexusAgenticCommandMissions = [];
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_session_context_cleared",
+      mode: "Approved Memory",
+      message: "Current session context cleared. Saved approved memory remains available until you forget, archive, deactivate, or delete it.",
+      preparedCards: [{ type: "clear_session", title: "Session cleared", status: "cleared", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true
+    };
+    toast("Session context cleared.");
+    renderUserWorkspace();
+    return true;
+  }
+  const record = nexusApprovedMemoryRecords.find(item => item.id === memoryId);
+  if (!record) return false;
+  const updated = { ...record, updatedAt: now, lastReviewedAt: now };
+  if (action === "review") updated.status = record.status || "active";
+  if (action === "edit" || action === "correct") {
+    updated.status = "active";
+    updated.title = `${record.title || record.typeLabel} (reviewed)`.slice(0, 120);
+    updated.authorizedHandling = "Corrected by user review.";
+  }
+  if (action === "forget") {
+    updated.status = "forgotten";
+    updated.value = "";
+    updated.authorizedHandling = "User-requested forgetting completed locally.";
+  }
+  if (action === "deactivate") {
+    updated.status = "deactivated";
+    updated.authorizedHandling = "Deactivated for closed business, buyer/seller leaving platform, deceased patient, or provider-managed status review.";
+  }
+  if (action === "archive") {
+    updated.status = "archived";
+    updated.authorizedHandling = "Archived where deletion may be restricted by provider-managed retention rules.";
+  }
+  if (action === "delete") {
+    nexusApprovedMemoryRecords = nexusApprovedMemoryRecords.filter(item => item.id !== memoryId);
+  } else {
+    nexusApprovedMemoryRecords = [updated, ...nexusApprovedMemoryRecords.filter(item => item.id !== memoryId)].slice(0, 50);
+  }
+  saveNexusRuntimeMemory();
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: `nexus_memory_${action}_recorded`,
+    mode: "Approved Memory",
+    message: `Memory action recorded: ${action}. No provider-backed deletion, medical record update, message, payment, booking, or external execution occurred.`,
+    preparedCards: [{ type: "memory_action", title: updated.title || record.title, status: action, localOnly: true }],
+    noExecutionAuthorized: true,
+    localOnly: true
+  };
+  toast(`Memory ${action} recorded.`);
+  renderUserWorkspace();
+  return true;
+}
+
 function nexusMissionHistoryStatusFromEntry(entry = {}, packet = null) {
   const text = `${entry.outcomeStatus || ""} ${entry.normalizedExecutionState || ""} ${entry.failureReason || ""} ${packet?.outcomeStatus || ""}`.toLowerCase();
   if (/archived/.test(text)) return "archived";
@@ -24990,6 +25231,7 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusPreparedPackets", JSON.stringify(nexusPreparedPackets.slice(0, 25)));
     localStorage.setItem("nexusActionHistory", JSON.stringify(nexusActionHistory.slice(0, 25)));
     localStorage.setItem("nexusMissionHistory", JSON.stringify(nexusMissionHistory.slice(0, 50)));
+    localStorage.setItem("nexusApprovedMemoryRecords", JSON.stringify(nexusApprovedMemoryRecords.slice(0, 50)));
     localStorage.setItem("nexusPartnerProfiles", JSON.stringify(nexusPartnerProfiles.slice(0, 25)));
     localStorage.setItem("nexusLaneConfigOverrides", JSON.stringify(nexusLaneConfigOverrides || {}));
     localStorage.setItem("nexusRecentWorkflows", JSON.stringify(nexusRecentWorkflows.slice(0, 8)));
@@ -25015,6 +25257,7 @@ function restoreNexusRuntimeMemory() {
     nexusPreparedPackets = JSON.parse(localStorage.getItem("nexusPreparedPackets") || "[]") || [];
     nexusActionHistory = JSON.parse(localStorage.getItem("nexusActionHistory") || "[]") || [];
     nexusMissionHistory = JSON.parse(localStorage.getItem("nexusMissionHistory") || "[]") || [];
+    nexusApprovedMemoryRecords = JSON.parse(localStorage.getItem("nexusApprovedMemoryRecords") || "[]") || [];
     nexusPartnerProfiles = JSON.parse(localStorage.getItem("nexusPartnerProfiles") || "[]") || [];
     nexusLaneConfigOverrides = JSON.parse(localStorage.getItem("nexusLaneConfigOverrides") || "{}") || {};
     nexusRecentWorkflows = JSON.parse(localStorage.getItem("nexusRecentWorkflows") || "[]") || [];
@@ -25048,6 +25291,7 @@ function restoreNexusRuntimeMemory() {
     nexusPreparedPackets = [];
     nexusActionHistory = [];
     nexusMissionHistory = [];
+    nexusApprovedMemoryRecords = [];
     nexusPartnerProfiles = [];
     nexusLaneConfigOverrides = {};
     nexusRecentWorkflows = [];
@@ -25084,6 +25328,7 @@ function clearNexusSensitiveLocalData() {
   nexusPreparedPackets = [];
   nexusActionHistory = [];
   nexusMissionHistory = [];
+  nexusApprovedMemoryRecords = [];
   nexusPartnerProfiles = [];
   nexusLaneConfigOverrides = {};
   nexusRecentWorkflows = [];
@@ -25118,6 +25363,7 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusPreparedPackets");
     localStorage.removeItem("nexusActionHistory");
     localStorage.removeItem("nexusMissionHistory");
+    localStorage.removeItem("nexusApprovedMemoryRecords");
     localStorage.removeItem("nexusPartnerProfiles");
     localStorage.removeItem("nexusLaneConfigOverrides");
     localStorage.removeItem("nexusRecentWorkflows");
@@ -28004,8 +28250,8 @@ function renderNexusActiveWorkflowWorkspace() {
     `;
   }
   const healthcare = isNexusHealthcareWorkflow(id);
-  const latestPacket = nexusPreparedPackets.find(packet => packet.workflowId === id);
-  const latestEntry = latestPacket ? nexusActionHistory.find(entry => entry.packetId === latestPacket.packetId) : null;
+  const latestPacket = nexusPreparedPackets.find(packet => packet && packet.workflowId === id);
+  const latestEntry = latestPacket ? nexusActionHistory.find(entry => entry && entry.packetId === latestPacket.packetId) : null;
   const latestLane = latestPacket ? nexusIntegrationLaneById(latestPacket.destinationLaneId) : nexusIntegrationLaneById(nexusWorkflowRegistryEntry(id)?.integrationLaneId);
   const steps = healthcare
     ? ["Add context", "Review safety boundaries", "Prepare provider-ready summary", "Confirm before any future handoff"]
@@ -29230,6 +29476,7 @@ function renderNexusMemoryUtilityPanel() {
   const store = nexusPersistentMemoryStore();
   const snapshot = store ? store.snapshot() : nexusPersistentMemoryState;
   const status = snapshot.status || {};
+  const approvedCounts = nexusApprovedMemoryCounts();
   return `
     <section class="nexus-utility-card" data-nexus-memory-utility-card="true">
       <span class="eyebrow">${escapeHtml(translateText("Memory"))}</span>
@@ -29238,7 +29485,9 @@ function renderNexusMemoryUtilityPanel() {
       <p>${escapeHtml(translateText(status.message || "Local memory active. Production database not connected."))}</p>
       <div><span>${escapeHtml(translateText("Saved records"))}</span><strong>${escapeHtml(String((snapshot.records || []).length))}</strong></div>
       <div><span>${escapeHtml(translateText("Receipts"))}</span><strong>${escapeHtml(String((snapshot.receipts || []).length))}</strong></div>
+      <div><span>${escapeHtml(translateText("Approved memories"))}</span><strong>${escapeHtml(String(approvedCounts.total || 0))}</strong></div>
       <button type="button" data-nexus-command-prefill="Show saved records.">${escapeHtml(translateText("Open records"))}</button>
+      <button type="button" data-nexus-command-prefill="Show approved memory and forgetting controls.">${escapeHtml(translateText("Open memory controls"))}</button>
     </section>
   `;
 }
@@ -34258,6 +34507,22 @@ function renderNexusUserWorkspaceSegment(label = "Nexus section", renderer = () 
   }
 }
 
+function renderNexusActiveWorkflowWorkspaceSafe() {
+  try {
+    return renderNexusActiveWorkflowWorkspace();
+  } catch (error) {
+    return `
+      <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-empty nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="none" data-execution-authority="false" data-no-live-execution="true" aria-label="${escapeHtml(translateText("Nexus active workflow"))}">
+        <div class="nexus-workflow-header">
+          <span class="eyebrow">${escapeHtml(translateText("Workspace"))}</span>
+          <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText("Choose a workflow to begin"))}</h3>
+          <p>${escapeHtml(translateText("Nexus cleared a stale local workflow view and kept the workspace available. No external action ran."))}</p>
+        </div>
+      </section>
+    `;
+  }
+}
+
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
@@ -34278,7 +34543,8 @@ function renderUserWorkspace() {
         ${renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)}
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
         ${renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)}
-        ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)}
+        ${renderNexusUserWorkspaceSegment("Approved memory controls", renderNexusApprovedMemoryPanel)}
+        ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)}
         ${renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)}
         ${renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)}
       </main>
@@ -50504,6 +50770,13 @@ if (typeof window !== "undefined") {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const interviewEventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  const approvedMemoryAction = event.target?.closest?.("[data-nexus-approved-memory-action]");
+  if (approvedMemoryAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return handleNexusApprovedMemoryAction(approvedMemoryAction.dataset.nexusApprovedMemoryAction || "", approvedMemoryAction);
+  }
   if (interviewEventTarget?.closest?.("[data-nexus-guided-save],[data-nexus-interview-skip],[data-nexus-interview-correct],[data-nexus-interview-review],[data-nexus-interview-cancel],[data-nexus-guided-back]")) {
     return handleNexusUserExperienceMaximizationClick(event);
   }

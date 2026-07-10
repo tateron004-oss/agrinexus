@@ -38,7 +38,7 @@ assert(renderBlock.includes("data-nexus-os-standard-startup=\"calm\""), "Standar
 assert(renderBlock.includes("renderNexusTopWelcomeArea()"), "Nexus welcome area remains visible");
 assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "Ask Nexus hero remains visible");
 assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)'), "mission workspace remains available");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)'), "active workflow workspace remains available");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)'), "active workflow workspace remains available");
 assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)'), "small calm helper is visible");
 assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy surfaces are preserved behind deferred host");
 

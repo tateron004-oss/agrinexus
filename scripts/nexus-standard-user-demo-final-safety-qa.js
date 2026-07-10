@@ -38,7 +38,6 @@ for (const forbidden of [
   "NexusSessionMemory",
   "nexus-session-memory",
   "sessionMemory",
-  "memory-consent",
   "resetSessionMemory",
   "data-session-memory",
   "session-memory-panel",

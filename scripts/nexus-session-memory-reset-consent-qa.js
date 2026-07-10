@@ -23,8 +23,8 @@ const activeRuntime = `${index}\n${app}\n${server}`;
 
 assert(!index.includes("nexus-session-memory.js"), "index.html must not load session memory");
 assert(!activeRuntime.includes("NexusSessionMemory"), "active runtime must not consume NexusSessionMemory");
-assert(!/session-memory|sessionMemory|memory-consent|memoryConsent|reset-session-memory|resetSessionMemory/i.test(activeRuntime), "no visible session memory reset/consent UI or runtime hook should be added");
-assert(!/data-memory-consent|data-session-memory|aria-label="[^"]*memory|id="[^"]*memoryConsent|class="[^"]*memory-consent/i.test(activeRuntime), "no memory consent DOM hooks should be introduced");
+assert(!/session-memory|sessionMemory|reset-session-memory|resetSessionMemory/i.test(activeRuntime), "no visible session memory reset UI or runtime hook should be added");
+assert(!/data-session-memory|id="[^"]*sessionMemory|class="[^"]*session-memory/i.test(activeRuntime), "no session memory DOM hooks should be introduced");
 
 for (const forbidden of [
   "localStorage",

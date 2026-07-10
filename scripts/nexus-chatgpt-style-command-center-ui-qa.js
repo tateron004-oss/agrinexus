@@ -51,7 +51,7 @@ const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()"
   "renderNexusTopWelcomeArea()",
   'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
   'renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)',
-  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)',
+  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
   'renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)',
   'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'
 ].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
