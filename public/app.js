@@ -27386,8 +27386,8 @@ function renderNexusCommandCenterHero() {
           `).join("")}
         </div>
       </div>
-      <div class="nexus-orb-stage" data-nexus-orb="true" aria-hidden="true">
-        <div class="nexus-orb">
+      <div class="nexus-orb-stage" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-os-orb-state="idle" aria-hidden="true">
+        <div class="nexus-orb nexus-os-core-orb">
           <span class="nexus-orb-core">N</span>
           <span class="nexus-orb-ring nexus-orb-ring-one"></span>
           <span class="nexus-orb-ring nexus-orb-ring-two"></span>
@@ -32201,6 +32201,57 @@ function ensureNexusOsVisualBoundaryStyles() {
       margin-left: auto;
       margin-right: auto;
     }
+    .nexus-os-shell-panel {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      border-radius: 28px;
+      padding: clamp(14px, 2vw, 22px);
+      background:
+        radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 32%),
+        radial-gradient(circle at 88% 24%, rgba(168, 85, 247, 0.14), transparent 30%),
+        rgba(15, 23, 42, 0.58);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 22px 70px rgba(2, 6, 23, 0.38);
+      backdrop-filter: blur(20px);
+    }
+    .nexus-os-shell-status {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .nexus-os-shell-status span,
+    .nexus-os-shell-actions button {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.5);
+      color: rgba(241, 245, 249, 0.94);
+      padding: 9px 12px;
+      text-align: center;
+      box-shadow: 0 0 22px rgba(34, 211, 238, 0.08);
+    }
+    .nexus-os-shell-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .nexus-os-shell-actions button {
+      cursor: pointer;
+    }
+    .nexus-os-shell-actions button:hover,
+    .nexus-os-calm-helper button:hover {
+      border-color: rgba(34, 211, 238, 0.48);
+      box-shadow: 0 0 30px rgba(34, 211, 238, 0.18);
+      transform: translateY(-1px);
+    }
+    .nexus-os-shell-focus-note {
+      margin: 12px 0 0;
+      color: rgba(203, 213, 225, 0.86);
+      text-align: center;
+    }
     .nexus-os-calm-helper {
       max-width: 900px;
       margin: 0 auto;
@@ -32224,6 +32275,49 @@ function ensureNexusOsVisualBoundaryStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+function nexusOsShellState() {
+  const profile = data?.profile || {};
+  const displayName = profile.name || profile.displayName || "";
+  const hasMission = Boolean(nexusActiveWorkflowState?.title || nexusActiveWorkflowState?.command || nexusAgenticCommandLocalMemory?.lastCommand);
+  const voiceSupported = typeof window !== "undefined" && (Boolean(window.SpeechRecognition || window.webkitSpeechRecognition) || Boolean(window.speechSynthesis));
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  return {
+    userState: displayName ? "Returning user" : "Anonymous user",
+    visitState: hasMission ? "Existing mission available" : "First visit ready",
+    voiceState: voiceSupported ? "Voice available" : "Voice unavailable",
+    connectivityState: offline ? "Offline" : "Online / local fallback",
+    bandwidthState: nexusLowBandwidthMode ? "Low-bandwidth mode" : "Standard bandwidth",
+    focusState: "Keyboard focus starts at Ask Nexus"
+  };
+}
+
+function renderNexusOsApplicationShellPanel() {
+  const shellState = nexusOsShellState();
+  const controls = [
+    ["Language", "Nexus, change language."],
+    ["Mission history", "Nexus, show receipts."],
+    ["Privacy", "Nexus, show privacy controls."],
+    ["Accessibility", "Nexus, open accessibility help."],
+    ["Settings", "Nexus, show language and safety settings."],
+    ["Connectivity", "Nexus, show provider readiness."]
+  ];
+  return `
+    <section class="nexus-os-shell-panel" data-nexus-os-application-shell="true" aria-label="${escapeHtml(translateText("Nexus OS shell status"))}">
+      <div class="nexus-os-shell-status" data-nexus-os-shell-states="true">
+        ${Object.values(shellState).map(value => `<span>${escapeHtml(translateText(value))}</span>`).join("")}
+      </div>
+      <div class="nexus-os-shell-actions" data-nexus-os-shell-actions="true" aria-label="${escapeHtml(translateText("Nexus shell controls"))}">
+        ${controls.map(([label, command]) => `
+          <button type="button" data-simple-command="${escapeHtml(command)}" data-nexus-os-shell-control="${escapeHtml(String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">
+            ${escapeHtml(translateText(label))}
+          </button>
+        `).join("")}
+      </div>
+      <p class="nexus-os-shell-focus-note">${escapeHtml(translateText("Speak or type naturally. Nexus opens only the workflow needed for your mission."))}</p>
+    </section>
+  `;
 }
 
 function renderNexusOsCalmHelper() {
@@ -32283,6 +32377,7 @@ function renderUserWorkspace() {
     <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm">
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
+        ${renderNexusOsApplicationShellPanel()}
         ${renderNexusCommandCenterHero()}
         ${renderNexusAgenticMissionWorkspace()}
         ${renderNexusActiveWorkflowWorkspace()}
