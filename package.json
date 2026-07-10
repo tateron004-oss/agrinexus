@@ -115,6 +115,7 @@
     "qa:nexus-os-approved-memory-forgetting": "node scripts/nexus-os-approved-memory-forgetting-qa.js",
     "qa:nexus-os-agrinexus-deployment": "node scripts/nexus-os-agrinexus-deployment-qa.js",
     "qa:nexus-os-health-workforce-safety": "node scripts/nexus-os-health-workforce-safety-qa.js",
+    "qa:nexus-os-control-plane": "node scripts/nexus-os-control-plane-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

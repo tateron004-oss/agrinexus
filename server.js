@@ -25,6 +25,7 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
+const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -36784,6 +36785,18 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusOsHealthWorkforceSafetyPack.evaluateHealthWorkforceSafety(body.command || body.goal || "", { role: body.role || "standard_user" });
     return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus-os/control-plane" && req.method === "GET") {
+    const role = nexusOsControlPlane.getRequestControlPlaneRole(req);
+    if (!nexusOsControlPlane.canAccessControlPlane(role)) {
+      return send(res, 403, nexusOsControlPlane.buildForbiddenControlPlaneResponse(role));
+    }
+    const snapshot = nexusOsControlPlane.getNexusOsControlPlaneSnapshot();
+    return send(res, 200, {
+      ...snapshot,
+      validation: nexusOsControlPlane.validateNexusOsControlPlane(snapshot)
+    });
   }
 
   if ((url.pathname === "/api/nexus/health" || url.pathname === "/api/nexus/readiness" || url.pathname === "/api/nexus/production-readiness") && req.method === "GET") {
