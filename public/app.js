@@ -43402,6 +43402,11 @@ function setVoiceResponse(message, speak = false, options = {}) {
       activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || nexusPresenceState.activeMission || ""
     });
   }
+  syncNexusPresenceSurfaces(nexusOsVoiceRuntimeState.mode || "standby", {
+    source: "voice-response-caption",
+    captionText: responseMessage,
+    assistantSpeaking: nexusOsVoiceRuntimeState.assistantSpeaking === true
+  });
   lastVoiceResponse = responseMessage;
   lastVoiceResponseAt = now;
   rememberNexusAnswerContext(responseMessage, options);
@@ -43428,6 +43433,11 @@ function setVoiceResponse(message, speak = false, options = {}) {
       if (summary) summary.textContent = translated;
       if (globalStatus) globalStatus.textContent = translated;
       updateUserCaptionPanel(translated);
+      syncNexusPresenceSurfaces(nexusOsVoiceRuntimeState.mode || "standby", {
+        source: "translated-voice-response-caption",
+        captionText: translated,
+        assistantSpeaking: nexusOsVoiceRuntimeState.assistantSpeaking === true
+      });
       announce(translated);
       if (interruptToken === voiceInterruptToken && !duplicateSpeech && (speak || (voiceFirstMode && allowVoiceFirst))) scheduleNexusSpeech(translated, options);
     }).catch(() => {
@@ -43760,6 +43770,115 @@ function persistNexusOsVoiceRuntimeState() {
   }));
 }
 
+const NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-presence-synchronization.v1",
+  controllerName: "NexusPresenceSynchronizationController",
+  runtimeOwner: "nexus-os-canonical-voice",
+  synchronizedSurfaces: Object.freeze([
+    "nexus-core-orb",
+    "voice-caption",
+    "voice-runtime-status",
+    "mission-lifecycle-status",
+    "screen-reader-announcement"
+  ]),
+  stateMap: Object.freeze({
+    starting: "wake",
+    listening: "listening",
+    "speech-detected": "hearing",
+    "partial-transcript": "hearing",
+    "final-transcript": "processing",
+    thinking: "reasoning",
+    processing: "processing",
+    reasoning: "reasoning",
+    speaking: "speaking",
+    awaiting_confirmation: "confirmation",
+    confirmation: "confirmation",
+    preparing: "preparing",
+    executing: "executing",
+    verifying: "verifying",
+    completed: "completed",
+    completed_local: "completed",
+    muted: "idle",
+    standby: "idle",
+    "typed-fallback": "waiting",
+    stopped: "idle",
+    "permission-denied": "blocked",
+    "microphone-unavailable": "blocked",
+    "recognition-timeout": "waiting",
+    failed: "error",
+    error: "error"
+  }),
+  safeguards: Object.freeze({
+    speakingStartsOnlyOnPlaybackStart: true,
+    speakingEndsOnPlaybackEndOrFailure: true,
+    captionUsesExactUserFacingResponse: true,
+    executionAnimationIndependentOfSpeechPlayback: true,
+    completionRequiresHonestCompletionSignal: true,
+    reducedMotionUsesStatusText: true,
+    screenReaderAnnouncementRequired: true,
+    noFakeExecutionClaim: true,
+    noFakeCompletionClaim: true
+  })
+});
+
+function normalizeNexusPresenceSyncMode(mode = "standby") {
+  const key = String(mode || "standby").replace(/-/g, "_").toLowerCase();
+  const dashed = key.replace(/_/g, "-");
+  return NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.stateMap[key]
+    || NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.stateMap[dashed]
+    || normalizeNexusCoreState(key);
+}
+
+function nexusPresenceSynchronizationState(extra = {}) {
+  const rawMode = extra.mode || nexusOsVoiceRuntimeState.mode || "standby";
+  const coreState = normalizeNexusPresenceSyncMode(rawMode);
+  const captionText = String(extra.captionText || nexusOsVoiceRuntimeState.captionText || lastVoiceResponse || "").trim();
+  return {
+    schemaVersion: NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.schemaVersion,
+    controllerName: NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT.controllerName,
+    mode: rawMode,
+    coreState,
+    captionText,
+    missionState: currentNexusOsMission?.()?.currentState || "return_home",
+    assistantSpeaking: Boolean(extra.assistantSpeaking ?? nexusOsVoiceRuntimeState.assistantSpeaking),
+    userSpeaking: Boolean(extra.userSpeaking ?? nexusOsVoiceRuntimeState.userSpeaking),
+    reducedMotionSafe: true,
+    screenReaderAnnouncement: nexusCoreStateAccessibleLabel(coreState),
+    noExecutionAuthority: true,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function syncNexusPresenceSurfaces(mode = "standby", details = {}) {
+  if (typeof document === "undefined") return nexusPresenceSynchronizationState({ ...details, mode });
+  const state = nexusPresenceSynchronizationState({ ...details, mode });
+  setNexusCoreState(state.coreState, {
+    source: details.source || "presence-synchronization",
+    statusText: details.statusText || state.screenReaderAnnouncement
+  });
+  document.body?.setAttribute?.("data-nexus-presence-sync-state", state.coreState);
+  document.body?.setAttribute?.("data-nexus-presence-speaking", String(state.assistantSpeaking));
+  document.querySelectorAll("[data-nexus-os-core-orb]").forEach(orb => {
+    orb.dataset.nexusPresenceSyncState = state.coreState;
+    orb.dataset.nexusPresenceSpeechActive = String(state.assistantSpeaking);
+  });
+  document.querySelectorAll("[data-nexus-os-voice-runtime-status]").forEach(surface => {
+    surface.dataset.nexusPresenceSyncState = state.coreState;
+    surface.dataset.nexusPresenceSpeaking = String(state.assistantSpeaking);
+  });
+  document.querySelectorAll("[data-nexus-os-mission-lifecycle-status]").forEach(surface => {
+    surface.dataset.nexusPresenceSyncState = state.coreState;
+    surface.dataset.nexusPresenceMissionState = state.missionState;
+  });
+  document.querySelectorAll("[data-nexus-presence-caption-sync]").forEach(caption => {
+    caption.textContent = state.captionText || details.fallbackCaption || nexusOsVoiceRuntimeSummary();
+  });
+  document.querySelectorAll("[data-nexus-presence-status-announcement]").forEach(status => {
+    status.textContent = `${state.screenReaderAnnouncement} ${state.captionText || ""}`.trim();
+  });
+  return state;
+}
+
 function updateNexusOsVoiceRuntimeState(patch = {}, reason = "voice-runtime-update") {
   const profile = typeof browserVoiceRuntimeProfile === "function" ? browserVoiceRuntimeProfile() : {};
   nexusOsVoiceRuntimeState = {
@@ -43781,6 +43900,12 @@ function updateNexusOsVoiceRuntimeState(patch = {}, reason = "voice-runtime-upda
   const surface = document.querySelector("[data-nexus-os-voice-runtime-status]");
   if (surface) surface.textContent = nexusOsVoiceRuntimeSummary();
   document.body?.setAttribute?.("data-nexus-os-voice-state", nexusOsVoiceRuntimeState.mode || "standby");
+  syncNexusPresenceSurfaces(nexusOsVoiceRuntimeState.mode || "standby", {
+    ...patch,
+    reason,
+    source: patch.source || "voice-runtime",
+    captionText: patch.captionText || patch.lastFinal || patch.lastPartial || patch.lastSpokenPreview || nexusOsVoiceRuntimeState.captionText || ""
+  });
   return nexusOsVoiceRuntimeState;
 }
 
@@ -43803,6 +43928,8 @@ function renderNexusOsVoiceRuntimeStatus() {
       <strong>${escapeHtml(translateText(nexusOsVoiceRuntimeState.mode || "standby"))}</strong>
       <small>${escapeHtml(translateText(nexusOsVoiceRuntimeSummary()))}</small>
       <em>${escapeHtml(translateText("Push-to-talk. No always-on listening without explicit consent."))}</em>
+      <small class="sr-only" aria-live="polite" data-nexus-presence-status-announcement="true">${escapeHtml(translateText(nexusCoreStateAccessibleLabel(nexusCoreRuntimeState.current)))}</small>
+      <small class="nexus-presence-caption-sync" data-nexus-presence-caption-sync="true">${escapeHtml(lastVoiceResponse || nexusOsVoiceRuntimeSummary())}</small>
     </div>
   `;
 }
@@ -44131,7 +44258,8 @@ function markNexusUserSpeechFinal(text = "", turnToken = null) {
     listeningState: "final",
     hearingState: "final",
     lastFinal: phrase,
-    lastPartial: ""
+    lastPartial: "",
+    captionText: phrase
   }, "final-user-command");
   updateNexusVoiceSession({
     state: "thinking",
@@ -44484,12 +44612,14 @@ function createNexusSpeechSynthesisUtterance(text = "", options = {}) {
 
 function runNexusSpeechSynthesisController(text = "", options = {}) {
   const prepared = createNexusSpeechSynthesisUtterance(text, options);
+  const compact = String(text || "").replace(/\s+/g, " ").trim();
   if (!prepared.ok) {
     updateNexusOsVoiceRuntimeState({
       mode: "caption-fallback",
       assistantSpeaking: false,
       speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
-      speechSynthesisReason: prepared.reason
+      speechSynthesisReason: prepared.reason,
+      captionText: compact
     }, options.reason || "speech-synthesis-fallback");
     return prepared;
   }
@@ -44499,7 +44629,8 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       updateNexusOsVoiceRuntimeState({
         assistantSpeaking: false,
         speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
-        speechSynthesisReason: "browser-speech-finished"
+        speechSynthesisReason: "browser-speech-finished",
+        captionText: compact
       }, options.reason || "speech-synthesis-finished");
       options.onEnd?.(event);
     };
@@ -44507,7 +44638,8 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       updateNexusOsVoiceRuntimeState({
         assistantSpeaking: false,
         speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
-        speechSynthesisReason: "browser-speech-error"
+        speechSynthesisReason: "browser-speech-error",
+        captionText: compact
       }, options.reason || "speech-synthesis-error");
       options.onError?.(event);
     };
@@ -44521,7 +44653,8 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       selectedSpeechLocale: prepared.controllerState.selectedLocale,
       speechRate: prepared.controllerState.rate,
       speechPitch: prepared.controllerState.pitch,
-      speechVolume: prepared.controllerState.volume
+      speechVolume: prepared.controllerState.volume,
+      captionText: compact
     }, options.reason || "speech-synthesis-start");
     window.speechSynthesis.speak(prepared.utterance);
     return { ...prepared, started: true };
@@ -44530,7 +44663,8 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       mode: "caption-fallback",
       assistantSpeaking: false,
       speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
-      speechSynthesisReason: "browser-speech-start-failed"
+      speechSynthesisReason: "browser-speech-start-failed",
+      captionText: compact
     }, options.reason || "speech-synthesis-start-failed");
     options.onError?.(error);
     return { ok: false, reason: "browser-speech-start-failed", error: error.message || String(error), controllerState: nexusSpeechSynthesisControllerState() };
@@ -44669,7 +44803,8 @@ function speakVoiceResponse(textOverride) {
     listeningState: voiceAutoRestart ? "active" : "idle",
     hearingState: "idle",
     assistantSpeaking: true,
-    lastSpokenPreview: compact.slice(0, 180)
+    lastSpokenPreview: compact.slice(0, 180),
+    captionText: compact
   }, "speech-playback-start");
   updateNexusVoiceSession({
     state: "assistant-speaking",
@@ -54469,6 +54604,9 @@ function exposeNexusAppWindowApis() {
   window.nexusSpeechSynthesisControllerState = nexusSpeechSynthesisControllerState;
   window.createNexusSpeechSynthesisUtterance = createNexusSpeechSynthesisUtterance;
   window.runNexusSpeechSynthesisController = runNexusSpeechSynthesisController;
+  window.NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT = NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT;
+  window.nexusPresenceSynchronizationState = nexusPresenceSynchronizationState;
+  window.syncNexusPresenceSurfaces = syncNexusPresenceSurfaces;
   window.NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT = NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT;
   window.nexusListeningWakeControllerState = nexusListeningWakeControllerState;
   window.createNexusRecognitionConfig = createNexusRecognitionConfig;
