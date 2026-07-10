@@ -419,6 +419,47 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
   updatedAt: new Date().toISOString()
 };
+const NEXUS_OS_MISSION_LIFECYCLE_STATES = Object.freeze([
+  "listen",
+  "understand",
+  "clarify",
+  "plan",
+  "collect",
+  "prepare",
+  "confirm",
+  "execute",
+  "verify",
+  "record",
+  "learn",
+  "complete",
+  "return_home"
+]);
+const NEXUS_OS_MISSION_TERMINAL_STATES = Object.freeze(["complete", "return_home", "cancelled", "failed"]);
+const NEXUS_OS_MISSION_TRANSITIONS = Object.freeze({
+  listen: ["understand", "clarify", "paused", "cancelled", "complete", "return_home", "failed"],
+  understand: ["clarify", "plan", "paused", "cancelled", "complete", "return_home", "failed"],
+  clarify: ["collect", "plan", "paused", "cancelled", "complete", "return_home", "failed"],
+  plan: ["collect", "prepare", "confirm", "paused", "cancelled", "complete", "return_home", "failed"],
+  collect: ["prepare", "confirm", "paused", "cancelled", "complete", "return_home", "failed"],
+  prepare: ["confirm", "verify", "record", "paused", "cancelled", "complete", "return_home", "failed"],
+  confirm: ["execute", "prepare", "paused", "cancelled", "complete", "return_home", "failed"],
+  execute: ["verify", "paused", "cancelled", "complete", "return_home", "failed"],
+  verify: ["record", "paused", "cancelled", "complete", "return_home", "failed"],
+  record: ["learn", "complete", "paused", "cancelled", "return_home", "failed"],
+  learn: ["complete", "return_home", "paused", "cancelled"],
+  complete: ["return_home"],
+  return_home: ["listen"],
+  paused: ["listen", "understand", "clarify", "plan", "collect", "prepare", "confirm", "cancelled"],
+  failed: ["retry", "return_home"],
+  retry: ["listen", "understand"],
+  cancelled: ["return_home"]
+});
+let nexusOsMissionLifecycleState = JSON.parse(localStorage.getItem("nexusOsMissionLifecycleState") || "null") || {
+  schemaVersion: "nexus-os-mission-lifecycle.v1",
+  activeMission: null,
+  missionHistory: [],
+  updatedAt: new Date().toISOString()
+};
 let queuedVoiceSpeechTimer = null;
 let queuedVoiceSpeechPayload = null;
 let agentPerformanceState = {
@@ -490,7 +531,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-394";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-395";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -11191,6 +11232,7 @@ function renderNexusOsUnifiedConversationSurface() {
       </div>
       <div class="nexus-os-transcript-strip" data-nexus-os-voice-transcript="true">${escapeHtml(translateText(transcriptText))}</div>
       ${renderNexusOsVoiceRuntimeStatus()}
+      ${renderNexusOsMissionLifecycleStatus()}
       <div class="nexus-os-conversation-log" data-nexus-os-conversation-log="true" tabindex="0" aria-live="polite">
         ${renderNexusOsConversationTurns()}
       </div>
@@ -26523,6 +26565,7 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  advanceNexusOsMissionForCommand(command, { source });
   recordNexusOsConversationTurn("user", command, { source });
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
   if (isNexusPresenceWakePhrase(command)) {
@@ -32856,6 +32899,67 @@ function ensureNexusOsVisualBoundaryStyles() {
       grid-column: 1 / -1;
       color: rgba(203, 213, 225, 0.84);
       font-style: normal;
+    }
+    .nexus-os-mission-lifecycle-status {
+      display: grid;
+      gap: 10px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(2, 6, 23, 0.7), rgba(30, 41, 59, 0.42));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 30px rgba(2, 6, 23, 0.18);
+    }
+    .nexus-os-mission-lifecycle-status span {
+      color: rgba(125, 211, 252, 0.92);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .nexus-os-mission-lifecycle-status strong {
+      display: block;
+      color: rgba(255, 255, 255, 0.96);
+      margin: 3px 0;
+    }
+    .nexus-os-mission-lifecycle-status small {
+      color: rgba(203, 213, 225, 0.84);
+    }
+    .nexus-os-mission-lifecycle-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .nexus-os-mission-lifecycle-steps span {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(15, 23, 42, 0.42);
+      color: rgba(203, 213, 225, 0.72);
+      font-size: 0.66rem;
+    }
+    .nexus-os-mission-lifecycle-steps span.done {
+      border-color: rgba(16, 185, 129, 0.32);
+      color: rgba(167, 243, 208, 0.9);
+    }
+    .nexus-os-mission-lifecycle-steps span.active {
+      border-color: rgba(34, 211, 238, 0.55);
+      background: rgba(14, 116, 144, 0.25);
+      color: rgba(224, 242, 254, 0.98);
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.18);
+    }
+    .nexus-os-mission-lifecycle-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .nexus-os-mission-lifecycle-actions button {
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(15, 23, 42, 0.52);
+      color: rgba(241, 245, 249, 0.92);
+      cursor: pointer;
     }
     .nexus-os-conversation-log {
       display: grid;
@@ -41284,6 +41388,248 @@ function renderNexusOsVoiceRuntimeStatus() {
   `;
 }
 
+function persistNexusOsMissionLifecycleState() {
+  localStorage.setItem("nexusOsMissionLifecycleState", JSON.stringify(nexusOsMissionLifecycleState));
+}
+
+function nexusOsMissionNow() {
+  return new Date().toISOString();
+}
+
+function nexusOsMissionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return `nexus-mission-${crypto.randomUUID()}`;
+  return `nexus-mission-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function inferNexusOsMissionDomain(goal = "") {
+  const text = String(goal || "").toLowerCase();
+  if (/\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|chronic|health|telehealth|doctor|clinic|pharmacy|medicine|provider|patient)\b/.test(text)) return "healthcare";
+  if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|harvest|maize|tomato|field)\b/.test(text)) return "agriculture";
+  if (/\b(job|workforce|training|learning|literacy|course|employer|worker|skill)\b/.test(text)) return "workforce-learning";
+  if (/\b(buyer|seller|marketplace|agritrade|sell|trade|vendor|price)\b/.test(text)) return "marketplace";
+  if (/\b(map|route|location|field visit|mobile clinic|transport|logistics)\b/.test(text)) return "maps-logistics";
+  if (/\b(message|sms|whatsapp|telegram|email|call|phone)\b/.test(text)) return "communications";
+  return "general-assistant";
+}
+
+function inferNexusOsMissionIntent(goal = "") {
+  const text = String(goal || "").toLowerCase();
+  if (/\b(record|track|log|capture|enter)\b/.test(text)) return "collect-information";
+  if (/\b(prepare|draft|build|create|summary|report|packet|script)\b/.test(text)) return "prepare-output";
+  if (/\b(open|show|go to|launch|start)\b/.test(text)) return "open-workflow";
+  if (/\b(find|research|source|search|learn|explain)\b/.test(text)) return "source-backed-guidance";
+  if (/\b(send|call|book|pay|buy|dispatch|share|submit|schedule)\b/.test(text)) return "sensitive-action-review";
+  return "guided-support";
+}
+
+function nexusOsMissionSafetyClassification(goal = "") {
+  const text = String(goal || "").toLowerCase();
+  if (/\b(emergency|911|ambulance|dispatch|diagnose|prescribe|refill|pay|payment|buy|checkout|send|sms|whatsapp|telegram|email|call|share my location|use my camera|book|schedule|submit)\b/.test(text)) return "elevated-review-required";
+  if (/\b(health|patient|pharmacy|provider|clinic|medicine|location|route|buyer|seller)\b/.test(text)) return "medium-risk-review-required";
+  return "low-risk-local-guidance";
+}
+
+function nexusOsMissionMissingInformation(goal = "", domain = "general-assistant") {
+  const text = String(goal || "").toLowerCase();
+  const missing = [];
+  if (domain === "healthcare" && !/\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|pharmacy|telehealth|clinic|provider)\b/.test(text)) missing.push("health topic");
+  if (domain === "agriculture" && !/\b(crop|field|soil|irrigation|pest|disease|rain|market|farm)\b/.test(text)) missing.push("crop or farm context");
+  if (domain === "maps-logistics" && !/\b(from|to|route|field|clinic|destination|origin|stockton|sacramento)\b/.test(text)) missing.push("origin and destination");
+  if (domain === "communications" && !/\b(recipient|buyer|seller|provider|doctor|pharmacy|owner|team|john|mary)\b/.test(text)) missing.push("recipient");
+  if (domain === "marketplace" && !/\b(product|crop|buyer|seller|quantity|price|maize|tomato)\b/.test(text)) missing.push("product or trade detail");
+  return missing;
+}
+
+function nexusOsMissionProviderRequirement(domain, safetyClassification) {
+  if (safetyClassification === "elevated-review-required") return "provider-or-action-connector-required-before-execution";
+  if (["healthcare", "marketplace", "maps-logistics", "communications"].includes(domain)) return "verified-source-or-provider-needed-for-live-action";
+  return "not-required-for-local-guidance";
+}
+
+function nexusOsMissionExecutionAvailability(safetyClassification) {
+  if (safetyClassification === "elevated-review-required") return "blocked-until-consent-final-gate-provider-and-audit";
+  if (safetyClassification === "medium-risk-review-required") return "preparation-only-until-reviewed";
+  return "local-guidance-available";
+}
+
+function createNexusOsMissionRecord(goal = "", metadata = {}) {
+  const now = nexusOsMissionNow();
+  const domain = metadata.domain || inferNexusOsMissionDomain(goal);
+  const intent = metadata.intent || inferNexusOsMissionIntent(goal);
+  const safetyClassification = nexusOsMissionSafetyClassification(goal);
+  const missingInformation = nexusOsMissionMissingInformation(goal, domain);
+  return {
+    missionId: nexusOsMissionId(),
+    userGoal: goal || "Nexus guided mission",
+    interpretedGoal: metadata.interpretedGoal || `${intent} in ${domain}`,
+    domain,
+    intent,
+    currentState: "listen",
+    currentStep: "Listen to the user's goal",
+    completedSteps: [],
+    missingInformation,
+    collectedInformation: {},
+    requiredConsent: safetyClassification !== "low-risk-local-guidance",
+    providerRequirement: nexusOsMissionProviderRequirement(domain, safetyClassification),
+    executionAvailability: nexusOsMissionExecutionAvailability(safetyClassification),
+    safetyClassification,
+    currentOutcome: "Mission started. Nexus has not executed any external action.",
+    receiptReferences: [],
+    createdAt: now,
+    updatedAt: now,
+    pauseState: "active",
+    failureReason: "",
+    retryEligibility: true,
+    source: metadata.source || "nexus-os-mission-runtime"
+  };
+}
+
+function currentNexusOsMission() {
+  return nexusOsMissionLifecycleState.activeMission || null;
+}
+
+function startNexusOsMission(goal = "", metadata = {}) {
+  const mission = createNexusOsMissionRecord(goal, metadata);
+  nexusOsMissionLifecycleState.activeMission = mission;
+  nexusOsMissionLifecycleState.updatedAt = mission.updatedAt;
+  persistNexusOsMissionLifecycleState();
+  return mission;
+}
+
+function canTransitionNexusOsMission(fromState, toState) {
+  return Boolean((NEXUS_OS_MISSION_TRANSITIONS[fromState] || []).includes(toState));
+}
+
+function transitionNexusOsMission(toState, details = {}) {
+  const mission = currentNexusOsMission();
+  if (!mission) return null;
+  const fromState = mission.currentState || "listen";
+  if (!canTransitionNexusOsMission(fromState, toState)) {
+    mission.failureReason = `Invalid transition blocked: ${fromState} to ${toState}`;
+    mission.retryEligibility = true;
+    mission.updatedAt = nexusOsMissionNow();
+    persistNexusOsMissionLifecycleState();
+    return mission;
+  }
+  mission.completedSteps = Array.from(new Set([...(mission.completedSteps || []), fromState]));
+  mission.currentState = toState;
+  mission.currentStep = details.currentStep || nexusOsMissionStepLabel(toState);
+  mission.currentOutcome = details.currentOutcome || nexusOsMissionOutcomeForState(toState, mission);
+  mission.pauseState = toState === "paused" ? "paused" : toState === "cancelled" ? "cancelled" : "active";
+  if (toState === "failed") mission.failureReason = details.failureReason || mission.failureReason || "Mission failed safely.";
+  if (toState === "complete") mission.completedSteps = Array.from(new Set([...(mission.completedSteps || []), "complete"]));
+  if (toState === "return_home") {
+    mission.completedSteps = Array.from(new Set([...(mission.completedSteps || []), "return_home"]));
+    nexusOsMissionLifecycleState.missionHistory = [mission, ...(nexusOsMissionLifecycleState.missionHistory || [])].slice(0, 12);
+    nexusOsMissionLifecycleState.activeMission = null;
+  }
+  mission.updatedAt = nexusOsMissionNow();
+  nexusOsMissionLifecycleState.updatedAt = mission.updatedAt;
+  persistNexusOsMissionLifecycleState();
+  return mission;
+}
+
+function nexusOsMissionStepLabel(state = "listen") {
+  return ({
+    listen: "Listen to the user's goal",
+    understand: "Interpret the goal",
+    clarify: "Ask only for missing information",
+    plan: "Build a safe plan",
+    collect: "Collect required details",
+    prepare: "Prepare the local output",
+    confirm: "Request explicit confirmation where required",
+    execute: "Execute only if configured and approved",
+    verify: "Verify the result",
+    record: "Record receipt and audit trail",
+    learn: "Learn approved context",
+    complete: "Complete the mission",
+    return_home: "Return to Nexus Home",
+    paused: "Paused by user",
+    cancelled: "Cancelled before execution",
+    failed: "Failed safely",
+    retry: "Retry eligible mission"
+  })[state] || "Mission step";
+}
+
+function nexusOsMissionOutcomeForState(state, mission = {}) {
+  if (state === "confirm") return "Confirmation is required before any high-risk or provider action can proceed.";
+  if (state === "execute") return mission.executionAvailability === "local-guidance-available" ? "Local safe action may run." : "External execution remains blocked until provider, consent, final gate, and audit are ready.";
+  if (state === "complete") return "Mission completed with an outcome state. No unsupported external action was claimed.";
+  if (state === "return_home") return "Mission returned to the calm Nexus Home state.";
+  if (state === "cancelled") return "Mission cancelled before execution.";
+  if (state === "failed") return "Mission failed safely and did not produce a success claim.";
+  return `${nexusOsMissionStepLabel(state)}.`;
+}
+
+function advanceNexusOsMissionForCommand(command = "", metadata = {}) {
+  const goal = String(command || "").trim();
+  if (!goal) return currentNexusOsMission();
+  const lower = goal.toLowerCase();
+  let mission = currentNexusOsMission();
+  if (/\b(pause mission|pause this mission|hold mission)\b/.test(lower)) return transitionNexusOsMission("paused", { currentOutcome: "Mission paused. Current step is retained." });
+  if (/\b(resume mission|continue mission|keep going)\b/.test(lower) && mission?.currentState === "paused") return transitionNexusOsMission(mission.completedSteps?.at?.(-1) || "listen", { currentOutcome: "Mission resumed from the retained step." });
+  if (/\b(cancel mission|stop mission|end mission)\b/.test(lower)) return transitionNexusOsMission("cancelled", { currentOutcome: "Mission cancelled before execution." });
+  if (/\b(retry mission|try again)\b/.test(lower) && mission?.currentState === "failed") return transitionNexusOsMission("retry", { currentOutcome: "Mission is retry eligible and ready to restart." });
+  if (/\b(complete mission|finish mission)\b/.test(lower)) return transitionNexusOsMission("complete", { currentOutcome: "Mission completed with a clear outcome state." });
+  if (/\b(return home|back to nexus home|go home)\b/.test(lower)) return transitionNexusOsMission("return_home", { currentOutcome: "Returned to Nexus Home." });
+  if (!mission || NEXUS_OS_MISSION_TERMINAL_STATES.includes(mission.currentState)) mission = startNexusOsMission(goal, metadata);
+  if (mission.currentState === "listen") mission = transitionNexusOsMission("understand", { currentOutcome: "Nexus interpreted the user goal." }) || mission;
+  if (mission.currentState === "understand") {
+    mission = transitionNexusOsMission(mission.missingInformation?.length ? "clarify" : "plan", {
+      currentOutcome: mission.missingInformation?.length ? "Nexus identified missing information." : "Nexus can plan with the available information."
+    }) || mission;
+  }
+  if (mission.currentState === "clarify" && !mission.missingInformation?.length) mission = transitionNexusOsMission("plan") || mission;
+  if (mission.currentState === "plan") {
+    mission = transitionNexusOsMission(mission.safetyClassification === "elevated-review-required" ? "confirm" : "prepare") || mission;
+  }
+  return mission;
+}
+
+function renderNexusOsMissionLifecycleStatus() {
+  const mission = currentNexusOsMission();
+  const history = nexusOsMissionLifecycleState.missionHistory || [];
+  const label = mission ? mission.currentState : "return_home";
+  const title = mission ? mission.interpretedGoal : "Nexus Home";
+  const outcome = mission ? mission.currentOutcome : "No active mission. Nexus is ready for the next goal.";
+  return `
+    <div class="nexus-os-mission-lifecycle-status" data-nexus-os-mission-lifecycle-status="true" data-current-state="${escapeHtml(label)}" data-execution-availability="${escapeHtml(mission?.executionAvailability || "no-active-execution")}">
+      <div>
+        <span>${escapeHtml(translateText("Mission"))}</span>
+        <strong>${escapeHtml(translateText(title))}</strong>
+        <small>${escapeHtml(translateText(outcome))}</small>
+      </div>
+      <div class="nexus-os-mission-lifecycle-steps" aria-label="${escapeHtml(translateText("Mission lifecycle"))}">
+        ${NEXUS_OS_MISSION_LIFECYCLE_STATES.map(state => `<span class="${mission?.currentState === state ? "active" : mission?.completedSteps?.includes(state) ? "done" : ""}">${escapeHtml(translateText(state.replace("_", " ")))}</span>`).join("")}
+      </div>
+      <div class="nexus-os-mission-lifecycle-actions">
+        <button type="button" data-nexus-os-mission-action="pause">${escapeHtml(translateText("Pause"))}</button>
+        <button type="button" data-nexus-os-mission-action="resume">${escapeHtml(translateText("Resume"))}</button>
+        <button type="button" data-nexus-os-mission-action="cancel">${escapeHtml(translateText("Cancel"))}</button>
+        <button type="button" data-nexus-os-mission-action="complete">${escapeHtml(translateText("Complete"))}</button>
+        <button type="button" data-nexus-os-mission-action="return-home">${escapeHtml(translateText("Return home"))}</button>
+      </div>
+      <small>${escapeHtml(translateText(`${history.length} previous mission(s) retained locally. Form completion alone does not complete a mission.`))}</small>
+    </div>
+  `;
+}
+
+async function handleNexusOsMissionLifecycleAction(action = "") {
+  const normalized = String(action || "").toLowerCase();
+  if (!currentNexusOsMission() && normalized !== "return-home") startNexusOsMission(agentPerformanceState.lastCommand || "Nexus guided mission", { source: "mission-action" });
+  if (normalized === "pause") transitionNexusOsMission("paused", { currentOutcome: "Mission paused. Current step is retained." });
+  if (normalized === "resume") {
+    const mission = currentNexusOsMission();
+    const retained = mission?.completedSteps?.at?.(-1) || "listen";
+    transitionNexusOsMission(retained, { currentOutcome: "Mission resumed from the retained step." });
+  }
+  if (normalized === "cancel") transitionNexusOsMission("cancelled", { currentOutcome: "Mission cancelled before execution." });
+  if (normalized === "complete") transitionNexusOsMission("complete", { currentOutcome: "Mission completed with an outcome state." });
+  if (normalized === "return-home") transitionNexusOsMission("return_home", { currentOutcome: "Returned to Nexus Home." });
+  renderUserWorkspace();
+  return true;
+}
+
 async function handleNexusOsVoiceControlAction(action = "toggle-listening", options = {}) {
   const normalized = String(action || "toggle-listening").toLowerCase();
   const source = options.source || "nexus-os-voice-control";
@@ -49659,6 +50005,14 @@ function bindStatic() {
       await handleNexusOsUnifiedConversationAction(conversationControl.dataset.nexusOsConversationAction || "");
       return;
     }
+    const missionControl = event.target?.closest?.("[data-nexus-os-mission-action]");
+    if (missionControl) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      await handleNexusOsMissionLifecycleAction(missionControl.dataset.nexusOsMissionAction || "");
+      return;
+    }
     const persistentOperationsShortcut = event.target?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
     if (persistentOperationsShortcut) {
       event.preventDefault();
@@ -49673,6 +50027,7 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
       if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -49740,6 +50095,7 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
       if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -51168,6 +51524,15 @@ function exposeNexusBrainIntelligenceRuntimeApis() {
   window.updateNexusMemory = updateNexusMemory;
   window.deactivateNexusMemory = deactivateNexusMemory;
   window.deleteNexusMemoryWithConfirmation = deleteNexusMemoryWithConfirmation;
+  window.NexusOsMissionLifecycleRuntime = Object.freeze({
+    states: NEXUS_OS_MISSION_LIFECYCLE_STATES,
+    transitions: NEXUS_OS_MISSION_TRANSITIONS,
+    current: currentNexusOsMission,
+    start: startNexusOsMission,
+    advanceForCommand: advanceNexusOsMissionForCommand,
+    transition: transitionNexusOsMission,
+    canTransition: canTransitionNexusOsMission
+  });
 }
 
 function installNexusBrainIntelligenceCommandBridge() {
@@ -51223,6 +51588,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
+    advanceNexusOsMissionForCommand(command, { source: "typed-command-keyboard" });
     if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();
