@@ -1,4 +1,5 @@
 const deploymentProfileModule = require("../public/nexus-os-agrinexus-deployment-profile.js");
+const healthNexusReferenceModule = require("../public/nexus-os-healthnexus-reference-profile.js");
 
 const CONTROL_PLANE_ROLES = Object.freeze(["admin", "partner_reviewer"]);
 
@@ -43,7 +44,9 @@ function providerMetadata(providerType, credentialNames, capabilities, readiness
 
 function getNexusOsControlPlaneSnapshot() {
   const profile = deploymentProfileModule.getNexusOsAgriNexusDeploymentProfile();
+  const referenceProfile = healthNexusReferenceModule.getHealthNexusReferenceProfile();
   const validation = deploymentProfileModule.validateAgriNexusDeploymentProfile(profile);
+  const referenceValidation = healthNexusReferenceModule.validateHealthNexusReferenceProfile(referenceProfile);
   const workflows = deploymentProfileModule.getNexusOsAgriNexusWorkflows();
   const policies = deploymentProfileModule.getNexusOsAgriNexusPolicies();
   const providerRequirements = deploymentProfileModule.getNexusOsAgriNexusProviderRequirements();
@@ -72,17 +75,17 @@ function getNexusOsControlPlaneSnapshot() {
         allowedLanguages: Object.freeze(profile.supportedLanguages)
       }),
       Object.freeze({
-        tenantId: "nexus-reference-reserved",
-        deploymentId: "reference-reserved",
-        displayName: "Nexus Reference Reserved",
-        status: "reserved_for_second_deployment_proof",
+        tenantId: referenceProfile.tenantConfiguration.defaultTenantId,
+        deploymentId: referenceProfile.deploymentId,
+        displayName: referenceProfile.displayName,
+        status: "active_reference_deployment",
         isolation: Object.freeze({
-          tenantIsolationRequired: true,
-          domainIsolationRequired: true,
+          tenantIsolationRequired: referenceProfile.tenantConfiguration.tenantIsolationRequired,
+          domainIsolationRequired: referenceProfile.tenantConfiguration.domainIsolationRequired,
           dataBoundary: "separate_tenant_configuration"
         }),
-        allowedRoles: Object.freeze(["standard_user", "provider", "admin"]),
-        allowedLanguages: Object.freeze(["en"])
+        allowedRoles: Object.freeze(referenceProfile.supportedRoles),
+        allowedLanguages: Object.freeze(referenceProfile.supportedLanguages)
       })
     ]),
     deploymentProfiles: Object.freeze([
@@ -94,21 +97,16 @@ function getNexusOsControlPlaneSnapshot() {
         enabled: true
       }),
       Object.freeze({
-        deploymentId: "reference-reserved",
-        displayName: "Nexus Reference Reserved",
-        compatibilityVersion: profile.nexusOsCompatibilityVersion,
-        validation: Object.freeze({ ok: true, issues: Object.freeze([]), reserved: true }),
-        enabled: false
+        deploymentId: referenceProfile.deploymentId,
+        displayName: referenceProfile.displayName,
+        compatibilityVersion: referenceProfile.nexusOsCompatibilityVersion,
+        validation: referenceValidation,
+        enabled: true
       })
     ]),
     branding: Object.freeze({
       [profile.deploymentId]: profile.branding,
-      "reference-reserved": Object.freeze({
-        assistantName: "Nexus",
-        productName: "Nexus Reference",
-        tone: "calm, practical, voice-first",
-        visualTheme: "neutral reference deployment"
-      })
+      [referenceProfile.deploymentId]: referenceProfile.branding
     }),
     enabledDomains: Object.freeze(
       profile.enabledDomains.map(domainId => Object.freeze({

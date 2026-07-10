@@ -25,6 +25,7 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
+const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 
 function loadEnvFile(filePath) {
@@ -36766,6 +36767,31 @@ async function api(req, res, url) {
       noSecretValues: true,
       noExecutionAuthorized: true
     });
+  }
+
+  if (url.pathname === "/api/nexus-os/deployments/healthnexus-reference" && req.method === "GET") {
+    const profile = nexusOsHealthNexusReferenceProfile.getHealthNexusReferenceProfile();
+    const validation = nexusOsHealthNexusReferenceProfile.validateHealthNexusReferenceProfile(profile);
+    return send(res, 200, {
+      ok: validation.ok,
+      profile,
+      validation,
+      domainPacks: nexusOsHealthNexusReferenceProfile.getHealthNexusReferenceDomainPacks(),
+      workflows: nexusOsHealthNexusReferenceProfile.getHealthNexusReferenceWorkflows(),
+      policies: nexusOsHealthNexusReferenceProfile.getHealthNexusReferencePolicies(),
+      providerRequirements: nexusOsHealthNexusReferenceProfile.getHealthNexusReferenceProviderRequirements().map(requirement => ({
+        ...requirement,
+        credentialRequirements: requirement.credentialRequirements
+      })),
+      sharedCore: nexusOsHealthNexusReferenceProfile.getHealthNexusReferenceSharedCore(),
+      noSecretValues: true,
+      noExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus-os/deployments/healthnexus-reference/resolve" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusOsHealthNexusReferenceProfile.resolveHealthNexusReferenceWorkflow(body.goal || body.command || ""));
   }
 
   if (url.pathname === "/api/nexus-os/safety/health-workforce" && req.method === "GET") {

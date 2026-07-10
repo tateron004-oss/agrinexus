@@ -36,7 +36,7 @@ assert(validation.ok, `control plane validates: ${validation.issues.join(", ")}`
 
 assert(Array.isArray(snapshot.tenants) && snapshot.tenants.length >= 2, "control plane represents more than one tenant");
 assert(snapshot.tenants.some(tenant => tenant.tenantId === "agrinexus-default" && tenant.status === "active"), "AgriNexus tenant is active");
-assert(snapshot.tenants.some(tenant => tenant.tenantId === "nexus-reference-reserved"), "second tenant record is reserved for later deployment proof");
+assert(snapshot.tenants.some(tenant => tenant.tenantId === "healthnexus-reference-default" && tenant.status === "active_reference_deployment"), "HealthNexus reference tenant is active");
 snapshot.tenants.forEach(tenant => {
   assert(tenant.isolation.tenantIsolationRequired === true, `${tenant.tenantId} requires tenant isolation`);
   assert(tenant.isolation.domainIsolationRequired === true, `${tenant.tenantId} requires domain isolation`);
@@ -45,9 +45,9 @@ snapshot.tenants.forEach(tenant => {
 
 assert(snapshot.deploymentProfiles.length >= 2, "control plane tracks multiple deployment profiles");
 assert(snapshot.deploymentProfiles.some(profile => profile.deploymentId === "agrinexus" && profile.enabled === true), "AgriNexus deployment profile is enabled");
-assert(snapshot.deploymentProfiles.some(profile => profile.deploymentId === "reference-reserved" && profile.enabled === false), "reference deployment is reserved but disabled");
+assert(snapshot.deploymentProfiles.some(profile => profile.deploymentId === "healthnexus-reference" && profile.enabled === true), "HealthNexus reference deployment profile is enabled");
 assert(snapshot.branding.agrinexus.productName === "AgriNexus", "AgriNexus branding is separated");
-assert(snapshot.branding["reference-reserved"].productName === "Nexus Reference", "reserved deployment branding is separated");
+assert(snapshot.branding["healthnexus-reference"].productName === "HealthNexus Reference", "HealthNexus branding is separated");
 
 [
   "agriculture",
