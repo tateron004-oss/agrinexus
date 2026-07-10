@@ -16,6 +16,7 @@ function sectionBetween(source, startNeedle, endNeedle) {
 }
 
 const workspace = sectionBetween(app, "function renderUserWorkspace()", "function renderUserAccessibilityPanel()");
+const deferredWorkspace = sectionBetween(app, "function renderNexusOsDeferredLegacySurfaces()", "function renderUserWorkspace()");
 const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()", "function nexusAgenticBrainCommandValue()");
 
 [
@@ -47,16 +48,26 @@ const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()"
 ].forEach(label => assert(app.includes(`label: "${label}"`), `launcher label missing: ${label}`));
 
 [
-  "renderNexusCommandCenterSidebar()",
   "renderNexusTopWelcomeArea()",
   "renderNexusCommandCenterHero()",
+  "renderNexusAgenticMissionWorkspace()",
+  "renderNexusActiveWorkflowWorkspace()",
+  "renderNexusOsCalmHelper()",
+  "renderNexusOsDeferredLegacySurfaces()"
+].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
+
+[
+  "renderNexusCommandCenterSidebar()",
   "renderNexusCoreFeatureCards()",
   "renderNexusModeLauncher()",
   "renderNexusVoiceInteractionBar()",
   "renderNexusAgenticBrainPanel()",
   "renderNexusOperationsShelf()",
   "renderNexusRightUtilityColumn()"
-].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
+].forEach(call => assert(deferredWorkspace.includes(call), `Nexus OS must preserve ${call} in deferred legacy surfaces`));
+
+assert(deferredWorkspace.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "deferred command center surfaces must be explicitly marked");
+assert(deferredWorkspace.includes("hidden aria-hidden=\"true\""), "deferred command center surfaces must be hidden from Standard User startup");
 
 [
   "renderNexusPlatformDashboard()",

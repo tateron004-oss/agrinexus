@@ -9,6 +9,16 @@ const app = read("public/app.js");
 const styles = read("public/styles.css");
 const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
+const renderUserWorkspaceStart = app.indexOf("function renderUserWorkspace()");
+const renderUserWorkspaceEnd = app.indexOf("function renderUserAccessibilityPanel", renderUserWorkspaceStart);
+const renderUserWorkspaceBlock = renderUserWorkspaceStart >= 0 && renderUserWorkspaceEnd > renderUserWorkspaceStart
+  ? app.slice(renderUserWorkspaceStart, renderUserWorkspaceEnd)
+  : "";
+const deferredLegacyStart = app.indexOf("function renderNexusOsDeferredLegacySurfaces()");
+const deferredLegacyEnd = app.indexOf("function renderUserWorkspace()", deferredLegacyStart);
+const deferredLegacyBlock = deferredLegacyStart >= 0 && deferredLegacyEnd > deferredLegacyStart
+  ? app.slice(deferredLegacyStart, deferredLegacyEnd)
+  : "";
 
 function includes(source, token, label) {
   assert(source.includes(token), `${label} should include ${token}`);
@@ -46,17 +56,19 @@ function assertBefore(source, first, second, label) {
 ].forEach(token => includes(app, token, `central workflow workspace contract ${token}`));
 
 assertBefore(
-  app,
+  renderUserWorkspaceBlock,
   "${renderNexusCommandCenterHero()}",
   "${renderNexusActiveWorkflowWorkspace()}",
   "workspace should be near the top of the main command area"
 );
 assertBefore(
-  app,
+  renderUserWorkspaceBlock,
   "${renderNexusActiveWorkflowWorkspace()}",
-  "${renderNexusAgenticBrainPanel()}",
-  "workspace should appear before contextual logs/history panels"
+  "${renderNexusOsDeferredLegacySurfaces()}",
+  "workspace should appear before deferred contextual logs/history panels"
 );
+includes(deferredLegacyBlock, "data-nexus-os-deferred-legacy-surfaces=\"true\"", "contextual logs/history are deferred in Nexus OS startup");
+includes(deferredLegacyBlock, "renderNexusAgenticBrainPanel()", "agentic brain panel remains available in deferred surfaces");
 
 [
   "agriculture",

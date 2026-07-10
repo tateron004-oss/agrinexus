@@ -293,7 +293,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-390";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-391";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -32166,10 +32166,112 @@ function handleNexusPlatformDashboardClick(event) {
   return true;
 }
 
+function ensureNexusOsVisualBoundaryStyles() {
+  if (document.getElementById("nexusOsVisualBoundaryStyles")) return;
+  const style = document.createElement("style");
+  style.id = "nexusOsVisualBoundaryStyles";
+  style.textContent = `
+    body.user-mode.nexus-os-visual-boundary .sidebar,
+    body.user-mode.nexus-os-visual-boundary #userMobileDock,
+    body.user-mode.nexus-os-visual-boundary #workspaceBar,
+    body.user-mode.nexus-os-visual-boundary #userVoiceDock,
+    body.user-mode.nexus-os-visual-boundary #userBackHomeBtn {
+      display: none !important;
+    }
+    body.user-mode.nexus-os-visual-boundary .shell {
+      display: block;
+      min-height: calc(100vh - 72px);
+    }
+    body.user-mode.nexus-os-visual-boundary #mainContent {
+      width: min(1180px, calc(100vw - 28px));
+      margin: 0 auto;
+    }
+    .nexus-os-startup-surface {
+      min-height: calc(100vh - 96px);
+      display: grid;
+      align-content: center;
+      gap: 18px;
+      padding: clamp(18px, 4vw, 44px) 0;
+    }
+    .nexus-os-startup-surface .nexus-top-welcome,
+    .nexus-os-startup-surface .nexus-command-hero,
+    .nexus-os-startup-surface .nexus-agentic-mission-workspace,
+    .nexus-os-startup-surface .nexus-active-workflow-workspace {
+      max-width: 980px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .nexus-os-calm-helper {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      color: rgba(226, 232, 240, 0.86);
+      text-align: center;
+    }
+    .nexus-os-calm-helper button {
+      border: 1px solid rgba(125, 211, 252, 0.28);
+      background: rgba(15, 23, 42, 0.56);
+      color: rgba(248, 250, 252, 0.96);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.12);
+    }
+    .nexus-os-deferred-legacy-host[hidden] {
+      display: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function renderNexusOsCalmHelper() {
+  const prompts = [
+    "Nexus, help me get started.",
+    "Nexus, what can you do?",
+    "Nexus, show my recent mission.",
+    "Nexus, change language."
+  ];
+  return `
+    <div class="nexus-os-calm-helper" aria-label="${escapeHtml(translateText("Nexus quick starts"))}">
+      <span>${escapeHtml(translateText("Start with a goal. Nexus will open only what is needed."))}</span>
+      ${prompts.map(prompt => `<button type="button" data-simple-command="${escapeHtml(prompt)}">${escapeHtml(translateText(prompt))}</button>`).join("")}
+    </div>
+  `;
+}
+
+function renderNexusOsDeferredLegacySurfaces() {
+  return `
+    <div class="nexus-os-deferred-legacy-host" data-nexus-os-deferred-legacy-surfaces="true" data-standard-user-startup-visible="false" hidden aria-hidden="true">
+      ${renderNexusCommandCenterSidebar()}
+      ${renderNexusDemoSandboxControls("deferred-command-landing")}
+      ${renderNexusUserTestingRuntimePanel()}
+      ${renderNexusPremiumMiniAppLauncher()}
+      ${renderNexusDemoRecordsPanel()}
+      ${renderNexusPremiumActivityReceiptsPanel()}
+      ${renderNexusMajorLaunchButtons()}
+      ${renderNexusRecentWorkflowsPanel()}
+      ${renderNexusRoleAwareControls()}
+      ${renderNexusCommandCenterStatusSummary()}
+      ${renderNexusCoreFeatureCards()}
+      ${renderNexusModeLauncher()}
+      ${renderNexusSuggestedActions()}
+      ${renderNexusVoiceInteractionBar()}
+      ${renderNexusAgenticBrainPanel()}
+      ${renderNexusKnowledgeRailPanel()}
+      ${renderNexusOperationsShelf()}
+      ${renderNexusRightUtilityColumn()}
+    </div>
+  `;
+}
+
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   ensureNexusRealProviderStatusBootstrap();
+  ensureNexusOsVisualBoundaryStyles();
+  document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
   // Review farm, crop, route, and field support options.
@@ -32178,31 +32280,15 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div class="nexus-command-center-shell nexus-shell" data-testid="nexus-standard-user-home">
-      ${renderNexusCommandCenterSidebar()}
+    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm">
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
-        ${renderNexusDemoSandboxControls("command-landing")}
-        ${renderNexusUserTestingRuntimePanel()}
-        ${renderNexusPremiumMiniAppLauncher()}
-        ${renderNexusDemoRecordsPanel()}
         ${renderNexusAgenticMissionWorkspace()}
-        ${renderNexusPremiumActivityReceiptsPanel()}
-        ${renderNexusMajorLaunchButtons()}
-        ${renderNexusRecentWorkflowsPanel()}
-        ${renderNexusRoleAwareControls()}
-        ${renderNexusCommandCenterStatusSummary()}
         ${renderNexusActiveWorkflowWorkspace()}
-        ${renderNexusCoreFeatureCards()}
-        ${renderNexusModeLauncher()}
-        ${renderNexusSuggestedActions()}
-        ${renderNexusVoiceInteractionBar()}
-        ${renderNexusAgenticBrainPanel()}
-        ${renderNexusKnowledgeRailPanel()}
-        ${renderNexusOperationsShelf()}
+        ${renderNexusOsCalmHelper()}
+        ${renderNexusOsDeferredLegacySurfaces()}
       </main>
-      ${renderNexusRightUtilityColumn()}
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
