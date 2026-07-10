@@ -317,14 +317,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-392"', "app build version"],
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-393"', "app build version"],
   [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-392"', "server build version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-393"', "server build version"],
   [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356"', "server cache version"],
   [sw, 'CACHE_NAME = "agrinexus-pwa-v356"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-392"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-392", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-392", "app script cache bust"]
+  [sw, 'BUILD_VERSION = "nexus-behavior-393"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-393", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-393", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

@@ -103,6 +103,7 @@
     "qa:nexus-os-visual-overload-boundary": "node scripts/nexus-os-visual-overload-boundary-qa.js",
     "qa:nexus-os-shell": "node scripts/nexus-os-shell-qa.js",
     "qa:nexus-core-state": "node scripts/nexus-core-state-qa.js",
+    "qa:nexus-os-conversation-surface": "node scripts/nexus-os-conversation-surface-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

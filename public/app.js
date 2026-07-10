@@ -421,6 +421,8 @@ let activeConversationIntake = JSON.parse(localStorage.getItem("agrinexusConvers
 let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
+let nexusOsConversationTurns = JSON.parse(localStorage.getItem("nexusOsUnifiedConversationTurns") || "[]");
+let nexusOsConversationMuted = localStorage.getItem("nexusOsUnifiedConversationMuted") === "true";
 let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
 let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
@@ -470,7 +472,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-392";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-393";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -11092,6 +11094,171 @@ function rememberConversationTurn(command = "", response = "") {
     updatedAt: new Date().toISOString()
   };
   saveConversationModeMemory(mode, nextMemory);
+}
+
+function normalizeNexusOsConversationText(text = "") {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function saveNexusOsConversationTurns() {
+  localStorage.setItem("nexusOsUnifiedConversationTurns", JSON.stringify(nexusOsConversationTurns.slice(-24)));
+  localStorage.setItem("nexusOsUnifiedConversationMuted", nexusOsConversationMuted ? "true" : "false");
+}
+
+function recordNexusOsConversationTurn(role = "assistant", text = "", options = {}) {
+  const content = normalizeNexusOsConversationText(text);
+  if (!content) return null;
+  const last = nexusOsConversationTurns[nexusOsConversationTurns.length - 1];
+  const signature = `${role}:${content}`;
+  if (last?.signature === signature && Date.now() - Number(last.epoch || 0) < 1200) return last;
+  const turn = {
+    id: `nexus-os-turn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    signature,
+    role: role === "user" ? "user" : "assistant",
+    text: content,
+    source: options.source || "nexus-os-unified-conversation",
+    state: options.state || nexusCoreRuntimeState.current || "idle",
+    timestamp: new Date().toISOString(),
+    epoch: Date.now()
+  };
+  nexusOsConversationTurns = [...nexusOsConversationTurns, turn].slice(-24);
+  saveNexusOsConversationTurns();
+  updateNexusOsUnifiedConversationDom();
+  return turn;
+}
+
+function latestNexusOsUserConversationTurn() {
+  return [...nexusOsConversationTurns].reverse().find(turn => turn.role === "user" && turn.text);
+}
+
+function renderNexusOsConversationTurns() {
+  const turns = nexusOsConversationTurns.slice(-8);
+  if (!turns.length) {
+    return `
+      <article class="nexus-os-conversation-turn assistant" data-nexus-os-conversation-empty="true">
+        <strong>${escapeHtml(translateText("Nexus"))}</strong>
+        <span>${escapeHtml(translateText("Tell me your goal. I will ask for missing details, open only the needed workflow, and keep risky actions gated."))}</span>
+        <time>${escapeHtml(translateText("Ready"))}</time>
+      </article>
+    `;
+  }
+  return turns.map(turn => `
+    <article class="nexus-os-conversation-turn ${turn.role === "user" ? "user" : "assistant"}" data-nexus-os-conversation-turn="${escapeHtml(turn.role)}">
+      <strong>${escapeHtml(turn.role === "user" ? translateText("You") : translateText("Nexus"))}</strong>
+      <span>${escapeHtml(translateText(turn.text))}</span>
+      <time datetime="${escapeHtml(turn.timestamp)}">${escapeHtml(new Date(turn.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</time>
+    </article>
+  `).join("");
+}
+
+function renderNexusOsUnifiedConversationSurface() {
+  const transcriptText = nexusPresenceState.lastUserInput
+    ? `Last heard: ${nexusPresenceState.lastUserInput}`
+    : "Voice transcript appears here when available.";
+  return `
+    <section class="nexus-os-conversation-surface" data-nexus-os-conversation-surface="true" aria-label="${escapeHtml(translateText("Nexus unified conversation"))}">
+      <div class="nexus-os-conversation-header">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Unified conversation"))}</span>
+          <strong>${escapeHtml(translateText("One Nexus conversation"))}</strong>
+        </div>
+        <div class="nexus-os-conversation-controls" data-nexus-os-conversation-controls="true">
+          <button type="button" data-nexus-os-conversation-action="stop-response">${escapeHtml(translateText("Stop"))}</button>
+          <button type="button" data-nexus-os-conversation-action="retry">${escapeHtml(translateText("Retry"))}</button>
+          <button type="button" data-nexus-os-conversation-action="repeat">${escapeHtml(translateText("Repeat"))}</button>
+          <button type="button" data-nexus-os-conversation-action="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
+          <button type="button" data-nexus-os-conversation-action="correct-transcript">${escapeHtml(translateText("Correct"))}</button>
+          <button type="button" data-nexus-os-conversation-action="restore">${escapeHtml(translateText("Restore"))}</button>
+        </div>
+      </div>
+      <div class="nexus-os-transcript-strip" data-nexus-os-voice-transcript="true">${escapeHtml(translateText(transcriptText))}</div>
+      <div class="nexus-os-conversation-log" data-nexus-os-conversation-log="true" tabindex="0" aria-live="polite">
+        ${renderNexusOsConversationTurns()}
+      </div>
+      <div class="nexus-os-conversation-live-region sr-only" data-nexus-os-conversation-live-region="true" aria-live="polite"></div>
+    </section>
+  `;
+}
+
+function updateNexusOsUnifiedConversationDom() {
+  if (typeof document === "undefined") return;
+  const log = document.querySelector("[data-nexus-os-conversation-log]");
+  if (log) {
+    log.innerHTML = renderNexusOsConversationTurns();
+    log.scrollTop = log.scrollHeight;
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => {
+      log.scrollTop = log.scrollHeight;
+    });
+  }
+  const transcript = document.querySelector("[data-nexus-os-voice-transcript]");
+  if (transcript) {
+    transcript.textContent = translateText(nexusPresenceState.lastUserInput ? `Last heard: ${nexusPresenceState.lastUserInput}` : "Voice transcript appears here when available.");
+  }
+  const liveRegion = document.querySelector("[data-nexus-os-conversation-live-region]");
+  if (liveRegion) {
+    const latest = nexusOsConversationTurns[nexusOsConversationTurns.length - 1];
+    liveRegion.textContent = latest ? `${latest.role === "user" ? "User" : "Nexus"}: ${latest.text}` : "";
+  }
+}
+
+async function handleNexusOsUnifiedConversationAction(action = "") {
+  const normalized = String(action || "").toLowerCase();
+  const input = $("#nexusCommandCenterInput");
+  if (normalized === "stop-response") {
+    stopNexusSpeaking?.("Stopped. I am ready when you are.");
+    stopVoicePlayback?.({ silent: true });
+    setNexusPresenceState(NEXUS_PRESENCE_STATES.WAITING, { nextQuestion: "Tell Nexus what to do next." });
+    recordNexusOsConversationTurn("assistant", "Stopped. I am ready when you are.", { source: "nexus-os-stop-response" });
+    return true;
+  }
+  if (normalized === "retry") {
+    const retry = latestNexusOsUserConversationTurn();
+    const command = retry?.text || nexusPresenceState.lastUserInput || agentPerformanceState.lastCommand || "";
+    if (!command) {
+      recordNexusOsConversationTurn("assistant", "I do not have a recent request to retry yet.", { source: "nexus-os-retry-empty" });
+      return true;
+    }
+    if (input) input.value = command;
+    setCommandInputs(command);
+    recordNexusOsConversationTurn("user", command, { source: "nexus-os-retry" });
+    if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "nexus-os-retry" })) return true;
+    await runNexusAgenticBrainAction("command", { command });
+    return true;
+  }
+  if (normalized === "repeat") {
+    const text = lastVoiceResponse || nexusPresenceState.lastResponse || "Nexus is ready.";
+    recordNexusOsConversationTurn("assistant", text, { source: "nexus-os-repeat" });
+    if (!nexusOsConversationMuted) speakVoiceResponse(text);
+    return true;
+  }
+  if (normalized === "mute" || normalized === "unmute") {
+    nexusOsConversationMuted = normalized === "mute";
+    saveNexusOsConversationTurns();
+    recordNexusOsConversationTurn("assistant", nexusOsConversationMuted ? "Nexus voice is muted. Text responses remain available." : "Nexus voice is unmuted.", { source: "nexus-os-mute-toggle" });
+    if (experienceMode === "user" || document.body.classList.contains("user-mode")) renderUserWorkspace();
+    return true;
+  }
+  if (normalized === "correct-transcript") {
+    if (input) {
+      input.value = nexusPresenceState.lastUserInput || agentPerformanceState.lastCommand || "";
+      input.focus?.({ preventScroll: true });
+    }
+    setNexusPresenceState(NEXUS_PRESENCE_STATES.WAITING, { nextQuestion: "Edit the transcript in Ask Nexus, then press Send." });
+    recordNexusOsConversationTurn("assistant", "Edit the transcript in Ask Nexus, then press Send.", { source: "nexus-os-correct-transcript" });
+    return true;
+  }
+  if (normalized === "restore") {
+    const restored = conversationMemoryForMode();
+    const command = restored.lastQuestion || latestNexusOsUserConversationTurn()?.text || "Continue my last workflow.";
+    if (input) {
+      input.value = command;
+      input.focus?.({ preventScroll: true });
+    }
+    setCommandInputs(command);
+    recordNexusOsConversationTurn("assistant", `Restored recent conversation: ${restored.lastTopic || "Nexus is ready."}`, { source: "nexus-os-restore" });
+    return true;
+  }
+  return false;
 }
 
 function conversationMode2Status(mode = conversationPlatformMode()) {
@@ -26336,6 +26503,7 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  recordNexusOsConversationTurn("user", command, { source });
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
   if (isNexusPresenceWakePhrase(command)) {
     event?.preventDefault?.();
@@ -27580,6 +27748,7 @@ async function handleNexusPresenceCommandSendSubmit(event) {
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  recordNexusOsConversationTurn("user", command, { source: "typed-command-send-button" });
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
@@ -27688,6 +27857,7 @@ function renderNexusCommandCenterHero() {
           ${nexusCommandCenterExamples().map(prompt => `<button type="button" data-nexus-command-prefill="${escapeHtml(prompt)}">${translateText(prompt)}</button>`).join("")}
         </div>
       </div>
+      ${renderNexusOsUnifiedConversationSurface()}
     </section>
   `;
 }
@@ -32588,6 +32758,113 @@ function ensureNexusOsVisualBoundaryStyles() {
       padding: 10px 14px;
       box-shadow: 0 0 24px rgba(34, 211, 238, 0.12);
     }
+    .nexus-os-conversation-surface {
+      grid-column: 1 / -1;
+      width: min(920px, 100%);
+      margin: 18px auto 0;
+      padding: 16px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.68), rgba(8, 13, 28, 0.5));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 70px rgba(2, 6, 23, 0.26);
+      backdrop-filter: blur(18px);
+    }
+    .nexus-os-conversation-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .nexus-os-conversation-header strong {
+      display: block;
+      color: rgba(248, 250, 252, 0.98);
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+    }
+    .nexus-os-conversation-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .nexus-os-conversation-controls button {
+      min-height: 34px;
+      border: 1px solid rgba(125, 211, 252, 0.26);
+      background: rgba(15, 23, 42, 0.6);
+      color: rgba(241, 245, 249, 0.94);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 0.82rem;
+    }
+    .nexus-os-conversation-controls button:hover {
+      border-color: rgba(34, 211, 238, 0.54);
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.16);
+    }
+    .nexus-os-transcript-strip {
+      border-radius: 16px;
+      padding: 9px 12px;
+      background: rgba(2, 6, 23, 0.3);
+      color: rgba(203, 213, 225, 0.88);
+      margin-bottom: 12px;
+    }
+    .nexus-os-conversation-log {
+      display: grid;
+      gap: 10px;
+      max-height: min(42vh, 360px);
+      overflow: auto;
+      scroll-behavior: smooth;
+      padding-right: 4px;
+    }
+    .nexus-os-conversation-turn {
+      display: grid;
+      gap: 5px;
+      max-width: 86%;
+      border-radius: 18px;
+      padding: 11px 13px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: rgba(226, 232, 240, 0.94);
+      background: rgba(15, 23, 42, 0.58);
+    }
+    .nexus-os-conversation-turn.user {
+      justify-self: end;
+      background: rgba(14, 116, 144, 0.42);
+      border-color: rgba(34, 211, 238, 0.24);
+    }
+    .nexus-os-conversation-turn.assistant {
+      justify-self: start;
+      background: rgba(30, 41, 59, 0.58);
+      border-color: rgba(168, 85, 247, 0.22);
+    }
+    .nexus-os-conversation-turn strong {
+      color: rgba(248, 250, 252, 0.98);
+      font-size: 0.88rem;
+    }
+    .nexus-os-conversation-turn span {
+      color: rgba(226, 232, 240, 0.92);
+      line-height: 1.45;
+    }
+    .nexus-os-conversation-turn time {
+      color: rgba(148, 163, 184, 0.82);
+      font-size: 0.72rem;
+    }
+    body.nexus-os-visual-boundary #userCaptionPanel,
+    body.nexus-os-visual-boundary #jarvisPanel,
+    body.nexus-os-visual-boundary #globalAssistantBar,
+    body.nexus-os-visual-boundary .conversation-panel,
+    body.nexus-os-visual-boundary .floating-assistant-card {
+      display: none !important;
+    }
+    @media (max-width: 720px) {
+      .nexus-os-conversation-header {
+        display: grid;
+      }
+      .nexus-os-conversation-controls {
+        justify-content: flex-start;
+      }
+      .nexus-os-conversation-turn {
+        max-width: 96%;
+      }
+    }
     .nexus-os-deferred-legacy-host[hidden] {
       display: none !important;
     }
@@ -32725,6 +33002,9 @@ function renderUserWorkspace() {
     </section>
   `;
   bindNexusStandardUserHomeControls();
+  setTimeout(() => {
+    updateNexusOsUnifiedConversationDom();
+  }, 0);
   if (!nexusPilotPlatformStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-pilot-status-panel='true']")) {
@@ -40620,6 +40900,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   lastVoiceResponseAt = now;
   rememberNexusAnswerContext(responseMessage, options);
   rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
+  recordNexusOsConversationTurn("assistant", responseMessage, { source: options.source || "set-voice-response", state: nexusCoreRuntimeState.current });
   const transcript = $("#voiceTranscript");
   if (transcript) transcript.textContent = responseMessage;
   const summary = $("#jarvisSummary");
@@ -49114,6 +49395,14 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    const conversationControl = event.target?.closest?.("[data-nexus-os-conversation-action]");
+    if (conversationControl) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      await handleNexusOsUnifiedConversationAction(conversationControl.dataset.nexusOsConversationAction || "");
+      return;
+    }
     const persistentOperationsShortcut = event.target?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
     if (persistentOperationsShortcut) {
       event.preventDefault();
