@@ -35,7 +35,8 @@ assert(renderUserWorkspace.includes("data-nexus-os-standard-startup=\"calm\""), 
 assert(renderUserWorkspace.includes("renderNexusOsApplicationShellPanel()"), "Nexus OS application shell panel is visible before mission content");
 assert(renderUserWorkspace.indexOf("renderNexusOsApplicationShellPanel()") < renderUserWorkspace.indexOf("renderNexusCommandCenterHero()"), "shell state appears before the Ask Nexus hero");
 assert(app.includes("data-nexus-os-core-orb=\"true\""), "Nexus Core orb is present in the primary shell");
-assert(app.includes("data-nexus-os-orb-state=\"idle\""), "Nexus Core orb has an honest initial idle state");
+assert(app.includes("current: \"idle\""), "Nexus Core runtime has an honest initial idle state");
+assert(app.includes("data-nexus-os-orb-state=\"${escapeHtml(coreState)}\""), "Nexus Core orb is driven by runtime state");
 assert(app.includes("nexus-os-core-orb"), "Nexus Core orb has a dedicated shell class");
 
 [

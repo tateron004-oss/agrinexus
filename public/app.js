@@ -107,6 +107,183 @@ const NEXUS_PRESENCE_STATES = Object.freeze({
   BLOCKED: "blocked",
   ERROR: "error"
 });
+const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
+  idle: {
+    label: "Nexus is idle and ready.",
+    motion: "calm pulse",
+    visual: "steady core",
+    announcement: "Nexus is ready.",
+    reducedMotion: "steady glow",
+    allowed: ["wake", "listening", "processing", "offline", "blocked"]
+  },
+  wake: {
+    label: "Wake phrase detected.",
+    motion: "wake ripple",
+    visual: "brightening core",
+    announcement: "Nexus heard the wake phrase.",
+    reducedMotion: "status text only",
+    allowed: ["listening", "idle", "blocked"]
+  },
+  listening: {
+    label: "Nexus is listening.",
+    motion: "listening pulse",
+    visual: "cyan listening ring",
+    announcement: "Nexus is listening.",
+    reducedMotion: "listening status text",
+    allowed: ["hearing", "processing", "waiting", "idle", "error"]
+  },
+  hearing: {
+    label: "Nexus is hearing speech.",
+    motion: "speech wave",
+    visual: "waveform ring",
+    announcement: "Nexus hears speech.",
+    reducedMotion: "hearing status text",
+    allowed: ["processing", "asking", "idle", "error"]
+  },
+  processing: {
+    label: "Nexus is reviewing the request.",
+    motion: "slow orbit",
+    visual: "blue processing glow",
+    announcement: "Nexus is reviewing the request.",
+    reducedMotion: "processing status text",
+    allowed: ["reasoning", "searching", "planning", "asking", "blocked", "error"]
+  },
+  reasoning: {
+    label: "Nexus is reasoning.",
+    motion: "thought orbit",
+    visual: "violet reasoning glow",
+    announcement: "Nexus is reasoning.",
+    reducedMotion: "reasoning status text",
+    allowed: ["searching", "planning", "asking", "preparing", "blocked", "error"]
+  },
+  searching: {
+    label: "Nexus is searching configured sources.",
+    motion: "source sweep",
+    visual: "cyan source trace",
+    announcement: "Nexus is searching configured sources.",
+    reducedMotion: "searching status text",
+    allowed: ["reasoning", "planning", "asking", "blocked", "error"]
+  },
+  planning: {
+    label: "Nexus is building a plan.",
+    motion: "step orbit",
+    visual: "green planning arc",
+    announcement: "Nexus is building a plan.",
+    reducedMotion: "planning status text",
+    allowed: ["asking", "preparing", "confirmation", "completed", "blocked", "error"]
+  },
+  asking: {
+    label: "Nexus is asking for a detail.",
+    motion: "question pulse",
+    visual: "gold question ring",
+    announcement: "Nexus needs one more detail.",
+    reducedMotion: "asking status text",
+    allowed: ["waiting", "listening", "processing", "idle", "blocked"]
+  },
+  waiting: {
+    label: "Nexus is waiting for the user.",
+    motion: "slow wait pulse",
+    visual: "soft waiting glow",
+    announcement: "Nexus is waiting.",
+    reducedMotion: "waiting status text",
+    allowed: ["listening", "processing", "idle", "blocked"]
+  },
+  speaking: {
+    label: "Nexus is speaking.",
+    motion: "speech shimmer",
+    visual: "voice wave",
+    announcement: "Nexus is speaking.",
+    reducedMotion: "speaking status text",
+    allowed: ["listening", "waiting", "completed", "idle", "error"]
+  },
+  preparing: {
+    label: "Nexus is preparing a local action.",
+    motion: "preparation orbit",
+    visual: "amber preparation glow",
+    announcement: "Nexus is preparing the next step.",
+    reducedMotion: "preparing status text",
+    allowed: ["confirmation", "queued", "completed", "blocked", "error"]
+  },
+  confirmation: {
+    label: "Nexus is awaiting confirmation.",
+    motion: "confirmation pulse",
+    visual: "gold confirmation ring",
+    announcement: "Confirmation is required.",
+    reducedMotion: "confirmation status text",
+    allowed: ["executing", "preparing", "waiting", "blocked", "idle"]
+  },
+  executing: {
+    label: "Nexus is attempting an approved action.",
+    motion: "execution sweep",
+    visual: "orange execution arc",
+    announcement: "Nexus is attempting an approved action.",
+    reducedMotion: "executing status text",
+    allowed: ["verifying", "queued", "error", "blocked"]
+  },
+  verifying: {
+    label: "Nexus is verifying the result.",
+    motion: "verification scan",
+    visual: "green verification ring",
+    announcement: "Nexus is verifying the result.",
+    reducedMotion: "verifying status text",
+    allowed: ["completed", "queued", "error", "blocked"]
+  },
+  learning: {
+    label: "Nexus is saving approved context.",
+    motion: "memory ripple",
+    visual: "soft memory glow",
+    announcement: "Nexus is saving approved context.",
+    reducedMotion: "saving status text",
+    allowed: ["completed", "idle", "error"]
+  },
+  completed: {
+    label: "Nexus completed a local or verified step.",
+    motion: "completion glow",
+    visual: "green completion glow",
+    announcement: "Nexus completed the step.",
+    reducedMotion: "completed status text",
+    allowed: ["idle", "listening", "learning"]
+  },
+  queued: {
+    label: "Nexus queued the step safely.",
+    motion: "queued pulse",
+    visual: "blue queued badge",
+    announcement: "Nexus queued the step safely.",
+    reducedMotion: "queued status text",
+    allowed: ["idle", "verifying", "blocked", "error"]
+  },
+  offline: {
+    label: "Nexus is offline and using local fallback.",
+    motion: "offline dim",
+    visual: "muted offline glow",
+    announcement: "Nexus is offline and using local fallback.",
+    reducedMotion: "offline status text",
+    allowed: ["queued", "idle", "blocked"]
+  },
+  blocked: {
+    label: "Nexus is blocked from executing externally.",
+    motion: "blocked steady",
+    visual: "red blocked ring",
+    announcement: "Nexus is blocked until requirements are met.",
+    reducedMotion: "blocked status text",
+    allowed: ["asking", "waiting", "idle"]
+  },
+  error: {
+    label: "Nexus hit a safe local error.",
+    motion: "error flicker",
+    visual: "red error glow",
+    announcement: "Nexus hit a safe local error. No external action was executed.",
+    reducedMotion: "error status text",
+    allowed: ["idle", "listening", "blocked"]
+  }
+});
+let nexusCoreRuntimeState = {
+  current: "idle",
+  previous: "",
+  statusText: NEXUS_CORE_STATE_CONTRACT.idle.label,
+  updatedAt: new Date().toISOString(),
+  source: "startup"
+};
 let nexusPresenceState = {
   state: NEXUS_PRESENCE_STATES.IDLE,
   status: "Ask Nexus what you need.",
@@ -293,7 +470,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-391";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-392";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v356";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -26852,6 +27029,98 @@ function renderNexusCommandCenterHeader() {
   `;
 }
 
+function getNexusCoreStateContract(state = nexusCoreRuntimeState.current) {
+  return NEXUS_CORE_STATE_CONTRACT[state] || NEXUS_CORE_STATE_CONTRACT.idle;
+}
+
+function normalizeNexusCoreState(state = "idle") {
+  const key = String(state || "idle").replace(/-/g, "_").toLowerCase();
+  const aliases = {
+    thinking: "reasoning",
+    answering: "speaking",
+    ready: "idle",
+    standby: "idle",
+    awaiting_followup: "asking",
+    awaiting_confirmation: "confirmation",
+    completed_local: "completed",
+    realtime_listening: "listening",
+    listening_ready: "listening",
+    user_speaking: "hearing",
+    assistant_speaking: "speaking",
+    local: "completed",
+    done: "completed",
+    failed: "error"
+  };
+  return NEXUS_CORE_STATE_CONTRACT[key] ? key : (aliases[key] || "idle");
+}
+
+function canTransitionNexusCoreState(fromState = "idle", toState = "idle") {
+  const from = normalizeNexusCoreState(fromState);
+  const to = normalizeNexusCoreState(toState);
+  if (from === to) return true;
+  const contract = getNexusCoreStateContract(from);
+  return Array.isArray(contract.allowed) && contract.allowed.includes(to);
+}
+
+function nexusCoreStateAccessibleLabel(state = nexusCoreRuntimeState.current) {
+  const contract = getNexusCoreStateContract(state);
+  return contract.announcement || contract.label || "Nexus is ready.";
+}
+
+function updateNexusCoreOrbDom() {
+  if (typeof document === "undefined") return;
+  exposeNexusCoreStateRuntime();
+  const state = nexusCoreRuntimeState.current || "idle";
+  const contract = getNexusCoreStateContract(state);
+  document.querySelectorAll("[data-nexus-os-core-orb]").forEach((orb) => {
+    orb.dataset.nexusOsOrbState = state;
+    orb.setAttribute("aria-label", nexusCoreStateAccessibleLabel(state));
+    orb.setAttribute("title", contract.label || state);
+    Object.keys(NEXUS_CORE_STATE_CONTRACT).forEach((knownState) => {
+      orb.classList.toggle(`nexus-core-state-${knownState}`, knownState === state);
+    });
+  });
+  document.querySelectorAll("[data-nexus-core-status-text]").forEach((status) => {
+    status.textContent = contract.label || nexusCoreRuntimeState.statusText || "Nexus is ready.";
+  });
+}
+
+function setNexusCoreState(nextState = "idle", updates = {}) {
+  const requested = normalizeNexusCoreState(nextState);
+  const current = normalizeNexusCoreState(nexusCoreRuntimeState.current);
+  const safeNext = canTransitionNexusCoreState(current, requested) ? requested : "blocked";
+  const contract = getNexusCoreStateContract(safeNext);
+  nexusCoreRuntimeState = {
+    ...nexusCoreRuntimeState,
+    ...updates,
+    previous: current,
+    current: safeNext,
+    requested,
+    statusText: updates.statusText || contract.label,
+    updatedAt: new Date().toISOString()
+  };
+  updateNexusCoreOrbDom();
+  return nexusCoreRuntimeState;
+}
+
+function syncNexusCoreStateFromPresence(state = NEXUS_PRESENCE_STATES.IDLE, updates = {}) {
+  const mapped = normalizeNexusCoreState(state);
+  return setNexusCoreState(mapped, {
+    source: updates.source || "presence",
+    statusText: updates.status || nexusPresenceStateLabel(state)
+  });
+}
+
+function exposeNexusCoreStateRuntime() {
+  const target = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : null);
+  if (!target) return;
+  target.NEXUS_CORE_STATE_CONTRACT = NEXUS_CORE_STATE_CONTRACT;
+  target.setNexusCoreState = setNexusCoreState;
+  target.getNexusCoreStateContract = getNexusCoreStateContract;
+  target.getNexusCoreRuntimeState = () => ({ ...nexusCoreRuntimeState });
+}
+exposeNexusCoreStateRuntime();
+
 function nexusPresenceStateLabel(state = nexusPresenceState.state) {
   const labels = {
     idle: "Ask Nexus what you need.",
@@ -26897,6 +27166,7 @@ function setNexusPresenceState(state = NEXUS_PRESENCE_STATES.IDLE, updates = {})
     status: updates.status || nexusPresenceStateLabel(state),
     updatedAt: new Date().toISOString()
   };
+  syncNexusCoreStateFromPresence(state, updates);
   updateNexusPresenceDom();
   return nexusPresenceState;
 }
@@ -27358,6 +27628,8 @@ function closeNexusOnboardingModal() {
 }
 
 function renderNexusCommandCenterHero() {
+  const coreState = nexusCoreRuntimeState.current || "idle";
+  const coreContract = getNexusCoreStateContract(coreState);
   return `
     <section class="nexus-command-center-hero nexus-hero nexus-glass-card" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
       <div class="nexus-command-center-copy">
@@ -27386,13 +27658,14 @@ function renderNexusCommandCenterHero() {
           `).join("")}
         </div>
       </div>
-      <div class="nexus-orb-stage" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-os-orb-state="idle" aria-hidden="true">
+      <div class="nexus-orb-stage nexus-core-state-${escapeHtml(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
         <div class="nexus-orb nexus-os-core-orb">
           <span class="nexus-orb-core">N</span>
           <span class="nexus-orb-ring nexus-orb-ring-one"></span>
           <span class="nexus-orb-ring nexus-orb-ring-two"></span>
           <span class="nexus-orb-ring nexus-orb-ring-three"></span>
         </div>
+        <span class="sr-only" data-nexus-core-status-text>${escapeHtml(coreContract.label)}</span>
         <div class="nexus-energy-wave nexus-wave" data-nexus-energy-wave="true">
           <span></span>
           <span></span>
@@ -32251,6 +32524,51 @@ function ensureNexusOsVisualBoundaryStyles() {
       margin: 12px 0 0;
       color: rgba(203, 213, 225, 0.86);
       text-align: center;
+    }
+    [data-nexus-os-core-orb] {
+      transition: filter 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+    }
+    [data-nexus-os-core-orb].nexus-core-state-idle {
+      filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.28));
+    }
+    [data-nexus-os-core-orb].nexus-core-state-wake,
+    [data-nexus-os-core-orb].nexus-core-state-listening,
+    [data-nexus-os-core-orb].nexus-core-state-hearing {
+      filter: drop-shadow(0 0 34px rgba(34, 211, 238, 0.42));
+      transform: scale(1.02);
+    }
+    [data-nexus-os-core-orb].nexus-core-state-processing,
+    [data-nexus-os-core-orb].nexus-core-state-reasoning,
+    [data-nexus-os-core-orb].nexus-core-state-searching,
+    [data-nexus-os-core-orb].nexus-core-state-planning {
+      filter: drop-shadow(0 0 38px rgba(168, 85, 247, 0.38));
+    }
+    [data-nexus-os-core-orb].nexus-core-state-asking,
+    [data-nexus-os-core-orb].nexus-core-state-waiting,
+    [data-nexus-os-core-orb].nexus-core-state-speaking,
+    [data-nexus-os-core-orb].nexus-core-state-confirmation,
+    [data-nexus-os-core-orb].nexus-core-state-preparing {
+      filter: drop-shadow(0 0 34px rgba(251, 191, 36, 0.38));
+    }
+    [data-nexus-os-core-orb].nexus-core-state-executing,
+    [data-nexus-os-core-orb].nexus-core-state-verifying,
+    [data-nexus-os-core-orb].nexus-core-state-completed,
+    [data-nexus-os-core-orb].nexus-core-state-learning {
+      filter: drop-shadow(0 0 38px rgba(34, 197, 94, 0.36));
+    }
+    [data-nexus-os-core-orb].nexus-core-state-queued,
+    [data-nexus-os-core-orb].nexus-core-state-offline,
+    [data-nexus-os-core-orb].nexus-core-state-blocked,
+    [data-nexus-os-core-orb].nexus-core-state-error {
+      filter: drop-shadow(0 0 30px rgba(248, 113, 113, 0.32));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-nexus-os-core-orb],
+      [data-nexus-os-core-orb] * {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+      }
     }
     .nexus-os-calm-helper {
       max-width: 900px;
