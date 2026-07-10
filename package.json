@@ -99,6 +99,7 @@
     "qa:nexus-platform-predictive-intelligence": "node scripts/nexus-platform-predictive-intelligence-qa.js",
     "qa:nexus-conversational-presence-layer": "node scripts/nexus-conversational-presence-layer-qa.js",
     "qa:nexus-experience-polish-layer": "node scripts/nexus-experience-polish-layer-qa.js",
+    "qa:nexus-os-repository-architecture-baseline": "node scripts/nexus-os-repository-architecture-baseline-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
