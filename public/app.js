@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-410";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v361";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-411";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v362";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -34121,6 +34121,25 @@ function ensureNexusOsVisualBoundaryStyles() {
       text-align: center;
       box-shadow: 0 0 22px rgba(34, 211, 238, 0.08);
     }
+    .nexus-os-deployment-summary {
+      display: grid;
+      gap: 0.25rem;
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 18px;
+      padding: 0.75rem 0.9rem;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(34, 197, 94, 0.09));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 24px rgba(34, 211, 238, 0.08);
+      color: rgba(226, 232, 240, 0.9);
+    }
+    .nexus-os-deployment-summary strong {
+      color: rgba(255, 255, 255, 0.96);
+      font-size: 0.95rem;
+    }
+    .nexus-os-deployment-summary span,
+    .nexus-os-deployment-summary small {
+      color: rgba(203, 213, 225, 0.84);
+      line-height: 1.35;
+    }
     .nexus-os-shell-actions {
       display: flex;
       flex-wrap: wrap;
@@ -34412,11 +34431,15 @@ function ensureNexusOsVisualBoundaryStyles() {
 
 function nexusOsShellState() {
   const profile = data?.profile || {};
+  const deployment = getNexusOsActiveDeploymentProfile();
+  const validation = validateNexusOsActiveDeploymentProfile();
   const displayName = profile.name || profile.displayName || "";
   const hasMission = Boolean(nexusActiveWorkflowState?.title || nexusActiveWorkflowState?.command || nexusAgenticCommandLocalMemory?.lastCommand);
   const voiceSupported = typeof window !== "undefined" && (Boolean(window.SpeechRecognition || window.webkitSpeechRecognition) || Boolean(window.speechSynthesis));
   const offline = typeof navigator !== "undefined" && navigator.onLine === false;
   return {
+    deploymentState: `${deployment.displayName || "Nexus"} profile loaded`,
+    domainState: `${validation.domainPackCount || 0} domain packs active`,
     userState: displayName ? "Returning user" : "Anonymous user",
     visitState: hasMission ? "Existing mission available" : "First visit ready",
     voiceState: voiceSupported ? "Voice available" : "Voice unavailable",
@@ -34424,6 +34447,43 @@ function nexusOsShellState() {
     bandwidthState: nexusLowBandwidthMode ? "Low-bandwidth mode" : "Standard bandwidth",
     focusState: "Keyboard focus starts at Ask Nexus"
   };
+}
+
+function getNexusOsActiveDeploymentModule() {
+  return typeof window !== "undefined" ? window.NexusOsAgriNexusDeploymentProfile : null;
+}
+
+function getNexusOsActiveDeploymentProfile() {
+  const module = getNexusOsActiveDeploymentModule();
+  if (module?.getNexusOsAgriNexusDeploymentProfile) return module.getNexusOsAgriNexusDeploymentProfile();
+  return {
+    deploymentId: "agrinexus",
+    displayName: "AgriNexus",
+    enabledDomains: [],
+    enabledWorkflows: [],
+    requiredPolicies: [],
+    supportedLanguages: ["en"]
+  };
+}
+
+function validateNexusOsActiveDeploymentProfile() {
+  const module = getNexusOsActiveDeploymentModule();
+  if (module?.validateAgriNexusDeploymentProfile) return module.validateAgriNexusDeploymentProfile();
+  return { ok: false, domainPackCount: 0, workflowCount: 0, policyCount: 0, providerRequirementCount: 0, issues: ["profile_module_unavailable"] };
+}
+
+function renderNexusOsDeploymentProfileSummary() {
+  const deployment = getNexusOsActiveDeploymentProfile();
+  const validation = validateNexusOsActiveDeploymentProfile();
+  const domains = Array.isArray(deployment.enabledDomains) ? deployment.enabledDomains : [];
+  const safeDomains = domains.slice(0, 6).map(domain => domain.replace(/_/g, " ")).join(", ");
+  return `
+    <div class="nexus-os-deployment-summary" data-nexus-os-deployment-profile="${escapeHtml(deployment.deploymentId || "unknown")}" data-nexus-os-domain-pack-count="${escapeHtml(String(validation.domainPackCount || 0))}" data-nexus-os-workflow-count="${escapeHtml(String(validation.workflowCount || 0))}" data-nexus-os-profile-valid="${validation.ok ? "true" : "false"}">
+      <strong>${escapeHtml(translateText(deployment.displayName || "Nexus"))}</strong>
+      <span>${escapeHtml(translateText("assembled from Nexus OS core, domain packs, provider requirements, policies, and deployment configuration"))}</span>
+      <small>${escapeHtml(translateText(`Enabled packs: ${safeDomains || "configured by deployment profile"}.`))}</small>
+    </div>
+  `;
 }
 
 function renderNexusOsApplicationShellPanel() {
@@ -34441,6 +34501,7 @@ function renderNexusOsApplicationShellPanel() {
       <div class="nexus-os-shell-status" data-nexus-os-shell-states="true">
         ${Object.values(shellState).map(value => `<span>${escapeHtml(translateText(value))}</span>`).join("")}
       </div>
+      ${renderNexusOsDeploymentProfileSummary()}
       <div class="nexus-os-shell-actions" data-nexus-os-shell-actions="true" aria-label="${escapeHtml(translateText("Nexus shell controls"))}">
         ${controls.map(([label, command]) => `
           <button type="button" data-simple-command="${escapeHtml(command)}" data-nexus-os-shell-control="${escapeHtml(String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">

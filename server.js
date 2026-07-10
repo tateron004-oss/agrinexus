@@ -23,6 +23,7 @@ const nexusFullCommunicationRuntime = require("./public/nexus-full-communication
 const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-collaboration-runtime.js");
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
+const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -47,8 +48,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-410";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v361";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-411";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v362";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -36744,6 +36745,25 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/production/status" && req.method === "GET") {
     return send(res, 200, nexusProductionPublicStatus(process.env));
+  }
+
+  if ((url.pathname === "/api/nexus-os/deployments/agrinexus" || url.pathname === "/api/nexus/deployment/profile") && req.method === "GET") {
+    const profile = nexusOsAgriNexusDeploymentProfile.getNexusOsAgriNexusDeploymentProfile();
+    const validation = nexusOsAgriNexusDeploymentProfile.validateAgriNexusDeploymentProfile(profile);
+    return send(res, 200, {
+      ok: validation.ok,
+      profile,
+      validation,
+      domainPacks: nexusOsAgriNexusDeploymentProfile.getNexusOsAgriNexusDomainPacks(),
+      workflows: nexusOsAgriNexusDeploymentProfile.getNexusOsAgriNexusWorkflows(),
+      policies: nexusOsAgriNexusDeploymentProfile.getNexusOsAgriNexusPolicies(),
+      providerRequirements: nexusOsAgriNexusDeploymentProfile.getNexusOsAgriNexusProviderRequirements().map(requirement => ({
+        ...requirement,
+        credentialRequirements: requirement.credentialRequirements
+      })),
+      noSecretValues: true,
+      noExecutionAuthorized: true
+    });
   }
 
   if ((url.pathname === "/api/nexus/health" || url.pathname === "/api/nexus/readiness" || url.pathname === "/api/nexus/production-readiness") && req.method === "GET") {
