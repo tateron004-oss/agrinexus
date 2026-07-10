@@ -176,6 +176,71 @@ const NEXUS_PRESENCE_RUNTIME_BASELINE = Object.freeze({
     noSpeechOnlyBlocking: true
   })
 });
+const NEXUS_PRESENCE_PROFILE_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-presence-profile-contract.v1",
+  registryName: "NexusVoiceProfileRegistry",
+  requiredFields: Object.freeze([
+    "id",
+    "displayName",
+    "profileRole",
+    "identityTraits",
+    "deliveryModes",
+    "toneBoundaries",
+    "voiceProviderPolicy",
+    "regionalizationPolicy",
+    "accessibilityPolicy",
+    "safetyBoundaries"
+  ]),
+  defaultProfileId: "nexus-presence",
+  profileSelectionStorageKey: "nexusPresenceProfileId",
+  approvedPreferenceOnly: true,
+  noVoiceCloning: true,
+  noCharacterImitation: true,
+  noRegionalAccentClaimWithoutProvider: true
+});
+const NEXUS_PRESENCE_PROFILE_REGISTRY = Object.freeze({
+  "nexus-presence": Object.freeze({
+    id: "nexus-presence",
+    displayName: "Nexus Presence",
+    profileRole: "official-global-assistant",
+    description: "The calm, confident, warm, patient, intelligent, respectful, honest, nonjudgmental, professional Nexus identity shared across all deployments.",
+    identityTraits: NEXUS_PRESENCE_RUNTIME_BASELINE.identityTraits,
+    deliveryModes: NEXUS_PRESENCE_RUNTIME_BASELINE.deliveryModes,
+    defaultDeliveryMode: "STANDARD",
+    toneBoundaries: Object.freeze({
+      everyday: "warm, clear, and concise",
+      clinical: "measured, safety-first, no diagnosis, no prescribing, no medication changes",
+      agriculture: "practical, local-context aware, source-aware, no yield or chemical guarantees",
+      workforce: "encouraging, plain-language, opportunity-oriented",
+      marketplace: "neutral and transaction-gated",
+      urgent: "calm, direct, and bounded without claiming emergency dispatch"
+    }),
+    voiceProviderPolicy: Object.freeze({
+      preferredRuntime: "browser-native-or-configured-provider",
+      browserFallback: true,
+      typedFallback: true,
+      speechSynthesisController: "NexusSpeechSynthesisController",
+      speechRecognitionController: "NexusSpeechRecognitionController",
+      noAutoplayRequirement: true,
+      noProviderClaimWithoutAvailability: true
+    }),
+    regionalizationPolicy: Object.freeze({
+      supported: true,
+      languageAware: true,
+      regionalVoiceIfAvailable: true,
+      noFakeAccent: true,
+      disclosure: "If a regional voice is unavailable, Nexus uses the safest available voice and keeps captions visible."
+    }),
+    accessibilityPolicy: NEXUS_PRESENCE_RUNTIME_BASELINE.accessibilityPolicy,
+    safetyBoundaries: Object.freeze({
+      noDiagnosis: true,
+      noPrescribing: true,
+      noProviderHandoffFromProfile: true,
+      noUnconfirmedMessagesCallsPaymentsLocationCameraEmergency: true,
+      highRiskActionsRemainGated: true
+    })
+  })
+});
 const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
   idle: {
     label: "Nexus is idle and ready.",
@@ -28880,6 +28945,7 @@ function getNexusPresenceRuntimeBaseline() {
   const currentMission = typeof currentNexusOsMission === "function" ? currentNexusOsMission() : null;
   const availableComponents = [
     "NexusPresenceRuntime",
+    "NexusVoiceProfileRegistry",
     "NexusSpeechRecognitionController",
     "NexusSpeechSynthesisController",
     "NexusConversationStyleEngine",
@@ -28925,12 +28991,65 @@ function getNexusPresenceRuntimeBaseline() {
   };
 }
 
+function getNexusPresenceProfileRegistry() {
+  return {
+    contract: NEXUS_PRESENCE_PROFILE_CONTRACT,
+    profiles: NEXUS_PRESENCE_PROFILE_REGISTRY,
+    profileIds: Object.keys(NEXUS_PRESENCE_PROFILE_REGISTRY),
+    defaultProfileId: NEXUS_PRESENCE_PROFILE_CONTRACT.defaultProfileId,
+    activeProfileId: resolveNexusPresenceProfileId()
+  };
+}
+
+function normalizeNexusPresenceProfileId(profileId = "") {
+  const id = String(profileId || "").trim().toLowerCase();
+  return NEXUS_PRESENCE_PROFILE_REGISTRY[id] ? id : NEXUS_PRESENCE_PROFILE_CONTRACT.defaultProfileId;
+}
+
+function resolveNexusPresenceProfileId(profileId = "") {
+  const stored = typeof localStorage !== "undefined"
+    ? localStorage.getItem(NEXUS_PRESENCE_PROFILE_CONTRACT.profileSelectionStorageKey)
+    : "";
+  return normalizeNexusPresenceProfileId(profileId || stored || NEXUS_PRESENCE_PROFILE_CONTRACT.defaultProfileId);
+}
+
+function resolveNexusPresenceProfile(profileId = "") {
+  const id = resolveNexusPresenceProfileId(profileId);
+  const profile = NEXUS_PRESENCE_PROFILE_REGISTRY[id] || NEXUS_PRESENCE_PROFILE_REGISTRY[NEXUS_PRESENCE_PROFILE_CONTRACT.defaultProfileId];
+  return {
+    ...profile,
+    contractVersion: NEXUS_PRESENCE_PROFILE_CONTRACT.schemaVersion,
+    registryName: NEXUS_PRESENCE_PROFILE_CONTRACT.registryName,
+    activeProfileId: id,
+    officialProfile: profile.displayName === NEXUS_PRESENCE_RUNTIME_BASELINE.officialProfile,
+    runtimeOwner: nexusOsVoiceRuntimeState.runtimeOwner,
+    selectedLanguage: voiceLanguageName(),
+    selectedLocale: voiceLocale(),
+    voiceRuntimeSchema: nexusOsVoiceRuntimeState.schemaVersion,
+    noVoiceCloning: NEXUS_PRESENCE_PROFILE_CONTRACT.noVoiceCloning,
+    noCharacterImitation: NEXUS_PRESENCE_PROFILE_CONTRACT.noCharacterImitation,
+    noRegionalAccentClaimWithoutProvider: NEXUS_PRESENCE_PROFILE_CONTRACT.noRegionalAccentClaimWithoutProvider
+  };
+}
+
+function setNexusPresenceProfile(profileId = NEXUS_PRESENCE_PROFILE_CONTRACT.defaultProfileId, options = {}) {
+  const id = normalizeNexusPresenceProfileId(profileId);
+  if (typeof localStorage !== "undefined" && options.persist !== false) {
+    localStorage.setItem(NEXUS_PRESENCE_PROFILE_CONTRACT.profileSelectionStorageKey, id);
+  }
+  const profile = resolveNexusPresenceProfile(id);
+  updateNexusOsVoiceRuntimeState({ presenceProfileId: id, presenceProfileName: profile.displayName }, options.reason || "presence-profile-selected");
+  updateNexusPresenceDom();
+  return profile;
+}
+
 function renderNexusPresenceRuntimeBadge() {
   const baseline = getNexusPresenceRuntimeBaseline();
+  const profile = resolveNexusPresenceProfile();
   const runtime = baseline.runtimeStatus || {};
   return `
-    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(baseline.officialProfile)}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
-      <strong>${escapeHtml(translateText("Nexus Presence"))}</strong>
+    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(profile.displayName)}" data-nexus-presence-profile-id="${escapeHtml(profile.id)}" data-nexus-presence-profile-contract="${escapeHtml(profile.contractVersion)}" data-nexus-presence-registry="${escapeHtml(profile.registryName)}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
+      <strong>${escapeHtml(translateText(profile.displayName))}</strong>
       <span>${escapeHtml(translateText("Shared voice, captions, orb, and mission state"))}</span>
       <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${runtime.recognitionSupported ? "speech available" : "typed fallback available"}`))}</small>
     </div>
@@ -28940,6 +29059,11 @@ function renderNexusPresenceRuntimeBadge() {
 if (typeof window !== "undefined") {
   window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
+  window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
+  window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
+  window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
+  window.resolveNexusPresenceProfile = resolveNexusPresenceProfile;
+  window.setNexusPresenceProfile = setNexusPresenceProfile;
 }
 
 function handleNexusPresenceWakePhrase(command = "", options = {}) {
@@ -53553,6 +53677,11 @@ function exposeNexusAppWindowApis() {
   window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
   window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
   window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
+  window.NEXUS_PRESENCE_PROFILE_CONTRACT = NEXUS_PRESENCE_PROFILE_CONTRACT;
+  window.NEXUS_PRESENCE_PROFILE_REGISTRY = NEXUS_PRESENCE_PROFILE_REGISTRY;
+  window.getNexusPresenceProfileRegistry = getNexusPresenceProfileRegistry;
+  window.resolveNexusPresenceProfile = resolveNexusPresenceProfile;
+  window.setNexusPresenceProfile = setNexusPresenceProfile;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {

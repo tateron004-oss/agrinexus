@@ -110,7 +110,7 @@ const exposeBlock = sectionBetween(app, "function exposeNexusAppWindowApis()", "
 
 [
   'data-nexus-presence-runtime="shared"',
-  'data-nexus-presence-profile="${escapeHtml(baseline.officialProfile)}"',
+  'data-nexus-presence-profile="${escapeHtml(profile.displayName)}"',
   'data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}"',
   'data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}"',
   'data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}"',
