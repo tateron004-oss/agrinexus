@@ -653,6 +653,7 @@ let nexusVoiceSession = JSON.parse(localStorage.getItem("agrinexusVoiceSession")
   lastAssistantSpeechAt: 0,
   queuedSpeechAt: 0
 };
+let nexusVoicePreferencePendingConsent = JSON.parse(localStorage.getItem("nexusVoicePreferencePendingConsent") || "null");
 let nexusOsVoiceStartInFlight = false;
 let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRuntimeState") || "null") || {
   schemaVersion: "nexus-os-voice-runtime.v1",
@@ -8122,8 +8123,11 @@ function voiceLanguageName() {
 function speechRateForLanguage(language = languageCode()) {
   const rates = { en: 1.04, fr: 0.97, sw: 0.96, ar: 0.92, es: 1.0 };
   const slowMode = localStorage.getItem("agrinexusSlowSpeech") === "on";
+  const voicePreferenceRate = getNexusVoicePreferences?.().speechRatePreset || "standard";
   const baseRate = rates[language] || 1.0;
-  return Number((slowMode ? Math.max(0.78, baseRate * 0.9) : baseRate).toFixed(2));
+  if (slowMode || voicePreferenceRate === "slow") return Number(Math.max(0.78, baseRate * 0.9).toFixed(2));
+  if (voicePreferenceRate === "fast") return Number(Math.min(1.18, baseRate * 1.08).toFixed(2));
+  return Number(baseRate.toFixed(2));
 }
 
 function speechPitchForLanguage(language = languageCode()) {
@@ -11466,6 +11470,7 @@ function renderNexusOsUnifiedConversationSurface() {
   const transcriptText = nexusPresenceState.lastUserInput
     ? `Last heard: ${nexusPresenceState.lastUserInput}`
     : "Voice transcript appears here when available.";
+  const preferences = getNexusVoicePreferences();
   return `
     <section class="nexus-os-conversation-surface" data-nexus-os-conversation-surface="true" aria-label="${escapeHtml(translateText("Nexus unified conversation"))}">
       <div class="nexus-os-conversation-header">
@@ -11481,6 +11486,17 @@ function renderNexusOsUnifiedConversationSurface() {
           <button type="button" data-nexus-os-conversation-action="correct-transcript">${escapeHtml(translateText("Correct"))}</button>
           <button type="button" data-nexus-os-conversation-action="restore">${escapeHtml(translateText("Restore"))}</button>
         </div>
+      </div>
+      <div class="nexus-os-voice-preferences" data-nexus-voice-preferences-controls="true" data-nexus-voice-preferences-memory="${escapeHtml(preferences.memoryStatus)}" aria-label="${escapeHtml(translateText("Voice and accessibility preferences"))}">
+        <span>${escapeHtml(translateText(nexusVoicePreferencesSummary(preferences)))}</span>
+        <button type="button" data-nexus-voice-preference-action="slower">${escapeHtml(translateText("Slower"))}</button>
+        <button type="button" data-nexus-voice-preference-action="faster">${escapeHtml(translateText("Faster"))}</button>
+        <button type="button" data-nexus-voice-preference-action="captions">${escapeHtml(translateText("Captions"))}</button>
+        <button type="button" data-nexus-voice-preference-action="concise">${escapeHtml(translateText("Concise"))}</button>
+        <button type="button" data-nexus-voice-preference-action="detailed">${escapeHtml(translateText("More detail"))}</button>
+        <button type="button" data-nexus-voice-preference-action="text-only">${escapeHtml(translateText("Text only"))}</button>
+        <button type="button" data-nexus-voice-preference-action="review">${escapeHtml(translateText("Review"))}</button>
+        <button type="button" data-nexus-voice-preference-action="reset">${escapeHtml(translateText("Reset"))}</button>
       </div>
       <div class="nexus-os-transcript-strip" data-nexus-os-voice-transcript="true">${escapeHtml(translateText(transcriptText))}</div>
       ${renderNexusOsVoiceRuntimeStatus()}
@@ -24907,6 +24923,23 @@ function handleNexusMissionHistoryAction(action = "", missionId = "") {
     return true;
   }
   return false;
+}
+
+function handleNexusVoicePreferenceControlAction(action = "") {
+  const commandMap = {
+    slower: "Nexus, speak more slowly.",
+    faster: "Nexus, speak faster.",
+    captions: "Nexus, enable captions.",
+    concise: "Nexus, prefer concise responses.",
+    detailed: "Nexus, prefer more explanation.",
+    "text-only": "Nexus, stop speaking and show text only.",
+    review: "Nexus, review voice preferences.",
+    reset: "Nexus, reset voice settings."
+  };
+  const command = commandMap[String(action || "").toLowerCase()];
+  if (!command) return false;
+  setCommandInputs(command);
+  return handleNexusVoicePreferenceCommand(command, { source: "voice-preference-control" });
 }
 
 function editNexusPacket(packetId) {
@@ -43723,6 +43756,260 @@ function installStableSpeechVoicePreference() {
   };
 }
 
+const NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-voice-preferences-accessibility.v1",
+  controllerName: "NexusVoicePreferenceManager",
+  runtimeOwner: "nexus-os-canonical-voice",
+  storageKey: "nexusPresenceVoicePreferences",
+  pendingConsentKey: "nexusVoicePreferencePendingConsent",
+  preferenceFields: Object.freeze([
+    "language",
+    "locale",
+    "voiceName",
+    "speechRatePreset",
+    "speechVolume",
+    "speechEnabled",
+    "captionsEnabled",
+    "answerLength",
+    "formality",
+    "deliveryMode"
+  ]),
+  commands: Object.freeze([
+    "speak more slowly",
+    "speak faster",
+    "use a different English voice",
+    "stop speaking and show text only",
+    "enable captions",
+    "prefer concise responses",
+    "prefer more explanation",
+    "prefer formal delivery",
+    "prefer conversational delivery",
+    "reset voice settings",
+    "forget voice preferences"
+  ]),
+  safeguards: Object.freeze({
+    consentRequiredForPersistentMemory: true,
+    temporaryPreferencesAllowed: true,
+    reviewPreferencesRequired: true,
+    resetSupported: true,
+    forgetSupported: true,
+    crossTenantIsolation: "local-user-browser-scope",
+    noSensitiveAttributeInference: true,
+    textFallbackAlwaysAvailable: true,
+    unavailableVoiceFallsBackHonestly: true,
+    noWorkflowExecutionAuthority: true
+  })
+});
+
+function defaultNexusVoicePreferences() {
+  return {
+    schemaVersion: NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.schemaVersion,
+    language: languageCode(),
+    locale: voiceLocale(),
+    voiceName: "",
+    speechRatePreset: localStorage.getItem("agrinexusSlowSpeech") === "on" ? "slow" : "standard",
+    speechVolume: Number(localStorage.getItem("nexusPresenceSpeechVolume") || 1),
+    speechEnabled: localStorage.getItem("agrinexusDemoQuiet") !== "on",
+    captionsEnabled: localStorage.getItem("nexusPresenceCaptionsEnabled") !== "off",
+    answerLength: localStorage.getItem("agrinexusShortAnswers") === "on" ? "concise" : "balanced",
+    formality: localStorage.getItem("nexusPresenceFormality") || "conversational",
+    deliveryMode: localStorage.getItem("nexusPresenceDeliveryMode") || "STANDARD",
+    memoryStatus: "temporary-until-approved",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function getNexusVoicePreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.storageKey) || "null");
+    return { ...defaultNexusVoicePreferences(), ...(saved || {}), memoryStatus: saved ? "saved-with-user-approval" : "temporary-until-approved" };
+  } catch {
+    return defaultNexusVoicePreferences();
+  }
+}
+
+function applyNexusVoicePreferences(preferences = {}) {
+  const merged = { ...getNexusVoicePreferences(), ...preferences, updatedAt: new Date().toISOString() };
+  localStorage.setItem("agrinexusSlowSpeech", merged.speechRatePreset === "slow" ? "on" : "off");
+  localStorage.setItem("agrinexusShortAnswers", merged.answerLength === "concise" ? "on" : "off");
+  localStorage.setItem("agrinexusDemoQuiet", merged.speechEnabled === false ? "on" : "off");
+  localStorage.setItem("nexusPresenceCaptionsEnabled", merged.captionsEnabled === false ? "off" : "on");
+  localStorage.setItem("nexusPresenceSpeechVolume", String(Math.max(0, Math.min(1, Number(merged.speechVolume) || 1))));
+  localStorage.setItem("nexusPresenceFormality", merged.formality || "conversational");
+  localStorage.setItem("nexusPresenceDeliveryMode", merged.deliveryMode || "STANDARD");
+  voiceDemoQuietMode = merged.speechEnabled === false;
+  if (merged.speechEnabled === false) nexusOsConversationMuted = true;
+  if (preferences.speechEnabled === true) nexusOsConversationMuted = false;
+  updateNexusOsVoiceRuntimeState({
+    mode: merged.speechEnabled === false ? "muted" : "standby",
+    voicePreferenceController: NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.controllerName,
+    captionsEnabled: merged.captionsEnabled !== false,
+    speechRatePreset: merged.speechRatePreset,
+    speechVolume: merged.speechVolume,
+    captionText: nexusVoicePreferencesSummary(merged)
+  }, "voice-preferences-applied");
+  return merged;
+}
+
+function rememberNexusVoicePreferences(preferences = {}) {
+  const merged = { ...getNexusVoicePreferences(), ...preferences, memoryStatus: "saved-with-user-approval", updatedAt: new Date().toISOString() };
+  localStorage.setItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.storageKey, JSON.stringify(merged));
+  localStorage.removeItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.pendingConsentKey);
+  nexusVoicePreferencePendingConsent = null;
+  return applyNexusVoicePreferences(merged);
+}
+
+function setTemporaryNexusVoicePreference(preferences = {}, label = "voice preference") {
+  const applied = applyNexusVoicePreferences(preferences);
+  nexusVoicePreferencePendingConsent = {
+    preferences,
+    label,
+    createdAt: new Date().toISOString(),
+    consentQuestion: `Would you like me to remember that ${label}?`
+  };
+  localStorage.setItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.pendingConsentKey, JSON.stringify(nexusVoicePreferencePendingConsent));
+  return applied;
+}
+
+function forgetNexusVoicePreferences() {
+  localStorage.removeItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.storageKey);
+  localStorage.removeItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.pendingConsentKey);
+  localStorage.removeItem("agrinexusSlowSpeech");
+  localStorage.removeItem("agrinexusShortAnswers");
+  localStorage.removeItem("nexusPresenceCaptionsEnabled");
+  localStorage.removeItem("nexusPresenceSpeechVolume");
+  localStorage.removeItem("nexusPresenceFormality");
+  localStorage.removeItem("nexusPresenceDeliveryMode");
+  nexusVoicePreferencePendingConsent = null;
+  return applyNexusVoicePreferences({ ...defaultNexusVoicePreferences(), speechEnabled: true, captionsEnabled: true });
+}
+
+function nexusVoicePreferencesSummary(preferences = getNexusVoicePreferences()) {
+  const captions = preferences.captionsEnabled === false ? "captions off" : "captions on";
+  const speech = preferences.speechEnabled === false ? "text only" : "speech available";
+  const saved = preferences.memoryStatus === "saved-with-user-approval" ? "saved" : "temporary";
+  return `Voice preferences: ${speech}, ${captions}, ${preferences.speechRatePreset || "standard"} pace, ${preferences.answerLength || "balanced"} answers, ${preferences.formality || "conversational"} delivery, ${saved}.`;
+}
+
+function rotateNexusAvailableVoice(locale = voiceLocale()) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return { ok: false, reason: "speech-synthesis-unavailable" };
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  const requestedLocale = normalizeNexusVoiceLocale(locale);
+  const matches = voices.filter(voice => voiceMatchesLocale(voice, requestedLocale));
+  const candidates = matches.length ? matches : voices;
+  if (!candidates.length) return { ok: false, reason: "no-browser-voices-available" };
+  const storageKey = browserVoiceStorageKey(requestedLocale);
+  const currentName = localStorage.getItem(storageKey) || "";
+  const currentIndex = Math.max(0, candidates.findIndex(voice => voice.name === currentName));
+  const selected = candidates[(currentIndex + 1) % candidates.length];
+  localStorage.setItem(storageKey, selected.name);
+  setTemporaryNexusVoicePreference({ voiceName: selected.name, locale: selected.lang || requestedLocale }, "voice choice");
+  return { ok: true, voiceName: selected.name, voiceLang: selected.lang || requestedLocale, providerSuppliedRegionalVoice: nexusRegionalVoiceMatchType(selected, requestedLocale) === "exact-locale-browser-voice" };
+}
+
+function handleNexusVoicePreferenceMemoryConsent(command = "") {
+  const text = normalizeToolText(command);
+  if (!nexusVoicePreferencePendingConsent) return false;
+  if (/\b(yes|remember|save|keep|store)\b/.test(text)) {
+    const remembered = rememberNexusVoicePreferences(nexusVoicePreferencePendingConsent.preferences || {});
+    setVoiceResponse(`Saved. ${nexusVoicePreferencesSummary(remembered)}`, false, { allowVoiceFirst: false, source: "voice-preference-consent" });
+    return true;
+  }
+  if (/\b(no|do not|don't|decline|temporary only)\b/.test(text)) {
+    localStorage.removeItem(NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT.pendingConsentKey);
+    nexusVoicePreferencePendingConsent = null;
+    setVoiceResponse("Okay. I will keep that preference for this browser session only.", false, { allowVoiceFirst: false, source: "voice-preference-consent" });
+    return true;
+  }
+  return false;
+}
+
+function handleNexusVoicePreferenceCommand(command = "", options = {}) {
+  const text = normalizeToolText(command);
+  if (!text) return false;
+  if (handleNexusVoicePreferenceMemoryConsent(command)) return true;
+  let applied = null;
+  let message = "";
+  let label = "";
+  if (/\b(review|show|what are)\b.*\b(voice|speech|caption|accessibility).*preferences?\b/.test(text)) {
+    setVoiceResponse(nexusVoicePreferencesSummary(), false, { allowVoiceFirst: false, source: "voice-preference-review" });
+    return true;
+  }
+  if (/\b(forget|delete|clear)\b.*\b(voice|speech|caption|accessibility).*preferences?\b/.test(text)) {
+    applied = forgetNexusVoicePreferences();
+    setVoiceResponse(`Voice preferences cleared. ${nexusVoicePreferencesSummary(applied)}`, false, { allowVoiceFirst: false, source: "voice-preference-forget" });
+    renderUserWorkspace?.();
+    return true;
+  }
+  if (/\b(reset)\b.*\b(voice|speech|caption|accessibility|settings)\b/.test(text)) {
+    applied = forgetNexusVoicePreferences();
+    setVoiceResponse(`Voice settings reset. ${nexusVoicePreferencesSummary(applied)}`, false, { allowVoiceFirst: false, source: "voice-preference-reset" });
+    renderUserWorkspace?.();
+    return true;
+  }
+  if (/\b(use|choose|select|different|another|change)\b.*\bvoice\b/.test(text)) {
+    const rotated = rotateNexusAvailableVoice(voiceLocale());
+    message = rotated.ok
+      ? `I selected another available browser voice for ${voiceLanguageName()}. ${rotated.providerSuppliedRegionalVoice ? "It matches the requested locale." : "If an exact regional voice is unavailable, I will use the closest honest fallback."}`
+      : "I could not find another browser voice on this device. Captions and typed responses remain available.";
+    label = "voice choice";
+  } else if (/\b(speak|talk|read)\b.*\b(slower|slowly|slow)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ speechRatePreset: "slow" }, "slower speech pace");
+    message = `I will speak more slowly. ${nexusVoicePreferencesSummary(applied)}`;
+    label = "slower speech pace";
+  } else if (/\b(speak|talk|read)\b.*\b(faster|quickly|fast)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ speechRatePreset: "fast" }, "faster speech pace");
+    message = `I will speak a little faster while keeping clarity. ${nexusVoicePreferencesSummary(applied)}`;
+    label = "faster speech pace";
+  } else if (/\b(stop speaking|text only|show text only|disable speech|turn off speech)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ speechEnabled: false, captionsEnabled: true }, "text-only speech setting");
+    stopVoicePlayback({ hard: true, reason: "voice-preference-text-only" });
+    message = "Speech is off. I will show text and captions only.";
+    label = "text-only speech setting";
+  } else if (/\b(enable|turn on|show)\b.*\b(captions|caption)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ captionsEnabled: true }, "caption preference");
+    message = "Captions are on. I will keep text visible with voice responses.";
+    label = "caption preference";
+  } else if (/\b(disable|turn off|hide)\b.*\b(captions|caption)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ captionsEnabled: false }, "caption preference");
+    message = "Captions are off for now. Text responses remain available in the conversation.";
+    label = "caption preference";
+  } else if (/\b(concise|short|brief)\b.*\b(response|answer|reply|mode|answers?)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ answerLength: "concise" }, "concise response preference");
+    message = "I will keep responses more concise.";
+    label = "concise response preference";
+  } else if (/\b(more explanation|explain more|detailed|more detail|longer)\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ answerLength: "detailed" }, "more explanation preference");
+    message = "I will give more explanation when it helps.";
+    label = "more explanation preference";
+  } else if (/\b(formal|professional)\b.*\b(delivery|tone|style|voice)?\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ formality: "formal", deliveryMode: "FOCUS" }, "formal delivery preference");
+    message = "I will use a more formal delivery.";
+    label = "formal delivery preference";
+  } else if (/\b(conversational|friendly|natural)\b.*\b(delivery|tone|style|voice)?\b/.test(text)) {
+    applied = setTemporaryNexusVoicePreference({ formality: "conversational", deliveryMode: "STANDARD" }, "conversational delivery preference");
+    message = "I will use a more conversational delivery.";
+    label = "conversational delivery preference";
+  } else if (/\b(volume up|louder|increase volume)\b/.test(text)) {
+    const current = getNexusVoicePreferences();
+    applied = setTemporaryNexusVoicePreference({ speechVolume: Math.min(1, Number(current.speechVolume || 1) + 0.15) }, "speech volume preference");
+    message = `Speech volume is set to ${Math.round(applied.speechVolume * 100)} percent.`;
+    label = "speech volume preference";
+  } else if (/\b(volume down|quieter|reduce volume|lower volume)\b/.test(text)) {
+    const current = getNexusVoicePreferences();
+    applied = setTemporaryNexusVoicePreference({ speechVolume: Math.max(0.2, Number(current.speechVolume || 1) - 0.15) }, "speech volume preference");
+    message = `Speech volume is set to ${Math.round(applied.speechVolume * 100)} percent.`;
+    label = "speech volume preference";
+  } else {
+    return false;
+  }
+  if (!applied) applied = getNexusVoicePreferences();
+  const consentQuestion = `Would you like me to remember that ${label || "voice preference"}?`;
+  setVoiceResponse(`${message} ${consentQuestion}`, false, { allowVoiceFirst: false, source: options.source || "voice-preference-command" });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function browserSpeechFallbackEnabled() {
   return localStorage.getItem(BROWSER_SPEECH_FALLBACK_STORAGE_KEY) === "on";
 }
@@ -44594,7 +44881,12 @@ function createNexusSpeechSynthesisUtterance(text = "", options = {}) {
   } else {
     utterance.pitch = NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.pitch;
   }
-  utterance.volume = Number.isFinite(options.volume) ? options.volume : NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.volume;
+  const preferredVolume = getNexusVoicePreferences?.().speechVolume;
+  utterance.volume = Number.isFinite(options.volume)
+    ? options.volume
+    : Number.isFinite(Number(preferredVolume))
+      ? Math.max(0, Math.min(1, Number(preferredVolume)))
+      : NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.volume;
   return {
     ok: true,
     reason: "browser-speech-synthesis-ready",
@@ -49720,6 +50012,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (handleNexusVoicePreferenceCommand(spokenCommand || command || localizedCommand || rawCommand, { source: options.source || "voice-preference-command" })) return;
   if (await handleNexusUnifiedBrainRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
@@ -49845,6 +50138,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     }
     return;
   }
+  if (handleNexusVoicePreferenceCommand(command || localizedCommand || rawCommand, { source: options.source || "voice-preference-command" })) return;
   if (isUniversalLanguageCommand(command || localizedCommand)) {
     pendingNexusSpokenCommand = null;
     pendingAgentClarification = null;
@@ -53038,6 +53332,14 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    const voicePreferenceControl = event.target?.closest?.("[data-nexus-voice-preference-action]");
+    if (voicePreferenceControl) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      handleNexusVoicePreferenceControlAction(voicePreferenceControl.dataset.nexusVoicePreferenceAction || "");
+      return;
+    }
     const conversationControl = event.target?.closest?.("[data-nexus-os-conversation-action]");
     if (conversationControl) {
       event.preventDefault();
@@ -54607,6 +54909,13 @@ function exposeNexusAppWindowApis() {
   window.NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT = NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT;
   window.nexusPresenceSynchronizationState = nexusPresenceSynchronizationState;
   window.syncNexusPresenceSurfaces = syncNexusPresenceSurfaces;
+  window.NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT = NEXUS_VOICE_PREFERENCES_ACCESSIBILITY_CONTRACT;
+  window.getNexusVoicePreferences = getNexusVoicePreferences;
+  window.setTemporaryNexusVoicePreference = setTemporaryNexusVoicePreference;
+  window.rememberNexusVoicePreferences = rememberNexusVoicePreferences;
+  window.forgetNexusVoicePreferences = forgetNexusVoicePreferences;
+  window.handleNexusVoicePreferenceCommand = handleNexusVoicePreferenceCommand;
+  window.handleNexusVoicePreferenceControlAction = handleNexusVoicePreferenceControlAction;
   window.NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT = NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT;
   window.nexusListeningWakeControllerState = nexusListeningWakeControllerState;
   window.createNexusRecognitionConfig = createNexusRecognitionConfig;
