@@ -44391,6 +44391,152 @@ function stripStandaloneVoiceAcknowledgement(text = "") {
     .trim();
 }
 
+const NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-speech-synthesis-controller.v1",
+  controllerName: "NexusSpeechSynthesisController",
+  canonicalRuntimeOwner: "nexus-os-canonical-voice",
+  supportedAdapters: Object.freeze(["openai-tts", "browser-speech-synthesis", "typed-caption-fallback"]),
+  browserAdapter: "NexusBrowserSpeechSynthesisAdapter",
+  serverAdapter: "NexusServerTtsAdapter",
+  defaultOptions: Object.freeze({
+    rate: 0.92,
+    pitch: 0.9,
+    volume: 1
+  }),
+  safeguards: Object.freeze({
+    featureDetected: true,
+    userGestureRequiredForAudibleSpeech: true,
+    captionsFallbackRequired: true,
+    noAutoplayClaim: true,
+    noProviderClaimWithoutAvailability: true,
+    noVoiceCloning: true,
+    noCharacterImitation: true,
+    noWorkflowExecutionAuthority: true
+  })
+});
+
+function nexusSpeechSynthesisControllerState() {
+  const synthesisSupported = typeof window !== "undefined" && "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance === "function";
+  const capability = typeof nexusVoiceCapabilitySummary === "function" ? nexusVoiceCapabilitySummary() : {};
+  const regionalVoice = typeof nexusRegionalVoiceSummary === "function" ? nexusRegionalVoiceSummary() : {};
+  return {
+    schemaVersion: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.schemaVersion,
+    controllerName: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+    runtimeOwner: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.canonicalRuntimeOwner,
+    synthesisSupported,
+    browserFallbackEnabled: typeof browserSpeechFallbackEnabled === "function" ? browserSpeechFallbackEnabled() : false,
+    captionsFallbackRequired: true,
+    selectedLocale: typeof voiceLocale === "function" ? voiceLocale() : "en-US",
+    selectedVoiceName: regionalVoice.voiceName || "",
+    selectedVoiceMatch: regionalVoice.matchType || "not-evaluated",
+    readyProviderIds: capability.readyProviderIds || [],
+    noWorkflowExecutionAuthority: true,
+    noProviderClaimWithoutAvailability: true
+  };
+}
+
+function createNexusSpeechSynthesisUtterance(text = "", options = {}) {
+  const compact = String(text || "").replace(/\s+/g, " ").trim();
+  if (!compact) return { ok: false, reason: "empty-text", utterance: null, controllerState: nexusSpeechSynthesisControllerState() };
+  if (typeof window === "undefined" || !("speechSynthesis" in window) || typeof window.SpeechSynthesisUtterance !== "function") {
+    return { ok: false, reason: "browser-speech-synthesis-unavailable", utterance: null, controllerState: nexusSpeechSynthesisControllerState() };
+  }
+  const utterance = new SpeechSynthesisUtterance(compact);
+  const locale = options.locale || (typeof voiceLocale === "function" ? voiceLocale() : "en-US");
+  const voice = options.voice || (typeof chooseSpeechVoice === "function" ? chooseSpeechVoice(locale) : null);
+  if (voice) utterance.voice = voice;
+  if (options.locale) {
+    utterance.lang = locale;
+  } else if (typeof voiceLocale === "function") {
+    utterance.lang = voiceLocale();
+  } else {
+    utterance.lang = locale;
+  }
+  if (Number.isFinite(options.rate)) {
+    utterance.rate = options.rate;
+  } else if (typeof speechRateForLanguage === "function") {
+    utterance.rate = speechRateForLanguage();
+  } else {
+    utterance.rate = NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.rate;
+  }
+  if (Number.isFinite(options.pitch)) {
+    utterance.pitch = options.pitch;
+  } else if (typeof speechPitchForLanguage === "function") {
+    utterance.pitch = speechPitchForLanguage();
+  } else {
+    utterance.pitch = NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.pitch;
+  }
+  utterance.volume = Number.isFinite(options.volume) ? options.volume : NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.defaultOptions.volume;
+  return {
+    ok: true,
+    reason: "browser-speech-synthesis-ready",
+    utterance,
+    controllerState: {
+      ...nexusSpeechSynthesisControllerState(),
+      selectedLocale: locale,
+      selectedVoiceName: voice?.name || "",
+      rate: utterance.rate,
+      pitch: utterance.pitch,
+      volume: utterance.volume
+    }
+  };
+}
+
+function runNexusSpeechSynthesisController(text = "", options = {}) {
+  const prepared = createNexusSpeechSynthesisUtterance(text, options);
+  if (!prepared.ok) {
+    updateNexusOsVoiceRuntimeState({
+      mode: "caption-fallback",
+      assistantSpeaking: false,
+      speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+      speechSynthesisReason: prepared.reason
+    }, options.reason || "speech-synthesis-fallback");
+    return prepared;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    prepared.utterance.onend = event => {
+      updateNexusOsVoiceRuntimeState({
+        assistantSpeaking: false,
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechSynthesisReason: "browser-speech-finished"
+      }, options.reason || "speech-synthesis-finished");
+      options.onEnd?.(event);
+    };
+    prepared.utterance.onerror = event => {
+      updateNexusOsVoiceRuntimeState({
+        assistantSpeaking: false,
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechSynthesisReason: "browser-speech-error"
+      }, options.reason || "speech-synthesis-error");
+      options.onError?.(event);
+    };
+    updateNexusOsVoiceRuntimeState({
+      mode: "speaking",
+      assistantSpeaking: true,
+      speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+      speechSynthesisProvider: "browser-speech-synthesis",
+      speechSynthesisReason: prepared.reason,
+      selectedSpeechVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+      selectedSpeechLocale: prepared.controllerState.selectedLocale,
+      speechRate: prepared.controllerState.rate,
+      speechPitch: prepared.controllerState.pitch,
+      speechVolume: prepared.controllerState.volume
+    }, options.reason || "speech-synthesis-start");
+    window.speechSynthesis.speak(prepared.utterance);
+    return { ...prepared, started: true };
+  } catch (error) {
+    updateNexusOsVoiceRuntimeState({
+      mode: "caption-fallback",
+      assistantSpeaking: false,
+      speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+      speechSynthesisReason: "browser-speech-start-failed"
+    }, options.reason || "speech-synthesis-start-failed");
+    options.onError?.(error);
+    return { ok: false, reason: "browser-speech-start-failed", error: error.message || String(error), controllerState: nexusSpeechSynthesisControllerState() };
+  }
+}
+
 function isGuidedHealthVoiceResponse(text = "", options = {}) {
   const value = normalizeToolText(`${options.command || ""} ${text || ""}`);
   const healthNeed = /\b(doctor|nurse|provider|clinic|hospital|medicine|medication|pharmacy|dawa|health|care|patient|sick|injury|baby|child|grandma)\b/.test(value);
@@ -44550,25 +44696,15 @@ function speakVoiceResponse(textOverride) {
       finishSpeaking();
       return;
     }
-    if (!("speechSynthesis" in window)) {
-      updateVoiceOutputStatus(`${reason} Browser speech fallback is enabled but unavailable here.`);
-      finishSpeaking();
-      return;
-    }
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(compact);
-      const fallbackVoice = chooseSpeechVoice(voiceLocale());
-      if (fallbackVoice) utterance.voice = fallbackVoice;
-      utterance.lang = voiceLocale();
-      utterance.rate = speechRateForLanguage();
-      utterance.pitch = speechPitchForLanguage();
-      utterance.onend = finishSpeaking;
-      utterance.onerror = finishSpeaking;
-      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback.`);
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      updateVoiceOutputStatus(`${reason} Browser speech fallback could not start.`);
+    const speechResult = runNexusSpeechSynthesisController(compact, {
+      reason: "browser-speech-fallback",
+      onEnd: finishSpeaking,
+      onError: finishSpeaking
+    });
+    if (speechResult.ok && speechResult.started) {
+      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback.`);
+    } else {
+      updateVoiceOutputStatus(`${reason} Browser speech fallback could not start: ${speechResult.reason}.`);
       finishSpeaking();
     }
   };
@@ -54211,6 +54347,10 @@ function exposeNexusAppWindowApis() {
   window.resolveNexusDomainToneSafetyAdapter = resolveNexusDomainToneSafetyAdapter;
   window.composeNexusConversationStyleResponse = composeNexusConversationStyleResponse;
   window.inferNexusConversationStyleMode = inferNexusConversationStyleMode;
+  window.NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT = NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT;
+  window.nexusSpeechSynthesisControllerState = nexusSpeechSynthesisControllerState;
+  window.createNexusSpeechSynthesisUtterance = createNexusSpeechSynthesisUtterance;
+  window.runNexusSpeechSynthesisController = runNexusSpeechSynthesisController;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
