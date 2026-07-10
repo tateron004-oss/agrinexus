@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-406";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v357";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-407";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v358";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -920,7 +920,7 @@ function buildNexusSafetyReviewDashboardState(context = {}) {
   const reviewCount = queue.filter(action => action.queueStatus === "queued_for_review").length;
   const localOnlyCount = history.filter(entry => entry.storageMode === "volatile-ui-only").length;
   const auditCount = audit.length;
-  const providerHandoffDetected = queue.some(action => action.providerHandoffAuthorized === true || action.externalExecutionAllowed === true);
+  const providerHandoffDetected = queue.some(action => Boolean(action.providerHandoffAuthorized) || Boolean(action.externalExecutionAllowed));
   return {
     schemaVersion: "nexus-safety-review-dashboard.v1",
     source: "nexus-safety-review-dashboard.v1",
@@ -24428,6 +24428,147 @@ function renderNexusConfirmationSummary(packet = null, lane = null) {
   `;
 }
 
+const NEXUS_UNIVERSAL_CONSENT_CATEGORIES = Object.freeze([
+  { id: "health_data_sharing", label: "Health-data sharing", pattern: /\b(health|clinical|diabetes|hypertension|obesity|rpm|rtm|telehealth|pharmacy|provider|care|clinic|chw)\b/ },
+  { id: "provider_handoff", label: "Provider handoff", pattern: /\b(provider|clinic|telehealth|mobile clinic|pharmacy|advisor|partner|handoff|referral)\b/ },
+  { id: "communications", label: "Communications", pattern: /\b(message|sms|whatsapp|email|call|phone|telegram|contact)\b/ },
+  { id: "payments", label: "Payments", pattern: /\b(payment|pay|checkout|buy|purchase|invoice|marketplace)\b/ },
+  { id: "applications", label: "Applications", pattern: /\b(application|apply|enroll|job|workforce|training|learning)\b/ },
+  { id: "referrals", label: "Referrals", pattern: /\b(referral|refer|provider|employer|training|workforce|clinic|partner)\b/ },
+  { id: "sensitive_persistent_memory", label: "Sensitive persistent memory", pattern: /\b(memory|save|store|persistent|record|medical|health|location|payment)\b/ }
+]);
+
+function nexusUniversalConsentRequirements(review = {}) {
+  const text = [
+    review.workflowId,
+    review.workflowLabel,
+    review.category,
+    review.riskLevel,
+    review.plannedAction,
+    review.destinationOrRecipient,
+    review.dataBeingShared,
+    review.providerOrChannel
+  ].join(" ").toLowerCase();
+  return NEXUS_UNIVERSAL_CONSENT_CATEGORIES.filter(category => category.pattern.test(text)).map(category => ({
+    ...category,
+    required: true,
+    explicitConsentRequired: true
+  }));
+}
+
+function nexusUniversalActionReviewForWorkflow(definition = {}, packet = null, lane = null, options = {}) {
+  const id = definition.id || packet?.workflowId || nexusActiveWorkflowState?.id || "nexus-workflow";
+  const registry = nexusWorkflowRegistryEntry(id) || {};
+  const presentation = definition.presentation || {};
+  const title = packet?.workflowLabel || registry.label || presentation.title || "Nexus workflow";
+  const category = registry.category || lane?.category || "general";
+  const riskLevel = registry.riskLevel || (lane?.requiresConfirmation ? "review-required" : "local-review");
+  const missing = Array.from(new Set([
+    ...(lane?.requiredCredentials || []),
+    ...(lane?.missingCredentials || []),
+    ...((lane && lane.liveModeAvailable === false && lane.status !== "active_test_mode") ? ["live provider/vendor configuration"] : [])
+  ].filter(Boolean)));
+  const providerUnavailable = missing.length > 0 || /not_configured|missing|inactive|blocked/i.test(String(lane?.status || ""));
+  const executionLive = Boolean(lane?.liveModeAvailable && lane?.status === "active_live");
+  const executionLocal = !executionLive;
+  const willQueue = providerUnavailable || Boolean(options.willQueue) || /queue|offline|prepared|inactive/i.test(String(packet?.outcomeStatus || lane?.lastActionStatus || ""));
+  const dataFields = packet?.payload && typeof packet.payload === "object"
+    ? Object.keys(packet.payload).filter(key => String(packet.payload[key] || "").trim()).slice(0, 6)
+    : [];
+  const providerOrChannel = lane?.partnerName || lane?.label || registry.integrationLaneId || "Local Nexus review";
+  const review = {
+    schemaVersion: "nexus-universal-action-review.v1",
+    workflowId: id,
+    workflowLabel: title,
+    category,
+    riskLevel,
+    plannedAction: `Prepare and review ${title}.`,
+    destinationOrRecipient: providerUnavailable ? "No external destination until provider is configured and approved." : providerOrChannel,
+    dataBeingShared: dataFields.length ? dataFields.join(", ") : "Only the visible packet details after user review.",
+    providerOrChannel,
+    knownCost: "No known cost in this local review.",
+    knownFee: "No known fee in this local review.",
+    knownRisk: /clinical|healthcare/i.test(category)
+      ? "Sensitive health context requires consent, provider review, and no diagnosis or prescribing."
+      : /payment|marketplace|external-execution|high/i.test(`${category} ${riskLevel}`)
+        ? "External action risk requires final confirmation, audit, and configured provider."
+        : "Local preparation risk only until an external provider is configured.",
+    reversible: executionLive ? "Unknown - depends on provider confirmation and action type." : "Yes - this local review can be edited, cancelled, delayed, or saved as a draft.",
+    executionLive,
+    executionLocal,
+    willQueue,
+    providerUnavailable,
+    missingRequirements: missing,
+    explicitApprovalRequired: Boolean(registry.requiresConfirmationBeforeExecution || lane?.requiresConfirmation || /clinical|external|high|payment/i.test(`${category} ${riskLevel}`)),
+    approvalIntentOnly: true,
+    finalExecutionGateRequired: true,
+    executionAuthority: false,
+    noExecutionAuthorized: true,
+    providerHandoffAllowed: false,
+    noSilentSend: true,
+    noSilentCall: true,
+    noHiddenProviderHandoff: true
+  };
+  return {
+    ...review,
+    consentRequirements: nexusUniversalConsentRequirements(review)
+  };
+}
+
+function renderNexusUniversalActionReviewLayer(review = nexusUniversalActionReviewForWorkflow()) {
+  const consent = review.consentRequirements || [];
+  const rows = [
+    ["What Nexus plans to do", review.plannedAction],
+    ["Destination or recipient", review.destinationOrRecipient],
+    ["Data being shared", review.dataBeingShared],
+    ["Provider or channel", review.providerOrChannel],
+    ["Known cost", review.knownCost],
+    ["Known fee", review.knownFee],
+    ["Known risk", review.knownRisk],
+    ["Reversible", review.reversible],
+    ["Execution is live", review.executionLive ? "Yes - only after final provider and confirmation gates." : "No"],
+    ["Execution is local", review.executionLocal ? "Yes - local review/preparation only." : "No"],
+    ["Will queue", review.willQueue ? "Yes - queued or draftable until ready." : "No"],
+    ["Provider unavailable", review.providerUnavailable ? "Yes - missing setup blocks live handoff." : "No"]
+  ];
+  return `
+    <section class="nexus-universal-action-review" data-nexus-universal-action-review-layer="true" data-nexus-action-review-schema="${escapeHtml(review.schemaVersion)}" data-execution-authority="false" data-provider-handoff="false" data-no-silent-send="true" data-no-silent-call="true" data-final-execution-gate-required="true">
+      <div class="nexus-universal-action-review-heading">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Universal action review"))}</span>
+          <strong>${escapeHtml(translateText("Review before approval"))}</strong>
+        </div>
+        <span>${escapeHtml(translateText(review.explicitApprovalRequired ? "Explicit consent required" : "Local review"))}</span>
+      </div>
+      <dl>
+        ${rows.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(translateText(label))}</dt>
+            <dd>${escapeHtml(translateText(value || "Not specified"))}</dd>
+          </div>
+        `).join("")}
+      </dl>
+      <div class="nexus-universal-consent-list" data-nexus-explicit-consent-categories="true">
+        <strong>${escapeHtml(translateText("Explicit consent categories"))}</strong>
+        ${(consent.length ? consent : [{ id: "local_review", label: "Local preparation review", explicitConsentRequired: false }]).map(item => `
+          <span data-nexus-consent-category="${escapeHtml(item.id)}">${escapeHtml(translateText(item.label))}${item.explicitConsentRequired ? ` - ${escapeHtml(translateText("required before external execution"))}` : ""}</span>
+        `).join("")}
+      </div>
+      ${review.missingRequirements?.length ? `
+        <p class="nexus-universal-action-review-warning">${escapeHtml(translateText(`Provider unavailable until setup is complete: ${review.missingRequirements.join(", ")}.`))}</p>
+      ` : ""}
+      <p>${escapeHtml(translateText("Approving here records approval intent only. Nexus still requires a final execution gate, configured provider, consent, audit, and result verification before any live action."))}</p>
+      <div class="nexus-universal-action-review-actions">
+        <button type="button" class="primary" data-nexus-universal-action-review="approve" data-workflow-id="${escapeHtml(review.workflowId)}">${escapeHtml(translateText("Approve"))}</button>
+        <button type="button" data-nexus-universal-action-review="edit" data-workflow-id="${escapeHtml(review.workflowId)}">${escapeHtml(translateText("Edit"))}</button>
+        <button type="button" data-nexus-universal-action-review="cancel" data-workflow-id="${escapeHtml(review.workflowId)}">${escapeHtml(translateText("Cancel"))}</button>
+        <button type="button" data-nexus-universal-action-review="delay" data-workflow-id="${escapeHtml(review.workflowId)}">${escapeHtml(translateText("Delay"))}</button>
+        <button type="button" data-nexus-universal-action-review="save-draft" data-workflow-id="${escapeHtml(review.workflowId)}">${escapeHtml(translateText("Save as draft"))}</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusActionReceipt(packet = null, entry = null) {
   const status = entry?.outcomeStatus || packet?.outcomeStatus || "draft";
   return `
@@ -27514,6 +27655,7 @@ function renderNexusActiveWorkflowWorkspace() {
         ${renderNexusWorkflowLandingWindow(definition, state)}
         ${renderNexusWorkflowLaneStatus(id)}
         ${renderNexusConfirmationSummary(latestPacket, latestLane)}
+        ${renderNexusUniversalActionReviewLayer(nexusUniversalActionReviewForWorkflow(definition, latestPacket, latestLane))}
       `}
       <div class="nexus-workflow-steps" aria-label="${escapeHtml(translateText("Workflow steps"))}">
         ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
@@ -50361,6 +50503,76 @@ function handleNexusUserExperienceMaximizationClick(event) {
       localOnly: true
     };
     renderUserWorkspace();
+    return true;
+  }
+  const universalReviewAction = target?.closest?.("[data-nexus-universal-action-review]");
+  if (universalReviewAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const action = universalReviewAction.dataset.nexusUniversalActionReview || "approve";
+    const workflowId = universalReviewAction.dataset.workflowId || nexusActiveWorkflowState?.id || "";
+    const definition = nexusFunctionWindowDefinition(workflowId, nexusActiveWorkflowState?.command || "");
+    const lane = nexusIntegrationLaneById(nexusWorkflowRegistryEntry(workflowId)?.integrationLaneId);
+    const review = nexusUniversalActionReviewForWorkflow(definition || { id: workflowId }, null, lane);
+    const statusByAction = {
+      approve: "approval_intent_recorded",
+      edit: "review_edit_requested",
+      cancel: "review_cancelled",
+      delay: "review_delayed",
+      "save-draft": "review_saved_as_draft"
+    };
+    const messageByAction = {
+      approve: "Approval intent recorded locally. Nexus still requires a final execution gate, configured provider, consent, audit, and result verification before any live action.",
+      edit: "Edit mode is ready. Adjust the packet before any confirmation or provider handoff.",
+      cancel: "Review cancelled locally. No provider was contacted and no external action was executed.",
+      delay: "Review delayed locally. Nexus will keep this as a draft/queue item until you return.",
+      "save-draft": "Draft saved locally for review. No external action, send, call, payment, dispatch, or provider handoff occurred."
+    };
+    nexusActiveWorkflowState = {
+      ...(nexusActiveWorkflowState || {}),
+      id: workflowId,
+      guidedMode: action === "edit" ? false : nexusActiveWorkflowState?.guidedMode,
+      universalActionReview: {
+        action,
+        status: statusByAction[action] || "review_updated",
+        at: new Date().toISOString(),
+        approvalIntentOnly: true,
+        finalExecutionGateRequired: true,
+        executionAuthority: false,
+        noExecutionAuthorized: true
+      }
+    };
+    recordNexusRecentWorkflow(workflowId, {
+      status: statusByAction[action] || "review_updated",
+      summary: messageByAction[action] || "Universal action review updated locally."
+    });
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: statusByAction[action] || "review_updated",
+      mode: "Universal action review",
+      message: messageByAction[action] || "Universal action review updated locally.",
+      preparedCards: [{
+        type: "universal_action_review",
+        title: review.workflowLabel,
+        status: statusByAction[action] || "review_updated",
+        localOnly: true,
+        approvalIntentOnly: true,
+        finalExecutionGateRequired: true,
+        noExecutionAuthorized: true
+      }],
+      review,
+      noExecutionAuthorized: true,
+      noProviderContactAuthorized: true,
+      noPaymentAuthorized: true,
+      noMessageSent: true,
+      noCallPlaced: true,
+      localOnly: true,
+      source: "nexus_universal_action_review"
+    };
+    saveNexusRuntimeMemory();
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
   const guidedMode = target?.closest?.("[data-nexus-guided-mode]");
