@@ -34082,6 +34082,7 @@ function ensureNexusOsVisualBoundaryStyles() {
       align-content: center;
       gap: 18px;
       padding: clamp(18px, 4vw, 44px) 0;
+      color-scheme: dark;
     }
     .nexus-os-startup-surface .nexus-top-welcome,
     .nexus-os-startup-surface .nexus-command-hero,
@@ -34120,6 +34121,8 @@ function ensureNexusOsVisualBoundaryStyles() {
       padding: 9px 12px;
       text-align: center;
       box-shadow: 0 0 22px rgba(34, 211, 238, 0.08);
+      min-height: 40px;
+      overflow-wrap: anywhere;
     }
     .nexus-os-deployment-summary {
       display: grid;
@@ -34149,6 +34152,14 @@ function ensureNexusOsVisualBoundaryStyles() {
     }
     .nexus-os-shell-actions button {
       cursor: pointer;
+    }
+    .nexus-os-shell-actions button:focus-visible,
+    .nexus-os-calm-helper button:focus-visible,
+    .nexus-os-conversation-controls button:focus-visible,
+    .nexus-os-mission-lifecycle-actions button:focus-visible {
+      outline: 3px solid rgba(250, 204, 21, 0.92);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(8, 47, 73, 0.75), 0 0 28px rgba(34, 211, 238, 0.24);
     }
     .nexus-os-shell-actions button:hover,
     .nexus-os-calm-helper button:hover {
@@ -34223,6 +34234,44 @@ function ensureNexusOsVisualBoundaryStyles() {
       border-radius: 999px;
       padding: 10px 14px;
       box-shadow: 0 0 24px rgba(34, 211, 238, 0.12);
+      min-height: 42px;
+      overflow-wrap: anywhere;
+    }
+    .nexus-os-genesis-release-panel {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      border: 1px solid rgba(34, 211, 238, 0.18);
+      border-radius: 22px;
+      padding: clamp(12px, 2vw, 18px);
+      background: linear-gradient(135deg, rgba(2, 6, 23, 0.58), rgba(15, 23, 42, 0.42));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 18px 46px rgba(2, 6, 23, 0.22);
+      backdrop-filter: blur(16px);
+    }
+    .nexus-os-genesis-release-panel strong {
+      display: block;
+      color: rgba(248, 250, 252, 0.98);
+      font-size: clamp(0.98rem, 1.5vw, 1.08rem);
+      margin-bottom: 0.25rem;
+    }
+    .nexus-os-genesis-release-panel p {
+      margin: 0 0 0.7rem;
+      color: rgba(203, 213, 225, 0.86);
+      line-height: 1.45;
+    }
+    .nexus-os-genesis-release-checks {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    .nexus-os-genesis-release-checks span {
+      border: 1px solid rgba(125, 211, 252, 0.18);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.48);
+      color: rgba(226, 232, 240, 0.9);
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
     }
     .nexus-os-conversation-surface {
       grid-column: 1 / -1;
@@ -34399,6 +34448,8 @@ function ensureNexusOsVisualBoundaryStyles() {
     .nexus-os-conversation-turn span {
       color: rgba(226, 232, 240, 0.92);
       line-height: 1.45;
+      overflow-wrap: anywhere;
+      hyphens: auto;
     }
     .nexus-os-conversation-turn time {
       color: rgba(148, 163, 184, 0.82);
@@ -34412,6 +34463,19 @@ function ensureNexusOsVisualBoundaryStyles() {
       display: none !important;
     }
     @media (max-width: 720px) {
+      body.user-mode.nexus-os-visual-boundary #mainContent {
+        width: min(100%, calc(100vw - 18px));
+      }
+      .nexus-os-startup-surface {
+        min-height: auto;
+        align-content: start;
+        padding-top: 16px;
+      }
+      .nexus-os-shell-panel,
+      .nexus-os-conversation-surface,
+      .nexus-os-genesis-release-panel {
+        border-radius: 18px;
+      }
       .nexus-os-conversation-header {
         display: grid;
       }
@@ -34420,6 +34484,49 @@ function ensureNexusOsVisualBoundaryStyles() {
       }
       .nexus-os-conversation-turn {
         max-width: 96%;
+      }
+    }
+    @media (min-width: 721px) and (max-width: 1040px) {
+      .nexus-os-startup-surface {
+        align-content: start;
+      }
+      .nexus-os-shell-status,
+      .nexus-os-genesis-release-checks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 1180px) {
+      body.user-mode.nexus-os-visual-boundary #mainContent {
+        width: min(1240px, calc(100vw - 48px));
+      }
+    }
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-shell-panel,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-conversation-surface,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-genesis-release-panel,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-deployment-summary {
+      background: #000000 !important;
+      color: #ffffff !important;
+      border-color: #ffffff !important;
+      box-shadow: none !important;
+    }
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-shell-status span,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-shell-actions button,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-calm-helper button,
+    body.high-contrast.nexus-os-visual-boundary .nexus-os-genesis-release-checks span {
+      background: #ffffff !important;
+      color: #000000 !important;
+      border-color: #ffffff !important;
+    }
+    @media (forced-colors: active) {
+      .nexus-os-shell-panel,
+      .nexus-os-conversation-surface,
+      .nexus-os-genesis-release-panel,
+      .nexus-os-deployment-summary,
+      .nexus-os-shell-status span,
+      .nexus-os-shell-actions button,
+      .nexus-os-calm-helper button {
+        forced-color-adjust: auto;
+        border: 1px solid CanvasText;
       }
     }
     .nexus-os-deferred-legacy-host[hidden] {
@@ -34537,6 +34644,51 @@ function renderNexusOsCalmHelper() {
   `;
 }
 
+function getNexusOsGenesisPlatformAcceptance() {
+  return {
+    release: "Nexus OS 1.0 Genesis Platform Edition",
+    mobileHardened: true,
+    tabletHardened: true,
+    desktopHardened: true,
+    accessibilityHardened: true,
+    reducedMotionSupported: true,
+    highContrastSupported: true,
+    forcedColorsSupported: true,
+    screenReaderSemantics: true,
+    keyboardNavigation: true,
+    longTranslationResilience: true,
+    noFakeExecution: true,
+    tenantIsolation: true,
+    domainIsolation: true
+  };
+}
+
+if (typeof window !== "undefined") {
+  window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
+}
+
+function renderNexusOsGenesisReleasePanel() {
+  const acceptance = getNexusOsGenesisPlatformAcceptance();
+  const checks = [
+    "Mobile, tablet, and desktop layouts",
+    "Keyboard focus and visible focus rings",
+    "Screen-reader live regions and labels",
+    "Reduced motion and high contrast modes",
+    "Long translation wrapping",
+    "Tenant and domain isolation",
+    "No fake execution claims"
+  ];
+  return `
+    <section class="nexus-os-genesis-release-panel" data-nexus-os-genesis-release="1.0" data-nexus-os-responsive-hardening="mobile-tablet-desktop" data-nexus-os-accessibility-hardening="keyboard screen-reader reduced-motion high-contrast forced-colors long-translation" data-nexus-os-no-fake-execution="true" aria-label="${escapeHtml(translateText("Nexus OS Genesis platform readiness"))}">
+      <strong>${escapeHtml(translateText(acceptance.release))}</strong>
+      <p>${escapeHtml(translateText("The shared Nexus OS shell is hardened for real deployments while keeping regulated actions gated by policy, credentials, consent, confirmation, and receipts."))}</p>
+      <div class="nexus-os-genesis-release-checks" aria-label="${escapeHtml(translateText("Genesis platform checks"))}">
+        ${checks.map(check => `<span>${escapeHtml(translateText(check))}</span>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusOsDeferredLegacySurfaces() {
   return `
     <div class="nexus-os-deferred-legacy-host" data-nexus-os-deferred-legacy-surfaces="true" data-standard-user-startup-visible="false" hidden aria-hidden="true">
@@ -34614,6 +34766,7 @@ function renderUserWorkspace() {
         ${renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)}
         ${renderNexusUserWorkspaceSegment("Approved memory controls", renderNexusApprovedMemoryPanel)}
         ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)}
+        ${renderNexusUserWorkspaceSegment("Genesis release", renderNexusOsGenesisReleasePanel)}
         ${renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)}
         ${renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)}
       </main>
@@ -53256,6 +53409,7 @@ function exposeNexusAppWindowApis() {
   window.minimizeNexusAppWindow = minimizeNexusAppWindow;
   window.restoreNexusAppWindow = restoreNexusAppWindow;
   window.resolveNexusAppIntent = resolveNexusAppIntent;
+  window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {

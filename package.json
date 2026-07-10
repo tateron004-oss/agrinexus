@@ -117,6 +117,7 @@
     "qa:nexus-os-health-workforce-safety": "node scripts/nexus-os-health-workforce-safety-qa.js",
     "qa:nexus-os-control-plane": "node scripts/nexus-os-control-plane-qa.js",
     "qa:nexus-os-second-deployment-proof": "node scripts/nexus-os-second-deployment-proof-qa.js",
+    "qa:nexus-os-genesis-platform-acceptance": "node scripts/nexus-os-genesis-platform-acceptance-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
