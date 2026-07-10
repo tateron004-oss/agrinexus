@@ -107,6 +107,75 @@ const NEXUS_PRESENCE_STATES = Object.freeze({
   BLOCKED: "blocked",
   ERROR: "error"
 });
+const NEXUS_PRESENCE_RUNTIME_BASELINE = Object.freeze({
+  schemaVersion: "nexus-presence-runtime.v1",
+  officialProfile: "Nexus Presence",
+  sharedCoreService: true,
+  runtimeRole: "shared voice, captions, orb, conversation, and mission state baseline",
+  identityTraits: Object.freeze([
+    "calm",
+    "confident",
+    "warm",
+    "patient",
+    "intelligent",
+    "respectful",
+    "honest",
+    "nonjudgmental",
+    "professional"
+  ]),
+  deliveryModes: Object.freeze({
+    STANDARD: Object.freeze({ label: "Standard", pace: "steady", speechRate: 0.92, tone: "calm and helpful" }),
+    CLINICAL: Object.freeze({ label: "Clinical", pace: "measured", speechRate: 0.88, tone: "precise, safety-first, no diagnosis" }),
+    GUIDE: Object.freeze({ label: "Guide", pace: "supportive", speechRate: 0.9, tone: "patient and instructional" }),
+    FOCUS: Object.freeze({ label: "Focus", pace: "concise", speechRate: 0.94, tone: "brief and task-oriented" }),
+    URGENT: Object.freeze({ label: "Urgent", pace: "clear", speechRate: 0.86, tone: "direct, calm, and bounded" })
+  }),
+  componentContracts: Object.freeze([
+    "NexusPresenceRuntime",
+    "NexusVoiceProfileRegistry",
+    "NexusVoiceCapabilityRegistry",
+    "NexusVoiceResolver",
+    "NexusSpeechRecognitionController",
+    "NexusSpeechSynthesisController",
+    "NexusConversationStyleEngine",
+    "NexusResponseComposer",
+    "NexusDomainToneAdapter",
+    "NexusEmotionContextAdapter",
+    "NexusPronunciationLexicon",
+    "NexusCaptionSynchronizer",
+    "NexusOrbSpeechSynchronizer",
+    "NexusVoicePreferenceManager",
+    "NexusPresencePolicyEngine",
+    "NexusPresenceTelemetry",
+    "NexusPresenceAccessibilityAdapter"
+  ]),
+  sharedRuntimeSources: Object.freeze({
+    voice: "nexusOsVoiceRuntimeState",
+    voiceSchema: "nexus-os-voice-runtime.v1",
+    voiceOwner: "nexus-os-canonical-voice",
+    presence: "nexusPresenceState",
+    conversation: "nexusOsConversationTurns",
+    captions: "nexus-os-transcript-strip",
+    orb: "nexusCoreRuntimeState",
+    mission: "nexusOsMissionLifecycleState"
+  }),
+  stateModel: Object.freeze(["idle", "listening", "thinking", "speaking", "awaiting_followup", "awaiting_confirmation", "completed_local", "blocked", "error"]),
+  honestyPolicy: Object.freeze({
+    noFakeSpeech: true,
+    noFakeAccent: true,
+    noFakeHearing: true,
+    noFakeCompletion: true,
+    regionalVoiceDisclosure: "Nexus may use the best available browser or configured provider voice; it must not claim a regional voice or accent is available unless the provider actually supplies it."
+  }),
+  accessibilityPolicy: Object.freeze({
+    captionsRequired: true,
+    keyboardFallbackRequired: true,
+    screenReaderStatusRequired: true,
+    reducedMotionRequired: true,
+    textFallbackRequired: true,
+    noSpeechOnlyBlocking: true
+  })
+});
 const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
   idle: {
     label: "Nexus is idle and ready.",
@@ -28802,6 +28871,77 @@ function renderNexusConversationalPresenceLayer() {
   `;
 }
 
+function getNexusPresenceRuntimeBaseline() {
+  const recognitionSupported = Boolean(
+    (typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition))
+    || (typeof realtimeVoiceSupported === "function" && realtimeVoiceSupported())
+  );
+  const synthesisSupported = Boolean(typeof window !== "undefined" && window.speechSynthesis && window.SpeechSynthesisUtterance);
+  const currentMission = typeof currentNexusOsMission === "function" ? currentNexusOsMission() : null;
+  const availableComponents = [
+    "NexusPresenceRuntime",
+    "NexusSpeechRecognitionController",
+    "NexusSpeechSynthesisController",
+    "NexusConversationStyleEngine",
+    "NexusResponseComposer",
+    "NexusCaptionSynchronizer",
+    "NexusOrbSpeechSynchronizer",
+    "NexusPresencePolicyEngine",
+    "NexusPresenceAccessibilityAdapter"
+  ];
+  const missingComponents = NEXUS_PRESENCE_RUNTIME_BASELINE.componentContracts
+    .filter(component => !availableComponents.includes(component))
+    .map(component => ({ component, status: "contracted-for-next-presence-rail" }));
+  return {
+    ...NEXUS_PRESENCE_RUNTIME_BASELINE,
+    runtimeStatus: {
+      profile: NEXUS_PRESENCE_RUNTIME_BASELINE.officialProfile,
+      presenceState: nexusPresenceState.state || NEXUS_PRESENCE_STATES.IDLE,
+      voiceRuntimeSchema: nexusOsVoiceRuntimeState.schemaVersion,
+      voiceRuntimeOwner: nexusOsVoiceRuntimeState.runtimeOwner,
+      voiceMode: nexusOsVoiceRuntimeState.mode || "standby",
+      recognitionSupported,
+      synthesisSupported,
+      conversationTurns: nexusOsConversationTurns.length,
+      captionSurface: "nexus-os-transcript-strip",
+      orbState: nexusCoreRuntimeState.current || "idle",
+      missionState: currentMission?.state || (nexusOsMissionLifecycleState.activeMission ? "active" : "idle"),
+      missionId: currentMission?.id || nexusOsMissionLifecycleState.activeMission?.id || "",
+      deliveryMode: "STANDARD",
+      noDuplicateVoiceRuntime: nexusOsVoiceRuntimeState.runtimeOwner === "nexus-os-canonical-voice",
+      lastUpdatedAt: new Date().toISOString()
+    },
+    availableComponents,
+    missingComponents,
+    safetyPosture: {
+      noProviderHandoffFromPresence: true,
+      noAutoplayRequirement: true,
+      noAlwaysOnListening: true,
+      noFakeSpeech: NEXUS_PRESENCE_RUNTIME_BASELINE.honestyPolicy.noFakeSpeech,
+      noFakeAccent: NEXUS_PRESENCE_RUNTIME_BASELINE.honestyPolicy.noFakeAccent,
+      noFakeHearing: NEXUS_PRESENCE_RUNTIME_BASELINE.honestyPolicy.noFakeHearing,
+      noFakeCompletion: NEXUS_PRESENCE_RUNTIME_BASELINE.honestyPolicy.noFakeCompletion
+    }
+  };
+}
+
+function renderNexusPresenceRuntimeBadge() {
+  const baseline = getNexusPresenceRuntimeBaseline();
+  const runtime = baseline.runtimeStatus || {};
+  return `
+    <div class="nexus-presence-runtime-badge" data-nexus-presence-runtime="shared" data-nexus-presence-profile="${escapeHtml(baseline.officialProfile)}" data-nexus-presence-schema="${escapeHtml(baseline.schemaVersion)}" data-nexus-presence-no-fake-speech="${baseline.honestyPolicy.noFakeSpeech ? "true" : "false"}" data-nexus-presence-no-fake-accent="${baseline.honestyPolicy.noFakeAccent ? "true" : "false"}" data-nexus-presence-accessibility="captions keyboard screen-reader reduced-motion text-fallback" aria-label="${escapeHtml(translateText("Nexus Presence shared runtime"))}">
+      <strong>${escapeHtml(translateText("Nexus Presence"))}</strong>
+      <span>${escapeHtml(translateText("Shared voice, captions, orb, and mission state"))}</span>
+      <small>${escapeHtml(translateText(`Voice ${runtime.voiceMode || "standby"} - ${runtime.recognitionSupported ? "speech available" : "typed fallback available"}`))}</small>
+    </div>
+  `;
+}
+
+if (typeof window !== "undefined") {
+  window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
+  window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
+}
+
 function handleNexusPresenceWakePhrase(command = "", options = {}) {
   if (!isNexusPresenceWakePhrase(command)) return false;
   const greeting = nexusPresenceGreeting();
@@ -29237,6 +29377,7 @@ function renderNexusCommandCenterHero() {
         <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
         <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
         ${renderNexusConversationalPresenceLayer()}
+        ${renderNexusPresenceRuntimeBadge()}
         <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
           <button type="button" class="primary" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput">${escapeHtml(translateText("Start Mission"))}</button>
           <button type="button" data-nexus-mode-shortcut="continue-mission" data-nexus-command="Continue my last workflow.">${escapeHtml(translateText("Continue Mission"))}</button>
@@ -53410,6 +53551,8 @@ function exposeNexusAppWindowApis() {
   window.restoreNexusAppWindow = restoreNexusAppWindow;
   window.resolveNexusAppIntent = resolveNexusAppIntent;
   window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
+  window.NEXUS_PRESENCE_RUNTIME_BASELINE = NEXUS_PRESENCE_RUNTIME_BASELINE;
+  window.getNexusPresenceRuntimeBaseline = getNexusPresenceRuntimeBaseline;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {
