@@ -32,8 +32,8 @@ const shellPanel = sectionBetween(app, "function renderNexusOsApplicationShellPa
 const shellState = sectionBetween(app, "function nexusOsShellState()", "function renderNexusOsApplicationShellPanel()");
 
 assert(renderUserWorkspace.includes("data-nexus-os-standard-startup=\"calm\""), "Standard User defaults to calm Nexus OS startup");
-assert(renderUserWorkspace.includes("renderNexusOsApplicationShellPanel()"), "Nexus OS application shell panel is visible before mission content");
-assert(renderUserWorkspace.indexOf("renderNexusOsApplicationShellPanel()") < renderUserWorkspace.indexOf("renderNexusCommandCenterHero()"), "shell state appears before the Ask Nexus hero");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)'), "Nexus OS application shell panel is visible before mission content");
+assert(renderUserWorkspace.indexOf('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)') < renderUserWorkspace.indexOf('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "shell state appears before the Ask Nexus hero");
 assert(app.includes("data-nexus-os-core-orb=\"true\""), "Nexus Core orb is present in the primary shell");
 assert(app.includes("current: \"idle\""), "Nexus Core runtime has an honest initial idle state");
 assert(app.includes("data-nexus-os-orb-state=\"${escapeHtml(coreState)}\""), "Nexus Core orb is driven by runtime state");
@@ -76,7 +76,7 @@ assert(app.includes("Speak or type naturally. Nexus opens only the workflow need
 assert(app.includes("body.user-mode.nexus-os-visual-boundary .sidebar"), "shell still hides the old persistent sidebar");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #workspaceBar"), "shell still hides the old workspace bar");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #userVoiceDock"), "shell still hides duplicate voice dock");
-assert(renderUserWorkspace.includes("renderNexusOsDeferredLegacySurfaces()"), "legacy functionality remains protected behind deferred surfaces");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy functionality remains protected behind deferred surfaces");
 assert(!renderUserWorkspace.includes("renderNexusPlatformDashboard()"), "old dashboard is not rendered under Nexus OS shell");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(shellPanel), "shell copy does not claim external execution");
 

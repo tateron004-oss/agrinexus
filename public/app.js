@@ -531,8 +531,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-408";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v359";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-409";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v360";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18878,6 +18878,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusGlobalAssistantBrainPlan(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
+          ${card.readableReceipt ? renderNexusReadableReceiptFields(card.readableReceipt) : ""}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
           ${card.needsRealProvider ? `<small>${escapeHtml(translateText("Needs verified provider/partner integration before external action."))}</small>` : ""}
           ${card.blockedCategories?.length ? `<small>${escapeHtml(translateText("Blocked/gated"))}: ${card.blockedCategories.map(escapeHtml).join(", ")}</small>` : ""}
@@ -23150,6 +23151,7 @@ const NEXUS_ENDGAME_INTEGRATION_LANE_EXTENSIONS = Object.freeze([
 ]);
 let nexusPreparedPackets = [];
 let nexusActionHistory = [];
+let nexusMissionHistory = [];
 let nexusPartnerProfiles = [];
 let nexusLaneConfigOverrides = {};
 let nexusRecentWorkflows = [];
@@ -23273,6 +23275,7 @@ const NEXUS_MAJOR_LAUNCH_BUTTONS = Object.freeze([
 function nexusAllAgenticWorkflows() {
   const seen = new Set();
   return [...NEXUS_AGENTIC_WORKFLOW_REGISTRY, ...NEXUS_ENDGAME_WORKFLOW_EXTENSIONS].filter(item => {
+    if (!item || !item.id) return false;
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
@@ -23282,6 +23285,7 @@ function nexusAllAgenticWorkflows() {
 function nexusAllIntegrationLanes() {
   const seen = new Set();
   return [...NEXUS_INTEGRATION_LANES, ...NEXUS_ENDGAME_INTEGRATION_LANE_EXTENSIONS].filter(item => {
+    if (!item || !item.id) return false;
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
@@ -23896,6 +23900,154 @@ function renderNexusVerifiedExecutionStatus(attempt = null) {
   `;
 }
 
+const NEXUS_MISSION_HISTORY_STATUSES = Object.freeze([
+  "active",
+  "paused",
+  "completed",
+  "failed",
+  "queued",
+  "cancelled",
+  "archived"
+]);
+
+function nexusMissionHistoryStatusFromEntry(entry = {}, packet = null) {
+  const text = `${entry.outcomeStatus || ""} ${entry.normalizedExecutionState || ""} ${entry.failureReason || ""} ${packet?.outcomeStatus || ""}`.toLowerCase();
+  if (/archived/.test(text)) return "archived";
+  if (/cancel/.test(text)) return "cancelled";
+  if (/failed|credential|required|provider_rejected|blocked/.test(text)) return "failed";
+  if (/queued|offline|inactive/.test(text)) return "queued";
+  if (/complete|verified_complete|provider_accepted|submitted|sent/.test(text)) return "completed";
+  if (/pause/.test(text)) return "paused";
+  return "active";
+}
+
+function nexusMissionPermittedActions(status = "active", entry = {}) {
+  const actions = ["inspect"];
+  if (["active", "paused", "queued"].includes(status)) actions.push("resume");
+  if (entry.retryEligibility && ["failed", "queued"].includes(status)) actions.push("retry");
+  if (["active", "paused", "queued"].includes(status)) actions.push("cancel");
+  if (["completed", "failed", "cancelled"].includes(status)) actions.push("archive");
+  if (["archived", "cancelled"].includes(status)) actions.push("delete");
+  return actions;
+}
+
+function buildNexusReadableReceipt(packet = {}, entry = {}) {
+  const collected = Object.entries(packet.userEnteredData || {})
+    .filter(([, value]) => String(value || "").trim())
+    .map(([key, value]) => `${key}: ${String(value).trim()}`);
+  const lane = nexusIntegrationLaneById(entry.laneId || packet.destinationLaneId);
+  return {
+    schemaVersion: "nexus-readable-mission-receipt.v1",
+    userRequest: packet.originalCommand || nexusActiveWorkflowState?.command || packet.summary || "User opened a Nexus workflow.",
+    nexusInterpretation: packet.workflowLabel || entry.workflowId || "Nexus workflow",
+    collectedInformation: collected.length ? collected : ["No extra user-entered fields were collected."],
+    userApproval: entry.confirmationStatus || packet.confirmationStatus || "No final external-execution approval recorded.",
+    preparedAction: packet.packetType || entry.actionType || "local_nexus_packet",
+    executionStatus: entry.normalizedExecutionState || entry.outcomeStatus || packet.outcomeStatus || "draft",
+    providerResult: entry.providerResponse || entry.resultMessage || "No provider result recorded.",
+    verification: entry.verificationEvidence || "not_started",
+    time: entry.timestamp || packet.updatedAt || packet.createdAt || new Date().toISOString(),
+    followUp: entry.followUpStatus || "Review next step before any external action.",
+    safetyNote: "Nexus did not send, call, pay, book, dispatch, diagnose, prescribe, share location, or contact a provider without the required provider evidence, consent, confirmation, audit, and verification.",
+    dataSharingNote: packet.consentText || `Local browser receipt only. ${lane?.label || "No provider lane"} receives nothing unless a configured, approved handoff succeeds.`
+  };
+}
+
+function buildNexusMissionHistoryRecord(packet = {}, entry = {}) {
+  const status = nexusMissionHistoryStatusFromEntry(entry, packet);
+  const receipt = buildNexusReadableReceipt(packet, entry);
+  return {
+    schemaVersion: "nexus-mission-history-record.v1",
+    missionId: packet.packetId || entry.packetId || entry.id || `nexus-mission-${Date.now()}`,
+    receiptId: entry.id || "",
+    packetId: packet.packetId || entry.packetId || "",
+    workflowId: packet.workflowId || entry.workflowId || "",
+    title: packet.workflowLabel || entry.workflowId || "Nexus mission",
+    status,
+    category: packet.category || "platform",
+    createdAt: packet.createdAt || entry.timestamp || receipt.time,
+    updatedAt: entry.timestamp || packet.updatedAt || receipt.time,
+    readableReceipt: receipt,
+    sensitiveReceiptAccess: /health|clinical|pharmacy|provider|diabetes|hypertension|obesity|rpm|rtm|mobile/i.test(`${packet.category || ""} ${packet.workflowId || ""} ${packet.packetType || ""}`)
+      ? "local-browser-only-sensitive"
+      : "local-browser-only",
+    permittedActions: nexusMissionPermittedActions(status, entry),
+    noSilentExecution: true,
+    noSecretsIncluded: true
+  };
+}
+
+function upsertNexusMissionHistory(record = {}) {
+  if (!record.missionId) return null;
+  nexusMissionHistory = [
+    record,
+    ...nexusMissionHistory.filter(item => item.missionId !== record.missionId)
+  ].slice(0, 50);
+  return record;
+}
+
+function nexusMissionHistoryCounts(records = nexusMissionHistory) {
+  return NEXUS_MISSION_HISTORY_STATUSES.reduce((counts, status) => {
+    counts[status] = records.filter(record => record.status === status).length;
+    return counts;
+  }, {});
+}
+
+function renderNexusReadableReceiptFields(receipt = {}) {
+  const collected = Array.isArray(receipt.collectedInformation) ? receipt.collectedInformation : [];
+  return `
+    <dl class="nexus-readable-receipt-fields" data-nexus-readable-receipt-fields="true">
+      <div><dt>${escapeHtml(translateText("User request"))}</dt><dd>${escapeHtml(translateText(receipt.userRequest || "Not recorded"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Nexus interpretation"))}</dt><dd>${escapeHtml(translateText(receipt.nexusInterpretation || "Nexus workflow"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Collected information"))}</dt><dd>${collected.map(item => `<span>${escapeHtml(translateText(item))}</span>`).join("") || escapeHtml(translateText("None"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("User approval"))}</dt><dd>${escapeHtml(translateText(receipt.userApproval || "Not recorded"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Prepared action"))}</dt><dd>${escapeHtml(translateText(receipt.preparedAction || "Local packet"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Execution status"))}</dt><dd>${escapeHtml(translateText(receipt.executionStatus || "draft"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Provider result"))}</dt><dd>${escapeHtml(translateText(receipt.providerResult || "No provider result"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Verification"))}</dt><dd>${escapeHtml(translateText(receipt.verification || "not_started"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Time"))}</dt><dd>${escapeHtml(translateText(receipt.time || ""))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Follow-up"))}</dt><dd>${escapeHtml(translateText(receipt.followUp || "Review next step"))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Safety note"))}</dt><dd>${escapeHtml(translateText(receipt.safetyNote || ""))}</dd></div>
+      <div><dt>${escapeHtml(translateText("Data-sharing note"))}</dt><dd>${escapeHtml(translateText(receipt.dataSharingNote || ""))}</dd></div>
+    </dl>
+  `;
+}
+
+function renderNexusMissionHistoryPanel() {
+  const records = nexusMissionHistory.slice(0, 12);
+  const counts = nexusMissionHistoryCounts();
+  return `
+    <section class="nexus-mission-history-panel nexus-glass-card" data-nexus-mission-history-panel="true" data-sensitive-receipt-access="local-browser-only" data-no-silent-execution="true">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${escapeHtml(translateText("Mission history"))}</span>
+        <strong>${escapeHtml(translateText("Receipts, timeline, and mission history"))}</strong>
+        <p>${escapeHtml(translateText("Nexus keeps a clear local record of what it understood, prepared, attempted, queued, failed, cancelled, completed, and what still needs follow-up."))}</p>
+      </div>
+      <div class="nexus-mission-history-counts" data-nexus-mission-history-counts="true">
+        ${NEXUS_MISSION_HISTORY_STATUSES.map(status => `<span data-nexus-mission-count="${escapeHtml(status)}">${escapeHtml(translateText(status))}: ${escapeHtml(String(counts[status] || 0))}</span>`).join("")}
+      </div>
+      <div class="nexus-mission-history-list" data-nexus-mission-history-list="true">
+        ${records.length ? records.map(record => `
+          <article data-nexus-mission-history-card="true" data-mission-id="${escapeHtml(record.missionId)}" data-mission-status="${escapeHtml(record.status)}" data-sensitive-receipt-access="${escapeHtml(record.sensitiveReceiptAccess)}">
+            <div>
+              <strong>${escapeHtml(translateText(record.title || "Nexus mission"))}</strong>
+              <span>${escapeHtml(translateText(`Status: ${record.status}`))}</span>
+              <small>${escapeHtml(translateText(`Updated: ${record.updatedAt || ""}`))}</small>
+            </div>
+            ${renderNexusReadableReceiptFields(record.readableReceipt || {})}
+            <div class="nexus-mission-history-actions">
+              ${(record.permittedActions || ["inspect"]).map(action => `
+                <button type="button" data-nexus-mission-history-action="${escapeHtml(action)}" data-mission-id="${escapeHtml(record.missionId)}">${escapeHtml(translateText(action))}</button>
+              `).join("")}
+            </div>
+            <small>${escapeHtml(translateText("Sensitive receipt access: local browser only. Export, retry, delete, and external action paths remain user-controlled and gated."))}</small>
+          </article>
+        `).join("") : `<p>${escapeHtml(translateText("No mission receipts yet. Open a workflow, prepare a packet, queue an action, or record an outcome to start the history."))}</p>`}
+      </div>
+    </section>
+  `;
+}
+
 function nexusAdapterTypeForLane(lane = {}, packet = {}) {
   const text = `${lane.id || ""} ${lane.category || ""} ${packet.packetType || ""}`.toLowerCase();
   if (/\bemail\b/.test(text)) return "email";
@@ -24160,6 +24312,110 @@ function cancelNexusPacket(packetId) {
   return true;
 }
 
+function inspectNexusMissionHistoryRecord(missionId = "") {
+  const record = nexusMissionHistory.find(item => item.missionId === missionId);
+  if (!record) return false;
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_mission_history_inspected",
+    mode: "Mission history",
+    message: `${record.title || "Nexus mission"} receipt is open for local review.`,
+    preparedCards: [{
+      type: "nexus_mission_history_receipt",
+      title: record.title || "Nexus mission",
+      status: record.status,
+      localOnly: true,
+      noExecutionAuthorized: true,
+      readableReceipt: record.readableReceipt,
+      sensitiveReceiptAccess: record.sensitiveReceiptAccess
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    noSecretsExposed: true,
+    source: "nexus_mission_history"
+  };
+  renderUserWorkspace();
+  return true;
+}
+
+function updateNexusMissionHistoryRecord(missionId = "", patch = {}) {
+  let updated = null;
+  nexusMissionHistory = nexusMissionHistory.map(record => {
+    if (record.missionId !== missionId) return record;
+    updated = {
+      ...record,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      permittedActions: nexusMissionPermittedActions(patch.status || record.status, {
+        retryEligibility: patch.retryEligibility ?? record.permittedActions?.includes("retry")
+      })
+    };
+    return updated;
+  });
+  saveNexusRuntimeMemory();
+  return updated;
+}
+
+function handleNexusMissionHistoryAction(action = "", missionId = "") {
+  const record = nexusMissionHistory.find(item => item.missionId === missionId);
+  if (!record) return false;
+  if (action === "inspect") return inspectNexusMissionHistoryRecord(missionId);
+  if (action === "resume") {
+    const packet = nexusPreparedPackets.find(item => item.packetId === record.packetId);
+    updateNexusMissionHistoryRecord(missionId, { status: "active" });
+    if (packet?.workflowId) openNexusWorkflow(packet.workflowId, { command: `resume ${record.title}`, source: "mission-history-resume" });
+    else {
+      nexusAgenticBrainLastResult = {
+        ok: true,
+        status: "nexus_mission_history_resumed",
+        mode: "Mission history",
+        message: `${record.title} is marked active again. Review the receipt before taking any next step.`,
+        preparedCards: [{ type: "nexus_mission_resume", title: record.title, status: "active", localOnly: true, noExecutionAuthorized: true }],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    }
+    return true;
+  }
+  if (action === "retry") {
+    if (!record.permittedActions?.includes("retry")) return inspectNexusMissionHistoryRecord(missionId);
+    return retryNexusAction(record.receiptId || nexusActionHistory.find(entry => entry.packetId === record.packetId)?.id || "");
+  }
+  if (action === "cancel") {
+    const packet = nexusPreparedPackets.find(item => item.packetId === record.packetId);
+    if (packet) return cancelNexusPacket(packet.packetId);
+    updateNexusMissionHistoryRecord(missionId, { status: "cancelled" });
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "archive") {
+    updateNexusMissionHistoryRecord(missionId, { status: "archived" });
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "delete") {
+    if (!["archived", "cancelled"].includes(record.status)) {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_mission_history_delete_blocked",
+        mode: "Mission history",
+        message: "Delete is permitted only for archived or cancelled local mission records. Archive first if you no longer need the receipt.",
+        preparedCards: [{ type: "delete_blocked", title: record.title, status: record.status, localOnly: true, noExecutionAuthorized: true }],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+      return true;
+    }
+    nexusMissionHistory = nexusMissionHistory.filter(item => item.missionId !== missionId);
+    saveNexusRuntimeMemory();
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
 function editNexusPacket(packetId) {
   const packet = nexusPreparedPackets.find(item => item.packetId === packetId);
   if (!packet) return false;
@@ -24169,7 +24425,7 @@ function editNexusPacket(packetId) {
 function recordNexusOutcome(packet, result) {
   const lane = nexusIntegrationLaneById(result.laneId || packet.destinationLaneId);
   const executionAttempt = buildNexusVerifiedExecutionAttemptRecord(packet, result, lane);
-  const entry = {
+  const provisionalEntry = {
     id: `nexus-action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     packetId: packet.packetId,
     workflowId: packet.workflowId,
@@ -24192,7 +24448,17 @@ function recordNexusOutcome(packet, result) {
     errorMessage: result.errorMessage || "",
     followUpStatus: result.followUpStatus || "review next step"
   };
+  const readableReceipt = buildNexusReadableReceipt(packet, provisionalEntry);
+  const entry = {
+    ...provisionalEntry,
+    readableReceipt,
+    missionStatus: nexusMissionHistoryStatusFromEntry(provisionalEntry, packet),
+    sensitiveReceiptAccess: /health|clinical|pharmacy|provider|diabetes|hypertension|obesity|rpm|rtm|mobile/i.test(`${packet.category || ""} ${packet.workflowId || ""} ${packet.packetType || ""}`)
+      ? "local-browser-only-sensitive"
+      : "local-browser-only"
+  };
   nexusActionHistory = [entry, ...nexusActionHistory].slice(0, 25);
+  upsertNexusMissionHistory(buildNexusMissionHistoryRecord(packet, entry));
   return entry;
 }
 
@@ -24686,6 +24952,14 @@ function renderNexusActionReceipt(packet = null, entry = null) {
     },
     packet ? nexusIntegrationLaneById(packet.destinationLaneId) : null
   );
+  const readableReceipt = entry?.readableReceipt || buildNexusReadableReceipt(packet || {}, {
+    outcomeStatus: status,
+    normalizedExecutionState: receiptAttempt.normalizedExecutionState,
+    providerResponse: receiptAttempt.providerResponse,
+    verificationEvidence: receiptAttempt.verificationEvidence,
+    timestamp: receiptAttempt.attemptTime,
+    followUpStatus: "Review next step before any external action."
+  });
   return `
     <section class="nexus-action-receipt" data-nexus-action-receipt="true">
       <strong>${escapeHtml(translateText("Action receipt"))}</strong>
@@ -24704,6 +24978,7 @@ function renderNexusActionReceipt(packet = null, entry = null) {
         </ul>
       </div>
       <p>${escapeHtml(translateText(`Status: ${nexusStatusBadgeLabel(status)}`))}${entry?.resultMessage ? ` - ${escapeHtml(translateText(entry.resultMessage))}` : ""}</p>
+      ${renderNexusReadableReceiptFields(readableReceipt)}
       ${renderNexusVerifiedExecutionStatus(receiptAttempt)}
     </section>
   `;
@@ -24714,6 +24989,7 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusActiveWorkflowState", JSON.stringify(nexusActiveWorkflowState || {}));
     localStorage.setItem("nexusPreparedPackets", JSON.stringify(nexusPreparedPackets.slice(0, 25)));
     localStorage.setItem("nexusActionHistory", JSON.stringify(nexusActionHistory.slice(0, 25)));
+    localStorage.setItem("nexusMissionHistory", JSON.stringify(nexusMissionHistory.slice(0, 50)));
     localStorage.setItem("nexusPartnerProfiles", JSON.stringify(nexusPartnerProfiles.slice(0, 25)));
     localStorage.setItem("nexusLaneConfigOverrides", JSON.stringify(nexusLaneConfigOverrides || {}));
     localStorage.setItem("nexusRecentWorkflows", JSON.stringify(nexusRecentWorkflows.slice(0, 8)));
@@ -24738,6 +25014,7 @@ function restoreNexusRuntimeMemory() {
     nexusActiveWorkflowState = JSON.parse(localStorage.getItem("nexusActiveWorkflowState") || "null") || nexusActiveWorkflowState;
     nexusPreparedPackets = JSON.parse(localStorage.getItem("nexusPreparedPackets") || "[]") || [];
     nexusActionHistory = JSON.parse(localStorage.getItem("nexusActionHistory") || "[]") || [];
+    nexusMissionHistory = JSON.parse(localStorage.getItem("nexusMissionHistory") || "[]") || [];
     nexusPartnerProfiles = JSON.parse(localStorage.getItem("nexusPartnerProfiles") || "[]") || [];
     nexusLaneConfigOverrides = JSON.parse(localStorage.getItem("nexusLaneConfigOverrides") || "{}") || {};
     nexusRecentWorkflows = JSON.parse(localStorage.getItem("nexusRecentWorkflows") || "[]") || [];
@@ -24770,6 +25047,7 @@ function restoreNexusRuntimeMemory() {
   } catch {
     nexusPreparedPackets = [];
     nexusActionHistory = [];
+    nexusMissionHistory = [];
     nexusPartnerProfiles = [];
     nexusLaneConfigOverrides = {};
     nexusRecentWorkflows = [];
@@ -24805,6 +25083,7 @@ function restoreNexusRuntimeMemory() {
 function clearNexusSensitiveLocalData() {
   nexusPreparedPackets = [];
   nexusActionHistory = [];
+  nexusMissionHistory = [];
   nexusPartnerProfiles = [];
   nexusLaneConfigOverrides = {};
   nexusRecentWorkflows = [];
@@ -24838,6 +25117,7 @@ function clearNexusSensitiveLocalData() {
     localStorage.removeItem("nexusActiveWorkflowState");
     localStorage.removeItem("nexusPreparedPackets");
     localStorage.removeItem("nexusActionHistory");
+    localStorage.removeItem("nexusMissionHistory");
     localStorage.removeItem("nexusPartnerProfiles");
     localStorage.removeItem("nexusLaneConfigOverrides");
     localStorage.removeItem("nexusRecentWorkflows");
@@ -28984,6 +29264,7 @@ function renderNexusOperationsShelf() {
         ${renderNexusEndgameCommandCenter()}
         ${renderNexusActivationCenter()}
         ${renderNexusReviewQueues()}
+        ${renderNexusMissionHistoryPanel()}
         ${renderNexusActiveWorkSummary()}
         ${renderNexusPilotPlatformStatusPanel()}
         ${renderNexusPilotReviewQueuePanel()}
@@ -28995,7 +29276,9 @@ function renderNexusOperationsShelf() {
 }
 
 function renderNexusModeLauncher() {
-  const shortcutsById = new Map(NEXUS_COMMAND_CENTER_SHORTCUTS.map(item => [item.id, item]));
+  const shortcutsById = new Map((NEXUS_COMMAND_CENTER_SHORTCUTS || [])
+    .filter(item => item && item.id)
+    .map(item => [item.id, item]));
   const homeItems = NEXUS_HOME_MODE_IDS.map(id => shortcutsById.get(id)).filter(Boolean);
   const activeWorkflowId = normalizeNexusWorkflowId(nexusActiveWorkflowState?.id || "", nexusActiveWorkflowState?.command || "");
   return `
@@ -33961,6 +34244,20 @@ function renderNexusOsDeferredLegacySurfaces() {
   `;
 }
 
+function renderNexusUserWorkspaceSegment(label = "Nexus section", renderer = () => "") {
+  try {
+    return renderer();
+  } catch (error) {
+    return `
+      <section class="nexus-render-segment-error nexus-glass-card" data-nexus-render-segment-error="${escapeHtml(label)}" data-no-live-execution="true">
+        <strong>${escapeHtml(translateText(`${label} needs a safe refresh`))}</strong>
+        <p>${escapeHtml(translateText(error?.message || "This local section could not render. Nexus kept the rest of the workspace available."))}</p>
+        <small>${escapeHtml(translateText("No external action ran. Clear local browser records or retry after reviewing the receipt/history panel."))}</small>
+      </section>
+    `;
+  }
+}
+
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
@@ -33978,12 +34275,12 @@ function renderUserWorkspace() {
     <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm">
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
-        ${renderNexusOsApplicationShellPanel()}
-        ${renderNexusCommandCenterHero()}
-        ${renderNexusAgenticMissionWorkspace()}
-        ${renderNexusActiveWorkflowWorkspace()}
-        ${renderNexusOsCalmHelper()}
-        ${renderNexusOsDeferredLegacySurfaces()}
+        ${renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)}
+        ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
+        ${renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)}
+        ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)}
+        ${renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)}
+        ${renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)}
       </main>
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
@@ -51171,6 +51468,17 @@ function bindStatic() {
     if (await handleNexusVirtualCareTelehealthClick(event)) return;
     if (await handleNexusProviderCoordinationClick(event)) return;
     if (handleNexusPacketActionClick(event)) return;
+    const missionHistoryAction = event.target?.closest?.("[data-nexus-mission-history-action]");
+    if (missionHistoryAction) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      handleNexusMissionHistoryAction(
+        missionHistoryAction.dataset.nexusMissionHistoryAction || "inspect",
+        missionHistoryAction.dataset.missionId || ""
+      );
+      return;
+    }
     if (handleNexusGlobalReviewQueueAuditClick(event)) return;
     if (handleNexusGlobalActivationCenterClick(event)) return;
     if (handleNexusLaneActionClick(event)) return;

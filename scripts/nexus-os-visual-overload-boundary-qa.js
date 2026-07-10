@@ -36,11 +36,11 @@ assert(app.includes("body.user-mode.nexus-os-visual-boundary #userVoiceDock"), "
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #userMobileDock"), "mobile dock is hidden for Standard User startup");
 assert(renderBlock.includes("data-nexus-os-standard-startup=\"calm\""), "Standard User startup is marked as calm Nexus OS surface");
 assert(renderBlock.includes("renderNexusTopWelcomeArea()"), "Nexus welcome area remains visible");
-assert(renderBlock.includes("renderNexusCommandCenterHero()"), "Ask Nexus hero remains visible");
-assert(renderBlock.includes("renderNexusAgenticMissionWorkspace()"), "mission workspace remains available");
-assert(renderBlock.includes("renderNexusActiveWorkflowWorkspace()"), "active workflow workspace remains available");
-assert(renderBlock.includes("renderNexusOsCalmHelper()"), "small calm helper is visible");
-assert(renderBlock.includes("renderNexusOsDeferredLegacySurfaces()"), "legacy surfaces are preserved behind deferred host");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "Ask Nexus hero remains visible");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)'), "mission workspace remains available");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)'), "active workflow workspace remains available");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)'), "small calm helper is visible");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy surfaces are preserved behind deferred host");
 
 const visibleStartupProhibited = [
   "renderNexusDemoSandboxControls(\"command-landing\")",

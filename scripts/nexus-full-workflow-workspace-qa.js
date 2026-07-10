@@ -57,14 +57,14 @@ function assertBefore(source, first, second, label) {
 
 assertBefore(
   renderUserWorkspaceBlock,
-  "${renderNexusCommandCenterHero()}",
-  "${renderNexusActiveWorkflowWorkspace()}",
+  'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
+  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)',
   "workspace should be near the top of the main command area"
 );
 assertBefore(
   renderUserWorkspaceBlock,
-  "${renderNexusActiveWorkflowWorkspace()}",
-  "${renderNexusOsDeferredLegacySurfaces()}",
+  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspace)',
+  'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)',
   "workspace should appear before deferred contextual logs/history panels"
 );
 includes(deferredLegacyBlock, "data-nexus-os-deferred-legacy-surfaces=\"true\"", "contextual logs/history are deferred in Nexus OS startup");

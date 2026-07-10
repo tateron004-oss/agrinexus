@@ -11829,7 +11829,8 @@ body.user-mode .nexus-window-helper,
 body.user-mode .nexus-guided-intake,
 body.user-mode .nexus-confirmation-summary,
 body.user-mode .nexus-action-receipt,
-body.user-mode .nexus-verified-execution-status {
+body.user-mode .nexus-verified-execution-status,
+body.user-mode .nexus-mission-history-panel {
   margin: 14px 0;
   padding: 14px;
   border: 1px solid rgba(125, 211, 252, .22);
@@ -11876,7 +11877,8 @@ body.user-mode .nexus-window-helper strong,
 body.user-mode .nexus-guided-intake strong,
 body.user-mode .nexus-confirmation-summary strong,
 body.user-mode .nexus-action-receipt strong,
-body.user-mode .nexus-verified-execution-status strong {
+body.user-mode .nexus-verified-execution-status strong,
+body.user-mode .nexus-mission-history-panel strong {
   color: rgba(255, 255, 255, .97);
 }
 
@@ -11889,7 +11891,10 @@ body.user-mode .nexus-confirmation-summary li,
 body.user-mode .nexus-action-receipt li,
 body.user-mode .nexus-action-receipt p,
 body.user-mode .nexus-verified-execution-status p,
-body.user-mode .nexus-verified-execution-status dd {
+body.user-mode .nexus-verified-execution-status dd,
+body.user-mode .nexus-readable-receipt-fields dd,
+body.user-mode .nexus-mission-history-panel p,
+body.user-mode .nexus-mission-history-panel small {
   color: rgba(226, 232, 240, .88);
   line-height: 1.45;
 }
@@ -11929,6 +11934,93 @@ body.user-mode .nexus-verified-execution-status dt {
 body.user-mode .nexus-verified-execution-status dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+body.user-mode .nexus-mission-history-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+body.user-mode .nexus-mission-history-counts span,
+body.user-mode .nexus-mission-history-actions button {
+  border: 1px solid rgba(103, 232, 249, .24);
+  border-radius: 999px;
+  color: rgba(240, 249, 255, .96);
+  background: rgba(15, 23, 42, .48);
+  box-shadow: 0 0 16px rgba(34, 211, 238, .1);
+}
+
+body.user-mode .nexus-mission-history-counts span {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+body.user-mode .nexus-mission-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+body.user-mode .nexus-mission-history-list article {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(2, 6, 23, .44), rgba(15, 23, 42, .34)),
+    radial-gradient(circle at 100% 0%, rgba(168, 85, 247, .14), transparent 36%);
+}
+
+body.user-mode .nexus-readable-receipt-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+body.user-mode .nexus-readable-receipt-fields div {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(125, 211, 252, .14);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, .3);
+}
+
+body.user-mode .nexus-readable-receipt-fields dt {
+  margin: 0 0 4px;
+  color: rgba(125, 211, 252, .9);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+body.user-mode .nexus-readable-receipt-fields dd {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+body.user-mode .nexus-mission-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-mission-history-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  text-transform: capitalize;
+}
+
+@media (max-width: 720px) {
+  body.user-mode .nexus-readable-receipt-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 body.user-mode .nexus-role-low-bandwidth-panel {
