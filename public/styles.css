@@ -14207,6 +14207,16 @@ body.user-mode .nexus-genesis-experience-root .nexus-primary-voice-hint {
   color: rgba(226, 232, 240, .9) !important;
 }
 
+body.user-mode .nexus-genesis-experience-root .nexus-primary-typed-submit {
+  min-width: 72px !important;
+  color: rgba(255, 255, 255, .98) !important;
+  letter-spacing: 0 !important;
+}
+
+body.user-mode .nexus-genesis-experience-root .nexus-primary-typed-hint {
+  color: rgba(203, 213, 225, .86) !important;
+}
+
 body.user-mode .nexus-genesis-experience-root .nexus-os-conversation-surface,
 body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
   grid-column: 1 / -1 !important;

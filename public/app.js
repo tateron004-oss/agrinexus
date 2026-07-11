@@ -30185,14 +30185,15 @@ function renderNexusCommandCenterHero() {
         </div>
       </div>
       <div class="nexus-command-composer" data-nexus-command-composer="true">
-        <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
+        <label for="nexusCommandCenterInput">${translateText("Type to Nexus")}</label>
         <div class="nexus-command-input-row">
           <button type="button" class="nexus-command-mic nexus-primary-voice-entry" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">${escapeHtml(translateText("Talk"))}</button>
-          <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, music, messages, reminders, or safety."))}"></textarea>
-          <button type="button" class="nexus-command-send" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">Send</button>
+          <textarea id="nexusCommandCenterInput" rows="2" data-nexus-primary-typed-entry="true" aria-describedby="nexusCommandTypedHint" placeholder="${escapeHtml(translateText("Tell Nexus what you need help with."))}"></textarea>
+          <button type="button" class="nexus-command-send nexus-primary-typed-submit" data-nexus-command-center-submit data-nexus-primary-typed-submit="true" data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">${escapeHtml(translateText("Ask"))}</button>
         </div>
         <div class="nexus-command-context">
           <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Press Talk to speak, or type your request.")}</span>
+          <span id="nexusCommandTypedHint" class="nexus-primary-typed-hint" data-nexus-primary-typed-hint="true">${translateText("Press Enter to ask. Use Shift+Enter for a new line.")}</span>
           <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>
           <span>${translateText("Local-first")}</span>
           <span>${translateText("High-risk actions gated")}</span>
