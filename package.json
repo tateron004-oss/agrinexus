@@ -134,6 +134,7 @@
     "qa:nexus-standard-user-diagnostics-removal": "node scripts/nexus-standard-user-diagnostics-removal-qa.js",
     "qa:nexus-core-first-viewport": "node scripts/nexus-core-first-viewport-qa.js",
     "qa:nexus-first-impression-greeting": "node scripts/nexus-first-impression-greeting-qa.js",
+    "qa:nexus-primary-voice-entry": "node scripts/nexus-primary-voice-entry-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

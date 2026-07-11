@@ -30187,11 +30187,12 @@ function renderNexusCommandCenterHero() {
       <div class="nexus-command-composer" data-nexus-command-composer="true">
         <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
         <div class="nexus-command-input-row">
+          <button type="button" class="nexus-command-mic nexus-primary-voice-entry" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">${escapeHtml(translateText("Talk"))}</button>
           <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, music, messages, reminders, or safety."))}"></textarea>
-          <button type="button" class="nexus-command-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" aria-label="${escapeHtml(translateText("Speak to Nexus"))}">Mic</button>
           <button type="button" class="nexus-command-send" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">Send</button>
         </div>
         <div class="nexus-command-context">
+          <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Press Talk to speak, or type your request.")}</span>
           <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>
           <span>${translateText("Local-first")}</span>
           <span>${translateText("High-risk actions gated")}</span>

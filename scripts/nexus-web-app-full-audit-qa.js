@@ -258,7 +258,7 @@ check("service worker and cache versions are consistent", (() => {
 })());
 
 check("key browser selectors and accessibility hooks exist", hasAll(app, [
-  'translateText("Speak to Nexus")',
+  'translateText("Talk to Nexus")',
   'translateText("Send to Nexus")',
   'translateText("Learn what Nexus can do")',
   'data-nexus-mode-shortcut',

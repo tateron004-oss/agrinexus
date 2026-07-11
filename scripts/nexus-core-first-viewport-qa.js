@@ -47,7 +47,7 @@ assert(genesisLayout.includes(".nexus-command-landing-status-strip"), "legacy la
 assert(genesisLayout.includes(".nexus-presence-continuity"), "verbose presence continuity is suppressed in first viewport");
 assert(genesisLayout.includes("grid-area: orb"), "orb stage is explicitly placed");
 assert(genesisLayout.includes("grid-area: composer"), "typed composer is explicitly placed");
-assert(genesisLayout.includes("grid-template-columns: minmax(0, 1fr) auto auto !important"), "typed and voice controls remain visible in the first viewport");
+assert(genesisLayout.includes("grid-template-columns: auto minmax(0, 1fr) auto !important"), "voice, typed, and send controls remain visible in the first viewport");
 assert(genesisLayout.includes('[data-nexus-os-voice-control="toggle-listening"]'), "primary voice control receives explicit visible sizing");
 assert(genesisLayout.includes("visibility: visible !important"), "primary voice control cannot collapse in the Genesis first viewport");
 assert(genesisLayout.includes("clamp(210px, 25vw, 300px)"), "Nexus orb receives first-viewport scale");

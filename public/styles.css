@@ -14178,7 +14178,7 @@ body.user-mode .nexus-genesis-experience-root .nexus-command-composer {
 }
 
 body.user-mode .nexus-genesis-experience-root .nexus-command-input-row {
-  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
 }
 
 body.user-mode .nexus-genesis-experience-root .nexus-command-mic,
@@ -14186,10 +14186,25 @@ body.user-mode .nexus-genesis-experience-root [data-nexus-os-voice-control="togg
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 72px !important;
+  min-width: 96px !important;
   min-height: 50px !important;
   visibility: visible !important;
   opacity: 1 !important;
+}
+
+body.user-mode .nexus-genesis-experience-root .nexus-primary-voice-entry {
+  border-color: rgba(34, 211, 238, .56) !important;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, .28), transparent 34%),
+    linear-gradient(135deg, rgba(14, 165, 233, .92), rgba(168, 85, 247, .88)) !important;
+  color: rgba(255, 255, 255, .98) !important;
+  box-shadow:
+    0 0 22px rgba(34, 211, 238, .28),
+    0 14px 32px rgba(15, 23, 42, .32) !important;
+}
+
+body.user-mode .nexus-genesis-experience-root .nexus-primary-voice-hint {
+  color: rgba(226, 232, 240, .9) !important;
 }
 
 body.user-mode .nexus-genesis-experience-root .nexus-os-conversation-surface,
