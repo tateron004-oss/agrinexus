@@ -139,6 +139,7 @@
     "qa:nexus-home-to-mission-transition": "node scripts/nexus-home-to-mission-transition-qa.js",
     "qa:nexus-first-viewport-responsive-hardening": "node scripts/nexus-first-viewport-responsive-hardening-qa.js",
     "qa:nexus-accessible-first-impression": "node scripts/nexus-accessible-first-impression-qa.js",
+    "qa:nexus-os-genesis-experience-layer-completion": "node scripts/nexus-os-genesis-experience-layer-completion-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

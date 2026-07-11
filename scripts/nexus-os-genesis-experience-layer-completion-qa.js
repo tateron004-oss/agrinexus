@@ -1,0 +1,94 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function assert(condition, label) {
+  if (!condition) {
+    console.error(`FAIL ${label}`);
+    process.exit(1);
+  }
+  console.log(`PASS ${label}`);
+}
+
+const app = read("public/app.js");
+const styles = read("public/styles.css");
+const packageJson = JSON.parse(read("package.json"));
+const qaSuite = read("scripts/qa-suite.js");
+
+const requiredQaScripts = [
+  "scripts/nexus-experience-render-root-qa.js",
+  "scripts/nexus-standard-user-diagnostics-removal-qa.js",
+  "scripts/nexus-core-first-viewport-qa.js",
+  "scripts/nexus-first-impression-greeting-qa.js",
+  "scripts/nexus-primary-voice-entry-qa.js",
+  "scripts/nexus-primary-typed-entry-qa.js",
+  "scripts/nexus-home-to-mission-transition-qa.js",
+  "scripts/nexus-first-viewport-responsive-hardening-qa.js",
+  "scripts/nexus-accessible-first-impression-qa.js",
+  "scripts/nexus-os-genesis-experience-layer-completion-qa.js"
+];
+
+const requiredAliases = {
+  "qa:nexus-experience-render-root": "node scripts/nexus-experience-render-root-qa.js",
+  "qa:nexus-standard-user-diagnostics-removal": "node scripts/nexus-standard-user-diagnostics-removal-qa.js",
+  "qa:nexus-core-first-viewport": "node scripts/nexus-core-first-viewport-qa.js",
+  "qa:nexus-first-impression-greeting": "node scripts/nexus-first-impression-greeting-qa.js",
+  "qa:nexus-primary-voice-entry": "node scripts/nexus-primary-voice-entry-qa.js",
+  "qa:nexus-primary-typed-entry": "node scripts/nexus-primary-typed-entry-qa.js",
+  "qa:nexus-home-to-mission-transition": "node scripts/nexus-home-to-mission-transition-qa.js",
+  "qa:nexus-first-viewport-responsive-hardening": "node scripts/nexus-first-viewport-responsive-hardening-qa.js",
+  "qa:nexus-accessible-first-impression": "node scripts/nexus-accessible-first-impression-qa.js",
+  "qa:nexus-os-genesis-experience-layer-completion": "node scripts/nexus-os-genesis-experience-layer-completion-qa.js"
+};
+
+requiredQaScripts.forEach(script => {
+  assert(fs.existsSync(path.join(root, script)), `${script} exists`);
+  assert(qaSuite.includes(script), `${script} is wired into safe suites`);
+});
+
+Object.entries(requiredAliases).forEach(([alias, command]) => {
+  assert(packageJson.scripts[alias] === command, `${alias} package alias exists`);
+});
+
+[
+  'data-nexus-standard-user-render-root="genesis-experience"',
+  'data-nexus-genesis-experience-root="true"',
+  'data-nexus-genesis-first-viewport="true"',
+  'data-nexus-os-core-orb="true"',
+  'data-nexus-accessible-first-impression="true"',
+  'data-nexus-primary-voice-entry="true"',
+  'data-nexus-primary-typed-entry="true"',
+  'data-nexus-primary-typed-submit="true"',
+  'data-nexus-home-to-mission-transition="true"',
+  'data-nexus-focused-mission-window="true"'
+].forEach(token => assert(app.includes(token), `${token} runtime marker exists`));
+
+[
+  "Good morning. I'm Nexus. What would you like to do?",
+  "Your assistant is here.",
+  "Press Talk to speak, or type your request.",
+  "Press Enter to ask. Use Shift+Enter for a new line.",
+  "Focused mission open",
+  "No external action is authorized from this transition."
+].forEach(token => assert(app.includes(token), `${token} user-facing copy exists`));
+
+[
+  "Genesis Experience Rail 3",
+  "@media (max-width: 640px)",
+  "@media (prefers-reduced-motion: reduce)",
+  "@media (forced-colors: active)",
+  ".nexus-primary-voice-entry",
+  ".nexus-primary-typed-submit",
+  ".nexus-home-to-mission-banner"
+].forEach(token => assert(styles.includes(token), `${token} CSS support exists`));
+
+assert(app.includes("renderNexusOsDeferredLegacySurfaces"), "legacy diagnostics remain deferred");
+assert(!/Good to see you\\\", \\$\\{escapeHtml\\(displayName\\)\\}/.test(app), "Standard User role greeting is not restored");
+assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(app.slice(app.indexOf("function renderUserWorkspace()"), app.indexOf("function renderUserAccessibilityPanel"))), "Standard User render root has no false execution claim");
+
+console.log("Nexus OS Genesis Experience Layer completion QA passed.");
