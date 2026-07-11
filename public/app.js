@@ -919,8 +919,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-413";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-414";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v365";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -30177,6 +30177,121 @@ function closeNexusOnboardingModal() {
 const NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH = Date.now();
 let nexusTrueExperienceSessionStarted = false;
 let nexusTrueExperienceHomeResetEpoch = 0;
+let nexusGenesisExperienceActivated = false;
+let nexusGenesisExperienceAnimationFrame = 0;
+let nexusGenesisExperienceStartedAt = 0;
+
+const NEXUS_GENESIS_EXPERIENCE_OWNERSHIP_REGISTRY = Object.freeze({
+  engine: "Nexus Genesis Experience Engine 1.0",
+  coreStateOwner: "nexusCoreRuntimeState",
+  orbRendererOwner: "renderNexusTrueCoreOrb",
+  particleRendererOwner: "CSS/rAF-driven nexus-genesis-particle-field",
+  audioHookOwner: "existing Nexus speech synthesis and voice runtime",
+  voiceSynchronizationOwner: "setNexusCoreState and Nexus Presence voice events",
+  missionTransitionOwner: "nexusTrueExperienceMode and renderNexusAgenticMissionWorkspace",
+  performanceTierOwner: "nexusGenesisExperiencePerformanceTier",
+  cacheBuildOwner: "AGRINEXUS_BUILD_VERSION / AGRINEXUS_PWA_CACHE_VERSION",
+  duplicateOrbPolicy: "one data-nexus-genesis-orb-entry is allowed on idle Home",
+  animationLoopPolicy: "single interruptible requestAnimationFrame loop, paused when hidden",
+  hiddenLegacyPolicy: "legacy Home controls are not mounted or focusable in orb-only idle"
+});
+
+function nexusGenesisExperienceReducedMotion() {
+  return Boolean(typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+}
+
+function nexusGenesisExperiencePerformanceTier() {
+  if (nexusGenesisExperienceReducedMotion()) return "reduced-motion";
+  const nav = typeof navigator !== "undefined" ? navigator : {};
+  const cores = Number(nav.hardwareConcurrency || 4);
+  const memory = Number(nav.deviceMemory || 4);
+  if (cores <= 2 || memory <= 2) return "low-power";
+  if (cores >= 8 && memory >= 8) return "high";
+  return "standard";
+}
+
+function exposeNexusGenesisExperienceRuntime() {
+  const target = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : null);
+  if (!target) return;
+  target.NEXUS_GENESIS_EXPERIENCE_OWNERSHIP_REGISTRY = NEXUS_GENESIS_EXPERIENCE_OWNERSHIP_REGISTRY;
+  target.getNexusGenesisExperienceRuntime = () => ({
+    activated: nexusGenesisExperienceActivated,
+    tier: nexusGenesisExperiencePerformanceTier(),
+    state: nexusCoreRuntimeState.current,
+    ownership: NEXUS_GENESIS_EXPERIENCE_OWNERSHIP_REGISTRY
+  });
+}
+
+function updateNexusGenesisExperienceDom() {
+  if (typeof document === "undefined") return;
+  const tier = nexusGenesisExperiencePerformanceTier();
+  const mode = nexusTrueExperienceMode();
+  if (document.body) {
+    document.body.dataset.nexusGenesisMode = mode;
+    document.body.dataset.nexusGenesisActivated = nexusGenesisExperienceActivated ? "true" : "false";
+  }
+  document.querySelectorAll("[data-nexus-genesis-engine-root]").forEach(root => {
+    root.dataset.nexusGenesisPerformanceTier = tier;
+    root.dataset.nexusGenesisActivated = nexusGenesisExperienceActivated ? "true" : "false";
+    root.dataset.nexusGenesisCoreState = normalizeNexusCoreState(nexusCoreRuntimeState.current || "idle");
+  });
+}
+
+function startNexusGenesisExperienceEngine() {
+  if (typeof window === "undefined" || nexusGenesisExperienceAnimationFrame) return;
+  exposeNexusGenesisExperienceRuntime();
+  nexusGenesisExperienceStartedAt = Date.now();
+  const tick = () => {
+    nexusGenesisExperienceAnimationFrame = 0;
+    updateNexusGenesisExperienceDom();
+    const root = document.querySelector("[data-nexus-genesis-engine-root]");
+    if (!root || document.hidden || nexusGenesisExperiencePerformanceTier() === "reduced-motion") return;
+    const elapsed = Math.min(3600, Date.now() - nexusGenesisExperienceStartedAt);
+    root.style.setProperty("--nexus-genesis-time", String(Math.round(elapsed / 40)));
+    nexusGenesisExperienceAnimationFrame = window.requestAnimationFrame(tick);
+  };
+  nexusGenesisExperienceAnimationFrame = window.requestAnimationFrame(tick);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && nexusGenesisExperienceAnimationFrame) {
+      window.cancelAnimationFrame(nexusGenesisExperienceAnimationFrame);
+      nexusGenesisExperienceAnimationFrame = 0;
+      return;
+    }
+    if (!document.hidden) startNexusGenesisExperienceEngine();
+  }, { passive: true });
+}
+
+function activateNexusGenesisExperience(source = "orb") {
+  nexusGenesisExperienceActivated = true;
+  nexusTrueExperienceSessionStarted = true;
+  setNexusCoreState("wake", { source: `genesis-${source}`, statusText: "Nexus is waking." });
+  renderUserWorkspace();
+  updateNexusGenesisExperienceDom();
+  requestAnimationFrame(() => {
+    $("#nexusCommandCenterInput")?.focus?.();
+    setNexusCoreState("waiting", { source: `genesis-${source}`, statusText: "Nexus is ready for your request." });
+  });
+  return true;
+}
+
+function resetNexusGenesisHomeViewport() {
+  if (typeof window === "undefined") return;
+  requestAnimationFrame(() => {
+    const home = document.querySelector("[data-nexus-genesis-orb-only-home]");
+    if (!home) return;
+    window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
+  });
+}
+
+function handleNexusGenesisOrbActivation(event) {
+  const orb = event?.target?.closest?.("[data-nexus-genesis-orb-entry]");
+  if (!orb) return false;
+  if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  return activateNexusGenesisExperience(event.type === "keydown" ? "keyboard" : "pointer");
+}
 
 function nexusTrueExperienceHasActiveWorkflow() {
   if (!nexusTrueExperienceSessionStarted) return false;
@@ -30226,7 +30341,7 @@ function clearNexusTrueExperienceStaleWorkflowState() {
 }
 
 function nexusTrueExperienceHasCurrentConversation() {
-  if (nexusTrueExperienceSessionStarted) return true;
+  if (nexusGenesisExperienceActivated || nexusTrueExperienceSessionStarted) return true;
   const minimumEpoch = Math.max(NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH, nexusTrueExperienceHomeResetEpoch);
   return nexusOsConversationTurns.some(turn => turn.role === "user" && Number(turn.epoch || 0) >= minimumEpoch);
 }
@@ -30250,9 +30365,15 @@ function nexusCoreStateClass(state = "idle") {
 function renderNexusTrueCoreOrb(options = {}) {
   const coreState = normalizeNexusCoreState(options.state || nexusCoreRuntimeState.current || "idle");
   const coreContract = getNexusCoreStateContract(coreState);
+  const isHome = options.home === true;
+  const label = isHome ? "Activate Nexus" : nexusCoreStateAccessibleLabel(coreState);
   return `
-    <div class="nexus-true-orb-wrap ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
-      <div class="nexus-orb-stage nexus-true-orb-stage ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
+    <div class="nexus-true-orb-wrap ${isHome ? "home" : ""} ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
+      <button type="button" class="nexus-orb-stage nexus-true-orb-stage ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-entry="${isHome ? "true" : "false"}" data-nexus-os-orb-state="${escapeHtml(coreState)}" aria-label="${escapeHtml(translateText(label))}" title="${escapeHtml(coreContract.label)}">
+        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Press Enter or Space to activate Nexus. Conversation and text input appear after activation."))}</span>
+        <span class="nexus-genesis-particle-field" data-nexus-genesis-particles="true" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
         <div class="nexus-orb nexus-os-core-orb nexus-true-core">
           <span class="nexus-orb-core">N</span>
           <span class="nexus-orb-ring nexus-orb-ring-one"></span>
@@ -30264,8 +30385,8 @@ function renderNexusTrueCoreOrb(options = {}) {
           <span></span>
           <span></span>
         </div>
-      </div>
-      <span class="nexus-true-orb-status" data-nexus-core-status-text aria-live="polite">${escapeHtml(translateText(coreContract.label || "Nexus is ready."))}</span>
+      </button>
+      <span class="nexus-true-orb-status ${isHome ? "sr-only" : ""}" data-nexus-core-status-text aria-live="polite">${escapeHtml(translateText(coreContract.label || "Nexus is ready."))}</span>
     </div>
   `;
 }
@@ -30299,16 +30420,10 @@ function renderNexusTrueSecondaryAccess() {
 
 function renderNexusTrueHome() {
   return `
-    <section class="nexus-true-home" data-nexus-true-home="true" data-nexus-accessible-first-impression="true" aria-labelledby="userWorkspaceTitle" aria-describedby="nexusFirstImpressionDescription nexusCommandTypedHint">
-      <p class="nexus-true-identity" data-nexus-identity="true">${escapeHtml(translateText("NEXUS"))}</p>
-      ${renderNexusTrueCoreOrb()}
-      <div class="nexus-true-greeting">
-        <h1 id="userWorkspaceTitle">${escapeHtml(translateText("Good evening, Ron."))}</h1>
-        <p id="nexusFirstImpressionDescription">${escapeHtml(translateText("What are we working on today?"))}</p>
-        <span class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use Speak or type to begin."))}</span>
-      </div>
-      ${renderNexusTrueCommandComposer()}
-      ${renderNexusTrueSecondaryAccess()}
+    <section class="nexus-true-home nexus-genesis-orb-only-home" data-nexus-true-home="true" data-nexus-genesis-orb-only-home="true" data-nexus-accessible-first-impression="true" aria-label="${escapeHtml(translateText("Nexus orb home"))}">
+      ${renderNexusTrueCoreOrb({ home: true })}
+      <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus"))}</span>
+      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Activate the orb to speak or type."))}</span>
     </section>
   `;
 }
@@ -35892,7 +36007,7 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root nexus-true-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="true-conversation" data-nexus-genesis-experience-root="true" data-nexus-true-conversational-root="true" data-nexus-standard-user-render-root="true-conversational-experience" data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}">
+    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root nexus-true-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="true-conversation" data-nexus-genesis-engine-root="true" data-nexus-genesis-experience-root="true" data-nexus-true-conversational-root="true" data-nexus-standard-user-render-root="true-conversational-experience" data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}" data-nexus-genesis-activated="${nexusGenesisExperienceActivated ? "true" : "false"}" data-nexus-genesis-core-state="${escapeHtml(normalizeNexusCoreState(nexusCoreRuntimeState.current || "idle"))}">
       <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus"))}">
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
@@ -44839,6 +44954,7 @@ async function handleNexusOsMissionLifecycleAction(action = "") {
   if (normalized === "complete") transitionNexusOsMission("complete", { currentOutcome: "Mission completed with an outcome state." });
   if (normalized === "return-home") {
     transitionNexusOsMission("return_home", { currentOutcome: "Returned to Nexus Home." });
+    nexusGenesisExperienceActivated = false;
     nexusTrueExperienceSessionStarted = false;
     nexusTrueExperienceHomeResetEpoch = Date.now();
     nexusActiveWorkflowState = { id: "", command: "", source: "return-home", workflow: "", action: "", openedAt: 0 };
@@ -44846,6 +44962,8 @@ async function handleNexusOsMissionLifecycleAction(action = "") {
     nexusAgenticCommandMissions = [];
   }
   renderUserWorkspace();
+  updateNexusGenesisExperienceDom();
+  if (normalized === "return-home") resetNexusGenesisHomeViewport();
   return true;
 }
 
@@ -53697,6 +53815,7 @@ function bindNexusStandardUserHomeControls() {
 
 function bindStatic() {
   renderLoginProfiles();
+  startNexusGenesisExperienceEngine();
   if (typeof globalThis !== "undefined") {
     globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
   }
@@ -53711,6 +53830,8 @@ function bindStatic() {
   document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
   document.addEventListener("input", handleNexusPresenceInputActivity, true);
   document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
+  document.addEventListener("click", handleNexusGenesisOrbActivation, true);
+  document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);
   document.addEventListener("click", handleNexusPresenceVoiceButton, true);
   document.addEventListener("click", event => {
     void handleNexusPresenceCommandSendSubmit(event);

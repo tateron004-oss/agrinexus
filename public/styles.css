@@ -15869,3 +15869,229 @@ body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home
   body.user-mode .nexus-true-home .nexus-true-composer { grid-area: composer; }
   body.user-mode .nexus-true-home .nexus-true-secondary { grid-area: secondary; }
 }
+
+/* Nexus Genesis Experience Engine 1.0: orb-only idle home and state choreography. */
+body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 40 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, .16), transparent 22%),
+    radial-gradient(circle at 50% 48%, rgba(168, 85, 247, .13), transparent 36%),
+    radial-gradient(circle at 20% 18%, rgba(14, 165, 233, .08), transparent 30%),
+    radial-gradient(circle at 80% 82%, rgba(217, 70, 239, .08), transparent 30%),
+    #02030a !important;
+}
+
+body.user-mode[data-nexus-genesis-mode="home"] {
+  overflow: hidden !important;
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home"] .nexus-command-main {
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100dvh !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+
+body.user-mode .nexus-genesis-orb-only-home {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2.5vw, 28px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home {
+  position: relative;
+  width: min(68vmin, 560px);
+  min-height: min(68vmin, 560px);
+  display: grid;
+  place-items: center;
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
+  width: min(68vmin, 560px) !important;
+  min-height: min(68vmin, 560px) !important;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  filter: saturate(1.08);
+  isolation: isolate;
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible {
+  outline: 3px solid rgba(125, 211, 252, .95);
+  outline-offset: 12px;
+  border-radius: 999px;
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
+  width: min(48vmin, 410px) !important;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 45% 42%, rgba(255, 255, 255, .96) 0 4%, rgba(125, 211, 252, .86) 6%, rgba(34, 211, 238, .34) 16%, transparent 44%),
+    radial-gradient(circle at 52% 54%, rgba(30, 64, 175, .92), rgba(88, 28, 135, .58) 48%, rgba(2, 6, 23, .82) 72%),
+    conic-gradient(from calc(var(--nexus-genesis-time, 0) * 1deg), rgba(34, 211, 238, .18), rgba(168, 85, 247, .42), rgba(14, 165, 233, .18), rgba(236, 72, 153, .3), rgba(34, 211, 238, .18));
+  box-shadow:
+    0 0 28px rgba(125, 211, 252, .45),
+    0 0 78px rgba(59, 130, 246, .28),
+    0 0 142px rgba(168, 85, 247, .22),
+    inset 0 0 32px rgba(255, 255, 255, .18),
+    inset 0 -34px 58px rgba(2, 6, 23, .46);
+  animation: nexusGenesisIdleBreath 7.5s ease-in-out infinite;
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-orb-core {
+  width: clamp(86px, 17vmin, 160px);
+  height: clamp(86px, 17vmin, 160px);
+  font-size: clamp(3.3rem, 11vmin, 7.2rem);
+  font-weight: 900;
+  color: rgba(255, 255, 255, .98);
+  text-shadow:
+    0 0 16px rgba(255, 255, 255, .42),
+    0 0 36px rgba(34, 211, 238, .5),
+    0 0 78px rgba(168, 85, 247, .42);
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring {
+  border-color: rgba(125, 211, 252, .58);
+  box-shadow:
+    0 0 24px rgba(34, 211, 238, .34),
+    inset 0 0 24px rgba(168, 85, 247, .18);
+}
+
+body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-one { animation: nexusGenesisRingOrbit 15s linear infinite; }
+body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-two { animation: nexusGenesisRingOrbitReverse 19s linear infinite; }
+body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-three { animation: nexusGenesisRingPulse 8s ease-in-out infinite; }
+
+body.user-mode .nexus-genesis-particle-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  z-index: -1;
+}
+
+body.user-mode .nexus-genesis-particle-field i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(125, 211, 252, .9);
+  box-shadow: 0 0 18px rgba(34, 211, 238, .8);
+  opacity: .5;
+  animation: nexusGenesisParticleDrift 11s ease-in-out infinite;
+}
+
+body.user-mode .nexus-genesis-particle-field i:nth-child(1) { left: 12%; top: 28%; animation-delay: -1s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(2) { left: 78%; top: 18%; animation-delay: -3s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(3) { left: 84%; top: 62%; animation-delay: -5s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(4) { left: 22%; top: 76%; animation-delay: -7s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(5) { left: 45%; top: 9%; animation-delay: -2s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(6) { left: 8%; top: 55%; animation-delay: -4s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(7) { left: 62%; top: 86%; animation-delay: -6s; }
+body.user-mode .nexus-genesis-particle-field i:nth-child(8) { left: 92%; top: 42%; animation-delay: -8s; }
+
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="wake"] .nexus-true-core,
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="listening"] .nexus-true-core {
+  animation-duration: 3.8s;
+  box-shadow:
+    0 0 38px rgba(125, 211, 252, .68),
+    0 0 120px rgba(34, 211, 238, .34),
+    0 0 168px rgba(168, 85, 247, .28),
+    inset 0 0 42px rgba(255, 255, 255, .22);
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="processing"] .nexus-orb-ring,
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="reasoning"] .nexus-orb-ring,
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="searching"] .nexus-orb-ring {
+  animation-duration: 7s;
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="confirmation"] .nexus-true-core,
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="blocked"] .nexus-true-core {
+  box-shadow:
+    0 0 34px rgba(251, 191, 36, .42),
+    0 0 104px rgba(217, 119, 6, .18),
+    inset 0 0 36px rgba(251, 191, 36, .16);
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="error"] .nexus-true-core {
+  box-shadow:
+    0 0 34px rgba(248, 113, 113, .44),
+    0 0 104px rgba(190, 18, 60, .22),
+    inset 0 0 36px rgba(248, 113, 113, .14);
+}
+
+@keyframes nexusGenesisIdleBreath {
+  0%, 100% { transform: scale(.985); filter: brightness(.96) saturate(1.04); }
+  50% { transform: scale(1.018); filter: brightness(1.15) saturate(1.18); }
+}
+
+@keyframes nexusGenesisRingOrbit {
+  to { transform: rotate(360deg) scale(1.02); }
+}
+
+@keyframes nexusGenesisRingOrbitReverse {
+  to { transform: rotate(-360deg) scale(.98); }
+}
+
+@keyframes nexusGenesisRingPulse {
+  0%, 100% { opacity: .42; transform: scale(.94); }
+  50% { opacity: .9; transform: scale(1.08); }
+}
+
+@keyframes nexusGenesisParticleDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(.8); opacity: .22; }
+  45% { transform: translate3d(18px, -28px, 0) scale(1.24); opacity: .72; }
+  70% { transform: translate3d(-16px, 18px, 0) scale(.95); opacity: .38; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-core,
+  body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring,
+  body.user-mode .nexus-genesis-particle-field i {
+    animation: none !important;
+  }
+
+  body.user-mode .nexus-genesis-particle-field {
+    display: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
+    border: 2px solid ButtonText;
+  }
+
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+}
+
+@media (max-width: 520px) {
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home,
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
+    width: min(84vmin, 430px) !important;
+    min-height: min(84vmin, 430px) !important;
+  }
+
+  body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
+    width: min(66vmin, 310px) !important;
+  }
+}

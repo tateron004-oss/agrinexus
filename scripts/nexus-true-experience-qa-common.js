@@ -34,6 +34,7 @@ function assertAlias(name, script) {
 function assertTrueHomeOwner() {
   const workspace = extractRenderUserWorkspace();
   assert(workspace.includes('data-nexus-standard-user-render-root="true-conversational-experience"'), "Standard User root is true conversational experience");
+  assert(workspace.includes('data-nexus-genesis-engine-root="true"'), "Genesis Experience Engine root exists");
   assert(workspace.includes('data-nexus-true-conversational-root="true"'), "true conversational root marker exists");
   assert(workspace.includes('data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}"'), "root exposes current true experience mode");
   assert(!workspace.includes("renderNexusTopWelcomeArea()"), "old top welcome is not mounted by Standard User root");
@@ -44,12 +45,12 @@ function assertTrueHomeOwner() {
 function assertTrueHomeMarkup() {
   const home = extractFunction("renderNexusTrueHome");
   assert(home.includes('data-nexus-true-home="true"'), "true home marker exists");
-  assert(home.includes('data-nexus-identity="true"'), "Nexus identity exists");
-  assert(home.includes("renderNexusTrueCoreOrb()"), "home renders true Nexus orb");
-  assert(home.includes("Good evening, Ron."), "natural greeting exists");
-  assert(home.includes("What are we working on today?"), "short invitation exists");
-  assert(home.includes("renderNexusTrueCommandComposer()"), "home renders one command composer");
-  assert(home.includes("renderNexusTrueSecondaryAccess()"), "home renders discreet secondary access");
+  assert(home.includes('data-nexus-genesis-orb-only-home="true"'), "orb-only Home marker exists");
+  assert(home.includes("renderNexusTrueCoreOrb({ home: true })"), "home renders one activated Nexus orb");
+  assert(!home.includes("Good evening, Ron."), "idle Home does not render visible greeting");
+  assert(!home.includes("renderNexusTrueCommandComposer()"), "idle Home does not render visible composer");
+  assert(!home.includes("renderNexusTrueSecondaryAccess()"), "idle Home does not render visible secondary controls");
+  assert(home.includes("Activate the orb to speak or type."), "nonvisual fallback instruction exists");
 }
 
 function assertLegacyHomeRemoved() {
@@ -76,9 +77,14 @@ function assertLegacyHomeRemoved() {
 function assertOrbPrimaryInteraction() {
   const orb = extractFunction("renderNexusTrueCoreOrb");
   assert(orb.includes('data-nexus-true-core-orb="true"'), "true orb marker exists");
+  assert(orb.includes('data-nexus-genesis-orb-entry="${isHome ? "true" : "false"}"'), "orb owns Home activation");
+  assert(orb.includes("Press Enter or Space to activate Nexus"), "orb has screen-reader activation instruction");
+  assert(app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler exists");
+  assert(app.includes("activateNexusGenesisExperience"), "activation transitions into Nexus experience");
   assert(orb.includes('data-nexus-os-orb-state="${escapeHtml(coreState)}"'), "orb reflects runtime state");
-  assert(orb.includes("nexusCoreStateAccessibleLabel(coreState)"), "orb has accessible state label");
+  assert(orb.includes("Activate Nexus"), "Home orb has accessible activation name");
   assert(styles.includes(".nexus-true-orb-stage"), "true orb stage styles exist");
+  assert(styles.includes(".nexus-genesis-particle-field"), "Genesis particle field styles exist");
   assert(styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced motion is supported");
   ["idle", "wake", "listening", "hearing", "processing", "reasoning", "speaking", "waiting", "confirmation", "executing", "verifying", "completed", "offline", "blocked", "error"].forEach(state => {
     assert(app.includes(`${state}:`) || app.includes(`"${state}"`), `${state} core state remains represented`);
@@ -116,13 +122,22 @@ function assertContextualMission() {
   assert(activeWorkflow.includes("nexusTrueExperienceHasCurrentWorkflowState"), "mission mode ignores stale persisted workflow state");
   assert(staleReset.includes("true-experience-stale-reset"), "stale workflow state is cleared before a fresh user command");
   assert(app.includes("nexusTrueExperienceSessionStarted = false;"), "return home resets true experience session");
+  assert(app.includes("nexusGenesisExperienceActivated = false;"), "return home resets orb activation");
+  assert(app.includes("function resetNexusGenesisHomeViewport()"), "return home owns Genesis viewport reset");
+  assert(app.includes("resetNexusGenesisHomeViewport();"), "return home calls Genesis viewport reset after render");
+  assert(app.includes("renderUserWorkspace();\n  updateNexusGenesisExperienceDom();"), "Genesis DOM state syncs immediately after workspace render");
+  assert(app.includes("document.body.dataset.nexusGenesisMode = mode;"), "body tracks Genesis mode for viewport control");
+  assert(styles.includes('body.user-mode[data-nexus-genesis-mode="home"]'), "Home mode hides overflow at body level");
+  assert(styles.includes("position: fixed !important;"), "Home mode owns a fixed full-window orb scene");
   assert(app.includes("nexusIntentDrivenWorkflowLastRoute = null;"), "return home clears routed mission state");
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v364"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-414"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v365"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-414"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v365"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v365"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");
@@ -141,7 +156,7 @@ function assertFinalAcceptance() {
   assert((composer.match(/data-nexus-primary-typed-entry/g) || []).length === 1, "composer defines one primary typed entry");
   assert(composer.includes("Ask Nexus anything..."), "single typed entry uses approved placeholder");
   assert(composer.includes("Send"), "single send action exists");
-  assert(!extractFunction("renderNexusTrueHome").includes("Ask Nexus"), "home does not show old Ask Nexus branding");
+  assert(!extractFunction("renderNexusTrueHome").includes("Ask Nexus"), "idle home does not show old Ask Nexus branding");
 }
 
 module.exports = {

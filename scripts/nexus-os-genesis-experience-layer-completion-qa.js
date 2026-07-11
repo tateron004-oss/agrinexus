@@ -63,6 +63,8 @@ Object.entries(requiredAliases).forEach(([alias, command]) => {
   'data-nexus-genesis-first-viewport="true"',
   'data-nexus-os-core-orb="true"',
   'data-nexus-true-home="true"',
+  'data-nexus-genesis-orb-only-home="true"',
+  'data-nexus-genesis-orb-entry="${isHome ? "true" : "false"}"',
   'data-nexus-primary-voice-entry="true"',
   'data-nexus-primary-typed-entry="true"',
   'data-nexus-primary-typed-submit="true"',
@@ -70,11 +72,9 @@ Object.entries(requiredAliases).forEach(([alias, command]) => {
 ].forEach(token => assert(app.includes(token), `${token} runtime marker exists`));
 
 [
-  "Good evening, Ron.",
-  "What are we working on today?",
-  "Nexus is ready. Use Speak or type to begin.",
-  "Speak",
-  "Ask Nexus anything...",
+  "Activate the orb to speak or type.",
+  "Press Enter or Space to activate Nexus.",
+  "Activate Nexus",
   "Focused mission open",
   "No external action is authorized from this transition."
 ].forEach(token => assert(app.includes(token), `${token} user-facing copy exists`));

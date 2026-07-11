@@ -37,9 +37,10 @@ assert(topWelcome.includes("Your assistant is here."), "top welcome has a calm a
 assert(!topWelcome.includes("Good to see you"), "top welcome no longer uses personal dashboard greeting");
 assert(!topWelcome.includes("Standard User"), "top welcome does not show Standard User role copy");
 assert(!topWelcome.includes("displayName"), "top welcome does not depend on role/profile display name");
-assert(trueHome.includes("Good evening, Ron."), "true home has natural first-impression Nexus greeting");
-assert(trueHome.includes("What are we working on today?"), "true home keeps direct next-step guidance");
-assert(trueHome.includes("Nexus is ready. Use Speak or type to begin."), "true home preserves accessible readiness language");
+assert(trueHome.includes('data-nexus-genesis-orb-only-home="true"'), "true home is now orb-only");
+assert(!trueHome.includes("Good evening, Ron."), "true home does not show visible greeting");
+assert(!trueHome.includes("What are we working on today?"), "true home does not show visible helper text");
+assert(trueHome.includes("Nexus is ready. Activate the orb to speak or type."), "true home preserves accessible readiness language");
 assert(hero.includes("renderNexusTrueHome()"), "hero delegates first impression to the true conversational home");
 assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");
 assert(workspace.includes("renderNexusCommandCenterHero"), "hero remains the Standard User command center");
