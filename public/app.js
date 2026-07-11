@@ -30152,8 +30152,8 @@ function renderNexusCommandCenterHero() {
         <strong class="nexus-premium-hero-title">${translateText("Ask Nexus")}</strong>
         <small class="nexus-premium-hero-subtitle">${translateText("Your AI assistant. Real answers. Real impact.")}</small>
         <span class="eyebrow">${translateText("AI assistant home")}</span>
-        <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
-        <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
+        <h3 id="userWorkspaceTitle">${translateText("Good morning. I'm Nexus. What would you like to do?")}</h3>
+        <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping important actions gated.")}</p>
         ${renderNexusConversationalPresenceLayer()}
         ${renderNexusPresenceRuntimeBadge()}
         <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
@@ -30262,13 +30262,11 @@ function renderNexusCommandCenterSidebar() {
 }
 
 function renderNexusTopWelcomeArea() {
-  const profile = data?.profile || {};
-  const displayName = profile.name || profile.displayName || translateText("Standard User");
   return `
     <header class="nexus-command-topbar" data-nexus-command-topbar="true">
       <div>
-        <span class="eyebrow">${escapeHtml(translateText("Welcome"))}</span>
-        <h2>${escapeHtml(translateText("Good to see you"))}, ${escapeHtml(displayName)}</h2>
+        <span class="eyebrow">${escapeHtml(translateText("Nexus is ready"))}</span>
+        <h2>${escapeHtml(translateText("Your assistant is here."))}</h2>
         <p>${escapeHtml(translateText("Nexus brings your support areas into one focused, source-aware assistant workspace."))}</p>
       </div>
       <div class="nexus-topbar-actions">

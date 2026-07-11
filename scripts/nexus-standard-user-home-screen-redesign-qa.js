@@ -244,11 +244,11 @@ function excludes(source, token, label) {
 });
 
 [
-  "Hi, I’m Nexus. What do you need help with today?",
+  "Good morning. I'm Nexus. What would you like to do?",
   "Ask Nexus or choose a support area below",
   "Playback depends on supported providers or accounts",
   "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
-  "keeping high-risk actions gated",
+  "keeping important actions gated",
   "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
 ].forEach(token => includes(app, token, `safe assistant copy ${token}`));
 
