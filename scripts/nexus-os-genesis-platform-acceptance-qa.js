@@ -31,6 +31,7 @@ const acceptanceBlock = sectionBetween(app, "function getNexusOsGenesisPlatformA
 const releasePanel = sectionBetween(app, "function renderNexusOsGenesisReleasePanel()", "function renderNexusOsDeferredLegacySurfaces()");
 const styleBlock = sectionBetween(app, "function ensureNexusOsVisualBoundaryStyles()", "function nexusOsShellState()");
 const renderUserWorkspace = sectionBetween(app, "function renderUserWorkspace()", "function renderUserAccessibilityPanel");
+const deferredLegacyHost = sectionBetween(app, "function renderNexusOsDeferredLegacySurfaces()", "function renderNexusUserWorkspaceSegment");
 
 [
   "mobileHardened: true",
@@ -49,7 +50,9 @@ const renderUserWorkspace = sectionBetween(app, "function renderUserWorkspace()"
 ].forEach((token) => assert(acceptanceBlock.includes(token), `acceptance contract includes ${token}`));
 
 assert(app.includes("window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance"), "Genesis acceptance contract is available for runtime/browser validation");
-assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Genesis release", renderNexusOsGenesisReleasePanel)'), "Genesis release panel is rendered in Standard User shell");
+assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Genesis release", renderNexusOsGenesisReleasePanel)'), "Genesis release diagnostics are not visible in the Standard User first viewport");
+assert(deferredLegacyHost.includes("renderNexusOsGenesisReleasePanel()"), "Genesis release panel remains available in the deferred host");
+assert(deferredLegacyHost.includes('data-standard-user-startup-visible="false"'), "deferred Genesis release panel is not startup-visible");
 assert(releasePanel.includes('data-nexus-os-genesis-release="1.0"'), "release panel marks Genesis version");
 assert(releasePanel.includes('data-nexus-os-responsive-hardening="mobile-tablet-desktop"'), "release panel marks responsive hardening");
 assert(releasePanel.includes("keyboard screen-reader reduced-motion high-contrast forced-colors long-translation"), "release panel marks accessibility hardening");

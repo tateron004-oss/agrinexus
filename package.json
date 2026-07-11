@@ -131,6 +131,7 @@
     "qa:nexus-presence-enforcement": "node scripts/nexus-presence-enforcement-qa.js",
     "qa:nexus-presence-acceptance": "node scripts/nexus-presence-acceptance-qa.js",
     "qa:nexus-experience-render-root": "node scripts/nexus-experience-render-root-qa.js",
+    "qa:nexus-standard-user-diagnostics-removal": "node scripts/nexus-standard-user-diagnostics-removal-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

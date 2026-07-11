@@ -30,10 +30,12 @@ function sectionBetween(source, startNeedle, endNeedle) {
 const renderUserWorkspace = sectionBetween(app, "function renderUserWorkspace()", "function renderUserAccessibilityPanel");
 const shellPanel = sectionBetween(app, "function renderNexusOsApplicationShellPanel()", "function renderNexusOsCalmHelper()");
 const shellState = sectionBetween(app, "function nexusOsShellState()", "function renderNexusOsApplicationShellPanel()");
+const deferredLegacyHost = sectionBetween(app, "function renderNexusOsDeferredLegacySurfaces()", "function renderNexusUserWorkspaceSegment");
 
 assert(renderUserWorkspace.includes("data-nexus-os-standard-startup=\"calm\""), "Standard User defaults to calm Nexus OS startup");
-assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)'), "Nexus OS application shell panel is visible before mission content");
-assert(renderUserWorkspace.indexOf('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)') < renderUserWorkspace.indexOf('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "shell state appears before the Ask Nexus hero");
+assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)'), "Nexus OS diagnostic shell is not visible before mission content");
+assert(deferredLegacyHost.includes("renderNexusOsApplicationShellPanel()"), "Nexus OS diagnostic shell remains available in the deferred host");
+assert(deferredLegacyHost.includes("renderNexusOsGenesisReleasePanel()"), "Genesis release diagnostics remain available in the deferred host");
 assert(app.includes("data-nexus-os-core-orb=\"true\""), "Nexus Core orb is present in the primary shell");
 assert(app.includes("current: \"idle\""), "Nexus Core runtime has an honest initial idle state");
 assert(app.includes("data-nexus-os-orb-state=\"${escapeHtml(coreState)}\""), "Nexus Core orb is driven by runtime state");

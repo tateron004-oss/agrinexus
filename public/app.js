@@ -35611,6 +35611,8 @@ function renderNexusOsGenesisReleasePanel() {
 function renderNexusOsDeferredLegacySurfaces() {
   return `
     <div class="nexus-os-deferred-legacy-host" data-nexus-os-deferred-legacy-surfaces="true" data-standard-user-startup-visible="false" hidden aria-hidden="true">
+      ${renderNexusOsApplicationShellPanel()}
+      ${renderNexusOsGenesisReleasePanel()}
       ${renderNexusCommandCenterSidebar()}
       ${renderNexusDemoSandboxControls("deferred-command-landing")}
       ${renderNexusUserTestingRuntimePanel()}
@@ -35680,12 +35682,10 @@ function renderUserWorkspace() {
     <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm" data-nexus-genesis-experience-root="true" data-nexus-standard-user-render-root="genesis-experience">
       <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
-        ${renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)}
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
         ${renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)}
         ${renderNexusUserWorkspaceSegment("Approved memory controls", renderNexusApprovedMemoryPanel)}
         ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)}
-        ${renderNexusUserWorkspaceSegment("Genesis release", renderNexusOsGenesisReleasePanel)}
         ${renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)}
         ${renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)}
       </main>
