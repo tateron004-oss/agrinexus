@@ -32,7 +32,8 @@ const shellPanel = sectionBetween(app, "function renderNexusOsApplicationShellPa
 const shellState = sectionBetween(app, "function nexusOsShellState()", "function renderNexusOsApplicationShellPanel()");
 const deferredLegacyHost = sectionBetween(app, "function renderNexusOsDeferredLegacySurfaces()", "function renderNexusUserWorkspaceSegment");
 
-assert(renderUserWorkspace.includes("data-nexus-os-standard-startup=\"calm\""), "Standard User defaults to calm Nexus OS startup");
+assert(renderUserWorkspace.includes("data-nexus-os-standard-startup=\"true-conversation\""), "Standard User defaults to true conversational Nexus startup");
+assert(renderUserWorkspace.includes('data-nexus-true-conversational-root="true"'), "true conversational root is mounted");
 assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)'), "Nexus OS diagnostic shell is not visible before mission content");
 assert(deferredLegacyHost.includes("renderNexusOsApplicationShellPanel()"), "Nexus OS diagnostic shell remains available in the deferred host");
 assert(deferredLegacyHost.includes("renderNexusOsGenesisReleasePanel()"), "Genesis release diagnostics remain available in the deferred host");
@@ -78,7 +79,8 @@ assert(app.includes("Speak or type naturally. Nexus opens only the workflow need
 assert(app.includes("body.user-mode.nexus-os-visual-boundary .sidebar"), "shell still hides the old persistent sidebar");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #workspaceBar"), "shell still hides the old workspace bar");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #userVoiceDock"), "shell still hides duplicate voice dock");
-assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy functionality remains protected behind deferred surfaces");
+assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy functionality is not mounted on the true home startup");
+assert(deferredLegacyHost.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "legacy functionality remains defined behind deferred surfaces");
 assert(!renderUserWorkspace.includes("renderNexusPlatformDashboard()"), "old dashboard is not rendered under Nexus OS shell");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(shellPanel), "shell copy does not claim external execution");
 

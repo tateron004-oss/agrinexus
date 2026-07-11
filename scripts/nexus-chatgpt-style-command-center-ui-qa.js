@@ -48,13 +48,18 @@ const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()"
 ].forEach(label => assert(app.includes(`label: "${label}"`), `launcher label missing: ${label}`));
 
 [
-  "renderNexusTopWelcomeArea()",
   'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
-  'renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)',
+].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
+
+[
+  "renderNexusTopWelcomeArea()",
   'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
   'renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)',
   'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'
-].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
+].forEach(call => assert(!workspace.includes(call), `true Nexus home must not mount legacy startup call: ${call}`));
+
+assert(workspace.includes('data-nexus-standard-user-render-root="true-conversational-experience"'), "Standard User workspace must use true conversational render root");
+assert(workspace.includes('showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""'), "mission workspace must mount only after a mission exists");
 
 [
   "renderNexusCommandCenterSidebar()",

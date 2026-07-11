@@ -34,13 +34,14 @@ assert(app.includes("body.user-mode.nexus-os-visual-boundary .sidebar"), "persis
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #workspaceBar"), "workspace bar is hidden for Standard User startup");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #userVoiceDock"), "bulky voice dock is hidden for Standard User startup");
 assert(app.includes("body.user-mode.nexus-os-visual-boundary #userMobileDock"), "mobile dock is hidden for Standard User startup");
-assert(renderBlock.includes("data-nexus-os-standard-startup=\"calm\""), "Standard User startup is marked as calm Nexus OS surface");
-assert(renderBlock.includes("renderNexusTopWelcomeArea()"), "Nexus welcome area remains visible");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "Ask Nexus hero remains visible");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)'), "mission workspace remains available");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)'), "active workflow workspace remains available");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)'), "small calm helper is visible");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy surfaces are preserved behind deferred host");
+assert(renderBlock.includes("data-nexus-os-standard-startup=\"true-conversation\""), "Standard User startup is marked as true conversational Nexus surface");
+assert(renderBlock.includes('data-nexus-true-conversational-root="true"'), "true conversational root is visible");
+assert(!renderBlock.includes("renderNexusTopWelcomeArea()"), "old welcome area is not mounted");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "true Nexus command entry remains visible");
+assert(renderBlock.includes('showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""'), "mission workspace remains conditional");
+assert(!renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)'), "active workflow workspace is not mounted on Home startup");
+assert(!renderBlock.includes('renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)'), "calm helper is not mounted on Home startup");
+assert(!renderBlock.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "legacy surfaces are not mounted on Home startup");
 
 const visibleStartupProhibited = [
   "renderNexusDemoSandboxControls(\"command-landing\")",
@@ -63,12 +64,12 @@ const visibleStartupProhibited = [
 ];
 
 visibleStartupProhibited.forEach((call) => {
-  assert(!renderBlock.includes(call) || renderBlock.indexOf(call) > renderBlock.indexOf("renderNexusOsDeferredLegacySurfaces"), `${call} is not directly visible in Standard User startup`);
+  assert(!renderBlock.includes(call), `${call} is not directly visible in Standard User startup`);
 });
 
 assert(app.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "deferred legacy host is explicitly marked");
 assert(app.includes("data-standard-user-startup-visible=\"false\" hidden aria-hidden=\"true\""), "deferred legacy host is hidden and aria-hidden");
-assert(app.includes("Start with a goal. Nexus will open only what is needed."), "Standard User receives simple Nexus OS guidance");
+assert(app.includes("What are we working on today?"), "Standard User receives simple Nexus OS guidance");
 assert(app.includes("No provider handoff") || app.includes("noProviderHandoff"), "no-provider-handoff safety remains represented");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(renderBlock), "startup copy does not claim fake execution");
 assert(packageJson.scripts["qa:nexus-os-visual-overload-boundary"] === "node scripts/nexus-os-visual-overload-boundary-qa.js", "package alias exists");

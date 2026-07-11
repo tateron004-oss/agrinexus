@@ -15592,3 +15592,280 @@ body.user-mode .nexus-universal-action-review-actions {
     transition: none !important;
   }
 }
+
+/* True Conversational Experience: Standard User meets Nexus first, not a dashboard. */
+body.user-mode .nexus-true-experience-root {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+body.user-mode .nexus-true-experience-root .nexus-command-main {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: clamp(14px, 2.6vw, 34px) !important;
+  overflow-x: hidden !important;
+}
+
+body.user-mode .nexus-true-home {
+  width: min(720px, calc(100vw - 28px));
+  min-height: min(760px, calc(100dvh - 28px));
+  display: grid;
+  grid-template-rows: auto auto auto auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(10px, 2dvh, 18px);
+  text-align: center;
+  padding: clamp(18px, 4vw, 44px);
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: clamp(28px, 4vw, 46px);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(34, 211, 238, .18), transparent 36%),
+    radial-gradient(circle at 50% 52%, rgba(168, 85, 247, .12), transparent 42%),
+    linear-gradient(180deg, rgba(8, 13, 28, .42), rgba(5, 8, 22, .18));
+  box-shadow:
+    0 30px 90px rgba(2, 6, 23, .36),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-true-identity {
+  margin: 0;
+  color: rgba(226, 232, 240, .9);
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(34, 211, 238, .34);
+}
+
+body.user-mode .nexus-true-orb-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+body.user-mode .nexus-true-orb-stage {
+  width: clamp(230px, 30vw, 360px) !important;
+  min-height: clamp(230px, 30vw, 360px) !important;
+  display: grid !important;
+  place-items: center !important;
+  position: relative !important;
+}
+
+body.user-mode .nexus-true-orb-wrap.compact .nexus-true-orb-stage {
+  width: 112px !important;
+  min-height: 112px !important;
+}
+
+body.user-mode .nexus-true-core {
+  width: clamp(190px, 25vw, 292px) !important;
+  aspect-ratio: 1 / 1;
+  filter: drop-shadow(0 0 32px rgba(34, 211, 238, .34));
+}
+
+body.user-mode .nexus-true-orb-wrap.compact .nexus-true-core {
+  width: 88px !important;
+}
+
+body.user-mode .nexus-true-orb-status {
+  min-height: 1.2em;
+  color: rgba(186, 230, 253, .88);
+  font-size: .82rem;
+}
+
+body.user-mode .nexus-true-greeting {
+  display: grid;
+  gap: 8px;
+}
+
+body.user-mode .nexus-true-greeting h1,
+body.user-mode .nexus-true-conversation-head h1 {
+  margin: 0;
+  color: rgba(255, 255, 255, .98);
+  font-size: clamp(1.55rem, 4vw, 2.8rem);
+  line-height: 1.06;
+  letter-spacing: 0;
+  text-shadow:
+    0 0 18px rgba(34, 211, 238, .24),
+    0 1px 3px rgba(0, 0, 0, .55);
+}
+
+body.user-mode .nexus-true-greeting p {
+  margin: 0;
+  color: rgba(226, 232, 240, .9);
+  font-size: clamp(1.02rem, 2.2vw, 1.22rem);
+}
+
+body.user-mode .nexus-true-composer {
+  width: min(640px, 100%);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 999px;
+  background: rgba(3, 7, 18, .58);
+  backdrop-filter: blur(22px);
+  box-shadow:
+    0 20px 48px rgba(2, 6, 23, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-true-composer textarea {
+  min-height: 48px !important;
+  max-height: 96px;
+  resize: none;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, .96) !important;
+  box-shadow: none !important;
+}
+
+body.user-mode .nexus-true-composer textarea::placeholder {
+  color: rgba(203, 213, 225, .68);
+}
+
+body.user-mode .nexus-true-mic,
+body.user-mode .nexus-true-send {
+  min-width: 74px !important;
+  min-height: 48px !important;
+  border-radius: 999px !important;
+}
+
+body.user-mode .nexus-true-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+body.user-mode .nexus-true-secondary button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  background: rgba(15, 23, 42, .36);
+  color: rgba(226, 232, 240, .86);
+}
+
+body.user-mode .nexus-true-conversation {
+  width: min(860px, calc(100vw - 28px));
+  min-height: min(760px, calc(100dvh - 28px));
+  display: grid;
+  grid-template-rows: auto minmax(180px, 1fr) auto;
+  gap: 14px;
+  padding: clamp(16px, 3vw, 30px);
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: 34px;
+  background: linear-gradient(180deg, rgba(8, 13, 28, .58), rgba(5, 8, 22, .34));
+  box-shadow: 0 30px 90px rgba(2, 6, 23, .36);
+}
+
+body.user-mode .nexus-true-conversation-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+body.user-mode .nexus-true-conversation-log {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+  padding: 4px;
+}
+
+body.user-mode .nexus-true-conversation-log .nexus-os-conversation-turn {
+  max-width: min(720px, 92%);
+}
+
+body.user-mode .nexus-true-conversation-log .nexus-os-conversation-turn.user {
+  justify-self: end;
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home"] :is(
+  .nexus-command-topbar,
+  .nexus-command-sidebar,
+  .nexus-command-center-grid,
+  .nexus-core-feature-card,
+  .nexus-mode-launcher,
+  .nexus-suggested-actions,
+  .nexus-voice-interaction-bar,
+  .nexus-os-conversation-surface,
+  .nexus-agentic-mission-workspace,
+  .nexus-command-examples,
+  .nexus-command-landing-actions,
+  .nexus-command-landing-status-strip,
+  .nexus-os-voice-preferences,
+  .nexus-os-mission-lifecycle-status
+) {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  body.user-mode .nexus-true-home {
+    width: min(100%, calc(100vw - 14px));
+    min-height: calc(100dvh - 14px);
+    padding: 16px 12px;
+    gap: 10px;
+  }
+
+  body.user-mode .nexus-true-orb-stage {
+    width: clamp(180px, 58vw, 230px) !important;
+    min-height: clamp(180px, 58vw, 230px) !important;
+  }
+
+  body.user-mode .nexus-true-core {
+    width: clamp(152px, 50vw, 190px) !important;
+  }
+
+  body.user-mode .nexus-true-composer {
+    grid-template-columns: 1fr;
+    border-radius: 26px;
+  }
+
+  body.user-mode .nexus-true-mic,
+  body.user-mode .nexus-true-send {
+    width: 100% !important;
+  }
+
+  body.user-mode .nexus-true-conversation {
+    width: min(100%, calc(100vw - 14px));
+    min-height: calc(100dvh - 14px);
+  }
+
+  body.user-mode .nexus-true-conversation-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  body.user-mode .nexus-true-conversation-head > button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-height: 640px) and (min-width: 700px) {
+  body.user-mode .nexus-true-home {
+    min-height: calc(100dvh - 18px);
+    grid-template-columns: .82fr 1fr;
+    grid-template-areas:
+      "id id"
+      "orb greet"
+      "composer composer"
+      "secondary secondary";
+    column-gap: 24px;
+  }
+
+  body.user-mode .nexus-true-home .nexus-true-identity { grid-area: id; }
+  body.user-mode .nexus-true-home .nexus-true-orb-wrap { grid-area: orb; }
+  body.user-mode .nexus-true-home .nexus-true-greeting { grid-area: greet; text-align: left; justify-self: start; }
+  body.user-mode .nexus-true-home .nexus-true-composer { grid-area: composer; }
+  body.user-mode .nexus-true-home .nexus-true-secondary { grid-area: secondary; }
+}

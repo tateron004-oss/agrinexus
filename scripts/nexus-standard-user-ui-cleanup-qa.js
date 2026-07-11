@@ -14,10 +14,11 @@ assert(deferredStart >= 0 && deferredEnd > deferredStart, "Nexus OS deferred leg
 const deferredLegacySurfaces = app.slice(deferredStart, deferredEnd);
 
 assert(
-  renderUserWorkspace.includes("renderNexusOsDeferredLegacySurfaces()")
-    || renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'),
-  "Standard User workspace must preserve deferred access to legacy assistant/status surfaces"
+  renderUserWorkspace.includes('data-nexus-standard-user-render-root="true-conversational-experience"'),
+  "Standard User workspace must use the true conversational experience root"
 );
+assert(!renderUserWorkspace.includes("renderNexusOsDeferredLegacySurfaces()"), "Standard User startup must not mount deferred legacy surfaces");
+assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)'), "Standard User startup must not expose the legacy review workspace");
 assert(deferredLegacySurfaces.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "Standard User workspace must defer legacy assistant/status surfaces behind Nexus OS boundary");
 assert(deferredLegacySurfaces.includes("renderNexusAgenticBrainPanel()"), "assistant brain panel must be preserved inside the hidden deferred host");
 assert(!renderUserWorkspace.includes("renderNexusProductionActionAssistantPanel()"), "Standard User workspace must not expose the production runtime test console");

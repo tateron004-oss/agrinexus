@@ -56,35 +56,37 @@ Object.entries(requiredAliases).forEach(([alias, command]) => {
 });
 
 [
-  'data-nexus-standard-user-render-root="genesis-experience"',
+  'data-nexus-standard-user-render-root="true-conversational-experience"',
+  'data-nexus-os-standard-startup="true-conversation"',
+  'data-nexus-true-conversational-root="true"',
   'data-nexus-genesis-experience-root="true"',
   'data-nexus-genesis-first-viewport="true"',
   'data-nexus-os-core-orb="true"',
-  'data-nexus-accessible-first-impression="true"',
+  'data-nexus-true-home="true"',
   'data-nexus-primary-voice-entry="true"',
   'data-nexus-primary-typed-entry="true"',
   'data-nexus-primary-typed-submit="true"',
-  'data-nexus-home-to-mission-transition="true"',
   'data-nexus-focused-mission-window="true"'
 ].forEach(token => assert(app.includes(token), `${token} runtime marker exists`));
 
 [
-  "Good morning. I'm Nexus. What would you like to do?",
-  "Your assistant is here.",
-  "Press Talk to speak, or type your request.",
-  "Press Enter to ask. Use Shift+Enter for a new line.",
+  "Good evening, Ron.",
+  "What are we working on today?",
+  "Nexus is ready. Use Speak or type to begin.",
+  "Speak",
+  "Ask Nexus anything...",
   "Focused mission open",
   "No external action is authorized from this transition."
 ].forEach(token => assert(app.includes(token), `${token} user-facing copy exists`));
 
 [
-  "Genesis Experience Rail 3",
+  "True Conversational Experience",
   "@media (max-width: 640px)",
+  "@media (max-width: 520px)",
   "@media (prefers-reduced-motion: reduce)",
-  "@media (forced-colors: active)",
-  ".nexus-primary-voice-entry",
-  ".nexus-primary-typed-submit",
-  ".nexus-home-to-mission-banner"
+  ".nexus-true-orb-stage",
+  ".nexus-true-composer",
+  ".nexus-true-conversation"
 ].forEach(token => assert(styles.includes(token), `${token} CSS support exists`));
 
 assert(app.includes("renderNexusOsDeferredLegacySurfaces"), "legacy diagnostics remain deferred");

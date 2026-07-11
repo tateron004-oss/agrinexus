@@ -28,6 +28,7 @@ const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
 
 const topWelcome = sectionBetween(app, "function renderNexusTopWelcomeArea()", "function renderNexusCoreFeatureCards");
+const trueHome = sectionBetween(app, "function renderNexusTrueHome()", "function renderNexusMinimalConversationExperience");
 const hero = sectionBetween(app, "function renderNexusCommandCenterHero()", "function nexusActiveSidebarId");
 const workspace = sectionBetween(app, "function renderUserWorkspace()", "function renderUserAccessibilityPanel");
 
@@ -36,12 +37,13 @@ assert(topWelcome.includes("Your assistant is here."), "top welcome has a calm a
 assert(!topWelcome.includes("Good to see you"), "top welcome no longer uses personal dashboard greeting");
 assert(!topWelcome.includes("Standard User"), "top welcome does not show Standard User role copy");
 assert(!topWelcome.includes("displayName"), "top welcome does not depend on role/profile display name");
-assert(hero.includes("Good morning. I'm Nexus. What would you like to do?"), "hero has natural first-impression Nexus greeting");
-assert(hero.includes("Ask Nexus or choose a support area below"), "hero keeps direct next-step guidance");
-assert(hero.includes("keeping important actions gated"), "hero preserves safety-gated action language");
-assert(workspace.includes("renderNexusTopWelcomeArea()"), "top welcome remains rendered in Standard User workspace");
+assert(trueHome.includes("Good evening, Ron."), "true home has natural first-impression Nexus greeting");
+assert(trueHome.includes("What are we working on today?"), "true home keeps direct next-step guidance");
+assert(trueHome.includes("Nexus is ready. Use Speak or type to begin."), "true home preserves accessible readiness language");
+assert(hero.includes("renderNexusTrueHome()"), "hero delegates first impression to the true conversational home");
+assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");
 assert(workspace.includes("renderNexusCommandCenterHero"), "hero remains the Standard User command center");
-assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(topWelcome + hero), "first impression does not claim external execution");
+assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(topWelcome + trueHome + hero), "first impression does not claim external execution");
 
 assert(packageJson.scripts["qa:nexus-first-impression-greeting"] === "node scripts/nexus-first-impression-greeting-qa.js", "package alias exists");
 assert(qaSuite.includes("scripts/nexus-first-impression-greeting-qa.js"), "safe QA suite includes first impression greeting QA");

@@ -919,8 +919,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-412";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v363";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-413";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -11558,6 +11558,7 @@ function saveNexusOsConversationTurns() {
 function recordNexusOsConversationTurn(role = "assistant", text = "", options = {}) {
   const content = normalizeNexusOsConversationText(text);
   if (!content) return null;
+  if (role === "user") nexusTrueExperienceSessionStarted = true;
   const last = nexusOsConversationTurns[nexusOsConversationTurns.length - 1];
   const signature = `${role}:${content}`;
   if (last?.signature === signature && Date.now() - Number(last.epoch || 0) < 1200) return last;
@@ -30080,20 +30081,31 @@ function handleNexusPresenceVoiceButton(event) {
 }
 
 async function handleNexusPresenceCommandSendSubmit(event) {
-  const submit = event?.target?.closest?.(".nexus-command-send[data-nexus-command-center-submit]");
+  const composer = event?.target?.closest?.("[data-nexus-command-composer]");
+  const submit = event?.target?.closest?.(".nexus-command-send[data-nexus-command-center-submit]")
+    || composer?.querySelector?.(".nexus-command-send[data-nexus-command-center-submit]");
   if (!submit) return false;
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  nexusTrueExperienceSessionStarted = true;
   recordNexusOsConversationTurn("user", command, { source: "typed-command-send-button" });
+  clearNexusTrueExperienceStaleWorkflowState();
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
   const source = "typed-command-send-button";
+  if (isNexusTrueExperienceReturnHomeCommand(command)) {
+    if (input) input.value = "";
+    setCommandInputs("");
+    await handleNexusOsMissionLifecycleAction("return-home");
+    return true;
+  }
   if (isNexusPresenceWakePhrase(command)) {
     if (input) input.value = command;
     setCommandInputs(command);
     await handleNexusUnifiedBrainRuntimeCommand(command, { source });
+    renderUserWorkspace();
     return true;
   }
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
@@ -30115,9 +30127,33 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     const directExperienceCommand = isNexusExperienceHelpCommand(command) || isNexusExperienceStatusCommand(command);
     if (input) input.value = directExperienceCommand ? "" : command;
     setCommandInputs(directExperienceCommand ? "" : command);
+    renderUserWorkspace();
     return true;
   }
-  return false;
+  const fallbackResponse = "I'm here. Tell me the goal, and I will ask for only the missing details before opening the right workflow.";
+  recordNexusOsConversationTurn("assistant", fallbackResponse, { source: "true-conversation-fallback" });
+  setVoiceResponse(fallbackResponse, false, { allowHandoff: false, source: "true-conversation-fallback" });
+  if (input) input.value = command;
+  setCommandInputs(command);
+  renderUserWorkspace();
+  return true;
+}
+
+function handleNexusTrueCommandComposerKeydown(event) {
+  const input = event?.target?.closest?.("#nexusCommandCenterInput[data-nexus-primary-typed-entry]");
+  if (!input || event.key !== "Enter" || event.shiftKey) return;
+  const composer = input.closest?.("[data-nexus-command-composer]");
+  const submit = composer?.querySelector?.(".nexus-command-send[data-nexus-command-center-submit]");
+  if (!submit) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  void handleNexusPresenceCommandSendSubmit({
+    target: submit,
+    preventDefault() {},
+    stopPropagation() {},
+    stopImmediatePropagation() {}
+  });
 }
 
 function openNexusOnboardingModal() {
@@ -30138,7 +30174,172 @@ function closeNexusOnboardingModal() {
   setTimeout(() => commandInput?.focus?.(), 0);
 }
 
+const NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH = Date.now();
+let nexusTrueExperienceSessionStarted = false;
+let nexusTrueExperienceHomeResetEpoch = 0;
+
+function nexusTrueExperienceHasActiveWorkflow() {
+  if (!nexusTrueExperienceSessionStarted) return false;
+  if (!nexusTrueExperienceHasCurrentWorkflowState()) return false;
+  return Boolean(
+    nexusActiveWorkflowState?.id
+    || nexusActiveWorkflowState?.functionId
+    || nexusActiveWorkflowState?.agenticMission
+    || nexusIntentDrivenWorkflowLastRoute?.recommendedWorkflow
+    || nexusAgenticCommandMissions?.length
+  );
+}
+
+function nexusTrueExperienceEpoch(value) {
+  const numeric = Number(value || 0);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function nexusTrueExperienceHasCurrentWorkflowState() {
+  const workflowTimes = [
+    nexusActiveWorkflowState?.openedAt,
+    nexusActiveWorkflowState?.startedAt,
+    nexusActiveWorkflowState?.createdAt,
+    nexusActiveWorkflowState?.timestamp,
+    nexusIntentDrivenWorkflowLastRoute?.openedAt,
+    nexusIntentDrivenWorkflowLastRoute?.startedAt,
+    nexusIntentDrivenWorkflowLastRoute?.createdAt,
+    nexusIntentDrivenWorkflowLastRoute?.timestamp,
+    ...(Array.isArray(nexusAgenticCommandMissions) ? nexusAgenticCommandMissions.flatMap(mission => [
+      mission?.openedAt,
+      mission?.startedAt,
+      mission?.createdAt,
+      mission?.timestamp,
+      mission?.updatedAt
+    ]) : [])
+  ].map(nexusTrueExperienceEpoch);
+  return workflowTimes.some(epoch => epoch >= NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH);
+}
+
+function clearNexusTrueExperienceStaleWorkflowState() {
+  if (nexusTrueExperienceHasCurrentWorkflowState()) return;
+  nexusActiveWorkflowState = { id: "", command: "", source: "true-experience-stale-reset", workflow: "", action: "", openedAt: 0 };
+  nexusIntentDrivenWorkflowLastRoute = null;
+  nexusAgenticCommandMissions = [];
+}
+
+function nexusTrueExperienceHasCurrentConversation() {
+  if (nexusTrueExperienceSessionStarted) return true;
+  const minimumEpoch = Math.max(NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH, nexusTrueExperienceHomeResetEpoch);
+  return nexusOsConversationTurns.some(turn => turn.role === "user" && Number(turn.epoch || 0) >= minimumEpoch);
+}
+
+function nexusTrueExperienceMode() {
+  if (nexusTrueExperienceHasActiveWorkflow()) return "mission";
+  if (nexusTrueExperienceHasCurrentConversation()) return "conversation";
+  return "home";
+}
+
+function isNexusTrueExperienceReturnHomeCommand(command = "") {
+  const normalized = String(command || "").toLowerCase().replace(/[.!?]+$/g, "").trim();
+  return /^(home|go home|return home|back home|take me home|nexus home|open nexus home|main screen)$/.test(normalized);
+}
+
+function nexusCoreStateClass(state = "idle") {
+  const normalized = normalizeNexusCoreState(state);
+  return `nexus-core-state-${escapeHtml(normalized)}`;
+}
+
+function renderNexusTrueCoreOrb(options = {}) {
+  const coreState = normalizeNexusCoreState(options.state || nexusCoreRuntimeState.current || "idle");
+  const coreContract = getNexusCoreStateContract(coreState);
+  return `
+    <div class="nexus-true-orb-wrap ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
+      <div class="nexus-orb-stage nexus-true-orb-stage ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
+        <div class="nexus-orb nexus-os-core-orb nexus-true-core">
+          <span class="nexus-orb-core">N</span>
+          <span class="nexus-orb-ring nexus-orb-ring-one"></span>
+          <span class="nexus-orb-ring nexus-orb-ring-two"></span>
+          <span class="nexus-orb-ring nexus-orb-ring-three"></span>
+        </div>
+        <div class="nexus-energy-wave nexus-wave" data-nexus-energy-wave="true" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <span class="nexus-true-orb-status" data-nexus-core-status-text aria-live="polite">${escapeHtml(translateText(coreContract.label || "Nexus is ready."))}</span>
+    </div>
+  `;
+}
+
+function renderNexusTrueCommandComposer(options = {}) {
+  const compact = options.compact === true;
+  return `
+    <form class="nexus-true-composer ${compact ? "compact" : ""}" data-nexus-command-composer="true" data-nexus-true-composer="true" aria-label="${escapeHtml(translateText("Ask Nexus"))}">
+      <button type="button" class="nexus-command-mic nexus-primary-voice-entry nexus-true-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">
+        ${escapeHtml(translateText("Speak"))}
+      </button>
+      <label class="sr-only" for="nexusCommandCenterInput">${escapeHtml(translateText("Ask Nexus anything"))}</label>
+      <textarea id="nexusCommandCenterInput" rows="1" data-nexus-primary-typed-entry="true" aria-describedby="nexusCommandTypedHint" placeholder="${escapeHtml(translateText("Ask Nexus anything..."))}"></textarea>
+      <button type="submit" class="nexus-command-send nexus-primary-typed-submit nexus-true-send" data-nexus-command-center-submit data-nexus-primary-typed-submit="true" data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">
+        ${escapeHtml(translateText("Send"))}
+      </button>
+      <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to ask. Use Shift+Enter for a new line."))}</span>
+    </form>
+  `;
+}
+
+function renderNexusTrueSecondaryAccess() {
+  return `
+    <nav class="nexus-true-secondary" data-nexus-true-secondary-access="true" aria-label="${escapeHtml(translateText("Secondary Nexus access"))}">
+      <button type="button" data-toggle-user-language>${escapeHtml(translateText("Language"))}</button>
+      <button type="button" data-nexus-command-prefill="Show mission history.">${escapeHtml(translateText("History"))}</button>
+      <button type="button" data-nexus-command-prefill="Show accessibility and privacy settings.">${escapeHtml(translateText("Settings"))}</button>
+    </nav>
+  `;
+}
+
+function renderNexusTrueHome() {
+  return `
+    <section class="nexus-true-home" data-nexus-true-home="true" data-nexus-accessible-first-impression="true" aria-labelledby="userWorkspaceTitle" aria-describedby="nexusFirstImpressionDescription nexusCommandTypedHint">
+      <p class="nexus-true-identity" data-nexus-identity="true">${escapeHtml(translateText("NEXUS"))}</p>
+      ${renderNexusTrueCoreOrb()}
+      <div class="nexus-true-greeting">
+        <h1 id="userWorkspaceTitle">${escapeHtml(translateText("Good evening, Ron."))}</h1>
+        <p id="nexusFirstImpressionDescription">${escapeHtml(translateText("What are we working on today?"))}</p>
+        <span class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use Speak or type to begin."))}</span>
+      </div>
+      ${renderNexusTrueCommandComposer()}
+      ${renderNexusTrueSecondaryAccess()}
+    </section>
+  `;
+}
+
+function renderNexusMinimalConversationExperience() {
+  return `
+    <section class="nexus-true-conversation" data-nexus-true-conversation="true" aria-label="${escapeHtml(translateText("Nexus conversation"))}">
+      <div class="nexus-true-conversation-head">
+        ${renderNexusTrueCoreOrb({ compact: true })}
+        <div>
+          <p class="nexus-true-identity">${escapeHtml(translateText("NEXUS"))}</p>
+          <h1>${escapeHtml(translateText("I'm with you."))}</h1>
+        </div>
+        <button type="button" data-nexus-os-mission-action="return-home" data-nexus-return-home-from-mission="true">${escapeHtml(translateText("Home"))}</button>
+      </div>
+      <div class="nexus-true-conversation-log" data-nexus-os-conversation-log="true" aria-live="polite">
+        ${renderNexusOsConversationTurns()}
+      </div>
+      ${renderNexusTrueCommandComposer({ compact: true })}
+      <div class="nexus-os-conversation-live-region sr-only" data-nexus-os-conversation-live-region="true" aria-live="polite"></div>
+    </section>
+  `;
+}
+
 function renderNexusCommandCenterHero() {
+  return nexusTrueExperienceMode() === "home"
+    ? renderNexusTrueHome()
+    : renderNexusMinimalConversationExperience();
+}
+
+function renderNexusCommandCenterHeroLegacy() {
   const coreState = nexusCoreRuntimeState.current || "idle";
   const coreContract = getNexusCoreStateContract(coreState);
   return `
@@ -35680,6 +35881,8 @@ function renderUserWorkspace() {
   if (!target) return;
   ensureNexusRealProviderStatusBootstrap();
   ensureNexusOsVisualBoundaryStyles();
+  const trueExperienceMode = nexusTrueExperienceMode();
+  const showMission = trueExperienceMode === "mission";
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -35689,15 +35892,10 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm" data-nexus-genesis-experience-root="true" data-nexus-standard-user-render-root="genesis-experience">
-      <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus command center"))}">
-        ${renderNexusTopWelcomeArea()}
+    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root nexus-true-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="true-conversation" data-nexus-genesis-experience-root="true" data-nexus-true-conversational-root="true" data-nexus-standard-user-render-root="true-conversational-experience" data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}">
+      <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus"))}">
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
-        ${renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace)}
-        ${renderNexusUserWorkspaceSegment("Approved memory controls", renderNexusApprovedMemoryPanel)}
-        ${renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)}
-        ${renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)}
-        ${renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)}
+        ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
       </main>
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
@@ -44639,7 +44837,14 @@ async function handleNexusOsMissionLifecycleAction(action = "") {
   }
   if (normalized === "cancel") transitionNexusOsMission("cancelled", { currentOutcome: "Mission cancelled before execution." });
   if (normalized === "complete") transitionNexusOsMission("complete", { currentOutcome: "Mission completed with an outcome state." });
-  if (normalized === "return-home") transitionNexusOsMission("return_home", { currentOutcome: "Returned to Nexus Home." });
+  if (normalized === "return-home") {
+    transitionNexusOsMission("return_home", { currentOutcome: "Returned to Nexus Home." });
+    nexusTrueExperienceSessionStarted = false;
+    nexusTrueExperienceHomeResetEpoch = Date.now();
+    nexusActiveWorkflowState = { id: "", command: "", source: "return-home", workflow: "", action: "", openedAt: 0 };
+    nexusIntentDrivenWorkflowLastRoute = null;
+    nexusAgenticCommandMissions = [];
+  }
   renderUserWorkspace();
   return true;
 }
@@ -53505,8 +53710,12 @@ function bindStatic() {
   }
   document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
   document.addEventListener("input", handleNexusPresenceInputActivity, true);
+  document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
   document.addEventListener("click", handleNexusPresenceVoiceButton, true);
   document.addEventListener("click", event => {
+    void handleNexusPresenceCommandSendSubmit(event);
+  }, true);
+  document.addEventListener("submit", event => {
     void handleNexusPresenceCommandSendSubmit(event);
   }, true);
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);

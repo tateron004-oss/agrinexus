@@ -28,14 +28,6 @@ function excludes(source, token, label) {
   assert(!source.includes(token), `${label} must not include ${token}`);
 }
 
-function assertBefore(source, first, second, label) {
-  const firstIndex = source.indexOf(first);
-  const secondIndex = source.indexOf(second);
-  assert(firstIndex >= 0, `${label} missing first token: ${first}`);
-  assert(secondIndex >= 0, `${label} missing second token: ${second}`);
-  assert(firstIndex < secondIndex, `${label} should place ${first} before ${second}`);
-}
-
 [
   "let nexusActiveWorkflowState",
   "function normalizeNexusWorkflowId(",
@@ -55,18 +47,11 @@ function assertBefore(source, first, second, label) {
   "heading?.focus"
 ].forEach(token => includes(app, token, `central workflow workspace contract ${token}`));
 
-assertBefore(
-  renderUserWorkspaceBlock,
-  'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
-  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
-  "workspace should be near the top of the main command area"
-);
-assertBefore(
-  renderUserWorkspaceBlock,
-  'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)',
-  'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)',
-  "workspace should appear before deferred contextual logs/history panels"
-);
+includes(renderUserWorkspaceBlock, 'data-nexus-standard-user-render-root="true-conversational-experience"', "true conversational Standard User root");
+includes(renderUserWorkspaceBlock, 'const showMission = trueExperienceMode === "mission";', "contextual mission mode guard");
+includes(renderUserWorkspaceBlock, 'showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""', "mission workspace is mounted only when needed");
+excludes(renderUserWorkspaceBlock, 'renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)', "true Nexus home startup");
+excludes(renderUserWorkspaceBlock, 'renderNexusUserWorkspaceSegment("Review workspace details", renderNexusOsDeferredLegacySurfaces)', "true Nexus home startup");
 includes(deferredLegacyBlock, "data-nexus-os-deferred-legacy-surfaces=\"true\"", "contextual logs/history are deferred in Nexus OS startup");
 includes(deferredLegacyBlock, "renderNexusAgenticBrainPanel()", "agentic brain panel remains available in deferred surfaces");
 

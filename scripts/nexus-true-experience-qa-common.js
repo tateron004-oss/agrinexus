@@ -1,0 +1,158 @@
+const fs = require("fs");
+const path = require("path");
+
+const ROOT = path.resolve(__dirname, "..");
+const app = fs.readFileSync(path.join(ROOT, "public", "app.js"), "utf8");
+const styles = fs.readFileSync(path.join(ROOT, "public", "styles.css"), "utf8");
+const server = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
+const sw = fs.readFileSync(path.join(ROOT, "public", "sw.js"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+const qaSuite = fs.readFileSync(path.join(ROOT, "scripts", "qa-suite.js"), "utf8");
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+function extractFunction(name) {
+  const start = app.indexOf(`function ${name}`);
+  assert(start >= 0, `${name} exists`);
+  const next = app.indexOf("\nfunction ", start + 10);
+  return app.slice(start, next > start ? next : app.length);
+}
+
+function extractRenderUserWorkspace() {
+  return extractFunction("renderUserWorkspace");
+}
+
+function assertAlias(name, script) {
+  assert(packageJson.scripts[name] === `node scripts/${script}`, `${name} package alias exists`);
+  assert(qaSuite.includes(`scripts/${script}`), `${script} is wired into safe QA suite`);
+}
+
+function assertTrueHomeOwner() {
+  const workspace = extractRenderUserWorkspace();
+  assert(workspace.includes('data-nexus-standard-user-render-root="true-conversational-experience"'), "Standard User root is true conversational experience");
+  assert(workspace.includes('data-nexus-true-conversational-root="true"'), "true conversational root marker exists");
+  assert(workspace.includes('data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}"'), "root exposes current true experience mode");
+  assert(!workspace.includes("renderNexusTopWelcomeArea()"), "old top welcome is not mounted by Standard User root");
+  assert(!workspace.includes('renderNexusUserWorkspaceSegment("Calm helper"'), "calm helper is not mounted on startup");
+  assert(!workspace.includes('renderNexusUserWorkspaceSegment("Review workspace details"'), "deferred legacy host is not mounted on startup");
+}
+
+function assertTrueHomeMarkup() {
+  const home = extractFunction("renderNexusTrueHome");
+  assert(home.includes('data-nexus-true-home="true"'), "true home marker exists");
+  assert(home.includes('data-nexus-identity="true"'), "Nexus identity exists");
+  assert(home.includes("renderNexusTrueCoreOrb()"), "home renders true Nexus orb");
+  assert(home.includes("Good evening, Ron."), "natural greeting exists");
+  assert(home.includes("What are we working on today?"), "short invitation exists");
+  assert(home.includes("renderNexusTrueCommandComposer()"), "home renders one command composer");
+  assert(home.includes("renderNexusTrueSecondaryAccess()"), "home renders discreet secondary access");
+}
+
+function assertLegacyHomeRemoved() {
+  const home = extractFunction("renderNexusTrueHome");
+  const workspace = extractRenderUserWorkspace();
+  const forbidden = [
+    "nexusCommandCenterExamples",
+    "nexus-command-landing-actions",
+    "nexus-command-landing-status-strip",
+    "renderNexusOsUnifiedConversationSurface",
+    "renderNexusOsMissionLifecycleStatus",
+    "renderNexusVoiceInteractionBar",
+    "renderNexusModeLauncher",
+    "renderNexusSuggestedActions",
+    "renderNexusAgenticBrainPanel",
+    "renderNexusRightUtilityColumn"
+  ];
+  forbidden.forEach(token => {
+    assert(!home.includes(token), `${token} is absent from true home`);
+    assert(!workspace.includes(token), `${token} is absent from startup root`);
+  });
+}
+
+function assertOrbPrimaryInteraction() {
+  const orb = extractFunction("renderNexusTrueCoreOrb");
+  assert(orb.includes('data-nexus-true-core-orb="true"'), "true orb marker exists");
+  assert(orb.includes('data-nexus-os-orb-state="${escapeHtml(coreState)}"'), "orb reflects runtime state");
+  assert(orb.includes("nexusCoreStateAccessibleLabel(coreState)"), "orb has accessible state label");
+  assert(styles.includes(".nexus-true-orb-stage"), "true orb stage styles exist");
+  assert(styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced motion is supported");
+  ["idle", "wake", "listening", "hearing", "processing", "reasoning", "speaking", "waiting", "confirmation", "executing", "verifying", "completed", "offline", "blocked", "error"].forEach(state => {
+    assert(app.includes(`${state}:`) || app.includes(`"${state}"`), `${state} core state remains represented`);
+  });
+}
+
+function assertMinimalConversation() {
+  const conversation = extractFunction("renderNexusMinimalConversationExperience");
+  const submitHandler = extractFunction("handleNexusPresenceCommandSendSubmit");
+  const keydownHandler = extractFunction("handleNexusTrueCommandComposerKeydown");
+  const bindStatic = extractFunction("bindStatic");
+  assert(conversation.includes('data-nexus-true-conversation="true"'), "minimal conversation marker exists");
+  assert(conversation.includes("renderNexusTrueCoreOrb({ compact: true })"), "conversation keeps compact orb");
+  assert(conversation.includes('data-nexus-os-conversation-log="true"'), "conversation log is available after input");
+  assert(conversation.includes("renderNexusTrueCommandComposer({ compact: true })"), "conversation keeps one composer");
+  assert(!conversation.includes("data-nexus-os-conversation-action=\"retry\""), "permanent retry control is not mounted");
+  assert(!conversation.includes("data-nexus-voice-preference-action"), "voice preference wall is not mounted");
+  assert(submitHandler.includes("[data-nexus-command-composer]"), "submit handler accepts true composer form submissions");
+  assert(submitHandler.includes("true-conversation-fallback"), "unclaimed typed commands still open a safe conversation");
+  assert(submitHandler.includes("isNexusPresenceWakePhrase(command)") && submitHandler.includes("renderUserWorkspace();"), "wake phrase commands visibly re-render the true experience");
+  assert(keydownHandler.includes('event.key !== "Enter"'), "true composer keydown handler is Enter-aware");
+  assert(keydownHandler.includes("event.shiftKey"), "true composer preserves Shift+Enter newline behavior");
+  assert(keydownHandler.includes("handleNexusPresenceCommandSendSubmit"), "Enter sends through the guarded submit handler");
+  assert(bindStatic.includes('document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown'), "true composer Enter-to-send event is bound");
+  assert(bindStatic.includes('document.addEventListener("submit"'), "true composer submit event is bound");
+}
+
+function assertContextualMission() {
+  const workspace = extractRenderUserWorkspace();
+  const activeWorkflow = extractFunction("nexusTrueExperienceHasActiveWorkflow");
+  const staleReset = extractFunction("clearNexusTrueExperienceStaleWorkflowState");
+  assert(workspace.includes('const showMission = trueExperienceMode === "mission";'), "mission workspace is conditional");
+  assert(workspace.includes('showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""'), "mission mounts only when needed");
+  assert(app.includes("nexusTrueExperienceHasActiveWorkflow"), "mission mode derives from active workflow state");
+  assert(activeWorkflow.includes("nexusTrueExperienceHasCurrentWorkflowState"), "mission mode ignores stale persisted workflow state");
+  assert(staleReset.includes("true-experience-stale-reset"), "stale workflow state is cleared before a fresh user command");
+  assert(app.includes("nexusTrueExperienceSessionStarted = false;"), "return home resets true experience session");
+  assert(app.includes("nexusIntentDrivenWorkflowLastRoute = null;"), "return home clears routed mission state");
+}
+
+function assertCacheResponsive() {
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v364"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v364"'), "service worker cache version bumped");
+  assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
+  assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
+  assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");
+}
+
+function assertFinalAcceptance() {
+  assertTrueHomeOwner();
+  assertTrueHomeMarkup();
+  assertLegacyHomeRemoved();
+  assertOrbPrimaryInteraction();
+  assertMinimalConversation();
+  assertContextualMission();
+  assertCacheResponsive();
+  const composer = extractFunction("renderNexusTrueCommandComposer");
+  assert((composer.match(/data-nexus-primary-voice-entry/g) || []).length === 1, "composer defines one primary voice entry");
+  assert((composer.match(/data-nexus-primary-typed-entry/g) || []).length === 1, "composer defines one primary typed entry");
+  assert(composer.includes("Ask Nexus anything..."), "single typed entry uses approved placeholder");
+  assert(composer.includes("Send"), "single send action exists");
+  assert(!extractFunction("renderNexusTrueHome").includes("Ask Nexus"), "home does not show old Ask Nexus branding");
+}
+
+module.exports = {
+  assert,
+  assertAlias,
+  assertTrueHomeOwner,
+  assertTrueHomeMarkup,
+  assertLegacyHomeRemoved,
+  assertOrbPrimaryInteraction,
+  assertMinimalConversation,
+  assertContextualMission,
+  assertCacheResponsive,
+  assertFinalAcceptance
+};
