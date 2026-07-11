@@ -30142,7 +30142,7 @@ function renderNexusCommandCenterHero() {
   const coreState = nexusCoreRuntimeState.current || "idle";
   const coreContract = getNexusCoreStateContract(coreState);
   return `
-    <section class="nexus-command-center-hero nexus-hero nexus-glass-card" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
+    <section class="nexus-command-center-hero nexus-hero nexus-glass-card" data-nexus-command-center="true" data-nexus-accessible-first-impression="true" aria-labelledby="userWorkspaceTitle" aria-describedby="nexusFirstImpressionDescription nexusCommandTypedHint">
       <div class="nexus-command-center-copy">
         <span class="eyebrow nexus-command-center-label">${translateText("Nexus Command Center")}</span>
         <div class="nexus-command-neural-wave" aria-hidden="true">
@@ -30153,7 +30153,7 @@ function renderNexusCommandCenterHero() {
         <small class="nexus-premium-hero-subtitle">${translateText("Your AI assistant. Real answers. Real impact.")}</small>
         <span class="eyebrow">${translateText("AI assistant home")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Good morning. I'm Nexus. What would you like to do?")}</h3>
-        <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping important actions gated.")}</p>
+        <p id="nexusFirstImpressionDescription">${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping important actions gated.")}</p>
         ${renderNexusConversationalPresenceLayer()}
         ${renderNexusPresenceRuntimeBadge()}
         <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
@@ -30192,6 +30192,7 @@ function renderNexusCommandCenterHero() {
           <button type="button" class="nexus-command-send nexus-primary-typed-submit" data-nexus-command-center-submit data-nexus-primary-typed-submit="true" data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">${escapeHtml(translateText("Ask"))}</button>
         </div>
         <div class="nexus-command-context">
+          <span class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use Talk or type to begin."))}</span>
           <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Press Talk to speak, or type your request.")}</span>
           <span id="nexusCommandTypedHint" class="nexus-primary-typed-hint" data-nexus-primary-typed-hint="true">${translateText("Press Enter to ask. Use Shift+Enter for a new line.")}</span>
           <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>

@@ -14262,6 +14262,48 @@ body.user-mode .nexus-home-to-mission-banner button {
   white-space: nowrap;
 }
 
+body.user-mode .nexus-genesis-experience-root :is(
+  .nexus-primary-voice-entry,
+  .nexus-primary-typed-submit,
+  .nexus-onboarding-entry,
+  [data-toggle-user-language],
+  [data-nexus-command-prefill],
+  [data-nexus-return-home-from-mission]
+):focus-visible,
+body.user-mode .nexus-genesis-experience-root [data-nexus-primary-typed-entry="true"]:focus-visible {
+  outline: 3px solid rgba(250, 204, 21, .95) !important;
+  outline-offset: 3px !important;
+  box-shadow:
+    0 0 0 5px rgba(15, 23, 42, .72),
+    0 0 28px rgba(250, 204, 21, .28) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.user-mode .nexus-genesis-experience-root *,
+  body.user-mode .nexus-genesis-experience-root *::before,
+  body.user-mode .nexus-genesis-experience-root *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body.user-mode .nexus-genesis-experience-root .nexus-command-center-hero,
+  body.user-mode .nexus-genesis-experience-root .nexus-command-composer,
+  body.user-mode .nexus-agentic-mission-workspace[data-nexus-focused-mission-window="true"] {
+    border: 1px solid CanvasText !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  body.user-mode .nexus-genesis-experience-root :is(button, textarea) {
+    border: 1px solid ButtonText !important;
+    color: ButtonText !important;
+  }
+}
+
 body.user-mode .nexus-genesis-experience-root .nexus-os-conversation-surface,
 body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
   grid-column: 1 / -1 !important;
