@@ -14217,6 +14217,51 @@ body.user-mode .nexus-genesis-experience-root .nexus-primary-typed-hint {
   color: rgba(203, 213, 225, .86) !important;
 }
 
+body.user-mode .nexus-agentic-mission-workspace[data-nexus-focused-mission-window="true"] {
+  scroll-margin-top: 18px !important;
+  position: relative !important;
+  border-color: rgba(34, 211, 238, .32) !important;
+  box-shadow:
+    0 26px 78px rgba(2, 8, 23, .38),
+    0 0 34px rgba(34, 211, 238, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+}
+
+body.user-mode .nexus-home-to-mission-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, .16), transparent 36%),
+    linear-gradient(135deg, rgba(15, 23, 42, .78), rgba(30, 41, 59, .58));
+}
+
+body.user-mode .nexus-home-to-mission-banner div {
+  display: grid;
+  gap: 3px;
+}
+
+body.user-mode .nexus-home-to-mission-banner strong {
+  color: rgba(255, 255, 255, .96);
+}
+
+body.user-mode .nexus-home-to-mission-banner span {
+  color: rgba(203, 213, 225, .88);
+}
+
+body.user-mode .nexus-home-to-mission-banner small {
+  color: rgba(186, 230, 253, .82);
+}
+
+body.user-mode .nexus-home-to-mission-banner button {
+  white-space: nowrap;
+}
+
 body.user-mode .nexus-genesis-experience-root .nexus-os-conversation-surface,
 body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
   grid-column: 1 / -1 !important;

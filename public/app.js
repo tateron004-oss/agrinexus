@@ -30665,7 +30665,7 @@ function renderNexusAgenticMissionWorkspace() {
   const mission = nexusCurrentMissionSnapshot();
   const statusOptions = ["draft", "collecting_info", "ready_to_prepare", "local_prepared", "needs_credentials", "needs_consent", "needs_confirmation", "vendor_required", "live_ready", "executed_with_receipt", "blocked_for_safety"];
   return `
-    <section class="nexus-agentic-mission-workspace nexus-glass-card" data-nexus-agentic-mission-workspace="true" data-nexus-mission-status-options="${escapeHtml(statusOptions.join(","))}" aria-label="${escapeHtml(translateText("Nexus mission workspace"))}">
+    <section class="nexus-agentic-mission-workspace nexus-glass-card" data-nexus-agentic-mission-workspace="true" data-nexus-home-to-mission-transition="true" data-nexus-focused-mission-window="true" data-nexus-mission-status-options="${escapeHtml(statusOptions.join(","))}" tabindex="-1" aria-label="${escapeHtml(translateText("Nexus focused mission workspace"))}">
       <div class="nexus-mission-head">
         <div>
           <span class="eyebrow">${escapeHtml(translateText("Agentic Mission Workspace"))}</span>
@@ -30673,6 +30673,14 @@ function renderNexusAgenticMissionWorkspace() {
           <p>${escapeHtml(translateText(mission.goal))}</p>
         </div>
         ${renderNexusStatusBadge(mission.status)}
+      </div>
+      <div class="nexus-home-to-mission-banner" data-nexus-home-to-mission-banner="true">
+        <div>
+          <strong>${escapeHtml(translateText("Focused mission open"))}</strong>
+          <span>${escapeHtml(translateText("Nexus is showing one mission workspace. Review the next step, then continue or return home."))}</span>
+          <small>${escapeHtml(translateText("No external action is authorized from this transition."))}</small>
+        </div>
+        <button type="button" data-nexus-os-mission-action="return-home" data-nexus-return-home-from-mission="true">${escapeHtml(translateText("Return home"))}</button>
       </div>
       <div class="nexus-mission-grid">
         <article><strong>${escapeHtml(translateText("What Nexus understands"))}</strong><span>${escapeHtml(translateText(mission.understood))}</span></article>
@@ -30708,6 +30716,7 @@ function renderNexusAgenticMissionWorkspace() {
         <button type="button" class="primary" data-nexus-agentic-runtime-action="continue">${escapeHtml(translateText("Continue mission"))}</button>
         <button type="button" data-nexus-agentic-runtime-action="confirm">${escapeHtml(translateText("Confirm local step"))}</button>
         <button type="button" data-nexus-agentic-runtime-action="cancel">${escapeHtml(translateText("Cancel mission"))}</button>
+        <button type="button" data-nexus-os-mission-action="return-home" data-nexus-return-home-from-mission="true">${escapeHtml(translateText("Return home"))}</button>
         <button type="button" class="primary" data-nexus-command-prefill="${escapeHtml(mission.nextStep)}">${escapeHtml(translateText("Use recommended prompt"))}</button>
         <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Provider readiness"))}</button>
         <button type="button" data-nexus-mode-shortcut="view-receipts" data-nexus-command="Show action receipt.">${escapeHtml(translateText("View receipts"))}</button>
