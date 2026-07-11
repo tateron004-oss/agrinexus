@@ -35677,8 +35677,8 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm">
-      <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
+    <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="calm" data-nexus-genesis-experience-root="true" data-nexus-standard-user-render-root="genesis-experience">
+      <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)}
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
