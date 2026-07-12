@@ -38661,6 +38661,11 @@ async function api(req, res, url) {
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.buildHealthRegulatoryAssessmentPacket(body?.text || body?.command || "", body?.context || {}));
   }
 
+  if (url.pathname === "/api/nexus/health-evidence/security-privacy-adversarial" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.buildHealthSecurityPrivacyAdversarialPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
   if (url.pathname === "/api/nexus/health-evidence/feedback" && req.method === "POST") {
     const body = await readBody(req);
     db.profile = db.profile || {};

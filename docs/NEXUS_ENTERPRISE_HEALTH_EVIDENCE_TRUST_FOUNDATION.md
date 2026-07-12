@@ -173,6 +173,12 @@ Nexus now exposes capability-level regulatory assessment through `POST /api/nexu
 
 This capability can classify a capability, list applicable review frames, and prepare a governance checklist. It cannot authorize production use, bypass legal or clinical approval, bypass jurisdiction review, activate live connectors, handle PHI without governance, diagnose, prescribe, contact providers, or dispatch emergencies.
 
+## Health Security, Privacy, Accessibility, And Adversarial Validation
+
+Nexus now exposes local health security, privacy, accessibility, and adversarial validation through `POST /api/nexus/health-evidence/security-privacy-adversarial` and Standard User commands such as "run health red team", "show privacy validation", "test prompt injection", or "test unsafe health claim." The packet classifies prompt-injection, jailbreak, credential exposure, PHI oversharing, fake citation, fake provider execution, emergency boundary, accessibility, localization, and consent-bypass risks.
+
+This capability can prepare local validation checks, blocked-finding receipts, and review-ready evidence for security, privacy, accessibility, and adversarial QA. It cannot approve release, bypass security/privacy/clinical review, expose secrets, bypass consent or human review, claim clinical safety has passed, contact providers, or dispatch emergencies.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
