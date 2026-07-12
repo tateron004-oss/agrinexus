@@ -87,3 +87,91 @@ Blocked until later provider-specific activation:
 - live SMS, WhatsApp, email, calls, video rooms, payments, booking, pharmacy, EHR/FHIR, lab, referral, logistics dispatch, buyer contact, training enrollment, employer application, drone mission execution, and regulated submissions
 
 Those capabilities can be made live only through provider-specific adapters that satisfy the same credential, consent, confirmation, audit, and outcome-verification contract.
+
+## Provider Orchestration Runtime
+
+Phase continuation adds `public/nexus-genesis-provider-orchestration.js`, a runtime layer above the vendor-neutral provider abstraction. The orchestration layer keeps Nexus production-oriented while preserving the no-silent-execution boundary.
+
+Runtime responsibilities:
+
+- create one adapter contract for every registered provider
+- classify adapter families across AI, cloud, communications, maps/weather, healthcare, workforce, agriculture, logistics, payments, and local fallback
+- evaluate execution readiness before provider use
+- enforce data-class, jurisdiction, consent, confirmation, quota, idempotency, replay, timeout, retry, and circuit-breaker gates
+- create review queues for provider requests that are not ready for live execution
+- run dry-run/local fallback execution packets without contacting external providers
+- cancel queued provider requests
+- administratively disable or roll back providers
+- keep retry, fallback, telemetry, incident, and circuit-breaker history in runtime memory
+- verify that provider acknowledgements are not treated as final outcomes
+- expose a public-safe SDK description for future provider adapters
+
+The orchestration layer does not activate live external execution by itself. It makes provider execution safer to activate later by requiring:
+
+- a concrete adapter contract
+- explicit provider configuration
+- allowed data class and jurisdiction
+- consent where required
+- final user confirmation where required
+- idempotency and replay protection
+- bounded retry and timeout behavior
+- circuit-breaker protection
+- audit receipt and outcome verification
+
+## Provider Orchestration API
+
+Public-safe local endpoints:
+
+- `GET /api/nexus/provider-orchestration/status`
+- `GET /api/nexus/provider-orchestration/console`
+- `GET /api/nexus/provider-orchestration/sdk`
+- `POST /api/nexus/provider-orchestration/capability-report`
+- `POST /api/nexus/provider-orchestration/readiness`
+- `POST /api/nexus/provider-orchestration/queue`
+- `POST /api/nexus/provider-orchestration/execute-dry-run`
+- `POST /api/nexus/provider-orchestration/cancel`
+- `POST /api/nexus/provider-orchestration/disable-provider`
+- `POST /api/nexus/provider-orchestration/rollback-provider`
+- `POST /api/nexus/provider-orchestration/verify-outcome`
+
+These endpoints return normalized packets and never return provider secret values. Missing configuration is reported by environment variable name only.
+
+## Standard User Orchestration Commands
+
+The Standard User Ask Nexus flow now recognizes provider orchestration questions such as:
+
+- Show provider console and retry history.
+- Which adapter handles SMS?
+- Show provider health.
+- Show quota and cost estimate.
+- Queue provider request.
+- Cancel provider request.
+- Show provider telemetry.
+- Show provider incident history.
+- Roll back provider.
+- Show provider SDK.
+- What is the execution state?
+
+The response is a visible provider orchestration card that summarizes adapter count, execution state, circuit state, quota state, duplicate/replay protection, and whether external execution is authorized. The card always states that receipts and outcome verification are required before a live provider action can be treated as complete.
+
+## Orchestration Execution States
+
+Current normalized states:
+
+- `local_completed`
+- `queued`
+- `credential-blocked`
+- `consent-blocked`
+- `confirmation-blocked`
+- `jurisdiction-blocked`
+- `data-class-blocked`
+- `quota-blocked`
+- `circuit-open`
+- `cancelled`
+- `duplicate-blocked`
+- `replay-blocked`
+- `provider-prepared`
+- `not production-authorized`
+- `failed-safe`
+
+Live calls, messages, bookings, payments, pharmacy requests, EHR/FHIR exchange, logistics dispatch, buyer contact, training enrollment, employer application, drone missions, and regulated submissions remain blocked until provider-specific activation satisfies the adapter contract and all approval gates.

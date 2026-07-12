@@ -94,6 +94,7 @@
     "qa:nexus-genesis-workforce-source-verification": "node scripts/nexus-genesis-workforce-source-verification-qa.js",
     "qa:nexus-genesis-africa-ag-opportunity": "node scripts/nexus-genesis-africa-ag-opportunity-qa.js",
     "qa:nexus-genesis-provider-abstraction": "node scripts/nexus-genesis-provider-abstraction-qa.js",
+    "qa:nexus-genesis-provider-orchestration": "node scripts/nexus-genesis-provider-orchestration-qa.js",
     "qa:nexus-marketplace-predictive-intelligence": "node scripts/nexus-marketplace-predictive-intelligence-qa.js",
     "qa:nexus-logistics-predictive-intelligence": "node scripts/nexus-logistics-predictive-intelligence-qa.js",
     "qa:nexus-workforce-predictive-intelligence": "node scripts/nexus-workforce-predictive-intelligence-qa.js",

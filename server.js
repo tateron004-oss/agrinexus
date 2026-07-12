@@ -28,6 +28,7 @@ const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-he
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
 const nexusGenesisProviderAbstraction = require("./public/nexus-genesis-provider-abstraction.js");
+const nexusGenesisProviderOrchestration = require("./public/nexus-genesis-provider-orchestration.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -39785,6 +39786,58 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/provider-abstraction/sdk" && req.method === "GET") {
     return send(res, 200, nexusGenesisProviderAbstraction.sdk());
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/status" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/console" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.adminConsole(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/capability-report" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.capabilityReport(body.command || "", process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/readiness" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.evaluateExecutionReadiness(body, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/queue" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.enqueue(body, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/execute-dry-run" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.executeDryRun(body, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/cancel" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.cancel(body.queueId || ""));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/disable-provider" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.disableProvider(body.providerId || "", body.reason || "administrative_disablement"));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/rollback-provider" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.rollbackProvider(body.providerId || ""));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/verify-outcome" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.verifyOutcome(body.receipt || body));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/sdk" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.sdk());
   }
 
   if (!user) return send(res, 401, { error: "Sign in required" });
