@@ -170,6 +170,7 @@
     "qa:nexus-enterprise-health-youth-vulnerable-safeguards": "node scripts/nexus-enterprise-health-youth-vulnerable-safeguards-qa.js",
     "qa:nexus-enterprise-health-accessibility-localization-governance": "node scripts/nexus-enterprise-health-accessibility-localization-governance-qa.js",
     "qa:nexus-enterprise-health-communications-follow-up-governance": "node scripts/nexus-enterprise-health-communications-follow-up-governance-qa.js",
+    "qa:nexus-enterprise-health-model-source-monitoring-governance": "node scripts/nexus-enterprise-health-model-source-monitoring-governance-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

@@ -161,6 +161,12 @@ Nexus now exposes health communications and follow-up governance through `POST /
 
 This capability can prepare SMS, WhatsApp, email, phone-script, portal-note, in-app reminder, and follow-up checklist drafts. It cannot send messages, start calls, schedule appointments, request refills, contact providers, route emergencies, or silently hand off to any communications provider until the required connector, resolved recipient, visible preview, consent, explicit approval, final confirmation, and audit gates are active.
 
+## Health Model And Source Monitoring Governance
+
+Nexus now exposes model and source monitoring governance through `POST /api/nexus/health-evidence/monitoring` and Standard User commands such as "show source monitoring", "show model monitoring", or "review stale source." The packet classifies source freshness, source conflict, model drift, calculator version, provider trust, terminology version, safety-signal, and jurisdiction-change monitoring needs.
+
+This capability can prepare governance review tickets, stale-source warnings, monitoring receipts, and human-review routing. It cannot run live monitoring, claim a source is current, update clinical guidance, silently replace sources, recalibrate models, notify providers, or escalate emergencies until configured connectors, thresholds, governance ownership, review approval, rollback paths, and audit controls are active.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
