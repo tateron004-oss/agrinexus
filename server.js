@@ -38636,6 +38636,11 @@ async function api(req, res, url) {
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.buildFhirTerminologyGovernancePacket(body?.text || body?.command || "", body?.context || {}));
   }
 
+  if (url.pathname === "/api/nexus/health-evidence/youth-vulnerable-safeguards" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.buildYouthVulnerableSafeguardPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
   if (url.pathname === "/api/nexus/health-evidence/feedback" && req.method === "POST") {
     const body = await readBody(req);
     db.profile = db.profile || {};

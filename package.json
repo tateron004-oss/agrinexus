@@ -167,6 +167,7 @@
     "qa:nexus-enterprise-health-laboratory-diagnostic-governance": "node scripts/nexus-enterprise-health-laboratory-diagnostic-governance-qa.js",
     "qa:nexus-enterprise-health-data-rights-governance": "node scripts/nexus-enterprise-health-data-rights-governance-qa.js",
     "qa:nexus-enterprise-health-fhir-terminology-governance": "node scripts/nexus-enterprise-health-fhir-terminology-governance-qa.js",
+    "qa:nexus-enterprise-health-youth-vulnerable-safeguards": "node scripts/nexus-enterprise-health-youth-vulnerable-safeguards-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

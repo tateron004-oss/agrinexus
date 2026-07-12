@@ -250,6 +250,20 @@
     noSilentDeletion: true
   });
 
+  const YOUTH_VULNERABLE_POPULATION_GOVERNANCE = Object.freeze({
+    governedPopulations: ["minor or child", "youth", "elder", "pregnancy or postpartum", "disability", "caregiver-supported user", "crisis risk", "abuse or exploitation concern"],
+    supportedUses: ["plain-language safety education", "guardian/caregiver review prompts", "professional review packet", "local trusted adult/resource questions", "crisis-resource display boundary"],
+    prohibitedUses: ["private disclosure without consent or legal basis", "autonomous clinical action", "unsafe family assumption", "child labor routing", "diagnosis", "prescribing", "emergency dispatch"],
+    requiredBeforeSharing: ["age/context clarification when relevant", "user assent/consent or legally appropriate guardian consent", "minimum necessary disclosure", "trusted recipient review", "audit receipt"],
+    requiredBeforeEscalation: ["immediate danger check", "jurisdiction resource lookup", "local emergency instruction", "human/professional review when available", "no dispatch claim"],
+    defaultState: "safeguard_review_only_until_age_context_consent_jurisdiction_and_human_review_are_configured",
+    executionEnabled: false,
+    noPrivateDisclosure: true,
+    noUnsafeFamilyAssumption: true,
+    noChildLaborRouting: true,
+    noEmergencyDispatch: true
+  });
+
   const ACCESSIBILITY_LOCALIZATION_GOVERNANCE = Object.freeze({
     supportedNeeds: ["plain language", "low literacy", "multilingual labels", "voice fallback", "caption fallback", "low bandwidth", "offline queue", "cultural adaptation review"],
     translationState: "translation_unverified_until_human_or_approved_translation_review",
@@ -307,7 +321,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -928,6 +942,51 @@
     };
   }
 
+  function inferVulnerablePopulation(input = "") {
+    const text = normalizeText(input);
+    if (/\b(pregnant|pregnancy|postpartum|maternal|antenatal|midwife)\b/.test(text)) return "pregnancy_or_postpartum";
+    if (/\b(child|minor|infant|baby|pediatric|teen|youth|girl|boy)\b/.test(text)) return "minor_or_youth";
+    if (/\b(elder|elderly|older adult|grandma|grandfather|grandmother|dementia)\b/.test(text)) return "elder";
+    if (/\b(disability|disabled|blind|deaf|mobility|cognitive|accessibility)\b/.test(text)) return "disability";
+    if (/\b(abuse|exploitation|violence|neglect|unsafe at home|trafficking)\b/.test(text)) return "abuse_or_exploitation_concern";
+    if (/\b(suicide|self harm|danger to self|danger to others|crisis)\b/.test(text)) return "crisis_risk";
+    if (/\b(caregiver|family support|guardian|parent)\b/.test(text)) return "caregiver_supported_user";
+    return "vulnerable_population_review";
+  }
+
+  function buildYouthVulnerableSafeguardPacket(input = "", context = {}) {
+    const population = inferVulnerablePopulation(input);
+    const crisisRelated = ["crisis_risk", "abuse_or_exploitation_concern", "pregnancy_or_postpartum"].includes(population);
+    const requiredBeforeAction = crisisRelated
+      ? YOUTH_VULNERABLE_POPULATION_GOVERNANCE.requiredBeforeEscalation
+      : YOUTH_VULNERABLE_POPULATION_GOVERNANCE.requiredBeforeSharing;
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_youth_vulnerable_safeguard_packet",
+      domainId: population === "pregnancy_or_postpartum" ? "maternal_child" : "youth_vulnerable",
+      population,
+      crisisRelated,
+      governance: YOUTH_VULNERABLE_POPULATION_GOVERNANCE,
+      domainEvidenceMap: DOMAIN_EVIDENCE_MAPS[population === "pregnancy_or_postpartum" ? "maternal_child" : "youth_vulnerable"],
+      requiredBeforeAction,
+      reviewQueue: crisisRelated ? HUMAN_REVIEW_QUEUE_TYPES.behavioral_crisis_review : HUMAN_REVIEW_QUEUE_TYPES.clinical_evidence_review,
+      executionEnabled: false,
+      canPrepareSafeguardQuestions: true,
+      canSharePrivately: false,
+      canAssumeFamilyConsent: false,
+      canRouteChildLabor: false,
+      canDiagnose: false,
+      canPrescribe: false,
+      canDispatchEmergencyHelp: false,
+      canContactProviderOrGuardian: false,
+      safety: commonSafety(),
+      auditReceipt: audit("youth_vulnerable_safeguard_prepared", population === "pregnancy_or_postpartum" ? "maternal_child" : "youth_vulnerable"),
+      userVisibleStatus: `Nexus prepared youth and vulnerable-population safeguards for ${population.replace(/_/g, " ")}. Nexus can prepare plain-language safety questions and a review packet, but it cannot disclose private information, assume family consent, route child labor, diagnose, prescribe, contact a provider or guardian, or dispatch emergency help. If there is immediate danger, the user should contact local emergency services or a trusted local professional/resource now.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -956,6 +1015,7 @@
       laboratoryDiagnosticEvidenceGovernance: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
       healthDataRightsGovernance: HEALTH_DATA_RIGHTS_GOVERNANCE,
+      youthVulnerablePopulationGovernance: YOUTH_VULNERABLE_POPULATION_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
       humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
@@ -993,12 +1053,13 @@
       medicationPharmacyGovernanceState: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE.defaultState,
       laboratoryDiagnosticGovernanceState: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE.defaultState,
       healthDataRightsGovernanceState: HEALTH_DATA_RIGHTS_GOVERNANCE.defaultMemoryState,
+      youthVulnerableSafeguardState: YOUTH_VULNERABLE_POPULATION_GOVERNANCE.defaultState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -1063,6 +1124,7 @@
     LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
     CONSENT_PRIVACY_GOVERNANCE,
     HEALTH_DATA_RIGHTS_GOVERNANCE,
+    YOUTH_VULNERABLE_POPULATION_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
     HUMAN_REVIEW_QUEUE_TYPES,
@@ -1080,6 +1142,7 @@
     buildLaboratoryDiagnosticEvidencePacket,
     buildHealthDataRightsPacket,
     buildFhirTerminologyGovernancePacket,
+    buildYouthVulnerableSafeguardPacket,
     registries,
     status,
     hasUnsafeClaim

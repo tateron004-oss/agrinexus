@@ -143,6 +143,12 @@ Nexus now exposes FHIR and clinical terminology governance through `POST /api/ne
 
 This capability can prepare resource-mapping previews, terminology-source questions, and provider-ready FHIR governance notes. It cannot access live records, write clinical records, export or import FHIR bundles, submit to a provider, or assign diagnosis codes until verified connector, identity, role, consent, minimum-necessary scope, terminology-source, professional-review, and audit gates are satisfied.
 
+## Youth And Vulnerable Population Safeguards
+
+Nexus now exposes youth, minor, elder, pregnancy/postpartum, disability, caregiver-supported, crisis-risk, abuse, and exploitation safeguards through `POST /api/nexus/health-evidence/youth-vulnerable-safeguards` and Standard User commands such as "show youth safeguard" or "prepare pregnancy safeguard." The packet classifies the vulnerable-population context and applies stricter consent, trusted-recipient, jurisdiction, and human-review gates.
+
+This capability can prepare plain-language safety questions, caregiver/guardian review prompts, crisis-resource display boundaries, and professional-review packets. It cannot disclose private information, assume family consent, route child labor, diagnose, prescribe, contact a provider or guardian, or dispatch emergency help.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

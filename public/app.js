@@ -1607,21 +1607,32 @@ function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
   const isLaboratoryDiagnosticPacket = packet.packetType === "enterprise_health_laboratory_diagnostic_evidence_governance_packet";
   const isHealthDataRightsPacket = packet.packetType === "enterprise_health_data_rights_governance_packet";
   const isFhirTerminologyPacket = packet.packetType === "enterprise_health_fhir_terminology_governance_packet";
+  const isYouthVulnerablePacket = packet.packetType === "enterprise_health_youth_vulnerable_safeguard_packet";
   const inspectorFields = packet.inspectorView?.fields || {};
   const isRegistryPacket = packet.registryPacketType === "enterprise_health_governance_registry_packet";
   const isHumanReviewPacket = packet.packetType === "enterprise_health_human_review_control_packet";
   return {
     type: packet.registryPacketType || packet.packetType || "enterprise_health_evidence_trust_packet",
-    title: isFhirTerminologyPacket ? "FHIR & Clinical Terminology Governance" : isHealthDataRightsPacket ? "Health Data Rights & Consent Governance" : isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
+    title: isYouthVulnerablePacket ? "Youth & Vulnerable Population Safeguards" : isFhirTerminologyPacket ? "FHIR & Clinical Terminology Governance" : isHealthDataRightsPacket ? "Health Data Rights & Consent Governance" : isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
     status: packet.domainId || "health-evidence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "enterprise-health-evidence-trust",
-      label: isFhirTerminologyPacket ? "FHIR terminology governance" : isHealthDataRightsPacket ? "Health data rights governance" : isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
+      label: isYouthVulnerablePacket ? "Safeguard review packet" : isFhirTerminologyPacket ? "FHIR terminology governance" : isHealthDataRightsPacket ? "Health data rights governance" : isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
       description: packet.userVisibleStatus || (isRegistryPacket ? "Nexus prepared the enterprise health governance registries." : "Nexus prepared an enterprise health evidence governance packet.")
     },
-    bullets: isFhirTerminologyPacket ? [
+    bullets: isYouthVulnerablePacket ? [
+      `Population: ${String(packet.population || "vulnerable population").replace(/_/g, " ")}`,
+      `Crisis related: ${packet.crisisRelated ? "yes" : "no"}`,
+      `Required safeguard gates: ${Array.isArray(packet.requiredBeforeAction) ? packet.requiredBeforeAction.length : 0}`,
+      `Can share privately: ${packet.canSharePrivately ? "yes" : "no"}`,
+      `Can assume family consent: ${packet.canAssumeFamilyConsent ? "yes" : "no"}`,
+      `Can route child labor: ${packet.canRouteChildLabor ? "yes" : "no"}`,
+      `Can contact provider or guardian: ${packet.canContactProviderOrGuardian ? "yes" : "no"}`,
+      `Can dispatch emergency help: ${packet.canDispatchEmergencyHelp ? "yes" : "no"}`,
+      `Execution enabled: ${packet.executionEnabled ? "yes" : "no"}`
+    ] : isFhirTerminologyPacket ? [
       `Requested resource: ${packet.requestedResource || "FHIR resource"}`,
       `Terminology system: ${packet.requestedTerminologySystem || "governed terminology"}`,
       `FHIR resources governed: ${Array.isArray(packet.fhirTerminologyContracts?.fhirResources) ? packet.fhirTerminologyContracts.fhirResources.length : 0}`,
@@ -1699,6 +1710,7 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   const laboratoryDiagnosticIntent = /\b(lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance)\b/i.test(text);
   const healthDataRightsIntent = /\b(health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|consent and privacy)\b/i.test(text);
   const fhirTerminologyIntent = /\b(fhir terminology|clinical terminology|medical record governance|health record governance|ehr governance|chart governance|loinc|snomed|rxnorm|fhir record)\b/i.test(text);
+  const youthVulnerableIntent = /\b(youth safeguard|vulnerable population|minor safeguard|child safety|child safeguard|elder safeguard|pregnancy safeguard|abuse concern|exploitation concern|caregiver safeguard)\b/i.test(text);
   const humanReviewIntent = /\b(human review|review queue|governance review|professional review controls|professional workspace controls)\b/i.test(text);
   const registryIntent = /\b(source registry|governance registr(?:y|ies)|verified provider trust|provider trust registry|fhir terminology|medical record governance|consent and privacy|clinical calculator registry)\b/i.test(text);
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
@@ -1710,7 +1722,9 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
     role: professionalRole ? "professional" : "standard_user",
     verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
   };
-  const packet = fhirTerminologyIntent
+  const packet = youthVulnerableIntent
+    ? runtime.buildYouthVulnerableSafeguardPacket(text, evidenceContext)
+    : fhirTerminologyIntent
     ? runtime.buildFhirTerminologyGovernancePacket(text, evidenceContext)
     : healthDataRightsIntent
     ? runtime.buildHealthDataRightsPacket(text, evidenceContext)
