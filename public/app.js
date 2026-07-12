@@ -1478,6 +1478,112 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
   return true;
 }
 
+function shouldOpenNexusMentalHealthMission(packet = {}) {
+  const state = packet.classification?.state || "";
+  const action = packet.classification?.action || "";
+  return Boolean(packet.classification?.crisisOverride
+    || packet.classification?.professionalReviewRequired
+    || ["provider_search", "optional_screening", "care_preparation", "privacy_control"].includes(action)
+    || ["location_required", "consent_blocked", "professional_review_required", "elevated_concern"].includes(state));
+}
+
+function renderNexusMentalHealthSupportCard(packet = {}) {
+  const classification = packet.classification || {};
+  const safety = packet.safety || {};
+  return {
+    type: "mental_health_behavioral_wellness",
+    title: "Mental Health & Behavioral Wellness",
+    status: classification.riskTier || "support",
+    localOnly: true,
+    confirmationRequired: Boolean(classification.professionalReviewRequired || classification.crisisOverride),
+    modeSummary: {
+      id: packet.capabilityId || "mental_health_behavioral_wellness",
+      label: "Support packet",
+      description: packet.userVisibleStatus || "Nexus prepared a mental-health support packet."
+    },
+    bullets: [
+      `State: ${classification.state || "support"}`,
+      `Action: ${classification.action || "supportive_dialogue"}`,
+      `Professional review required: ${classification.professionalReviewRequired ? "yes" : "no"}`,
+      `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
+      `No provider contacted: ${safety.noProviderContacted ? "yes" : "required"}`,
+      `Memory mode: ${packet.privacy?.defaultMemoryMode || "session_only"}`
+    ],
+    receiptId: packet.receipt?.receiptId || "",
+    packet
+  };
+}
+
+function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options = {}) {
+  const runtime = window.NexusMentalHealthBehavioralWellness;
+  const text = String(command || "").trim();
+  if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const packet = runtime.buildSupportPacket(text, {
+    language: languageCode(),
+    source: options.source || "standard_user",
+    locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(text),
+    screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(text)
+  });
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const openMission = shouldOpenNexusMentalHealthMission(packet);
+  if (openMission) {
+    nexusTrueExperienceSessionStarted = true;
+    nexusActiveWorkflowState = {
+      id: "mental-health-behavioral-wellness",
+      command: text,
+      source: options.source || "mental-health-runtime",
+      workflow: "mental_health_behavioral_wellness",
+      action: packet.classification?.action || "support",
+      openedAt: Date.now(),
+      agenticMission: {
+        title: "Mental Health & Behavioral Wellness",
+        status: packet.classification?.riskTier || "support",
+        safetyState: packet.classification?.state || "emotional_support"
+      }
+    };
+    startNexusOsMission(text, {
+      source: "mental-health-behavioral-wellness",
+      capabilityId: packet.capabilityId,
+      safetyClassification: packet.classification?.riskTier || "support"
+    });
+  }
+  const response = packet.userVisibleStatus || "Nexus prepared mental-health support locally.";
+  recordNexusOsConversationTurn("assistant", response, {
+    source: "nexus-mental-health-behavioral-wellness",
+    state: packet.classification?.state,
+    noDiagnosis: true,
+    noProviderContacted: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message: response,
+    source: "nexus-mental-health-behavioral-wellness",
+    capabilityId: packet.capabilityId,
+    preparedCards: [renderNexusMentalHealthSupportCard(packet)],
+    result: packet,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    noProviderContacted: true,
+    noEmergencyDispatch: true,
+    noDiagnosis: true,
+    noPrescribing: true
+  };
+  setNexusCoreState(packet.classification?.crisisOverride ? "blocked" : "responding", {
+    source: "mental-health-behavioral-wellness",
+    statusText: packet.classification?.crisisOverride ? "Immediate support boundary active." : "Support packet prepared."
+  });
+  setVoiceResponse(response, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-mental-health-behavioral-wellness",
+    mentalHealthSupportPacket: packet
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
   if (isUniversalLanguageCommand(command)) {
@@ -1485,6 +1591,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     return true;
   }
   if (runNexusStandardUserHomeLocalCommand(command)) return true;
+  if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
@@ -30108,6 +30215,11 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     renderUserWorkspace();
     return true;
   }
+  if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source })) {
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
   if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
     if (input) input.value = command;
@@ -50127,6 +50239,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   if (handleNexusExperienceStarterCommand(text, options)) return true;
   if (handleNexusExperienceStatusCommand(text, options)) return true;
   if (handleNexusPresenceFollowUp(text, options)) return true;
+  if (handleNexusMentalHealthBehavioralWellnessCommand(text, {
+    ...options,
+    source: options.source || "unified-brain-mental-health-priority"
+  })) return true;
   const intentRoute = resolveNexusIntentDrivenWorkflowRoute(text, options);
   if (intentRoute && (intentRoute.recommendedWorkflow || intentRoute.confidence >= 0.4)) {
     return routeNexusIntentDrivenWorkflowCommand(text, {

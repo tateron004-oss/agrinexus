@@ -23,6 +23,7 @@ const nexusFullCommunicationRuntime = require("./public/nexus-full-communication
 const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-collaboration-runtime.js");
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
+const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -190,6 +191,7 @@ function nexusRealProviderStatus(db, env = process.env) {
   const mobileClinicBridge = nexusRealProviders.mobileClinicBridge.status(env);
   const pharmacyBridge = nexusRealProviders.pharmacyBridge.status(env);
   const patientSupportBridge = nexusRealProviders.patientSupportBridge.status(env);
+  const mentalHealth = nexusMentalHealthBehavioralWellness.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -379,6 +381,22 @@ function nexusRealProviderStatus(db, env = process.env) {
       detail: "Health access, provider-review, telehealth, mobile clinic, pharmacy, and patient navigation preparation only. No diagnosis, prescribing, booking, contact, payment, or emergency dispatch.",
       canTestNow: medicalSupportBridge.enabled ? "Create local intakes, summaries, provider-review reports, reminders, and safe offline metadata after confirmation." : "Medical Support Bridge disabled.",
       stillNeeded: medicalSupportBridge.enabled ? [] : ["Enable NEXUS_MEDICAL_SUPPORT_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "mental-health-behavioral-wellness",
+      title: "Mental Health & Behavioral Wellness",
+      providerName: "Nexus mental-health support engine",
+      enabled: mentalHealth.enabled,
+      missingConfig: mentalHealth.missingConfig,
+      testability: mentalHealth.missingConfig.length ? "missing_config" : "local_support_ready",
+      detail: "Supportive dialogue, crisis override, privacy controls, evidence metadata, and provider-search readiness. No diagnosis, prescribing, fake referral, appointment booking, provider contact, or emergency dispatch.",
+      canTestNow: "Run local supportive conversation, crisis classification, privacy-control, and provider-readiness checks. Live provider search requires approved source configuration.",
+      stillNeeded: [
+        ...mentalHealth.missingConfig.map(name => `Add ${name}`),
+        "Clinical/source governance before presenting provider availability as current",
+        "Jurisdiction-approved crisis/provider resource registry before live handoff"
+      ],
       requiresConfirmation: true
     }),
     providerReadinessCard({
@@ -38456,6 +38474,26 @@ async function api(req, res, url) {
     const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env);
     await writeDb(db);
     return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/mental-health/status" && req.method === "GET") {
+    return send(res, 200, nexusMentalHealthBehavioralWellness.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/mental-health/classify" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, {
+      ok: true,
+      classification: nexusMentalHealthBehavioralWellness.classifyState(body?.text || body?.command || "", body?.context || {}),
+      noDiagnosis: true,
+      noProviderContacted: true,
+      noEmergencyDispatch: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/mental-health/support" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusMentalHealthBehavioralWellness.buildSupportPacket(body?.text || body?.command || "", body?.context || {}));
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {

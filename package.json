@@ -158,6 +158,7 @@
     "qa:nexus-voice-orb-synchronization": "node scripts/nexus-voice-orb-synchronization-qa.js",
     "qa:nexus-experience-performance-accessibility": "node scripts/nexus-experience-performance-accessibility-qa.js",
     "qa:nexus-genesis-experience-engine-acceptance": "node scripts/nexus-genesis-experience-engine-acceptance-qa.js",
+    "qa:nexus-mental-health-behavioral-wellness": "node scripts/nexus-mental-health-behavioral-wellness-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
