@@ -1587,22 +1587,43 @@ function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options 
 function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
   const safety = packet.safety || {};
   const sources = Array.isArray(packet.sourceReceipts) ? packet.sourceReceipts : [];
+  const registrySources = Array.isArray(packet.recognizedSources) ? packet.recognizedSources : [];
+  const domainMaps = packet.domainEvidenceMaps && typeof packet.domainEvidenceMaps === "object" ? packet.domainEvidenceMaps : {};
   const models = Array.isArray(packet.predictiveModels) ? packet.predictiveModels : Array.isArray(packet.models) ? packet.models : [];
+  const registryModels = packet.predictiveModelRegistry && typeof packet.predictiveModelRegistry === "object" ? packet.predictiveModelRegistry : {};
+  const calculators = Array.isArray(packet.calculators) ? packet.calculators : packet.clinicalCalculatorRegistry && typeof packet.clinicalCalculatorRegistry === "object" ? Object.values(packet.clinicalCalculatorRegistry) : [];
+  const providerTrust = packet.verifiedProviderTrustRegistry && typeof packet.verifiedProviderTrustRegistry === "object" ? packet.verifiedProviderTrustRegistry : {};
+  const fhirResources = Array.isArray(packet.fhirTerminologyContracts?.fhirResources) ? packet.fhirTerminologyContracts.fhirResources : [];
+  const readiness = packet.readinessClassifications && typeof packet.readinessClassifications === "object" ? packet.readinessClassifications : {};
+  const inspectorFields = packet.inspectorView?.fields || {};
+  const isRegistryPacket = packet.registryPacketType === "enterprise_health_governance_registry_packet";
   return {
-    type: packet.packetType || "enterprise_health_evidence_trust_packet",
-    title: "Enterprise Health Evidence Trust",
+    type: packet.registryPacketType || packet.packetType || "enterprise_health_evidence_trust_packet",
+    title: isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
     status: packet.domainId || "health-evidence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "enterprise-health-evidence-trust",
-      label: "Professional evidence inspector",
-      description: packet.userVisibleStatus || "Nexus prepared an enterprise health evidence governance packet."
+      label: isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
+      description: packet.userVisibleStatus || (isRegistryPacket ? "Nexus prepared the enterprise health governance registries." : "Nexus prepared an enterprise health evidence governance packet.")
     },
-    bullets: [
+    bullets: isRegistryPacket ? [
+      `Canonical sources governed: ${registrySources.length}`,
+      `Health domain maps: ${Object.keys(domainMaps).length}`,
+      `Predictive models governed: ${Object.keys(registryModels).length}`,
+      `Clinical calculators governed: ${calculators.length}`,
+      `Verified provider trust categories: ${Object.keys(providerTrust).length}`,
+      `FHIR resources governed: ${fhirResources.length}`,
+      `FHIR status: ${readiness.fhirTerminology || "connector disabled until consent/role/audit gates are configured"}`,
+      `Execution enabled: ${packet.executionEnabled ? "yes" : "no"}`
+    ] : [
       `Domain: ${String(packet.domainId || "health").replace(/_/g, " ")}`,
       `Sources mapped: ${sources.length}`,
       `Predictive models governed: ${models.length}`,
+      `Clinical calculators governed: ${calculators.length || "registry available"}`,
+      `Inspector role: ${packet.inspectorView?.role || "standard_user"}`,
+      `Source version: ${inspectorFields.sourceVersion || inspectorFields.publicationYearOrVersion || "verification required"}`,
       `Professional review required: ${safety.professionalReviewRequired ? "yes" : "yes"}`,
       `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
       `No fake citation: ${safety.noFakeCitation ? "yes" : "required"}`
@@ -1616,6 +1637,7 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   const runtime = window.NexusEnterpriseHealthEvidenceTrust;
   const text = String(command || "").trim();
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const registryIntent = /\b(source registry|governance registr(?:y|ies)|verified provider trust|provider trust registry|fhir terminology|medical record governance|consent and privacy|clinical calculator registry)\b/i.test(text);
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
   const professionalRole = /\b(professional version|clinician version|complete citation|evidence certainty|recommendation strength|conflicts? of interest|citation export)\b/i.test(text);
   const sourceVerificationIntent = /\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources)\b/i.test(text);
@@ -1625,12 +1647,16 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
     role: professionalRole ? "professional" : "standard_user",
     verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
   };
-  const packet = predictiveIntent
+  const packet = registryIntent
+    ? runtime.registries()
+    : predictiveIntent
     ? runtime.predictiveGovernance(text, evidenceContext)
     : runtime.inspect(text, evidenceContext);
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
-  const response = packet.userVisibleStatus || "Nexus prepared an enterprise health evidence trust packet.";
+  const response = packet.userVisibleStatus || (registryIntent
+    ? `Nexus prepared the enterprise health governance registries: ${Array.isArray(packet.recognizedSources) ? packet.recognizedSources.length : 0} canonical sources, ${packet.clinicalCalculatorRegistry ? Object.keys(packet.clinicalCalculatorRegistry).length : 0} clinical calculators, ${packet.verifiedProviderTrustRegistry ? Object.keys(packet.verifiedProviderTrustRegistry).length : 0} verified provider trust categories, and ${Array.isArray(packet.fhirTerminologyContracts?.fhirResources) ? packet.fhirTerminologyContracts.fhirResources.length : 0} FHIR resources. Execution remains disabled; Nexus does not diagnose, prescribe, access records, contact providers, or dispatch emergencies until the required connector, consent, professional review, and audit gates are satisfied.`
+    : "Nexus prepared an enterprise health evidence trust packet.");
   recordNexusOsConversationTurn("assistant", response, {
     source: "nexus-enterprise-health-evidence-trust",
     domainId: packet.domainId,

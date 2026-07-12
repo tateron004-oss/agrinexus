@@ -78,7 +78,23 @@
     source("ema", "European Medicines Agency", "1A", "EU", ["medication", "regulatory"], "https://www.ema.europa.eu/"),
     source("cochrane", "Cochrane", "3", "international", ["systematic_review", "evidence_synthesis"], "https://www.cochrane.org/"),
     source("samhsa", "Substance Abuse and Mental Health Services Administration", "1A", "US", ["mental_health", "substance_use", "provider_directory"], "https://www.samhsa.gov/"),
-    source("npi", "National Plan and Provider Enumeration System", "7", "US", ["provider_directory"], "https://npiregistry.cms.hhs.gov/")
+    source("npi", "National Plan and Provider Enumeration System", "7", "US", ["provider_directory"], "https://npiregistry.cms.hhs.gov/"),
+    source("uspstf", "U.S. Preventive Services Task Force", "2", "US", ["screening", "preventive_care", "maternal_child"], "https://www.uspreventiveservicestaskforce.org/"),
+    source("ada", "American Diabetes Association Standards of Care", "2", "US", ["diabetes", "cardiometabolic", "clinical_practice_guideline"], "https://diabetes.org/"),
+    source("aha", "American Heart Association", "2", "US", ["hypertension", "cardiovascular", "patient_education"], "https://www.heart.org/"),
+    source("acog", "American College of Obstetricians and Gynecologists", "2", "US", ["maternal_child", "pregnancy", "screening"], "https://www.acog.org/"),
+    source("aap", "American Academy of Pediatrics", "2", "US", ["pediatrics", "youth", "vulnerable_population"], "https://www.aap.org/"),
+    source("apa", "American Psychiatric Association", "2", "US", ["mental_health", "behavioral_wellness", "screening"], "https://www.psychiatry.org/"),
+    source("kdigo", "KDIGO", "2", "international", ["kidney", "diabetes", "hypertension"], "https://kdigo.org/"),
+    source("gold", "Global Initiative for Chronic Obstructive Lung Disease", "2", "international", ["respiratory", "copd", "chronic_care"], "https://goldcopd.org/"),
+    source("gina", "Global Initiative for Asthma", "2", "international", ["asthma", "respiratory", "chronic_care"], "https://ginasthma.org/"),
+    source("988", "988 Suicide & Crisis Lifeline", "7", "US", ["crisis", "mental_health", "safety_planning"], "https://988lifeline.org/"),
+    source("findhelp", "Findhelp Social Care Network", "7", "US", ["social_care", "food", "housing", "transportation"], "https://www.findhelp.org/"),
+    source("hrsa", "Health Resources and Services Administration", "7", "US", ["health_center", "mobile_clinic", "provider_directory"], "https://www.hrsa.gov/"),
+    source("loinc", "LOINC", "5", "international", ["laboratory", "clinical_terminology", "fhir"], "https://loinc.org/"),
+    source("snomed", "SNOMED International", "5", "international", ["clinical_terminology", "fhir", "diagnostics"], "https://www.snomed.org/"),
+    source("rxnorm", "RxNorm", "5", "US", ["medication", "pharmacy", "clinical_terminology"], "https://www.nlm.nih.gov/research/umls/rxnorm/"),
+    source("hl7", "HL7 International", "5", "international", ["fhir", "interoperability", "clinical_terminology"], "https://www.hl7.org/fhir/")
   ]);
 
   const SOURCE_CONFLICT_RULES = Object.freeze([
@@ -100,23 +116,94 @@
   ]);
 
   const DOMAIN_EVIDENCE_MAPS = Object.freeze({
+    chronic_care: domain("chronic_care", ["cdc", "nih", "cms", "who", "ada", "aha"], ["education", "manual tracking", "provider-ready summaries", "RPM/RTM readiness"], ["diagnosis", "treatment plan", "medication change", "automated clinical monitoring"]),
     diabetes: domain("diabetes", ["cdc", "nih", "cms", "who"], ["patient education", "RPM/RTM organization", "provider-ready summaries"], ["diagnosis", "insulin adjustment", "medication prescribing"]),
     hypertension: domain("hypertension", ["cdc", "nih", "cms", "who"], ["BP tracking", "education", "provider-ready summaries"], ["diagnosis", "medication changes", "emergency triage replacement"]),
     obesity: domain("obesity", ["cdc", "nih", "who"], ["education", "goal planning", "provider discussion prompts"], ["diagnosis", "prescribing weight-loss medication"]),
+    cardiometabolic: domain("cardiometabolic", ["cdc", "nih", "ada", "aha", "cms"], ["risk-factor education", "care-team summary", "lifestyle barrier organization"], ["risk diagnosis", "statin/medication recommendation", "treatment intensity selection"]),
+    kidney: domain("kidney", ["nih", "kdigo", "cdc", "loinc"], ["kidney-risk education", "lab-name organization", "provider questions"], ["eGFR diagnosis", "CKD staging as final advice", "medication safety decision"]),
+    respiratory: domain("respiratory", ["gold", "gina", "nih", "who"], ["asthma/COPD education", "trigger tracking", "clinic questions"], ["inhaler prescription", "oxygen therapy decision", "emergency replacement"]),
     rpm_rtm: domain("rpm_rtm", ["cms", "fda", "nih"], ["manual readings", "device/source provenance", "provider review packets"], ["device-level medical monitoring claims", "automated clinical alerts"]),
     mental_health: domain("mental_health", ["who", "samhsa", "nih"], ["supportive dialogue", "crisis override", "provider/resource readiness"], ["diagnosis", "therapy replacement", "emergency dispatch"]),
+    behavioral_wellness: domain("behavioral_wellness", ["who", "samhsa", "apa", "nih"], ["supportive coping plan", "screening consent gate", "provider questions"], ["diagnosis", "therapy replacement", "medication recommendation"]),
+    crisis_safety: domain("crisis_safety", ["988", "samhsa", "who"], ["crisis recognition", "safety planning prompts", "trusted-person guidance"], ["emergency dispatch claim", "risk prediction as final triage", "silent third-party contact"]),
     medication: domain("medication", ["fda", "ema", "nih", "nice"], ["medication education", "question preparation", "pharmacy workflow preparation"], ["prescribing", "dose change", "refill approval"]),
+    medication_safety: domain("medication_safety", ["fda", "rxnorm", "nih", "ema"], ["drug-name normalization", "side-effect question prep", "pharmacist review packet"], ["interaction certainty", "dose advice", "substitution approval"]),
     laboratory: domain("laboratory", ["nih", "cdc", "fda"], ["lab organization", "unit capture", "provider questions"], ["diagnostic certainty", "universal reference interval"]),
+    diagnostic_imaging: domain("diagnostic_imaging", ["fda", "nih", "ahrq"], ["imaging report organization", "questions for clinician", "source provenance"], ["image diagnosis", "urgent interpretation", "radiology replacement"]),
+    screening: domain("screening", ["uspstf", "cdc", "who", "acog", "aap"], ["screening education", "eligibility questions", "provider-ready checklist"], ["screening order", "eligibility guarantee", "result interpretation"]),
+    maternal_child: domain("maternal_child", ["who", "cdc", "acog", "aap"], ["danger-sign education", "antenatal/pediatric visit prep", "family support plan"], ["diagnosis", "treatment instruction", "emergency dispatch"]),
+    youth_vulnerable: domain("youth_vulnerable", ["aap", "who", "samhsa", "cdc"], ["extra consent review", "guardian/safeguarding prompts", "plain-language support"], ["private disclosure without consent", "autonomous clinical action", "unsafe family assumption"]),
     telehealth: domain("telehealth", ["cms", "cdc", "who"], ["intake preparation", "visit readiness", "summary preparation"], ["appointment guarantee", "provider acceptance claim"]),
+    mobile_clinic: domain("mobile_clinic", ["hrsa", "cms", "cdc", "who"], ["mobile clinic request prep", "vitals/screening education", "review queue"], ["dispatch", "arrival guarantee", "clinical acceptance claim"]),
     pharmacy: domain("pharmacy", ["fda", "ema", "cms"], ["pharmacy preparation", "medication list organization"], ["fulfillment guarantee", "prescription/refill approval"]),
-    social_care: domain("social_care", ["cms", "cdc", "who"], ["eligibility uncertainty", "resource preparation", "consent gates"], ["guaranteed eligibility", "sharing health data without consent"])
+    provider_directory: domain("provider_directory", ["npi", "cms", "hrsa", "samhsa"], ["provider identity display", "directory source provenance", "contact prep"], ["provider quality claim", "availability guarantee", "silent provider contact"]),
+    health_center: domain("health_center", ["hrsa", "cms", "cdc"], ["health-center lookup prep", "eligibility questions", "contact packet"], ["appointment booking", "eligibility guarantee", "provider acceptance claim"]),
+    fhir_records: domain("fhir_records", ["hl7", "loinc", "snomed", "rxnorm"], ["FHIR packet preparation", "terminology mapping", "consent-gated export"], ["record access", "record write", "clinical documentation without provider approval"]),
+    social_care: domain("social_care", ["cms", "cdc", "who", "findhelp"], ["eligibility uncertainty", "resource preparation", "consent gates"], ["guaranteed eligibility", "sharing health data without consent"]),
+    transportation_to_care: domain("transportation_to_care", ["cms", "findhelp", "hrsa"], ["transportation needs prep", "resource list", "consent-gated handoff packet"], ["dispatch", "ride booking", "payment"])
   });
 
   const PREDICTIVE_MODEL_REGISTRY = Object.freeze({
     chronic_trend_review: model("chronic_trend_review", "Descriptive chronic-care trend review", ["adult self-reported/manual readings"], ["diabetes", "hypertension", "obesity", "rpm_rtm"], "local_ruleset", false),
     mental_health_crisis_override: model("mental_health_crisis_override", "Crisis/emergency language override", ["all users; direct emergency language"], ["mental_health"], "rule_override", false),
     cardiovascular_risk_score: model("cardiovascular_risk_score", "Cardiovascular risk-score placeholder", ["requires validated calculator selection and complete inputs"], ["hypertension", "diabetes"], "blocked_until_calculator_governed", false),
-    medication_safety_review: model("medication_safety_review", "Medication evidence safety review", ["requires authoritative drug source and clinician/pharmacist review"], ["medication", "pharmacy"], "evidence_review", false)
+    medication_safety_review: model("medication_safety_review", "Medication evidence safety review", ["requires authoritative drug source and clinician/pharmacist review"], ["medication", "pharmacy"], "evidence_review", false),
+    social_care_eligibility_readiness: model("social_care_eligibility_readiness", "Social-care eligibility readiness review", ["requires user consent and local program rules"], ["social_care", "transportation_to_care"], "human_review_required", false),
+    youth_vulnerable_safeguard_router: model("youth_vulnerable_safeguard_router", "Youth and vulnerable-population safeguard router", ["children, elders, pregnancy, disability, crisis, abuse, exploitation"], ["youth_vulnerable", "maternal_child", "crisis_safety"], "safeguard_override", false),
+    fhir_record_readiness_review: model("fhir_record_readiness_review", "FHIR record readiness review", ["requires identity, consent, role, and configured FHIR connector"], ["fhir_records", "telehealth", "provider_directory"], "connector_blocked", false)
+  });
+
+  const CLINICAL_CALCULATOR_REGISTRY = Object.freeze({
+    bmi: calculator("bmi", "Body Mass Index", ["height", "weight"], ["obesity", "cardiometabolic"], "education_only", false),
+    bp_category: calculator("bp_category", "Blood pressure category support", ["systolic", "diastolic", "measurement_context"], ["hypertension"], "review_only", false),
+    a1c_context: calculator("a1c_context", "A1C context support", ["a1c_value", "date", "lab_source"], ["diabetes"], "review_only", false),
+    egfr_context: calculator("egfr_context", "eGFR context support", ["eGFR_value", "date", "lab_source", "age_optional"], ["kidney"], "review_only", false),
+    ascvd_risk: calculator("ascvd_risk", "ASCVD risk estimator readiness", ["age", "sex", "race_or_applicable_model_context", "cholesterol", "bp", "diabetes", "smoking", "treatment_context"], ["cardiometabolic", "hypertension", "diabetes"], "blocked_until_formula_and_population_validated", false),
+    phq9: calculator("phq9", "PHQ-9 screening instrument governance", ["user_consent", "all_item_answers", "crisis_override_check"], ["mental_health", "behavioral_wellness"], "consent_and_professional_review_required", false),
+    gad7: calculator("gad7", "GAD-7 screening instrument governance", ["user_consent", "all_item_answers", "functional_impact_context"], ["mental_health", "behavioral_wellness"], "consent_and_professional_review_required", false),
+    cssrs: calculator("cssrs", "C-SSRS style suicide-risk screening governance", ["trained_workflow", "jurisdiction_resources", "immediate_safety_check"], ["crisis_safety", "mental_health"], "crisis_override_required", false),
+    pregnancy_danger_signs: calculator("pregnancy_danger_signs", "Pregnancy danger-sign checklist", ["symptoms", "gestational_context_if_known", "local_urgent_care_context"], ["maternal_child"], "urgent_review_boundary", false)
+  });
+
+  const VERIFIED_PROVIDER_TRUST_REGISTRY = Object.freeze({
+    physician_clinic: providerTrust("physician_clinic", "Physician or clinic", ["license verification", "NPI or local registry", "specialty/scope", "active status", "sanction check"], ["schedule", "message", "clinical review"], "provider_confirmation_required"),
+    telehealth_provider: providerTrust("telehealth_provider", "Telehealth provider", ["telehealth credential", "jurisdiction coverage", "platform status", "consent workflow"], ["video visit", "intake review", "provider note"], "telehealth_connector_required"),
+    pharmacy: providerTrust("pharmacy", "Pharmacy", ["license verification", "pharmacy location", "pharmacist review route", "prescription authority"], ["refill request", "medication question", "inventory check"], "pharmacy_connector_required"),
+    mobile_clinic_operator: providerTrust("mobile_clinic_operator", "Mobile clinic operator", ["operator identity", "service scope", "schedule source", "coverage geography"], ["mobile visit request", "screening event", "community outreach"], "operator_confirmation_required"),
+    crisis_resource: providerTrust("crisis_resource", "Crisis resource", ["jurisdiction resource source", "availability review", "language/accessibility review"], ["display resource", "safety planning"], "never_claim_dispatch"),
+    social_service_org: providerTrust("social_service_org", "Social-service organization", ["program owner", "eligibility source", "service area", "freshness review"], ["resource packet", "eligibility question prep"], "consent_required_before_sharing")
+  });
+
+  const FHIR_TERMINOLOGY_CONTRACTS = Object.freeze({
+    fhirResources: ["Patient", "Observation", "Condition", "MedicationStatement", "MedicationRequest", "ServiceRequest", "Encounter", "CarePlan", "DocumentReference", "Consent", "Provenance"],
+    terminologySystems: {
+      loinc: "laboratory and observation codes",
+      snomed: "clinical findings and problems",
+      rxnorm: "medication normalization",
+      icd10: "billing/diagnosis code context only when supplied by a qualified source"
+    },
+    defaultState: "disabled_until_identity_consent_role_and_connector_are_configured",
+    noClinicalWrite: true,
+    noRecordAccessWithoutConsent: true,
+    auditRequired: true
+  });
+
+  const CONSENT_PRIVACY_GOVERNANCE = Object.freeze({
+    requiredBefore: ["provider sharing", "FHIR access", "pharmacy handoff", "appointment/referral request", "social-care sharing", "messages/calls", "export"],
+    userRights: ["view", "correct", "export", "revoke", "delete local copy where permitted", "see audit trail"],
+    dataMinimization: true,
+    sensitiveDataDefault: "local_or_session_only_until_configured",
+    memoryDefault: "do_not_store_sensitive_health_data_without_explicit_consent",
+    sharingDefault: "blocked_until_user_approval_and_audit_receipt"
+  });
+
+  const ACCESSIBILITY_LOCALIZATION_GOVERNANCE = Object.freeze({
+    supportedNeeds: ["plain language", "low literacy", "multilingual labels", "voice fallback", "caption fallback", "low bandwidth", "offline queue", "cultural adaptation review"],
+    translationState: "translation_unverified_until_human_or_approved_translation_review",
+    languages: ["English", "Spanish", "French", "Arabic", "Portuguese", "Swahili"],
+    noClinicalInterpretationCertificationClaim: true,
+    offlineState: "may prepare packets locally; does not claim live source freshness while offline"
   });
 
   const UNSAFE_CLAIM_PATTERNS = [
@@ -137,7 +224,8 @@
     /\b(guideline|clinical guideline|recommendation strength|evidence tier|source authority|jurisdiction)\b/i,
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
-    /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i
+    /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|vulnerable population|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -189,6 +277,37 @@
     });
   }
 
+  function calculator(calculatorId, name, requiredInputs, domains, validationStatus, executionEnabled) {
+    return Object.freeze({
+      calculatorId,
+      name,
+      requiredInputs,
+      domains,
+      validationStatus,
+      executionEnabled,
+      outputBoundary: "decision-support preparation only; no diagnosis, prescribing, treatment selection, or emergency triage",
+      missingInputBehavior: "ask_for_missing_information_or_block",
+      professionalReviewRequired: true,
+      auditRequired: true
+    });
+  }
+
+  function providerTrust(providerType, label, verificationRequirements, actionCapabilities, executionState) {
+    return Object.freeze({
+      providerType,
+      label,
+      verificationRequirements,
+      actionCapabilities,
+      executionState,
+      liveExecutionEnabled: false,
+      userApprovalRequired: true,
+      providerConfirmationRequired: true,
+      auditRequired: true,
+      noSilentHandoff: true,
+      noCredentialClaimWithoutConnector: true
+    });
+  }
+
   function normalizeText(value = "") {
     return String(value || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim();
   }
@@ -212,11 +331,20 @@
     if (/\b(hypertension|blood pressure|bp)\b/.test(text)) return "hypertension";
     if (/\b(obesity|weight|bmi)\b/.test(text)) return "obesity";
     if (/\b(rpm|rtm|remote patient|remote therapeutic|reading|device)\b/.test(text)) return "rpm_rtm";
-    if (/\b(mental|behavioral|behavioural|depression|anxiety|crisis|suicide)\b/.test(text)) return "mental_health";
+    if (/\b(crisis|suicide|self harm|harm myself|safety plan|988)\b/.test(text)) return "crisis_safety";
+    if (/\b(mental|behavioral|behavioural|depression|anxiety|wellness|phq|gad)\b/.test(text)) return "mental_health";
     if (/\b(medicine|medication|drug|pharmacy|refill|prescription)\b/.test(text)) return "medication";
+    if (/\b(kidney|egfr|renal)\b/.test(text)) return "kidney";
+    if (/\b(asthma|copd|respiratory|inhaler|breathing)\b/.test(text)) return "respiratory";
+    if (/\b(screening|preventive|mammogram|colon|vaccination)\b/.test(text)) return "screening";
+    if (/\b(child|pediatric|youth|minor|infant|pregnancy|maternal|baby)\b/.test(text)) return "maternal_child";
     if (/\b(lab|laboratory|diagnostic|test result|reference range)\b/.test(text)) return "laboratory";
     if (/\b(telehealth|virtual care|video visit|provider bridge)\b/.test(text)) return "telehealth";
-    if (/\b(social care|food|housing|transportation|benefits)\b/.test(text)) return "social_care";
+    if (/\b(fhir|medical record|health record|ehr|chart)\b/.test(text)) return "fhir_records";
+    if (/\b(provider directory|doctor near|clinic directory|health center)\b/.test(text)) return "provider_directory";
+    if (/\b(mobile clinic|rural clinic|community outreach)\b/.test(text)) return "mobile_clinic";
+    if (/\b(transportation to care|ride to care|medical transport)\b/.test(text)) return "transportation_to_care";
+    if (/\b(social care|food|housing|transportation|benefits|social service)\b/.test(text)) return "social_care";
     return "chronic_care";
   }
 
@@ -425,6 +553,7 @@
   function predictiveGovernance(input = "", context = {}) {
     const domainId = context.domain || inferDomain(input);
     const models = Object.values(PREDICTIVE_MODEL_REGISTRY).filter(item => item.domains.includes(domainId) || (domainId === "chronic_care" && item.domains.some(domain => ["diabetes", "hypertension", "obesity", "rpm_rtm"].includes(domain))));
+    const calculators = Object.values(CLINICAL_CALCULATOR_REGISTRY).filter(item => item.domains.includes(domainId) || (domainId === "chronic_care" && item.domains.some(domain => ["diabetes", "hypertension", "obesity", "cardiometabolic"].includes(domain))));
     return {
       ok: true,
       serviceId: SERVICE_ID,
@@ -432,6 +561,7 @@
       packetType: "predictive_health_governance_packet",
       domainId,
       models,
+      calculators,
       allowedNow: "descriptive_review_only",
       blockedUntil: [
         "validated intended population",
@@ -448,6 +578,45 @@
     };
   }
 
+  function registries() {
+    const readinessClassifications = {
+      sources: "implemented_locally_pending_live_verification",
+      domains: "implemented_locally",
+      predictiveModels: "implemented_locally_execution_disabled",
+      calculators: "implemented_locally_execution_disabled",
+      providerTrust: "implemented_locally_provider_or_credential_blocked",
+      fhirTerminology: "implemented_locally_connector_disabled",
+      consentPrivacy: "implemented_locally_required_before_sharing",
+      accessibilityLocalization: "implemented_locally_translation_review_required"
+    };
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      registryPacketType: "enterprise_health_governance_registry_packet",
+      evidenceHierarchy: EVIDENCE_TIERS,
+      recognizedSources: RECOGNIZED_SOURCE_RECORDS,
+      domainEvidenceMaps: DOMAIN_EVIDENCE_MAPS,
+      predictiveModelRegistry: PREDICTIVE_MODEL_REGISTRY,
+      clinicalCalculatorRegistry: CLINICAL_CALCULATOR_REGISTRY,
+      verifiedProviderTrustRegistry: VERIFIED_PROVIDER_TRUST_REGISTRY,
+      fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
+      consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
+      accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+      sourceVerificationStates: SOURCE_VERIFICATION_STATES,
+      blockedSourceStates: BLOCKED_SOURCE_STATES,
+      readinessClassifications,
+      executionEnabled: false,
+      noDiagnosis: true,
+      noPrescribing: true,
+      noProviderContacted: true,
+      noRecordAccessed: true,
+      noEmergencyDispatch: true,
+      noSecretsExposed: true,
+      auditReceipt: audit("enterprise_health_governance_registries_prepared", "all_health_domains")
+    };
+  }
+
   function status(env = {}) {
     const enabled = env.NEXUS_ENTERPRISE_HEALTH_EVIDENCE_ENABLED !== "false";
     return {
@@ -460,11 +629,14 @@
       sourceVerificationStateCount: SOURCE_VERIFICATION_STATES.length,
       domainMapCount: Object.keys(DOMAIN_EVIDENCE_MAPS).length,
       predictiveModelCount: Object.keys(PREDICTIVE_MODEL_REGISTRY).length,
+      clinicalCalculatorCount: Object.keys(CLINICAL_CALCULATOR_REGISTRY).length,
+      verifiedProviderTrustCategoryCount: Object.keys(VERIFIED_PROVIDER_TRUST_REGISTRY).length,
+      fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "professional inspector contract"],
-      blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "unvalidated prediction", "fake citation"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "consent/privacy governance", "professional inspector contract"],
+      blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
     };
@@ -520,6 +692,11 @@
     SOURCE_CONFLICT_RULES,
     DOMAIN_EVIDENCE_MAPS,
     PREDICTIVE_MODEL_REGISTRY,
+    CLINICAL_CALCULATOR_REGISTRY,
+    VERIFIED_PROVIDER_TRUST_REGISTRY,
+    FHIR_TERMINOLOGY_CONTRACTS,
+    CONSENT_PRIVACY_GOVERNANCE,
+    ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     shouldHandle,
     inferDomain,
     inspect,
@@ -527,6 +704,7 @@
     buildConflictReview,
     buildFeedbackRecord,
     predictiveGovernance,
+    registries,
     status,
     hasUnsafeClaim
   });

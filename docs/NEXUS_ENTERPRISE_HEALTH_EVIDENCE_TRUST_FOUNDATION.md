@@ -93,6 +93,24 @@ The predictive model registry currently supports governance records for:
 
 Predictive outputs remain descriptive unless model validation, intended population, formula/source version, bias/performance review, human professional review, and regulatory classification gates are satisfied.
 
+## Enterprise Health Governance Registries
+
+Nexus now exposes an implementation-grade governance registry packet at `GET /api/nexus/health-evidence/registries`. The packet expands the health evidence foundation beyond source inspection into the registries required for a professional health, social-care, and provider-trust workspace.
+
+The canonical source registry now includes medical, public-health, medication, laboratory, terminology, crisis, provider-directory, health-center, and social-care authorities such as USPSTF, ADA, AHA, ACOG, AAP, APA, KDIGO, GOLD, GINA, 988, Findhelp, HRSA, LOINC, SNOMED, RxNorm, and HL7/FHIR references. These records are source-ready only; live freshness and local jurisdiction authority still require verification.
+
+Domain evidence maps now cover chronic care, diabetes, hypertension, obesity, cardiometabolic support, kidney, respiratory, RPM/RTM, mental health, behavioral wellness, crisis safety, medication, medication safety, laboratory, diagnostic imaging, screening, maternal/child health, youth/vulnerable populations, telehealth, mobile clinic, pharmacy, provider directory, health center, FHIR records, social care, and transportation-to-care. Each map includes supported uses, prohibited uses, professional boundaries, emergency override requirements, and activation status.
+
+The clinical calculator registry governs BMI, blood-pressure category support, A1C context support, eGFR context support, ASCVD risk readiness, PHQ-9, GAD-7, C-SSRS style suicide-risk screening governance, and pregnancy danger-sign checklist support. These calculators are not execution-authorized in Standard User runtime. They may only organize inputs, explain missing data, and prepare professional-review packets until formula version, intended population, clinical approval, and audit controls are satisfied.
+
+The verified provider trust registry defines verification requirements for physician/clinic, telehealth, pharmacy, mobile clinic, crisis resource, and social-service organization categories. Provider contact, appointment/referral requests, pharmacy handoffs, mobile clinic dispatch, and social-care sharing remain blocked until identity, license/source checks, user approval, provider confirmation where required, and audit logging are present.
+
+The FHIR and clinical terminology contract lists Patient, Observation, Condition, MedicationStatement, MedicationRequest, ServiceRequest, Encounter, CarePlan, DocumentReference, Consent, and Provenance as governed resource categories. Nexus does not access, write, or export medical records through this registry unless a configured connector, identity proofing, role authorization, consent, and audit receipt are active.
+
+Consent and privacy governance requires explicit approval before provider sharing, FHIR access, pharmacy handoff, appointment/referral request, social-care sharing, messages/calls, or export. User rights include view, correction, export, revocation, deletion of local copies where permitted, and audit-trail visibility.
+
+Accessibility and localization governance covers plain language, low literacy, multilingual labels, voice fallback, caption fallback, low-bandwidth behavior, offline packets, and cultural adaptation review. Nexus does not claim certified clinical interpretation or live source freshness while offline.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

@@ -38564,6 +38564,10 @@ async function api(req, res, url) {
     });
   }
 
+  if (url.pathname === "/api/nexus/health-evidence/registries" && req.method === "GET") {
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.registries());
+  }
+
   if (url.pathname === "/api/nexus/health-evidence/inspect" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.inspect(body?.text || body?.command || "", body?.context || {}));
