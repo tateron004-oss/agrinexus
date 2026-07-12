@@ -24,6 +24,7 @@ const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-c
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
+const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -192,6 +193,7 @@ function nexusRealProviderStatus(db, env = process.env) {
   const pharmacyBridge = nexusRealProviders.pharmacyBridge.status(env);
   const patientSupportBridge = nexusRealProviders.patientSupportBridge.status(env);
   const mentalHealth = nexusMentalHealthBehavioralWellness.status(env);
+  const healthEvidenceTrust = nexusEnterpriseHealthEvidenceTrust.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -398,6 +400,21 @@ function nexusRealProviderStatus(db, env = process.env) {
         "Jurisdiction-approved crisis/provider resource registry before live handoff"
       ],
       requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "enterprise-health-evidence-trust",
+      title: "Enterprise Health Evidence Trust",
+      providerName: "Nexus HealthEvidenceTrustService",
+      enabled: healthEvidenceTrust.enabled,
+      testability: healthEvidenceTrust.enabled ? "professional_inspection_ready" : "disabled",
+      detail: "Platform-wide health evidence tiers, source governance, domain maps, predictive governance, and professional-inspection receipts. No diagnosis, prescribing, unvalidated prediction, provider contact, emergency dispatch, or fake citation.",
+      canTestNow: healthEvidenceTrust.enabled ? "Inspect diabetes, hypertension, obesity, RPM/RTM, medication, lab, telehealth, pharmacy, mental-health, and social-care evidence governance packets." : "Enterprise Health Evidence Trust disabled.",
+      stillNeeded: healthEvidenceTrust.enabled ? [
+        "Live source version monitoring before clinical citation activation",
+        "Real professional governance records before endorsement claims",
+        "Jurisdiction-specific source approval before localized clinical recommendations"
+      ] : ["Set NEXUS_ENTERPRISE_HEALTH_EVIDENCE_ENABLED=true"],
+      requiresConfirmation: false
     }),
     providerReadinessCard({
       id: "chronic-disease-bridge",
@@ -38494,6 +38511,32 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/mental-health/support" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusMentalHealthBehavioralWellness.buildSupportPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/health-evidence/status" && req.method === "GET") {
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/health-evidence/sources" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      serviceId: nexusEnterpriseHealthEvidenceTrust.SERVICE_ID,
+      evidenceHierarchy: nexusEnterpriseHealthEvidenceTrust.EVIDENCE_TIERS,
+      recognizedSources: nexusEnterpriseHealthEvidenceTrust.RECOGNIZED_SOURCE_RECORDS,
+      domainEvidenceMaps: nexusEnterpriseHealthEvidenceTrust.DOMAIN_EVIDENCE_MAPS,
+      noClinicalAuthorityClaimed: true,
+      noSecretsExposed: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/health-evidence/inspect" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.inspect(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/health-evidence/predictive-governance" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusEnterpriseHealthEvidenceTrust.predictiveGovernance(body?.text || body?.command || "", body?.context || {}));
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {

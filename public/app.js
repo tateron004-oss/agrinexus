@@ -1584,6 +1584,81 @@ function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options 
   return true;
 }
 
+function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
+  const safety = packet.safety || {};
+  const sources = Array.isArray(packet.sourceReceipts) ? packet.sourceReceipts : [];
+  const models = Array.isArray(packet.predictiveModels) ? packet.predictiveModels : Array.isArray(packet.models) ? packet.models : [];
+  return {
+    type: packet.packetType || "enterprise_health_evidence_trust_packet",
+    title: "Enterprise Health Evidence Trust",
+    status: packet.domainId || "health-evidence",
+    localOnly: true,
+    confirmationRequired: false,
+    modeSummary: {
+      id: "enterprise-health-evidence-trust",
+      label: "Professional evidence inspector",
+      description: packet.userVisibleStatus || "Nexus prepared an enterprise health evidence governance packet."
+    },
+    bullets: [
+      `Domain: ${String(packet.domainId || "health").replace(/_/g, " ")}`,
+      `Sources mapped: ${sources.length}`,
+      `Predictive models governed: ${models.length}`,
+      `Professional review required: ${safety.professionalReviewRequired ? "yes" : "yes"}`,
+      `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
+      `No fake citation: ${safety.noFakeCitation ? "yes" : "required"}`
+    ],
+    receiptId: packet.auditReceipt?.receiptId || "",
+    packet
+  };
+}
+
+function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options = {}) {
+  const runtime = window.NexusEnterpriseHealthEvidenceTrust;
+  const text = String(command || "").trim();
+  if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
+  const packet = predictiveIntent
+    ? runtime.predictiveGovernance(text, { language: languageCode(), source: options.source || "standard_user" })
+    : runtime.inspect(text, { language: languageCode(), source: options.source || "standard_user" });
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const response = packet.userVisibleStatus || "Nexus prepared an enterprise health evidence trust packet.";
+  recordNexusOsConversationTurn("assistant", response, {
+    source: "nexus-enterprise-health-evidence-trust",
+    domainId: packet.domainId,
+    noDiagnosis: true,
+    noFakeCitation: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message: response,
+    source: "nexus-enterprise-health-evidence-trust",
+    capabilityId: runtime.SERVICE_ID || "nexus_enterprise_health_evidence_trust",
+    preparedCards: [renderNexusEnterpriseHealthEvidenceTrustCard(packet)],
+    result: packet,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    noProviderContacted: true,
+    noEmergencyDispatch: true,
+    noDiagnosis: true,
+    noPrescribing: true,
+    noFakeCitation: true
+  };
+  setNexusCoreState("reasoning", {
+    source: "enterprise-health-evidence-trust",
+    statusText: "Professional evidence packet prepared."
+  });
+  setVoiceResponse(response, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-enterprise-health-evidence-trust",
+    healthEvidenceTrustPacket: packet
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
   if (isUniversalLanguageCommand(command)) {
@@ -1591,6 +1666,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     return true;
   }
   if (runNexusStandardUserHomeLocalCommand(command)) return true;
+  if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
@@ -30215,6 +30291,11 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     renderUserWorkspace();
     return true;
   }
+  if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source })) {
     if (input) input.value = "";
     setCommandInputs("");
@@ -54329,6 +54410,11 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = "";
+        setCommandInputs("");
+        return;
+      }
       if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = command;
         setCommandInputs(command);
@@ -55633,6 +55719,14 @@ function installNexusBrainIntelligenceCommandBridge() {
     if (!input) return;
     const command = input.value?.trim() || "";
     advanceNexusOsMissionForCommand(command, { source: "typed-command-keyboard" });
+    if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-keyboard" })) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = "";
+      setCommandInputs("");
+      return;
+    }
     if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();
