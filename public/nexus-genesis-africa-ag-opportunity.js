@@ -129,6 +129,70 @@
     "transport_availability"
   ]);
 
+  const SUPPORT_INTELLIGENCE_REGISTRY = Object.freeze([
+    supportSignal("learner_success", ["attendance", "completion", "mentor access", "practice time"], "implemented_locally"),
+    supportSignal("dropout_prevention", ["missed sessions", "care duties", "transport gaps", "equipment gaps"], "implemented_locally"),
+    supportSignal("literacy_support", ["low-literacy mode", "voice-first prompts", "visual checklist"], "implemented_locally"),
+    supportSignal("language_support", ["English", "Swahili", "French", "Portuguese", "Arabic", "Amharic", "Kinyarwanda"], "implemented_locally"),
+    supportSignal("digital_access", ["phone-only path", "offline packet", "low-bandwidth summary"], "implemented_locally"),
+    supportSignal("childcare_support", ["childcare need", "safe schedule", "social-service referral readiness"], "provider_backed_required"),
+    supportSignal("transport_support", ["travel distance", "market route", "training route", "field visit"], "provider_backed_required"),
+    supportSignal("mentoring_support", ["peer mentor", "extension worker", "women leader", "youth coach"], "partner_required"),
+    supportSignal("equipment_need", ["starter tools", "protective equipment", "shared equipment", "repair support"], "partner_required")
+  ]);
+
+  const WOMEN_YOUTH_PROTECTION_REGISTRY = Object.freeze([
+    protection("women_land_access", "Land access barrier support", ["land tenure review question", "group farming option", "lease verification"], "awaiting_local_validation"),
+    protection("women_finance_access", "Women finance readiness", ["savings group readiness", "grant eligibility checklist", "no automatic application"], "credential_blocked"),
+    protection("women_safety", "Women safety and participation support", ["safe meeting location", "harassment concern prompt", "trusted reviewer path"], "professional_review_required"),
+    protection("women_leadership", "Women leadership pathway", ["cooperative leadership", "mentor matching readiness", "community validation"], "partner_required"),
+    protection("youth_safeguarding", "Youth safeguarding", ["age-aware support", "guardian/mentor review when needed", "no exploitative placement"], "professional_review_required"),
+    protection("youth_training_to_work", "Youth training-to-work pathway", ["apprenticeship readiness", "internship readiness", "verified employer only"], "employer_backed_required")
+  ]);
+
+  const TRUST_REGISTRY = Object.freeze([
+    trustRecord("training_provider", "Verified training provider", ["identity", "curriculum", "safeguarding policy", "completion evidence"], "credential_blocked"),
+    trustRecord("employer", "Verified agriculture employer", ["identity", "role details", "wage or stipend terms", "safety policy"], "employer_backed"),
+    trustRecord("buyer", "Verified buyer", ["identity", "crop/specification", "price basis", "payment terms"], "buyer_backed"),
+    trustRecord("cooperative", "Verified cooperative", ["registration", "governance", "member terms", "records"], "provider_backed"),
+    trustRecord("finance_program", "Verified finance program", ["eligibility", "terms", "fees", "consumer protection"], "credential_blocked"),
+    trustRecord("extension_service", "Verified extension service", ["authority", "specialty", "coverage area", "review receipt"], "partner_required"),
+    trustRecord("transport_provider", "Verified transport provider", ["license", "route", "cost basis", "safety"], "credential_blocked"),
+    trustRecord("storage_provider", "Verified storage or cold-chain provider", ["facility identity", "capacity", "quality controls", "pricing"], "partner_required"),
+    trustRecord("social_service", "Verified women/youth social service", ["service owner", "eligibility", "privacy policy", "safeguarding"], "provider_backed_required")
+  ]);
+
+  const PRIVACY_FAIRNESS_CONTROLS = Object.freeze({
+    consent: "required_before_sharing_or_provider_use",
+    correction: "implemented_locally",
+    export: "implemented_locally",
+    deletion: "implemented_locally",
+    revocation: "implemented_locally",
+    dataIsolation: "session_or_case_scoped",
+    roleBasedAccess: Object.freeze(["standard_user", "mentor_reviewer", "provider_reviewer", "program_admin"]),
+    prohibitedDiscriminationSignals: MODEL_REGISTRY[0].excludedNegativeSignals,
+    fairnessTests: Object.freeze(["gender_supportive_not_exclusionary", "youth_safeguarding", "rural_access_bias", "low_literacy_access", "disability_and_health_non_exclusion"]),
+    adversarialTests: Object.freeze(["fake_buyer_claim", "fake_financing_approval", "unsafe_youth_job", "pressure_to_share_private_data", "guaranteed_income_claim"]),
+    securityControls: Object.freeze(["no_secret_exposure", "no_provider_write_without_consent", "no_cross_user_data", "receipt_required", "review_required_for_execution"])
+  });
+
+  const ACCESSIBILITY_LOCALIZATION = Object.freeze({
+    multilingualSupport: ["English", "Swahili", "French", "Portuguese", "Arabic", "Amharic", "Kinyarwanda"],
+    voiceSupport: "command_routing_and_spoken_summary_ready",
+    lowLiteracySupport: ["short plain language", "checklist output", "voice-first guidance", "icons where UI renders cards"],
+    offlineSupport: "packet_can_be_generated_locally_without_live_provider",
+    lowBandwidthSupport: "compact packet and source IDs available",
+    accessibilityChecks: ["keyboard reachable via Ask Nexus", "plain-language labels", "no color-only status", "screen-reader friendly packet labels"]
+  });
+
+  const PROGRAM_IMPACT_FIELDS = Object.freeze({
+    verifiedOutcomeFields: ["verified enrollment", "verified attendance", "verified completion", "verified placement", "verified buyer transaction", "verified finance approval"],
+    estimatedOutcomeFields: ["estimated readiness", "estimated support need", "estimated pathway fit", "estimated climate risk", "estimated market readiness"],
+    reportingRule: "verified outcomes and estimated indicators must remain separated",
+    funderExportEnabled: false,
+    aggregateOnlyWithoutConsent: true
+  });
+
   const CAPABILITY_STATUS = Object.freeze({
     participant_intake: "implemented_locally",
     learner_readiness: "implemented_locally",
@@ -149,7 +213,14 @@
     buyer_contact: "credential_blocked",
     finance_application: "credential_blocked",
     transport_dispatch: "credential_blocked",
-    production_authorization: "not_production_authorized"
+    production_authorization: "not_production_authorized",
+    privacy_consent_controls: "implemented_locally",
+    fairness_controls: "implemented_locally",
+    youth_safeguarding: "implemented_locally",
+    women_inclusion_controls: "implemented_locally",
+    multilingual_low_literacy_support: "implemented_locally",
+    program_impact_reporting: "implemented_locally",
+    funder_export: "disabled"
   });
 
   const COMMAND_PATTERNS = Object.freeze([
@@ -157,7 +228,8 @@
     /\b(young woman|women|woman|girls?|childcare|land access|safety|mentorship|leadership|income)\b/i,
     /\b(youth|young people|apprenticeship|training near me|drone agriculture|farming jobs|agritech|skills am i missing)\b/i,
     /\b(financing|grant|loan|savings group|equipment|transport|market access|buyers?|buyer|storage|logistics)\b/i,
-    /\b(africa.*capability status|youth and women agriculture capability|program progress|show my progress|delete my program profile|do not remember this)\b/i
+    /\b(africa.*capability status|youth and women agriculture capability|program progress|show my progress|delete my program profile|do not remember this)\b/i,
+    /\b(dropout|attendance|completion|literacy|language support|digital access|mentor|equipment|safeguarding|fairness|privacy|export|delete|consent|program impact|funder report|trust registry|verified buyer|verified employer|verified training)\b/i
   ]);
 
   function country(id, name, languages, crops, sourceSummary) {
@@ -239,6 +311,30 @@
     });
   }
 
+  function supportSignal(signalId, factors, readiness) {
+    return Object.freeze({ signalId, factors: Object.freeze(factors), readiness, noExecutionAuthorized: true });
+  }
+
+  function protection(protectionId, title, controls, readiness) {
+    return Object.freeze({ protectionId, title, controls: Object.freeze(controls), readiness, professionalReviewRequired: true, noExecutionAuthorized: true });
+  }
+
+  function trustRecord(recordType, title, verificationRequirements, state) {
+    return Object.freeze({
+      recordType,
+      title,
+      verificationRequirements: Object.freeze(verificationRequirements),
+      sourceVerification: "required_before_use",
+      freshnessRequired: true,
+      canonicalUrlRequired: true,
+      jurisdictionRequired: true,
+      licensingRequired: true,
+      reviewReceiptRequired: true,
+      state,
+      liveExecutionEnabled: false
+    });
+  }
+
   function normalizeText(value) {
     return String(value || "").trim().replace(/\s+/g, " ");
   }
@@ -313,6 +409,127 @@
     ]);
   }
 
+  function buildSupportPrediction(command = "", profile = inferParticipantProfile(command)) {
+    const text = normalizeText(command).toLowerCase();
+    const supportNeeds = new Set(profile.barriers || []);
+    if (/\b(dropout|miss|attendance|completion)\b/i.test(text)) supportNeeds.add("attendance_completion");
+    if (/\b(literacy|read|language|translate|swahili|french|arabic|amharic|kinyarwanda)\b/i.test(text)) supportNeeds.add("literacy_language");
+    if (/\b(phone|internet|offline|data|digital)\b/i.test(text)) supportNeeds.add("digital_access");
+    if (/\b(mentor|coach|support)\b/i.test(text)) supportNeeds.add("mentoring");
+    if (/\b(equipment|tools|protective|starter)\b/i.test(text)) supportNeeds.add("equipment");
+    return Object.freeze({
+      supportNeeds: Object.freeze([...supportNeeds]),
+      dropoutPreventionPlan: Object.freeze(["confirm schedule fit", "identify transport and childcare barriers", "offer low-bandwidth study plan", "connect to verified mentor only after consent"]),
+      learnerSuccessSignals: SUPPORT_INTELLIGENCE_REGISTRY,
+      confidence: profile.region === "region not provided" ? "medium_low_until_region_known" : "medium",
+      blockedProviderSteps: Object.freeze(["training enrollment", "mentor assignment", "transport booking", "equipment grant application"])
+    });
+  }
+
+  function buildClimateRiskProfile(profile = {}) {
+    return Object.freeze({
+      country: profile.country || "country not provided",
+      riskSignals: RISK_INTELLIGENCE_REGISTRY,
+      cropLivestockScope: Object.freeze(["crop", "livestock", "poultry", "aquaculture", "irrigation", "soil", "storage", "post-harvest"]),
+      dataStatus: "data_limited_without_live_country_weather_soil_extension_sources",
+      guidance: Object.freeze(["ask for district", "verify local crop calendar", "check extension source", "do not treat as pesticide, veterinary, or fertilizer prescription"])
+    });
+  }
+
+  function buildMarketEnterpriseReadiness(profile = {}) {
+    return Object.freeze({
+      entrepreneurshipReadiness: "implemented_locally",
+      cooperativeReadiness: "implemented_locally",
+      agribusinessReadiness: "implemented_locally",
+      marketAccessReadiness: "buyer_backed_required",
+      logisticsReadiness: "implemented_locally",
+      financingReadiness: "credential_blocked_for_application",
+      buyerReadiness: "buyer_backed_required",
+      nextChecks: Object.freeze(["verify buyer identity", "verify cooperative terms", "verify transport and storage", "separate estimate from verified outcome", "collect explicit consent before sharing"])
+    });
+  }
+
+  function buildGovernancePacket(command = "") {
+    return Object.freeze({
+      packetType: "genesis_africa_ag_opportunity_governance_packet",
+      capabilityId: SERVICE_ID,
+      schemaVersion: SCHEMA_VERSION,
+      command: normalizeText(command),
+      privacyFairnessControls: PRIVACY_FAIRNESS_CONTROLS,
+      womenYouthProtections: WOMEN_YOUTH_PROTECTION_REGISTRY,
+      accessibilityLocalization: ACCESSIBILITY_LOCALIZATION,
+      executionBoundaries: EXECUTION_BOUNDARIES,
+      productionAuthorized: false,
+      userVisibleStatus: "Nexus prepared the privacy, fairness, safeguarding, accessibility, and governance controls for Africa youth and women agriculture opportunity support. Provider-facing use still requires consent, local validation, fairness review, and professional review."
+    });
+  }
+
+  function buildTrustRegistryPacket(command = "") {
+    return Object.freeze({
+      packetType: "genesis_africa_ag_opportunity_trust_registry_packet",
+      capabilityId: SERVICE_ID,
+      schemaVersion: SCHEMA_VERSION,
+      command: normalizeText(command),
+      trustRegistry: TRUST_REGISTRY,
+      countrySources: COUNTRY_SOURCE_REGISTRY,
+      sourceVerificationStates: Object.freeze(["country_verified_required", "partner_required", "credential_blocked", "buyer_backed", "employer_backed", "provider_backed_required"]),
+      userVisibleStatus: "Nexus prepared verified-source and provider trust requirements. Unverified buyers, employers, training providers, finance programs, transport providers, storage providers, and social-service partners remain blocked from live action.",
+      ...EXECUTION_BOUNDARIES
+    });
+  }
+
+  function buildProgramImpactPacket(command = "") {
+    return Object.freeze({
+      packetType: "genesis_africa_ag_opportunity_program_impact_packet",
+      capabilityId: SERVICE_ID,
+      schemaVersion: SCHEMA_VERSION,
+      command: normalizeText(command),
+      programImpactFields: PROGRAM_IMPACT_FIELDS,
+      verifiedOutcomes: Object.freeze([]),
+      estimatedIndicators: Object.freeze(["readiness packet count", "support need categories", "pathway interest categories", "country/regional gap categories"]),
+      funderExportEnabled: false,
+      aggregateOnlyWithoutConsent: true,
+      userVisibleStatus: "Nexus can prepare local program-impact indicators, but verified outcomes must remain separate from estimates. Funder exports are disabled until consent, governance approval, and verified outcome sources exist.",
+      ...EXECUTION_BOUNDARIES
+    });
+  }
+
+  function buildCompletionClassificationPacket(command = "") {
+    return Object.freeze({
+      packetType: "genesis_africa_ag_opportunity_completion_classification_packet",
+      capabilityId: SERVICE_ID,
+      schemaVersion: SCHEMA_VERSION,
+      command: normalizeText(command),
+      countries: SUPPORTED_COUNTRIES.map(item => item.name),
+      modelIds: MODEL_REGISTRY.map(item => item.modelId),
+      registryCounts: Object.freeze({
+        countrySources: COUNTRY_SOURCE_REGISTRY.length,
+        trustRecords: TRUST_REGISTRY.length,
+        pathways: PATHWAY_REGISTRY.length,
+        supportSignals: SUPPORT_INTELLIGENCE_REGISTRY.length,
+        protectionControls: WOMEN_YOUTH_PROTECTION_REGISTRY.length,
+        riskSignals: RISK_INTELLIGENCE_REGISTRY.length
+      }),
+      classifications: Object.freeze({
+        localAdvisoryRuntime: "implemented_locally",
+        supportPrediction: "implemented_locally",
+        climateCropRisk: "data_limited",
+        verifiedBuyerAction: "buyer_backed",
+        employerPlacementAction: "employer_backed",
+        trainingEnrollment: "credential_blocked",
+        financeApplication: "credential_blocked",
+        transportDispatch: "credential_blocked",
+        countrySourceUse: "awaiting_local_validation",
+        fairnessReview: "awaiting_fairness_review",
+        professionalReview: "awaiting_professional_review",
+        funderExport: "disabled",
+        productionAuthorization: "not_production_authorized"
+      }),
+      userVisibleStatus: "Nexus classified the Africa youth and women agricultural opportunity capability for end-to-end testing. Local advisory, support, governance, and reporting packets are implemented; live partner execution remains gated or blocked by verification, credentials, fairness, professional review, and authorization.",
+      ...EXECUTION_BOUNDARIES
+    });
+  }
+
   function buildReceipt(command = "", profile = {}, recommendations = []) {
     return Object.freeze({
       receiptId: stableId("africa-ag-opportunity-receipt", `${command}:${profile.country}:${recommendations.map(item => item.title).join("|")}`),
@@ -348,6 +565,14 @@
       userVisibleStatus: "Nexus prepared an Africa youth and women agricultural opportunity packet. It can recommend local planning steps, training pathways, support needs, and verification questions, but it does not promise income, yield, jobs, financing, buyer demand, enrollment, or provider action.",
       participantProfile: profile,
       recommendations,
+      supportPrediction: buildSupportPrediction(command, profile),
+      climateRiskProfile: buildClimateRiskProfile(profile),
+      marketEnterpriseReadiness: buildMarketEnterpriseReadiness(profile),
+      womenYouthProtections: WOMEN_YOUTH_PROTECTION_REGISTRY,
+      privacyFairnessControls: PRIVACY_FAIRNESS_CONTROLS,
+      accessibilityLocalization: ACCESSIBILITY_LOCALIZATION,
+      programImpactFields: PROGRAM_IMPACT_FIELDS,
+      trustRegistry: TRUST_REGISTRY,
       countryConfig: SUPPORTED_COUNTRIES.find(item => item.id === profile.countryId),
       sourceRegistry: SOURCE_REGISTRY,
       countrySourceRegistry: COUNTRY_SOURCE_REGISTRY.filter(item => item.countryId === profile.countryId),
@@ -389,6 +614,9 @@
       modelCount: MODEL_REGISTRY.length,
       pathwayCount: PATHWAY_REGISTRY.length,
       riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
+      trustRecordCount: TRUST_REGISTRY.length,
+      supportSignalCount: SUPPORT_INTELLIGENCE_REGISTRY.length,
+      protectionControlCount: WOMEN_YOUTH_PROTECTION_REGISTRY.length,
       productionAuthorized: false,
       ...EXECUTION_BOUNDARIES
     });
@@ -406,6 +634,12 @@
       pathways: PATHWAY_REGISTRY,
       regions: REGIONAL_CONFIGURATION,
       riskSignals: RISK_INTELLIGENCE_REGISTRY,
+      supportSignals: SUPPORT_INTELLIGENCE_REGISTRY,
+      womenYouthProtections: WOMEN_YOUTH_PROTECTION_REGISTRY,
+      trustRegistry: TRUST_REGISTRY,
+      privacyFairnessControls: PRIVACY_FAIRNESS_CONTROLS,
+      accessibilityLocalization: ACCESSIBILITY_LOCALIZATION,
+      programImpactFields: PROGRAM_IMPACT_FIELDS,
       capabilityStatus: CAPABILITY_STATUS,
       ...EXECUTION_BOUNDARIES
     });
@@ -422,6 +656,9 @@
       modelCount: MODEL_REGISTRY.length,
       pathwayCount: PATHWAY_REGISTRY.length,
       riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
+      trustRecordCount: TRUST_REGISTRY.length,
+      supportSignalCount: SUPPORT_INTELLIGENCE_REGISTRY.length,
+      protectionControlCount: WOMEN_YOUTH_PROTECTION_REGISTRY.length,
       productionAuthorized: false,
       noFakeExecution: true,
       noGuarantees: true
@@ -439,11 +676,24 @@
     PATHWAY_REGISTRY,
     REGIONAL_CONFIGURATION,
     RISK_INTELLIGENCE_REGISTRY,
+    SUPPORT_INTELLIGENCE_REGISTRY,
+    WOMEN_YOUTH_PROTECTION_REGISTRY,
+    TRUST_REGISTRY,
+    PRIVACY_FAIRNESS_CONTROLS,
+    ACCESSIBILITY_LOCALIZATION,
+    PROGRAM_IMPACT_FIELDS,
     CAPABILITY_STATUS,
     shouldHandle,
     inferParticipantProfile,
+    buildSupportPrediction,
+    buildClimateRiskProfile,
+    buildMarketEnterpriseReadiness,
     buildOpportunityPacket,
     buildCapabilityStatusPacket,
+    buildGovernancePacket,
+    buildTrustRegistryPacket,
+    buildProgramImpactPacket,
+    buildCompletionClassificationPacket,
     registries,
     status
   });

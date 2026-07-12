@@ -38760,6 +38760,26 @@ async function api(req, res, url) {
     return send(res, 200, nexusGenesisAfricaAgOpportunity.buildCapabilityStatusPacket(body?.text || body?.command || ""));
   }
 
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/governance" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildGovernancePacket(body?.text || body?.command || ""));
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/trust-registry" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildTrustRegistryPacket(body?.text || body?.command || ""));
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/program-impact" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildProgramImpactPacket(body?.text || body?.command || ""));
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/completion-classification" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildCompletionClassificationPacket(body?.text || body?.command || ""));
+  }
+
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
     return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
   }

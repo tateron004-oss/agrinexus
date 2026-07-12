@@ -21,6 +21,12 @@ assert(runtime.COUNTRY_SOURCE_REGISTRY.length >= runtime.SUPPORTED_COUNTRIES.len
 assert(runtime.MODEL_REGISTRY.length >= 12, "runtime must register governed predictive models");
 assert(runtime.PATHWAY_REGISTRY.length >= 12, "runtime must configure agriculture, workforce, and enterprise pathways");
 assert(runtime.RISK_INTELLIGENCE_REGISTRY.length >= 12, "runtime must configure climate, crop, market, and post-harvest risk signals");
+assert(runtime.SUPPORT_INTELLIGENCE_REGISTRY.length >= 9, "runtime must configure learner-success and support intelligence");
+assert(runtime.WOMEN_YOUTH_PROTECTION_REGISTRY.length >= 6, "runtime must configure women and youth protection controls");
+assert(runtime.TRUST_REGISTRY.length >= 9, "runtime must configure verified provider/buyer/employer trust records");
+assert(runtime.PRIVACY_FAIRNESS_CONTROLS.fairnessTests.length >= 5, "runtime must configure fairness tests");
+assert(runtime.ACCESSIBILITY_LOCALIZATION.multilingualSupport.includes("Swahili"), "runtime must configure multilingual support");
+assert(runtime.PROGRAM_IMPACT_FIELDS.funderExportEnabled === false, "funder exports must be disabled by default");
 assert(runtime.REGIONAL_CONFIGURATION.east_africa.countryIds.includes("kenya"), "East Africa regional config must include Kenya");
 assert(runtime.REGIONAL_CONFIGURATION.west_africa.countryIds.includes("ghana"), "West Africa regional config must include Ghana");
 assert(runtime.REGIONAL_CONFIGURATION.southern_africa.countryIds.includes("zambia"), "Southern Africa regional config must include Zambia");
@@ -50,7 +56,11 @@ runtime.SUPPORTED_COUNTRIES.forEach(country => {
   "I want to learn drone agriculture.",
   "Find buyers for my crops.",
   "Find financing.",
-  "Show Africa youth and women agriculture capability status and production limitations."
+  "Show Africa youth and women agriculture capability status and production limitations.",
+  "Show privacy consent fairness safeguarding and export controls.",
+  "Show the trust registry for verified buyers and employers.",
+  "Prepare a program impact funder report.",
+  "Show master completion classification for end-to-end testing."
 ].forEach(command => {
   assert.strictEqual(runtime.shouldHandle(command), true, `should handle ${command}`);
 });
@@ -69,6 +79,13 @@ assert(packet.pathwayRegistry.some(item => item.pathwayId === "aquaculture"), "p
 assert(packet.riskIntelligenceRegistry.includes("planting_window"), "packet must include planting-window risk signal");
 assert(packet.riskIntelligenceRegistry.includes("post_harvest_handling"), "packet must include post-harvest risk signal");
 assert(packet.regionalConfiguration.name === "East Africa", "packet must include regional configuration");
+assert(packet.supportPrediction.supportNeeds.includes("land_access"), "packet must include support prediction");
+assert(packet.supportPrediction.dropoutPreventionPlan.length >= 4, "packet must include dropout prevention plan");
+assert(packet.climateRiskProfile.riskSignals.includes("drought"), "packet must include climate risk profile");
+assert(packet.marketEnterpriseReadiness.buyerReadiness === "buyer_backed_required", "buyer readiness must be buyer backed");
+assert(packet.privacyFairnessControls.consent === "required_before_sharing_or_provider_use", "packet must include consent control");
+assert(packet.accessibilityLocalization.offlineSupport.includes("locally"), "packet must include offline support");
+assert(packet.trustRegistry.some(item => item.recordType === "buyer" && item.liveExecutionEnabled === false), "buyer trust record must block live execution");
 assert(packet.receipt.receiptId.startsWith("africa-ag-opportunity-receipt-"), "receipt must exist");
 assert.strictEqual(packet.buyerContactEnabled, false, "buyer contact must be disabled");
 assert.strictEqual(packet.trainingEnrollmentEnabled, false, "training enrollment must be disabled");
@@ -87,6 +104,9 @@ assert(statusPacket.classificationCounts.credential_blocked >= 4, "status must c
 assert(statusPacket.countrySourceCount >= 100, "status must count country-specific sources");
 assert(statusPacket.pathwayCount >= 12, "status must count pathways");
 assert(statusPacket.riskSignalCount >= 12, "status must count risk signals");
+assert(statusPacket.trustRecordCount >= 9, "status must count trust records");
+assert(statusPacket.supportSignalCount >= 9, "status must count support signals");
+assert(statusPacket.protectionControlCount >= 6, "status must count protection controls");
 
 const registries = runtime.registries();
 assert.strictEqual(registries.packetType, "genesis_africa_ag_opportunity_registry_packet");
@@ -95,6 +115,34 @@ assert(registries.countrySources.length >= 100, "registries must expose country 
 assert(registries.pathways.some(item => item.pathwayId === "employment"), "registries must expose employment pathway");
 assert(registries.pathways.some(item => item.pathwayId === "entrepreneurship"), "registries must expose entrepreneurship pathway");
 assert(registries.riskSignals.includes("disease_pressure"), "registries must expose disease pressure risk signal");
+assert(registries.supportSignals.some(item => item.signalId === "dropout_prevention"), "registries must expose dropout prevention support");
+assert(registries.womenYouthProtections.some(item => item.protectionId === "youth_safeguarding"), "registries must expose youth safeguarding");
+
+const governance = runtime.buildGovernancePacket("Show privacy consent fairness safeguarding and export controls.");
+assert.strictEqual(governance.packetType, "genesis_africa_ag_opportunity_governance_packet");
+assert.strictEqual(governance.productionAuthorized, false);
+assert(governance.privacyFairnessControls.securityControls.includes("no_secret_exposure"), "governance must include security controls");
+assert(governance.privacyFairnessControls.adversarialTests.includes("guaranteed_income_claim"), "governance must include adversarial checks");
+assert(governance.womenYouthProtections.some(item => item.protectionId === "women_safety"), "governance must include women safety controls");
+
+const trust = runtime.buildTrustRegistryPacket("Show the trust registry for verified buyers and employers.");
+assert.strictEqual(trust.packetType, "genesis_africa_ag_opportunity_trust_registry_packet");
+assert(trust.trustRegistry.some(item => item.recordType === "buyer" && item.state === "buyer_backed"), "trust registry must include buyer-backed state");
+assert(trust.trustRegistry.every(item => item.liveExecutionEnabled === false), "trust registry must not enable live execution");
+assert(trust.sourceVerificationStates.includes("credential_blocked"), "trust registry must classify credential-blocked state");
+
+const impact = runtime.buildProgramImpactPacket("Prepare a program impact funder report.");
+assert.strictEqual(impact.packetType, "genesis_africa_ag_opportunity_program_impact_packet");
+assert.strictEqual(impact.funderExportEnabled, false);
+assert.strictEqual(impact.aggregateOnlyWithoutConsent, true);
+assert(impact.programImpactFields.reportingRule.includes("verified outcomes"), "impact packet must separate verified and estimated outcomes");
+
+const completion = runtime.buildCompletionClassificationPacket("Show master completion classification for end-to-end testing.");
+assert.strictEqual(completion.packetType, "genesis_africa_ag_opportunity_completion_classification_packet");
+assert.strictEqual(completion.classifications.localAdvisoryRuntime, "implemented_locally");
+assert.strictEqual(completion.classifications.trainingEnrollment, "credential_blocked");
+assert.strictEqual(completion.classifications.productionAuthorization, "not_production_authorized");
+assert(completion.registryCounts.countrySources >= 100, "completion packet must count country sources");
 
 [
   "nexus-genesis-africa-ag-opportunity.js",
@@ -103,7 +151,11 @@ assert(registries.riskSignals.includes("disease_pressure"), "registries must exp
   "Africa Agriculture Opportunity Packet",
   "noYieldOrIncomeGuarantee",
   "Buyer contacted",
-  "Training enrolled"
+  "Training enrolled",
+  "Africa Opportunity Governance Controls",
+  "Africa Opportunity Trust Registry",
+  "Africa Opportunity Program Impact",
+  "Africa Opportunity Completion Classification"
 ].forEach(token => includes(`${index}\n${app}`, token, `frontend token ${token}`));
 
 const commandCenterSubmitIndex = app.indexOf("const earlyCommandCenterSubmit = event.target.closest(\"[data-nexus-command-center-submit]\");");
@@ -118,7 +170,11 @@ assert(commandCenterWorkforceIndex > commandCenterAfricaIndex, "Africa opportuni
   "/api/nexus/africa-ag-opportunity/status",
   "/api/nexus/africa-ag-opportunity/registries",
   "/api/nexus/africa-ag-opportunity/evaluate",
-  "/api/nexus/africa-ag-opportunity/capability-status"
+  "/api/nexus/africa-ag-opportunity/capability-status",
+  "/api/nexus/africa-ag-opportunity/governance",
+  "/api/nexus/africa-ag-opportunity/trust-registry",
+  "/api/nexus/africa-ag-opportunity/program-impact",
+  "/api/nexus/africa-ag-opportunity/completion-classification"
 ].forEach(token => includes(server, token, `server token ${token}`));
 
 [

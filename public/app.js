@@ -1992,12 +1992,16 @@ function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}
 function renderNexusGenesisAfricaAgOpportunityCard(packet = {}) {
   const isStatus = packet.packetType === "genesis_africa_ag_opportunity_capability_status_packet";
   const isRegistry = packet.packetType === "genesis_africa_ag_opportunity_registry_packet";
+  const isGovernance = packet.packetType === "genesis_africa_ag_opportunity_governance_packet";
+  const isTrust = packet.packetType === "genesis_africa_ag_opportunity_trust_registry_packet";
+  const isImpact = packet.packetType === "genesis_africa_ag_opportunity_program_impact_packet";
+  const isCompletion = packet.packetType === "genesis_africa_ag_opportunity_completion_classification_packet";
   const profile = packet.participantProfile || {};
   const firstRecommendation = (packet.recommendations || [])[0] || {};
   const counts = packet.classificationCounts || {};
   return {
     type: packet.packetType || "genesis_africa_youth_women_ag_opportunity_packet",
-    title: isStatus ? "Africa Opportunity Capability Status" : isRegistry ? "Africa Opportunity Registries" : "Africa Agriculture Opportunity Packet",
+    title: isStatus ? "Africa Opportunity Capability Status" : isRegistry ? "Africa Opportunity Registries" : isGovernance ? "Africa Opportunity Governance Controls" : isTrust ? "Africa Opportunity Trust Registry" : isImpact ? "Africa Opportunity Program Impact" : isCompletion ? "Africa Opportunity Completion Classification" : "Africa Agriculture Opportunity Packet",
     status: "africa-youth-women-agricultural-opportunity",
     localOnly: true,
     confirmationRequired: false,
@@ -2006,7 +2010,28 @@ function renderNexusGenesisAfricaAgOpportunityCard(packet = {}) {
       label: isStatus ? "Capability classifications and production limits" : isRegistry ? "Country, source, and model registries" : "Pathway, training, barriers, support, and next steps",
       description: packet.userVisibleStatus || "Nexus prepared an Africa agriculture opportunity packet."
     },
-    bullets: isStatus ? [
+    bullets: isGovernance ? [
+      "Privacy, consent, correction, export, deletion, and revocation controls are defined.",
+      "Youth safeguarding and women inclusion protections require review before provider-facing use.",
+      "Fairness and adversarial checks are required before production scoring.",
+      "No provider, buyer, employer, finance, or transport action is authorized."
+    ] : isTrust ? [
+      `Trust record types: ${(packet.trustRegistry || []).length}`,
+      `Country source records: ${(packet.countrySources || []).length}`,
+      "Canonical URL, freshness, jurisdiction, licensing, and review receipts are required.",
+      "Unverified providers, buyers, employers, and finance programs remain blocked."
+    ] : isImpact ? [
+      "Verified outcomes and estimated indicators are separated.",
+      "Funder exports are disabled until consent and governance approval exist.",
+      "Aggregate reporting is allowed only without sensitive personal sharing.",
+      "No enrollment, buyer transaction, placement, or finance approval is claimed."
+    ] : isCompletion ? [
+      `Countries: ${(packet.countries || []).length}`,
+      `Models: ${(packet.modelIds || []).length}`,
+      `Country sources: ${packet.registryCounts?.countrySources || 0}`,
+      `Trust records: ${packet.registryCounts?.trustRecords || 0}`,
+      `Production authorization: ${packet.classifications?.productionAuthorization || "not_production_authorized"}`
+    ] : isStatus ? [
       `Countries configured: ${packet.supportedCountryCount || 0}`,
       `Implemented locally: ${counts.implemented_locally || 0}`,
       `Credential blocked: ${counts.credential_blocked || 0}`,
@@ -2042,12 +2067,24 @@ function handleNexusGenesisAfricaAgOpportunityCommand(command = "", options = {}
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
   const statusIntent = /\b(capability status|production limitations|what is production authorized)\b/i.test(text);
   const registryIntent = /\b(registry|registries|source|sources|countries|models)\b/i.test(text) && /\b(africa|agriculture|women|youth)\b/i.test(text);
+  const governanceIntent = /\b(governance|privacy|consent|fairness|safeguarding|delete|export|revocation|accessibility|low literacy|language support)\b/i.test(text);
+  const trustIntent = /\b(trust registry|verified buyer|verified employer|verified training|verified provider|verified cooperative|source verification|freshness|canonical url|licensing)\b/i.test(text);
+  const impactIntent = /\b(program impact|funder report|verified outcome|estimated outcome|aggregate report)\b/i.test(text);
+  const completionIntent = /\b(completion classification|end-to-end testing|master completion|production limitations)\b/i.test(text);
   const context = {
     language: languageCode(),
     source: options.source || "standard_user",
     consentState: "session_only_or_not_provided"
   };
-  const packet = registryIntent
+  const packet = completionIntent
+    ? runtime.buildCompletionClassificationPacket(text)
+    : impactIntent
+    ? runtime.buildProgramImpactPacket(text)
+    : trustIntent
+    ? runtime.buildTrustRegistryPacket(text)
+    : governanceIntent
+    ? runtime.buildGovernancePacket(text)
+    : registryIntent
     ? runtime.registries()
     : statusIntent
     ? runtime.buildCapabilityStatusPacket(text)

@@ -31,6 +31,23 @@ The pathway registry covers crop production, livestock, poultry, aquaculture, ir
 
 The runtime includes East Africa, West Africa, and Southern Africa configuration with country membership, language context, priority sectors, and common constraints. This supports country-aware packet generation while still requiring local validation before production use.
 
+## Support, Trust, and Governance Runtime
+
+The runtime now produces local packets for learner success, dropout prevention, attendance, completion, literacy, language, digital access, childcare, transport, mentoring, equipment support, women participation, youth safeguarding, market access, financing readiness, cooperative readiness, and entrepreneurship support.
+
+Trust records classify training providers, employers, buyers, cooperatives, finance programs, extension services, transport providers, storage providers, and social-service partners. Every trust record requires source verification, freshness, canonical URL, jurisdiction, licensing, and a review receipt before live use. Live execution remains disabled.
+
+Privacy and fairness controls cover consent, correction, export, deletion, revocation, role-based access, data isolation, anti-discrimination tests, adversarial tests, security controls, youth safeguarding, and women inclusion protections.
+
+Program-impact reporting separates verified outcomes from estimated indicators. Funder exports are disabled until consent, governance approval, and verified outcome sources exist.
+
+## Additional API Packets
+
+- `POST /api/nexus/africa-ag-opportunity/governance`
+- `POST /api/nexus/africa-ag-opportunity/trust-registry`
+- `POST /api/nexus/africa-ag-opportunity/program-impact`
+- `POST /api/nexus/africa-ag-opportunity/completion-classification`
+
 ## Safety and Production Limits
 
 Nexus does not contact buyers, enroll users in training, apply for financing, dispatch transport or drones, enroll cooperatives, guarantee income, guarantee yield, guarantee employment, or make provider referrals from this runtime. Consent, verified providers, local validation, confirmation, and governance gates are required before any real-world execution.
