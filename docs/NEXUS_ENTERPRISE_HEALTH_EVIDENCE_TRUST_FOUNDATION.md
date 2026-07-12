@@ -149,6 +149,12 @@ Nexus now exposes youth, minor, elder, pregnancy/postpartum, disability, caregiv
 
 This capability can prepare plain-language safety questions, caregiver/guardian review prompts, crisis-resource display boundaries, and professional-review packets. It cannot disclose private information, assume family consent, route child labor, diagnose, prescribe, contact a provider or guardian, or dispatch emergency help.
 
+## Health Accessibility And Localization Governance
+
+Nexus now exposes multilingual, cultural-adaptation, voice/caption fallback, low-literacy, offline, and low-bandwidth health support governance through `POST /api/nexus/health-evidence/accessibility-localization` and Standard User commands such as "show health accessibility" or "prepare low bandwidth health packet." The packet classifies the accessibility or localization need and shows the review gates required before clinical-language, offline, or culturally adapted material can be used.
+
+This capability can prepare plain-language explanations, caption/voice fallback notes, translation-review packets, cultural-adaptation review questions, and offline or low-bandwidth health packets. It cannot claim certified clinical interpretation, live source freshness while offline, changed clinical meaning, provider contact, diagnosis, prescribing, or emergency dispatch without approved review and audit gates.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

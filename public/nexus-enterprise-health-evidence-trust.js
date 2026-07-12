@@ -269,7 +269,11 @@
     translationState: "translation_unverified_until_human_or_approved_translation_review",
     languages: ["English", "Spanish", "French", "Arabic", "Portuguese", "Swahili"],
     noClinicalInterpretationCertificationClaim: true,
-    offlineState: "may prepare packets locally; does not claim live source freshness while offline"
+    offlineState: "may prepare packets locally; does not claim live source freshness while offline",
+    executionEnabled: false,
+    noCertifiedInterpreterClaim: true,
+    noLiveSourceFreshnessOffline: true,
+    noClinicalMeaningChangeWithoutReview: true
   });
 
   const PROFESSIONAL_WORKSPACE_ROLES = Object.freeze({
@@ -321,7 +325,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|health accessibility|localization governance|translation governance|low literacy health|offline health packet|low bandwidth health|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -987,6 +991,50 @@
     };
   }
 
+  function inferAccessibilityLocalizationNeed(input = "") {
+    const text = normalizeText(input);
+    if (/\b(low bandwidth|offline|no internet|slow internet|sync later)\b/.test(text)) return "offline_low_bandwidth";
+    if (/\b(voice|speak|read aloud|audio|caption|captions)\b/.test(text)) return "voice_caption_fallback";
+    if (/\b(simple|plain language|low literacy|cannot read|can't read|slow down|small words)\b/.test(text)) return "plain_language_low_literacy";
+    if (/\b(translate|translation|spanish|french|arabic|portuguese|swahili|kiswahili|language)\b/.test(text)) return "multilingual_translation_review";
+    if (/\b(culture|cultural|local words|local context|community)\b/.test(text)) return "cultural_adaptation_review";
+    return "accessible_health_support_review";
+  }
+
+  function buildAccessibilityLocalizationGovernancePacket(input = "", context = {}) {
+    const need = inferAccessibilityLocalizationNeed(input);
+    const offlineRelated = need === "offline_low_bandwidth";
+    const translationRelated = need === "multilingual_translation_review" || need === "cultural_adaptation_review";
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_accessibility_localization_governance_packet",
+      domainId: "accessibility_localization",
+      need,
+      offlineRelated,
+      translationRelated,
+      governance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+      supportedLanguages: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.languages,
+      supportedNeeds: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.supportedNeeds,
+      translationState: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.translationState,
+      offlineState: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.offlineState,
+      requiredBeforeClinicalTranslationUse: ["approved translation review", "source-language preservation", "clinical meaning review", "user-facing uncertainty label", "audit receipt"],
+      requiredBeforeOfflineUse: ["local packet scope", "stale-source warning", "no live freshness claim", "sync/review plan when network returns"],
+      executionEnabled: false,
+      canPreparePlainLanguage: true,
+      canPrepareCaptionFallback: true,
+      canPrepareOfflinePacket: true,
+      canClaimCertifiedInterpretation: false,
+      canClaimLiveFreshnessOffline: false,
+      canChangeClinicalMeaning: false,
+      canContactProvider: false,
+      safety: commonSafety(),
+      auditReceipt: audit("accessibility_localization_governance_prepared", "accessibility_localization"),
+      userVisibleStatus: `Nexus prepared accessibility and localization governance for ${need.replace(/_/g, " ")}. Nexus can prepare plain-language, caption, voice-fallback, multilingual, cultural-adaptation, offline, or low-bandwidth support, but it cannot claim certified clinical interpretation, live source freshness while offline, changed clinical meaning, provider contact, diagnosis, prescribing, or emergency dispatch without approved review and audit gates.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -1054,12 +1102,13 @@
       laboratoryDiagnosticGovernanceState: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE.defaultState,
       healthDataRightsGovernanceState: HEALTH_DATA_RIGHTS_GOVERNANCE.defaultMemoryState,
       youthVulnerableSafeguardState: YOUTH_VULNERABLE_POPULATION_GOVERNANCE.defaultState,
+      accessibilityLocalizationState: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.translationState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -1143,6 +1192,7 @@
     buildHealthDataRightsPacket,
     buildFhirTerminologyGovernancePacket,
     buildYouthVulnerableSafeguardPacket,
+    buildAccessibilityLocalizationGovernancePacket,
     registries,
     status,
     hasUnsafeClaim
