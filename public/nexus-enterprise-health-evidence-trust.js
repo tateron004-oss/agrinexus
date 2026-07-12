@@ -202,6 +202,19 @@
     noPharmacyContact: true
   });
 
+  const LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE = Object.freeze({
+    sourceRequirements: ["LOINC or approved observation terminology", "test name and units", "specimen/context if known", "reference range source if supplied", "clinician review"],
+    governedWorkflows: ["lab result organization", "unit/context capture", "reference-range question preparation", "diagnostic-imaging report question preparation", "provider-ready lab summary"],
+    blockedWorkflows: ["diagnosis", "final lab interpretation", "universal reference interval claim", "urgent imaging interpretation", "radiology replacement", "medical-record write"],
+    requiredBeforeClinicalInterpretation: ["verified source/version", "patient context", "units and reference-range provenance", "qualified professional review", "audit receipt"],
+    terminologySystems: ["LOINC", "SNOMED CT", "FHIR Observation", "FHIR DiagnosticReport"],
+    defaultState: "organization_only_until_source_context_professional_review_and_audit_are_configured",
+    executionEnabled: false,
+    noDiagnosis: true,
+    noFinalInterpretation: true,
+    noRecordWrite: true
+  });
+
   const CONSENT_PRIVACY_GOVERNANCE = Object.freeze({
     requiredBefore: ["provider sharing", "FHIR access", "pharmacy handoff", "appointment/referral request", "social-care sharing", "messages/calls", "export"],
     userRights: ["view", "correct", "export", "revoke", "delete local copy where permitted", "see audit trail"],
@@ -266,7 +279,7 @@
     /\b(health evidence|medical evidence|evidence inspector|professional evidence|source trust|trusted source)\b/i,
     /\b(guideline|clinical guideline|recommendation strength|evidence tier|source authority|jurisdiction)\b/i,
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
-    /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
+    /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
     /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
   ];
@@ -744,6 +757,55 @@
     };
   }
 
+  function buildLaboratoryDiagnosticEvidencePacket(input = "", context = {}) {
+    const text = normalizeText(input);
+    const concernType = /\b(imaging|xray|x-ray|mri|ct|ultrasound|radiology)\b/.test(text)
+      ? "diagnostic_imaging_report_preparation"
+      : /\b(reference range|range|unit|units)\b/.test(text)
+      ? "unit_reference_range_question_preparation"
+      : /\b(a1c|egfr|creatinine|cholesterol|hemoglobin|glucose|lab)\b/.test(text)
+      ? "lab_result_organization"
+      : "diagnostic_evidence_preparation";
+    const sourceReceipts = ["loinc", "snomed", "nih", "fda"].map(sourceId => {
+      const sourceRecord = sourceById(sourceId);
+      return {
+        sourceId,
+        name: sourceRecord?.name || sourceId,
+        canonicalUrl: sourceRecord?.canonicalUrl || "",
+        evidenceTier: sourceRecord?.evidenceTier || "unmapped",
+        verification: verifySource(sourceId, context.verification || {}),
+        citationReady: false,
+        reasonCitationNotFinal: "Laboratory and diagnostic evidence requires source, unit, reference-range, patient-context, and professional review before clinical interpretation."
+      };
+    });
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_laboratory_diagnostic_evidence_governance_packet",
+      domainId: concernType === "diagnostic_imaging_report_preparation" ? "diagnostic_imaging" : "laboratory",
+      concernType,
+      governance: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
+      sourceReceipts,
+      requiredReviewQueue: HUMAN_REVIEW_QUEUE_TYPES.laboratory_diagnostic_review,
+      requiredProfessionalRoles: {
+        physician: PROFESSIONAL_WORKSPACE_ROLES.physician,
+        nurse_or_chw: PROFESSIONAL_WORKSPACE_ROLES.nurse_or_chw
+      },
+      interpretationState: "blocked_until_units_context_source_and_professional_review_are_present",
+      executionEnabled: false,
+      canOrganizeResults: true,
+      canPrepareQuestions: true,
+      canDiagnose: false,
+      canFinalInterpretLab: false,
+      canInterpretImagingUrgency: false,
+      canWriteMedicalRecord: false,
+      safety: commonSafety(),
+      auditReceipt: audit("laboratory_diagnostic_evidence_governance_prepared", "laboratory"),
+      userVisibleStatus: `Nexus prepared laboratory and diagnostic evidence governance for ${concernType.replace(/_/g, " ")}. Nexus can organize result details and source requirements, but it cannot diagnose, provide final lab interpretation, replace radiology/clinician review, write medical records, or claim a universal reference range until source, unit, context, professional review, and audit gates are satisfied.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -768,6 +830,7 @@
       verifiedProviderTrustRegistry: VERIFIED_PROVIDER_TRUST_REGISTRY,
       fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
       medicationPharmacyEvidenceGovernance: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
+      laboratoryDiagnosticEvidenceGovernance: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
@@ -803,12 +866,13 @@
       verifiedProviderTrustCategoryCount: Object.keys(VERIFIED_PROVIDER_TRUST_REGISTRY).length,
       fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
       medicationPharmacyGovernanceState: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE.defaultState,
+      laboratoryDiagnosticGovernanceState: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE.defaultState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -869,6 +933,7 @@
     VERIFIED_PROVIDER_TRUST_REGISTRY,
     FHIR_TERMINOLOGY_CONTRACTS,
     MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
+    LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
     CONSENT_PRIVACY_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
@@ -884,6 +949,7 @@
     predictiveGovernance,
     buildHumanReviewPacket,
     buildMedicationPharmacyEvidencePacket,
+    buildLaboratoryDiagnosticEvidencePacket,
     registries,
     status,
     hasUnsafeClaim

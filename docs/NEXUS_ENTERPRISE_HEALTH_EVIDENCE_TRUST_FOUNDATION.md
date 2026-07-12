@@ -125,6 +125,12 @@ Nexus now exposes medication/pharmacy evidence governance through `POST /api/nex
 
 This capability can organize medication education questions, side-effect questions, medication-list preparation, refill questions, and pharmacy handoff readiness. It cannot prescribe, recommend a dose, change medication, approve a refill, contact a pharmacy, purchase medication, claim inventory, or submit pharmacy data until the required pharmacy connector, verified recipient, user consent, explicit confirmation, professional review, and audit gates are active.
 
+## Laboratory And Diagnostic Evidence Governance
+
+Nexus now exposes laboratory and diagnostic evidence governance through `POST /api/nexus/health-evidence/laboratory-diagnostic` and Standard User commands such as "show lab governance" or "show diagnostic evidence governance." The packet classifies lab, reference-range, or imaging-report concerns; maps LOINC, SNOMED, NIH, and FDA source requirements; and selects the laboratory/diagnostic human-review queue.
+
+This capability can organize lab result details, units, reference-range questions, diagnostic-imaging report questions, and provider-ready lab summaries. It cannot diagnose, provide final lab interpretation, replace a radiologist or clinician, claim universal reference ranges, write medical records, or decide urgency without verified source/context, professional review, and audit gates.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
