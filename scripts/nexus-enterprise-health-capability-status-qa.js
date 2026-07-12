@@ -53,6 +53,8 @@ for (const capabilityId of requiredCapabilities) {
 }
 
 const packet = runtime.buildHealthGenesisCapabilityStatusPacket("Show health capability status and production limitations report.", {});
+assert.strictEqual(runtime.shouldHandle("Show health capability status and production limitations report."), true, "Standard User capability-status command is routed to enterprise health handler");
+assert.strictEqual(runtime.shouldHandle("What is production authorized?"), true, "production authorization status command is routed to enterprise health handler");
 assert.strictEqual(packet.packetType, "enterprise_health_genesis_capability_status_packet", "packet type is stable");
 assert.strictEqual(packet.domainId, "health_genesis_capability_status", "domain id is stable");
 assert.strictEqual(packet.allCapabilitiesClassified, true, "all capabilities are classified");
