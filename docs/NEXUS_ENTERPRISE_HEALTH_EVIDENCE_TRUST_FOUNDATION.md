@@ -167,6 +167,12 @@ Nexus now exposes model and source monitoring governance through `POST /api/nexu
 
 This capability can prepare governance review tickets, stale-source warnings, monitoring receipts, and human-review routing. It cannot run live monitoring, claim a source is current, update clinical guidance, silently replace sources, recalibrate models, notify providers, or escalate emergencies until configured connectors, thresholds, governance ownership, review approval, rollback paths, and audit controls are active.
 
+## Capability-Level Regulatory Assessment
+
+Nexus now exposes capability-level regulatory assessment through `POST /api/nexus/health-evidence/regulatory-assessment` and Standard User commands such as "show regulatory assessment", "classify this capability", or "review production authorization." The packet classifies health education, clinical-adjacent guidance, predictive models, screening instruments, provider contact, telehealth, pharmacy, FHIR/medical records, mental-health crisis support, payment/benefit, social-care sharing, and accessibility/localization capabilities.
+
+This capability can classify a capability, list applicable review frames, and prepare a governance checklist. It cannot authorize production use, bypass legal or clinical approval, bypass jurisdiction review, activate live connectors, handle PHI without governance, diagnose, prescribe, contact providers, or dispatch emergencies.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

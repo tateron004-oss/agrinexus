@@ -1611,21 +1611,33 @@ function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
   const isAccessibilityLocalizationPacket = packet.packetType === "enterprise_health_accessibility_localization_governance_packet";
   const isHealthFollowUpPacket = packet.packetType === "enterprise_health_communications_follow_up_governance_packet";
   const isHealthMonitoringPacket = packet.packetType === "enterprise_health_model_source_monitoring_governance_packet";
+  const isHealthRegulatoryPacket = packet.packetType === "enterprise_health_regulatory_assessment_packet";
   const inspectorFields = packet.inspectorView?.fields || {};
   const isRegistryPacket = packet.registryPacketType === "enterprise_health_governance_registry_packet";
   const isHumanReviewPacket = packet.packetType === "enterprise_health_human_review_control_packet";
   return {
     type: packet.registryPacketType || packet.packetType || "enterprise_health_evidence_trust_packet",
-    title: isHealthMonitoringPacket ? "Health Model & Source Monitoring Governance" : isHealthFollowUpPacket ? "Health Communications & Follow-Up Governance" : isAccessibilityLocalizationPacket ? "Health Accessibility & Localization Governance" : isYouthVulnerablePacket ? "Youth & Vulnerable Population Safeguards" : isFhirTerminologyPacket ? "FHIR & Clinical Terminology Governance" : isHealthDataRightsPacket ? "Health Data Rights & Consent Governance" : isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
+    title: isHealthRegulatoryPacket ? "Health Regulatory Assessment" : isHealthMonitoringPacket ? "Health Model & Source Monitoring Governance" : isHealthFollowUpPacket ? "Health Communications & Follow-Up Governance" : isAccessibilityLocalizationPacket ? "Health Accessibility & Localization Governance" : isYouthVulnerablePacket ? "Youth & Vulnerable Population Safeguards" : isFhirTerminologyPacket ? "FHIR & Clinical Terminology Governance" : isHealthDataRightsPacket ? "Health Data Rights & Consent Governance" : isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
     status: packet.domainId || "health-evidence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "enterprise-health-evidence-trust",
-      label: isHealthMonitoringPacket ? "Monitoring and drift review gates" : isHealthFollowUpPacket ? "Follow-up and communication gates" : isAccessibilityLocalizationPacket ? "Accessible health support governance" : isYouthVulnerablePacket ? "Safeguard review packet" : isFhirTerminologyPacket ? "FHIR terminology governance" : isHealthDataRightsPacket ? "Health data rights governance" : isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
+      label: isHealthRegulatoryPacket ? "Capability risk and authorization gates" : isHealthMonitoringPacket ? "Monitoring and drift review gates" : isHealthFollowUpPacket ? "Follow-up and communication gates" : isAccessibilityLocalizationPacket ? "Accessible health support governance" : isYouthVulnerablePacket ? "Safeguard review packet" : isFhirTerminologyPacket ? "FHIR terminology governance" : isHealthDataRightsPacket ? "Health data rights governance" : isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
       description: packet.userVisibleStatus || (isRegistryPacket ? "Nexus prepared the enterprise health governance registries." : "Nexus prepared an enterprise health evidence governance packet.")
     },
-    bullets: isHealthMonitoringPacket ? [
+    bullets: isHealthRegulatoryPacket ? [
+      `Capability type: ${String(packet.capabilityType || "health capability").replace(/_/g, " ")}`,
+      `Risk tier: ${String(packet.riskTier || "review required").replace(/_/g, " ")}`,
+      `Current classification: ${String(packet.currentClassification || "not production authorized").replace(/_/g, " ")}`,
+      `Regulatory frames: ${Array.isArray(packet.regulatoryFrames) ? packet.regulatoryFrames.length : 0}`,
+      `Can classify capability: ${packet.canClassifyCapability ? "yes" : "no"}`,
+      `Can authorize production: ${packet.canAuthorizeProduction ? "yes" : "no"}`,
+      `Can bypass legal review: ${packet.canBypassLegalReview ? "yes" : "no"}`,
+      `Can activate live connector: ${packet.canActivateLiveConnector ? "yes" : "no"}`,
+      `Production authorized: ${packet.productionAuthorized ? "yes" : "no"}`,
+      `Execution enabled: ${packet.executionEnabled ? "yes" : "no"}`
+    ] : isHealthMonitoringPacket ? [
       `Monitoring type: ${String(packet.monitoringType || "health governance monitoring").replace(/_/g, " ")}`,
       `Monitored asset types: ${Array.isArray(packet.monitoredAssetTypes) ? packet.monitoredAssetTypes.length : 0}`,
       `Live monitoring enabled: ${packet.liveMonitoringEnabled ? "yes" : "no"}`,
@@ -1749,6 +1761,7 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   const accessibilityLocalizationIntent = /\b(health accessibility|localization governance|translation governance|clinical translation|low literacy health|plain language health|offline health packet|low bandwidth health|voice fallback health|caption fallback health|cultural adaptation)\b/i.test(text);
   const healthFollowUpIntent = /\b(health follow-up|follow-up governance|message follow-up|call script governance|rpm follow-up|rtm follow-up|chronic follow-up|provider follow-up|pharmacy follow-up|prepare health message|prepare health reminder)\b/i.test(text);
   const healthMonitoringIntent = /\b(source monitoring|model monitoring|evidence monitoring|drift monitoring|stale source|calculator version|safety signal monitoring|health monitoring governance|guideline monitoring)\b/i.test(text);
+  const healthRegulatoryIntent = /\b(regulatory assessment|production authorization|compliance classification|jurisdiction review|capability classification|regulatory review|production approval)\b/i.test(text);
   const humanReviewIntent = /\b(human review|review queue|governance review|professional review controls|professional workspace controls)\b/i.test(text);
   const registryIntent = /\b(source registry|governance registr(?:y|ies)|verified provider trust|provider trust registry|fhir terminology|medical record governance|consent and privacy|clinical calculator registry)\b/i.test(text);
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
@@ -1760,7 +1773,9 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
     role: professionalRole ? "professional" : "standard_user",
     verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
   };
-  const packet = healthMonitoringIntent
+  const packet = healthRegulatoryIntent
+    ? runtime.buildHealthRegulatoryAssessmentPacket(text, evidenceContext)
+    : healthMonitoringIntent
     ? runtime.buildHealthModelSourceMonitoringPacket(text, evidenceContext)
     : healthFollowUpIntent
     ? runtime.buildHealthCommunicationsFollowUpPacket(text, evidenceContext)

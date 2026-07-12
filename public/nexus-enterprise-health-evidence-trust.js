@@ -304,6 +304,19 @@
     noEmergencyEscalation: true
   });
 
+  const HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE = Object.freeze({
+    assessedCapabilityTypes: ["health education", "clinical-adjacent guidance", "predictive model", "screening instrument", "provider contact", "telehealth workflow", "pharmacy workflow", "FHIR/medical records", "mental-health crisis support", "payment or benefit workflow", "social-care sharing", "accessibility/localization"],
+    regulatoryFrames: ["HIPAA/privacy", "state/professional licensure", "FDA clinical decision support boundary", "FTC/consumer protection", "988/crisis resource boundary", "pharmacy board rules", "telehealth consent", "FHIR/ONC interoperability", "GDPR/NDPR/local data protection where applicable", "accessibility and language-access review"],
+    classificationStates: ["implemented_locally", "provider_backed", "credential_blocked", "jurisdiction_blocked", "awaiting_clinical_approval", "awaiting_regulatory_review", "license_restricted", "experimental", "disabled", "not_production_authorized"],
+    requiredBeforeProductionAuthorization: ["documented intended use", "jurisdiction map", "privacy/security impact review", "clinical safety review where applicable", "legal/compliance review", "provider/license verification", "consent and audit controls", "incident response plan", "rollback/disable switch", "human governance owner"],
+    defaultState: "not_production_authorized_until_intended_use_jurisdiction_privacy_clinical_legal_provider_and_audit_reviews_are_complete",
+    executionEnabled: false,
+    productionAuthorizationEnabled: false,
+    noSelfAuthorization: true,
+    noJurisdictionBypass: true,
+    noClinicalApprovalBypass: true
+  });
+
   const PROFESSIONAL_WORKSPACE_ROLES = Object.freeze({
     physician: reviewRole("physician", ["clinical interpretation", "diagnosis/treatment decisions", "care plan review"], ["diagnosis", "prescribing", "referral approval", "clinical calculator interpretation"]),
     pharmacist: reviewRole("pharmacist", ["medication evidence", "pharmacy workflow review", "interaction concern triage"], ["dose advice", "substitution approval", "refill approval"]),
@@ -353,7 +366,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|health accessibility|localization governance|translation governance|low literacy health|offline health packet|low bandwidth health|health follow-up|follow-up governance|message follow-up|call script governance|rpm follow-up|rtm follow-up|source monitoring|model monitoring|evidence monitoring|drift monitoring|stale source|calculator version|safety signal monitoring|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|health accessibility|localization governance|translation governance|low literacy health|offline health packet|low bandwidth health|health follow-up|follow-up governance|message follow-up|call script governance|rpm follow-up|rtm follow-up|source monitoring|model monitoring|evidence monitoring|drift monitoring|stale source|calculator version|safety signal monitoring|regulatory assessment|production authorization|compliance classification|jurisdiction review|capability classification|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -1155,6 +1168,61 @@
     };
   }
 
+  function inferRegulatoryCapability(input = "") {
+    const text = normalizeText(input);
+    if (/\b(crisis|suicide|988|emergency|self harm|behavioral)\b/.test(text)) return "mental_health_crisis_support";
+    if (/\b(fhir|medical record|ehr|chart|phi|export record)\b/.test(text)) return "fhir_medical_records";
+    if (/\b(pharmacy|refill|prescription|medication)\b/.test(text)) return "pharmacy_workflow";
+    if (/\b(provider contact|message provider|call provider|referral|appointment)\b/.test(text)) return "provider_contact_workflow";
+    if (/\b(telehealth|video visit|virtual care)\b/.test(text)) return "telehealth_workflow";
+    if (/\b(payment|pay|billing|benefit|insurance)\b/.test(text)) return "payment_or_benefit_workflow";
+    if (/\b(predictive|risk model|calculator|screening|phq|gad|risk score)\b/.test(text)) return "predictive_or_screening_capability";
+    if (/\b(translation|language|accessibility|low literacy|offline)\b/.test(text)) return "accessibility_localization";
+    if (/\b(social care|housing|food|transportation|community resource)\b/.test(text)) return "social_care_sharing";
+    return "health_education_or_preparation";
+  }
+
+  function regulatoryRiskFor(capabilityType) {
+    if (capabilityType === "health_education_or_preparation") return "low_to_moderate_review_required";
+    if (capabilityType === "accessibility_localization") return "moderate_language_access_review_required";
+    if (capabilityType === "social_care_sharing") return "moderate_privacy_consent_review_required";
+    return "high_regulated_review_required";
+  }
+
+  function buildHealthRegulatoryAssessmentPacket(input = "", context = {}) {
+    const capabilityType = inferRegulatoryCapability(input);
+    const riskTier = regulatoryRiskFor(capabilityType);
+    const productionBlocked = capabilityType !== "health_education_or_preparation";
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_regulatory_assessment_packet",
+      domainId: "health_regulatory_assessment",
+      capabilityType,
+      riskTier,
+      productionBlocked,
+      governance: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE,
+      regulatoryFrames: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE.regulatoryFrames,
+      classificationStates: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE.classificationStates,
+      requiredBeforeProductionAuthorization: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE.requiredBeforeProductionAuthorization,
+      currentClassification: productionBlocked ? "not_production_authorized" : "implemented_locally",
+      executionEnabled: false,
+      productionAuthorized: false,
+      canClassifyCapability: true,
+      canPrepareReviewChecklist: true,
+      canAuthorizeProduction: false,
+      canBypassLegalReview: false,
+      canBypassClinicalApproval: false,
+      canBypassJurisdictionReview: false,
+      canActivateLiveConnector: false,
+      canHandlePhiWithoutGovernance: false,
+      safety: commonSafety(),
+      auditReceipt: audit("health_regulatory_assessment_prepared", "health_regulatory_assessment"),
+      userVisibleStatus: `Nexus prepared a capability-level regulatory assessment for ${capabilityType.replace(/_/g, " ")}. Nexus can classify the capability, list applicable review frames, and prepare a governance checklist, but it cannot authorize production use, bypass legal or clinical approval, bypass jurisdiction review, activate live connectors, handle PHI without governance, diagnose, prescribe, contact providers, or dispatch emergencies.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -1187,6 +1255,7 @@
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
       healthCommunicationsFollowUpGovernance: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE,
       healthModelSourceMonitoringGovernance: HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE,
+      healthRegulatoryAssessmentGovernance: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
       humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
       reviewDecisionStates: REVIEW_DECISION_STATES,
@@ -1227,12 +1296,13 @@
       accessibilityLocalizationState: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.translationState,
       healthCommunicationsFollowUpState: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE.defaultState,
       healthModelSourceMonitoringState: HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE.defaultState,
+      healthRegulatoryAssessmentState: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE.defaultState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "health communications/follow-up governance", "health model/source monitoring governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "health communications/follow-up governance", "health model/source monitoring governance", "capability regulatory assessment", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -1301,6 +1371,7 @@
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE,
     HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE,
+    HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
     HUMAN_REVIEW_QUEUE_TYPES,
     REVIEW_DECISION_STATES,
@@ -1321,6 +1392,7 @@
     buildAccessibilityLocalizationGovernancePacket,
     buildHealthCommunicationsFollowUpPacket,
     buildHealthModelSourceMonitoringPacket,
+    buildHealthRegulatoryAssessmentPacket,
     registries,
     status,
     hasUnsafeClaim
