@@ -58,15 +58,75 @@
     source("verified.finance.program", "Verified finance or grant program", 5, "provider directory", "verified finance program record")
   ]);
 
+  const COUNTRY_SOURCE_REGISTRY = Object.freeze(SUPPORTED_COUNTRIES.flatMap(countryConfig => [
+    countrySource(countryConfig, "ministry_agriculture", `${countryConfig.name} agriculture authority`, "official_agriculture_authority", "country_verified_required"),
+    countrySource(countryConfig, "labor_employment", `${countryConfig.name} labor and employment authority`, "official_labor_authority", "country_verified_required"),
+    countrySource(countryConfig, "education_training", `${countryConfig.name} education and training authority`, "official_education_authority", "country_verified_required"),
+    countrySource(countryConfig, "meteorological_service", `${countryConfig.name} meteorological service`, "official_climate_authority", "country_verified_required"),
+    countrySource(countryConfig, "research_extension", `${countryConfig.name} agriculture research and extension institute`, "research_extension_institute", "country_verified_required"),
+    countrySource(countryConfig, "verified_training_provider", `${countryConfig.name} verified training providers`, "training_provider_directory", "partner_required"),
+    countrySource(countryConfig, "verified_employer", `${countryConfig.name} verified agriculture employers`, "employer_directory", "partner_required"),
+    countrySource(countryConfig, "verified_buyer", `${countryConfig.name} verified crop and livestock buyers`, "buyer_directory", "partner_required"),
+    countrySource(countryConfig, "verified_cooperative", `${countryConfig.name} verified cooperatives`, "cooperative_directory", "partner_required"),
+    countrySource(countryConfig, "finance_program", `${countryConfig.name} verified finance, grant, and savings programs`, "finance_program_directory", "partner_required"),
+    countrySource(countryConfig, "social_service", `${countryConfig.name} women, youth, childcare, transport, and social-service support`, "social_service_directory", "partner_required")
+  ]));
+
   const MODEL_REGISTRY = Object.freeze([
     model("learner-success-support-v1", "Learner Success and Support Model", "attendance, completion, literacy, language, transport, childcare, and mentoring support", "approved_with_professional_review"),
+    model("attendance-risk-v1", "Attendance Risk Support Model", "attendance constraints, family obligations, distance, seasonality, childcare, safety, transport, and timetable fit", "approved_with_professional_review"),
+    model("completion-risk-v1", "Completion Risk Support Model", "course completion risks, literacy load, language fit, mentoring access, equipment access, and practice time", "approved_with_professional_review"),
+    model("literacy-language-support-v1", "Literacy and Language Support Model", "low-literacy support, translation needs, local-language learning path, voice-first support, and instructor review needs", "approved_with_professional_review"),
+    model("digital-access-equipment-v1", "Digital Access and Equipment Need Model", "phone access, data access, offline needs, protective equipment, starter tools, and shared-equipment options", "approved_with_professional_review"),
     model("agricultural-pathway-fit-v1", "Agricultural Pathway Fit Model", "crop, livestock, drone, irrigation, processing, logistics, and agribusiness pathways", "approved_for_advisory_use"),
     model("farm-climate-readiness-v1", "Farm and Climate Readiness Model", "rainfall, water, soil, planting windows, drought, flood, heat, pest, and storage risk", "data_limited"),
+    model("crop-calendar-postharvest-v1", "Crop Calendar and Post-Harvest Risk Model", "planting window, crop calendar, harvest timing, storage, spoilage, aggregation, and post-harvest risk", "data_limited"),
+    model("pest-disease-watch-v1", "Pest and Disease Watch Model", "pest pressure, disease pressure, scouting prompts, extension questions, and verified-source escalation", "data_limited"),
     model("market-income-opportunity-v1", "Market and Income Opportunity Model", "buyer demand, distance, seasonality, storage, value addition, and entrepreneurship potential", "awaiting_local_validation"),
     model("women-participation-barrier-v1", "Women's Participation and Barrier Model", "childcare, safety, land, finance, mentoring, literacy, digital access, and leadership support", "awaiting_fairness_review"),
     model("youth-employment-enterprise-v1", "Youth Employment and Enterprise Model", "training, apprenticeships, farm jobs, drone careers, agritech, and enterprise progression", "approved_with_professional_review"),
     model("cooperative-group-enterprise-v1", "Cooperative and Group Enterprise Model", "governance, shared equipment, market aggregation, recordkeeping, and leadership readiness", "experimental"),
     model("program-impact-v1", "Program Impact Model", "aggregated enrollment, completion, placement, enterprise, buyer access, and regional gap reporting", "not_production_authorized")
+  ]);
+
+  const PATHWAY_REGISTRY = Object.freeze([
+    pathway("crop.production", "Crop production", ["maize", "cassava", "rice", "beans", "vegetables"], ["soil", "water", "crop calendar", "pest scouting", "post-harvest storage"]),
+    pathway("livestock", "Livestock", ["dairy", "small ruminants", "feed planning"], ["animal health referral", "feed", "housing", "market access"]),
+    pathway("poultry", "Poultry enterprise", ["broilers", "layers", "vaccination questions", "feed planning"], ["biosecurity", "starter capital", "market timing"]),
+    pathway("aquaculture", "Aquaculture", ["pond setup", "feed", "water quality", "market sizing"], ["water access", "technical training", "local regulation"]),
+    pathway("irrigation", "Irrigation and water-smart farming", ["drip basics", "water harvesting", "scheduling"], ["water rights", "equipment", "maintenance"]),
+    pathway("food.processing", "Food processing and value addition", ["drying", "milling", "packaging", "quality basics"], ["equipment", "food safety", "market standards"]),
+    pathway("logistics", "Agriculture logistics", ["aggregation", "cold-chain readiness", "transport planning"], ["road access", "storage", "buyer timing"]),
+    pathway("drone.agriculture", "Drone agriculture support", ["field mapping", "scouting", "spraying safety theory"], ["certification", "equipment", "no flight dispatch"]),
+    pathway("maintenance", "Equipment maintenance", ["pump maintenance", "small engines", "irrigation repair"], ["tools", "mentor", "safety"]),
+    pathway("agritech", "Agritech and digital agriculture", ["recordkeeping", "mobile advisory", "market data"], ["digital access", "data literacy", "connectivity"]),
+    pathway("cooperative", "Cooperative or group enterprise", ["aggregation", "governance", "shared equipment"], ["trust", "records", "leadership"]),
+    pathway("employment", "Agriculture employment", ["farm jobs", "apprenticeship", "internship"], ["employer verification", "transport", "safety"]),
+    pathway("entrepreneurship", "Agriculture entrepreneurship", ["business basics", "costing", "customer discovery"], ["finance readiness", "mentoring", "buyer validation"])
+  ]);
+
+  const REGIONAL_CONFIGURATION = Object.freeze({
+    east_africa: region("East Africa", ["kenya", "tanzania", "uganda", "rwanda", "ethiopia"], ["Swahili where applicable", "English", "local languages"], ["maize", "beans", "coffee", "dairy", "horticulture", "poultry"], ["rainfall variability", "transport distance", "digital access", "youth unemployment"]),
+    west_africa: region("West Africa", ["ghana", "nigeria", "senegal"], ["English", "French", "local languages"], ["cassava", "rice", "maize", "cocoa", "groundnut", "poultry"], ["market aggregation", "post-harvest loss", "finance access", "women enterprise barriers"]),
+    southern_africa: region("Southern Africa", ["zambia", "south_africa"], ["English", "local languages"], ["maize", "soybean", "livestock", "horticulture", "agri-processing"], ["drought", "equipment access", "youth jobs", "logistics"])
+  });
+
+  const RISK_INTELLIGENCE_REGISTRY = Object.freeze([
+    "rainfall_variability",
+    "drought",
+    "flood",
+    "heat",
+    "soil_fertility",
+    "water_access",
+    "crop_calendar",
+    "planting_window",
+    "pest_pressure",
+    "disease_pressure",
+    "harvest_timing",
+    "storage_loss",
+    "post_harvest_handling",
+    "market_distance",
+    "transport_availability"
   ]);
 
   const CAPABILITY_STATUS = Object.freeze({
@@ -120,6 +180,22 @@
     });
   }
 
+  function countrySource(countryConfig, sourceType, title, category, readiness) {
+    return Object.freeze({
+      sourceId: `${countryConfig.id}.${sourceType}`,
+      countryId: countryConfig.id,
+      country: countryConfig.name,
+      title,
+      organization: title,
+      sourceType,
+      sourceCategory: category,
+      readiness,
+      status: readiness === "country_verified_required" ? "needs_country_url_verification" : "partner_or_provider_required",
+      missingBeforeExecution: Object.freeze(["verified local owner", "current official URL", "licensing or sharing permission", "freshness date", "review receipt"]),
+      noExecutionAuthorized: true
+    });
+  }
+
   function model(modelId, name, purpose, approvalState) {
     return Object.freeze({
       modelId,
@@ -136,6 +212,30 @@
       approvalState,
       monitoringPlan: Object.freeze(["source_freshness", "fairness", "false_positive_barriers", "false_negative_barriers", "provider_verification_expiration", "regional_gaps"]),
       rollbackPlan: "disable model ID and fall back to supportive checklist"
+    });
+  }
+
+  function pathway(pathwayId, name, subpaths, supportNeeds) {
+    return Object.freeze({
+      pathwayId,
+      name,
+      subpaths: Object.freeze(subpaths),
+      supportNeeds: Object.freeze(supportNeeds),
+      localValidationRequired: true,
+      liveEnrollmentEnabled: false,
+      buyerContactEnabled: false,
+      providerReferralEnabled: false
+    });
+  }
+
+  function region(name, countryIds, languages, prioritySectors, commonConstraints) {
+    return Object.freeze({
+      name,
+      countryIds: Object.freeze(countryIds),
+      languages: Object.freeze(languages),
+      prioritySectors: Object.freeze(prioritySectors),
+      commonConstraints: Object.freeze(commonConstraints),
+      localValidationRequired: true
     });
   }
 
@@ -250,7 +350,11 @@
       recommendations,
       countryConfig: SUPPORTED_COUNTRIES.find(item => item.id === profile.countryId),
       sourceRegistry: SOURCE_REGISTRY,
+      countrySourceRegistry: COUNTRY_SOURCE_REGISTRY.filter(item => item.countryId === profile.countryId),
       modelRegistry: MODEL_REGISTRY,
+      pathwayRegistry: PATHWAY_REGISTRY,
+      regionalConfiguration: Object.values(REGIONAL_CONFIGURATION).find(item => item.countryIds.includes(profile.countryId)) || null,
+      riskIntelligenceRegistry: RISK_INTELLIGENCE_REGISTRY,
       capabilityStatus: CAPABILITY_STATUS,
       receipt: buildReceipt(command, profile, recommendations),
       explanation: {
@@ -281,7 +385,10 @@
       classificationCounts: counts,
       supportedCountryCount: SUPPORTED_COUNTRIES.length,
       sourceCount: SOURCE_REGISTRY.length,
+      countrySourceCount: COUNTRY_SOURCE_REGISTRY.length,
       modelCount: MODEL_REGISTRY.length,
+      pathwayCount: PATHWAY_REGISTRY.length,
+      riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
       productionAuthorized: false,
       ...EXECUTION_BOUNDARIES
     });
@@ -294,7 +401,11 @@
       schemaVersion: SCHEMA_VERSION,
       countries: SUPPORTED_COUNTRIES,
       sources: SOURCE_REGISTRY,
+      countrySources: COUNTRY_SOURCE_REGISTRY,
       models: MODEL_REGISTRY,
+      pathways: PATHWAY_REGISTRY,
+      regions: REGIONAL_CONFIGURATION,
+      riskSignals: RISK_INTELLIGENCE_REGISTRY,
       capabilityStatus: CAPABILITY_STATUS,
       ...EXECUTION_BOUNDARIES
     });
@@ -307,7 +418,10 @@
       schemaVersion: SCHEMA_VERSION,
       supportedCountryCount: SUPPORTED_COUNTRIES.length,
       sourceCount: SOURCE_REGISTRY.length,
+      countrySourceCount: COUNTRY_SOURCE_REGISTRY.length,
       modelCount: MODEL_REGISTRY.length,
+      pathwayCount: PATHWAY_REGISTRY.length,
+      riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
       productionAuthorized: false,
       noFakeExecution: true,
       noGuarantees: true
@@ -320,7 +434,11 @@
     EXECUTION_BOUNDARIES,
     SUPPORTED_COUNTRIES,
     SOURCE_REGISTRY,
+    COUNTRY_SOURCE_REGISTRY,
     MODEL_REGISTRY,
+    PATHWAY_REGISTRY,
+    REGIONAL_CONFIGURATION,
+    RISK_INTELLIGENCE_REGISTRY,
     CAPABILITY_STATUS,
     shouldHandle,
     inferParticipantProfile,

@@ -19,6 +19,18 @@ The initial registry covers Kenya, Ghana, Nigeria, Tanzania, Uganda, Rwanda, Zam
 
 The runtime includes a source registry for national agriculture, labor, youth, women/gender, meteorological, regional, international, training, cooperative, buyer, and finance-program sources. It also registers predictive/advisory models for learner readiness, agriculture pathway fit, farm/climate readiness, market opportunity, women participation barriers, youth employment, cooperatives, and program impact.
 
+## Country Source Records
+
+Each supported country now has country-specific records for agriculture authorities, labor and employment agencies, education/training authorities, meteorological services, agriculture research/extension institutes, verified training providers, verified employers, verified buyers, verified cooperatives, finance programs, and women/youth/childcare/transport social-service support. These records are source and readiness contracts only; they require local owner verification, current official URLs, licensing checks, freshness dates, and review receipts before production execution or provider-facing use.
+
+## Pathway and Risk Intelligence
+
+The pathway registry covers crop production, livestock, poultry, aquaculture, irrigation, food processing, logistics, drone agriculture support, maintenance, agritech, cooperatives, employment, and entrepreneurship. The risk registry covers rainfall variability, drought, flood, heat, soil fertility, water access, crop calendars, planting windows, pest and disease pressure, harvest timing, storage loss, post-harvest handling, market distance, and transport availability.
+
+## Regional Configuration
+
+The runtime includes East Africa, West Africa, and Southern Africa configuration with country membership, language context, priority sectors, and common constraints. This supports country-aware packet generation while still requiring local validation before production use.
+
 ## Safety and Production Limits
 
 Nexus does not contact buyers, enroll users in training, apply for financing, dispatch transport or drones, enroll cooperatives, guarantee income, guarantee yield, guarantee employment, or make provider referrals from this runtime. Consent, verified providers, local validation, confirmation, and governance gates are required before any real-world execution.
