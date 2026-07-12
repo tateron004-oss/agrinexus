@@ -1601,20 +1601,31 @@ function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
   const providerTrust = packet.verifiedProviderTrustRegistry && typeof packet.verifiedProviderTrustRegistry === "object" ? packet.verifiedProviderTrustRegistry : {};
   const fhirResources = Array.isArray(packet.fhirTerminologyContracts?.fhirResources) ? packet.fhirTerminologyContracts.fhirResources : [];
   const readiness = packet.readinessClassifications && typeof packet.readinessClassifications === "object" ? packet.readinessClassifications : {};
+  const reviewRoles = packet.professionalWorkspaceRoles && typeof packet.professionalWorkspaceRoles === "object" ? packet.professionalWorkspaceRoles : {};
+  const reviewQueues = packet.reviewQueueTypes && typeof packet.reviewQueueTypes === "object" ? packet.reviewQueueTypes : {};
   const inspectorFields = packet.inspectorView?.fields || {};
   const isRegistryPacket = packet.registryPacketType === "enterprise_health_governance_registry_packet";
+  const isHumanReviewPacket = packet.packetType === "enterprise_health_human_review_control_packet";
   return {
     type: packet.registryPacketType || packet.packetType || "enterprise_health_evidence_trust_packet",
-    title: isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
+    title: isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
     status: packet.domainId || "health-evidence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "enterprise-health-evidence-trust",
-      label: isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
+      label: isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
       description: packet.userVisibleStatus || (isRegistryPacket ? "Nexus prepared the enterprise health governance registries." : "Nexus prepared an enterprise health evidence governance packet.")
     },
-    bullets: isRegistryPacket ? [
+    bullets: isHumanReviewPacket ? [
+      `Selected queue: ${packet.selectedQueue?.queueId || "clinical_evidence_review"}`,
+      `Professional roles governed: ${Object.keys(reviewRoles).length}`,
+      `Review queues governed: ${Object.keys(reviewQueues).length}`,
+      `Decision states: ${Array.isArray(packet.reviewDecisionStates) ? packet.reviewDecisionStates.length : 0}`,
+      `Can approve provider submission: ${packet.canApproveProviderSubmission ? "yes" : "no"}`,
+      `Can bypass consent: ${packet.canBypassConsent ? "yes" : "no"}`,
+      `Execution enabled: ${packet.executionEnabled ? "yes" : "no"}`
+    ] : isRegistryPacket ? [
       `Canonical sources governed: ${registrySources.length}`,
       `Health domain maps: ${Object.keys(domainMaps).length}`,
       `Predictive models governed: ${Object.keys(registryModels).length}`,
@@ -1643,6 +1654,7 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   const runtime = window.NexusEnterpriseHealthEvidenceTrust;
   const text = String(command || "").trim();
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const humanReviewIntent = /\b(human review|review queue|governance review|professional review controls|professional workspace controls)\b/i.test(text);
   const registryIntent = /\b(source registry|governance registr(?:y|ies)|verified provider trust|provider trust registry|fhir terminology|medical record governance|consent and privacy|clinical calculator registry)\b/i.test(text);
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
   const professionalRole = /\b(professional version|clinician version|complete citation|evidence certainty|recommendation strength|conflicts? of interest|citation export)\b/i.test(text);
@@ -1653,7 +1665,9 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
     role: professionalRole ? "professional" : "standard_user",
     verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
   };
-  const packet = registryIntent
+  const packet = humanReviewIntent
+    ? runtime.buildHumanReviewPacket(text, evidenceContext)
+    : registryIntent
     ? runtime.registries()
     : predictiveIntent
     ? runtime.predictiveGovernance(text, evidenceContext)

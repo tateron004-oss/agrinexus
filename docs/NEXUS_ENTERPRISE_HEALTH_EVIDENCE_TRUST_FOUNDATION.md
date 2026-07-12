@@ -111,6 +111,14 @@ Consent and privacy governance requires explicit approval before provider sharin
 
 Accessibility and localization governance covers plain language, low literacy, multilingual labels, voice fallback, caption fallback, low-bandwidth behavior, offline packets, and cultural adaptation review. Nexus does not claim certified clinical interpretation or live source freshness while offline.
 
+## Professional Workspace And Human Review Controls
+
+Nexus now exposes human-review control packets through `POST /api/nexus/health-evidence/human-review` and Standard User commands such as "show human review controls for pharmacy." The packet selects a review queue, professional role boundary, required checks, decision states, and blocked execution states.
+
+Governed professional workspace roles include physician, pharmacist, behavioral-health professional, nurse/CHW, social-care reviewer, and governance administrator. Each role has explicit review authority and prohibited authority. No role can bypass user consent or audit requirements.
+
+Governed review queues include clinical evidence, medication/pharmacy, laboratory/diagnostic, behavioral/crisis, social-care, and FHIR record review. Review can approve education packets or provider-ready summaries, but it cannot authorize diagnosis, prescribing, medication change, provider submission, medical-record access, emergency dispatch, or consent bypass without the required connector, human approval, and audit gates.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

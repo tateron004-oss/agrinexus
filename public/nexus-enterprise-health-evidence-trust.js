@@ -206,6 +206,36 @@
     offlineState: "may prepare packets locally; does not claim live source freshness while offline"
   });
 
+  const PROFESSIONAL_WORKSPACE_ROLES = Object.freeze({
+    physician: reviewRole("physician", ["clinical interpretation", "diagnosis/treatment decisions", "care plan review"], ["diagnosis", "prescribing", "referral approval", "clinical calculator interpretation"]),
+    pharmacist: reviewRole("pharmacist", ["medication evidence", "pharmacy workflow review", "interaction concern triage"], ["dose advice", "substitution approval", "refill approval"]),
+    behavioral_health_professional: reviewRole("behavioral_health_professional", ["screening review", "safety-plan review", "resource appropriateness"], ["diagnosis", "therapy replacement", "crisis dispatch"]),
+    nurse_or_chw: reviewRole("nurse_or_chw", ["intake review", "education reinforcement", "follow-up preparation"], ["independent diagnosis", "medication changes", "unapproved clinical triage"]),
+    social_care_reviewer: reviewRole("social_care_reviewer", ["resource review", "eligibility evidence organization", "consent check"], ["eligibility guarantee", "benefit approval", "sharing without consent"]),
+    governance_admin: reviewRole("governance_admin", ["source governance", "audit review", "configuration readiness"], ["clinical override", "provider contact without user approval"])
+  });
+
+  const HUMAN_REVIEW_QUEUE_TYPES = Object.freeze({
+    clinical_evidence_review: reviewQueue("clinical_evidence_review", ["source freshness", "jurisdiction", "population", "clinical applicability"], ["physician", "governance_admin"]),
+    medication_pharmacy_review: reviewQueue("medication_pharmacy_review", ["drug source", "medication list", "pharmacy handoff boundary"], ["pharmacist", "physician"]),
+    laboratory_diagnostic_review: reviewQueue("laboratory_diagnostic_review", ["test source", "unit/context", "reference range limits"], ["physician", "nurse_or_chw"]),
+    behavioral_crisis_review: reviewQueue("behavioral_crisis_review", ["screening governance", "crisis language", "safety plan boundary"], ["behavioral_health_professional", "governance_admin"]),
+    social_care_review: reviewQueue("social_care_review", ["resource freshness", "eligibility uncertainty", "consent before sharing"], ["social_care_reviewer", "governance_admin"]),
+    fhir_record_review: reviewQueue("fhir_record_review", ["identity", "role", "consent", "provenance", "connector status"], ["physician", "governance_admin"])
+  });
+
+  const REVIEW_DECISION_STATES = Object.freeze([
+    "queued_for_review",
+    "needs_more_information",
+    "approved_for_user_education",
+    "approved_for_provider_packet",
+    "blocked_source_or_jurisdiction",
+    "blocked_missing_consent",
+    "blocked_missing_connector",
+    "requires_escalation_to_licensed_professional",
+    "rejected_unsafe_or_unsupported"
+  ]);
+
   const UNSAFE_CLAIM_PATTERNS = [
     /\bclinically proven for every population\b/i,
     /\bapproved worldwide\b/i,
@@ -225,7 +255,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|vulnerable population|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -305,6 +335,31 @@
       auditRequired: true,
       noSilentHandoff: true,
       noCredentialClaimWithoutConnector: true
+    });
+  }
+
+  function reviewRole(roleId, reviewAuthority, prohibitedAuthority) {
+    return Object.freeze({
+      roleId,
+      reviewAuthority,
+      prohibitedAuthority,
+      identityRequired: true,
+      licenseOrTrainingVerificationRequired: true,
+      auditRequired: true,
+      cannotBypassUserConsent: true
+    });
+  }
+
+  function reviewQueue(queueId, requiredChecks, allowedRoles) {
+    return Object.freeze({
+      queueId,
+      requiredChecks,
+      allowedRoles,
+      defaultState: "queued_for_review",
+      auditRequired: true,
+      userVisibleOutcomeRequired: true,
+      liveExecutionEnabled: false,
+      noSilentApproval: true
     });
   }
 
@@ -578,6 +633,52 @@
     };
   }
 
+  function inferReviewQueue(domainId, input = "") {
+    const text = normalizeText(input);
+    if (/\b(medication|pharmacy|prescription|refill|drug)\b/.test(text) || ["medication", "medication_safety", "pharmacy"].includes(domainId)) return "medication_pharmacy_review";
+    if (/\b(lab|laboratory|diagnostic|imaging|test result)\b/.test(text) || ["laboratory", "diagnostic_imaging"].includes(domainId)) return "laboratory_diagnostic_review";
+    if (/\b(mental|behavioral|crisis|safety plan|screening|phq|gad)\b/.test(text) || ["mental_health", "behavioral_wellness", "crisis_safety"].includes(domainId)) return "behavioral_crisis_review";
+    if (/\b(social care|food|housing|transportation|benefits)\b/.test(text) || ["social_care", "transportation_to_care"].includes(domainId)) return "social_care_review";
+    if (/\b(fhir|medical record|health record|ehr|chart)\b/.test(text) || domainId === "fhir_records") return "fhir_record_review";
+    return "clinical_evidence_review";
+  }
+
+  function buildHumanReviewPacket(input = "", context = {}) {
+    const domainId = context.domain || inferDomain(input);
+    const roleId = PROFESSIONAL_WORKSPACE_ROLES[context.role] ? context.role : "governance_admin";
+    const queueId = inferReviewQueue(domainId, input);
+    const queue = HUMAN_REVIEW_QUEUE_TYPES[queueId];
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_human_review_control_packet",
+      domainId,
+      requestedRole: roleId,
+      professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
+      reviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
+      selectedQueue: queue,
+      reviewDecisionStates: REVIEW_DECISION_STATES,
+      requiredBeforeApproval: [
+        "verified reviewer identity",
+        "license/training scope check",
+        "source freshness and jurisdiction review",
+        "user consent for sharing or export",
+        "audit receipt",
+        "clear user-visible outcome"
+      ],
+      executionEnabled: false,
+      canApproveEducationPacket: true,
+      canApproveProviderSubmission: false,
+      canApproveMedicationChange: false,
+      canApproveEmergencyDispatch: false,
+      canBypassConsent: false,
+      safety: commonSafety(),
+      auditReceipt: audit("enterprise_health_human_review_controls_prepared", domainId),
+      userVisibleStatus: `Nexus prepared the ${queueId.replace(/_/g, " ")} controls for ${domainId.replace(/_/g, " ")}. Review can organize evidence and user-facing outcomes, but provider submission, diagnosis, prescribing, medical-record access, and emergency dispatch remain disabled until consent, role, connector, and audit gates are satisfied.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -603,6 +704,9 @@
       fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+      professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
+      humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
+      reviewDecisionStates: REVIEW_DECISION_STATES,
       sourceVerificationStates: SOURCE_VERIFICATION_STATES,
       blockedSourceStates: BLOCKED_SOURCE_STATES,
       readinessClassifications,
@@ -632,6 +736,8 @@
       clinicalCalculatorCount: Object.keys(CLINICAL_CALCULATOR_REGISTRY).length,
       verifiedProviderTrustCategoryCount: Object.keys(VERIFIED_PROVIDER_TRUST_REGISTRY).length,
       fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
+      professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
+      humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
@@ -697,13 +803,18 @@
     FHIR_TERMINOLOGY_CONTRACTS,
     CONSENT_PRIVACY_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+    PROFESSIONAL_WORKSPACE_ROLES,
+    HUMAN_REVIEW_QUEUE_TYPES,
+    REVIEW_DECISION_STATES,
     shouldHandle,
     inferDomain,
+    inferReviewQueue,
     inspect,
     verifySource,
     buildConflictReview,
     buildFeedbackRecord,
     predictiveGovernance,
+    buildHumanReviewPacket,
     registries,
     status,
     hasUnsafeClaim
