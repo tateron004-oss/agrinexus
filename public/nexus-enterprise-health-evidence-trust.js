@@ -189,6 +189,19 @@
     auditRequired: true
   });
 
+  const FHIR_TERMINOLOGY_GOVERNANCE = Object.freeze({
+    governedWorkflows: ["record summary preparation", "FHIR resource mapping", "terminology mapping", "consent-gated export preparation", "provider packet preparation"],
+    blockedWorkflows: ["live record access", "clinical record write", "chart update", "FHIR export", "FHIR import", "provider submission", "diagnosis coding decision"],
+    requiredBeforeConnectorUse: ["verified FHIR connector", "identity proofing", "role authorization", "explicit user consent", "minimum necessary scope preview", "audit receipt"],
+    requiredBeforeTerminologyUse: ["source system", "code system", "version or release date when available", "qualified review for clinical meaning"],
+    defaultState: "mapping_only_until_identity_consent_role_connector_and_audit_are_configured",
+    executionEnabled: false,
+    noLiveRecordAccess: true,
+    noClinicalRecordWrite: true,
+    noTerminologyDiagnosisClaim: true,
+    noSilentExport: true
+  });
+
   const MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE = Object.freeze({
     sourceRequirements: ["FDA or controlling medication authority", "RxNorm or approved medication terminology", "user-supplied medication name", "pharmacist or clinician review"],
     governedWorkflows: ["medication education", "side-effect question preparation", "medication list organization", "refill question preparation", "pharmacy handoff readiness"],
@@ -862,6 +875,59 @@
     };
   }
 
+  function inferFhirResource(input = "") {
+    const text = normalizeText(input);
+    if (/\b(lab|laboratory|blood pressure|bp|a1c|glucose|reading|rpm|rtm|observation)\b/.test(text)) return "Observation";
+    if (/\b(medication|medicine|prescription|rxnorm|pharmacy)\b/.test(text)) return "MedicationStatement";
+    if (/\b(referral|order|request|service)\b/.test(text)) return "ServiceRequest";
+    if (/\b(visit|encounter|telehealth|appointment)\b/.test(text)) return "Encounter";
+    if (/\b(plan|care plan|chronic care)\b/.test(text)) return "CarePlan";
+    if (/\b(document|summary|record|chart)\b/.test(text)) return "DocumentReference";
+    if (/\b(consent|permission|authorization)\b/.test(text)) return "Consent";
+    if (/\b(condition|diagnosis|problem|hypertension|diabetes|obesity)\b/.test(text)) return "Condition";
+    return "Patient";
+  }
+
+  function inferTerminologySystem(input = "") {
+    const text = normalizeText(input);
+    if (/\b(lab|laboratory|observation|loinc|a1c|glucose|blood pressure|bp)\b/.test(text)) return "loinc";
+    if (/\b(medication|medicine|prescription|rxnorm|drug|pharmacy)\b/.test(text)) return "rxnorm";
+    if (/\b(condition|problem|finding|snomed|diagnostic|diagnosis)\b/.test(text)) return "snomed";
+    if (/\b(icd|billing|claim)\b/.test(text)) return "icd10";
+    return "hl7_fhir";
+  }
+
+  function buildFhirTerminologyGovernancePacket(input = "", context = {}) {
+    const requestedResource = inferFhirResource(input);
+    const requestedTerminologySystem = inferTerminologySystem(input);
+    const terminologyDescription = FHIR_TERMINOLOGY_CONTRACTS.terminologySystems[requestedTerminologySystem] || "FHIR interoperability resource mapping";
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_fhir_terminology_governance_packet",
+      domainId: "fhir_records",
+      requestedResource,
+      requestedTerminologySystem,
+      terminologyDescription,
+      fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
+      fhirTerminologyGovernance: FHIR_TERMINOLOGY_GOVERNANCE,
+      requiredBeforeConnectorUse: FHIR_TERMINOLOGY_GOVERNANCE.requiredBeforeConnectorUse,
+      requiredBeforeTerminologyUse: FHIR_TERMINOLOGY_GOVERNANCE.requiredBeforeTerminologyUse,
+      executionEnabled: false,
+      canAccessLiveRecords: false,
+      canWriteClinicalRecords: false,
+      canExportFhirBundle: false,
+      canImportFhirBundle: false,
+      canSubmitToProvider: false,
+      canAssignDiagnosisCode: false,
+      canPrepareMappingPreview: true,
+      safety: commonSafety(),
+      auditReceipt: audit("fhir_terminology_governance_prepared", "fhir_records"),
+      userVisibleStatus: `Nexus prepared FHIR and terminology governance for ${requestedResource} using ${requestedTerminologySystem}. Nexus can prepare a mapping preview and provider-ready questions, but it cannot access live records, write clinical records, export or import FHIR bundles, submit to a provider, or assign diagnosis codes until verified connector, identity, role, consent, minimum-necessary scope, terminology-source, professional-review, and audit gates are satisfied.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -885,6 +951,7 @@
       clinicalCalculatorRegistry: CLINICAL_CALCULATOR_REGISTRY,
       verifiedProviderTrustRegistry: VERIFIED_PROVIDER_TRUST_REGISTRY,
       fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
+      fhirTerminologyGovernance: FHIR_TERMINOLOGY_GOVERNANCE,
       medicationPharmacyEvidenceGovernance: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
       laboratoryDiagnosticEvidenceGovernance: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
@@ -922,6 +989,7 @@
       clinicalCalculatorCount: Object.keys(CLINICAL_CALCULATOR_REGISTRY).length,
       verifiedProviderTrustCategoryCount: Object.keys(VERIFIED_PROVIDER_TRUST_REGISTRY).length,
       fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
+      fhirTerminologyGovernanceState: FHIR_TERMINOLOGY_GOVERNANCE.defaultState,
       medicationPharmacyGovernanceState: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE.defaultState,
       laboratoryDiagnosticGovernanceState: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE.defaultState,
       healthDataRightsGovernanceState: HEALTH_DATA_RIGHTS_GOVERNANCE.defaultMemoryState,
@@ -930,7 +998,7 @@
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -990,6 +1058,7 @@
     CLINICAL_CALCULATOR_REGISTRY,
     VERIFIED_PROVIDER_TRUST_REGISTRY,
     FHIR_TERMINOLOGY_CONTRACTS,
+    FHIR_TERMINOLOGY_GOVERNANCE,
     MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
     LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
     CONSENT_PRIVACY_GOVERNANCE,
@@ -1010,6 +1079,7 @@
     buildMedicationPharmacyEvidencePacket,
     buildLaboratoryDiagnosticEvidencePacket,
     buildHealthDataRightsPacket,
+    buildFhirTerminologyGovernancePacket,
     registries,
     status,
     hasUnsafeClaim

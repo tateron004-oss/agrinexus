@@ -137,6 +137,12 @@ Nexus now exposes consent, privacy, memory, sharing, correction, export, revocat
 
 This capability can prepare consent previews, correction request previews, export scope previews, revocation plans, deletion-scope notes, and sensitive-memory consent checks. It cannot share health data, access FHIR records, store sensitive memory, export data, delete records, bypass revocation, or mutate backend records until the required gates are active.
 
+## FHIR And Clinical Terminology Governance
+
+Nexus now exposes FHIR and clinical terminology governance through `POST /api/nexus/health-evidence/fhir-terminology` and Standard User commands such as "show FHIR terminology governance" or "prepare medical record governance." The packet maps the requested resource category to governed FHIR resources and terminology systems such as LOINC, SNOMED, RxNorm, ICD-10 context, and HL7/FHIR.
+
+This capability can prepare resource-mapping previews, terminology-source questions, and provider-ready FHIR governance notes. It cannot access live records, write clinical records, export or import FHIR bundles, submit to a provider, or assign diagnosis codes until verified connector, identity, role, consent, minimum-necessary scope, terminology-source, professional-review, and audit gates are satisfied.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
