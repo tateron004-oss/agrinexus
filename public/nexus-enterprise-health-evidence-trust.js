@@ -276,6 +276,20 @@
     noClinicalMeaningChangeWithoutReview: true
   });
 
+  const HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE = Object.freeze({
+    governedChannels: ["SMS draft", "WhatsApp draft", "email draft", "phone script", "portal note", "in-app reminder", "follow-up checklist"],
+    supportedUses: ["message draft preparation", "call script preparation", "follow-up reminder preparation", "provider-summary packet attachment", "review queue routing", "audit receipt creation"],
+    prohibitedUses: ["silent send", "silent call", "provider contact without approval", "appointment scheduling", "pharmacy refill request", "emergency dispatch", "clinical escalation without professional review"],
+    requiredBeforeSend: ["resolved recipient", "visible recipient display", "visible channel display", "message or call-purpose preview", "language confirmation", "explicit user approval", "final confirmation", "audit receipt", "provider availability state"],
+    requiredBeforeClinicalFollowUp: ["source-backed context", "licensed/professional review when clinical advice is requested", "minimum necessary content", "consent for sharing", "reviewable packet copy", "revocation/correction path"],
+    defaultState: "draft_and_follow_up_preparation_only_until_connector_consent_confirmation_and_audit_are_active",
+    executionEnabled: false,
+    noSilentSend: true,
+    noSilentCall: true,
+    noProviderContactWithoutApproval: true,
+    noEmergencyRouting: true
+  });
+
   const PROFESSIONAL_WORKSPACE_ROLES = Object.freeze({
     physician: reviewRole("physician", ["clinical interpretation", "diagnosis/treatment decisions", "care plan review"], ["diagnosis", "prescribing", "referral approval", "clinical calculator interpretation"]),
     pharmacist: reviewRole("pharmacist", ["medication evidence", "pharmacy workflow review", "interaction concern triage"], ["dose advice", "substitution approval", "refill approval"]),
@@ -325,7 +339,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|health accessibility|localization governance|translation governance|low literacy health|offline health packet|low bandwidth health|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|youth safeguard|vulnerable population|minor safeguard|child safety|elder safeguard|pregnancy safeguard|abuse concern|health accessibility|localization governance|translation governance|low literacy health|offline health packet|low bandwidth health|health follow-up|follow-up governance|message follow-up|call script governance|rpm follow-up|rtm follow-up|human review|review queue|governance review|professional review controls|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -1035,6 +1049,53 @@
     };
   }
 
+  function inferHealthFollowUpType(input = "") {
+    const text = normalizeText(input);
+    if (/\b(emergency|crisis|suicide|self harm|danger|urgent)\b/.test(text)) return "crisis_boundary_follow_up";
+    if (/\b(pharmacy|refill|prescription|medication|medicine)\b/.test(text)) return "pharmacy_follow_up";
+    if (/\b(rpm|rtm|remote patient|remote therapeutic|blood pressure|bp|glucose|a1c|weight|obesity|diabetes|hypertension)\b/.test(text)) return "chronic_monitoring_follow_up";
+    if (/\b(appointment|telehealth|provider|doctor|clinic|visit|referral)\b/.test(text)) return "provider_visit_follow_up";
+    if (/\b(transport|housing|food|benefit|social care|community resource)\b/.test(text)) return "social_care_follow_up";
+    return "health_follow_up_review";
+  }
+
+  function buildHealthCommunicationsFollowUpPacket(input = "", context = {}) {
+    const followUpType = inferHealthFollowUpType(input);
+    const crisisRelated = followUpType === "crisis_boundary_follow_up";
+    const clinicalRelated = ["pharmacy_follow_up", "chronic_monitoring_follow_up", "provider_visit_follow_up", "crisis_boundary_follow_up"].includes(followUpType);
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_communications_follow_up_governance_packet",
+      domainId: "health_communications_follow_up",
+      followUpType,
+      crisisRelated,
+      clinicalRelated,
+      governance: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE,
+      governedChannels: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE.governedChannels,
+      requiredBeforeSend: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE.requiredBeforeSend,
+      requiredBeforeClinicalFollowUp: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE.requiredBeforeClinicalFollowUp,
+      requiredReviewQueue: crisisRelated ? HUMAN_REVIEW_QUEUE_TYPES.behavioral_crisis_review : clinicalRelated ? HUMAN_REVIEW_QUEUE_TYPES.clinical_evidence_review : HUMAN_REVIEW_QUEUE_TYPES.social_care_review,
+      executionEnabled: false,
+      canPrepareMessageDraft: true,
+      canPrepareCallScript: true,
+      canPrepareReminder: true,
+      canAttachProviderSummary: true,
+      canSendMessage: false,
+      canStartCall: false,
+      canScheduleAppointment: false,
+      canRequestRefill: false,
+      canContactProvider: false,
+      canRouteEmergency: false,
+      noSilentSend: true,
+      noSilentCall: true,
+      safety: commonSafety(),
+      auditReceipt: audit("health_communications_follow_up_prepared", "health_communications_follow_up"),
+      userVisibleStatus: `Nexus prepared health communications and follow-up governance for ${followUpType.replace(/_/g, " ")}. Nexus can prepare drafts, call scripts, reminders, review packets, and audit receipts, but it cannot send messages, start calls, schedule appointments, request refills, contact providers, or route emergencies without the required connector, consent, review, explicit approval, final confirmation, and audit gates.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -1065,6 +1126,7 @@
       healthDataRightsGovernance: HEALTH_DATA_RIGHTS_GOVERNANCE,
       youthVulnerablePopulationGovernance: YOUTH_VULNERABLE_POPULATION_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+      healthCommunicationsFollowUpGovernance: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
       humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
       reviewDecisionStates: REVIEW_DECISION_STATES,
@@ -1103,12 +1165,13 @@
       healthDataRightsGovernanceState: HEALTH_DATA_RIGHTS_GOVERNANCE.defaultMemoryState,
       youthVulnerableSafeguardState: YOUTH_VULNERABLE_POPULATION_GOVERNANCE.defaultState,
       accessibilityLocalizationState: ACCESSIBILITY_LOCALIZATION_GOVERNANCE.translationState,
+      healthCommunicationsFollowUpState: HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE.defaultState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "health communications/follow-up governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -1175,6 +1238,7 @@
     HEALTH_DATA_RIGHTS_GOVERNANCE,
     YOUTH_VULNERABLE_POPULATION_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
+    HEALTH_COMMUNICATIONS_FOLLOW_UP_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
     HUMAN_REVIEW_QUEUE_TYPES,
     REVIEW_DECISION_STATES,
@@ -1193,6 +1257,7 @@
     buildFhirTerminologyGovernancePacket,
     buildYouthVulnerableSafeguardPacket,
     buildAccessibilityLocalizationGovernancePacket,
+    buildHealthCommunicationsFollowUpPacket,
     registries,
     status,
     hasUnsafeClaim

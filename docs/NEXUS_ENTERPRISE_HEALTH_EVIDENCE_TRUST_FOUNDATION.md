@@ -155,6 +155,12 @@ Nexus now exposes multilingual, cultural-adaptation, voice/caption fallback, low
 
 This capability can prepare plain-language explanations, caption/voice fallback notes, translation-review packets, cultural-adaptation review questions, and offline or low-bandwidth health packets. It cannot claim certified clinical interpretation, live source freshness while offline, changed clinical meaning, provider contact, diagnosis, prescribing, or emergency dispatch without approved review and audit gates.
 
+## Health Communications And Follow-Up Governance
+
+Nexus now exposes health communications and follow-up governance through `POST /api/nexus/health-evidence/communications-follow-up` and Standard User commands such as "prepare health follow-up", "prepare RPM follow-up", or "show message follow-up governance." The packet classifies the follow-up context and prepares the message, call-script, reminder, review queue, and audit gates needed before any communication can move toward a live provider or recipient.
+
+This capability can prepare SMS, WhatsApp, email, phone-script, portal-note, in-app reminder, and follow-up checklist drafts. It cannot send messages, start calls, schedule appointments, request refills, contact providers, route emergencies, or silently hand off to any communications provider until the required connector, resolved recipient, visible preview, consent, explicit approval, final confirmation, and audit gates are active.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
