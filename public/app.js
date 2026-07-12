@@ -1617,9 +1617,17 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   const text = String(command || "").trim();
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
+  const professionalRole = /\b(professional version|clinician version|complete citation|evidence certainty|recommendation strength|conflicts? of interest|citation export)\b/i.test(text);
+  const sourceVerificationIntent = /\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources)\b/i.test(text);
+  const evidenceContext = {
+    language: languageCode(),
+    source: options.source || "standard_user",
+    role: professionalRole ? "professional" : "standard_user",
+    verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
+  };
   const packet = predictiveIntent
-    ? runtime.predictiveGovernance(text, { language: languageCode(), source: options.source || "standard_user" })
-    : runtime.inspect(text, { language: languageCode(), source: options.source || "standard_user" });
+    ? runtime.predictiveGovernance(text, evidenceContext)
+    : runtime.inspect(text, evidenceContext);
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   const response = packet.userVisibleStatus || "Nexus prepared an enterprise health evidence trust packet.";
@@ -24738,6 +24746,12 @@ function handleNexusApprovedMemoryAction(action = "", source = null) {
   return true;
 }
 
+function isNexusEnterpriseHealthEvidenceTrustCommand(command = "") {
+  const runtime = window.NexusEnterpriseHealthEvidenceTrust;
+  const text = String(command || "").trim();
+  return Boolean(runtime && text && runtime.shouldHandle?.(text));
+}
+
 function nexusMissionHistoryStatusFromEntry(entry = {}, packet = null) {
   const text = `${entry.outcomeStatus || ""} ${entry.normalizedExecutionState || ""} ${entry.failureReason || ""} ${packet?.outcomeStatus || ""}`.toLowerCase();
   if (/archived/.test(text)) return "archived";
@@ -28501,6 +28515,14 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   advanceNexusOsMissionForCommand(command, { source });
   recordNexusOsConversationTurn("user", command, { source });
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
@@ -54078,6 +54100,14 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = "";
+        setCommandInputs("");
+        return;
+      }
       advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
       if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
@@ -54165,6 +54195,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = "";
+        setCommandInputs("");
+        return;
+      }
       advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
       if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
@@ -55668,7 +55706,7 @@ function exposeNexusBrainIntelligenceRuntimeApis() {
 function installNexusBrainIntelligenceCommandBridge() {
   if (typeof document === "undefined" || document.body?.dataset.nexusBrainIntelligenceBound === "true") return;
   if (document.body) document.body.dataset.nexusBrainIntelligenceBound = "true";
-  const isExplicitBrainLaneCommand = command => /\b(blood pressure|bp\b|glucose|blood sugar|a1c|medication|medicine|missed|chest pain|shortness of breath|diabetes|hypertension|obesity|rpm|rtm|chronic|crop|maize|cassava|tomato|rice|agriculture|farm|field|rainfall|irrigation|soil test|yield risk|market-ready|food-security|agronomist|buyer|buyers|seller|sellers|shipment|tracking|trade route|logistics|job|application|employer|learning plan|drone|whatsapp|telegram|sms|message|email|call|phone|provider handoff|pharmacy|mobile clinic|telehealth|show receipts|what happened|continue mission|cancel mission|confirm mission|mark .*closed|out of business)\b/i.test(String(command || ""));
+  const isExplicitBrainLaneCommand = command => !isNexusEnterpriseHealthEvidenceTrustCommand(command) && /\b(blood pressure|bp\b|glucose|blood sugar|a1c|medication|medicine|missed|chest pain|shortness of breath|diabetes|hypertension|obesity|rpm|rtm|chronic|crop|maize|cassava|tomato|rice|agriculture|farm|field|rainfall|irrigation|soil test|yield risk|market-ready|food-security|agronomist|buyer|buyers|seller|sellers|shipment|tracking|trade route|logistics|job|application|employer|learning plan|drone|whatsapp|telegram|sms|message|email|call|phone|provider handoff|pharmacy|mobile clinic|telehealth|show receipts|what happened|continue mission|cancel mission|confirm mission|mark .*closed|out of business)\b/i.test(String(command || ""));
 
   document.addEventListener("click", async event => {
     const copySummary = event.target?.closest?.("[data-nexus-copy-predictive-summary]");
@@ -55702,7 +55740,7 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = nexusCommandInputForSubmit(submit);
     const command = input?.value?.trim() || "";
     if (routeNexusCommandCenterCommunicationSubmit(event, submit, "typed-command-submit")) return;
-    if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command)) return;
+    if (!command || isNexusCapabilityOverviewCommand(command) || isNexusLiveKnowledgeQuestion(command) || isNexusMediaMusicCommand(command) || isNexusEnterpriseHealthEvidenceTrustCommand(command)) return;
     const shouldUseBrain = shouldNexusAgenticCommandRuntimeHandle(command) || isNexusPredictiveMaturityCommand(command) || isNexusAgriculturePredictiveModelerCommand(command) || isNexusMultiDomainPredictiveCommand(command) || isNexusChronicPredictiveModelerCommand(command) || isExplicitBrainLaneCommand(command);
     if (!shouldUseBrain) return;
     event.preventDefault();
@@ -55718,7 +55756,6 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
-    advanceNexusOsMissionForCommand(command, { source: "typed-command-keyboard" });
     if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();
@@ -55727,6 +55764,7 @@ function installNexusBrainIntelligenceCommandBridge() {
       setCommandInputs("");
       return;
     }
+    advanceNexusOsMissionForCommand(command, { source: "typed-command-keyboard" });
     if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();

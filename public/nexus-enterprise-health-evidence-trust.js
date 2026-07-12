@@ -15,6 +15,57 @@
     { tier: "7", label: "Provider/service directory", authorityWeight: 28, clinicalUse: "Directory presence only; not proof of availability, suitability, or quality." }
   ]);
 
+  const SOURCE_VERIFICATION_STATES = Object.freeze([
+    "verified_current",
+    "verified_current_with_local_adaptation",
+    "verified_but_aging",
+    "review_due",
+    "pending_professional_review",
+    "superseded",
+    "withdrawn",
+    "unavailable",
+    "redirected",
+    "redirect_changed",
+    "jurisdiction_mismatch",
+    "population_mismatch",
+    "license_restricted",
+    "translation_unverified",
+    "content_changed",
+    "provider_verification_expired",
+    "provider_status_unknown"
+  ]);
+
+  const BLOCKED_SOURCE_STATES = Object.freeze([
+    "superseded",
+    "withdrawn",
+    "unavailable",
+    "redirect_changed",
+    "jurisdiction_mismatch",
+    "population_mismatch",
+    "license_restricted",
+    "content_changed",
+    "provider_verification_expired"
+  ]);
+
+  const FEEDBACK_TYPES = Object.freeze([
+    "incorrect_citation",
+    "outdated_source",
+    "superseded_source",
+    "withdrawn_source",
+    "wrong_population",
+    "wrong_jurisdiction",
+    "unsafe_interpretation",
+    "unsupported_conclusion",
+    "translation_concern",
+    "licensing_concern",
+    "provider_data_error",
+    "social_service_data_error",
+    "model_concern",
+    "calculator_concern",
+    "medication_concern",
+    "laboratory_concern"
+  ]);
+
   const RECOGNIZED_SOURCE_RECORDS = Object.freeze([
     source("who", "World Health Organization", "1B", "international", ["public_health", "chronic_care", "mental_health", "maternal_child", "infectious_disease"], "https://www.who.int/"),
     source("cdc", "Centers for Disease Control and Prevention", "1A", "US", ["public_health", "diabetes", "hypertension", "infectious_disease", "emergency"], "https://www.cdc.gov/"),
@@ -28,6 +79,24 @@
     source("cochrane", "Cochrane", "3", "international", ["systematic_review", "evidence_synthesis"], "https://www.cochrane.org/"),
     source("samhsa", "Substance Abuse and Mental Health Services Administration", "1A", "US", ["mental_health", "substance_use", "provider_directory"], "https://www.samhsa.gov/"),
     source("npi", "National Plan and Provider Enumeration System", "7", "US", ["provider_directory"], "https://npiregistry.cms.hhs.gov/")
+  ]);
+
+  const SOURCE_CONFLICT_RULES = Object.freeze([
+    {
+      conflictId: "jurisdiction-guidance-conflict",
+      trigger: "same domain with different controlling jurisdictions",
+      action: "preserve sources separately; apply configured controlling local authority; show uncertainty and require professional review when local authority is absent"
+    },
+    {
+      conflictId: "population-guidance-conflict",
+      trigger: "guidance applies to different age, pregnancy, comorbidity, or care-setting populations",
+      action: "block unsupported generalization; show population limitation; require professional review"
+    },
+    {
+      conflictId: "evidence-quality-conflict",
+      trigger: "primary study conflicts with formal guideline or systematic evidence synthesis",
+      action: "prefer stronger evidence hierarchy; disclose disagreement; avoid false consensus"
+    }
   ]);
 
   const DOMAIN_EVIDENCE_MAPS = Object.freeze({
@@ -67,10 +136,12 @@
     /\b(health evidence|medical evidence|evidence inspector|professional evidence|source trust|trusted source)\b/i,
     /\b(guideline|clinical guideline|recommendation strength|evidence tier|source authority|jurisdiction)\b/i,
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
-    /\b(medication evidence|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i
+    /\b(medication evidence|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
+    /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
+    const trustedDomain = safeHostname(canonicalUrl);
     return Object.freeze({
       sourceId,
       name,
@@ -78,8 +149,13 @@
       jurisdiction,
       domains,
       canonicalUrl,
+      trustedDomains: trustedDomain ? [trustedDomain] : [],
+      sourceTitle: `${name} canonical source record`,
+      publicationYearOrVersion: "version verification required",
+      verificationState: "pending_professional_review",
       versionStatus: "monitoring_required",
       lastVerifiedAt: null,
+      nextScheduledReviewAt: null,
       licensingStatus: "review_required",
       conflictOfInterestStatus: "not_applicable_or_unknown",
       governanceApproval: "required_before_clinical_activation"
@@ -115,6 +191,14 @@
 
   function normalizeText(value = "") {
     return String(value || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim();
+  }
+
+  function safeHostname(value = "") {
+    try {
+      return new URL(String(value || "")).hostname.replace(/^www\./, "");
+    } catch (_error) {
+      return "";
+    }
   }
 
   function shouldHandle(input = "") {
@@ -155,8 +239,10 @@
       versionStatus: sourceRecord.versionStatus,
       governanceApproval: sourceRecord.governanceApproval,
       citationReady: false,
+      verification: verifySource(sourceRecord.sourceId, context.verification || {}),
       reasonCitationNotFinal: "Live version/date verification and governance approval are required before clinical citation activation."
     }));
+    const role = normalizeInspectorRole(context.role || (/professional version/i.test(String(input || "")) ? "professional" : "standard_user"));
     return {
       ok: true,
       serviceId: SERVICE_ID,
@@ -167,6 +253,8 @@
       evidenceMap,
       evidenceHierarchy: EVIDENCE_TIERS,
       sourceReceipts,
+      conflictReview: buildConflictReview(domainId, sourceReceipts),
+      inspectorView: buildInspectorView(role, domainId, sourceReceipts, evidenceMap, models),
       predictiveModels: models,
       professionalInspector: {
         available: true,
@@ -177,6 +265,160 @@
       safety: commonSafety(),
       auditReceipt: audit("health_evidence_inspection_prepared", domainId),
       userVisibleStatus: `Nexus prepared an enterprise health evidence trust packet for ${domainId.replace(/_/g, " ")}. It shows source tiers, jurisdiction limits, model governance, and professional review requirements without making a diagnosis or clinical claim.`
+    };
+  }
+
+  function normalizeInspectorRole(role = "standard_user") {
+    const value = normalizeText(role).replace(/[-\s]+/g, "_");
+    return value === "professional" || value === "clinician" || value === "administrator" ? "professional" : "standard_user";
+  }
+
+  function buildInspectorView(role, domainId, sourceReceipts, evidenceMap, models) {
+    const first = sourceReceipts[0] || {};
+    if (role === "professional") {
+      return {
+        role: "professional",
+        fields: {
+          completeCitation: `${first.name || "Source"} (${first.versionStatus || "version pending"}). ${first.canonicalUrl || "canonical URL pending"}`,
+          evidenceTier: first.evidenceTier || "unmapped",
+          recommendationScope: evidenceMap.supportedUses || [],
+          recommendationStrength: "not extracted until guideline/version review is complete",
+          evidenceCertainty: "not graded until source-specific appraisal is complete",
+          intendedPopulation: "must be confirmed per source and model",
+          exclusions: evidenceMap.prohibitedUses || [],
+          jurisdiction: first.jurisdiction || "requires jurisdiction match",
+          careSetting: "requires care-setting match",
+          sourceVersion: first.versionStatus || "monitoring required",
+          publicationDate: first.publicationYearOrVersion || "verification required",
+          revisionDate: "verification required",
+          funding: "not extracted",
+          conflictsOfInterest: "not extracted",
+          localAdaptation: "required when local authority differs",
+          licensing: "review required",
+          modelOrRuleUsingSource: models.map(item => item.modelId),
+          sourceVerificationReceipt: first.verification?.verificationReceiptId || "",
+          sourceConflicts: buildConflictReview(domainId, sourceReceipts),
+          professionalReviewRequirements: ["source version", "jurisdiction", "population", "recommendation strength", "clinical applicability"],
+          citationExportReady: false,
+          canonicalSourceAction: "open_canonical_source_after_review"
+        }
+      };
+    }
+    return {
+      role: "standard_user",
+      fields: {
+        sourceOrganization: first.name || "Source pending",
+        sourceTitle: first.sourceTitle || `${first.name || "Source"} canonical source record`,
+        publicationYearOrVersion: first.publicationYearOrVersion || "version verification required",
+        jurisdiction: first.jurisdiction || "requires jurisdiction match",
+        lastVerifiedDate: first.verification?.lastVerifiedAt || "not yet live-verified",
+        whyItApplies: `${domainId.replace(/_/g, " ")} source map includes this organization as an initial authority candidate.`,
+        keyLimitation: first.reasonCitationNotFinal || "Professional review is required before clinical activation.",
+        professionalReviewNotice: "A qualified professional must review clinical interpretation and local applicability.",
+        inspectSourceAction: "inspect_source"
+      }
+    };
+  }
+
+  function verifySource(sourceIdOrUrl = "", options = {}) {
+    const sourceRecord = sourceById(sourceIdOrUrl) || RECOGNIZED_SOURCE_RECORDS.find(item => item.canonicalUrl === sourceIdOrUrl) || null;
+    const canonicalUrl = sourceRecord?.canonicalUrl || String(sourceIdOrUrl || "");
+    const canonicalHostname = safeHostname(canonicalUrl);
+    const trustedDomains = sourceRecord?.trustedDomains || (canonicalHostname ? [canonicalHostname] : []);
+    const observedUrl = String(options.observedUrl || options.finalUrl || canonicalUrl || "");
+    const observedHostname = safeHostname(observedUrl);
+    const redirectDetected = Boolean(options.redirectDetected || (observedUrl && canonicalUrl && observedUrl !== canonicalUrl));
+    const redirectDestinationTrusted = !observedHostname || trustedDomains.includes(observedHostname);
+    let verificationState = sourceRecord?.verificationState || "pending_professional_review";
+    const blockers = [];
+    const warnings = [];
+
+    if (!canonicalUrl || !canonicalHostname) {
+      verificationState = "unavailable";
+      blockers.push("canonical_url_invalid");
+    }
+    if (observedHostname && !redirectDestinationTrusted) {
+      verificationState = "redirect_changed";
+      blockers.push("redirect_destination_untrusted");
+    } else if (redirectDetected) {
+      verificationState = "redirected";
+      warnings.push("redirect_detected");
+    }
+    if (options.httpStatus && Number(options.httpStatus) >= 400) {
+      verificationState = "unavailable";
+      blockers.push("source_unavailable");
+    }
+    if (options.withdrawn === true) {
+      verificationState = "withdrawn";
+      blockers.push("withdrawn_source");
+    }
+    if (options.supersededBy) {
+      verificationState = "superseded";
+      blockers.push("superseded_source");
+    }
+    if (options.contentChanged === true) {
+      verificationState = "content_changed";
+      blockers.push("content_changed_requires_review");
+    }
+    if (options.jurisdiction && sourceRecord?.jurisdiction && !["international", sourceRecord.jurisdiction].includes(options.jurisdiction)) {
+      verificationState = "jurisdiction_mismatch";
+      blockers.push("jurisdiction_mismatch");
+    }
+    if (!blockers.length && options.liveChecked === true && !redirectDetected) {
+      verificationState = options.localAdaptation ? "verified_current_with_local_adaptation" : "verified_current";
+    }
+    const blocked = BLOCKED_SOURCE_STATES.includes(verificationState);
+    return {
+      verificationReceiptId: `${SERVICE_ID}-source-verification-${sourceRecord?.sourceId || "custom"}-${Date.now()}`,
+      sourceId: sourceRecord?.sourceId || "",
+      canonicalUrl,
+      canonicalHostname,
+      trustedDomains,
+      observedUrl,
+      observedHostname,
+      redirectDetected,
+      redirectDestinationTrusted,
+      verificationState,
+      allowedForClinicalUse: !blocked && verificationState.startsWith("verified_current"),
+      blocked,
+      blockers,
+      warnings,
+      lastVerifiedAt: options.liveChecked ? new Date().toISOString() : sourceRecord?.lastVerifiedAt,
+      nextScheduledReviewAt: sourceRecord?.nextScheduledReviewAt,
+      professionalReviewRequired: verificationState !== "verified_current",
+      offlineVerificationState: options.liveChecked ? "live_checked" : "offline_registry_only",
+      noSilentUse: blocked
+    };
+  }
+
+  function buildConflictReview(domainId, sourceReceipts = []) {
+    const jurisdictions = Array.from(new Set(sourceReceipts.map(item => item.jurisdiction).filter(Boolean)));
+    const tiers = Array.from(new Set(sourceReceipts.map(item => item.evidenceTier).filter(Boolean)));
+    return {
+      domainId,
+      hasPotentialConflict: jurisdictions.length > 1 || tiers.length > 1,
+      jurisdictionDifferences: jurisdictions,
+      evidenceTierDifferences: tiers,
+      rules: SOURCE_CONFLICT_RULES,
+      selectedSourceId: "",
+      selectionReason: "No clinical source selected automatically; professional review and jurisdiction configuration are required.",
+      falseConsensusAvoided: true
+    };
+  }
+
+  function buildFeedbackRecord(input = {}) {
+    const feedbackType = FEEDBACK_TYPES.includes(input.feedbackType) ? input.feedbackType : "unsupported_conclusion";
+    return {
+      feedbackId: `${SERVICE_ID}-feedback-${Date.now()}`,
+      feedbackType,
+      sourceId: String(input.sourceId || "").slice(0, 80),
+      domainId: String(input.domainId || "health").slice(0, 80),
+      note: String(input.note || "").slice(0, 600),
+      status: "queued_for_governance_review",
+      professionalReviewed: false,
+      reviewerClaim: "No qualified professional review is claimed until a reviewer records it.",
+      createdAt: new Date().toISOString(),
+      safety: commonSafety()
     };
   }
 
@@ -215,12 +457,13 @@
       enabled,
       recognizedSourceCount: RECOGNIZED_SOURCE_RECORDS.length,
       evidenceTierCount: EVIDENCE_TIERS.length,
+      sourceVerificationStateCount: SOURCE_VERIFICATION_STATES.length,
       domainMapCount: Object.keys(DOMAIN_EVIDENCE_MAPS).length,
       predictiveModelCount: Object.keys(PREDICTIVE_MODEL_REGISTRY).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "domain evidence maps", "predictive governance receipts", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -270,12 +513,19 @@
     SERVICE_ID,
     SERVICE_VERSION,
     EVIDENCE_TIERS,
+    SOURCE_VERIFICATION_STATES,
+    BLOCKED_SOURCE_STATES,
+    FEEDBACK_TYPES,
     RECOGNIZED_SOURCE_RECORDS,
+    SOURCE_CONFLICT_RULES,
     DOMAIN_EVIDENCE_MAPS,
     PREDICTIVE_MODEL_REGISTRY,
     shouldHandle,
     inferDomain,
     inspect,
+    verifySource,
+    buildConflictReview,
+    buildFeedbackRecord,
     predictiveGovernance,
     status,
     hasUnsafeClaim

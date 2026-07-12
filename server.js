@@ -1810,6 +1810,39 @@ function send(res, status, body, headers = {}) {
   res.end(payload);
 }
 
+async function verifyNexusHealthSourceLive(sourceIdOrUrl = "") {
+  const sourceRecord = nexusEnterpriseHealthEvidenceTrust.RECOGNIZED_SOURCE_RECORDS.find(item => item.sourceId === sourceIdOrUrl) || null;
+  const targetUrl = sourceRecord?.canonicalUrl || String(sourceIdOrUrl || "");
+  if (!/^https:\/\//i.test(targetUrl)) {
+    return { liveChecked: true, providerError: "canonical_https_url_required", httpStatus: 0 };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.NEXUS_HEALTH_SOURCE_VERIFY_TIMEOUT_MS || 5000));
+  try {
+    const response = await fetch(targetUrl, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: controller.signal,
+      headers: { "user-agent": "NexusHealthEvidenceVerifier/1.0" }
+    });
+    const location = response.headers.get("location") || "";
+    return {
+      liveChecked: true,
+      httpStatus: response.status,
+      redirectDetected: response.status >= 300 && response.status < 400 && Boolean(location),
+      observedUrl: location ? new URL(location, targetUrl).toString() : targetUrl
+    };
+  } catch (error) {
+    return {
+      liveChecked: true,
+      httpStatus: 0,
+      providerError: error?.name === "AbortError" ? "verification_timeout" : "verification_failed"
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function rateLimit(req, limit = 180, windowMs = 60_000) {
   const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
   const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
@@ -38522,6 +38555,8 @@ async function api(req, res, url) {
       ok: true,
       serviceId: nexusEnterpriseHealthEvidenceTrust.SERVICE_ID,
       evidenceHierarchy: nexusEnterpriseHealthEvidenceTrust.EVIDENCE_TIERS,
+      sourceVerificationStates: nexusEnterpriseHealthEvidenceTrust.SOURCE_VERIFICATION_STATES,
+      blockedSourceStates: nexusEnterpriseHealthEvidenceTrust.BLOCKED_SOURCE_STATES,
       recognizedSources: nexusEnterpriseHealthEvidenceTrust.RECOGNIZED_SOURCE_RECORDS,
       domainEvidenceMaps: nexusEnterpriseHealthEvidenceTrust.DOMAIN_EVIDENCE_MAPS,
       noClinicalAuthorityClaimed: true,
@@ -38534,9 +38569,44 @@ async function api(req, res, url) {
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.inspect(body?.text || body?.command || "", body?.context || {}));
   }
 
+  if (url.pathname === "/api/nexus/health-evidence/source/verify" && req.method === "POST") {
+    const body = await readBody(req);
+    const sourceId = body?.sourceId || body?.url || body?.canonicalUrl || "";
+    const liveAllowed = process.env.NEXUS_HEALTH_SOURCE_LIVE_VERIFICATION_ENABLED === "true" && body?.live === true;
+    const liveResult = liveAllowed ? await verifyNexusHealthSourceLive(sourceId) : { liveChecked: false };
+    return send(res, 200, {
+      ok: true,
+      liveVerificationEnabled: process.env.NEXUS_HEALTH_SOURCE_LIVE_VERIFICATION_ENABLED === "true",
+      liveVerificationAttempted: liveAllowed,
+      ...nexusEnterpriseHealthEvidenceTrust.verifySource(sourceId, {
+        ...body,
+        ...liveResult
+      }),
+      noClinicalAuthorityClaimed: true,
+      noSecretsExposed: true
+    });
+  }
+
   if (url.pathname === "/api/nexus/health-evidence/predictive-governance" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.predictiveGovernance(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/health-evidence/feedback" && req.method === "POST") {
+    const body = await readBody(req);
+    db.profile = db.profile || {};
+    db.profile.nexusHealthEvidenceGovernanceQueue = db.profile.nexusHealthEvidenceGovernanceQueue || [];
+    const feedback = nexusEnterpriseHealthEvidenceTrust.buildFeedbackRecord(body || {});
+    db.profile.nexusHealthEvidenceGovernanceQueue.unshift(feedback);
+    db.profile.nexusHealthEvidenceGovernanceQueue = db.profile.nexusHealthEvidenceGovernanceQueue.slice(0, 100);
+    await writeDb(db);
+    return send(res, 200, {
+      ok: true,
+      feedback,
+      queueLength: db.profile.nexusHealthEvidenceGovernanceQueue.length,
+      noProfessionalReviewClaimed: true,
+      noExternalExecutionAuthorized: true
+    });
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {

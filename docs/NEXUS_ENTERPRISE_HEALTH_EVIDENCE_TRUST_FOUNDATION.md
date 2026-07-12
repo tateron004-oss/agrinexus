@@ -12,6 +12,8 @@ This foundation is not a clinical endorsement system. It is an inspectable gover
 - Status endpoint: `GET /api/nexus/health-evidence/status`
 - Source registry endpoint: `GET /api/nexus/health-evidence/sources`
 - Evidence inspector endpoint: `POST /api/nexus/health-evidence/inspect`
+- Source verification endpoint: `POST /api/nexus/health-evidence/source/verify`
+- Governance feedback endpoint: `POST /api/nexus/health-evidence/feedback`
 - Predictive governance endpoint: `POST /api/nexus/health-evidence/predictive-governance`
 - Standard User command routing: evidence, guideline, source trust, medication evidence, lab evidence, diabetes evidence, hypertension evidence, obesity evidence, RPM/RTM evidence, predictive health governance, calculator, model-validation, and risk-score commands.
 
@@ -47,6 +49,21 @@ Each source record includes:
 - governance approval requirement
 
 The service does not claim a source is current, clinically activated, or locally controlling until version, jurisdiction, and governance review are completed.
+
+## Live Source Verification And Evidence Inspector
+
+Nexus now carries a source verification contract for canonical URL checks, trusted-domain validation, redirect review, aging review, supersession, withdrawal, licensing limits, jurisdiction limits, population limits, translation status, and provider-directory freshness. Live network verification is default-off and only runs when `NEXUS_HEALTH_SOURCE_LIVE_VERIFICATION_ENABLED=true` and the verification request explicitly asks for live checking.
+
+Verification states include `verified_current`, `verified_current_local_adaptation`, `verified_aging`, `review_due`, `pending_professional_review`, `superseded`, `withdrawn`, `unavailable`, `redirected`, `redirect_changed`, `jurisdiction_mismatch`, `population_mismatch`, `license_restricted`, `translation_unverified`, `content_changed`, `provider_verification_expired`, and `provider_status_unknown`.
+
+Nexus must not silently use sources that are withdrawn, superseded, redirected to an untrusted destination, unavailable, out of jurisdiction, out of population, license restricted, translation unverified, content changed without review, or provider verification expired. Those states require explicit review before the source can support user-facing health guidance.
+
+The evidence inspector has two roles:
+
+- Standard User view: publisher, source title, currentness status, limitations, professional-review reminder, and patient-safe explanation.
+- Professional view: complete citation fields, version/currentness checks, recommendation-strength placeholders, conflict review, governance requirements, and explicit note that Nexus does not claim qualified professional review.
+
+Feedback types such as incorrect citation, outdated source, wrong jurisdiction, conflicting guideline, translation concern, accessibility issue, provider data issue, laboratory concern, medication concern, model concern, and safety concern are queued for governance review. Feedback records do not claim professional review, do not contact providers, and do not authorize external execution.
 
 ## Domain Evidence Maps
 
