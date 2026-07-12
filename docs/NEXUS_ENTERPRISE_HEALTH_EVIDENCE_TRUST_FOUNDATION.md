@@ -179,6 +179,12 @@ Nexus now exposes local health security, privacy, accessibility, and adversarial
 
 This capability can prepare local validation checks, blocked-finding receipts, and review-ready evidence for security, privacy, accessibility, and adversarial QA. It cannot approve release, bypass security/privacy/clinical review, expose secrets, bypass consent or human review, claim clinical safety has passed, contact providers, or dispatch emergencies.
 
+## Genesis Health Capability Status And Production Limitations
+
+Nexus now exposes a Genesis enterprise health capability-status packet through `POST /api/nexus/health-evidence/capability-status` and Standard User commands such as "show health capability status", "show production limitations report", or "what is production authorized." The packet classifies every major enterprise health requirement as implemented locally, provider-backed, credential-blocked, awaiting clinical approval, awaiting regulatory review, license restricted, experimental, disabled, or not production-authorized.
+
+This capability can report what has been implemented, what remains credential- or approval-blocked, and which production limitations still apply. It cannot activate regulated execution, claim production authorization, bypass credentials, bypass clinical or regulatory review, bypass consent and audit gates, diagnose, prescribe, contact providers, or dispatch emergencies.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.

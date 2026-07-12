@@ -331,6 +331,36 @@
     canOverrideEmergencyBoundary: false
   });
 
+  const HEALTH_GENESIS_CAPABILITY_STATUS = Object.freeze([
+    capabilityStatus("canonical_medical_social_care_source_registry", "implemented_locally", "Canonical medical, public-health, terminology, provider-directory, crisis, and social-care source records are registered locally; live freshness verification depends on configured source connectors."),
+    capabilityStatus("domain_evidence_maps", "implemented_locally", "Health domains map to accepted source classes and blocked uses."),
+    capabilityStatus("predictive_model_and_calculator_registries", "implemented_locally", "Predictive model and clinical calculator registries exist with execution disabled until validation, approval, and jurisdiction review are complete."),
+    capabilityStatus("model_validation_explainability_monitoring_receipts", "implemented_locally", "Model/source monitoring, receipts, and explainability fields are available locally; live monitoring is connector-blocked."),
+    capabilityStatus("mental_health_behavioral_wellness_runtime", "implemented_locally", "Mental-health and behavioral-wellness support runs as supportive, non-diagnostic preparation with crisis boundaries."),
+    capabilityStatus("governed_screening_instruments", "awaiting_clinical_approval", "PHQ-9, GAD-7, C-SSRS style, and other screening instruments are governed but not clinically authorized for autonomous scoring or interpretation."),
+    capabilityStatus("crisis_detection_safety_planning", "implemented_locally", "Crisis language triggers supportive safety boundaries and local-resource instructions; Nexus does not dispatch emergency services."),
+    capabilityStatus("verified_provider_trust_registry", "implemented_locally", "Provider trust categories are registered locally; live verification depends on official provider/licensing connectors."),
+    capabilityStatus("official_provider_and_social_service_integrations", "credential_blocked", "Official provider, licensing, treatment, health-center, crisis, and social-service connectors require credentials, jurisdiction rules, and data-use approval."),
+    capabilityStatus("appointment_referral_message_provider_execution_states", "implemented_locally", "Truthful blocked, prepared, queued, confirmation-required, and provider-required states exist; live execution remains gated."),
+    capabilityStatus("professional_health_workspace", "implemented_locally", "Professional roles, review queues, decision states, and evidence cards are available locally."),
+    capabilityStatus("human_review_controls", "implemented_locally", "Medical and social-care human-review controls are modeled with consent and audit gates."),
+    capabilityStatus("medication_pharmacy_evidence_governance", "implemented_locally", "Medication/pharmacy evidence governance exists; prescribing, dose changes, refill approval, and pharmacy contact remain disabled."),
+    capabilityStatus("laboratory_diagnostic_evidence_governance", "implemented_locally", "Lab and diagnostic evidence governance exists; diagnosis, final interpretation, imaging replacement, and record write remain disabled."),
+    capabilityStatus("chronic_care_predictive_integration", "implemented_locally", "Chronic-care predictive integration supports DM, obesity, HTN, RPM, and RTM preparation without diagnosis or medication changes."),
+    capabilityStatus("consent_memory_sharing_correction_export_revocation_deletion", "implemented_locally", "Consent and health data rights governance packets are available; real data mutation/export requires identity, consent, retention, and connector gates."),
+    capabilityStatus("fhir_terminology_contracts", "implemented_locally", "FHIR resource and terminology contracts exist; live FHIR access/write/export is disabled until connector, identity, consent, role, and audit controls are configured."),
+    capabilityStatus("youth_vulnerable_population_safeguards", "implemented_locally", "Youth, elder, pregnancy, disability, caregiver, abuse, and exploitation safeguards are implemented locally."),
+    capabilityStatus("multilingual_cultural_voice_low_literacy_offline_low_bandwidth", "implemented_locally", "Accessibility/localization governance covers multilingual, cultural, voice, caption, low-literacy, offline, and low-bandwidth support."),
+    capabilityStatus("genesis_orb_focused_mission_integration", "implemented_locally", "Standard User commands render focused mission/evidence cards through the Genesis UI path."),
+    capabilityStatus("communications_follow_up_runtime", "implemented_locally", "Health communications and follow-up drafts, call scripts, reminders, and review packets are prepared locally; sending/calls require configured providers and final confirmation."),
+    capabilityStatus("capability_level_regulatory_assessment", "implemented_locally", "Capability-level regulatory assessment classifies risk and required approval gates, but cannot self-authorize production."),
+    capabilityStatus("governance_review_workflows", "implemented_locally", "Governance review queues and receipts are available locally."),
+    capabilityStatus("model_source_monitoring", "implemented_locally", "Model/source monitoring packets are available locally; live monitoring and alerting remain disabled."),
+    capabilityStatus("api_standard_user_command_coverage", "implemented_locally", "API endpoints and Standard User command routing cover evidence trust, governance, monitoring, regulatory, and adversarial validation packets."),
+    capabilityStatus("security_privacy_accessibility_adversarial_regression", "implemented_locally", "Security, privacy, accessibility, and adversarial validation packets and QA run locally."),
+    capabilityStatus("production_authorization", "not_production_authorized", "No clinical, provider-execution, FHIR, pharmacy, crisis, or regulated action is production-authorized without credentials, consent, professional review, jurisdiction approval, and audit controls.")
+  ]);
+
   const PROFESSIONAL_WORKSPACE_ROLES = Object.freeze({
     physician: reviewRole("physician", ["clinical interpretation", "diagnosis/treatment decisions", "care plan review"], ["diagnosis", "prescribing", "referral approval", "clinical calculator interpretation"]),
     pharmacist: reviewRole("pharmacist", ["medication evidence", "pharmacy workflow review", "interaction concern triage"], ["dose advice", "substitution approval", "refill approval"]),
@@ -573,6 +603,18 @@
       safety: commonSafety(),
       auditReceipt: audit("health_evidence_inspection_prepared", domainId),
       userVisibleStatus: `Nexus prepared an enterprise health evidence trust packet for ${domainId.replace(/_/g, " ")}. It shows source tiers, jurisdiction limits, model governance, and professional review requirements without making a diagnosis or clinical claim.`
+    };
+  }
+
+  function capabilityStatus(capabilityId, classification, limitation) {
+    return {
+      capabilityId,
+      classification,
+      limitation,
+      liveActionEnabled: false,
+      requiresCredentialOrApproval: !["implemented_locally"].includes(classification),
+      userApprovalRequiredBeforeExecution: true,
+      auditRequiredBeforeExecution: true
     };
   }
 
@@ -1298,6 +1340,38 @@
     };
   }
 
+  function buildHealthGenesisCapabilityStatusPacket(input = "", context = {}) {
+    const counts = HEALTH_GENESIS_CAPABILITY_STATUS.reduce((acc, item) => {
+      acc[item.classification] = (acc[item.classification] || 0) + 1;
+      return acc;
+    }, {});
+    const productionLimited = HEALTH_GENESIS_CAPABILITY_STATUS.filter(item => item.classification !== "implemented_locally");
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_genesis_capability_status_packet",
+      domainId: "health_genesis_capability_status",
+      capabilityStatus: HEALTH_GENESIS_CAPABILITY_STATUS,
+      capabilityCount: HEALTH_GENESIS_CAPABILITY_STATUS.length,
+      classificationCounts: counts,
+      productionLimitedCapabilities: productionLimited,
+      productionAuthorized: false,
+      executionEnabled: false,
+      allCapabilitiesClassified: true,
+      canReportCapabilityStatus: true,
+      canActivateRegulatedExecution: false,
+      canClaimProductionReady: false,
+      canBypassCredentials: false,
+      canBypassClinicalApproval: false,
+      canBypassRegulatoryReview: false,
+      canBypassConsentAudit: false,
+      safety: commonSafety(),
+      auditReceipt: audit("health_genesis_capability_status_prepared", "health_genesis_capability_status"),
+      userVisibleStatus: `Nexus prepared the Genesis enterprise health capability status packet. ${HEALTH_GENESIS_CAPABILITY_STATUS.length} capabilities are classified across implemented-local, credential-blocked, approval-blocked, experimental, disabled, and not-production-authorized states. Nexus can report what is built and what remains blocked, but it cannot activate regulated execution, claim production authorization, bypass credentials, bypass clinical/regulatory review, bypass consent, diagnose, prescribe, contact providers, or dispatch emergencies.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -1332,6 +1406,7 @@
       healthModelSourceMonitoringGovernance: HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE,
       healthRegulatoryAssessmentGovernance: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE,
       healthSecurityPrivacyAdversarialGovernance: HEALTH_SECURITY_PRIVACY_ADVERSARIAL_GOVERNANCE,
+      healthGenesisCapabilityStatus: HEALTH_GENESIS_CAPABILITY_STATUS,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
       humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
       reviewDecisionStates: REVIEW_DECISION_STATES,
@@ -1374,12 +1449,13 @@
       healthModelSourceMonitoringState: HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE.defaultState,
       healthRegulatoryAssessmentState: HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE.defaultState,
       healthSecurityPrivacyAdversarialState: HEALTH_SECURITY_PRIVACY_ADVERSARIAL_GOVERNANCE.defaultState,
+      healthGenesisCapabilityStatusCount: HEALTH_GENESIS_CAPABILITY_STATUS.length,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "health communications/follow-up governance", "health model/source monitoring governance", "capability regulatory assessment", "security/privacy/adversarial validation", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "FHIR terminology governance", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "youth/vulnerable safeguards", "accessibility/localization governance", "health communications/follow-up governance", "health model/source monitoring governance", "capability regulatory assessment", "security/privacy/adversarial validation", "Genesis capability status", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -1450,6 +1526,7 @@
     HEALTH_MODEL_SOURCE_MONITORING_GOVERNANCE,
     HEALTH_REGULATORY_ASSESSMENT_GOVERNANCE,
     HEALTH_SECURITY_PRIVACY_ADVERSARIAL_GOVERNANCE,
+    HEALTH_GENESIS_CAPABILITY_STATUS,
     PROFESSIONAL_WORKSPACE_ROLES,
     HUMAN_REVIEW_QUEUE_TYPES,
     REVIEW_DECISION_STATES,
@@ -1472,6 +1549,7 @@
     buildHealthModelSourceMonitoringPacket,
     buildHealthRegulatoryAssessmentPacket,
     buildHealthSecurityPrivacyAdversarialPacket,
+    buildHealthGenesisCapabilityStatusPacket,
     registries,
     status,
     hasUnsafeClaim
