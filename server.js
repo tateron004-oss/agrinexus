@@ -38546,6 +38546,21 @@ async function api(req, res, url) {
     return send(res, 200, nexusMentalHealthBehavioralWellness.buildSupportPacket(body?.text || body?.command || "", body?.context || {}));
   }
 
+  if (url.pathname === "/api/nexus/mental-health/screening/governance" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusMentalHealthBehavioralWellness.buildScreeningGovernance(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/mental-health/escalation" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusMentalHealthBehavioralWellness.buildJurisdictionEscalation(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/mental-health/safety-plan" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusMentalHealthBehavioralWellness.buildSafetyPlan(body?.text || body?.command || "", body?.context || {}));
+  }
+
   if (url.pathname === "/api/nexus/health-evidence/status" && req.method === "GET") {
     return send(res, 200, nexusEnterpriseHealthEvidenceTrust.status(process.env));
   }

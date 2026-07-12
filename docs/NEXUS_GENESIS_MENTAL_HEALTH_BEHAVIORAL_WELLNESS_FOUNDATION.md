@@ -48,6 +48,9 @@ Direct crisis, abuse, safeguarding, violence, and emergency language overrides o
 - `GET /api/nexus/mental-health/status`
 - `POST /api/nexus/mental-health/classify`
 - `POST /api/nexus/mental-health/support`
+- `POST /api/nexus/mental-health/screening/governance`
+- `POST /api/nexus/mental-health/escalation`
+- `POST /api/nexus/mental-health/safety-plan`
 
 These endpoints return source/provider readiness metadata, support packets, and classification results. They do not write records, contact providers, dispatch emergency services, book appointments, diagnose, prescribe, or expose secrets.
 
@@ -87,6 +90,14 @@ Provider sources are represented as readiness contracts:
 
 Provider execution remains disabled until source, jurisdiction, credential, consent, confirmation, and audit requirements are satisfied.
 
+## Governed Screening And Crisis Escalation
+
+Nexus now carries governed screening contracts for PHQ-9, GAD-7, WHO-5, AUDIT-C, PCL-5, and C-SSRS-style suicide-safety screening. Screening remains consent-gated, non-diagnostic, unscored by default, and professional-review bound. Nexus may organize the selected instrument and missing governance requirements, but it does not assign severity, diagnose, or recommend treatment.
+
+Jurisdiction-aware escalation metadata is available for United States, Kenya, Nigeria, and generic unverified jurisdictions. These profiles identify approved-resource requirements and blocked states; they do not authorize live handoff, provider contact, or emergency dispatch.
+
+The safety-plan packet provides local support steps for immediate safety preparation, trusted-person contact, local emergency/crisis support, and professional-review preparation. It is not a safety certification and does not trigger external action.
+
 ## Safety Boundaries
 
 Nexus must not:
@@ -114,4 +125,4 @@ Package alias:
 
 - `npm run qa:nexus-mental-health-behavioral-wellness`
 
-The QA verifies open-dialogue routing, crisis override, screening consent blocking, provider readiness, privacy defaults, server routes, Standard User wiring, and no-fake-execution claims.
+The QA verifies open-dialogue routing, crisis override, governed screening consent blocking, jurisdiction escalation metadata, safety-plan packets, provider readiness, privacy defaults, server routes, Standard User wiring, and no-fake-execution claims.

@@ -1490,6 +1490,9 @@ function shouldOpenNexusMentalHealthMission(packet = {}) {
 function renderNexusMentalHealthSupportCard(packet = {}) {
   const classification = packet.classification || {};
   const safety = packet.safety || {};
+  const screening = packet.screeningGovernance || {};
+  const escalation = packet.jurisdictionEscalation || {};
+  const safetyPlan = packet.safetyPlan || {};
   return {
     type: "mental_health_behavioral_wellness",
     title: "Mental Health & Behavioral Wellness",
@@ -1505,6 +1508,9 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
       `State: ${classification.state || "support"}`,
       `Action: ${classification.action || "supportive_dialogue"}`,
       `Professional review required: ${classification.professionalReviewRequired ? "yes" : "no"}`,
+      `Screening governance: ${screening.instrumentId || "not requested"}`,
+      `Jurisdiction escalation: ${escalation.jurisdictionId || "not active"}`,
+      `Safety plan steps: ${Array.isArray(safetyPlan.steps) ? safetyPlan.steps.length : 0}`,
       `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
       `No provider contacted: ${safety.noProviderContacted ? "yes" : "required"}`,
       `Memory mode: ${packet.privacy?.defaultMemoryMode || "session_only"}`

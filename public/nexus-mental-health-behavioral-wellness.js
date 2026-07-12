@@ -76,6 +76,31 @@
     }
   ]);
 
+  const GOVERNED_SCREENING_INSTRUMENTS = Object.freeze({
+    phq9: screeningInstrument("phq9", "PHQ-9 depression screening governance", ["depression", "low_mood"], 9, ["user_consent", "validated_language", "crisis_item_review", "professional_review_for_concern"]),
+    gad7: screeningInstrument("gad7", "GAD-7 anxiety screening governance", ["anxiety", "worry"], 7, ["user_consent", "validated_language", "professional_review_for_concern"]),
+    who5: screeningInstrument("who5", "WHO-5 wellbeing screening governance", ["wellbeing", "quality_of_life"], 5, ["user_consent", "validated_language", "non_diagnostic_label"]),
+    auditc: screeningInstrument("auditc", "AUDIT-C alcohol-use screening governance", ["alcohol", "substance_use"], 3, ["user_consent", "validated_language", "substance_use_resource_boundary"]),
+    pcl5: screeningInstrument("pcl5", "PCL-5 trauma symptom screening governance", ["trauma", "ptsd"], 20, ["user_consent", "validated_language", "trauma_informed_support", "professional_review_for_concern"]),
+    cssrs: screeningInstrument("cssrs", "C-SSRS style suicide safety screening governance", ["suicide_safety", "crisis"], "trained_workflow", ["trained_workflow", "jurisdiction_resource_review", "immediate_safety_override"])
+  });
+
+  const JURISDICTION_ESCALATION_REGISTRY = Object.freeze({
+    us: jurisdictionEscalation("us", "United States", ["988 Suicide & Crisis Lifeline", "local emergency services", "SAMHSA treatment locator"], ["988", "911"], "requires current local resource verification before any live handoff"),
+    kenya: jurisdictionEscalation("kenya", "Kenya", ["local emergency services", "local approved crisis or safeguarding resource"], ["local emergency number required"], "configuration required before local crisis resource display"),
+    nigeria: jurisdictionEscalation("nigeria", "Nigeria", ["local emergency services", "local approved crisis or safeguarding resource"], ["local emergency number required"], "configuration required before local crisis resource display"),
+    generic: jurisdictionEscalation("generic", "User jurisdiction not verified", ["local emergency services", "trusted local crisis/safeguarding resource", "nearest safe emergency location"], ["ask for city/region if safe"], "do not claim jurisdiction-specific resource without configured source")
+  });
+
+  const SAFETY_PLAN_STEPS = Object.freeze([
+    "Move away from immediate means of harm when possible.",
+    "Move toward a safer place or another person.",
+    "Contact local emergency or crisis support if there is immediate danger.",
+    "Tell one trusted person what is happening if safe to do so.",
+    "Write down what happened, what changed, and what support is needed for a professional review.",
+    "Keep Nexus in support mode only; Nexus does not declare safety, dispatch help, or contact anyone automatically."
+  ]);
+
   const STATE_DEFINITIONS = Object.freeze({
     ordinary_conversation: "Ordinary conversation with no mental-health support signal.",
     general_wellness: "General wellbeing support and education.",
@@ -147,6 +172,130 @@
     if (/\b(do not remember|don't remember|session only|delete|show me what you remember|stop.*check)\b/.test(normalized)) return "privacy_control";
     if (/\b(calm down|breathing|grounding|cope|coping)\b/.test(normalized)) return "coping_tool";
     return "supportive_dialogue";
+  }
+
+  function screeningInstrument(instrumentId, label, domains, itemCount, governanceRequirements) {
+    return Object.freeze({
+      instrumentId,
+      label,
+      domains,
+      itemCount,
+      governanceRequirements,
+      executionEnabled: false,
+      scoringEnabled: false,
+      outputBoundary: "non-diagnostic preparation only; no diagnosis, severity label, treatment recommendation, or emergency triage replacement",
+      consentRequired: true,
+      professionalReviewRequiredForConcern: true,
+      crisisOverrideRequired: true,
+      auditRequired: true
+    });
+  }
+
+  function jurisdictionEscalation(jurisdictionId, label, resourceTypes, displayRules, verificationStatus) {
+    return Object.freeze({
+      jurisdictionId,
+      label,
+      resourceTypes,
+      displayRules,
+      verificationStatus,
+      liveHandoffEnabled: false,
+      emergencyDispatchEnabled: false,
+      providerContactEnabled: false,
+      userApprovalRequiredBeforeSharing: true,
+      auditRequired: true
+    });
+  }
+
+  function inferScreeningInstrument(input = "") {
+    const text = normalizeText(input);
+    if (/\b(phq|phq-9|depression screen)\b/.test(text)) return "phq9";
+    if (/\b(gad|gad-7|anxiety screen)\b/.test(text)) return "gad7";
+    if (/\b(who-5|who5|wellbeing screen|well-being screen)\b/.test(text)) return "who5";
+    if (/\b(audit-c|auditc|alcohol screen)\b/.test(text)) return "auditc";
+    if (/\b(pcl-5|pcl5|trauma screen|ptsd screen)\b/.test(text)) return "pcl5";
+    if (/\b(c-ssrs|cssrs|suicide screen|safety screen)\b/.test(text)) return "cssrs";
+    return /\b(screen|screening|assessment|questionnaire)\b/.test(text) ? "phq9" : null;
+  }
+
+  function inferJurisdiction(input = "", context = {}) {
+    const explicit = normalizeText(context.jurisdiction || context.country || "");
+    const text = `${normalizeText(input)} ${explicit}`.trim();
+    if (/\b(united states|usa|u\.s\.|us|california|stockton|new york|texas)\b/.test(text)) return "us";
+    if (/\b(kenya|nairobi|mombasa|kisumu)\b/.test(text)) return "kenya";
+    if (/\b(nigeria|lagos|abuja|kano)\b/.test(text)) return "nigeria";
+    return "generic";
+  }
+
+  function buildScreeningGovernance(input = "", context = {}) {
+    const instrumentId = inferScreeningInstrument(input) || "phq9";
+    const instrument = GOVERNED_SCREENING_INSTRUMENTS[instrumentId];
+    const consentGranted = context.screeningConsent === true || /\b(i consent|yes.*screen|start screening|i agree)\b/i.test(String(input || ""));
+    return {
+      ok: true,
+      packetType: "governed_mental_health_screening_packet",
+      instrumentId,
+      instrument,
+      consentGranted,
+      canDisplayQuestions: consentGranted,
+      canScore: false,
+      canDiagnose: false,
+      canRecommendTreatment: false,
+      professionalReviewRequired: true,
+      blockedUntil: consentGranted
+        ? ["approved instrument text", "validated language", "professional review path", "audit receipt before interpretation"]
+        : ["explicit user consent", "non-diagnostic explanation", "validated language", "professional review path"],
+      safety: {
+        noDiagnosis: true,
+        noSeverityLabel: true,
+        noTreatmentRecommendation: true,
+        noEmergencyDispatch: true,
+        noProviderContacted: true,
+        crisisOverrideRequired: true
+      }
+    };
+  }
+
+  function buildJurisdictionEscalation(input = "", context = {}) {
+    const jurisdictionId = inferJurisdiction(input, context);
+    const escalation = JURISDICTION_ESCALATION_REGISTRY[jurisdictionId] || JURISDICTION_ESCALATION_REGISTRY.generic;
+    return {
+      ok: true,
+      packetType: "jurisdiction_aware_crisis_escalation_packet",
+      jurisdictionId,
+      escalation,
+      jurisdictionVerified: jurisdictionId !== "generic" && escalation.verificationStatus !== "configuration required before local crisis resource display",
+      liveHandoffEnabled: false,
+      emergencyDispatchEnabled: false,
+      providerContactEnabled: false,
+      blockedUntil: [
+        "approved jurisdiction resource source",
+        "current local crisis/safeguarding registry",
+        "user consent before sharing",
+        "audit receipt",
+        "configured provider or emergency partner for any live handoff"
+      ],
+      safety: {
+        noEmergencyDispatch: true,
+        noProviderContacted: true,
+        noSilentHandoff: true,
+        noSafetyCertification: true
+      }
+    };
+  }
+
+  function buildSafetyPlan(input = "", context = {}) {
+    return {
+      ok: true,
+      packetType: "mental_health_safety_plan_packet",
+      generatedAt: new Date().toISOString(),
+      jurisdictionEscalation: buildJurisdictionEscalation(input, context),
+      steps: SAFETY_PLAN_STEPS,
+      userVisibleBoundary: "This is a support plan, not a safety certification. If there is immediate danger, contact local emergency or crisis support now.",
+      canShare: false,
+      noEmergencyDispatch: true,
+      noProviderContacted: true,
+      auditRequiredBeforeSharing: true
+    };
   }
 
   function classifyState(input = "", context = {}) {
@@ -269,6 +418,9 @@
   function buildSupportPacket(input = "", context = {}) {
     const classification = classifyState(input, context);
     const now = new Date().toISOString();
+    const screeningGovernance = classification.action === "optional_screening" ? buildScreeningGovernance(input, context) : null;
+    const jurisdictionEscalation = classification.crisisOverride || classification.state === "abuse_or_safeguarding_concern" ? buildJurisdictionEscalation(input, context) : null;
+    const safetyPlan = classification.crisisOverride ? buildSafetyPlan(input, context) : null;
     const immediateActions = [];
     if (classification.crisisOverride) {
       immediateActions.push("Seek local emergency or crisis support now if there is immediate danger.");
@@ -300,6 +452,9 @@
       immediateActions,
       evidenceCollections: TRUSTED_EVIDENCE_COLLECTIONS,
       providerSources: VERIFIED_PROVIDER_SOURCES,
+      screeningGovernance,
+      jurisdictionEscalation,
+      safetyPlan,
       sourceReceipts: TRUSTED_EVIDENCE_COLLECTIONS.map(collection => ({
         collectionId: collection.collectionId,
         evidenceTier: collection.evidenceTier,
@@ -309,6 +464,7 @@
       })),
       safety: {
         noDiagnosis: true,
+        noScreeningScoreWithoutGovernance: true,
         noPrescribing: true,
         noMedicationChange: true,
         noProviderContacted: true,
@@ -365,6 +521,9 @@
       defaultMemoryMode: "session_only",
       evidenceCollections: TRUSTED_EVIDENCE_COLLECTIONS.length,
       providerSources: VERIFIED_PROVIDER_SOURCES.length,
+      governedScreeningInstruments: Object.keys(GOVERNED_SCREENING_INSTRUMENTS).length,
+      jurisdictionEscalationProfiles: Object.keys(JURISDICTION_ESCALATION_REGISTRY).length,
+      safetyPlanSteps: SAFETY_PLAN_STEPS.length,
       safety: {
         noSecretsExposed: true,
         noDiagnosis: true,
@@ -381,8 +540,14 @@
     STATE_DEFINITIONS,
     TRUSTED_EVIDENCE_COLLECTIONS,
     VERIFIED_PROVIDER_SOURCES,
+    GOVERNED_SCREENING_INSTRUMENTS,
+    JURISDICTION_ESCALATION_REGISTRY,
+    SAFETY_PLAN_STEPS,
     shouldHandle,
     classifyState,
+    buildScreeningGovernance,
+    buildJurisdictionEscalation,
+    buildSafetyPlan,
     buildSupportPacket,
     status
   };
