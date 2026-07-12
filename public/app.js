@@ -1989,6 +1989,110 @@ function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}
   return true;
 }
 
+function renderNexusGenesisAfricaAgOpportunityCard(packet = {}) {
+  const isStatus = packet.packetType === "genesis_africa_ag_opportunity_capability_status_packet";
+  const isRegistry = packet.packetType === "genesis_africa_ag_opportunity_registry_packet";
+  const profile = packet.participantProfile || {};
+  const firstRecommendation = (packet.recommendations || [])[0] || {};
+  const counts = packet.classificationCounts || {};
+  return {
+    type: packet.packetType || "genesis_africa_youth_women_ag_opportunity_packet",
+    title: isStatus ? "Africa Opportunity Capability Status" : isRegistry ? "Africa Opportunity Registries" : "Africa Agriculture Opportunity Packet",
+    status: "africa-youth-women-agricultural-opportunity",
+    localOnly: true,
+    confirmationRequired: false,
+    modeSummary: {
+      id: "africa-youth-women-agricultural-opportunity",
+      label: isStatus ? "Capability classifications and production limits" : isRegistry ? "Country, source, and model registries" : "Pathway, training, barriers, support, and next steps",
+      description: packet.userVisibleStatus || "Nexus prepared an Africa agriculture opportunity packet."
+    },
+    bullets: isStatus ? [
+      `Countries configured: ${packet.supportedCountryCount || 0}`,
+      `Implemented locally: ${counts.implemented_locally || 0}`,
+      `Credential blocked: ${counts.credential_blocked || 0}`,
+      `Data limited: ${counts.data_limited || 0}`,
+      `Production authorized: ${packet.productionAuthorized ? "yes" : "no"}`,
+      `Buyer contact enabled: ${packet.buyerContactEnabled ? "yes" : "no"}`,
+      `Training enrollment enabled: ${packet.trainingEnrollmentEnabled ? "yes" : "no"}`
+    ] : isRegistry ? [
+      `Countries: ${(packet.countries || []).length}`,
+      `Sources: ${(packet.sources || []).length}`,
+      `Models: ${(packet.models || []).length}`,
+      "Country-specific validation is required before production use.",
+      "Directories do not prove availability, funding, provider quality, buyer demand, yield, or income."
+    ] : [
+      `Country: ${profile.country || "country needed"}`,
+      `Population support: ${profile.targetPopulation || "youth/women support"}`,
+      `Interests: ${(profile.interests || []).join(", ") || "agriculture pathway"}`,
+      `Primary path: ${firstRecommendation.title || "more information needed"}`,
+      `Support needs: ${(profile.barriers || []).join(", ") || "check transport, childcare, digital access, finance"}`,
+      `Receipt: ${packet.receipt?.receiptId || "created locally"}`,
+      `Buyer contacted: ${packet.buyerContactEnabled ? "yes" : "no"}`,
+      `Training enrolled: ${packet.trainingEnrollmentEnabled ? "yes" : "no"}`,
+      `Income/yield guarantee active: ${packet.incomeGuaranteeEnabled || packet.yieldGuaranteeEnabled ? "yes" : "no"}`
+    ],
+    receiptId: packet.receipt?.receiptId || "",
+    packet
+  };
+}
+
+function handleNexusGenesisAfricaAgOpportunityCommand(command = "", options = {}) {
+  const runtime = window.NexusGenesisAfricaAgOpportunity;
+  const text = String(command || "").trim();
+  if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const statusIntent = /\b(capability status|production limitations|what is production authorized)\b/i.test(text);
+  const registryIntent = /\b(registry|registries|source|sources|countries|models)\b/i.test(text) && /\b(africa|agriculture|women|youth)\b/i.test(text);
+  const context = {
+    language: languageCode(),
+    source: options.source || "standard_user",
+    consentState: "session_only_or_not_provided"
+  };
+  const packet = registryIntent
+    ? runtime.registries()
+    : statusIntent
+    ? runtime.buildCapabilityStatusPacket(text)
+    : runtime.buildOpportunityPacket(text, context);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const response = packet.userVisibleStatus || "Nexus prepared an Africa agriculture opportunity packet.";
+  recordNexusOsConversationTurn("assistant", response, {
+    source: "nexus-genesis-africa-ag-opportunity",
+    capabilityId: runtime.SERVICE_ID || "africa_youth_women_agricultural_opportunity_intelligence",
+    noBuyerContacted: true,
+    noTrainingEnrollment: true,
+    noFinancingApplication: true,
+    noYieldOrIncomeGuarantee: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message: response,
+    source: "nexus-genesis-africa-ag-opportunity",
+    capabilityId: runtime.SERVICE_ID || "africa_youth_women_agricultural_opportunity_intelligence",
+    preparedCards: [renderNexusGenesisAfricaAgOpportunityCard(packet)],
+    result: packet,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    noBuyerContacted: true,
+    noTrainingEnrollment: true,
+    noFinancingApplication: true,
+    noTransportDispatch: true,
+    noYieldOrIncomeGuarantee: true
+  };
+  setNexusCoreState("reasoning", {
+    source: "genesis-africa-ag-opportunity",
+    statusText: statusIntent ? "Africa opportunity capability status prepared." : "Africa opportunity packet prepared."
+  });
+  setVoiceResponse(response, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-genesis-africa-ag-opportunity",
+    africaAgOpportunityPacket: packet
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
   if (isUniversalLanguageCommand(command)) {
@@ -1996,6 +2100,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     return true;
   }
   if (runNexusStandardUserHomeLocalCommand(command)) return true;
+  if (handleNexusGenesisAfricaAgOpportunityCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
@@ -54518,6 +54623,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (handleNexusGenesisAfricaAgOpportunityCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();

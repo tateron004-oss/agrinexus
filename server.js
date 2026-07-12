@@ -26,6 +26,7 @@ const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.j
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
+const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -38739,6 +38740,24 @@ async function api(req, res, url) {
       queueLength: db.profile.nexusWorkforceGovernanceQueue.length,
       noExternalExecutionAuthorized: true
     });
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/status" && req.method === "GET") {
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.status());
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/registries" && req.method === "GET") {
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.registries());
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/evaluate" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildOpportunityPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/africa-ag-opportunity/capability-status" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisAfricaAgOpportunity.buildCapabilityStatusPacket(body?.text || body?.command || ""));
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
