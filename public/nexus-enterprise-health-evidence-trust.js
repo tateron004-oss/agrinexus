@@ -224,6 +224,19 @@
     sharingDefault: "blocked_until_user_approval_and_audit_receipt"
   });
 
+  const HEALTH_DATA_RIGHTS_GOVERNANCE = Object.freeze({
+    governedRights: ["view", "correct", "export", "revoke", "delete local copy where permitted", "see audit trail"],
+    governedActions: ["provider sharing", "FHIR access", "pharmacy handoff", "appointment/referral request", "social-care sharing", "messages/calls", "export", "memory storage"],
+    requiredBeforeSharing: ["specific recipient", "minimum necessary data preview", "purpose preview", "explicit user consent", "revocation path", "audit receipt"],
+    requiredBeforeExport: ["user identity/session confirmation", "export scope preview", "sensitive-data warning", "explicit approval", "audit receipt"],
+    requiredBeforeDeletion: ["local-copy scope", "retention/legal limitation check", "confirmation", "audit receipt"],
+    defaultMemoryState: "do_not_store_sensitive_health_data_without_explicit_consent",
+    executionEnabled: false,
+    noSilentSharing: true,
+    noSilentExport: true,
+    noSilentDeletion: true
+  });
+
   const ACCESSIBILITY_LOCALIZATION_GOVERNANCE = Object.freeze({
     supportedNeeds: ["plain language", "low literacy", "multilingual labels", "voice fallback", "caption fallback", "low bandwidth", "offline queue", "cultural adaptation review"],
     translationState: "translation_unverified_until_human_or_approved_translation_review",
@@ -281,7 +294,7 @@
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
     /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
-    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
+    /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
   ];
 
   function source(sourceId, name, tier, jurisdiction, domains, canonicalUrl) {
@@ -806,6 +819,49 @@
     };
   }
 
+  function buildHealthDataRightsPacket(input = "", context = {}) {
+    const text = normalizeText(input);
+    const actionType = /\b(delete|deletion|erase|remove)\b/.test(text)
+      ? "deletion_request_preparation"
+      : /\b(revoke|withdraw)\b/.test(text)
+      ? "consent_revocation_preparation"
+      : /\b(correct|correction|fix)\b/.test(text)
+      ? "correction_request_preparation"
+      : /\b(export|download|copy)\b/.test(text)
+      ? "export_request_preparation"
+      : /\b(share|send|provider|pharmacy|social care|fhir)\b/.test(text)
+      ? "sharing_consent_preparation"
+      : /\b(memory|remember|store)\b/.test(text)
+      ? "sensitive_memory_consent_preparation"
+      : "health_data_rights_review";
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_data_rights_governance_packet",
+      domainId: "consent_privacy",
+      actionType,
+      consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
+      healthDataRightsGovernance: HEALTH_DATA_RIGHTS_GOVERNANCE,
+      requiredBeforeApproval: actionType.includes("export")
+        ? HEALTH_DATA_RIGHTS_GOVERNANCE.requiredBeforeExport
+        : actionType.includes("deletion")
+        ? HEALTH_DATA_RIGHTS_GOVERNANCE.requiredBeforeDeletion
+        : HEALTH_DATA_RIGHTS_GOVERNANCE.requiredBeforeSharing,
+      executionEnabled: false,
+      canPrepareConsentPreview: true,
+      canShareHealthData: false,
+      canAccessFhirRecords: false,
+      canStoreSensitiveMemory: false,
+      canExportNow: false,
+      canDeleteNow: false,
+      canBypassRevocation: false,
+      safety: commonSafety(),
+      auditReceipt: audit("health_data_rights_governance_prepared", "consent_privacy"),
+      userVisibleStatus: `Nexus prepared health data rights governance for ${actionType.replace(/_/g, " ")}. Nexus can prepare a consent, correction, export, revocation, deletion, or memory-control preview, but it cannot share health data, access FHIR records, store sensitive memory, export data, delete records, or bypass revocation until identity, scope, consent, retention, connector, confirmation, and audit gates are satisfied.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -832,6 +888,7 @@
       medicationPharmacyEvidenceGovernance: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
       laboratoryDiagnosticEvidenceGovernance: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
+      healthDataRightsGovernance: HEALTH_DATA_RIGHTS_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
       humanReviewQueueTypes: HUMAN_REVIEW_QUEUE_TYPES,
@@ -867,12 +924,13 @@
       fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
       medicationPharmacyGovernanceState: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE.defaultState,
       laboratoryDiagnosticGovernanceState: LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE.defaultState,
+      healthDataRightsGovernanceState: HEALTH_DATA_RIGHTS_GOVERNANCE.defaultMemoryState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "laboratory/diagnostic evidence governance", "health data rights governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -935,6 +993,7 @@
     MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
     LABORATORY_DIAGNOSTIC_EVIDENCE_GOVERNANCE,
     CONSENT_PRIVACY_GOVERNANCE,
+    HEALTH_DATA_RIGHTS_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
     HUMAN_REVIEW_QUEUE_TYPES,
@@ -950,6 +1009,7 @@
     buildHumanReviewPacket,
     buildMedicationPharmacyEvidencePacket,
     buildLaboratoryDiagnosticEvidencePacket,
+    buildHealthDataRightsPacket,
     registries,
     status,
     hasUnsafeClaim

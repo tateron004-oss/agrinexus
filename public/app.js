@@ -1605,21 +1605,31 @@ function renderNexusEnterpriseHealthEvidenceTrustCard(packet = {}) {
   const reviewQueues = packet.reviewQueueTypes && typeof packet.reviewQueueTypes === "object" ? packet.reviewQueueTypes : {};
   const isMedicationPharmacyPacket = packet.packetType === "enterprise_health_medication_pharmacy_evidence_governance_packet";
   const isLaboratoryDiagnosticPacket = packet.packetType === "enterprise_health_laboratory_diagnostic_evidence_governance_packet";
+  const isHealthDataRightsPacket = packet.packetType === "enterprise_health_data_rights_governance_packet";
   const inspectorFields = packet.inspectorView?.fields || {};
   const isRegistryPacket = packet.registryPacketType === "enterprise_health_governance_registry_packet";
   const isHumanReviewPacket = packet.packetType === "enterprise_health_human_review_control_packet";
   return {
     type: packet.registryPacketType || packet.packetType || "enterprise_health_evidence_trust_packet",
-    title: isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
+    title: isHealthDataRightsPacket ? "Health Data Rights & Consent Governance" : isLaboratoryDiagnosticPacket ? "Laboratory & Diagnostic Evidence Governance" : isMedicationPharmacyPacket ? "Medication & Pharmacy Evidence Governance" : isHumanReviewPacket ? "Enterprise Health Human Review Controls" : isRegistryPacket ? "Enterprise Health Governance Registries" : "Enterprise Health Evidence Trust",
     status: packet.domainId || "health-evidence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "enterprise-health-evidence-trust",
-      label: isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
+      label: isHealthDataRightsPacket ? "Health data rights governance" : isLaboratoryDiagnosticPacket ? "Laboratory/diagnostic governance" : isMedicationPharmacyPacket ? "Medication/pharmacy governance" : isHumanReviewPacket ? "Human review controls" : isRegistryPacket ? "Professional governance registry" : "Professional evidence inspector",
       description: packet.userVisibleStatus || (isRegistryPacket ? "Nexus prepared the enterprise health governance registries." : "Nexus prepared an enterprise health evidence governance packet.")
     },
-    bullets: isLaboratoryDiagnosticPacket ? [
+    bullets: isHealthDataRightsPacket ? [
+      `Action type: ${packet.actionType || "health data rights review"}`,
+      `Governed rights: ${Array.isArray(packet.healthDataRightsGovernance?.governedRights) ? packet.healthDataRightsGovernance.governedRights.length : 0}`,
+      `Required approvals: ${Array.isArray(packet.requiredBeforeApproval) ? packet.requiredBeforeApproval.length : 0}`,
+      `Can share health data: ${packet.canShareHealthData ? "yes" : "no"}`,
+      `Can access FHIR records: ${packet.canAccessFhirRecords ? "yes" : "no"}`,
+      `Can store sensitive memory: ${packet.canStoreSensitiveMemory ? "yes" : "no"}`,
+      `Can bypass revocation: ${packet.canBypassRevocation ? "yes" : "no"}`,
+      `Execution enabled: ${packet.executionEnabled ? "yes" : "no"}`
+    ] : isLaboratoryDiagnosticPacket ? [
       `Concern type: ${packet.concernType || "diagnostic evidence preparation"}`,
       `Governed workflows: ${Array.isArray(packet.governance?.governedWorkflows) ? packet.governance.governedWorkflows.length : 0}`,
       `Required sources: ${sources.length}`,
@@ -1676,6 +1686,7 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
   const medicationPharmacyIntent = /\b(medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance)\b/i.test(text);
   const laboratoryDiagnosticIntent = /\b(lab governance|laboratory governance|diagnostic evidence|diagnostic governance|imaging governance)\b/i.test(text);
+  const healthDataRightsIntent = /\b(health data rights|memory consent|sharing consent|export health data|delete health data|revoke consent|correction request|consent and privacy)\b/i.test(text);
   const humanReviewIntent = /\b(human review|review queue|governance review|professional review controls|professional workspace controls)\b/i.test(text);
   const registryIntent = /\b(source registry|governance registr(?:y|ies)|verified provider trust|provider trust registry|fhir terminology|medical record governance|consent and privacy|clinical calculator registry)\b/i.test(text);
   const predictiveIntent = /\b(predictive|prediction|risk model|risk score|calculator|validation population|model governance)\b/i.test(text);
@@ -1687,7 +1698,9 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
     role: professionalRole ? "professional" : "standard_user",
     verification: sourceVerificationIntent ? { sourceInspectionRequested: true } : {}
   };
-  const packet = laboratoryDiagnosticIntent
+  const packet = healthDataRightsIntent
+    ? runtime.buildHealthDataRightsPacket(text, evidenceContext)
+    : laboratoryDiagnosticIntent
     ? runtime.buildLaboratoryDiagnosticEvidencePacket(text, evidenceContext)
     : medicationPharmacyIntent
     ? runtime.buildMedicationPharmacyEvidencePacket(text, evidenceContext)

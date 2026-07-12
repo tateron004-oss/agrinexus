@@ -131,6 +131,12 @@ Nexus now exposes laboratory and diagnostic evidence governance through `POST /a
 
 This capability can organize lab result details, units, reference-range questions, diagnostic-imaging report questions, and provider-ready lab summaries. It cannot diagnose, provide final lab interpretation, replace a radiologist or clinician, claim universal reference ranges, write medical records, or decide urgency without verified source/context, professional review, and audit gates.
 
+## Health Data Rights And Consent Governance
+
+Nexus now exposes consent, privacy, memory, sharing, correction, export, revocation, and deletion governance through `POST /api/nexus/health-evidence/consent-rights` and Standard User commands such as "show health data rights" or "revoke consent." The packet classifies the requested rights action and shows the identity, scope, consent, retention, connector, confirmation, and audit gates required before any real data operation.
+
+This capability can prepare consent previews, correction request previews, export scope previews, revocation plans, deletion-scope notes, and sensitive-memory consent checks. It cannot share health data, access FHIR records, store sensitive memory, export data, delete records, bypass revocation, or mutate backend records until the required gates are active.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
