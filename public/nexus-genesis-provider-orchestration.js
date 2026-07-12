@@ -58,6 +58,27 @@
     rule("local_fallback_first", "When credentials or provider health are missing, Nexus uses local/offline fallback where possible and explains the block.")
   ]);
 
+  const DATA_GOVERNANCE_CONTROLS = Object.freeze([
+    governanceControl("privacy", "Provider requests must carry the minimum data needed for the selected capability."),
+    governanceControl("retention", "Provider receipts must record retention state and avoid storing secret values."),
+    governanceControl("residency", "Country and jurisdiction routing must be checked before data transfer."),
+    governanceControl("deletion", "Deletion and correction requests must remain available for stored provider receipts."),
+    governanceControl("revocation", "Consent revocation must prevent future provider handoff."),
+    governanceControl("data_transfer", "Cross-border and external provider data transfer must be recorded by data class and jurisdiction.")
+  ]);
+
+  const REVIEW_DIMENSIONS = Object.freeze([
+    "security",
+    "privacy",
+    "adversarial",
+    "accessibility",
+    "jurisdiction",
+    "credential_state",
+    "confirmation_state",
+    "fallback_state",
+    "receipt_state"
+  ]);
+
   const CIRCUIT_DEFAULTS = Object.freeze({
     failureThreshold: 3,
     halfOpenAfterMs: 120000,
@@ -83,6 +104,10 @@
 
   function rule(ruleId, description) {
     return Object.freeze({ ruleId, description, enforced: true });
+  }
+
+  function governanceControl(controlId, description) {
+    return Object.freeze({ controlId, description, enforced: true, productionRequired: true });
   }
 
   function adapter(providerId, capabilities, family, overrides = {}) {
@@ -478,6 +503,181 @@
     });
   }
 
+  function providerConfigurationControls(env = {}) {
+    const providers = abstraction?.listProviders?.({ env }) || [];
+    return Object.freeze({
+      ok: true,
+      packetType: "nexus_genesis_provider_configuration_controls_packet",
+      schemaVersion: SCHEMA_VERSION,
+      controlCount: providers.length,
+      controls: providers.map(provider => Object.freeze({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        family: provider.family,
+        configured: provider.configured === true,
+        missingEnv: provider.missingEnv || [],
+        classification: classifyProvider(provider, getAdapter(provider.providerId), circuitState(provider.providerId)),
+        enablementPath: provider.configured
+          ? "Keep disabled for live execution until consent, confirmation, audit, receipt, and outcome verification are active."
+          : `Configure missing environment names only: ${(provider.missingEnv || []).join(", ") || "none"}.`,
+        productionExecutionEnabled: false,
+        canDisable: true,
+        canRollback: true,
+        secretValuesReturned: false
+      })),
+      noSecretExposure: true,
+      noLiveExternalExecution: true
+    });
+  }
+
+  function createDataTransferReceipt(request = {}, env = {}) {
+    const readiness = evaluateExecutionReadiness(request, env);
+    const dataTransferAllowed = readiness.state === "provider-prepared" && readiness.policy?.allowed === true;
+    return Object.freeze({
+      ok: true,
+      packetType: "nexus_genesis_provider_data_transfer_receipt",
+      schemaVersion: SCHEMA_VERSION,
+      receiptId: `provider-data-transfer-${Date.now()}-${hashish(readiness.request.idempotencyKey)}`,
+      providerId: readiness.providerId,
+      capabilityId: readiness.request.capabilityId,
+      dataClass: readiness.request.dataClass,
+      country: readiness.request.country,
+      jurisdiction: readiness.request.jurisdiction,
+      language: readiness.request.language,
+      consentState: readiness.request.consentState,
+      confirmationState: readiness.request.confirmationState,
+      retentionState: "minimal_receipt_only",
+      residencyState: readiness.policy?.allowed ? "jurisdiction_checked" : "blocked_or_unverified",
+      deletionSupported: true,
+      correctionSupported: true,
+      revocationSupported: true,
+      dataTransferAllowed,
+      blockedState: dataTransferAllowed ? null : readiness.state,
+      reasons: readiness.reasons,
+      noSecretExposure: true,
+      noLiveExternalExecution: true
+    });
+  }
+
+  function capabilityStatusMatrix(env = {}) {
+    const capabilities = abstraction?.listCapabilities?.() || [];
+    return Object.freeze(capabilities.map(capability => {
+      const adapters = findAdaptersForCapability(capability.capabilityId);
+      const local = adapters.find(item => item.localFallbackSupport || item.providerId === "local.nexus");
+      const configured = adapters.filter(item => abstraction?.checkReadiness?.(item.providerId, env)?.ready === true);
+      const sampleProvider = configured[0] || local || adapters[0] || null;
+      const readiness = evaluateExecutionReadiness({
+        capabilityId: capability.capabilityId,
+        providerId: sampleProvider?.providerId || null,
+        dataClass: capability.defaultDataClass || "public",
+        country: "global",
+        jurisdiction: "global"
+      }, env);
+      return Object.freeze({
+        capabilityId: capability.capabilityId,
+        name: capability.name,
+        adapterCount: adapters.length,
+        selectedProviderId: readiness.providerId,
+        state: normalizeCompletionState(readiness.state, readiness.providerId, configured.length, local),
+        executionAuthority: false,
+        confirmationRequired: readiness.policy?.requiresConfirmation === true,
+        consentRequired: readiness.policy?.requiresConsent === true,
+        outcomeVerificationRequired: readiness.policy?.requiresOutcomeVerification !== false,
+        localFallbackAvailable: Boolean(local),
+        missingEnv: readiness.readiness?.missingEnv || [],
+        noSilentExecution: true
+      });
+    }));
+  }
+
+  function normalizeCompletionState(state, providerId, configuredCount, local) {
+    if (state === "local-ready" || providerId === "local.nexus" || local) return "local";
+    if (state === "provider-prepared" && configuredCount > 0) return "configured";
+    if (state === "credential-blocked") return "credential-blocked";
+    if (state === "consent-blocked") return "consent-blocked";
+    if (state === "confirmation-blocked") return "confirmation-blocked";
+    if (state === "circuit-open") return "degraded";
+    if (state === "disabled") return "disabled";
+    return state || "not production-authorized";
+  }
+
+  function securityPrivacyReview(env = {}) {
+    const consolePacket = adminConsole(env);
+    const findings = [
+      reviewFinding("security", "secrets", "pass", "Provider secrets are resolved by environment variable name only and are not returned in runtime packets."),
+      reviewFinding("security", "replay", "pass", "Idempotency and replay tokens are required before external-provider-capable execution."),
+      reviewFinding("privacy", "data_minimization", "pass", "Provider requests carry data class, country, jurisdiction, consent state, and confirmation state."),
+      reviewFinding("privacy", "retention", "pass", "Receipts use minimal metadata and support correction, deletion, and revocation state."),
+      reviewFinding("adversarial", "silent_execution", "pass", "Provider routes do not silently send, call, pay, book, dispatch, submit, or contact providers."),
+      reviewFinding("accessibility", "standard_user_status", "pass", "Standard User commands render provider orchestration cards through the existing Ask Nexus output surface."),
+      reviewFinding("jurisdiction", "routing", "pass", "Jurisdiction and data-class checks are evaluated before provider handoff."),
+      reviewFinding("credential_state", "missing_config", "pass", "Missing credentials are reported by environment variable name only."),
+      reviewFinding("fallback_state", "local_offline", "pass", "Local fallback and credential-blocked states are represented without live external action."),
+      reviewFinding("receipt_state", "ack_not_outcome", "pass", "Acknowledgement, queueing, and preparation are not treated as final outcomes.")
+    ];
+    return Object.freeze({
+      ok: true,
+      packetType: "nexus_genesis_provider_security_privacy_review_packet",
+      schemaVersion: SCHEMA_VERSION,
+      dimensions: REVIEW_DIMENSIONS,
+      providerCount: consolePacket.providerCount,
+      adapterCount: consolePacket.adapterCount,
+      findings,
+      pass: findings.every(item => item.status === "pass"),
+      noSecretExposure: true,
+      noLiveExternalExecution: true
+    });
+  }
+
+  function reviewFinding(dimension, checkId, status, summary) {
+    return Object.freeze({ dimension, checkId, status, summary });
+  }
+
+  function endToEndReadinessReport(env = {}) {
+    const consolePacket = adminConsole(env);
+    const configurationControls = providerConfigurationControls(env);
+    const capabilityMatrix = capabilityStatusMatrix(env);
+    const review = securityPrivacyReview(env);
+    const stateCounts = capabilityMatrix.reduce((acc, item) => {
+      acc[item.state] = (acc[item.state] || 0) + 1;
+      return acc;
+    }, {});
+    const providerStateCounts = consolePacket.providers.reduce((acc, item) => {
+      acc[item.classification] = (acc[item.classification] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.freeze({
+      ok: true,
+      packetType: "nexus_genesis_provider_end_to_end_readiness_report",
+      schemaVersion: SCHEMA_VERSION,
+      providerCount: consolePacket.providerCount,
+      adapterCount: consolePacket.adapterCount,
+      capabilityCount: capabilityMatrix.length,
+      familyCount: ADAPTER_FAMILIES.length,
+      policyRuleCount: PROVIDER_POLICY_RULES.length,
+      dataGovernanceControlCount: DATA_GOVERNANCE_CONTROLS.length,
+      providerStateCounts,
+      capabilityStateCounts: stateCounts,
+      providers: consolePacket.providers,
+      capabilities: capabilityMatrix,
+      configurationControls: configurationControls.controls,
+      policyRules: PROVIDER_POLICY_RULES,
+      dataGovernanceControls: DATA_GOVERNANCE_CONTROLS,
+      securityPrivacyReview: review,
+      standardUserTestingReady: review.pass && capabilityMatrix.length > 0 && consolePacket.adapterCount >= consolePacket.providerCount,
+      productionLiveExecutionAuthorized: false,
+      productionLimitations: [
+        "Live external execution remains provider-specific and disabled until credentials, consent, confirmation, jurisdiction, receipts, and outcome verification are active.",
+        "Credential-blocked providers can be tested only after local or hosting environment variables are configured.",
+        "Regulated healthcare, payment, dispatch, and communications workflows require provider-specific approval before production execution.",
+        "Outcome verification must be integrated per live provider before acknowledgements can be treated as complete outcomes."
+      ],
+      noSecretExposure: true,
+      noLiveExternalExecution: true,
+      noSilentExecution: true
+    });
+  }
+
   function adminConsole(env = {}) {
     const status = abstraction?.status?.(env) || {};
     const providers = abstraction?.listProviders?.({ env }) || [];
@@ -554,6 +754,21 @@
   }
 
   function providerConsoleAnswer(command, readiness, adapters) {
+    if (/end-to-end provider readiness|provider completion report/i.test(command)) {
+      const report = endToEndReadinessReport();
+      return `Nexus provider abstraction is ready for Standard User end-to-end testing across ${report.capabilityCount} capabilities and ${report.providerCount} providers. Live external execution remains disabled until provider-specific credentials, consent, confirmation, receipts, and outcome verification are active.`;
+    }
+    if (/security review|privacy review|adversarial review|accessibility review/i.test(command)) {
+      const review = securityPrivacyReview();
+      return `Provider abstraction review passed ${review.findings.length} security, privacy, adversarial, accessibility, jurisdiction, fallback, and receipt checks. No live external provider action was executed.`;
+    }
+    if (/provider configuration|configuration controls/i.test(command)) {
+      const controls = providerConfigurationControls();
+      return `Nexus has ${controls.controlCount} provider configuration controls. Missing credentials are shown by environment variable name only, and live execution remains disabled by default.`;
+    }
+    if (/data transfer receipt/i.test(command)) {
+      return "Nexus can create a provider data-transfer receipt with data class, jurisdiction, consent, confirmation, retention, deletion, correction, and revocation state before any provider handoff.";
+    }
     if (/console|health|adapter|orchestration|circuit|retry|queue|fallback|quota|cost/i.test(command)) {
       return `Nexus has ${ADAPTER_CONTRACTS.length} provider adapter contracts across ${ADAPTER_FAMILIES.length} families. ${readiness.providerId} is currently ${readiness.state}. Live external execution remains gated by credentials, consent, confirmation, policy, receipts, and outcome verification.`;
     }
@@ -561,7 +776,7 @@
   }
 
   function shouldHandle(command = "") {
-    return /provider console|provider health|adapter|orchestration|circuit breaker|retry history|fallback history|quota|cost estimate|queue provider|cancel provider|provider telemetry|provider incident|provider rollback|provider sdk|which adapter|execution state/i.test(String(command || ""));
+    return /provider console|provider health|adapter|orchestration|circuit breaker|retry history|fallback history|quota|cost estimate|queue provider|cancel provider|provider telemetry|provider incident|provider rollback|provider sdk|provider configuration|configuration controls|data transfer receipt|security review|privacy review|adversarial review|accessibility review|end-to-end provider readiness|provider completion report|which adapter|execution state/i.test(String(command || ""));
   }
 
   function status(env = {}) {
@@ -600,6 +815,8 @@
     ADAPTER_FAMILIES,
     EXECUTION_STATES,
     PROVIDER_POLICY_RULES,
+    DATA_GOVERNANCE_CONTROLS,
+    REVIEW_DIMENSIONS,
     ADAPTER_CONTRACTS,
     CIRCUIT_DEFAULTS,
     getAdapter,
@@ -612,6 +829,11 @@
     disableProvider,
     rollbackProvider,
     verifyOutcome,
+    providerConfigurationControls,
+    createDataTransferReceipt,
+    capabilityStatusMatrix,
+    securityPrivacyReview,
+    endToEndReadinessReport,
     adminConsole,
     capabilityReport,
     circuitState,

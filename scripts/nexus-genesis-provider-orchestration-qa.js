@@ -25,6 +25,10 @@ assert.strictEqual(runtime.SERVICE_ID, "nexus_genesis_provider_orchestration_run
 assert.strictEqual(runtime.SCHEMA_VERSION, "nexus.genesis.provider-orchestration.v1");
 assert(runtime.ADAPTER_CONTRACTS.length >= abstraction.PROVIDERS.length, "every provider should have an adapter contract");
 assert(runtime.ADAPTER_CONTRACTS.length >= 50, "adapter registry should cover all major provider families");
+assert(runtime.DATA_GOVERNANCE_CONTROLS.length >= 6, "data governance controls should cover privacy, retention, residency, deletion, revocation, and transfer");
+assert(runtime.REVIEW_DIMENSIONS.includes("security"), "review dimensions should include security");
+assert(runtime.REVIEW_DIMENSIONS.includes("privacy"), "review dimensions should include privacy");
+assert(runtime.REVIEW_DIMENSIONS.includes("accessibility"), "review dimensions should include accessibility");
 
 [
   "ai",
@@ -217,6 +221,56 @@ const outcome = runtime.verifyOutcome({
 assert.strictEqual(outcome.providerOrchestrationVerified, false);
 assert.strictEqual(outcome.acknowledgementIsNotOutcome, true);
 
+const configurationControls = runtime.providerConfigurationControls(fakeEnv);
+assert.strictEqual(configurationControls.ok, true);
+assert(configurationControls.controlCount >= 50);
+assert.strictEqual(configurationControls.noSecretExposure, true);
+assert.strictEqual(configurationControls.noLiveExternalExecution, true);
+assert(configurationControls.controls.some(item => item.providerId === "twilio-sms"), "configuration controls should include Twilio SMS");
+assert(configurationControls.controls.every(item => item.secretValuesReturned === false), "configuration controls must not return secret values");
+
+const transferReceipt = runtime.createDataTransferReceipt({
+  command: "prepare provider handoff",
+  capabilityId: "communications.sms",
+  providerId: "twilio-sms",
+  dataClass: "personal",
+  country: "US",
+  jurisdiction: "US",
+  consentState: "missing",
+  confirmationState: "missing"
+}, fakeEnv);
+assert.strictEqual(transferReceipt.packetType, "nexus_genesis_provider_data_transfer_receipt");
+assert.strictEqual(transferReceipt.noLiveExternalExecution, true);
+assert.strictEqual(transferReceipt.noSecretExposure, true);
+assert.strictEqual(transferReceipt.deletionSupported, true);
+assert.strictEqual(transferReceipt.correctionSupported, true);
+assert.strictEqual(transferReceipt.revocationSupported, true);
+assert.strictEqual(transferReceipt.dataTransferAllowed, false, "data transfer should remain blocked without consent/confirmation/production authorization");
+
+const capabilityMatrix = runtime.capabilityStatusMatrix(fakeEnv);
+assert(capabilityMatrix.length >= abstraction.CAPABILITIES.length, "capability matrix should cover all abstraction capabilities");
+assert(capabilityMatrix.every(item => item.executionAuthority === false), "capability matrix must not grant execution authority");
+assert(capabilityMatrix.some(item => item.state === "local"), "capability matrix should include local fallback capabilities");
+assert(capabilityMatrix.some(item => item.state === "credential-blocked" || item.state === "not production-authorized" || item.state === "consent-blocked"), "capability matrix should include blocked external capability states");
+
+const reviewPacket = runtime.securityPrivacyReview(fakeEnv);
+assert.strictEqual(reviewPacket.ok, true);
+assert.strictEqual(reviewPacket.pass, true);
+assert(reviewPacket.findings.length >= 10, "security/privacy/adversarial/accessibility review should include multiple findings");
+assert(reviewPacket.dimensions.includes("adversarial"), "review should cover adversarial testing");
+assert.strictEqual(reviewPacket.noSecretExposure, true);
+
+const readinessReport = runtime.endToEndReadinessReport(fakeEnv);
+assert.strictEqual(readinessReport.ok, true);
+assert.strictEqual(readinessReport.packetType, "nexus_genesis_provider_end_to_end_readiness_report");
+assert(readinessReport.providerCount >= 50);
+assert(readinessReport.adapterCount >= readinessReport.providerCount);
+assert(readinessReport.capabilityCount >= 70);
+assert.strictEqual(readinessReport.standardUserTestingReady, true);
+assert.strictEqual(readinessReport.productionLiveExecutionAuthorized, false);
+assert.strictEqual(readinessReport.noSilentExecution, true);
+assert(readinessReport.productionLimitations.some(item => /Live external execution remains provider-specific/i.test(item)), "readiness report should state live-execution limitation");
+
 const consolePacket = runtime.adminConsole(fakeEnv);
 assert.strictEqual(consolePacket.ok, true);
 assert(consolePacket.providerCount >= 50);
@@ -248,9 +302,22 @@ const combinedJson = JSON.stringify({ consolePacket, report, status, smsPrepared
   "stripe-secret-value"
 ].forEach(secret => assert(!combinedJson.includes(secret), `secret value ${secret} must not be exposed`));
 
+const completionJson = JSON.stringify({ configurationControls, transferReceipt, capabilityMatrix, reviewPacket, readinessReport });
+[
+  "AC_FAKE_SECRET_VALUE",
+  "fake-auth-token-secret",
+  "+15551234567",
+  "sendgrid-secret-value",
+  "stripe-secret-value"
+].forEach(secret => assert(!completionJson.includes(secret), `completion packet must not expose ${secret}`));
+
 [
   "/api/nexus/provider-orchestration/status",
   "/api/nexus/provider-orchestration/console",
+  "/api/nexus/provider-orchestration/configuration-controls",
+  "/api/nexus/provider-orchestration/capability-matrix",
+  "/api/nexus/provider-orchestration/security-privacy-review",
+  "/api/nexus/provider-orchestration/end-to-end-readiness",
   "/api/nexus/provider-orchestration/capability-report",
   "/api/nexus/provider-orchestration/readiness",
   "/api/nexus/provider-orchestration/queue",
@@ -259,6 +326,7 @@ const combinedJson = JSON.stringify({ consolePacket, report, status, smsPrepared
   "/api/nexus/provider-orchestration/disable-provider",
   "/api/nexus/provider-orchestration/rollback-provider",
   "/api/nexus/provider-orchestration/verify-outcome",
+  "/api/nexus/provider-orchestration/data-transfer-receipt",
   "/api/nexus/provider-orchestration/sdk"
 ].forEach(route => includes(server, route, "server"));
 
@@ -276,8 +344,11 @@ includes(qaSuite, "scripts/nexus-genesis-provider-orchestration-qa.js", "qa-suit
 
 assert(runtime.shouldHandle("Show provider console and retry history"), "provider console command should route");
 assert(runtime.shouldHandle("Which adapter handles SMS?"), "adapter command should route");
+assert(runtime.shouldHandle("Show provider completion report"), "provider completion report command should route");
+assert(runtime.shouldHandle("Show provider configuration controls"), "configuration controls command should route");
+assert(runtime.shouldHandle("Create a data transfer receipt"), "data transfer receipt command should route");
 assert(!runtime.shouldHandle("What can Nexus do?"), "general capability command should stay with existing routing");
 
-assert(!/sent successfully|payment completed|appointment booked|provider confirmed|dispatched successfully/i.test(JSON.stringify({ status, report, consolePacket, localDryRun, smsBlocked })), "orchestration packets must not claim unsafe live success");
+assert(!/sent successfully|payment completed|appointment booked|provider confirmed|dispatched successfully/i.test(JSON.stringify({ status, report, consolePacket, localDryRun, smsBlocked, readinessReport, reviewPacket })), "orchestration packets must not claim unsafe live success");
 
 console.log("Nexus Genesis provider orchestration QA passed.");

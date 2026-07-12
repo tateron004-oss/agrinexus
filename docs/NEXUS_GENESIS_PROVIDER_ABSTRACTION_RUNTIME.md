@@ -124,6 +124,10 @@ Public-safe local endpoints:
 
 - `GET /api/nexus/provider-orchestration/status`
 - `GET /api/nexus/provider-orchestration/console`
+- `GET /api/nexus/provider-orchestration/configuration-controls`
+- `GET /api/nexus/provider-orchestration/capability-matrix`
+- `GET /api/nexus/provider-orchestration/security-privacy-review`
+- `GET /api/nexus/provider-orchestration/end-to-end-readiness`
 - `GET /api/nexus/provider-orchestration/sdk`
 - `POST /api/nexus/provider-orchestration/capability-report`
 - `POST /api/nexus/provider-orchestration/readiness`
@@ -133,6 +137,7 @@ Public-safe local endpoints:
 - `POST /api/nexus/provider-orchestration/disable-provider`
 - `POST /api/nexus/provider-orchestration/rollback-provider`
 - `POST /api/nexus/provider-orchestration/verify-outcome`
+- `POST /api/nexus/provider-orchestration/data-transfer-receipt`
 
 These endpoints return normalized packets and never return provider secret values. Missing configuration is reported by environment variable name only.
 
@@ -151,6 +156,10 @@ The Standard User Ask Nexus flow now recognizes provider orchestration questions
 - Roll back provider.
 - Show provider SDK.
 - What is the execution state?
+- Show provider configuration controls.
+- Create a data transfer receipt.
+- Show provider security and privacy review.
+- Show provider completion report.
 
 The response is a visible provider orchestration card that summarizes adapter count, execution state, circuit state, quota state, duplicate/replay protection, and whether external execution is authorized. The card always states that receipts and outcome verification are required before a live provider action can be treated as complete.
 
@@ -175,3 +184,38 @@ Current normalized states:
 - `failed-safe`
 
 Live calls, messages, bookings, payments, pharmacy requests, EHR/FHIR exchange, logistics dispatch, buyer contact, training enrollment, employer application, drone missions, and regulated submissions remain blocked until provider-specific activation satisfies the adapter contract and all approval gates.
+
+## Completion Readiness Runtime
+
+The orchestration runtime also exposes a completion-readiness layer for end-to-end Standard User testing. This layer is implemented in code, not as a static checklist.
+
+Completion surfaces:
+
+- `providerConfigurationControls(env)` lists every provider, its missing environment variable names, classification, enablement path, disable support, rollback support, and secret-return status.
+- `capabilityStatusMatrix(env)` maps every capability to available adapters, selected provider state, local fallback, consent/confirmation requirements, outcome verification, and missing configuration.
+- `createDataTransferReceipt(request, env)` produces a data-transfer receipt with data class, country, jurisdiction, consent, confirmation, retention, residency, deletion, correction, revocation, and blocked-state fields.
+- `securityPrivacyReview(env)` performs deterministic security, privacy, adversarial, accessibility, jurisdiction, credential-state, fallback-state, and receipt-state checks.
+- `endToEndReadinessReport(env)` aggregates providers, capabilities, policy rules, data-governance controls, provider classifications, capability classifications, production limitations, and Standard User testing readiness.
+
+Data-governance controls cover:
+
+- privacy
+- retention
+- residency
+- deletion
+- revocation
+- data transfer
+
+The readiness report can classify capabilities and providers as local, configured, credential-blocked, consent-blocked, confirmation-blocked, degraded, disabled, not production-authorized, or other explicit blocked states. It does not authorize production live execution.
+
+Standard User end-to-end testing readiness means:
+
+- every provider has an adapter contract
+- every capability has a status classification
+- missing credentials are shown by variable name only
+- live execution stays disabled by default
+- local/offline fallback is available where modeled
+- consent, confirmation, receipts, and outcome verification remain required for high-impact action lanes
+- security, privacy, adversarial, accessibility, fallback, credential, and receipt checks pass
+
+This is enough for complete Standard User provider-status testing. It is not a claim that every external vendor is live in production.

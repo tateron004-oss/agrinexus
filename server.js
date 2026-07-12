@@ -39796,6 +39796,22 @@ async function api(req, res, url) {
     return send(res, 200, nexusGenesisProviderOrchestration.adminConsole(process.env));
   }
 
+  if (url.pathname === "/api/nexus/provider-orchestration/configuration-controls" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.providerConfigurationControls(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/capability-matrix" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.capabilityStatusMatrix(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/security-privacy-review" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.securityPrivacyReview(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/end-to-end-readiness" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderOrchestration.endToEndReadinessReport(process.env));
+  }
+
   if (url.pathname === "/api/nexus/provider-orchestration/capability-report" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusGenesisProviderOrchestration.capabilityReport(body.command || "", process.env));
@@ -39834,6 +39850,11 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/provider-orchestration/verify-outcome" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusGenesisProviderOrchestration.verifyOutcome(body.receipt || body));
+  }
+
+  if (url.pathname === "/api/nexus/provider-orchestration/data-transfer-receipt" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderOrchestration.createDataTransferReceipt(body, process.env));
   }
 
   if (url.pathname === "/api/nexus/provider-orchestration/sdk" && req.method === "GET") {
