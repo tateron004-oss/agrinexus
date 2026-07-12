@@ -1869,6 +1869,113 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
   return true;
 }
 
+function renderNexusGenesisPredictiveWorkforceCard(packet = {}) {
+  const isStatus = packet.packetType === "genesis_predictive_workforce_capability_status_packet";
+  const isRegistry = packet.packetType === "genesis_predictive_workforce_registry_packet";
+  const topJob = packet.topRecommendation || {};
+  const fit = topJob.fit || {};
+  const classifications = packet.capabilityClassifications || {};
+  const counts = packet.classificationCounts || {};
+  return {
+    type: packet.packetType || "genesis_predictive_workforce_career_packet",
+    title: isStatus ? "Genesis Workforce Capability Status" : isRegistry ? "Workforce Source & Employer Registries" : "Predictive Workforce Career Packet",
+    status: packet.intent || packet.state || "workforce-career-intelligence",
+    localOnly: true,
+    confirmationRequired: false,
+    modeSummary: {
+      id: "predictive-workforce-career-intelligence",
+      label: isStatus ? "Capability classifications and production limits" : isRegistry ? "Verified workforce registry foundation" : "Career fit, skills gap, barriers, and next steps",
+      description: packet.userVisibleStatus || "Nexus prepared a workforce intelligence packet."
+    },
+    bullets: isStatus ? [
+      `Capabilities classified: ${Object.keys(classifications).length}`,
+      `Implemented locally: ${counts.implemented_locally || 0}`,
+      `Credential blocked: ${counts.credential_blocked || 0}`,
+      `Awaiting fairness review: ${counts.awaiting_fairness_review || 0}`,
+      `Awaiting legal review: ${counts.awaiting_legal_review || 0}`,
+      `Production authorized: ${packet.productionAuthorized ? "yes" : "no"}`,
+      `Can submit applications: ${packet.canSubmitApplication ? "yes" : "no"}`,
+      `Can contact employers: ${packet.canContactEmployer ? "yes" : "no"}`,
+      `Health data used for employment: ${packet.canUseHealthDataForEmployment ? "yes" : "no"}`
+    ] : isRegistry ? [
+      `Source authorities: ${Array.isArray(packet.sources) ? packet.sources.length : 0}`,
+      `Employer trust records: ${Array.isArray(packet.employers) ? packet.employers.length : 0}`,
+      `Predictive models governed: ${Array.isArray(packet.models) ? packet.models.length : 0}`,
+      "Official sources outrank public job boards.",
+      "Employer trust requires official-domain or partner verification.",
+      `External execution enabled: ${packet.applicationSubmissionEnabled || packet.employerContactEnabled ? "yes" : "no"}`
+    ] : [
+      `Target: ${packet.profile?.targetRole || "career goal"}`,
+      `Top match: ${topJob.title || "more information needed"}`,
+      `Fit category: ${fit.category || "insufficient_information"}`,
+      `Matched: ${(fit.matchedQualifications || []).join(", ") || "none recorded yet"}`,
+      `Missing: ${(fit.missingRequirements || []).join(", ") || "no required gaps detected in local context"}`,
+      `Barriers: ${(packet.profile?.barriers || []).join(", ") || "none stated"}`,
+      `Receipt: ${packet.receipt?.receiptId || "created locally"}`,
+      `Employer contacted: ${packet.employerContactEnabled ? "yes" : "no"}`,
+      `Application submitted: ${packet.applicationSubmissionEnabled ? "yes" : "no"}`
+    ],
+    receiptId: packet.receipt?.receiptId || "",
+    packet
+  };
+}
+
+function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}) {
+  const runtime = window.NexusGenesisPredictiveWorkforce;
+  const text = String(command || "").trim();
+  if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const registryIntent = /\b(source registry|employer trust|model registry|verified workforce source|verified jobs registry|employer registry)\b/i.test(text);
+  const capabilityStatusIntent = /\b(workforce capability status|workforce production limitations|employment capability status|career capability status|what is production authorized)\b/i.test(text);
+  const context = {
+    language: languageCode(),
+    source: options.source || "standard_user",
+    consentState: "session_only_or_not_provided"
+  };
+  const packet = registryIntent
+    ? runtime.registries()
+    : capabilityStatusIntent
+    ? runtime.buildWorkforceCapabilityStatusPacket(text, context)
+    : runtime.buildPredictiveWorkforcePacket(text, context);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const response = packet.userVisibleStatus || "Nexus prepared a predictive workforce career packet.";
+  recordNexusOsConversationTurn("assistant", response, {
+    source: "nexus-genesis-predictive-workforce",
+    capabilityId: runtime.SERVICE_ID || "predictive_workforce_career_intelligence",
+    noEmployerContacted: true,
+    noApplicationSubmitted: true,
+    noHealthDataShared: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message: response,
+    source: "nexus-genesis-predictive-workforce",
+    capabilityId: runtime.SERVICE_ID || "predictive_workforce_career_intelligence",
+    preparedCards: [renderNexusGenesisPredictiveWorkforceCard(packet)],
+    result: packet,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    noEmployerContacted: true,
+    noApplicationSubmitted: true,
+    noInterviewScheduled: true,
+    noHealthDataShared: true,
+    noFakeJobAvailabilityClaim: true
+  };
+  setNexusCoreState("reasoning", {
+    source: "genesis-predictive-workforce",
+    statusText: capabilityStatusIntent ? "Workforce capability status prepared." : "Career intelligence packet prepared."
+  });
+  setVoiceResponse(response, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-genesis-predictive-workforce",
+    workforcePacket: packet
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
   if (isUniversalLanguageCommand(command)) {
@@ -1876,6 +1983,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     return true;
   }
   if (runNexusStandardUserHomeLocalCommand(command)) return true;
+  if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
@@ -54397,6 +54505,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();

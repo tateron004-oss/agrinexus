@@ -90,6 +90,7 @@
     "qa:nexus-user-testing-runtime": "node scripts/nexus-user-testing-runtime-qa.js",
     "qa:nexus-chronic-health-predictive-modeler": "node scripts/nexus-chronic-health-predictive-modeler-qa.js",
     "qa:nexus-agriculture-predictive-intelligence": "node scripts/nexus-agriculture-predictive-intelligence-qa.js",
+    "qa:nexus-genesis-predictive-workforce": "node scripts/nexus-genesis-predictive-workforce-qa.js",
     "qa:nexus-marketplace-predictive-intelligence": "node scripts/nexus-marketplace-predictive-intelligence-qa.js",
     "qa:nexus-logistics-predictive-intelligence": "node scripts/nexus-logistics-predictive-intelligence-qa.js",
     "qa:nexus-workforce-predictive-intelligence": "node scripts/nexus-workforce-predictive-intelligence-qa.js",

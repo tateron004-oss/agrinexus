@@ -25,6 +25,7 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
+const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -38684,6 +38685,53 @@ async function api(req, res, url) {
       feedback,
       queueLength: db.profile.nexusHealthEvidenceGovernanceQueue.length,
       noProfessionalReviewClaimed: true,
+      noExternalExecutionAuthorized: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/workforce-genesis/status" && req.method === "GET") {
+    return send(res, 200, nexusGenesisPredictiveWorkforce.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/workforce-genesis/registries" && req.method === "GET") {
+    return send(res, 200, nexusGenesisPredictiveWorkforce.registries());
+  }
+
+  if (url.pathname === "/api/nexus/workforce-genesis/evaluate" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisPredictiveWorkforce.buildPredictiveWorkforcePacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/workforce-genesis/capability-status" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisPredictiveWorkforce.buildWorkforceCapabilityStatusPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
+  if (url.pathname === "/api/nexus/workforce-genesis/feedback" && req.method === "POST") {
+    const body = await readBody(req);
+    db.profile = db.profile || {};
+    db.profile.nexusWorkforceGovernanceQueue = db.profile.nexusWorkforceGovernanceQueue || [];
+    const packet = nexusGenesisPredictiveWorkforce.buildPredictiveWorkforcePacket(body?.text || body?.command || "Workforce feedback review", body?.context || {});
+    const feedback = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      queue: "workforce_professional_review",
+      status: "queued_for_review",
+      packetType: packet.packetType,
+      receiptId: packet.receipt?.receiptId || "",
+      reviewerRoleRequired: "qualified workforce professional",
+      noEmployerContacted: true,
+      noApplicationSubmitted: true,
+      noHealthDataShared: true,
+      note: String(body?.note || "Workforce packet queued for local professional review.").slice(0, 400)
+    };
+    db.profile.nexusWorkforceGovernanceQueue.unshift(feedback);
+    db.profile.nexusWorkforceGovernanceQueue = db.profile.nexusWorkforceGovernanceQueue.slice(0, 100);
+    await writeDb(db);
+    return send(res, 200, {
+      ok: true,
+      feedback,
+      queueLength: db.profile.nexusWorkforceGovernanceQueue.length,
       noExternalExecutionAuthorized: true
     });
   }
