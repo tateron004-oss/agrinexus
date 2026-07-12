@@ -189,6 +189,19 @@
     auditRequired: true
   });
 
+  const MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE = Object.freeze({
+    sourceRequirements: ["FDA or controlling medication authority", "RxNorm or approved medication terminology", "user-supplied medication name", "pharmacist or clinician review"],
+    governedWorkflows: ["medication education", "side-effect question preparation", "medication list organization", "refill question preparation", "pharmacy handoff readiness"],
+    blockedWorkflows: ["dose advice", "prescribing", "medication change", "substitution approval", "refill approval", "pharmacy order", "payment", "inventory guarantee"],
+    requiredBeforePharmacyHandoff: ["verified pharmacy connector", "verified pharmacy or recipient identity", "user consent", "message/refill purpose preview", "explicit user confirmation", "audit receipt"],
+    terminologySystems: ["RxNorm", "FHIR MedicationStatement", "FHIR MedicationRequest"],
+    defaultState: "review_only_until_pharmacy_connector_consent_and_audit_are_configured",
+    executionEnabled: false,
+    noMedicationChange: true,
+    noRefillApproval: true,
+    noPharmacyContact: true
+  });
+
   const CONSENT_PRIVACY_GOVERNANCE = Object.freeze({
     requiredBefore: ["provider sharing", "FHIR access", "pharmacy handoff", "appointment/referral request", "social-care sharing", "messages/calls", "export"],
     userRights: ["view", "correct", "export", "revoke", "delete local copy where permitted", "see audit trail"],
@@ -253,7 +266,7 @@
     /\b(health evidence|medical evidence|evidence inspector|professional evidence|source trust|trusted source)\b/i,
     /\b(guideline|clinical guideline|recommendation strength|evidence tier|source authority|jurisdiction)\b/i,
     /\b(predictive health governance|model governance|risk model|risk score|calculator registry|validation population)\b/i,
-    /\b(medication evidence|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
+    /\b(medication evidence|medication governance|medication safety governance|pharmacy evidence|pharmacy governance|refill governance|prescription governance|lab evidence|laboratory evidence|diabetes evidence|hypertension evidence|obesity evidence|rpm evidence|rtm evidence)\b/i,
     /\b(show the source|who published this|is this source current|when was this verified|why is this source blocked|show the professional version|conflicting guidelines|conflicting sources)\b/i,
     /\b(professional health workspace|verified provider trust|provider trust registry|clinical calculator|fhir terminology|medical record governance|consent and privacy|human review|review queue|governance review|professional review controls|vulnerable population|social care evidence|source registry)\b/i
   ];
@@ -679,6 +692,58 @@
     };
   }
 
+  function buildMedicationPharmacyEvidencePacket(input = "", context = {}) {
+    const text = normalizeText(input);
+    const concernType = /\b(refill|renew)\b/.test(text)
+      ? "refill_question_preparation"
+      : /\b(side effect|reaction|adverse)\b/.test(text)
+      ? "side_effect_question_preparation"
+      : /\b(interaction|mix|combine|together)\b/.test(text)
+      ? "interaction_question_preparation"
+      : /\b(prescription|prescribe)\b/.test(text)
+      ? "prescription_question_preparation"
+      : "medication_education_preparation";
+    const sourceReceipts = ["fda", "rxnorm", "nih", "ema"].map(sourceId => {
+      const sourceRecord = sourceById(sourceId);
+      return {
+        sourceId,
+        name: sourceRecord?.name || sourceId,
+        canonicalUrl: sourceRecord?.canonicalUrl || "",
+        evidenceTier: sourceRecord?.evidenceTier || "unmapped",
+        verification: verifySource(sourceId, context.verification || {}),
+        citationReady: false,
+        reasonCitationNotFinal: "Medication and pharmacy evidence requires source version verification and pharmacist/clinician review before clinical use."
+      };
+    });
+    return {
+      ok: true,
+      serviceId: SERVICE_ID,
+      serviceVersion: SERVICE_VERSION,
+      packetType: "enterprise_health_medication_pharmacy_evidence_governance_packet",
+      domainId: "medication_safety",
+      concernType,
+      governance: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
+      sourceReceipts,
+      requiredReviewQueue: HUMAN_REVIEW_QUEUE_TYPES.medication_pharmacy_review,
+      requiredProfessionalRoles: {
+        pharmacist: PROFESSIONAL_WORKSPACE_ROLES.pharmacist,
+        physician: PROFESSIONAL_WORKSPACE_ROLES.physician
+      },
+      pharmacyHandoffState: "blocked_missing_verified_connector_consent_confirmation_and_audit",
+      executionEnabled: false,
+      canPrepareQuestions: true,
+      canPrepareMedicationList: true,
+      canApproveRefill: false,
+      canRecommendDose: false,
+      canChangeMedication: false,
+      canContactPharmacy: false,
+      canPurchaseMedication: false,
+      safety: commonSafety(),
+      auditReceipt: audit("medication_pharmacy_evidence_governance_prepared", "medication_safety"),
+      userVisibleStatus: `Nexus prepared medication and pharmacy evidence governance for ${concernType.replace(/_/g, " ")}. Nexus can organize questions and source requirements, but it cannot prescribe, change medication, approve refills, contact a pharmacy, purchase medication, or claim inventory until the pharmacy connector, consent, professional review, confirmation, and audit gates are satisfied.`
+    };
+  }
+
   function registries() {
     const readinessClassifications = {
       sources: "implemented_locally_pending_live_verification",
@@ -702,6 +767,7 @@
       clinicalCalculatorRegistry: CLINICAL_CALCULATOR_REGISTRY,
       verifiedProviderTrustRegistry: VERIFIED_PROVIDER_TRUST_REGISTRY,
       fhirTerminologyContracts: FHIR_TERMINOLOGY_CONTRACTS,
+      medicationPharmacyEvidenceGovernance: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
       consentPrivacyGovernance: CONSENT_PRIVACY_GOVERNANCE,
       accessibilityLocalizationGovernance: ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
       professionalWorkspaceRoles: PROFESSIONAL_WORKSPACE_ROLES,
@@ -736,12 +802,13 @@
       clinicalCalculatorCount: Object.keys(CLINICAL_CALCULATOR_REGISTRY).length,
       verifiedProviderTrustCategoryCount: Object.keys(VERIFIED_PROVIDER_TRUST_REGISTRY).length,
       fhirTerminologyResourceCount: FHIR_TERMINOLOGY_CONTRACTS.fhirResources.length,
+      medicationPharmacyGovernanceState: MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE.defaultState,
       professionalWorkspaceRoleCount: Object.keys(PROFESSIONAL_WORKSPACE_ROLES).length,
       humanReviewQueueCount: Object.keys(HUMAN_REVIEW_QUEUE_TYPES).length,
       executionEnabled: false,
       clinicalAuthorityClaimed: false,
       missingConfig: [],
-      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "consent/privacy governance", "professional inspector contract"],
+      activeCapabilities: ["source inspection", "evidence tiering", "source verification contracts", "role-aware evidence inspector", "conflict review", "domain evidence maps", "predictive governance receipts", "clinical calculator governance", "verified provider trust registry", "FHIR terminology contracts", "medication/pharmacy evidence governance", "consent/privacy governance", "professional inspector contract"],
       blockedCapabilities: ["clinical diagnosis", "prescribing", "medication change", "provider submission", "emergency dispatch", "FHIR record access", "clinical calculator execution", "unvalidated prediction", "fake citation"],
       noSecretsExposed: true,
       safety: commonSafety()
@@ -801,6 +868,7 @@
     CLINICAL_CALCULATOR_REGISTRY,
     VERIFIED_PROVIDER_TRUST_REGISTRY,
     FHIR_TERMINOLOGY_CONTRACTS,
+    MEDICATION_PHARMACY_EVIDENCE_GOVERNANCE,
     CONSENT_PRIVACY_GOVERNANCE,
     ACCESSIBILITY_LOCALIZATION_GOVERNANCE,
     PROFESSIONAL_WORKSPACE_ROLES,
@@ -815,6 +883,7 @@
     buildFeedbackRecord,
     predictiveGovernance,
     buildHumanReviewPacket,
+    buildMedicationPharmacyEvidencePacket,
     registries,
     status,
     hasUnsafeClaim

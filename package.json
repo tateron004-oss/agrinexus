@@ -163,6 +163,7 @@
     "qa:nexus-enterprise-health-source-verification": "node scripts/nexus-enterprise-health-source-verification-qa.js",
     "qa:nexus-enterprise-health-governance-registries": "node scripts/nexus-enterprise-health-governance-registries-qa.js",
     "qa:nexus-enterprise-health-human-review-controls": "node scripts/nexus-enterprise-health-human-review-controls-qa.js",
+    "qa:nexus-enterprise-health-medication-pharmacy-governance": "node scripts/nexus-enterprise-health-medication-pharmacy-governance-qa.js",
     "qa:nexus-predictive-intelligence-maturity": "node scripts/nexus-predictive-intelligence-maturity-qa.js",
     "qa:nexus-internet-services-integration-audit": "node scripts/nexus-internet-services-integration-audit-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",

@@ -119,6 +119,12 @@ Governed professional workspace roles include physician, pharmacist, behavioral-
 
 Governed review queues include clinical evidence, medication/pharmacy, laboratory/diagnostic, behavioral/crisis, social-care, and FHIR record review. Review can approve education packets or provider-ready summaries, but it cannot authorize diagnosis, prescribing, medication change, provider submission, medical-record access, emergency dispatch, or consent bypass without the required connector, human approval, and audit gates.
 
+## Medication And Pharmacy Evidence Governance
+
+Nexus now exposes medication/pharmacy evidence governance through `POST /api/nexus/health-evidence/medication-pharmacy` and Standard User commands such as "show pharmacy evidence governance" or "show refill governance." The packet classifies the medication concern, maps FDA/RxNorm/NIH/EMA source requirements, selects the medication/pharmacy human-review queue, and shows pharmacist/physician review boundaries.
+
+This capability can organize medication education questions, side-effect questions, medication-list preparation, refill questions, and pharmacy handoff readiness. It cannot prescribe, recommend a dose, change medication, approve a refill, contact a pharmacy, purchase medication, claim inventory, or submit pharmacy data until the required pharmacy connector, verified recipient, user consent, explicit confirmation, professional review, and audit gates are active.
+
 ## Standard User Behavior
 
 When a user asks for health evidence, source trust, guideline inspection, or predictive health governance, Nexus creates a visible professional evidence inspector packet.
