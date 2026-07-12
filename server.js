@@ -27,6 +27,7 @@ const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-healt
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
+const nexusGenesisProviderAbstraction = require("./public/nexus-genesis-provider-abstraction.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -39730,6 +39731,62 @@ async function api(req, res, url) {
 </Response>`);
   }
 
+  if (url.pathname === "/api/nexus/provider-abstraction/status" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderAbstraction.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/providers" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      providers: nexusGenesisProviderAbstraction.listProviders({ env: process.env }),
+      noSecretExposure: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/capabilities" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      capabilities: nexusGenesisProviderAbstraction.listCapabilities(),
+      families: nexusGenesisProviderAbstraction.listProviderFamilies()
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/select" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.selectProvider({ ...body, env: process.env }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/policy" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.evaluatePolicy(body));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/execute" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.execute({ ...body, env: process.env }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/receipt" && req.method === "POST") {
+    const body = await readBody(req);
+    const selection = nexusGenesisProviderAbstraction.selectProvider({ ...body, env: process.env });
+    return send(res, 200, nexusGenesisProviderAbstraction.createReceipt(body, selection, {
+      status: "receipt_prepared",
+      summary: "Receipt prepared without external provider execution."
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/capability-status" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.capabilityStatus(body.command || "", {
+      ...body,
+      env: process.env
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/sdk" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderAbstraction.sdk());
+  }
+
   if (!user) return send(res, 401, { error: "Sign in required" });
 
   if (url.pathname === "/api/state" && req.method === "GET") {
@@ -44241,6 +44298,62 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.communicationThreadResult = result;
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/status" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderAbstraction.status(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/providers" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      providers: nexusGenesisProviderAbstraction.listProviders({ env: process.env }),
+      noSecretExposure: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/capabilities" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      capabilities: nexusGenesisProviderAbstraction.listCapabilities(),
+      families: nexusGenesisProviderAbstraction.listProviderFamilies()
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/select" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.selectProvider({ ...body, env: process.env }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/policy" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.evaluatePolicy(body));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/execute" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.execute({ ...body, env: process.env }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/receipt" && req.method === "POST") {
+    const body = await readBody(req);
+    const selection = nexusGenesisProviderAbstraction.selectProvider({ ...body, env: process.env });
+    return send(res, 200, nexusGenesisProviderAbstraction.createReceipt(body, selection, {
+      status: "receipt_prepared",
+      summary: "Receipt prepared without external provider execution."
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/capability-status" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisProviderAbstraction.capabilityStatus(body.command || "", {
+      ...body,
+      env: process.env
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/provider-abstraction/sdk" && req.method === "GET") {
+    return send(res, 200, nexusGenesisProviderAbstraction.sdk());
   }
 
   return send(res, 404, { error: "API route not found" });

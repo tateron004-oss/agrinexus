@@ -1989,6 +1989,85 @@ function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}
   return true;
 }
 
+function renderNexusGenesisProviderAbstractionCard(packet = {}) {
+  const selected = packet.selectedProvider || {};
+  const rejected = packet.rejectedProviders || [];
+  const missingEnv = [...new Set(rejected.flatMap(item => item.missingEnv || []))];
+  return {
+    type: packet.packetType || "nexus_genesis_provider_abstraction_capability_status_packet",
+    title: "Provider Capability Status",
+    status: packet.state || "provider-abstraction-status",
+    localOnly: selected.localFallbackSupport === true,
+    confirmationRequired: packet.requiresConfirmation === true,
+    modeSummary: {
+      id: "provider-abstraction",
+      label: selected.displayName ? `Selected path: ${selected.displayName}` : "Provider route status",
+      description: packet.answer || "Nexus checked the provider abstraction layer."
+    },
+    bullets: [
+      `Capability: ${packet.capabilityId || "general provider capability"}`,
+      `Selected provider: ${selected.displayName || "none selected"}`,
+      `State: ${packet.state || "unknown"}`,
+      `AWS required: ${packet.awsRequired ? "yes" : "no"}`,
+      `External execution enabled now: ${packet.externalExecutionEnabled ? "yes" : "no"}`,
+      `Production authorized: ${packet.productionAuthorized ? "yes" : "no"}`,
+      `Consent required: ${packet.requiresConsent ? "yes" : "depends on action"}`,
+      `Confirmation required: ${packet.requiresConfirmation ? "yes" : "depends on action"}`,
+      `Missing env names: ${missingEnv.length ? missingEnv.join(", ") : "none for selected local path"}`
+    ],
+    packet
+  };
+}
+
+function handleNexusGenesisProviderAbstractionCommand(command = "", options = {}) {
+  const runtime = window.NexusGenesisProviderAbstraction;
+  const text = String(command || "").trim();
+  if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
+  const packet = runtime.capabilityStatus(text, {
+    source: options.source || "standard_user",
+    dataClass: "public",
+    country: "global",
+    jurisdiction: "global",
+    consentState: "missing",
+    confirmationState: "missing"
+  });
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const response = packet.answer || "Nexus checked provider routing and execution gates.";
+  recordNexusOsConversationTurn("assistant", response, {
+    source: "nexus-genesis-provider-abstraction",
+    capabilityId: runtime.SERVICE_ID || "nexus_genesis_vendor_neutral_provider_abstraction",
+    noExternalExecution: true,
+    noSecretExposure: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message: response,
+    source: "nexus-genesis-provider-abstraction",
+    capabilityId: runtime.SERVICE_ID || "nexus_genesis_vendor_neutral_provider_abstraction",
+    preparedCards: [renderNexusGenesisProviderAbstractionCard(packet)],
+    result: packet,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    noExternalExecution: true,
+    noSecretExposure: true,
+    providerAbstractionPacket: packet
+  };
+  setNexusCoreState("reasoning", {
+    source: "genesis-provider-abstraction",
+    statusText: "Provider capability status prepared."
+  });
+  setVoiceResponse(response, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-genesis-provider-abstraction",
+    providerAbstractionPacket: packet
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function renderNexusGenesisAfricaAgOpportunityCard(packet = {}) {
   const isStatus = packet.packetType === "genesis_africa_ag_opportunity_capability_status_packet";
   const isRegistry = packet.packetType === "genesis_africa_ag_opportunity_registry_packet";
@@ -2137,6 +2216,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     return true;
   }
   if (runNexusStandardUserHomeLocalCommand(command)) return true;
+  if (handleNexusGenesisProviderAbstractionCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusGenesisAfricaAgOpportunityCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
@@ -30778,6 +30858,11 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     renderUserWorkspace();
     return true;
   }
+  if (handleNexusGenesisProviderAbstractionCommand(command, { source })) {
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {
     if (input) input.value = "";
     setCommandInputs("");
@@ -54660,6 +54745,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (handleNexusGenesisProviderAbstractionCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (handleNexusGenesisAfricaAgOpportunityCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
