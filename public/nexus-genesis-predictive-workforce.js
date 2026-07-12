@@ -67,6 +67,12 @@
     employer("employer.agriculture-logistics", "Agriculture Logistics Network", "agriculture logistics", "example-ag-logistics.test", "employer_confirmed_required", ["transportation_sensitive", "schedule_review_required"])
   ]);
 
+  const WORKFORCE_VERIFICATION_RECORDS = Object.freeze([
+    verificationRecord("job.evse-entry-technician", "employer.solar-field-services", "employer.career.page", "verification_pending", "Official employer career-page confirmation required before Nexus may claim this listing is open.", ["official careers URL", "role requirements", "closing date"]),
+    verificationRecord("job.community-health-worker", "employer.community-health-support", "training.provider.verified", "training_provider_unverified", "Training-provider and employer relationship must be verified before Nexus may recommend enrollment or claim openings.", ["training provider record", "program dates", "eligibility source"]),
+    verificationRecord("job.ag-logistics-coordinator", "employer.agriculture-logistics", "public.job.board", "third_party_source", "Public job-board listing is not employer-confirmed and cannot be treated as a verified open job.", ["third-party listing URL", "employer domain match", "duplicate and scam-risk review"])
+  ]);
+
   const MODEL_REGISTRY = Object.freeze([
     model("workforce-readiness-rules-v1", "Workforce readiness rule engine", "deterministic rules", "Advisory readiness and missing-data detection", "approved_for_advisory_use"),
     model("job-fit-ranker-v1", "Explainable job fit ranker", "deterministic scorecard", "Transparent opportunity fit and gap explanation", "awaiting_fairness_review"),
@@ -108,6 +114,7 @@
     /\b(resume|cv|cover letter|help me apply|application|track my applications?|interview|mock interview|prepare for an interview|follow up)\b/i,
     /\b(apprenticeships?|internships?|training|certification|credential|jobs with training|union apprenticeship|veteran-friendly|no degree)\b/i,
     /\b(transportation(?: to work)?|child\s*care|childcare|housing|food support|work tools|digital access|language access|barrier|blocking me)\b/i,
+    /\b(show the source|sources?|is this job still open|job still open|is this employer verified|employer verified|verified job|verified employer|listing current|scam risk)\b/i,
     /\b(workforce capability status|workforce production limitations|employment capability status|career capability status|what is production authorized)\b/i,
     /\b(delete my employment data|do not remember this|do not share this with employers|export my career records|correct my work history|stop using my information for job matching)\b/i
   ]);
@@ -139,6 +146,23 @@
       applicationMethod: "official employer or verified provider only",
       communicationReadiness: "credential_blocked_until_provider_and_consent",
       trustReceiptRequired: true
+    });
+  }
+
+  function verificationRecord(jobId, employerId, sourceId, verificationState, currentClaimBoundary, evidenceRequired) {
+    return Object.freeze({
+      jobId,
+      employerId,
+      sourceId,
+      verificationState,
+      currentClaimBoundary,
+      evidenceRequired: Object.freeze(evidenceRequired),
+      canClaimOpen: verificationState === "verified_current" || verificationState === "employer_confirmed",
+      employerContactEnabled: false,
+      applicationSubmissionEnabled: false,
+      lastCheckedAt: "not_live_checked_in_this_session",
+      noFakeAvailabilityClaim: true,
+      noFakeEmployerTrustClaim: true
     });
   }
 
@@ -293,6 +317,66 @@
         listingState: "third_party_source"
       }
     ].map(job => ({ ...job, fit: scoreOpportunity(profile, job) }));
+  }
+
+  function verificationForJob(job = {}) {
+    const record = WORKFORCE_VERIFICATION_RECORDS.find(item => item.jobId === job.jobId)
+      || verificationRecord(job.jobId || "unknown", job.employerId || "unknown", job.sourceId || "unknown", "verification_pending", "Nexus needs a verified source before claiming this job is current.", ["official source"]);
+    const employerRecord = EMPLOYER_TRUST_REGISTRY.find(item => item.employerId === record.employerId) || null;
+    const sourceRecord = WORKFORCE_SOURCE_REGISTRY.find(item => item.sourceId === record.sourceId) || null;
+    const scamRiskSignals = [];
+    if (record.verificationState === "third_party_source") scamRiskSignals.push("not_employer_confirmed");
+    if (!employerRecord?.officialDomain) scamRiskSignals.push("missing_official_domain");
+    if (!record.canClaimOpen) scamRiskSignals.push("cannot_claim_open_without_current_verification");
+    return Object.freeze({
+      ...record,
+      jobTitle: job.title || record.jobId,
+      employerPublicName: employerRecord?.publicName || "Employer not selected",
+      employerVerificationState: employerRecord?.verificationState || "employer_unknown",
+      employerOfficialDomain: employerRecord?.officialDomain || "",
+      sourceName: sourceRecord?.name || record.sourceId,
+      sourceTier: sourceRecord?.tier || 0,
+      sourceCategory: sourceRecord?.category || "unknown",
+      sourceCanonicalUrl: sourceRecord?.canonicalUrl || "",
+      listingAvailability: record.canClaimOpen ? "verified_current_or_employer_confirmed" : "not_verified_current",
+      payRangeVerified: false,
+      recruiterVerified: false,
+      duplicateCheckState: "not_live_checked",
+      scamRiskSignals,
+      requiredNextVerificationSteps: record.evidenceRequired
+    });
+  }
+
+  function buildWorkforceSourceVerificationPacket(command = "", context = {}) {
+    const profile = extractProfile(command, context);
+    const opportunities = sampleOpportunities(profile);
+    const verifications = opportunities.map(verificationForJob);
+    const selected = verifications.find(item => normalizeText(command).toLowerCase().includes(item.jobTitle.toLowerCase()))
+      || verifications[0];
+    return Object.freeze({
+      packetType: "genesis_workforce_source_verification_packet",
+      capabilityId: SERVICE_ID,
+      schemaVersion: SCHEMA_VERSION,
+      command: normalizeText(command),
+      userVisibleStatus: "Nexus checked the workforce source and employer trust records available locally. It will not claim a job is open, an employer is trusted, or a recruiter is legitimate unless current verification evidence is present.",
+      selectedVerification: selected,
+      verifications,
+      sourceRegistry: WORKFORCE_SOURCE_REGISTRY,
+      employerTrustRegistry: EMPLOYER_TRUST_REGISTRY,
+      noClaimOfOpenJobWithoutVerification: true,
+      noRecruiterTrustWithoutEvidence: true,
+      noEmployerContacted: true,
+      noApplicationSubmitted: true,
+      noExternalExecutionAuthorized: true,
+      audit: {
+        auditId: stableId("workforce-source-audit", `${command}:${selected.jobId}`),
+        createdAt: new Date().toISOString(),
+        checks: ["source_tier", "employer_registry", "listing_state", "scam_risk_signal", "no_fake_availability_claim"],
+        result: selected.listingAvailability
+      },
+      safety: EXECUTION_DEFAULTS,
+      ...EXECUTION_DEFAULTS
+    });
   }
 
   function scoreOpportunity(profile = {}, job = {}) {
@@ -507,6 +591,7 @@
     PROTECTED_ATTRIBUTE_EXCLUSIONS,
     WORKFORCE_SOURCE_REGISTRY,
     EMPLOYER_TRUST_REGISTRY,
+    WORKFORCE_VERIFICATION_RECORDS,
     MODEL_REGISTRY,
     CAPABILITY_CLASSIFICATIONS,
     shouldHandle,
@@ -516,6 +601,7 @@
     sampleOpportunities,
     scoreOpportunity,
     buildPredictiveWorkforcePacket,
+    buildWorkforceSourceVerificationPacket,
     buildWorkforceCapabilityStatusPacket,
     buildWorkforcePredictionReceipt,
     registries,

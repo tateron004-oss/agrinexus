@@ -1872,19 +1872,20 @@ function handleNexusEnterpriseHealthEvidenceTrustCommand(command = "", options =
 function renderNexusGenesisPredictiveWorkforceCard(packet = {}) {
   const isStatus = packet.packetType === "genesis_predictive_workforce_capability_status_packet";
   const isRegistry = packet.packetType === "genesis_predictive_workforce_registry_packet";
-  const topJob = packet.topRecommendation || {};
+  const isVerification = packet.packetType === "genesis_workforce_source_verification_packet";
+  const topJob = packet.topRecommendation || packet.selectedVerification || {};
   const fit = topJob.fit || {};
   const classifications = packet.capabilityClassifications || {};
   const counts = packet.classificationCounts || {};
   return {
     type: packet.packetType || "genesis_predictive_workforce_career_packet",
-    title: isStatus ? "Genesis Workforce Capability Status" : isRegistry ? "Workforce Source & Employer Registries" : "Predictive Workforce Career Packet",
+    title: isStatus ? "Genesis Workforce Capability Status" : isRegistry ? "Workforce Source & Employer Registries" : isVerification ? "Workforce Source Verification" : "Predictive Workforce Career Packet",
     status: packet.intent || packet.state || "workforce-career-intelligence",
     localOnly: true,
     confirmationRequired: false,
     modeSummary: {
       id: "predictive-workforce-career-intelligence",
-      label: isStatus ? "Capability classifications and production limits" : isRegistry ? "Verified workforce registry foundation" : "Career fit, skills gap, barriers, and next steps",
+      label: isStatus ? "Capability classifications and production limits" : isRegistry ? "Verified workforce registry foundation" : isVerification ? "Job source, listing, and employer trust verification" : "Career fit, skills gap, barriers, and next steps",
       description: packet.userVisibleStatus || "Nexus prepared a workforce intelligence packet."
     },
     bullets: isStatus ? [
@@ -1904,6 +1905,15 @@ function renderNexusGenesisPredictiveWorkforceCard(packet = {}) {
       "Official sources outrank public job boards.",
       "Employer trust requires official-domain or partner verification.",
       `External execution enabled: ${packet.applicationSubmissionEnabled || packet.employerContactEnabled ? "yes" : "no"}`
+    ] : isVerification ? [
+      `Selected: ${topJob.jobTitle || topJob.jobId || "workforce source"}`,
+      `Source: ${topJob.sourceName || topJob.sourceId || "source registry"}`,
+      `Verification: ${topJob.verificationState || "verification_pending"}`,
+      `Listing availability: ${topJob.listingAvailability || "not_verified_current"}`,
+      `Employer: ${topJob.employerPublicName || "not selected"}`,
+      `Open-job claim allowed: ${topJob.canClaimOpen ? "yes" : "no"}`,
+      `Employer contacted: ${packet.employerContactEnabled ? "yes" : "no"}`,
+      `Application submitted: ${packet.applicationSubmissionEnabled ? "yes" : "no"}`
     ] : [
       `Target: ${packet.profile?.targetRole || "career goal"}`,
       `Top match: ${topJob.title || "more information needed"}`,
@@ -1926,6 +1936,7 @@ function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
   const registryIntent = /\b(source registry|employer trust|model registry|verified workforce source|verified jobs registry|employer registry)\b/i.test(text);
   const capabilityStatusIntent = /\b(workforce capability status|workforce production limitations|employment capability status|career capability status|what is production authorized)\b/i.test(text);
+  const sourceVerificationIntent = /\b(show the source|sources?|is this job still open|job still open|is this employer verified|employer verified|verified job|verified employer|listing current|scam risk)\b/i.test(text);
   const context = {
     language: languageCode(),
     source: options.source || "standard_user",
@@ -1935,6 +1946,8 @@ function handleNexusGenesisPredictiveWorkforceCommand(command = "", options = {}
     ? runtime.registries()
     : capabilityStatusIntent
     ? runtime.buildWorkforceCapabilityStatusPacket(text, context)
+    : sourceVerificationIntent && typeof runtime.buildWorkforceSourceVerificationPacket === "function"
+    ? runtime.buildWorkforceSourceVerificationPacket(text, context)
     : runtime.buildPredictiveWorkforcePacket(text, context);
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;

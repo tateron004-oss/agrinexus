@@ -38707,6 +38707,11 @@ async function api(req, res, url) {
     return send(res, 200, nexusGenesisPredictiveWorkforce.buildWorkforceCapabilityStatusPacket(body?.text || body?.command || "", body?.context || {}));
   }
 
+  if (url.pathname === "/api/nexus/workforce-genesis/source-verification" && req.method === "POST") {
+    const body = await readBody(req);
+    return send(res, 200, nexusGenesisPredictiveWorkforce.buildWorkforceSourceVerificationPacket(body?.text || body?.command || "", body?.context || {}));
+  }
+
   if (url.pathname === "/api/nexus/workforce-genesis/feedback" && req.method === "POST") {
     const body = await readBody(req);
     db.profile = db.profile || {};

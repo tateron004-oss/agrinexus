@@ -26,6 +26,7 @@ Implemented locally:
 - application tracking packet support
 - employer trust registry
 - workforce source registry
+- workforce source verification packets
 - prediction receipts
 - professional-review queue packet support
 - privacy, consent, correction, export, deletion, and sharing boundaries
@@ -47,6 +48,10 @@ The runtime includes canonical workforce source classes for:
 - public job boards
 
 Public job boards remain lower-trust sources. Nexus does not claim a job is open or employer-confirmed unless source freshness and employer verification support that claim.
+
+The source-verification runtime returns `genesis_workforce_source_verification_packet` records. It checks local source records, employer trust records, listing-currentness state, and scam-risk signals before Nexus answers questions such as "Is this job still open?", "Is this employer verified?", or "Show the source."
+
+Current fixture listings remain `verification_pending`, `training_provider_unverified`, or `third_party_source` unless current employer/source evidence is present. Nexus must not claim a job is open, a recruiter is legitimate, an employer is trusted, or a pay range is verified without that evidence.
 
 ## Employer Trust
 
@@ -86,6 +91,7 @@ Health and mental-health data remain isolated from employer workflows. Employer 
 - `GET /api/nexus/workforce-genesis/registries`
 - `POST /api/nexus/workforce-genesis/evaluate`
 - `POST /api/nexus/workforce-genesis/capability-status`
+- `POST /api/nexus/workforce-genesis/source-verification`
 - `POST /api/nexus/workforce-genesis/feedback`
 
 The feedback endpoint queues local professional-review metadata. It does not contact employers, submit applications, schedule interviews, or share health data.
