@@ -38,7 +38,58 @@
     country("zambia", "Zambia", ["English"], ["maize", "soybean", "poultry", "horticulture", "dairy"], "Zambia agriculture, labor, youth, education, and community development authorities"),
     country("south_africa", "South Africa", ["English"], ["horticulture", "maize", "livestock", "poultry", "agri-processing"], "South Africa agriculture, labor, education, youth, and women development authorities"),
     country("senegal", "Senegal", ["French"], ["rice", "horticulture", "groundnut", "poultry", "millet"], "Senegal agriculture, labor, youth, vocational training, and women development authorities"),
-    country("ethiopia", "Ethiopia", ["English", "Amharic"], ["teff", "coffee", "wheat", "poultry", "horticulture"], "Ethiopia agriculture, labor, education, youth, and women authorities")
+    country("ethiopia", "Ethiopia", ["English", "Amharic"], ["teff", "coffee", "wheat", "poultry", "horticulture"], "Ethiopia agriculture, labor, education, youth, and women authorities"),
+    country("democratic_republic_of_the_congo", "Democratic Republic of the Congo", ["French", "Swahili", "Lingala", "Kikongo", "Tshiluba"], ["cassava", "maize", "beans", "rice", "plantain", "horticulture", "livestock", "poultry", "aquaculture", "food processing"], "DRC agriculture, labor, education, humanitarian, social-support, and women/youth enterprise authorities", {
+      isoAlpha2: "CD",
+      isoAlpha3: "COD",
+      internalCountryId: "nexus-country-cd",
+      region: "Africa",
+      subregion: "Central Africa",
+      currency: "CDF",
+      primaryLanguage: "French",
+      aliases: ["democratic republic of the congo", "drc", "dr congo", "congo-kinshasa", "congo kinshasa", "rdc", "republique democratique du congo"],
+      priorityDeployment: true,
+      administrativeLevel: "province",
+      administrativeUnits: ["Kinshasa", "North Kivu", "South Kivu", "Ituri", "Kasai", "Kasai Central", "Kasai Oriental", "Haut-Katanga", "Lualaba", "Tanganyika", "Tshopo", "Equateur", "Kongo Central"],
+      jurisdiction: "CD",
+      provinceAware: true,
+      contextNotes: ["province-aware planning", "smallholder agriculture", "displaced and conflict-affected population support", "humanitarian and social-support coordination", "digital and transportation barriers", "land and finance access"],
+      operatingAssumptions: ["Do not treat DRC as one uniform operating environment.", "Ask for province, territory, language, and local validation before provider or buyer recommendations."]
+    }),
+    country("republic_of_the_congo", "Republic of the Congo", ["French", "Lingala", "Kituba"], ["cassava", "maize", "plantain", "horticulture", "livestock", "poultry", "aquaculture", "forestry-linked agribusiness"], "Republic of the Congo agriculture, forestry, labor, education, social-service, and women/youth enterprise authorities", {
+      isoAlpha2: "CG",
+      isoAlpha3: "COG",
+      internalCountryId: "nexus-country-cg",
+      region: "Africa",
+      subregion: "Central Africa",
+      currency: "XAF",
+      primaryLanguage: "French",
+      aliases: ["republic of the congo", "congo-brazzaville", "congo brazzaville", "republique du congo"],
+      administrativeLevel: "department",
+      administrativeUnits: ["Brazzaville", "Pointe-Noire", "Pool", "Bouenza", "Niari", "Lekoumou", "Cuvette", "Plateaux", "Sangha", "Likouala", "Kouilou"],
+      jurisdiction: "CG",
+      provinceAware: false,
+      contextNotes: ["separate Congo-Brazzaville jurisdiction", "agriculture and forestry context", "separate ministries, laws, providers, buyers, markets, and training systems from DRC"],
+      operatingAssumptions: ["Do not reuse DRC records for Republic of the Congo.", "Ask for department and local validation before provider or market recommendations."]
+    }),
+    country("egypt", "Egypt", ["Arabic", "Egyptian Arabic", "English", "French"], ["wheat", "rice", "maize", "horticulture", "greenhouse vegetables", "livestock", "poultry", "aquaculture", "food processing", "agricultural exports"], "Egypt agriculture, irrigation, labor, education, vocational training, meteorology, research, university, women/youth, and development partner authorities", {
+      isoAlpha2: "EG",
+      isoAlpha3: "EGY",
+      internalCountryId: "nexus-country-eg",
+      region: "Africa",
+      subregion: "Northern Africa",
+      currency: "EGP",
+      primaryLanguage: "Arabic",
+      aliases: ["egypt", "arab republic of egypt", "misr", "egyptian"],
+      priorityDeployment: true,
+      rightToLeft: true,
+      administrativeLevel: "governorate",
+      administrativeUnits: ["Cairo", "Giza", "Alexandria", "Dakahlia", "Sharqia", "Beheira", "Kafr El Sheikh", "Gharbia", "Minya", "Fayoum", "Beni Suef", "Assiut", "Sohag", "Qena", "Luxor", "Aswan", "New Valley", "Matrouh", "North Sinai", "South Sinai", "Red Sea"],
+      jurisdiction: "EG",
+      provinceAware: false,
+      contextNotes: ["governorate-aware planning", "Nile Valley and Nile Delta agriculture", "desert and reclaimed-land agriculture", "irrigation and water-efficiency planning", "water scarcity", "heat and drought risk", "soil salinity", "cold-chain requirements", "greenhouse agriculture", "agricultural exports", "technical and vocational training"],
+      operatingAssumptions: ["Do not copy sub-Saharan assumptions into Egypt.", "Use Arabic-first, right-to-left aware communication and ask for governorate before local planning."]
+    })
   ]);
 
   const SOURCE_REGISTRY = Object.freeze([
@@ -64,12 +115,34 @@
     countrySource(countryConfig, "education_training", `${countryConfig.name} education and training authority`, "official_education_authority", "country_verified_required"),
     countrySource(countryConfig, "meteorological_service", `${countryConfig.name} meteorological service`, "official_climate_authority", "country_verified_required"),
     countrySource(countryConfig, "research_extension", `${countryConfig.name} agriculture research and extension institute`, "research_extension_institute", "country_verified_required"),
+    countrySource(countryConfig, "irrigation_water_authority", `${countryConfig.name} irrigation, water, or water-resource authority`, "official_water_authority", "country_verified_required"),
+    countrySource(countryConfig, "university_research", `${countryConfig.name} agriculture universities and applied research programs`, "university_research_source", "country_verified_required"),
+    countrySource(countryConfig, "extension_service", `${countryConfig.name} extension and advisory services`, "extension_service_directory", "partner_required"),
     countrySource(countryConfig, "verified_training_provider", `${countryConfig.name} verified training providers`, "training_provider_directory", "partner_required"),
     countrySource(countryConfig, "verified_employer", `${countryConfig.name} verified agriculture employers`, "employer_directory", "partner_required"),
     countrySource(countryConfig, "verified_buyer", `${countryConfig.name} verified crop and livestock buyers`, "buyer_directory", "partner_required"),
     countrySource(countryConfig, "verified_cooperative", `${countryConfig.name} verified cooperatives`, "cooperative_directory", "partner_required"),
     countrySource(countryConfig, "finance_program", `${countryConfig.name} verified finance, grant, and savings programs`, "finance_program_directory", "partner_required"),
+    countrySource(countryConfig, "transport_provider", `${countryConfig.name} verified transport and route-support providers`, "transport_provider_directory", "partner_required"),
+    countrySource(countryConfig, "storage_provider", `${countryConfig.name} verified storage and cold-chain providers`, "storage_provider_directory", "partner_required"),
+    countrySource(countryConfig, "government_program", `${countryConfig.name} government agriculture, youth, women, food-security, and enterprise programs`, "government_program_directory", "country_verified_required"),
+    countrySource(countryConfig, "ngo_development_partner", `${countryConfig.name} recognized NGO and international development partners`, "ngo_development_partner_directory", "partner_required"),
     countrySource(countryConfig, "social_service", `${countryConfig.name} women, youth, childcare, transport, and social-service support`, "social_service_directory", "partner_required")
+  ]));
+
+  const COUNTRY_TRUST_REGISTRY = Object.freeze(SUPPORTED_COUNTRIES.flatMap(countryConfig => [
+    countryTrustRecord(countryConfig, "provider", "Verified agriculture and social-support providers", ["identity", "jurisdiction", "service scope", "safeguarding policy"], "provider_backed_required"),
+    countryTrustRecord(countryConfig, "training_provider", "Verified training and vocational providers", ["identity", "curriculum", "language support", "completion evidence"], "credential_blocked"),
+    countryTrustRecord(countryConfig, "employer", "Verified employers and apprenticeship hosts", ["identity", "role terms", "safety policy", "youth safeguarding"], "employer_backed"),
+    countryTrustRecord(countryConfig, "buyer", "Verified buyers and market actors", ["identity", "commodity", "quality terms", "payment terms"], "buyer_backed"),
+    countryTrustRecord(countryConfig, "cooperative", "Verified cooperatives and producer groups", ["registration", "governance", "member terms", "records"], "provider_backed"),
+    countryTrustRecord(countryConfig, "extension_service", "Verified extension and advisory services", ["authority", "coverage area", "specialty", "review receipt"], "partner_required"),
+    countryTrustRecord(countryConfig, "finance_program", "Verified finance, grant, and savings programs", ["eligibility", "terms", "fees", "consumer protection"], "credential_blocked"),
+    countryTrustRecord(countryConfig, "transport_provider", "Verified transport and logistics providers", ["license", "route", "cost basis", "safety"], "credential_blocked"),
+    countryTrustRecord(countryConfig, "storage_provider", "Verified storage and cold-chain providers", ["facility identity", "capacity", "quality controls", "pricing"], "partner_required"),
+    countryTrustRecord(countryConfig, "government", "Verified government programs and authorities", ["official source", "jurisdiction", "eligibility", "freshness date"], "country_verified_required"),
+    countryTrustRecord(countryConfig, "university", "Verified universities and research institutes", ["official source", "program scope", "licensing", "freshness date"], "country_verified_required"),
+    countryTrustRecord(countryConfig, "ngo_social_service", "Verified NGOs and social-service organizations", ["service owner", "eligibility", "privacy policy", "safeguarding"], "provider_backed_required")
   ]));
 
   const MODEL_REGISTRY = Object.freeze([
@@ -108,7 +181,9 @@
   const REGIONAL_CONFIGURATION = Object.freeze({
     east_africa: region("East Africa", ["kenya", "tanzania", "uganda", "rwanda", "ethiopia"], ["Swahili where applicable", "English", "local languages"], ["maize", "beans", "coffee", "dairy", "horticulture", "poultry"], ["rainfall variability", "transport distance", "digital access", "youth unemployment"]),
     west_africa: region("West Africa", ["ghana", "nigeria", "senegal"], ["English", "French", "local languages"], ["cassava", "rice", "maize", "cocoa", "groundnut", "poultry"], ["market aggregation", "post-harvest loss", "finance access", "women enterprise barriers"]),
-    southern_africa: region("Southern Africa", ["zambia", "south_africa"], ["English", "local languages"], ["maize", "soybean", "livestock", "horticulture", "agri-processing"], ["drought", "equipment access", "youth jobs", "logistics"])
+    southern_africa: region("Southern Africa", ["zambia", "south_africa"], ["English", "local languages"], ["maize", "soybean", "livestock", "horticulture", "agri-processing"], ["drought", "equipment access", "youth jobs", "logistics"]),
+    central_africa: region("Central Africa", ["democratic_republic_of_the_congo", "republic_of_the_congo"], ["French", "Swahili where applicable", "Lingala", "Kikongo", "Kituba", "Tshiluba"], ["cassava", "maize", "beans", "rice", "plantain", "horticulture", "livestock", "poultry", "aquaculture", "forestry-linked agribusiness"], ["province or department specificity", "rural logistics", "post-harvest loss", "digital barriers", "transport barriers", "land and finance access", "humanitarian and social-support coordination"]),
+    north_africa: region("North Africa", ["egypt"], ["Arabic", "Egyptian Arabic", "English", "French"], ["wheat", "rice", "maize", "horticulture", "greenhouse agriculture", "livestock", "poultry", "aquaculture", "food processing", "agricultural exports"], ["water scarcity", "heat and drought", "soil salinity", "irrigation efficiency", "cold-chain logistics", "governorate-specific planning"])
   });
 
   const RISK_INTELLIGENCE_REGISTRY = Object.freeze([
@@ -116,12 +191,18 @@
     "drought",
     "flood",
     "heat",
+    "water_scarcity",
+    "soil_salinity",
     "soil_fertility",
     "water_access",
     "crop_calendar",
     "planting_window",
     "pest_pressure",
     "disease_pressure",
+    "province_security_logistics_context",
+    "humanitarian_support_coordination",
+    "nile_delta_irrigation_efficiency",
+    "aquaculture_water_quality",
     "harvest_timing",
     "storage_loss",
     "post_harvest_handling",
@@ -133,7 +214,7 @@
     supportSignal("learner_success", ["attendance", "completion", "mentor access", "practice time"], "implemented_locally"),
     supportSignal("dropout_prevention", ["missed sessions", "care duties", "transport gaps", "equipment gaps"], "implemented_locally"),
     supportSignal("literacy_support", ["low-literacy mode", "voice-first prompts", "visual checklist"], "implemented_locally"),
-    supportSignal("language_support", ["English", "Swahili", "French", "Portuguese", "Arabic", "Amharic", "Kinyarwanda"], "implemented_locally"),
+    supportSignal("language_support", ["English", "Swahili", "French", "Portuguese", "Arabic", "Egyptian Arabic", "Amharic", "Kinyarwanda", "Lingala", "Kikongo", "Kituba", "Tshiluba"], "implemented_locally"),
     supportSignal("digital_access", ["phone-only path", "offline packet", "low-bandwidth summary"], "implemented_locally"),
     supportSignal("childcare_support", ["childcare need", "safe schedule", "social-service referral readiness"], "provider_backed_required"),
     supportSignal("transport_support", ["travel distance", "market route", "training route", "field visit"], "provider_backed_required"),
@@ -177,7 +258,8 @@
   });
 
   const ACCESSIBILITY_LOCALIZATION = Object.freeze({
-    multilingualSupport: ["English", "Swahili", "French", "Portuguese", "Arabic", "Amharic", "Kinyarwanda"],
+    multilingualSupport: ["English", "Swahili", "French", "Portuguese", "Arabic", "Egyptian Arabic", "Amharic", "Kinyarwanda", "Lingala", "Kikongo", "Kituba", "Tshiluba"],
+    rightToLeftSupport: "Arabic and Egypt interface metadata are marked right-to-left ready; local copy review is required before production.",
     voiceSupport: "command_routing_and_spoken_summary_ready",
     lowLiteracySupport: ["short plain language", "checklist output", "voice-first guidance", "icons where UI renders cards"],
     offlineSupport: "packet_can_be_generated_locally_without_live_provider",
@@ -229,11 +311,46 @@
     /\b(youth|young people|apprenticeship|training near me|drone agriculture|farming jobs|agritech|skills am i missing)\b/i,
     /\b(financing|grant|loan|savings group|equipment|transport|market access|buyers?|buyer|storage|logistics)\b/i,
     /\b(africa.*capability status|youth and women agriculture capability|program progress|show my progress|delete my program profile|do not remember this)\b/i,
-    /\b(dropout|attendance|completion|literacy|language support|digital access|mentor|equipment|safeguarding|fairness|privacy|export|delete|consent|program impact|funder report|trust registry|verified buyer|verified employer|verified training)\b/i
+    /\b(dropout|attendance|completion|literacy|language support|digital access|mentor|equipment|safeguarding|fairness|privacy|export|delete|consent|program impact|funder report|trust registry|verified buyer|verified employer|verified training)\b/i,
+    /\b(democratic republic of the congo|drc|dr congo|congo[-\s]?kinshasa|rdc|republic of the congo|congo[-\s]?brazzaville|egypt|arab republic of egypt|nile delta|congo)\b/i
   ]);
 
-  function country(id, name, languages, crops, sourceSummary) {
-    return Object.freeze({ id, name, languages: Object.freeze(languages), priorityCrops: Object.freeze(crops), sourceSummary, localValidationRequired: true });
+  function country(id, name, languages, crops, sourceSummary, meta = {}) {
+    return Object.freeze({
+      id,
+      name,
+      canonicalCountryName: name,
+      isoAlpha2: meta.isoAlpha2 || id.slice(0, 2).toUpperCase(),
+      isoAlpha3: meta.isoAlpha3 || null,
+      internalCountryId: meta.internalCountryId || `nexus-country-${id.replace(/_/g, "-")}`,
+      region: meta.region || "Africa",
+      subregion: meta.subregion || "country-specific subregion",
+      currency: meta.currency || "country-specific currency",
+      primaryLanguage: meta.primaryLanguage || languages[0],
+      languages: Object.freeze(languages),
+      supportedLanguages: Object.freeze(languages),
+      rightToLeft: meta.rightToLeft === true,
+      priorityCrops: Object.freeze(crops),
+      sourceSummary,
+      aliases: Object.freeze(meta.aliases || [name.toLowerCase(), id.replace(/_/g, " ")]),
+      priorityDeployment: meta.priorityDeployment === true,
+      administrativeLevel: meta.administrativeLevel || "country/district",
+      administrativeUnits: Object.freeze(meta.administrativeUnits || []),
+      jurisdiction: meta.jurisdiction || meta.isoAlpha2 || id,
+      sourceVerificationState: "country_verified_required",
+      localValidationState: "awaiting_local_validation",
+      providerVerificationState: "partner_or_provider_required",
+      fairnessReviewState: "awaiting_fairness_review",
+      safeguardingState: "safeguarding_controls_required",
+      lastVerificationDate: "not_live_verified_in_this_session",
+      productionAuthorizationState: "not_production_authorized",
+      offlineSupportState: "local_packet_supported",
+      lowBandwidthSupportState: "compact_packet_supported",
+      provinceAware: meta.provinceAware === true,
+      contextNotes: Object.freeze(meta.contextNotes || []),
+      operatingAssumptions: Object.freeze(meta.operatingAssumptions || []),
+      localValidationRequired: true
+    });
   }
 
   function source(sourceId, title, tier, category, canonicalUrl) {
@@ -257,6 +374,9 @@
       sourceId: `${countryConfig.id}.${sourceType}`,
       countryId: countryConfig.id,
       country: countryConfig.name,
+      isoAlpha2: countryConfig.isoAlpha2,
+      isoAlpha3: countryConfig.isoAlpha3,
+      jurisdiction: countryConfig.jurisdiction,
       title,
       organization: title,
       sourceType,
@@ -265,6 +385,30 @@
       status: readiness === "country_verified_required" ? "needs_country_url_verification" : "partner_or_provider_required",
       missingBeforeExecution: Object.freeze(["verified local owner", "current official URL", "licensing or sharing permission", "freshness date", "review receipt"]),
       noExecutionAuthorized: true
+    });
+  }
+
+  function countryTrustRecord(countryConfig, recordType, title, verificationRequirements, state) {
+    return Object.freeze({
+      recordId: `${countryConfig.id}.${recordType}`,
+      countryId: countryConfig.id,
+      country: countryConfig.name,
+      isoAlpha2: countryConfig.isoAlpha2,
+      isoAlpha3: countryConfig.isoAlpha3,
+      jurisdiction: countryConfig.jurisdiction,
+      recordType,
+      title,
+      verificationRequirements: Object.freeze(verificationRequirements),
+      sourceVerification: "required_before_use",
+      freshnessRequired: true,
+      canonicalUrlRequired: true,
+      jurisdictionRequired: true,
+      licensingRequired: true,
+      reviewReceiptRequired: true,
+      state,
+      sourceIsolationRequired: true,
+      providerOrBuyerIsolationRequired: true,
+      liveExecutionEnabled: false
     });
   }
 
@@ -350,9 +494,55 @@
     return COMMAND_PATTERNS.some(pattern => pattern.test(command));
   }
 
+  function matchesCountryToken(text, token) {
+    const normalized = normalizeText(token).toLowerCase();
+    if (!normalized) return false;
+    return new RegExp(`(^|[^a-z0-9])${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(text);
+  }
+
+  function detectCountry(command = "", context = {}) {
+    const text = `${command} ${JSON.stringify(context || {})}`.toLowerCase();
+    const explicitContext = normalizeText(context.countryId || context.country || context.isoAlpha2 || context.isoAlpha3).toLowerCase();
+    if (explicitContext) {
+      const contextCountry = SUPPORTED_COUNTRIES.find(item => (
+        item.id === explicitContext ||
+        item.name.toLowerCase() === explicitContext ||
+        item.isoAlpha2.toLowerCase() === explicitContext ||
+        (item.isoAlpha3 || "").toLowerCase() === explicitContext ||
+        item.aliases.some(alias => alias.toLowerCase() === explicitContext)
+      ));
+      if (contextCountry) return Object.freeze({ country: contextCountry, ambiguous: false, candidates: Object.freeze([]), reason: "explicit_context" });
+    }
+
+    const drc = SUPPORTED_COUNTRIES.find(item => item.id === "democratic_republic_of_the_congo");
+    const republic = SUPPORTED_COUNTRIES.find(item => item.id === "republic_of_the_congo");
+    const bareCongo = matchesCountryToken(text, "congo");
+    const qualifiedCongo = /\b(democratic republic of the congo|drc|dr congo|congo[-\s]?kinshasa|rdc|republic of the congo|congo[-\s]?brazzaville)\b/i.test(text);
+    if (bareCongo && !qualifiedCongo) {
+      return Object.freeze({
+        country: null,
+        ambiguous: true,
+        candidates: Object.freeze([drc, republic].filter(Boolean).map(item => Object.freeze({ id: item.id, name: item.name, isoAlpha2: item.isoAlpha2, isoAlpha3: item.isoAlpha3 }))),
+        reason: "ambiguous_congo"
+      });
+    }
+
+    if (/\b(nile delta|nile valley|arab republic of egypt|misr|egyptian)\b/i.test(text)) {
+      const egypt = SUPPORTED_COUNTRIES.find(item => item.id === "egypt");
+      if (egypt) return Object.freeze({ country: egypt, ambiguous: false, candidates: Object.freeze([]), reason: "egypt_regional_context" });
+    }
+
+    const country = SUPPORTED_COUNTRIES.find(item => {
+      const tokens = [item.name, item.id.replace(/_/g, " "), item.isoAlpha2, item.isoAlpha3, ...(item.aliases || [])].filter(Boolean);
+      return tokens.some(token => matchesCountryToken(text, token));
+    }) || SUPPORTED_COUNTRIES[0];
+    return Object.freeze({ country, ambiguous: false, candidates: Object.freeze([]), reason: country === SUPPORTED_COUNTRIES[0] ? "default" : "matched_alias" });
+  }
+
   function inferParticipantProfile(command = "", context = {}) {
     const text = `${command} ${JSON.stringify(context || {})}`.toLowerCase();
-    const country = SUPPORTED_COUNTRIES.find(item => text.includes(item.name.toLowerCase()) || text.includes(item.id.replace(/_/g, " "))) || SUPPORTED_COUNTRIES[0];
+    const countryDetection = detectCountry(command, context);
+    const country = countryDetection.country || SUPPORTED_COUNTRIES[0];
     const barriers = [];
     [
       ["land_access", /\b(no land|do not have land|don't have land|without land|land access|rent land|small plot)\b/],
@@ -362,17 +552,30 @@
       ["digital_access", /\b(no internet|phone only|digital|online)\b/],
       ["water_access", /\b(irrigation|water|rainfall|drought)\b/],
       ["safety", /\b(safety|unsafe|harassment|violence)\b/],
-      ["literacy_language", /\b(literacy|read|language|translate|swahili|french|arabic|portuguese)\b/]
+      ["literacy_language", /\b(literacy|read|language|translate|swahili|french|arabic|portuguese|lingala|kikongo|kituba|tshiluba)\b/],
+      ["humanitarian_displacement", /\b(eastern drc|north kivu|south kivu|ituri|displaced|conflict|humanitarian)\b/],
+      ["water_scarcity", /\b(nile delta|nile valley|desert|reclaimed land|salinity|water scarcity)\b/]
     ].forEach(([id, pattern]) => { if (pattern.test(text)) barriers.push(id); });
     const interests = [];
-    ["poultry", "horticulture", "maize", "cassava", "rice", "livestock", "drone", "irrigation", "food processing", "cooperative", "market access"].forEach(item => {
+    ["poultry", "horticulture", "maize", "cassava", "rice", "livestock", "drone", "irrigation", "food processing", "cooperative", "market access", "greenhouse", "aquaculture", "exports", "cold chain", "nile delta"].forEach(item => {
       if (text.includes(item)) interests.push(item);
     });
+    if (/\b(process|processing|value add|value-add)\b/i.test(text)) interests.push("food processing");
     return Object.freeze({
-      country: country.name,
-      countryId: country.id,
-      region: normalizeText(context.region || "region not provided"),
+      country: countryDetection.ambiguous ? "Congo clarification needed" : country.name,
+      countryId: countryDetection.ambiguous ? "ambiguous_congo" : country.id,
+      countryDetection,
+      countryAmbiguity: countryDetection.ambiguous,
+      countryCandidates: countryDetection.candidates,
+      region: normalizeText(context.region || context.province || context.governorate || "region not provided"),
+      administrativeLevel: country.administrativeLevel,
+      administrativeUnit: normalizeText(context.province || context.governorate || context.region || "not provided"),
+      jurisdiction: countryDetection.ambiguous ? "ambiguous_congo" : country.jurisdiction,
+      isoAlpha2: countryDetection.ambiguous ? null : country.isoAlpha2,
+      isoAlpha3: countryDetection.ambiguous ? null : country.isoAlpha3,
+      primaryLanguage: country.primaryLanguage,
       preferredLanguages: country.languages,
+      rightToLeft: country.rightToLeft === true,
       targetPopulation: /\b(woman|women|girl|single mother)\b/i.test(text) ? "women_support" : /\b(youth|young)\b/i.test(text) ? "youth_support" : "general_youth_women_support",
       interests: Object.freeze([...new Set(interests.length ? interests : ["agriculture pathway"])]),
       barriers: Object.freeze([...new Set(barriers)]),
@@ -427,12 +630,20 @@
   }
 
   function buildClimateRiskProfile(profile = {}) {
+    const countryConfig = SUPPORTED_COUNTRIES.find(item => item.id === profile.countryId);
+    const countrySpecificRisks = countryConfig && countryConfig.contextNotes.length ? countryConfig.contextNotes : ["local validation required"];
     return Object.freeze({
       country: profile.country || "country not provided",
+      countryId: profile.countryId || "country_not_provided",
+      jurisdiction: profile.jurisdiction || "jurisdiction_not_selected",
+      administrativeLevel: profile.administrativeLevel || "country/district",
+      administrativeUnit: profile.administrativeUnit || "not provided",
+      rightToLeft: profile.rightToLeft === true,
       riskSignals: RISK_INTELLIGENCE_REGISTRY,
+      countrySpecificRisks: Object.freeze(countrySpecificRisks),
       cropLivestockScope: Object.freeze(["crop", "livestock", "poultry", "aquaculture", "irrigation", "soil", "storage", "post-harvest"]),
       dataStatus: "data_limited_without_live_country_weather_soil_extension_sources",
-      guidance: Object.freeze(["ask for district", "verify local crop calendar", "check extension source", "do not treat as pesticide, veterinary, or fertilizer prescription"])
+      guidance: Object.freeze([`ask for ${profile.administrativeLevel || "district"}`, "verify local crop calendar", "check extension source", "do not treat as pesticide, veterinary, or fertilizer prescription"])
     });
   }
 
@@ -471,6 +682,7 @@
       schemaVersion: SCHEMA_VERSION,
       command: normalizeText(command),
       trustRegistry: TRUST_REGISTRY,
+      countryTrustRegistry: COUNTRY_TRUST_REGISTRY,
       countrySources: COUNTRY_SOURCE_REGISTRY,
       sourceVerificationStates: Object.freeze(["country_verified_required", "partner_required", "credential_blocked", "buyer_backed", "employer_backed", "provider_backed_required"]),
       userVisibleStatus: "Nexus prepared verified-source and provider trust requirements. Unverified buyers, employers, training providers, finance programs, transport providers, storage providers, and social-service partners remain blocked from live action.",
@@ -504,6 +716,7 @@
       modelIds: MODEL_REGISTRY.map(item => item.modelId),
       registryCounts: Object.freeze({
         countrySources: COUNTRY_SOURCE_REGISTRY.length,
+        countryTrustRecords: COUNTRY_TRUST_REGISTRY.length,
         trustRecords: TRUST_REGISTRY.length,
         pathways: PATHWAY_REGISTRY.length,
         supportSignals: SUPPORT_INTELLIGENCE_REGISTRY.length,
@@ -537,7 +750,13 @@
       schemaVersion: SCHEMA_VERSION,
       participantConsent: profile.memoryPreference,
       country: profile.country,
+      countryId: profile.countryId,
+      isoAlpha2: profile.isoAlpha2,
+      isoAlpha3: profile.isoAlpha3,
+      jurisdiction: profile.jurisdiction,
       region: profile.region,
+      administrativeLevel: profile.administrativeLevel,
+      administrativeUnit: profile.administrativeUnit,
       purpose: "youth_women_agricultural_opportunity_support",
       predictionHorizon: "near-term pathway and support planning",
       inputsUsed: ["user command", "session context", "country registry", "local pathway rules"],
@@ -557,12 +776,19 @@
   function buildOpportunityPacket(command = "", context = {}) {
     const profile = inferParticipantProfile(command, context);
     const recommendations = buildRecommendations(profile);
+    const countryConfig = SUPPORTED_COUNTRIES.find(item => item.id === profile.countryId) || null;
+    const countrySourceRegistry = profile.countryAmbiguity ? [] : COUNTRY_SOURCE_REGISTRY.filter(item => item.countryId === profile.countryId);
+    const countryTrustRegistry = profile.countryAmbiguity ? [] : COUNTRY_TRUST_REGISTRY.filter(item => item.countryId === profile.countryId);
+    const regionalConfiguration = profile.countryAmbiguity ? null : Object.values(REGIONAL_CONFIGURATION).find(item => item.countryIds.includes(profile.countryId)) || null;
+    const userVisibleStatus = profile.countryAmbiguity
+      ? "Nexus needs clarification: do you mean Democratic Republic of the Congo (Congo-Kinshasa/DRC) or Republic of the Congo (Congo-Brazzaville)? No country-specific provider, buyer, market, law, ministry, source, or model record was selected."
+      : "Nexus prepared an Africa youth and women agricultural opportunity packet. It can recommend local planning steps, training pathways, support needs, and verification questions, but it does not promise income, yield, jobs, financing, buyer demand, enrollment, or provider action.";
     return Object.freeze({
       packetType: "genesis_africa_youth_women_ag_opportunity_packet",
       capabilityId: SERVICE_ID,
       schemaVersion: SCHEMA_VERSION,
       command: normalizeText(command),
-      userVisibleStatus: "Nexus prepared an Africa youth and women agricultural opportunity packet. It can recommend local planning steps, training pathways, support needs, and verification questions, but it does not promise income, yield, jobs, financing, buyer demand, enrollment, or provider action.",
+      userVisibleStatus,
       participantProfile: profile,
       recommendations,
       supportPrediction: buildSupportPrediction(command, profile),
@@ -573,18 +799,27 @@
       accessibilityLocalization: ACCESSIBILITY_LOCALIZATION,
       programImpactFields: PROGRAM_IMPACT_FIELDS,
       trustRegistry: TRUST_REGISTRY,
-      countryConfig: SUPPORTED_COUNTRIES.find(item => item.id === profile.countryId),
+      countryConfig,
       sourceRegistry: SOURCE_REGISTRY,
-      countrySourceRegistry: COUNTRY_SOURCE_REGISTRY.filter(item => item.countryId === profile.countryId),
+      countrySourceRegistry,
+      countryTrustRegistry,
       modelRegistry: MODEL_REGISTRY,
       pathwayRegistry: PATHWAY_REGISTRY,
-      regionalConfiguration: Object.values(REGIONAL_CONFIGURATION).find(item => item.countryIds.includes(profile.countryId)) || null,
+      regionalConfiguration,
       riskIntelligenceRegistry: RISK_INTELLIGENCE_REGISTRY,
       capabilityStatus: CAPABILITY_STATUS,
+      countryIsolation: Object.freeze({
+        jurisdiction: profile.jurisdiction,
+        sourceIsolationRequired: true,
+        providerBuyerIsolationRequired: true,
+        providerRecordsMustMatchCountry: true,
+        buyerRecordsMustMatchCountry: true,
+        ambiguousCountryRequiresClarification: profile.countryAmbiguity === true
+      }),
       receipt: buildReceipt(command, profile, recommendations),
       explanation: {
         whyRecommended: recommendations.map(item => item.why),
-        missingInformation: ["district", "land/water details", "training availability", "verified provider", "verified market or buyer", "finance eligibility"],
+        missingInformation: [profile.administrativeLevel || "district", "land/water details", "training availability", "verified provider", "verified market or buyer", "finance eligibility"],
         whatNexusIsNotConcluding: [
           "Nexus is not guaranteeing income, yield, employment, buyer demand, financing, or training completion.",
           "Nexus is not contacting providers, buyers, employers, financiers, cooperatives, or transport services.",
@@ -609,8 +844,10 @@
       capabilityStatus: CAPABILITY_STATUS,
       classificationCounts: counts,
       supportedCountryCount: SUPPORTED_COUNTRIES.length,
+      priorityDeploymentCountries: SUPPORTED_COUNTRIES.filter(item => item.priorityDeployment).map(item => Object.freeze({ id: item.id, name: item.name, isoAlpha2: item.isoAlpha2, isoAlpha3: item.isoAlpha3 })),
       sourceCount: SOURCE_REGISTRY.length,
       countrySourceCount: COUNTRY_SOURCE_REGISTRY.length,
+      countryTrustRecordCount: COUNTRY_TRUST_REGISTRY.length,
       modelCount: MODEL_REGISTRY.length,
       pathwayCount: PATHWAY_REGISTRY.length,
       riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
@@ -630,6 +867,7 @@
       countries: SUPPORTED_COUNTRIES,
       sources: SOURCE_REGISTRY,
       countrySources: COUNTRY_SOURCE_REGISTRY,
+      countryTrustRegistry: COUNTRY_TRUST_REGISTRY,
       models: MODEL_REGISTRY,
       pathways: PATHWAY_REGISTRY,
       regions: REGIONAL_CONFIGURATION,
@@ -651,8 +889,10 @@
       capabilityId: SERVICE_ID,
       schemaVersion: SCHEMA_VERSION,
       supportedCountryCount: SUPPORTED_COUNTRIES.length,
+      priorityDeploymentCountries: SUPPORTED_COUNTRIES.filter(item => item.priorityDeployment).map(item => Object.freeze({ id: item.id, name: item.name, isoAlpha2: item.isoAlpha2, isoAlpha3: item.isoAlpha3 })),
       sourceCount: SOURCE_REGISTRY.length,
       countrySourceCount: COUNTRY_SOURCE_REGISTRY.length,
+      countryTrustRecordCount: COUNTRY_TRUST_REGISTRY.length,
       modelCount: MODEL_REGISTRY.length,
       pathwayCount: PATHWAY_REGISTRY.length,
       riskSignalCount: RISK_INTELLIGENCE_REGISTRY.length,
@@ -672,6 +912,7 @@
     SUPPORTED_COUNTRIES,
     SOURCE_REGISTRY,
     COUNTRY_SOURCE_REGISTRY,
+    COUNTRY_TRUST_REGISTRY,
     MODEL_REGISTRY,
     PATHWAY_REGISTRY,
     REGIONAL_CONFIGURATION,
@@ -684,6 +925,7 @@
     PROGRAM_IMPACT_FIELDS,
     CAPABILITY_STATUS,
     shouldHandle,
+    detectCountry,
     inferParticipantProfile,
     buildSupportPrediction,
     buildClimateRiskProfile,

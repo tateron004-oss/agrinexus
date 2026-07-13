@@ -15,9 +15,10 @@ function includes(source, token, label) {
 }
 
 assert.strictEqual(runtime.SERVICE_ID, "africa_youth_women_agricultural_opportunity_intelligence");
-assert(runtime.SUPPORTED_COUNTRIES.length >= 10, "runtime must configure multiple African countries");
+assert(runtime.SUPPORTED_COUNTRIES.length >= 13, "runtime must configure expanded African country coverage");
 assert(runtime.SOURCE_REGISTRY.length >= 10, "runtime must seed trusted source registry");
-assert(runtime.COUNTRY_SOURCE_REGISTRY.length >= runtime.SUPPORTED_COUNTRIES.length * 10, "runtime must configure country-specific source records");
+assert(runtime.COUNTRY_SOURCE_REGISTRY.length >= runtime.SUPPORTED_COUNTRIES.length * 18, "runtime must configure expanded country-specific source records");
+assert(runtime.COUNTRY_TRUST_REGISTRY.length >= runtime.SUPPORTED_COUNTRIES.length * 12, "runtime must configure country-specific trust records");
 assert(runtime.MODEL_REGISTRY.length >= 12, "runtime must register governed predictive models");
 assert(runtime.PATHWAY_REGISTRY.length >= 12, "runtime must configure agriculture, workforce, and enterprise pathways");
 assert(runtime.RISK_INTELLIGENCE_REGISTRY.length >= 12, "runtime must configure climate, crop, market, and post-harvest risk signals");
@@ -26,10 +27,17 @@ assert(runtime.WOMEN_YOUTH_PROTECTION_REGISTRY.length >= 6, "runtime must config
 assert(runtime.TRUST_REGISTRY.length >= 9, "runtime must configure verified provider/buyer/employer trust records");
 assert(runtime.PRIVACY_FAIRNESS_CONTROLS.fairnessTests.length >= 5, "runtime must configure fairness tests");
 assert(runtime.ACCESSIBILITY_LOCALIZATION.multilingualSupport.includes("Swahili"), "runtime must configure multilingual support");
+assert(runtime.ACCESSIBILITY_LOCALIZATION.multilingualSupport.includes("Egyptian Arabic"), "runtime must configure Egyptian Arabic support");
+assert(runtime.ACCESSIBILITY_LOCALIZATION.multilingualSupport.includes("Lingala"), "runtime must configure Lingala support");
+assert(runtime.ACCESSIBILITY_LOCALIZATION.multilingualSupport.includes("Tshiluba"), "runtime must configure Tshiluba support");
+assert(runtime.ACCESSIBILITY_LOCALIZATION.rightToLeftSupport.includes("Arabic"), "runtime must configure Arabic right-to-left support");
 assert(runtime.PROGRAM_IMPACT_FIELDS.funderExportEnabled === false, "funder exports must be disabled by default");
 assert(runtime.REGIONAL_CONFIGURATION.east_africa.countryIds.includes("kenya"), "East Africa regional config must include Kenya");
 assert(runtime.REGIONAL_CONFIGURATION.west_africa.countryIds.includes("ghana"), "West Africa regional config must include Ghana");
 assert(runtime.REGIONAL_CONFIGURATION.southern_africa.countryIds.includes("zambia"), "Southern Africa regional config must include Zambia");
+assert(runtime.REGIONAL_CONFIGURATION.central_africa.countryIds.includes("democratic_republic_of_the_congo"), "Central Africa regional config must include DRC");
+assert(runtime.REGIONAL_CONFIGURATION.central_africa.countryIds.includes("republic_of_the_congo"), "Central Africa regional config must include Republic of the Congo");
+assert(runtime.REGIONAL_CONFIGURATION.north_africa.countryIds.includes("egypt"), "North Africa regional config must include Egypt");
 assert(runtime.CAPABILITY_STATUS.training_enrollment_request === "credential_blocked", "training enrollment must be credential blocked");
 assert(runtime.CAPABILITY_STATUS.production_authorization === "not_production_authorized", "production authorization must remain blocked");
 
@@ -40,13 +48,66 @@ runtime.SUPPORTED_COUNTRIES.forEach(country => {
   assert(sources.some(item => item.sourceType === "education_training"), `${country.name} must include education/training authority`);
   assert(sources.some(item => item.sourceType === "meteorological_service"), `${country.name} must include meteorological service`);
   assert(sources.some(item => item.sourceType === "research_extension"), `${country.name} must include research/extension institute`);
+  assert(sources.some(item => item.sourceType === "irrigation_water_authority"), `${country.name} must include irrigation/water authority`);
+  assert(sources.some(item => item.sourceType === "university_research"), `${country.name} must include university/research records`);
+  assert(sources.some(item => item.sourceType === "extension_service"), `${country.name} must include extension-service records`);
   assert(sources.some(item => item.sourceType === "verified_training_provider"), `${country.name} must include training provider directory`);
   assert(sources.some(item => item.sourceType === "verified_employer"), `${country.name} must include employer directory`);
   assert(sources.some(item => item.sourceType === "verified_buyer"), `${country.name} must include buyer directory`);
   assert(sources.some(item => item.sourceType === "verified_cooperative"), `${country.name} must include cooperative directory`);
   assert(sources.some(item => item.sourceType === "finance_program"), `${country.name} must include finance program directory`);
+  assert(sources.some(item => item.sourceType === "transport_provider"), `${country.name} must include transport provider directory`);
+  assert(sources.some(item => item.sourceType === "storage_provider"), `${country.name} must include storage provider directory`);
+  assert(sources.some(item => item.sourceType === "government_program"), `${country.name} must include government program records`);
+  assert(sources.some(item => item.sourceType === "ngo_development_partner"), `${country.name} must include NGO/development partner records`);
   assert(sources.every(item => item.noExecutionAuthorized === true), `${country.name} sources must not authorize execution`);
+  assert(sources.every(item => item.countryId === country.id), `${country.name} sources must remain isolated to country ID`);
+  const countryTrust = runtime.COUNTRY_TRUST_REGISTRY.filter(item => item.countryId === country.id);
+  assert(countryTrust.some(item => item.recordType === "buyer"), `${country.name} must include buyer trust records`);
+  assert(countryTrust.some(item => item.recordType === "training_provider"), `${country.name} must include training-provider trust records`);
+  assert(countryTrust.some(item => item.recordType === "government"), `${country.name} must include government trust records`);
+  assert(countryTrust.every(item => item.liveExecutionEnabled === false), `${country.name} trust records must block live execution`);
 });
+
+const drc = runtime.SUPPORTED_COUNTRIES.find(country => country.id === "democratic_republic_of_the_congo");
+const congoRepublic = runtime.SUPPORTED_COUNTRIES.find(country => country.id === "republic_of_the_congo");
+const egypt = runtime.SUPPORTED_COUNTRIES.find(country => country.id === "egypt");
+assert(drc, "DRC country config must exist");
+assert(congoRepublic, "Republic of the Congo country config must exist");
+assert(egypt, "Egypt country config must exist");
+assert.strictEqual(drc.isoAlpha2, "CD");
+assert.strictEqual(drc.isoAlpha3, "COD");
+assert.strictEqual(drc.jurisdiction, "CD");
+assert.strictEqual(drc.administrativeLevel, "province");
+assert.strictEqual(drc.priorityDeployment, true);
+assert(drc.supportedLanguages.includes("Swahili"), "DRC must support Swahili");
+assert(drc.supportedLanguages.includes("Lingala"), "DRC must support Lingala");
+assert(drc.supportedLanguages.includes("Kikongo"), "DRC must support Kikongo");
+assert(drc.supportedLanguages.includes("Tshiluba"), "DRC must support Tshiluba");
+assert.strictEqual(congoRepublic.isoAlpha2, "CG");
+assert.strictEqual(congoRepublic.isoAlpha3, "COG");
+assert.strictEqual(congoRepublic.jurisdiction, "CG");
+assert.strictEqual(congoRepublic.administrativeLevel, "department");
+assert(congoRepublic.supportedLanguages.includes("Kituba"), "Republic of the Congo must support Kituba");
+assert.notStrictEqual(drc.internalCountryId, congoRepublic.internalCountryId, "DRC and Republic of the Congo must have separate internal IDs");
+assert.strictEqual(egypt.isoAlpha2, "EG");
+assert.strictEqual(egypt.isoAlpha3, "EGY");
+assert.strictEqual(egypt.jurisdiction, "EG");
+assert.strictEqual(egypt.priorityDeployment, true);
+assert.strictEqual(egypt.rightToLeft, true);
+assert.strictEqual(egypt.primaryLanguage, "Arabic");
+assert.strictEqual(egypt.administrativeLevel, "governorate");
+assert(egypt.supportedLanguages.includes("Egyptian Arabic"), "Egypt must include Egyptian Arabic");
+assert(egypt.contextNotes.some(note => /Nile Delta/i.test(note)), "Egypt must include Nile Delta planning context");
+
+assert.strictEqual(runtime.detectCountry("Help me find agriculture training in the Democratic Republic of the Congo.").country.id, "democratic_republic_of_the_congo");
+assert.strictEqual(runtime.detectCountry("What agriculture pathway fits a young woman in eastern DRC?").country.id, "democratic_republic_of_the_congo");
+assert.strictEqual(runtime.detectCountry("Show support for Congo-Kinshasa.").country.id, "democratic_republic_of_the_congo");
+assert.strictEqual(runtime.detectCountry("Show support for the Republic of the Congo.").country.id, "republic_of_the_congo");
+assert.strictEqual(runtime.detectCountry("Show support for Congo-Brazzaville.").country.id, "republic_of_the_congo");
+assert.strictEqual(runtime.detectCountry("I need agriculture training in Egypt.").country.id, "egypt");
+assert.strictEqual(runtime.detectCountry("Show support for the Arab Republic of Egypt.").country.id, "egypt");
+assert.strictEqual(runtime.detectCountry("Help me in Congo.").ambiguous, true, "bare Congo must require clarification");
 
 [
   "Nexus, help me start farming.",
@@ -60,10 +121,53 @@ runtime.SUPPORTED_COUNTRIES.forEach(country => {
   "Show privacy consent fairness safeguarding and export controls.",
   "Show the trust registry for verified buyers and employers.",
   "Prepare a program impact funder report.",
-  "Show master completion classification for end-to-end testing."
+  "Show master completion classification for end-to-end testing.",
+  "Help me find agriculture training in the Democratic Republic of the Congo.",
+  "Show support for the Republic of the Congo.",
+  "I need agriculture training in Egypt.",
+  "Help me in Congo."
 ].forEach(command => {
   assert.strictEqual(runtime.shouldHandle(command), true, `should handle ${command}`);
 });
+
+const drcPacket = runtime.buildOpportunityPacket("Help me find agriculture training in the Democratic Republic of the Congo.");
+assert.strictEqual(drcPacket.participantProfile.countryId, "democratic_republic_of_the_congo");
+assert.strictEqual(drcPacket.participantProfile.jurisdiction, "CD");
+assert.strictEqual(drcPacket.participantProfile.administrativeLevel, "province");
+assert(drcPacket.countrySourceRegistry.length > 0, "DRC packet must include DRC sources");
+assert(drcPacket.countrySourceRegistry.every(item => item.countryId === "democratic_republic_of_the_congo" && item.jurisdiction === "CD"), "DRC packet must not mix country sources");
+assert(drcPacket.countryTrustRegistry.every(item => item.countryId === "democratic_republic_of_the_congo" && item.jurisdiction === "CD"), "DRC packet must not mix trust records");
+assert.strictEqual(drcPacket.countryIsolation.providerBuyerIsolationRequired, true, "DRC packet must require provider/buyer isolation");
+
+const easternDrcPacket = runtime.buildOpportunityPacket("What agriculture pathway fits a young woman in eastern DRC?");
+assert.strictEqual(easternDrcPacket.participantProfile.countryId, "democratic_republic_of_the_congo");
+assert.strictEqual(easternDrcPacket.participantProfile.targetPopulation, "women_support");
+assert(easternDrcPacket.participantProfile.barriers.includes("humanitarian_displacement"), "eastern DRC packet should carry humanitarian/logistics barrier context");
+
+const congoRepublicPacket = runtime.buildOpportunityPacket("Show support for the Republic of the Congo.");
+assert.strictEqual(congoRepublicPacket.participantProfile.countryId, "republic_of_the_congo");
+assert.strictEqual(congoRepublicPacket.participantProfile.jurisdiction, "CG");
+assert(congoRepublicPacket.countrySourceRegistry.every(item => item.countryId === "republic_of_the_congo" && item.jurisdiction === "CG"), "Republic of the Congo packet must not reuse DRC sources");
+assert(congoRepublicPacket.countryTrustRegistry.every(item => item.countryId === "republic_of_the_congo" && item.jurisdiction === "CG"), "Republic of the Congo packet must not reuse DRC trust records");
+
+const egyptPacket = runtime.buildOpportunityPacket("What can a young woman grow or process in the Nile Delta?");
+assert.strictEqual(egyptPacket.participantProfile.countryId, "egypt");
+assert.strictEqual(egyptPacket.participantProfile.jurisdiction, "EG");
+assert.strictEqual(egyptPacket.participantProfile.rightToLeft, true);
+assert.strictEqual(egyptPacket.participantProfile.primaryLanguage, "Arabic");
+assert.strictEqual(egyptPacket.participantProfile.administrativeLevel, "governorate");
+assert(egyptPacket.participantProfile.barriers.includes("water_scarcity"), "Nile Delta packet should include Egypt water/scarcity context");
+assert(egyptPacket.climateRiskProfile.countrySpecificRisks.some(item => /Nile Delta|water scarcity|salinity/i.test(item)), "Egypt climate profile must include country-specific Nile/water context");
+assert(egyptPacket.countrySourceRegistry.every(item => item.countryId === "egypt" && item.jurisdiction === "EG"), "Egypt packet must isolate source records");
+
+const ambiguousCongoPacket = runtime.buildOpportunityPacket("Help me in Congo.");
+assert.strictEqual(ambiguousCongoPacket.participantProfile.countryId, "ambiguous_congo");
+assert.strictEqual(ambiguousCongoPacket.participantProfile.countryAmbiguity, true);
+assert.strictEqual(ambiguousCongoPacket.countrySourceRegistry.length, 0, "ambiguous Congo must not select country sources");
+assert.strictEqual(ambiguousCongoPacket.countryTrustRegistry.length, 0, "ambiguous Congo must not select trust records");
+assert(ambiguousCongoPacket.userVisibleStatus.includes("Congo-Kinshasa"), "ambiguous Congo must ask about DRC/Congo-Kinshasa");
+assert(ambiguousCongoPacket.userVisibleStatus.includes("Congo-Brazzaville"), "ambiguous Congo must ask about Republic of the Congo/Congo-Brazzaville");
+assert.strictEqual(ambiguousCongoPacket.countryIsolation.ambiguousCountryRequiresClarification, true, "ambiguous Congo must require clarification");
 
 const packet = runtime.buildOpportunityPacket("I am a young woman in Kenya. I do not have land, need childcare, and want to start a poultry business.");
 assert.strictEqual(packet.packetType, "genesis_africa_youth_women_ag_opportunity_packet");
@@ -101,7 +205,8 @@ assert.strictEqual(statusPacket.buyerContactEnabled, false);
 assert.strictEqual(statusPacket.trainingEnrollmentEnabled, false);
 assert(statusPacket.classificationCounts.implemented_locally >= 8, "status must classify implemented local capabilities");
 assert(statusPacket.classificationCounts.credential_blocked >= 4, "status must classify credential-blocked execution capabilities");
-assert(statusPacket.countrySourceCount >= 100, "status must count country-specific sources");
+assert(statusPacket.countrySourceCount >= runtime.SUPPORTED_COUNTRIES.length * 18, "status must count expanded country-specific sources");
+assert(statusPacket.countryTrustRecordCount >= runtime.SUPPORTED_COUNTRIES.length * 12, "status must count country-specific trust records");
 assert(statusPacket.pathwayCount >= 12, "status must count pathways");
 assert(statusPacket.riskSignalCount >= 12, "status must count risk signals");
 assert(statusPacket.trustRecordCount >= 9, "status must count trust records");
@@ -111,7 +216,8 @@ assert(statusPacket.protectionControlCount >= 6, "status must count protection c
 const registries = runtime.registries();
 assert.strictEqual(registries.packetType, "genesis_africa_ag_opportunity_registry_packet");
 assert.strictEqual(registries.buyerContactEnabled, false);
-assert(registries.countrySources.length >= 100, "registries must expose country source records");
+assert(registries.countrySources.length >= runtime.SUPPORTED_COUNTRIES.length * 18, "registries must expose country source records");
+assert(registries.countryTrustRegistry.length >= runtime.SUPPORTED_COUNTRIES.length * 12, "registries must expose country trust records");
 assert(registries.pathways.some(item => item.pathwayId === "employment"), "registries must expose employment pathway");
 assert(registries.pathways.some(item => item.pathwayId === "entrepreneurship"), "registries must expose entrepreneurship pathway");
 assert(registries.riskSignals.includes("disease_pressure"), "registries must expose disease pressure risk signal");
@@ -128,7 +234,9 @@ assert(governance.womenYouthProtections.some(item => item.protectionId === "wome
 const trust = runtime.buildTrustRegistryPacket("Show the trust registry for verified buyers and employers.");
 assert.strictEqual(trust.packetType, "genesis_africa_ag_opportunity_trust_registry_packet");
 assert(trust.trustRegistry.some(item => item.recordType === "buyer" && item.state === "buyer_backed"), "trust registry must include buyer-backed state");
+assert(trust.countryTrustRegistry.some(item => item.countryId === "egypt" && item.recordType === "buyer"), "trust packet must include country-specific buyer trust records");
 assert(trust.trustRegistry.every(item => item.liveExecutionEnabled === false), "trust registry must not enable live execution");
+assert(trust.countryTrustRegistry.every(item => item.liveExecutionEnabled === false), "country trust registry must not enable live execution");
 assert(trust.sourceVerificationStates.includes("credential_blocked"), "trust registry must classify credential-blocked state");
 
 const impact = runtime.buildProgramImpactPacket("Prepare a program impact funder report.");
@@ -142,7 +250,8 @@ assert.strictEqual(completion.packetType, "genesis_africa_ag_opportunity_complet
 assert.strictEqual(completion.classifications.localAdvisoryRuntime, "implemented_locally");
 assert.strictEqual(completion.classifications.trainingEnrollment, "credential_blocked");
 assert.strictEqual(completion.classifications.productionAuthorization, "not_production_authorized");
-assert(completion.registryCounts.countrySources >= 100, "completion packet must count country sources");
+assert(completion.registryCounts.countrySources >= runtime.SUPPORTED_COUNTRIES.length * 18, "completion packet must count country sources");
+assert(completion.registryCounts.countryTrustRecords >= runtime.SUPPORTED_COUNTRIES.length * 12, "completion packet must count country trust records");
 
 [
   "nexus-genesis-africa-ag-opportunity.js",
@@ -164,6 +273,22 @@ const commandCenterWorkforceIndex = app.indexOf("handleNexusGenesisPredictiveWor
 assert(commandCenterSubmitIndex >= 0, "command center submit handler must exist");
 assert(commandCenterAfricaIndex > commandCenterSubmitIndex, "command center must route Africa opportunity commands");
 assert(commandCenterWorkforceIndex > commandCenterAfricaIndex, "Africa opportunity routing should run before generic workforce routing");
+const presenceComposerIndex = app.indexOf("async function handleNexusPresenceCommandSendSubmit");
+const presenceAfricaIndex = app.indexOf("await handleNexusGenesisAfricaAgOpportunityCommandAsync(command, { source })", presenceComposerIndex);
+const presenceFallbackIndex = app.indexOf("const fallbackResponse = \"I'm here. Tell me the goal", presenceComposerIndex);
+assert(presenceComposerIndex >= 0, "presence/orb composer submit handler must exist");
+assert(presenceAfricaIndex > presenceComposerIndex, "presence/orb composer must route Africa opportunity commands");
+assert(presenceFallbackIndex > presenceAfricaIndex, "presence/orb Africa opportunity routing must run before generic fallback");
+assert(app.includes("function isNexusGenesisAfricaAgOpportunityFallbackCommand"), "Africa opportunity fallback command classifier must exist");
+assert(app.includes("async function handleNexusGenesisAfricaAgOpportunityCommandAsync"), "Africa opportunity async server fallback must exist");
+assert(app.includes("/api/nexus/africa-ag-opportunity/evaluate"), "Africa opportunity async fallback must call existing server endpoint");
+assert(app.includes("nexus-genesis-africa-ag-opportunity-server-fallback"), "Africa opportunity server fallback must tag receipts safely");
+const homeClickSubmitIndex = app.indexOf("const submit = eventTarget?.closest?.(\"[data-nexus-command-center-submit]\");");
+const homeClickAfricaIndex = app.indexOf("void handleNexusGenesisAfricaAgOpportunityCommandAsync(command, { source: \"command-submit\" });", homeClickSubmitIndex);
+const homeClickAgenticIndex = app.indexOf("submitNexusAgenticCommandRuntime(command, input, \"command-submit\", event)", homeClickSubmitIndex);
+assert(homeClickSubmitIndex >= 0, "home click submit handler must exist");
+assert(homeClickAfricaIndex > homeClickSubmitIndex, "home click submit handler must route Africa opportunity commands");
+assert(homeClickAgenticIndex > homeClickAfricaIndex, "Africa opportunity routing must run before generic agentic command runtime");
 
 [
   "nexusGenesisAfricaAgOpportunity",
