@@ -30,6 +30,14 @@ const suites = {
     "scripts/call-provider-drift-qa.js"
   ],
   voice: [
+    "scripts/nexus-trust-chain-trace-qa.js",
+    "scripts/nexus-conversation-acknowledgement-qa.js",
+    "scripts/nexus-audible-response-qa.js",
+    "scripts/nexus-orb-deterministic-activation-qa.js",
+    "scripts/nexus-conversation-first-routing-qa.js",
+    "scripts/nexus-admin-preview-isolation-qa.js",
+    "scripts/nexus-first-response-synchronization-qa.js",
+    "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
     "scripts/voice-browser-policy-regression.js",
     "scripts/realtime-voice-provider-qa.js",
     "scripts/voice-phase1-alignment-qa.js",

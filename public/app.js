@@ -807,6 +807,71 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
   updatedAt: new Date().toISOString()
 };
+const NEXUS_GENESIS_TRUST_CHAIN_STATES = Object.freeze([
+  "idle",
+  "wake_requested",
+  "voice_permission_pending",
+  "listening",
+  "speech_detected",
+  "transcript_finalized",
+  "conversation_submitted",
+  "response_pending",
+  "response_ready",
+  "speech_preparing",
+  "speaking",
+  "waiting",
+  "permission_denied",
+  "recognition_unavailable",
+  "recognition_failed",
+  "response_failed",
+  "synthesis_unavailable",
+  "synthesis_failed",
+  "cancelled"
+]);
+const NEXUS_GENESIS_TRUST_CHAIN_FAILURE_STATES = Object.freeze([
+  "permission_denied",
+  "recognition_unavailable",
+  "recognition_failed",
+  "response_failed",
+  "synthesis_unavailable",
+  "synthesis_failed",
+  "cancelled"
+]);
+const NEXUS_GENESIS_TRUST_CHAIN_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-genesis-trust-chain.v1",
+  runtimeOwner: "NexusGenesisTrustChainRuntime",
+  canonicalStates: NEXUS_GENESIS_TRUST_CHAIN_STATES,
+  failureStates: NEXUS_GENESIS_TRUST_CHAIN_FAILURE_STATES,
+  orbHomeAction: "wake_or_listen_only",
+  conversationFirst: true,
+  standardUserAdminPreviewAllowed: false,
+  textFallbackRequired: true,
+  speechRequiresStartEvent: true,
+  noWorkflowFromOrbActivation: true
+});
+let nexusGenesisTrustChainState = {
+  schemaVersion: NEXUS_GENESIS_TRUST_CHAIN_CONTRACT.schemaVersion,
+  runtimeOwner: NEXUS_GENESIS_TRUST_CHAIN_CONTRACT.runtimeOwner,
+  state: "idle",
+  orbState: "idle",
+  visibleFeedback: "Nexus is ready.",
+  screenReaderFeedback: "Nexus is ready.",
+  lastTranscript: "",
+  lastResponse: "",
+  textFallbackRequired: true,
+  loggingBehavior: "protected-client-diagnostics",
+  updatedAt: new Date().toISOString()
+};
+let nexusDailyCompanionState = JSON.parse(localStorage.getItem("nexusDailyCompanionState") || "null") || {
+  schemaVersion: "nexus-daily-companion.v1",
+  mode: "companion",
+  activeMissionTopic: "",
+  pausedMissionTopic: "",
+  lastTopic: "",
+  lastUserNeed: "",
+  approvedMemoryOnly: true,
+  updatedAt: new Date().toISOString()
+};
 const NEXUS_OS_MISSION_LIFECYCLE_STATES = Object.freeze([
   "listen",
   "understand",
@@ -919,8 +984,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-418";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v369";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-419";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -15764,6 +15829,19 @@ function nexusEvidenceMarkup(packet) {
 
 function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
   const text = String(prompt || "").replace(/\s+/g, " ").trim();
+  const source = String(options.source || "").toLowerCase();
+  if (
+    experienceMode === "user" &&
+    (source === "voice" || source.includes("genesis") || source.includes("orb")) &&
+    !options.explicitUserRequestedPreview
+  ) {
+    setNexusGenesisTrustChainState("waiting", {
+      transcript: text,
+      visibleFeedback: "Nexus will stay in conversation until you ask for a workflow.",
+      reason: "standard-user-preview-isolated"
+    });
+    return null;
+  }
   const helpers = nexusAutonomousRuntimeHelpers();
   if (!text || !helpers.router || typeof helpers.router.routeNexusIntent !== "function") return null;
   const route = helpers.router.routeNexusIntent(text);
@@ -31187,9 +31265,186 @@ function startNexusGenesisExperienceEngine() {
   }, { passive: true });
 }
 
-function activateNexusGenesisExperience(source = "orb") {
+function nexusTrustChainOrbStateFor(state = nexusGenesisTrustChainState.state) {
+  if (state === "listening" || state === "speech_detected") return "listening";
+  if (state === "transcript_finalized" || state === "conversation_submitted" || state === "response_pending" || state === "speech_preparing") return "processing";
+  if (state === "speaking") return "speaking";
+  if (state === "waiting" || state === "response_ready") return "waiting";
+  if (NEXUS_GENESIS_TRUST_CHAIN_FAILURE_STATES.includes(state)) return "error";
+  if (state === "wake_requested" || state === "voice_permission_pending") return "wake";
+  return "idle";
+}
+
+function setNexusGenesisTrustChainState(state = "idle", details = {}) {
+  const normalized = NEXUS_GENESIS_TRUST_CHAIN_STATES.includes(state) ? state : "response_failed";
+  const visibleFeedback = String(details.visibleFeedback || details.statusText || nexusGenesisTrustChainState.visibleFeedback || "Nexus is ready.").trim();
+  const screenReaderFeedback = String(details.screenReaderFeedback || visibleFeedback).trim();
+  nexusGenesisTrustChainState = {
+    ...nexusGenesisTrustChainState,
+    state: normalized,
+    orbState: nexusTrustChainOrbStateFor(normalized),
+    visibleFeedback,
+    screenReaderFeedback,
+    lastTranscript: details.transcript ?? nexusGenesisTrustChainState.lastTranscript,
+    lastResponse: details.response ?? nexusGenesisTrustChainState.lastResponse,
+    failureRecovery: details.failureRecovery || "",
+    textFallbackRequired: details.textFallbackRequired !== false,
+    updatedAt: new Date().toISOString()
+  };
+  updateNexusOsVoiceRuntimeState({
+    trustChainState: normalized,
+    trustChainOrbState: nexusGenesisTrustChainState.orbState,
+    captionText: visibleFeedback,
+    assistantSpeaking: normalized === "speaking"
+  }, details.reason || `trust-chain-${normalized}`);
+  syncNexusPresenceSurfaces(nexusGenesisTrustChainState.orbState, {
+    source: "nexus-genesis-trust-chain",
+    captionText: visibleFeedback,
+    assistantSpeaking: normalized === "speaking"
+  });
+  const firstImpression = document.querySelector("[data-nexus-first-impression-status]");
+  if (firstImpression) firstImpression.textContent = translateText(screenReaderFeedback);
+  return nexusGenesisTrustChainState;
+}
+
+function isNexusConversationOnlyTrustChainInput(command = "") {
+  const text = normalizeToolText(command);
+  if (!text) return true;
+  return /\b(hello|hi|hey nexus|hello nexus|can you hear me|do you hear me|are you there|how are you|what can you do|show me nexus modes|tell me something interesting|explain ai|repeat that|speak more slowly|speak slower|use text only|text only|stop speaking)\b/.test(text)
+    && !/\b(sell|record|track|find work|apply|blood pressure|bp|shipment|maize|crop issue|telehealth|pharmacy|marketplace|route|dispatch|pay|book|schedule|call|message|whatsapp|sms)\b/.test(text);
+}
+
+function nexusConversationOnlyTrustChainResponse(command = "") {
+  const text = normalizeToolText(command);
+  if (!text) return "I am here. You can speak or type what you need.";
+  if (/\b(can you hear me|do you hear me|are you there)\b/.test(text)) return "Yes, I can hear you. What are we working on today?";
+  if (/\b(hello|hi|hey nexus|hello nexus)\b/.test(text)) return "Hello. I am listening. What do you need help with today?";
+  if (/\b(what can you do|show me nexus modes)\b/.test(text)) return "I can help with agriculture, health preparation, learning, jobs, marketplace review, maps, messages, reminders, language, offline support, and safe provider preparation. Tell me what you want to do next.";
+  if (/\b(explain ai)\b/.test(text)) return "AI is software that can recognize patterns, answer questions, and help organize tasks. I will keep actions gated and ask before anything important happens.";
+  if (/\b(tell me something interesting)\b/.test(text)) return "Here is something interesting: small improvements in irrigation timing, soil care, and storage can often protect more value than a bigger harvest alone.";
+  if (/\b(repeat that)\b/.test(text)) return lastVoiceResponse || "I am ready. Tell me what you need.";
+  if (/\b(speak more slowly|speak slower)\b/.test(text)) return "I will speak more slowly. You can keep talking naturally.";
+  if (/\b(use text only|text only|stop speaking)\b/.test(text)) return "Okay. I will continue in text.";
+  return "I heard you. Tell me a little more so I can help the right way.";
+}
+
+function saveNexusDailyCompanionState(patch = {}) {
+  nexusDailyCompanionState = {
+    ...nexusDailyCompanionState,
+    ...patch,
+    schemaVersion: "nexus-daily-companion.v1",
+    approvedMemoryOnly: true,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem("nexusDailyCompanionState", JSON.stringify(nexusDailyCompanionState));
+  } catch {
+    // Companion continuity remains session-safe if storage is unavailable.
+  }
+  return nexusDailyCompanionState;
+}
+
+function nexusDailyCompanionIntent(command = "") {
+  const text = normalizeToolText(command);
+  if (!text) return null;
+  const activeTopic = nexusDailyCompanionState.activeMissionTopic || nexusDailyCompanionState.pausedMissionTopic || "";
+  if (/\b(good morning|good afternoon|good evening|hello|hi|hey nexus)\b/.test(text)) {
+    return { type: "conversation", topic: "greeting", response: "Good morning. I am here with you. What would you like to focus on today?" };
+  }
+  if (/\b(can you hear me|do you hear me|are you there)\b/.test(text)) {
+    return { type: "conversation", topic: "hearing-check", response: "Yes, I can hear you. What are we working on today?" };
+  }
+  if (/\b(hard day|feeling lonely|i feel lonely|lonely today|sad today|rough day)\b/.test(text)) {
+    return { type: "conversation", topic: "support", response: "I am glad you reached out. Would you like to talk for a while, or is there something specific you would like help with?" };
+  }
+  if (/\b(explain ai|new to it|explain this to me|i don't understand|i dont understand|didn't understand|didnt understand)\b/.test(text)) {
+    return { type: "conversation", topic: "teaching", response: "Of course. I can explain it in plain steps. AI is software that can notice patterns, answer questions, and help organize tasks, but important actions still need your approval." };
+  }
+  if (/\b(what should i work on first|what should i focus on today|focus on today)\b/.test(text)) {
+    return { type: "conversation", topic: "decision-support", response: "Let us choose one useful next step. We can focus on health, farm work, learning, jobs, messages, or something personal you want to handle today." };
+  }
+  if (/\b(tell me something interesting)\b/.test(text)) {
+    return { type: "conversation", topic: "curiosity", response: "Here is something interesting: in farming and health, the best results often come from small habits repeated consistently, not one big change." };
+  }
+  if (/\b(repeat that|read that again)\b/.test(text)) {
+    return { type: "conversation", topic: "repeat", response: lastVoiceResponse || "I am here and ready. Tell me what you need." };
+  }
+  if (/\b(talk more slowly|speak more slowly|repeat that more slowly)\b/.test(text)) {
+    setTemporaryNexusVoicePreference({ speechRatePreset: "slow" }, "slower speech pace");
+    return { type: "conversation", topic: "voice-preference", response: "I will slow down. I can repeat things as many times as you need." };
+  }
+  if (/\b(remember that i prefer short answers|prefer short answers|keep answers short)\b/.test(text)) {
+    setTemporaryNexusVoicePreference({ answerLength: "concise" }, "short answer preference");
+    return { type: "conversation", topic: "memory-consent", response: "I can use short answers for now. If you want me to remember that preference, just say yes when I ask." };
+  }
+  if (/\b(forget that preference|forget my preference|clear that preference)\b/.test(text)) {
+    forgetNexusVoicePreferences();
+    return { type: "conversation", topic: "memory-clear", response: "Okay. I cleared that voice preference. You can set it again anytime." };
+  }
+  if (/\b(what were we discussing earlier|what were we talking about|go back to what we were discussing)\b/.test(text)) {
+    const topic = activeTopic || nexusDailyCompanionState.lastTopic || "your last request";
+    return { type: "conversation", topic: "continuity", response: `We were discussing ${topic}. Would you like to continue there or switch to something else?` };
+  }
+  if (/\b(help me sell maize|help me sell my maize|buyer for maize|sell maize)\b/.test(text)) {
+    saveNexusDailyCompanionState({ mode: "mission", activeMissionTopic: "maize buyer support", lastTopic: "maize buyer support", lastUserNeed: command });
+    return { type: "mission-context", topic: "maize buyer support", response: "I can help with that. What type of maize are you selling, how much do you have, and where is it located? I will not contact a buyer or create a transaction without your confirmation." };
+  }
+  if (/\b(weather tomorrow|weather outside|what is the weather)\b/.test(text)) {
+    const returnPrompt = activeTopic ? ` After that, would you like to return to ${activeTopic}?` : "";
+    return { type: "conversation", topic: "weather", response: `I can help with weather when a live weather source is configured. I will not guess live conditions. Tell me the location, and I can check the connected source or explain what configuration is missing.${returnPrompt}` };
+  }
+  if (/\b(let'?s go back to the maize|go back to maize|return to maize|back to maize)\b/.test(text)) {
+    saveNexusDailyCompanionState({ mode: "mission", activeMissionTopic: "maize buyer support", pausedMissionTopic: "" });
+    return { type: "mission-context", topic: "maize buyer support", response: "Back to the maize. Tell me the quantity, location, and whether you already have a buyer in mind." };
+  }
+  if (/\b(pause this until later|pause this|save this for later)\b/.test(text)) {
+    const topic = activeTopic || "this conversation";
+    saveNexusDailyCompanionState({ mode: "companion", activeMissionTopic: "", pausedMissionTopic: topic });
+    return { type: "conversation", topic: "pause", response: `Okay. I paused ${topic}. When you are ready, say let us go back, and I will help you continue.` };
+  }
+  if (/\b(call my daughter|call my son|call my wife|call my husband|call my family|call my caregiver)\b/.test(text)) {
+    return { type: "conversation", topic: "contact-prep", response: "I can help you prepare that call, but a phone provider is not connected unless it is configured and you confirm. I can help you write what to say or show the contact details instead." };
+  }
+  if (/\b(can't remember whether i took my medication|cant remember whether i took my medication|did i take my medication|missed my medication|forgot my medicine)\b/.test(text)) {
+    return { type: "conversation", topic: "medication-safety", response: "That can feel worrying. I cannot tell you to take or skip medicine, but I can help you check your routine, write down what you remember, and prepare a question for a pharmacist or clinician. If you feel very unwell, seek local urgent help." };
+  }
+  if (/\b(i need help|help me)\b/.test(text) && !/\b(sell|maize|crop|buyer|doctor|clinic|emergency|pay|call|message|location)\b/.test(text)) {
+    return { type: "conversation", topic: "clarification", response: "I am here. Tell me a little more about what kind of help you need, and I will take it one step at a time." };
+  }
+  return null;
+}
+
+function handleNexusDailyCompanionCommand(command = "", options = {}) {
+  const intent = nexusDailyCompanionIntent(command);
+  if (!intent) return false;
+  saveNexusDailyCompanionState({
+    mode: intent.type === "mission-context" ? "mission" : nexusDailyCompanionState.mode || "companion",
+    lastTopic: intent.topic || nexusDailyCompanionState.lastTopic,
+    lastUserNeed: command
+  });
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  setNexusGenesisTrustChainState("response_ready", {
+    transcript: command,
+    response: intent.response,
+    visibleFeedback: intent.response,
+    reason: "daily-companion-response"
+  });
+  setVoiceResponse(intent.response, options.speak !== false, {
+    allowHandoff: false,
+    command,
+    source: options.source || "nexus-daily-companion",
+    turnToken: options.turnToken
+  });
+  return true;
+}
+
+async function activateNexusGenesisExperience(source = "orb") {
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;
+  setNexusGenesisTrustChainState("wake_requested", { visibleFeedback: "Nexus is waking.", reason: `genesis-${source}` });
   setNexusCoreState("wake", { source: `genesis-${source}`, statusText: "Nexus is waking." });
   renderUserWorkspace();
   updateNexusGenesisExperienceDom();
@@ -31197,6 +31452,8 @@ function activateNexusGenesisExperience(source = "orb") {
     $("#nexusCommandCenterInput")?.focus?.();
     setNexusCoreState("waiting", { source: `genesis-${source}`, statusText: "Nexus is ready for your request." });
   });
+  setNexusGenesisTrustChainState("voice_permission_pending", { visibleFeedback: "Nexus is ready to listen.", reason: `genesis-${source}-voice-permission` });
+  await startVoiceListening({ source: `genesis-${source}` });
   return true;
 }
 
@@ -31216,7 +31473,31 @@ function handleNexusGenesisOrbActivation(event) {
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
-  return activateNexusGenesisExperience(event.type === "keydown" ? "keyboard" : "pointer");
+  const state = nexusGenesisTrustChainState.state;
+  if (state === "speaking" || voiceSpeaking) {
+    stopVoicePlayback({ hard: true, reason: "genesis-orb-stop-speaking" });
+    setNexusGenesisTrustChainState("waiting", { visibleFeedback: "I stopped speaking. I am still here.", reason: "genesis-orb-stop-speaking" });
+    setVoiceResponse("I stopped speaking. I am still here.", false, { allowVoiceFirst: false, source: "genesis-orb-stop-speaking" });
+    return true;
+  }
+  if (state === "listening" || voiceRecognition) {
+    voiceStopRequested = true;
+    try {
+      voiceRecognition?.stop?.();
+    } catch {
+      // Recognition may already be stopped by the browser.
+    }
+    voiceRecognition = null;
+    setNexusGenesisTrustChainState("cancelled", { visibleFeedback: "Listening stopped. Tap the orb when you want to speak again.", reason: "genesis-orb-stop-listening" });
+    setVoiceStatus("standby");
+    return true;
+  }
+  if (["conversation_submitted", "response_pending", "speech_preparing"].includes(state)) {
+    setNexusGenesisTrustChainState(state, { visibleFeedback: "I am working on your response.", reason: "genesis-orb-processing-click" });
+    return true;
+  }
+  void activateNexusGenesisExperience(event.type === "keydown" ? "keyboard" : "pointer");
+  return true;
 }
 
 function nexusTrueExperienceHasActiveWorkflow() {
@@ -44845,6 +45126,12 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const compactResponse = String(responseMessage || "").replace(/\s+/g, " ").trim();
   const now = Date.now();
   const duplicateSpeech = Boolean(speak && compactResponse && compactResponse === String(lastVoiceResponse || "").replace(/\s+/g, " ").trim() && now - lastVoiceResponseAt < 8000);
+  setNexusGenesisTrustChainState(compactResponse ? "response_ready" : "response_failed", {
+    response: compactResponse,
+    visibleFeedback: compactResponse || "I heard you, but I was not able to prepare a response. Please try again.",
+    failureRecovery: compactResponse ? "" : "Ask the user to try again or type the request.",
+    reason: options.source || "set-voice-response"
+  });
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   if (!options.skipPresenceUpdate) {
     const inferredPresence = inferNexusPresenceStateFromMessage(responseMessage, options);
@@ -46347,27 +46634,89 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
   }
   try {
     window.speechSynthesis.cancel();
+    prepared.utterance.onstart = event => {
+      updateNexusOsVoiceRuntimeState({
+        mode: "speaking",
+        assistantSpeaking: true,
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechSynthesisProvider: "browser-speech-synthesis",
+        speechSynthesisReason: "browser-speech-onstart",
+        selectedSpeechVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+        selectedSpeechLocale: prepared.controllerState.selectedLocale,
+        speechRate: prepared.controllerState.rate,
+        speechPitch: prepared.controllerState.pitch,
+        speechVolume: prepared.controllerState.volume,
+        speechStartEventReceived: true,
+        captionText: compact
+      }, options.reason || "speech-synthesis-onstart");
+      setNexusGenesisTrustChainState("speaking", {
+        response: compact,
+        visibleFeedback: compact,
+        reason: "speech-synthesis-onstart"
+      });
+      options.onStart?.(event);
+    };
+    prepared.utterance.onboundary = event => {
+      updateNexusOsVoiceRuntimeState({
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechBoundaryEventReceived: true,
+        speechBoundaryCharIndex: event?.charIndex ?? null,
+        captionText: compact
+      }, options.reason || "speech-synthesis-boundary");
+      options.onBoundary?.(event);
+    };
+    prepared.utterance.onpause = event => {
+      updateNexusOsVoiceRuntimeState({
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechSynthesisReason: "browser-speech-paused",
+        captionText: compact
+      }, options.reason || "speech-synthesis-paused");
+      options.onPause?.(event);
+    };
+    prepared.utterance.onresume = event => {
+      updateNexusOsVoiceRuntimeState({
+        speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
+        speechSynthesisReason: "browser-speech-resumed",
+        captionText: compact
+      }, options.reason || "speech-synthesis-resumed");
+      options.onResume?.(event);
+    };
     prepared.utterance.onend = event => {
       updateNexusOsVoiceRuntimeState({
+        mode: "standby",
         assistantSpeaking: false,
         speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
         speechSynthesisReason: "browser-speech-finished",
+        speechEndEventReceived: true,
         captionText: compact
       }, options.reason || "speech-synthesis-finished");
+      setNexusGenesisTrustChainState("waiting", {
+        response: compact,
+        visibleFeedback: "Nexus is ready for your next request.",
+        reason: "speech-synthesis-finished"
+      });
       options.onEnd?.(event);
     };
     prepared.utterance.onerror = event => {
       updateNexusOsVoiceRuntimeState({
+        mode: "caption-fallback",
         assistantSpeaking: false,
         speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
         speechSynthesisReason: "browser-speech-error",
+        speechErrorCode: event?.error || "unknown",
         captionText: compact
       }, options.reason || "speech-synthesis-error");
+      setNexusGenesisTrustChainState("synthesis_failed", {
+        response: compact,
+        visibleFeedback: "I heard you, but I am unable to speak right now. I will continue in text.",
+        failureRecovery: "Continue in visible text and allow retry by user gesture.",
+        reason: "speech-synthesis-error"
+      });
       options.onError?.(event);
     };
     updateNexusOsVoiceRuntimeState({
-      mode: "speaking",
-      assistantSpeaking: true,
+      mode: "speech-preparing",
+      assistantSpeaking: false,
       speechSynthesisController: NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT.controllerName,
       speechSynthesisProvider: "browser-speech-synthesis",
       speechSynthesisReason: prepared.reason,
@@ -46377,9 +46726,14 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       speechPitch: prepared.controllerState.pitch,
       speechVolume: prepared.controllerState.volume,
       captionText: compact
-    }, options.reason || "speech-synthesis-start");
+    }, options.reason || "speech-synthesis-preparing");
+    setNexusGenesisTrustChainState("speech_preparing", {
+      response: compact,
+      visibleFeedback: compact,
+      reason: "speech-synthesis-preparing"
+    });
     window.speechSynthesis.speak(prepared.utterance);
-    return { ...prepared, started: true };
+    return { ...prepared, requested: true, started: false };
   } catch (error) {
     updateNexusOsVoiceRuntimeState({
       mode: "caption-fallback",
@@ -46388,6 +46742,12 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       speechSynthesisReason: "browser-speech-start-failed",
       captionText: compact
     }, options.reason || "speech-synthesis-start-failed");
+    setNexusGenesisTrustChainState("synthesis_failed", {
+      response: compact,
+      visibleFeedback: "I heard you, but I am unable to speak right now. I will continue in text.",
+      failureRecovery: "Continue in visible text and allow retry by user gesture.",
+      reason: "speech-synthesis-start-failed"
+    });
     options.onError?.(error);
     return { ok: false, reason: "browser-speech-start-failed", error: error.message || String(error), controllerState: nexusSpeechSynthesisControllerState() };
   }
@@ -46521,20 +46881,25 @@ function speakVoiceResponse(textOverride) {
   voiceSpeaking = true;
   voiceAutoRestart = keepListeningForAnswer || keepStreamingOpen || false;
   updateNexusOsVoiceRuntimeState({
-    mode: "speaking",
+    mode: "speech-preparing",
     listeningState: voiceAutoRestart ? "active" : "idle",
     hearingState: "idle",
-    assistantSpeaking: true,
+    assistantSpeaking: false,
     lastSpokenPreview: compact.slice(0, 180),
     captionText: compact
-  }, "speech-playback-start");
+  }, "speech-playback-preparing");
+  setNexusGenesisTrustChainState("speech_preparing", {
+    response: compact,
+    visibleFeedback: compact,
+    reason: "speech-playback-preparing"
+  });
   updateNexusVoiceSession({
-    state: "assistant-speaking",
-    assistantSpeaking: true,
+    state: "speech-preparing",
+    assistantSpeaking: false,
     userSpeaking: false,
-    lastAssistantSpeechAt: Date.now()
-  }, "speech-playback-start");
-  updateNativeVoiceBridgeState("speaking", { text: compact.slice(0, 180), keepListening: voiceAutoRestart });
+    queuedSpeechAt: Date.now()
+  }, "speech-playback-preparing");
+  updateNativeVoiceBridgeState("speech-preparing", { text: compact.slice(0, 180), keepListening: voiceAutoRestart });
   const updateVoiceOutputStatus = message => {
     const localStatus = $("#voicePlaybackStatus");
     const globalStatus = $("#globalVoiceOutputStatus");
@@ -46548,7 +46913,15 @@ function speakVoiceResponse(textOverride) {
   };
   const browserSpeak = reason => {
     if (!browserSpeechFallbackEnabled()) {
-      updateVoiceOutputStatus(`${reason} Browser speech fallback is off by default.`);
+      const fallbackMessage = "I heard you, but I am unable to speak right now. I will continue in text.";
+      updateVoiceOutputStatus(`${fallbackMessage} ${reason} Browser speech fallback is off by default.`);
+      updateUserCaptionPanel(fallbackMessage, { expanded: true });
+      setNexusGenesisTrustChainState("synthesis_unavailable", {
+        response: compact,
+        visibleFeedback: fallbackMessage,
+        failureRecovery: "Visible text remains available.",
+        reason: "browser-speech-fallback-disabled"
+      });
       toast("OpenAI voice unavailable. Browser voice fallback is off.");
       finishSpeaking();
       return;
@@ -46558,8 +46931,8 @@ function speakVoiceResponse(textOverride) {
       onEnd: finishSpeaking,
       onError: finishSpeaking
     });
-    if (speechResult.ok && speechResult.started) {
-      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback.`);
+    if (speechResult.ok && (speechResult.requested || speechResult.started)) {
+      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback. Speech state will change to speaking after the browser start event.`);
     } else {
       updateVoiceOutputStatus(`${reason} Browser speech fallback could not start: ${speechResult.reason}.`);
       finishSpeaking();
@@ -46584,6 +46957,28 @@ function speakVoiceResponse(textOverride) {
         const voice = result.voiceResult?.voice || "OpenAI";
         const model = result.voiceResult?.model || "speech";
         updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}).`);
+        audio.onplay = () => {
+          if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+          updateNexusOsVoiceRuntimeState({
+            mode: "speaking",
+            assistantSpeaking: true,
+            speechSynthesisProvider: "openai-tts",
+            speechStartEventReceived: true,
+            captionText: compact
+          }, "openai-audio-onplay");
+          setNexusGenesisTrustChainState("speaking", {
+            response: compact,
+            visibleFeedback: compact,
+            reason: "openai-audio-onplay"
+          });
+          updateNexusVoiceSession({
+            state: "assistant-speaking",
+            assistantSpeaking: true,
+            userSpeaking: false,
+            lastAssistantSpeechAt: Date.now()
+          }, "openai-audio-onplay");
+          updateNativeVoiceBridgeState("speaking", { text: compact.slice(0, 180), keepListening: voiceAutoRestart });
+        };
         audio.onended = finishSpeaking;
         audio.onerror = finishSpeaking;
         audio.play().catch(() => {
@@ -51428,6 +51823,26 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeNexusVoiceWorkflowCommand(command || localizedCommand);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
+  const trustChainInput = spokenCommand || command || localizedCommand || rawCommand;
+  if (handleNexusDailyCompanionCommand(trustChainInput, {
+    ...options,
+    speak: true,
+    source: options.source || "nexus-daily-companion",
+    turnToken
+  })) return;
+  if (isNexusConversationOnlyTrustChainInput(trustChainInput)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    setVoiceResponse(nexusConversationOnlyTrustChainResponse(trustChainInput), true, {
+      allowHandoff: false,
+      command: trustChainInput,
+      source: "genesis-trust-chain-conversation-first",
+      turnToken
+    });
+    return;
+  }
   const a100SafeIntent = a100SafeAutonomyIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (openA100SafeAutonomyPreview(a100SafeIntent)) return;
   if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
@@ -53423,6 +53838,11 @@ function processFinalVoiceCommand(command = "", options = {}) {
   if (!finalCommand) return;
   clearStreamingVoicePartial();
   markNexusUserSpeechFinal(finalCommand, nexusVoiceTurnToken + 1);
+  setNexusGenesisTrustChainState("transcript_finalized", {
+    transcript: finalCommand,
+    visibleFeedback: `I heard: ${finalCommand}`,
+    reason: "voice-final-transcript"
+  });
   updateNativeVoiceBridgeState("final", { transcript: finalCommand, source: options.source || "voice" });
   if (voiceSpeaking) {
     if (isLikelyNexusSelfEcho(finalCommand)) return;
@@ -53468,13 +53888,32 @@ function processFinalVoiceCommand(command = "", options = {}) {
     pauseNexusForSideConversation(cleanedCommand || localizedCommand || finalCommand);
     return;
   }
-  renderNexusAutonomousRuntimePreview(cleanedCommand || localizedCommand || finalCommand, { source: "voice" });
   const turnToken = beginNexusVoiceTurn(cleanedCommand || localizedCommand || finalCommand);
+  setNexusGenesisTrustChainState("conversation_submitted", {
+    transcript: cleanedCommand || localizedCommand || finalCommand,
+    visibleFeedback: "Nexus heard you. One moment.",
+    reason: "conversation-submitted"
+  });
   setVoiceStatus("thinking");
   updateNativeVoiceBridgeState("thinking", { transcript: cleanedCommand || localizedCommand || finalCommand, turnToken });
   updateNexusBehaviorLayer("thinking", "Nexus heard you and is preparing the next response.");
   const outputStatus = $("#globalVoiceOutputStatus");
   if (outputStatus) outputStatus.textContent = translateText("Nexus heard you. One moment.");
+  if (isNexusConversationOnlyTrustChainInput(cleanedCommand || localizedCommand || finalCommand)) {
+    const response = nexusConversationOnlyTrustChainResponse(cleanedCommand || localizedCommand || finalCommand);
+    setVoiceResponse(response, true, {
+      allowHandoff: false,
+      command: cleanedCommand || localizedCommand || finalCommand,
+      source: "genesis-trust-chain-conversation-only",
+      turnToken
+    });
+    return;
+  }
+  setNexusGenesisTrustChainState("response_pending", {
+    transcript: cleanedCommand || localizedCommand || finalCommand,
+    visibleFeedback: "Nexus is preparing the right response.",
+    reason: "response-pending"
+  });
   request("/api/voice/transcribe", { method: "POST", body: { transcript: finalCommand, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
   handleVoiceCommand(finalCommand, { source: "voice", turnToken });
 }
@@ -53507,6 +53946,11 @@ async function startVoiceListening(options = {}) {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!profile.secureEnough) {
     markNexusListeningControllerEvent("unsupported-secure-context", { permissionState: "secure-context-required", inputMode: "typed-fallback" });
+    setNexusGenesisTrustChainState("recognition_unavailable", {
+      visibleFeedback: "I cannot access the microphone here. You can continue by typing.",
+      failureRecovery: "Use the typed command input.",
+      reason: "secure-context-required"
+    });
     updateNexusOsVoiceRuntimeState({
       mode: "unsupported-browser",
       listeningState: "blocked",
@@ -53545,6 +53989,10 @@ async function startVoiceListening(options = {}) {
   }
   nexusOsVoiceStartInFlight = true;
   markNexusListeningControllerEvent("starting", { permissionState: "prompt-or-existing", inputMode: "press-to-talk" });
+  setNexusGenesisTrustChainState("voice_permission_pending", {
+    visibleFeedback: "Nexus is requesting microphone access.",
+    reason: "voice-permission-pending"
+  });
   updateNexusOsVoiceRuntimeState({
     mode: "starting",
     listeningState: "starting",
@@ -53560,6 +54008,11 @@ async function startVoiceListening(options = {}) {
   if (!Recognition) {
     nexusOsVoiceStartInFlight = false;
     markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
+    setNexusGenesisTrustChainState("recognition_unavailable", {
+      visibleFeedback: "I cannot access speech recognition in this browser. You can continue by typing.",
+      failureRecovery: "Reveal the typed command input.",
+      reason: "speech-recognition-unavailable"
+    });
     updateNexusOsVoiceRuntimeState({
       mode: "unsupported-browser",
       listeningState: "typed-fallback",
@@ -53586,6 +54039,10 @@ async function startVoiceListening(options = {}) {
       microphoneUnavailable: false
     }, source);
     updateNativeVoiceBridgeState("listening", { locale: voiceLocale(), browser: profile.browserName, recognition: profile.recognitionName });
+    setNexusGenesisTrustChainState("listening", {
+      visibleFeedback: "Nexus is listening.",
+      reason: "recognition-started"
+    });
     setVoiceStatus(voiceConversationPaused ? "paused" : "listening");
     const status = $("#globalMicStatus");
     if (status) status.textContent = voiceConversationPaused
@@ -53612,6 +54069,11 @@ async function startVoiceListening(options = {}) {
           : `Voice input paused: ${error}. I am reconnecting voice now.`;
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
+    setNexusGenesisTrustChainState(permissionBlocked ? "permission_denied" : "recognition_failed", {
+      visibleFeedback: permissionBlocked ? "I cannot access the microphone. You can continue by typing." : "I did not catch that. Please try again or type your request.",
+      failureRecovery: "Keep typed conversation available.",
+      reason: "recognition-error"
+    });
     markNexusListeningControllerEvent(permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "failed", {
       permissionState: permissionBlocked ? "denied" : "unknown",
       microphoneUnavailable: error === "audio-capture",
@@ -53667,6 +54129,11 @@ async function startVoiceListening(options = {}) {
     }
     if (interimTranscript) {
       markNexusListeningControllerEvent("partial-transcript", { partialTranscript: interimTranscript, inputMode: "press-to-talk" });
+      setNexusGenesisTrustChainState("speech_detected", {
+        transcript: interimTranscript,
+        visibleFeedback: "Nexus hears you.",
+        reason: "partial-transcript"
+      });
       updateStreamingVoicePartial(interimTranscript, { source: "interim" });
     }
     if (finalTranscript) {
