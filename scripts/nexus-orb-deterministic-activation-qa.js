@@ -1,2 +1,16 @@
-const { runTrustChainAssertions } = require("./nexus-genesis-trust-chain-common-qa");
-console.log(JSON.stringify(runTrustChainAssertions("nexus-orb-deterministic-activation-qa"), null, 2));
+"use strict";
+
+const { runTrustChainQa } = require("./lib/nexus-genesis-trust-chain-shared-qa");
+
+try {
+  const result = runTrustChainQa({
+    railNumber: 4,
+    suiteId: "nexus-orb-deterministic-activation",
+    suiteName: "Nexus Genesis Trust Chain Rail 4 QA",
+    groups: ["ownership", "orbActivation", "adminIsolation"]
+  });
+  console.log(JSON.stringify(result, null, 2));
+} catch (error) {
+  console.error(error && error.stack ? error.stack : error);
+  process.exitCode = 1;
+}

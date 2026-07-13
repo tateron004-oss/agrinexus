@@ -1,0 +1,453 @@
+"use strict";
+
+const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const DEFAULT_REPOSITORY_ROOT = path.resolve(__dirname, "..", "..");
+
+const TRUST_CHAIN_RAILS = Object.freeze([
+  {
+    railNumber: 1,
+    suiteId: "nexus-trust-chain-trace",
+    suiteName: "Nexus Genesis Trust Chain Rail 1 QA",
+    wrapper: "scripts/nexus-trust-chain-trace-qa.js",
+    alias: "qa:nexus-trust-chain-trace",
+    groups: ["ownership", "transcript", "synchronization"]
+  },
+  {
+    railNumber: 2,
+    suiteId: "nexus-conversation-acknowledgement",
+    suiteName: "Nexus Genesis Trust Chain Rail 2 QA",
+    wrapper: "scripts/nexus-conversation-acknowledgement-qa.js",
+    alias: "qa:nexus-conversation-acknowledgement",
+    groups: ["transcript", "acknowledgement", "fallback", "companion"]
+  },
+  {
+    railNumber: 3,
+    suiteId: "nexus-audible-response",
+    suiteName: "Nexus Genesis Trust Chain Rail 3 QA",
+    wrapper: "scripts/nexus-audible-response-qa.js",
+    alias: "qa:nexus-audible-response",
+    groups: ["synthesis", "fallback", "synchronization"]
+  },
+  {
+    railNumber: 4,
+    suiteId: "nexus-orb-deterministic-activation",
+    suiteName: "Nexus Genesis Trust Chain Rail 4 QA",
+    wrapper: "scripts/nexus-orb-deterministic-activation-qa.js",
+    alias: "qa:nexus-orb-deterministic-activation",
+    groups: ["ownership", "orbActivation", "adminIsolation"]
+  },
+  {
+    railNumber: 5,
+    suiteId: "nexus-conversation-first-routing",
+    suiteName: "Nexus Genesis Trust Chain Rail 5 QA",
+    wrapper: "scripts/nexus-conversation-first-routing-qa.js",
+    alias: "qa:nexus-conversation-first-routing",
+    groups: ["routing", "acknowledgement", "companion"]
+  },
+  {
+    railNumber: 6,
+    suiteId: "nexus-admin-preview-isolation",
+    suiteName: "Nexus Genesis Trust Chain Rail 6 QA",
+    wrapper: "scripts/nexus-admin-preview-isolation-qa.js",
+    alias: "qa:nexus-admin-preview-isolation",
+    groups: ["adminIsolation", "ownership", "fallback"]
+  },
+  {
+    railNumber: 7,
+    suiteId: "nexus-first-response-synchronization",
+    suiteName: "Nexus Genesis Trust Chain Rail 7 QA",
+    wrapper: "scripts/nexus-first-response-synchronization-qa.js",
+    alias: "qa:nexus-first-response-synchronization",
+    groups: ["transcript", "acknowledgement", "synthesis", "synchronization", "fallback"]
+  },
+  {
+    railNumber: 8,
+    suiteId: "nexus-genesis-trust-chain-acceptance",
+    suiteName: "Nexus Genesis Trust Chain Rail 8 Acceptance QA",
+    wrapper: "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+    alias: "qa:nexus-genesis-trust-chain-acceptance",
+    groups: [
+      "ownership",
+      "transcript",
+      "acknowledgement",
+      "synthesis",
+      "orbActivation",
+      "routing",
+      "adminIsolation",
+      "synchronization",
+      "fallback",
+      "companion",
+      "registration",
+      "acceptance"
+    ]
+  }
+]);
+
+const APPROVED_GROUPS = new Set([
+  "ownership",
+  "transcript",
+  "acknowledgement",
+  "synthesis",
+  "orbActivation",
+  "routing",
+  "adminIsolation",
+  "synchronization",
+  "fallback",
+  "companion",
+  "registration",
+  "acceptance"
+]);
+
+function readSource(repositoryRoot, relativePath) {
+  return fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+}
+
+function sourceBetween(source, startMarker, endMarker, label) {
+  const start = source.indexOf(startMarker);
+  assert(start >= 0, `${label}: missing start marker ${startMarker}`);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert(end > start, `${label}: missing end marker ${endMarker} after ${startMarker}`);
+  return source.slice(start, end);
+}
+
+function loadRepository(repositoryRoot) {
+  return {
+    repositoryRoot,
+    app: readSource(repositoryRoot, "public/app.js"),
+    index: readSource(repositoryRoot, "public/index.html"),
+    sw: readSource(repositoryRoot, "public/sw.js"),
+    server: readSource(repositoryRoot, "server.js"),
+    packageJson: JSON.parse(readSource(repositoryRoot, "package.json")),
+    qaSuite: readSource(repositoryRoot, "scripts/qa-suite.js")
+  };
+}
+
+function assertIncludes(source, tokens, label, contractName) {
+  tokens.forEach(token => {
+    assert(source.includes(token), `${label}: ${contractName} missing expected token: ${token}`);
+  });
+}
+
+function assertExcludes(source, tokens, label, contractName) {
+  tokens.forEach(token => {
+    assert(!source.includes(token), `${label}: ${contractName} contains forbidden token: ${token}`);
+  });
+}
+
+function assertOwnership(context, label) {
+  assertIncludes(context.app, [
+    "NEXUS_GENESIS_TRUST_CHAIN_CONTRACT",
+    "NexusGenesisTrustChainRuntime",
+    'orbHomeAction: "wake_or_listen_only"',
+    "canonicalSpeechRecognitionController",
+    "canonicalSpeechSynthesisController",
+    "NexusSpeechRecognitionController",
+    "NexusSpeechSynthesisController",
+    "nexus-os-canonical-voice",
+    "processFinalVoiceCommand",
+    "scheduleFinalVoiceCommand",
+    "handleVoiceCommandCore",
+    "standardUserAdminPreviewAllowed: false",
+    "textFallbackRequired: true",
+    "speechRequiresStartEvent: true",
+    "noWorkflowFromOrbActivation: true"
+  ], label, "trust-chain ownership");
+
+  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
+  assertExcludes(orbSource, [
+    "renderNexusAutonomousRuntimePreview",
+    "openWorkflow",
+    "Plan Preview",
+    "Evidence and Verification",
+    "goSection("
+  ], label, "orb preview isolation");
+}
+
+function assertTranscript(context, label) {
+  assertIncludes(context.app, [
+    "transcript_finalized",
+    "conversation_submitted",
+    "speech_detected",
+    "recognition_failed",
+    "cancelled"
+  ], label, "final transcript states");
+
+  const finalVoiceSource = sourceBetween(context.app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", label);
+  assertIncludes(finalVoiceSource, [
+    'setNexusGenesisTrustChainState("transcript_finalized"',
+    'setNexusGenesisTrustChainState("conversation_submitted"',
+    "handleVoiceCommand(finalCommand"
+  ], label, "final transcript delivery");
+  assert(!finalVoiceSource.includes("renderNexusAutonomousRuntimePreview("), `${label}: final voice path must not open preview before conversation.`);
+  assert(context.app.includes("voiceFinalDebounceTimer") && context.app.includes("VOICE_FINAL_DEBOUNCE_MS"), `${label}: final transcript path should carry duplicate/debounce protection.`);
+}
+
+function assertAcknowledgement(context, label) {
+  const responseSource = sourceBetween(context.app, "function setVoiceResponse", "function userFirstName", label);
+  assertIncludes(responseSource, [
+    'setNexusGenesisTrustChainState(compactResponse ? "response_ready" : "response_failed"',
+    "recordNexusOsConversationTurn(\"assistant\"",
+    "updateUserCaptionPanel(responseMessage)",
+    "scheduleNexusSpeech(responseMessage"
+  ], label, "visible acknowledgement");
+  assert(responseSource.indexOf("updateUserCaptionPanel(responseMessage)") < responseSource.indexOf("scheduleNexusSpeech(responseMessage"), `${label}: visible text/caption must render before speech is scheduled.`);
+  assert(context.app.includes("I heard you, but I wasn't able to prepare a response. Please try again.") || context.app.includes("I heard you"), `${label}: missing honest response failure fallback wording.`);
+}
+
+function assertSynthesis(context, label) {
+  const speechSource = sourceBetween(context.app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", label);
+  assertIncludes(speechSource, [
+    "window.speechSynthesis",
+    "SpeechSynthesisUtterance",
+    "prepared.utterance.onstart",
+    "prepared.utterance.onboundary",
+    "prepared.utterance.onpause",
+    "prepared.utterance.onresume",
+    "prepared.utterance.onend",
+    "prepared.utterance.onerror",
+    'mode: "speech-preparing"',
+    'setNexusGenesisTrustChainState("speaking"',
+    'setNexusGenesisTrustChainState("synthesis_failed"',
+    "speechStartEventReceived: true",
+    "speechEndEventReceived: true",
+    "window.speechSynthesis.speak(prepared.utterance)"
+  ], label, "audible response lifecycle");
+  assert(context.app.includes("function chooseSpeechVoice"), `${label}: speech lifecycle must use safe voice selection helper.`);
+  assert(speechSource.indexOf('mode: "speech-preparing"') < speechSource.indexOf("window.speechSynthesis.speak(prepared.utterance)"), `${label}: speech state must prepare before speak() and wait for onstart before speaking.`);
+
+  const speakSource = sourceBetween(context.app, "function speakVoiceResponse", "function setVoiceStatus", label);
+  assertIncludes(speakSource, [
+    "runNexusSpeechSynthesisController(compact",
+    "Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback.",
+    "Speech state will change to speaking after the browser start event.",
+    "I heard you, but I am unable to speak right now. I will continue in text.",
+    "Browser speech fallback could not start: ${speechResult.reason}",
+    "audio.onplay",
+    'setNexusGenesisTrustChainState("speaking"'
+  ], label, "speech fallback wiring");
+}
+
+function assertOrbActivation(context, label) {
+  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
+  assertIncludes(orbSource, [
+    "event.stopImmediatePropagation",
+    "voiceRecognition?.stop",
+    "stopVoicePlayback",
+    "genesis-orb-stop-speaking",
+    "genesis-orb-stop-listening",
+    "genesis-orb-processing-click",
+    "void activateNexusGenesisExperience"
+  ], label, "deterministic orb activation");
+  assertExcludes(orbSource, [
+    "renderNexusAutonomousRuntimePreview",
+    "openWorkflow",
+    "Plan Preview",
+    "Evidence and Verification",
+    "goSection("
+  ], label, "forbidden orb side effect");
+
+  const activateSource = sourceBetween(context.app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", label);
+  assertIncludes(activateSource, [
+    'setNexusGenesisTrustChainState("wake_requested"',
+    'setNexusGenesisTrustChainState("voice_permission_pending"',
+    "await startVoiceListening"
+  ], label, "orb wake/listen flow");
+}
+
+function assertRouting(context, label) {
+  const voiceCoreSource = sourceBetween(context.app, "async function handleVoiceCommandCore", "async function handleVoiceCommand", label);
+  const companionIndex = voiceCoreSource.indexOf("handleNexusDailyCompanionCommand");
+  const previewIndex = voiceCoreSource.indexOf("runStandardUserAssistantRuntimePreview");
+  const workflowIndex = voiceCoreSource.indexOf("launchCapabilityFromVoice");
+  assert(companionIndex > -1, `${label}: companion mode must run inside shared voice core.`);
+  assert(previewIndex > -1 && companionIndex < previewIndex, `${label}: conversation-first companion handling must run before preview routing.`);
+  assert(workflowIndex > -1 && companionIndex < workflowIndex, `${label}: conversation-first companion handling must run before workflow launch.`);
+  assertIncludes(context.app, [
+    "Good morning. I am here with you.",
+    "Yes, I can hear you. What are we working on today?",
+    "tell me something interesting",
+    "explain ai",
+    "I need help",
+    "what can you do"
+  ], label, "conversation-first representative inputs");
+}
+
+function assertAdminIsolation(context, label) {
+  const previewSource = sourceBetween(context.app, "function renderNexusAutonomousRuntimePreview", "function installNexusAutonomousRuntimePreview", label);
+  assertIncludes(previewSource, [
+    "standard-user-preview-isolated",
+    "!options.explicitUserRequestedPreview"
+  ], label, "Standard User preview isolation");
+
+  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
+  assertExcludes(orbSource, [
+    "Plan Preview",
+    "Execution Preview",
+    "Provider Readiness",
+    "Capability Matrix",
+    "Runtime diagnostics",
+    "Administrative queues"
+  ], label, "admin surface isolation");
+}
+
+function assertSynchronization(context, label) {
+  assertIncludes(context.app, [
+    "listening",
+    "transcript_finalized",
+    "response_pending",
+    "response_ready",
+    "speech_preparing",
+    "speaking",
+    "waiting",
+    "synthesis_failed",
+    "recognition_failed"
+  ], label, "first response state sequence");
+  const speechSource = sourceBetween(context.app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", label);
+  assert(speechSource.indexOf("prepared.utterance.onstart") < speechSource.indexOf("window.speechSynthesis.speak(prepared.utterance)"), `${label}: speaking state must be owned by the playback-start callback.`);
+  assert(speechSource.indexOf('mode: "speech-preparing"') < speechSource.indexOf("window.speechSynthesis.speak(prepared.utterance)"), `${label}: speech-preparing state must be set before speak() is requested.`);
+  const responseSource = sourceBetween(context.app, "function setVoiceResponse", "function userFirstName", label);
+  assert(responseSource.indexOf("updateUserCaptionPanel(responseMessage)") < responseSource.indexOf("scheduleNexusSpeech(responseMessage"), `${label}: captions must be synchronized before speech scheduling.`);
+}
+
+function assertFallback(context, label) {
+  assertIncludes(context.app, [
+    "I heard you, but I am unable to speak right now. I will continue in text.",
+    "I cannot access the microphone here. You can continue by typing.",
+    "I cannot access speech recognition in this browser. You can continue by typing.",
+    "Visible text remains available.",
+    "typed-fallback",
+    "synthesis_unavailable",
+    "recognition_unavailable"
+  ], label, "fallback contract");
+}
+
+function assertCompanion(context, label) {
+  assertIncludes(context.app, [
+    "nexusDailyCompanionState",
+    "nexusDailyCompanionIntent",
+    "handleNexusDailyCompanionCommand",
+    "Good morning. I am here with you.",
+    "Yes, I can hear you. What are we working on today?",
+    "I am glad you reached out.",
+    "Of course. I can explain it in plain steps.",
+    "I will slow down.",
+    "I can use short answers for now.",
+    "I cleared that voice preference.",
+    "I can help with that. What type of maize are you selling",
+    "I paused",
+    "Back to the maize",
+    "I can help you prepare that call, but a phone provider is not connected",
+    "I cannot tell you to take or skip medicine"
+  ], label, "daily companion behavior");
+  assertExcludes(context.app, [
+    "I love you.",
+    "I am all you need.",
+    "You don't need to call anyone else.",
+    "Do not call your family.",
+    "I understand exactly how you feel."
+  ], label, "prohibited companion dependency language");
+}
+
+function assertRegistration(context, label) {
+  TRUST_CHAIN_RAILS.forEach(rail => {
+    const wrapperSource = readSource(context.repositoryRoot, rail.wrapper);
+    assert(wrapperSource.includes("runTrustChainQa"), `${label}: ${rail.wrapper} must invoke shared runTrustChainQa.`);
+    assert(wrapperSource.includes(`railNumber: ${rail.railNumber}`), `${label}: ${rail.wrapper} must identify rail ${rail.railNumber}.`);
+    assert(wrapperSource.includes(`suiteId: "${rail.suiteId}"`), `${label}: ${rail.wrapper} must identify suite id ${rail.suiteId}.`);
+    rail.groups.forEach(group => {
+      assert(wrapperSource.includes(`"${group}"`), `${label}: ${rail.wrapper} must select group ${group}.`);
+    });
+    assert(!wrapperSource.includes("fs.readFileSync"), `${label}: ${rail.wrapper} must not reimplement repository loading.`);
+    assert(!wrapperSource.includes("sourceBetween("), `${label}: ${rail.wrapper} must not copy shared assertion helpers.`);
+    assert(wrapperSource.length < 2000, `${label}: ${rail.wrapper} should remain a small rail launcher.`);
+    assert.strictEqual(
+      context.packageJson.scripts[rail.alias],
+      `node ${rail.wrapper.replaceAll("\\", "/")}`,
+      `${label}: package alias ${rail.alias} must point to ${rail.wrapper}`
+    );
+  });
+  assert(context.qaSuite.includes("scripts/nexus-genesis-trust-chain-acceptance-qa.js"), `${label}: safe suite wiring must include final acceptance wrapper.`);
+}
+
+function assertAcceptance(context, label) {
+  const appVersion = context.app.match(/AGRINEXUS_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
+  const swVersion = context.sw.match(/BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
+  const serverVersion = context.server.match(/AGRINEXUS_WEB_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
+  assert(appVersion && appVersion === swVersion && swVersion === serverVersion, `${label}: app, SW, and server build versions must align.`);
+  assert(context.index.includes(`/app.js?v=${appVersion}`), `${label}: index must load current app build.`);
+  assert(context.index.includes(`/styles.css?v=${appVersion}`), `${label}: index must load current stylesheet build.`);
+}
+
+const GROUP_ASSERTIONS = Object.freeze({
+  ownership: assertOwnership,
+  transcript: assertTranscript,
+  acknowledgement: assertAcknowledgement,
+  synthesis: assertSynthesis,
+  orbActivation: assertOrbActivation,
+  routing: assertRouting,
+  adminIsolation: assertAdminIsolation,
+  synchronization: assertSynchronization,
+  fallback: assertFallback,
+  companion: assertCompanion,
+  registration: assertRegistration,
+  acceptance: assertAcceptance
+});
+
+function runTrustChainQa(options = {}) {
+  const suiteId = options.suiteId || "nexus-genesis-trust-chain-shared";
+  const suiteName = options.suiteName || "Nexus Genesis Shared Trust Chain QA";
+  const repositoryRoot = path.resolve(options.repositoryRoot || DEFAULT_REPOSITORY_ROOT);
+  const groups = options.groups && options.groups.length ? options.groups : TRUST_CHAIN_RAILS[7].groups;
+  const context = loadRepository(repositoryRoot);
+  const passedGroups = [];
+
+  groups.forEach(group => {
+    assert(APPROVED_GROUPS.has(group), `${suiteName}: unknown trust-chain assertion group ${group}`);
+    GROUP_ASSERTIONS[group](context, suiteName);
+    passedGroups.push(group);
+  });
+
+  const result = {
+    suiteId,
+    suiteName,
+    railNumber: options.railNumber || null,
+    repositoryRoot,
+    groups: passedGroups,
+    appVersion: context.app.match(/AGRINEXUS_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1] || "unknown",
+    ok: true
+  };
+
+  if (options.verbose) {
+    result.rails = TRUST_CHAIN_RAILS.map(({ railNumber, suiteId: id, groups: railGroups }) => ({ railNumber, suiteId: id, groups: railGroups }));
+  }
+
+  return result;
+}
+
+function runTrustChainAssertions(label = "nexus-genesis-trust-chain") {
+  return runTrustChainQa({
+    suiteId: label,
+    suiteName: label,
+    groups: TRUST_CHAIN_RAILS[7].groups
+  });
+}
+
+module.exports = {
+  APPROVED_GROUPS,
+  TRUST_CHAIN_RAILS,
+  runTrustChainAssertions,
+  runTrustChainQa
+};
+
+if (require.main === module) {
+  try {
+    const result = runTrustChainQa({ verbose: true });
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  }
+}
