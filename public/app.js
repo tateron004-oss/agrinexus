@@ -984,7 +984,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-419";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-423";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -31598,11 +31598,47 @@ function renderNexusTrueCoreOrb(options = {}) {
   `;
 }
 
+function handleNexusPrimaryVoiceButtonClick(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  event?.stopImmediatePropagation?.();
+  void handleNexusOsVoiceControlAction("toggle-listening", { source: "nexus-primary-visible-voice-button" });
+  return false;
+}
+
+function bindNexusPrimaryVoiceControls() {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll("[data-nexus-command-center-voice],[data-nexus-os-voice-control]").forEach(control => {
+    if (control.dataset.nexusPrimaryVoiceControlBound === "true") return;
+    control.dataset.nexusPrimaryVoiceControlBound = "true";
+    control.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      const action = control.dataset.nexusOsVoiceControl || "toggle-listening";
+      void handleNexusOsVoiceControlAction(action, { source: "bound-visible-voice-control" });
+    }, true);
+  });
+}
+
+function renderNexusBrowserVoiceAvailabilityHint() {
+  if (typeof window === "undefined") return "";
+  const profile = browserVoiceRuntimeProfile();
+  const message = profile.supported
+    ? "Voice uses browser support. Typed Ask Nexus always works."
+    : "Voice is not available in this browser. You can keep using typed Ask Nexus.";
+  return `
+    <p class="nexus-browser-voice-fallback" data-nexus-browser-voice-fallback="true" data-browser-voice-supported="${profile.supported ? "true" : "false"}" role="status">
+      ${escapeHtml(translateText(message))}
+    </p>
+  `;
+}
+
 function renderNexusTrueCommandComposer(options = {}) {
   const compact = options.compact === true;
   return `
     <form class="nexus-true-composer ${compact ? "compact" : ""}" data-nexus-command-composer="true" data-nexus-true-composer="true" aria-label="${escapeHtml(translateText("Ask Nexus"))}">
-      <button type="button" class="nexus-command-mic nexus-primary-voice-entry nexus-true-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">
+      <button type="button" class="nexus-command-mic nexus-primary-voice-entry nexus-true-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" onclick="return handleNexusPrimaryVoiceButtonClick(event)" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">
         ${escapeHtml(translateText("Speak"))}
       </button>
       <label class="sr-only" for="nexusCommandCenterInput">${escapeHtml(translateText("Ask Nexus anything"))}</label>
@@ -31612,6 +31648,7 @@ function renderNexusTrueCommandComposer(options = {}) {
       </button>
       <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to ask. Use Shift+Enter for a new line."))}</span>
     </form>
+    ${renderNexusBrowserVoiceAvailabilityHint()}
   `;
 }
 
@@ -37242,7 +37279,9 @@ function renderUserWorkspace() {
     </section>
   `;
   bindNexusStandardUserHomeControls();
+  bindNexusPrimaryVoiceControls();
   setTimeout(() => {
+    bindNexusPrimaryVoiceControls();
     updateNexusOsUnifiedConversationDom();
   }, 0);
   if (!nexusPilotPlatformStatus) {
@@ -47030,6 +47069,43 @@ function setVoiceStatus(status) {
   updateNexusBehaviorLayer(status);
 }
 
+function showNexusVoiceFallbackMessage(message = "Voice is not available in this browser. You can keep using typed Ask Nexus.", options = {}) {
+  const compact = String(message || "").replace(/\s+/g, " ").trim();
+  if (!compact) return;
+  const source = options.source || "browser-voice-fallback";
+  lastVoiceResponse = compact;
+  lastVoiceResponseAt = Date.now();
+  updateNexusOsVoiceRuntimeState({
+    mode: options.mode || "typed-fallback",
+    listeningState: "typed",
+    hearingState: "idle",
+    assistantSpeaking: false,
+    captionText: compact
+  }, source);
+  setNexusGenesisTrustChainState(options.trustChainState || "recognition_unavailable", {
+    visibleFeedback: compact,
+    failureRecovery: "Keep typed Ask Nexus available.",
+    reason: source
+  });
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.WAITING, {
+    lastResponse: compact,
+    nextQuestion: "Type your request in Ask Nexus.",
+    activeMission: nexusPresenceState.activeMission
+  });
+  recordNexusOsConversationTurn("assistant", compact, { source, state: nexusCoreRuntimeState.current });
+  updateUserCaptionPanel(compact, { expanded: true });
+  syncNexusPresenceSurfaces(options.mode || "typed-fallback", {
+    source,
+    captionText: compact,
+    assistantSpeaking: false
+  });
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText(compact);
+  const assistantStatus = $("#globalAssistantStatus");
+  if (assistantStatus) assistantStatus.textContent = translateText(compact);
+  updateNexusOsUnifiedConversationDom();
+}
+
 function realtimeVoiceSupported() {
   const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
   return Boolean(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia && secureEnough);
@@ -53935,11 +54011,11 @@ async function startVoiceListening(options = {}) {
     updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle", hearingState: "idle" }, source);
     setVoiceStatus("standby");
     refreshMicSupport();
-    return;
-  }
-  if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
-    markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "press-to-talk" });
-    updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
+    showNexusVoiceFallbackMessage("Nexus voice is in text-only mode. Type your request in Ask Nexus, and the same routing will apply.", {
+      source: "voice-text-only-mode",
+      mode: "typed-fallback",
+      trustChainState: "recognition_unavailable"
+    });
     return;
   }
   const profile = browserVoiceRuntimeProfile();
@@ -53957,7 +54033,69 @@ async function startVoiceListening(options = {}) {
       permissionState: "secure-context-required"
     }, source);
     refreshMicSupport();
-    setVoiceResponse(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or local server URL, then allow microphone access.`);
+    showNexusVoiceFallbackMessage(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. You can keep using typed Ask Nexus here.`, {
+      source: "secure-context-required",
+      mode: "typed-fallback",
+      trustChainState: "recognition_unavailable"
+    });
+    return;
+  }
+  if (!Recognition && !realtimeVoiceSupported()) {
+    nexusOsVoiceStartInFlight = false;
+    markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
+    setNexusGenesisTrustChainState("recognition_unavailable", {
+      visibleFeedback: "I cannot access speech recognition in this browser. You can continue by typing.",
+      failureRecovery: "Reveal the typed command input.",
+      reason: "speech-recognition-unavailable"
+    });
+    updateNexusOsVoiceRuntimeState({
+      mode: "unsupported-browser",
+      listeningState: "typed-fallback",
+      permissionState: "unsupported",
+      microphoneUnavailable: true
+    }, source);
+    refreshMicSupport();
+    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this test browser. You can keep using typed Ask Nexus and the same routing will apply.`, {
+      source: "speech-recognition-unavailable",
+      mode: "typed-fallback",
+      trustChainState: "recognition_unavailable"
+    });
+    return;
+  }
+  if (!Recognition && realtimeVoiceEnabled() && realtimeVoiceSupported() && !realtimeVoiceActive()) {
+    let realtimeConfigured = false;
+    try {
+      const statusPayload = await loadRealtimeVoiceStatus();
+      realtimeConfigured = Boolean(statusPayload?.realtimeVoice?.configured);
+    } catch {
+      realtimeConfigured = false;
+    }
+    if (!realtimeConfigured) {
+      nexusOsVoiceStartInFlight = false;
+      markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, realtimeConfigured: false, inputMode: "typed-fallback" });
+      setNexusGenesisTrustChainState("recognition_unavailable", {
+        visibleFeedback: "Realtime voice is not configured here. You can continue by typing.",
+        failureRecovery: "Reveal the typed command input.",
+        reason: "realtime-voice-not-configured"
+      });
+      updateNexusOsVoiceRuntimeState({
+        mode: "typed-fallback",
+        listeningState: "typed-fallback",
+        permissionState: "unsupported",
+        microphoneUnavailable: true
+      }, source);
+      refreshMicSupport();
+      showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition here, and realtime voice is not configured. You can keep using typed Ask Nexus and the same routing will apply.`, {
+        source: "realtime-voice-not-configured",
+        mode: "typed-fallback",
+        trustChainState: "recognition_unavailable"
+      });
+      return;
+    }
+  }
+  if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
+    markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "press-to-talk" });
+    updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
     return;
   }
   if (voiceConversationPaused && voiceRecognition) {
@@ -54020,7 +54158,11 @@ async function startVoiceListening(options = {}) {
       microphoneUnavailable: true
     }, source);
     refreshMicSupport();
-    setVoiceResponse(`${profile.browserName} does not expose microphone speech recognition here, and OpenAI Realtime voice is not available. Type your request in Ask AgriNexus and click Run command.`);
+    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this test browser. You can keep using typed Ask Nexus and the same routing will apply.`, {
+      source: "speech-recognition-unavailable",
+      mode: "typed-fallback",
+      trustChainState: "recognition_unavailable"
+    });
     return;
   }
   voiceStopRequested = false;
@@ -54155,7 +54297,11 @@ async function startVoiceListening(options = {}) {
       hearingState: "idle",
       lastError: error.message || "recognition-start-failed"
     }, source);
-    setVoiceResponse("Voice recognition could not start. Type your request in Ask Nexus, and the same safety routing will apply.", false, { allowVoiceFirst: false });
+    showNexusVoiceFallbackMessage("Voice recognition could not start. Type your request in Ask Nexus, and the same safety routing will apply.", {
+      source: "recognition-start-failed",
+      mode: "typed-fallback",
+      trustChainState: "recognition_failed"
+    });
   }
 }
 
@@ -55238,6 +55384,15 @@ function bindStatic() {
   document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
   document.addEventListener("click", handleNexusGenesisOrbActivation, true);
   document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);
+  document.addEventListener("click", event => {
+    const voiceControl = event.target?.closest?.("[data-nexus-command-center-voice],[data-nexus-os-voice-control]");
+    if (!voiceControl) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const action = voiceControl.dataset.nexusOsVoiceControl || "toggle-listening";
+    void handleNexusOsVoiceControlAction(action, { source: "standard-user-visible-voice-control" });
+  }, true);
   document.addEventListener("click", handleNexusPresenceVoiceButton, true);
   document.addEventListener("click", event => {
     void handleNexusPresenceCommandSendSubmit(event);
@@ -56880,6 +57035,7 @@ function exposeNexusAppWindowApis() {
   window.nexusSpeechSynthesisControllerState = nexusSpeechSynthesisControllerState;
   window.createNexusSpeechSynthesisUtterance = createNexusSpeechSynthesisUtterance;
   window.runNexusSpeechSynthesisController = runNexusSpeechSynthesisController;
+  window.browserVoiceRuntimeProfile = browserVoiceRuntimeProfile;
   window.NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT = NEXUS_PRESENCE_SYNCHRONIZATION_CONTRACT;
   window.nexusPresenceSynchronizationState = nexusPresenceSynchronizationState;
   window.syncNexusPresenceSurfaces = syncNexusPresenceSurfaces;
@@ -56894,6 +57050,7 @@ function exposeNexusAppWindowApis() {
   window.nexusListeningWakeControllerState = nexusListeningWakeControllerState;
   window.createNexusRecognitionConfig = createNexusRecognitionConfig;
   window.normalizeNexusWakeTranscript = normalizeNexusWakeTranscript;
+  window.handleNexusPrimaryVoiceButtonClick = handleNexusPrimaryVoiceButtonClick;
 }
 
 function exposeNexusBrainIntelligenceRuntimeApis() {

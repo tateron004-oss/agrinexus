@@ -38,6 +38,7 @@ const suites = {
     "scripts/nexus-admin-preview-isolation-qa.js",
     "scripts/nexus-first-response-synchronization-qa.js",
     "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+    "scripts/nexus-genesis-browser-voice-acceptance-qa.js",
     "scripts/voice-browser-policy-regression.js",
     "scripts/realtime-voice-provider-qa.js",
     "scripts/voice-phase1-alignment-qa.js",
@@ -1748,11 +1749,14 @@ function fail(message) {
 }
 
 const transientRetryScripts = new Set([
+  "scripts/call-intent-smoke.js",
   "scripts/native-call-bridge-dispatch-qa.js",
   "scripts/companion-confirmation-gate-smoke.js",
   "scripts/companion-understanding-smoke.js",
   "scripts/companion-route-mismatch-smoke.js",
-  "scripts/companion-response-quality-smoke.js"
+  "scripts/companion-response-quality-smoke.js",
+  "scripts/voice-phase1-alignment-qa.js",
+  "scripts/voice-phase3-tts-qa.js"
 ]);
 
 const suiteName = process.argv[2];

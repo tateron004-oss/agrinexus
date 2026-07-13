@@ -133,9 +133,9 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-419"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-423"'), "app build version bumped");
   assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-419"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-423"'), "server build version bumped");
   assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370"'), "server cache version bumped");
   assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v370"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");

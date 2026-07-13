@@ -19,6 +19,7 @@
     "qa:nexus-admin-preview-isolation": "node scripts/nexus-admin-preview-isolation-qa.js",
     "qa:nexus-first-response-synchronization": "node scripts/nexus-first-response-synchronization-qa.js",
     "qa:nexus-genesis-trust-chain-acceptance": "node scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+    "qa:nexus-genesis-browser-voice-acceptance": "node scripts/nexus-genesis-browser-voice-acceptance-qa.js",
     "qa:core": "node scripts/qa-suite.js core",
     "qa:app": "node scripts/qa-suite.js app",
     "qa:nexus-workforce": "node scripts/qa-suite.js nexus-workforce",

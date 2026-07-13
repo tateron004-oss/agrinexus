@@ -81,7 +81,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
   "microphone-unavailable",
   "recognition-timeout",
   "I did not hear speech. I am still listening.",
-  "Type your request in Ask AgriNexus"
+  "Type your request in Ask Nexus"
 ].forEach(token => includes(startBlock + app, token, `existing recognition safety token ${token}`));
 
 [
