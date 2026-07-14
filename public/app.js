@@ -513,10 +513,10 @@ const NEXUS_CORE_STATE_CONTRACT = Object.freeze({
     allowed: ["queued", "idle", "blocked"]
   },
   blocked: {
-    label: "Nexus is blocked from executing externally.",
+    label: "I can help here, but live external actions need a connected service.",
     motion: "blocked steady",
     visual: "red blocked ring",
-    announcement: "Nexus is blocked until requirements are met.",
+    announcement: "Nexus can continue locally, but external actions need the required connection and approval.",
     reducedMotion: "blocked status text",
     allowed: ["asking", "waiting", "idle"]
   },
@@ -31302,6 +31302,12 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     renderUserWorkspace();
     return true;
   }
+  if (handleNexusVoiceTroubleshootingCommand(command, { source: "typed-command-send-button" })) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    renderUserWorkspace();
+    return true;
+  }
   if (handleNexusGenesisProviderOrchestrationCommand(command, { source })) {
     if (input) input.value = "";
     setCommandInputs("");
@@ -31532,14 +31538,15 @@ function setNexusGenesisTrustChainState(state = "idle", details = {}) {
 function isNexusConversationOnlyTrustChainInput(command = "") {
   const text = normalizeToolText(command);
   if (!text) return true;
-  return /\b(hello|hi|hey nexus|hello nexus|can you hear me|do you hear me|are you there|how are you|what can you do|show me nexus modes|tell me something interesting|explain ai|repeat that|speak more slowly|speak slower|use text only|text only|stop speaking)\b/.test(text)
+  return /\b(hello|hi|hey nexus|hello nexus|can you hear me|do you hear me|are you there|how are you|what can you do|show me nexus modes|tell me something interesting|explain ai|repeat that|speak more slowly|speak slower|use text only|text only|stop speaking|i can't hear you|i cant hear you|i can t hear you|still can't hear you|still cant hear you|still can t hear you|why aren't you speaking|why arent you speaking|why aren t you speaking|turn on voice|talk to me|is my microphone working|is my mic working)\b/.test(text)
     && !/\b(sell|record|track|find work|apply|blood pressure|bp|shipment|maize|crop issue|telehealth|pharmacy|marketplace|route|dispatch|pay|book|schedule|call|message|whatsapp|sms)\b/.test(text);
 }
 
 function nexusConversationOnlyTrustChainResponse(command = "") {
   const text = normalizeToolText(command);
   if (!text) return "I am here. You can speak or type what you need.";
-  if (/\b(can you hear me|do you hear me|are you there)\b/.test(text)) return "Yes, I can hear you. What are we working on today?";
+  const voiceConcern = nexusVoiceTroubleshootingResponse(command, { source: "voice" });
+  if (voiceConcern) return voiceConcern;
   if (/\b(hello|hi|hey nexus|hello nexus)\b/.test(text)) return "Hello. I am listening. What do you need help with today?";
   if (/\b(what can you do|show me nexus modes)\b/.test(text)) return "I can help with agriculture, health preparation, learning, jobs, marketplace review, maps, messages, reminders, language, offline support, and safe provider preparation. Tell me what you want to do next.";
   if (/\b(explain ai)\b/.test(text)) return "AI is software that can recognize patterns, answer questions, and help organize tasks. I will keep actions gated and ask before anything important happens.";
@@ -31548,6 +31555,104 @@ function nexusConversationOnlyTrustChainResponse(command = "") {
   if (/\b(speak more slowly|speak slower)\b/.test(text)) return "I will speak more slowly. You can keep talking naturally.";
   if (/\b(use text only|text only|stop speaking)\b/.test(text)) return "Okay. I will continue in text.";
   return "I heard you. Tell me a little more so I can help the right way.";
+}
+
+function isNexusVoiceTroubleshootingCommand(command = "") {
+  const text = normalizeToolText(command);
+  if (!text) return false;
+  return /\b(can you hear me|do you hear me|can nexus hear me|are you listening|are you hearing me|you hear me|you listening|i can't hear you|i cant hear you|i can t hear you|can't hear you|cant hear you|can t hear you|still can't hear you|still cant hear you|still can t hear you|why aren't you speaking|why arent you speaking|why aren t you speaking|why are you not speaking|turn on voice|nexus talk to me|talk to me|speak to me|is my microphone working|is my mic working|microphone working|mic working|speech not working|voice not working|sound not working|audio not working)\b/.test(text)
+    || /\b(me escuchas|me oyes|puedes oirme|puedes escucharme|no te escucho|microfono funciona)\b/.test(text)
+    || /\b(tu m entends|vous m entendez|je ne t entends pas|tu ecoutes|micro fonctionne)\b/.test(text)
+    || /\b(unanisikia|unasikia|sikuskii|siskii sauti|mic inafanya kazi|kipaza sauti kinafanya kazi)\b/.test(text)
+    || /(?:\u0647\u0644 \u062a\u0633\u0645\u0639\u0646\u064a|\u062a\u0633\u0645\u0639\u0646\u064a|\u0644\u0627 \u0627\u0633\u0645\u0639\u0643|\u0627\u0644\u0635\u0648\u062a \u0644\u0627 \u064a\u0639\u0645\u0644|\u0627\u0644\u0645\u064a\u0643\u0631\u0648\u0641\u0648\u0646 \u064a\u0639\u0645\u0644)/.test(command);
+}
+
+function nexusVoiceTroubleshootingState() {
+  const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false, browserName: "this browser" };
+  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
+  const synthesisSupported = typeof window !== "undefined" && Boolean(window.speechSynthesis || activeVoiceAudio || browserSpeechFallbackEnabled?.());
+  const quiet = Boolean(voiceDemoQuietMode || nexusOsConversationMuted);
+  const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const listeningState = recognitionActive
+    ? "Voice ready"
+    : !profile.secureEnough
+      ? "Voice unavailable in this browser"
+      : profile.supported
+        ? "Microphone permission required"
+        : "Speech recognition unavailable";
+  const outputState = quiet
+    ? "Speech output muted"
+    : synthesisSupported
+      ? "Speech output available"
+      : "Speech output unavailable";
+  return {
+    profile,
+    recognitionActive,
+    synthesisSupported,
+    quiet,
+    permissionState,
+    listeningState,
+    outputState,
+    typedFallback: "Typed conversation available"
+  };
+}
+
+function nexusVoiceTroubleshootingResponse(command = "", options = {}) {
+  if (!isNexusVoiceTroubleshootingCommand(command)) return "";
+  const source = String(options.source || "").toLowerCase();
+  const state = nexusVoiceTroubleshootingState();
+  const text = normalizeToolText(command);
+  const usedTypedInput = source.includes("typed") || source.includes("command-send") || source.includes("chat");
+  if (/\b(i can't hear you|i cant hear you|i can t hear you|can't hear you|cant hear you|can t hear you|still can't hear you|still cant hear you|still can t hear you|why aren't you speaking|why arent you speaking|why aren t you speaking|why are you not speaking|sound not working|audio not working|voice not working)\b/.test(text)) {
+    if (state.quiet) return "I can respond on screen, but voice is muted right now. Use Unmute or Repeat if you want me to try speaking aloud.";
+    if (!state.synthesisSupported) return "I can respond on screen, but I cannot speak aloud in this browser right now. You can keep typing, or try a supported browser with audio enabled.";
+    return "I received your message. If you cannot hear me, check browser audio, then press Repeat. You can also continue by typing.";
+  }
+  if (/\b(turn on voice|talk to me|speak to me|nexus talk to me)\b/.test(text)) {
+    if (!state.profile.secureEnough) return "Voice needs HTTPS, localhost, or 127.0.0.1 in this browser. You can keep typing here, or return after opening a secure page.";
+    if (!state.profile.supported) return "Voice listening is not available in this browser right now, but typed conversation is ready. Try Chrome or Edge for microphone support.";
+    return "Voice can start from the Talk button. Press Talk, allow microphone access if the browser asks, and I will listen only while you choose to use voice.";
+  }
+  if (/\b(is my microphone working|is my mic working|microphone working|mic working|can you hear me|do you hear me|are you listening|are you hearing me|you hear me|you listening)\b/.test(text)) {
+    if (state.recognitionActive) return "Yes, I received your message. Voice listening is active right now.";
+    if (usedTypedInput) return "I received your typed message. Voice listening is not active right now. Press Talk if you want to try the microphone, or keep typing here.";
+    if (state.profile.supported) return "I received your message. Voice listening is not active now; press Talk to start microphone listening when you are ready.";
+    return "I received your message on screen. Microphone speech recognition is unavailable in this browser, but typed conversation works.";
+  }
+  return "I received your message. Voice status is visible here, and typed conversation is available if microphone or audio is unavailable.";
+}
+
+function handleNexusVoiceTroubleshootingCommand(command = "", options = {}) {
+  const response = nexusVoiceTroubleshootingResponse(command, options);
+  if (!response) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  const state = nexusVoiceTroubleshootingState();
+  recordNexusOsConversationTurn("assistant", response, { source: options.source || "nexus-voice-troubleshooting" });
+  setNexusGenesisTrustChainState(state.recognitionActive ? "response_ready" : "recognition_unavailable", {
+    transcript: command,
+    response,
+    visibleFeedback: response,
+    failureRecovery: "Type your request below, press Talk to try microphone access, or return Home.",
+    reason: "voice-troubleshooting"
+  });
+  updateNexusOsVoiceRuntimeState({
+    mode: state.recognitionActive ? "listening" : state.quiet ? "muted" : "typed-fallback",
+    listeningState: state.recognitionActive ? "active" : "typed",
+    permissionState: state.permissionState,
+    microphoneUnavailable: !state.profile.supported,
+    assistantSpeaking: false,
+    captionText: response
+  }, options.source || "nexus-voice-troubleshooting");
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
+    lastUserInput: command,
+    lastResponse: response,
+    nextQuestion: "Type your request below, press Talk, or return Home.",
+    source: options.source || "nexus-voice-troubleshooting"
+  });
+  renderLiveVoiceSuggestions(["Press Talk", "Continue without voice", "Return Home"]);
+  setVoiceResponse(response, false, { allowHandoff: false, allowVoiceFirst: false, command, source: options.source || "nexus-voice-troubleshooting" });
+  return true;
 }
 
 function saveNexusDailyCompanionState(patch = {}) {
@@ -31574,7 +31679,10 @@ function nexusDailyCompanionIntent(command = "") {
     return { type: "conversation", topic: "greeting", response: "Good morning. I am here with you. What would you like to focus on today?" };
   }
   if (/\b(can you hear me|do you hear me|are you there)\b/.test(text)) {
-    return { type: "conversation", topic: "hearing-check", response: "Yes, I can hear you. What are we working on today?" };
+    return { type: "conversation", topic: "hearing-check", response: nexusVoiceTroubleshootingResponse(command, { source: "daily-companion" }) || "I received your message. What are we working on today?" };
+  }
+  if (isNexusVoiceTroubleshootingCommand(command)) {
+    return { type: "conversation", topic: "voice-support", response: nexusVoiceTroubleshootingResponse(command, { source: "daily-companion" }) || "Voice status is visible here, and typed conversation remains available." };
   }
   if (/\b(hard day|feeling lonely|i feel lonely|lonely today|sad today|rough day)\b/.test(text)) {
     return { type: "conversation", topic: "support", response: "I am glad you reached out. Would you like to talk for a while, or is there something specific you would like help with?" };
@@ -31908,6 +32016,16 @@ function renderNexusMinimalConversationExperience() {
       <div class="nexus-true-conversation-log" data-nexus-os-conversation-log="true" aria-live="polite">
         ${renderNexusOsConversationTurns()}
       </div>
+      ${renderNexusOsVoiceRuntimeStatus()}
+      <div class="nexus-os-conversation-controls nexus-os-companion-voice-controls" data-nexus-companion-voice-controls="true" aria-label="${escapeHtml(translateText("Nexus voice controls"))}">
+        <button type="button" data-nexus-os-voice-control="toggle-listening">${escapeHtml(translateText("Talk"))}</button>
+        <button type="button" data-nexus-os-voice-control="stop-listening">${escapeHtml(translateText("Stop listening"))}</button>
+        <button type="button" data-nexus-os-voice-control="stop-speaking">${escapeHtml(translateText("Stop speaking"))}</button>
+        <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
+        <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
+        <button type="button" data-nexus-os-voice-control="typed-fallback">${escapeHtml(translateText("Continue without voice"))}</button>
+      </div>
+      <p class="nexus-companion-recovery-hint" data-nexus-companion-recovery-hint="true">${escapeHtml(translateText("Voice is optional. Type below, press Talk for microphone access, or use Home to return to the command center."))}</p>
       ${renderNexusTrueCommandComposer({ compact: true })}
       <div class="nexus-os-conversation-live-region sr-only" data-nexus-os-conversation-live-region="true" aria-live="polite"></div>
     </section>
@@ -37126,18 +37244,20 @@ function ensureNexusOsVisualBoundaryStyles() {
     }
     .nexus-os-conversation-log {
       display: grid;
-      gap: 10px;
-      max-height: min(42vh, 360px);
+      gap: 8px;
+      min-height: 0;
+      max-height: min(38vh, 320px);
       overflow: auto;
       scroll-behavior: smooth;
       padding-right: 4px;
+      align-content: end;
     }
     .nexus-os-conversation-turn {
       display: grid;
-      gap: 5px;
+      gap: 4px;
       max-width: 86%;
       border-radius: 18px;
-      padding: 11px 13px;
+      padding: 9px 12px;
       border: 1px solid rgba(148, 163, 184, 0.18);
       color: rgba(226, 232, 240, 0.94);
       background: rgba(15, 23, 42, 0.58);
@@ -37158,8 +37278,9 @@ function ensureNexusOsVisualBoundaryStyles() {
     }
     .nexus-os-conversation-turn span {
       color: rgba(226, 232, 240, 0.92);
-      line-height: 1.45;
-      overflow-wrap: anywhere;
+      line-height: 1.35;
+      overflow-wrap: break-word;
+      word-break: normal;
       hyphens: auto;
     }
     .nexus-os-conversation-turn time {
@@ -37172,6 +37293,43 @@ function ensureNexusOsVisualBoundaryStyles() {
     body.nexus-os-visual-boundary .conversation-panel,
     body.nexus-os-visual-boundary .floating-assistant-card {
       display: none !important;
+    }
+    .nexus-true-conversation {
+      width: min(860px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+      gap: 12px;
+    }
+    .nexus-true-conversation .nexus-os-voice-runtime-status {
+      margin: 0;
+    }
+    .nexus-os-companion-voice-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.58), rgba(30, 41, 59, 0.42));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 34px rgba(15, 23, 42, 0.18);
+    }
+    .nexus-os-companion-voice-controls button {
+      border: 1px solid rgba(125, 211, 252, 0.28);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(8, 47, 73, 0.58);
+      color: rgba(240, 249, 255, 0.96);
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.1);
+      cursor: pointer;
+    }
+    .nexus-companion-recovery-hint {
+      margin: 0;
+      color: rgba(203, 213, 225, 0.86);
+      font-size: 0.9rem;
+      text-align: center;
     }
     @media (max-width: 720px) {
       body.user-mode.nexus-os-visual-boundary #mainContent {
@@ -37195,6 +37353,12 @@ function ensureNexusOsVisualBoundaryStyles() {
       }
       .nexus-os-conversation-turn {
         max-width: 96%;
+      }
+      .nexus-true-conversation {
+        gap: 10px;
+      }
+      .nexus-os-companion-voice-controls {
+        justify-content: flex-start;
       }
     }
     @media (min-width: 721px) and (max-width: 1040px) {
@@ -46177,11 +46341,14 @@ function nexusOsVoiceRuntimeSummary() {
 
 function renderNexusOsVoiceRuntimeStatus() {
   updateNexusOsVoiceRuntimeState({ mode: nexusOsVoiceRuntimeState.mode || "standby" }, "render-status");
+  const voiceState = typeof nexusVoiceTroubleshootingState === "function"
+    ? nexusVoiceTroubleshootingState()
+    : { listeningState: nexusOsVoiceRuntimeState.mode || "standby", outputState: "Speech output available", typedFallback: "Typed conversation available" };
   return `
     <div class="nexus-os-voice-runtime-status" data-nexus-os-voice-runtime-status="true">
       <span>${escapeHtml(translateText("Voice"))}</span>
-      <strong>${escapeHtml(translateText(nexusOsVoiceRuntimeState.mode || "standby"))}</strong>
-      <small>${escapeHtml(translateText(nexusOsVoiceRuntimeSummary()))}</small>
+      <strong>${escapeHtml(translateText(voiceState.listeningState || nexusOsVoiceRuntimeState.mode || "standby"))}</strong>
+      <small>${escapeHtml(translateText(`${voiceState.outputState || "Speech output available"}. ${voiceState.typedFallback || "Typed conversation available"}. ${nexusOsVoiceRuntimeSummary()}`))}</small>
       <em>${escapeHtml(translateText("Push-to-talk. No always-on listening without explicit consent."))}</em>
       <small class="sr-only" aria-live="polite" data-nexus-presence-status-announcement="true">${escapeHtml(translateText(nexusCoreStateAccessibleLabel(nexusCoreRuntimeState.current)))}</small>
       <small class="nexus-presence-caption-sync" data-nexus-presence-caption-sync="true">${escapeHtml(lastVoiceResponse || nexusOsVoiceRuntimeSummary())}</small>
@@ -46444,6 +46611,19 @@ async function handleNexusOsMissionLifecycleAction(action = "") {
 async function handleNexusOsVoiceControlAction(action = "toggle-listening", options = {}) {
   const normalized = String(action || "toggle-listening").toLowerCase();
   const source = options.source || "nexus-os-voice-control";
+  if (normalized === "stop-listening") {
+    voiceStopRequested = true;
+    try {
+      if (voiceRecognition && typeof voiceRecognition.stop === "function") voiceRecognition.stop();
+    } catch {}
+    voiceRecognition = null;
+    updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle", assistantSpeaking: false }, source);
+    const response = "Stopped listening. You can type your request, press Talk again, or return Home.";
+    recordNexusOsConversationTurn("assistant", response, { source });
+    setVoiceResponse(response, false, { allowVoiceFirst: false, source });
+    renderUserWorkspace();
+    return true;
+  }
   if (normalized === "stop-speaking") {
     stopVoicePlayback({ hard: true, reason: source });
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle", hearingState: "idle" }, source);
@@ -49512,15 +49692,14 @@ function isNexusHearingCheckCommand(command = "") {
     || /(?:\u0647\u0644 \u062a\u0633\u0645\u0639\u0646\u064a|\u062a\u0633\u0645\u0639\u0646\u064a|\u0627\u0644\u0645\u064a\u0643\u0631\u0648\u0641\u0648\u0646 \u064a\u0639\u0645\u0644)/.test(command);
 }
 
-function answerNexusHearingCheck() {
+function answerNexusHearingCheck(options = {}) {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   updateNexusBehaviorLayer("listening", "Nexus confirmed the user can be heard.");
-  const status = voiceRecognition
-    ? "Yes, I hear you. I'm listening."
-    : "Yes, I got that. Your mic reached Nexus.";
+  const status = nexusVoiceTroubleshootingResponse("can you hear me", { source: options.source || "voice" })
+    || (voiceRecognition ? "Yes, I received your message. Voice listening is active right now." : "I received your message on screen. Typed conversation works.");
   renderLiveVoiceSuggestions(["Nexus, open learning", "Nexus, open telehealth", "Nexus, stop"]);
-  setVoiceResponse(`${status} What do you need next?`, true);
+  setVoiceResponse(`${status} What do you need next?`, true, { allowHandoff: false, source: options.source || "hearing-check" });
 }
 
 function cleanSpokenUserName(name = "") {
@@ -52122,6 +52301,10 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   command = normalizeNexusVoiceWorkflowCommand(command || localizedCommand);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
   const trustChainInput = spokenCommand || command || localizedCommand || rawCommand;
+  if (handleNexusVoiceTroubleshootingCommand(trustChainInput, {
+    ...options,
+    source: options.source || "voice-command"
+  })) return;
   if (handleNexusDailyCompanionCommand(trustChainInput, {
     ...options,
     speak: true,

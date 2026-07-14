@@ -440,7 +440,7 @@ function assertRouting(context, label) {
   assert(workflowIndex > -1 && companionIndex < workflowIndex, `${label}: conversation-first companion handling must run before workflow launch.`);
   assertIncludes(context.app, [
     "Good morning. I am here with you.",
-    "Yes, I can hear you. What are we working on today?",
+    "Voice listening is not active right now.",
     "tell me something interesting",
     "explain ai",
     "I need help",
@@ -503,7 +503,7 @@ function assertCompanion(context, label) {
     "nexusDailyCompanionIntent",
     "handleNexusDailyCompanionCommand",
     "Good morning. I am here with you.",
-    "Yes, I can hear you. What are we working on today?",
+    "Voice listening is not active right now.",
     "I am glad you reached out.",
     "Of course. I can explain it in plain steps.",
     "I will slow down.",

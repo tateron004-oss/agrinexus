@@ -74,7 +74,8 @@ includes(heroBlock, "${renderNexusOsUnifiedConversationSurface()}", "canonical c
 ].forEach(selector => includes(stylesBlock, selector, `duplicate surface hidden ${selector}`));
 
 includes(stylesBlock, ".nexus-os-conversation-log", "conversation log styling");
-includes(stylesBlock, "max-height: min(42vh, 360px)", "long-response/mobile containment");
+includes(stylesBlock, "max-height: min(38vh, 320px)", "compact long-response/mobile containment");
+includes(stylesBlock, "word-break: normal", "conversation text avoids vertical single-letter wrapping");
 includes(stylesBlock, "@media (max-width: 720px)", "mobile behavior");
 
 includes(app, "recordNexusOsConversationTurn(\"user\", command", "typed command records user turn");

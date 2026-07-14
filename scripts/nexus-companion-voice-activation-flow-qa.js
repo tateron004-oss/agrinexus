@@ -1,0 +1,122 @@
+"use strict";
+
+const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
+
+const app = read("public/app.js");
+const index = read("public/index.html");
+const manifest = read("public/manifest.webmanifest");
+const packageJson = JSON.parse(read("package.json"));
+const qaSuite = read("scripts/qa-suite.js");
+
+function between(source, start, end, label) {
+  const startIndex = source.indexOf(start);
+  assert(startIndex >= 0, `${label}: missing start marker ${start}`);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert(endIndex > startIndex, `${label}: missing end marker ${end}`);
+  return source.slice(startIndex, endIndex);
+}
+
+function includesAll(source, tokens, label) {
+  for (const token of tokens) {
+    assert(source.includes(token), `${label}: missing ${token}`);
+  }
+}
+
+assert(!app.includes("Nexus is blocked from executing externally."), "raw blocked execution phrase must not appear in the Standard User app runtime");
+assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
+assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
+assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
+assert(index.includes('/manifest.webmanifest?v=nexus-behavior-424'), "index should version the manifest link to avoid stale manifest warnings");
+assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
+
+includesAll(app, [
+  "function isNexusVoiceTroubleshootingCommand",
+  "function nexusVoiceTroubleshootingState",
+  "function nexusVoiceTroubleshootingResponse",
+  "function handleNexusVoiceTroubleshootingCommand",
+  "I received your typed message. Voice listening is not active right now.",
+  "I can respond on screen, but I cannot speak aloud in this browser right now.",
+  "Voice can start from the Talk button.",
+  "Microphone permission required",
+  "Speech recognition unavailable",
+  "Speech output unavailable",
+  "Typed conversation available"
+], "voice troubleshooting runtime");
+
+const troubleshootingSource = between(app, "function nexusVoiceTroubleshootingResponse", "function handleNexusVoiceTroubleshootingCommand", "voice troubleshooting response");
+includesAll(troubleshootingSource, [
+  "i can't hear you",
+  "i can t hear you",
+  "still can t hear you",
+  "why aren't you speaking",
+  "why aren t you speaking",
+  "turn on voice",
+  "nexus talk to me",
+  "is my microphone working",
+  "Press Talk",
+  "continue by typing"
+], "voice troubleshooting response");
+assert(!troubleshootingSource.includes("Plan created"), "voice troubleshooting must never answer with Plan created");
+
+const typedSubmitSource = between(app, "async function handleNexusPresenceCommandSendSubmit", "function handleNexusTrueCommandComposerKeydown", "typed command submit");
+assert(
+  typedSubmitSource.indexOf("handleNexusVoiceTroubleshootingCommand(command") > typedSubmitSource.indexOf("isNexusPresenceWakePhrase(command)"),
+  "typed submit should handle voice troubleshooting after wake phrase handling"
+);
+assert(
+  typedSubmitSource.indexOf("handleNexusVoiceTroubleshootingCommand(command") < typedSubmitSource.indexOf("handleNexusGenesisProviderOrchestrationCommand"),
+  "typed submit should handle voice troubleshooting before provider/plan routing"
+);
+
+const voiceCoreSource = between(app, "async function handleVoiceCommandCore", "const a100SafeIntent", "voice command core");
+assert(
+  voiceCoreSource.includes("handleNexusVoiceTroubleshootingCommand(trustChainInput"),
+  "voice command core should route troubleshooting before broader planning"
+);
+
+const minimalConversationSource = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal companion surface");
+includesAll(minimalConversationSource, [
+  "renderNexusOsVoiceRuntimeStatus()",
+  "data-nexus-os-voice-control=\"toggle-listening\"",
+  "Stop listening",
+  "Stop speaking",
+  "Repeat",
+  "Unmute",
+  "Mute",
+  "Continue without voice",
+  "Voice is optional.",
+  "Home"
+], "minimal companion surface");
+
+const voiceControlSource = between(app, "async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice controls");
+includesAll(voiceControlSource, [
+  "normalized === \"stop-listening\"",
+  "voiceRecognition.stop",
+  "Stopped listening. You can type your request, press Talk again, or return Home.",
+  "renderUserWorkspace()"
+], "voice controls");
+
+const cssSource = between(app, ".nexus-os-conversation-log {", "@media (max-width: 720px)", "companion conversation CSS");
+includesAll(cssSource, [
+  "max-height: min(38vh, 320px)",
+  "overflow-wrap: break-word",
+  "word-break: normal",
+  ".nexus-os-companion-voice-controls",
+  ".nexus-companion-recovery-hint"
+], "companion conversation CSS");
+
+assert(
+  packageJson.scripts["qa:nexus-companion-voice-activation-flow"] === "node scripts/nexus-companion-voice-activation-flow-qa.js",
+  "package alias must run companion voice activation QA"
+);
+assert(
+  qaSuite.includes("scripts/nexus-companion-voice-activation-flow-qa.js"),
+  "qa-suite must include companion voice activation QA"
+);
+
+console.log("Nexus companion voice activation flow QA passed.");
