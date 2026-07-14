@@ -6,9 +6,11 @@ const app = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf
 
 assertOrbPrimaryInteraction();
 assertMinimalConversation();
-assert(app.includes("handleNexusGenesisOrbActivation"), "orb click/keyboard activation handler exists");
-assert(app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation is bound");
-assert(app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation is bound");
-assert(app.includes('["Enter", " "].includes(event.key)'), "orb supports Enter and Space activation");
+assert(app.includes("handleNexusGenesisOrbActivation"), "legacy orb activation handler remains as inert guard");
+assert(app.includes("function handleNexusGenesisOrbActivation") && app.includes("return false;"), "orb activation handler is inert");
+assert(!app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation is not bound");
+assert(!app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation is not bound");
+assert(!app.includes('["Enter", " "].includes(event.key)'), "orb no longer supports keyboard activation");
+assert(app.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "orb explains status-only role");
 
-console.log("Nexus orb conversation activation QA passed.");
+console.log("Nexus orb conversation non-activation QA passed.");

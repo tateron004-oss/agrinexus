@@ -406,15 +406,16 @@ function assertSynthesis(context, label) {
 function assertOrbActivation(context, label) {
   const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
   assertIncludes(orbSource, [
+    "return false"
+  ], label, "deterministic orb non-activation");
+  assertExcludes(orbSource, [
     "event.stopImmediatePropagation",
     "voiceRecognition?.stop",
     "stopVoicePlayback",
     "genesis-orb-stop-speaking",
     "genesis-orb-stop-listening",
     "genesis-orb-processing-click",
-    "void activateNexusGenesisExperience"
-  ], label, "deterministic orb activation");
-  assertExcludes(orbSource, [
+    "void activateNexusGenesisExperience",
     "renderNexusAutonomousRuntimePreview",
     "openWorkflow",
     "Plan Preview",
@@ -424,10 +425,30 @@ function assertOrbActivation(context, label) {
 
   const activateSource = sourceBetween(context.app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", label);
   assertIncludes(activateSource, [
-    'setNexusGenesisTrustChainState("wake_requested"',
-    'setNexusGenesisTrustChainState("voice_permission_pending"',
-    "await startVoiceListening"
-  ], label, "orb wake/listen flow");
+    'setNexusGenesisTrustChainState("waiting"',
+    "renderUserWorkspace()",
+    "updateNexusGenesisExperienceDom()"
+  ], label, "presence startup flow");
+  assertExcludes(activateSource, [
+    "startNexusOsMission(",
+    "await startVoiceListening",
+    'setNexusGenesisTrustChainState("voice_permission_pending"'
+  ], label, "forbidden orb startup side effect");
+
+  const rendererSource = sourceBetween(context.app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", label);
+  assertIncludes(rendererSource, [
+    'data-nexus-genesis-orb-presence="true"',
+    'role="img"',
+    "Nexus visual status indicator. Use the voice controls or type below to begin."
+  ], label, "presence orb renderer");
+  assertExcludes(rendererSource, [
+    "<button",
+    "data-nexus-genesis-orb-entry",
+    "onclick"
+  ], label, "forbidden orb interactive markup");
+
+  const bindSource = sourceBetween(context.app, "function bindStatic", "async function boot", label);
+  assert(!bindSource.includes("handleNexusGenesisOrbActivation"), `${label}: static binding must not wire orb click or keyboard activation.`);
 }
 
 function assertRouting(context, label) {

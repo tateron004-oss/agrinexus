@@ -79,18 +79,20 @@ assert(
   "voice command core should route troubleshooting before broader planning"
 );
 
-const activationSource = between(app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", "Genesis orb activation");
+const activationSource = between(app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", "Genesis presence activation");
 includesAll(activationSource, [
-  "startNexusOsMission(\"Open the full Nexus Standard User workspace\"",
   "renderUserWorkspace()",
   "nexusGenesisExperienceActivated = true",
-  "nexusTrueExperienceSessionStarted = true"
-], "Genesis orb activation");
+  "nexusTrueExperienceSessionStarted = true",
+  "Nexus is ready."
+], "Genesis presence activation");
+assert(!activationSource.includes("startNexusOsMission("), "Genesis orb activation must not create a mission");
+assert(!activationSource.includes("startVoiceListening("), "Genesis orb activation must not request microphone permission");
 
 const experienceModeSource = between(app, "function nexusTrueExperienceMode", "function isNexusTrueExperienceReturnHomeCommand", "Nexus true experience mode");
 assert(
-  experienceModeSource.includes("if (nexusGenesisExperienceActivated || currentNexusOsMission()) return \"mission\";"),
-  "activated Genesis orb must route to mission/full workspace mode"
+  experienceModeSource.includes("return \"conversation\";"),
+  "Standard User should open directly into conversation mode"
 );
 
 const minimalConversationSource = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal companion surface");
@@ -101,9 +103,21 @@ assert(
 
 const commandCenterHeroSource = between(app, "function renderNexusCommandCenterHero", "function renderNexusCommandCenterHeroLegacy", "command center hero route");
 assert(
-  commandCenterHeroSource.includes(": renderNexusCommandCenterHeroLegacy();"),
-  "non-home Standard User route must render the unified workspace hero, not the minimal companion screen"
+  commandCenterHeroSource.includes("return renderNexusCommandCenterHeroLegacy();"),
+  "Standard User route must render the unified conversational workspace hero"
 );
+
+const orbSource = between(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "Genesis orb renderer");
+includesAll(orbSource, [
+  "data-nexus-genesis-orb-presence=\"true\"",
+  "role=\"img\"",
+  "Nexus visual status indicator. Use the voice controls or type below to begin."
+], "Genesis non-clickable orb renderer");
+assert(!orbSource.includes("<button"), "Genesis orb renderer must not use button semantics");
+assert(!orbSource.includes("data-nexus-genesis-orb-entry"), "Genesis orb renderer must not expose activation entry metadata");
+
+const bindSource = between(app, "function bindStatic", "async function boot", "static binding");
+assert(!bindSource.includes("handleNexusGenesisOrbActivation"), "static binding must not attach orb click or keyboard activation");
 
 const userWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "Standard User workspace render");
 includesAll(userWorkspaceSource, [
@@ -115,11 +129,16 @@ includesAll(userWorkspaceSource, [
 
 const voiceControlSource = between(app, "async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice controls");
 includesAll(voiceControlSource, [
+  "normalized === \"enable-voice\"",
+  "normalized === \"toggle-hands-free\"",
   "normalized === \"stop-listening\"",
+  "explicit-enable-voice",
+  "explicit-hands-free-toggle",
   "voiceRecognition.stop",
-  "Stopped listening. You can type your request, press Talk again, or return Home.",
+  "Stopped listening. You can type your request or press Talk again.",
   "renderUserWorkspace()"
 ], "voice controls");
+assert(!app.includes('localStorage.setItem("agrinexusVoiceFirst", "on")'), "hands-free voice mode must not persist as on across refresh");
 
 const cssSource = between(app, ".nexus-os-conversation-log {", "@media (max-width: 720px)", "companion conversation CSS");
 includesAll(cssSource, [

@@ -216,11 +216,12 @@ check("false live action claims remain blocked", !/\b(completed payment|called t
 
 check("no secrets are exposed", !/\b(TWILIO_AUTH_TOKEN\s*[:=]\s*['\"][^'\"]+|OPENAI_API_KEY\s*[:=]\s*['\"][^'\"]+|STRIPE_SECRET_KEY\s*[:=]\s*['\"][^'\"]+)/i.test(server + app));
 
-check("Standard User first screen remains icon-first and uncluttered", hasAll(app, [
-  'data-testid="nexus-standard-user-home"',
-  "renderNexusModeLauncher",
-  "renderNexusSuggestedActions",
-  "Ask Nexus or choose a support area below"
+check("Standard User first screen remains conversation-first and uncluttered", hasAll(app, [
+  'data-nexus-os-standard-startup="true-conversation"',
+  'data-nexus-true-conversational-root="true"',
+  "Hello. I'm Nexus.",
+  "Enable voice once, press Talk, or type your request.",
+  'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
 
 check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-424", "agrinexus-pwa-v370"])

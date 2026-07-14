@@ -50,7 +50,7 @@ function assertTrueHomeMarkup() {
   assert(!home.includes("Good evening, Ron."), "idle Home does not render visible greeting");
   assert(!home.includes("renderNexusTrueCommandComposer()"), "idle Home does not render visible composer");
   assert(!home.includes("renderNexusTrueSecondaryAccess()"), "idle Home does not render visible secondary controls");
-  assert(home.includes("Activate the orb to speak or type."), "nonvisual fallback instruction exists");
+  assert(home.includes("Nexus is ready. Use voice controls or type below."), "nonvisual presence fallback instruction exists");
 }
 
 function assertLegacyHomeRemoved() {
@@ -78,12 +78,15 @@ function assertLegacyHomeRemoved() {
 function assertOrbPrimaryInteraction() {
   const orb = extractFunction("renderNexusTrueCoreOrb");
   assert(orb.includes('data-nexus-true-core-orb="true"'), "true orb marker exists");
-  assert(orb.includes('data-nexus-genesis-orb-entry="${isHome ? "true" : "false"}"'), "orb owns Home activation");
-  assert(orb.includes("Press Enter or Space to activate Nexus"), "orb has screen-reader activation instruction");
+  assert(orb.includes('data-nexus-genesis-orb-presence="true"'), "orb is presence-only");
+  assert(!orb.includes("data-nexus-genesis-orb-entry"), "orb no longer owns Home activation");
+  assert(orb.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "orb has screen-reader presence instruction");
+  assert(!orb.includes("<button"), "orb does not use button semantics");
   assert(app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler exists");
-  assert(app.includes("activateNexusGenesisExperience"), "activation transitions into Nexus experience");
+  assert(!app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation listener is removed");
+  assert(!app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation listener is removed");
   assert(orb.includes('data-nexus-os-orb-state="${escapeHtml(coreState)}"'), "orb reflects runtime state");
-  assert(orb.includes("Activate Nexus"), "Home orb has accessible activation name");
+  assert(orb.includes("nexusCoreStateAccessibleLabel(coreState)"), "orb has accessible status name");
   assert(styles.includes(".nexus-true-orb-stage"), "true orb stage styles exist");
   assert(styles.includes(".nexus-genesis-particle-field"), "Genesis particle field styles exist");
   assert(styles.includes("@media (prefers-reduced-motion: reduce)"), "reduced motion is supported");

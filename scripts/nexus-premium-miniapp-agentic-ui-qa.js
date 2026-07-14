@@ -23,8 +23,8 @@ function rejects(source, pattern, label) {
   "nexus-command-center-hero",
   "data-nexus-command-landing-actions=\"true\"",
   "data-nexus-command-landing-status=\"true\"",
-  "Start Mission",
-  "Continue Mission",
+  "Send",
+  "Continue conversation",
   "View Receipts",
   "Provider Readiness"
 ].forEach(term => includes(app, term, "command landing"));

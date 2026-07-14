@@ -69,7 +69,8 @@ visibleStartupProhibited.forEach((call) => {
 
 assert(app.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "deferred legacy host is explicitly marked");
 assert(app.includes("data-standard-user-startup-visible=\"false\" hidden aria-hidden=\"true\""), "deferred legacy host is hidden and aria-hidden");
-assert(app.includes("Activate the orb to speak or type."), "Standard User receives nonvisual orb activation guidance");
+assert(app.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "Standard User receives status-only orb guidance");
+assert(app.includes("[data-nexus-os-core-orb]") && app.includes("pointer-events: none"), "orb is non-interactive under the visual boundary");
 assert(app.includes("No provider handoff") || app.includes("noProviderHandoff"), "no-provider-handoff safety remains represented");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(renderBlock), "startup copy does not claim fake execution");
 assert(packageJson.scripts["qa:nexus-os-visual-overload-boundary"] === "node scripts/nexus-os-visual-overload-boundary-qa.js", "package alias exists");

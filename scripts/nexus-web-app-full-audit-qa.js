@@ -230,11 +230,12 @@ check("language is consistent for Standard User source-backed UX", hasAll(app + 
   "Internet Resource status"
 ]));
 
-check("Standard User first screen remains icon-first, not tab-heavy", hasAll(app, [
-  'data-testid="nexus-standard-user-home"',
-  "renderNexusModeLauncher",
-  "renderNexusSuggestedActions",
-  "Ask Nexus or choose a support area below"
+check("Standard User first screen remains conversation-first, not tab-heavy", hasAll(app, [
+  'data-nexus-os-standard-startup="true-conversation"',
+  'data-nexus-true-conversational-root="true"',
+  "Hello. I'm Nexus.",
+  "Enable voice once, press Talk, or type your request.",
+  'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && hasAll(css, [
   "body.user-mode .nexus-mode-launcher",
   "body.user-mode .nexus-mode-launcher strong",

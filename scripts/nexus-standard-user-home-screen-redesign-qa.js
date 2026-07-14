@@ -153,7 +153,10 @@ function excludes(source, token, label) {
   "Platform Active",
   "All systems operational",
   "Ask Nexus",
-  "Your AI assistant. Real answers. Real impact.",
+  "Nexus is present",
+  "Talk naturally. Type when voice is not available.",
+  "Hello. I'm Nexus.",
+  "You can talk to me or type below. Tell me what you need help with, and we'll work through it together.",
   "Saved Questions",
   "Provider Support",
   "Platform Status",
@@ -244,11 +247,10 @@ function excludes(source, token, label) {
 });
 
 [
-  "Good morning. I'm Nexus. What would you like to do?",
-  "Ask Nexus or choose a support area below",
+  "Hello. I'm Nexus. You can talk to me or type below. Tell me what you need help with, and we'll work through it together.",
+  "Enable voice once, press Talk, or type your request.",
   "Playback depends on supported providers or accounts",
   "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
-  "keeping important actions gated",
   "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
 ].forEach(token => includes(app, token, `safe assistant copy ${token}`));
 

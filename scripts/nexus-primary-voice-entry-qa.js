@@ -39,7 +39,7 @@ assert(hero.includes('data-nexus-os-voice-control="toggle-listening"'), "Talk bu
 assert(hero.includes('aria-label="${escapeHtml(translateText("Talk to Nexus"))}"'), "Talk button has accessible voice label");
 assert(hero.includes('>${escapeHtml(translateText("Talk"))}</button>'), "voice entry uses Talk label instead of utility Mic copy");
 assert(hero.includes('data-nexus-primary-voice-hint="true"'), "voice hint is rendered near command controls");
-assert(hero.includes("Press Talk to speak, or type your request."), "voice hint keeps typed fallback visible");
+assert(hero.includes("Enable voice once, press Talk, or type your request."), "voice hint keeps typed fallback visible");
 assert(commandRow.indexOf("data-nexus-primary-voice-entry") < commandRow.indexOf("nexusCommandCenterInput"), "voice entry appears before typed input in the command row");
 assert(voiceHandler.includes("await startVoiceListening({ source });"), "voice action remains routed through existing guarded listening helper");
 assert(app.includes('event.target.closest("[data-nexus-command-center-voice]")'), "command center voice clicks are handled by existing click binding");

@@ -717,11 +717,12 @@ let pendingGrandmaAction = null;
 let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
-let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") === "on";
+let voiceFirstMode = false;
 let voiceDemoQuietMode = localStorage.getItem("agrinexusDemoQuiet") === "on";
 let voiceStreamingMode = localStorage.getItem("agrinexusStreamingVoice") !== "off";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
+let nexusVoicePermissionDeniedThisSession = false;
 let voiceSpeaking = false;
 let voiceResumeAfterSpeech = false;
 let voiceConversationPaused = false;
@@ -12755,7 +12756,7 @@ function renderNexusOsConversationTurns() {
     return `
       <article class="nexus-os-conversation-turn assistant" data-nexus-os-conversation-empty="true">
         <strong>${escapeHtml(translateText("Nexus"))}</strong>
-        <span>${escapeHtml(translateText("Tell me your goal. I will ask for missing details, open only the needed workflow, and keep risky actions gated."))}</span>
+        <span>${escapeHtml(translateText("Hello. I'm Nexus. You can talk to me or type below. Tell me what you need help with, and we'll work through it together."))}</span>
         <time>${escapeHtml(translateText("Ready"))}</time>
       </article>
     `;
@@ -15294,7 +15295,7 @@ function installAgriNexusNativeBridge() {
       if (type === "voice.wake") {
         voiceFirstMode = true;
         voiceAutoRestart = true;
-        localStorage.setItem("agrinexusVoiceFirst", "on");
+        localStorage.removeItem("agrinexusVoiceFirst");
         setVoiceStatus("listening");
         updateNexusBehaviorLayer("listening", "Native wake heard. Nexus is ready for the command.");
         return { ok: true, action: "wake-ready" };
@@ -31423,7 +31424,7 @@ const NEXUS_GENESIS_EXPERIENCE_OWNERSHIP_REGISTRY = Object.freeze({
   missionTransitionOwner: "nexusTrueExperienceMode and renderNexusAgenticMissionWorkspace",
   performanceTierOwner: "nexusGenesisExperiencePerformanceTier",
   cacheBuildOwner: "AGRINEXUS_BUILD_VERSION / AGRINEXUS_PWA_CACHE_VERSION",
-  duplicateOrbPolicy: "one data-nexus-genesis-orb-entry is allowed on idle Home",
+  duplicateOrbPolicy: "Genesis orb is one non-interactive visual presence indicator",
   animationLoopPolicy: "single interruptible requestAnimationFrame loop, paused when hidden",
   hiddenLegacyPolicy: "legacy Home controls are not mounted or focusable in orb-only idle"
 });
@@ -31774,24 +31775,14 @@ function handleNexusDailyCompanionCommand(command = "", options = {}) {
 async function activateNexusGenesisExperience(source = "orb") {
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;
-  if (!currentNexusOsMission()) {
-    startNexusOsMission("Open the full Nexus Standard User workspace", {
-      source: `genesis-${source}-workspace-entry`,
-      domain: "general-assistant",
-      intent: "open-workflow",
-      interpretedGoal: "Unified Standard User workspace"
-    });
-  }
-  setNexusGenesisTrustChainState("wake_requested", { visibleFeedback: "Nexus is waking.", reason: `genesis-${source}` });
-  setNexusCoreState("wake", { source: `genesis-${source}`, statusText: "Nexus is waking." });
+  setNexusGenesisTrustChainState("waiting", { visibleFeedback: "Nexus is ready.", reason: `genesis-${source}` });
+  setNexusCoreState("waiting", { source: `genesis-${source}`, statusText: "Nexus is ready." });
   renderUserWorkspace();
   updateNexusGenesisExperienceDom();
   requestAnimationFrame(() => {
     $("#nexusCommandCenterInput")?.focus?.();
     setNexusCoreState("waiting", { source: `genesis-${source}`, statusText: "Nexus is ready for your request." });
   });
-  setNexusGenesisTrustChainState("voice_permission_pending", { visibleFeedback: "Nexus is ready to listen.", reason: `genesis-${source}-voice-permission` });
-  await startVoiceListening({ source: `genesis-${source}` });
   return true;
 }
 
@@ -31805,37 +31796,7 @@ function resetNexusGenesisHomeViewport() {
 }
 
 function handleNexusGenesisOrbActivation(event) {
-  const orb = event?.target?.closest?.("[data-nexus-genesis-orb-entry]");
-  if (!orb) return false;
-  if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return false;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation?.();
-  const state = nexusGenesisTrustChainState.state;
-  if (state === "speaking" || voiceSpeaking) {
-    stopVoicePlayback({ hard: true, reason: "genesis-orb-stop-speaking" });
-    setNexusGenesisTrustChainState("waiting", { visibleFeedback: "I stopped speaking. I am still here.", reason: "genesis-orb-stop-speaking" });
-    setVoiceResponse("I stopped speaking. I am still here.", false, { allowVoiceFirst: false, source: "genesis-orb-stop-speaking" });
-    return true;
-  }
-  if (state === "listening" || voiceRecognition) {
-    voiceStopRequested = true;
-    try {
-      voiceRecognition?.stop?.();
-    } catch {
-      // Recognition may already be stopped by the browser.
-    }
-    voiceRecognition = null;
-    setNexusGenesisTrustChainState("cancelled", { visibleFeedback: "Listening stopped. Tap the orb when you want to speak again.", reason: "genesis-orb-stop-listening" });
-    setVoiceStatus("standby");
-    return true;
-  }
-  if (["conversation_submitted", "response_pending", "speech_preparing"].includes(state)) {
-    setNexusGenesisTrustChainState(state, { visibleFeedback: "I am working on your response.", reason: "genesis-orb-processing-click" });
-    return true;
-  }
-  void activateNexusGenesisExperience(event.type === "keydown" ? "keyboard" : "pointer");
-  return true;
+  return false;
 }
 
 function nexusTrueExperienceHasActiveWorkflow() {
@@ -31887,15 +31848,15 @@ function clearNexusTrueExperienceStaleWorkflowState() {
 
 function nexusTrueExperienceHasCurrentConversation() {
   if (nexusGenesisExperienceActivated || nexusTrueExperienceSessionStarted) return true;
+  if (typeof document !== "undefined" && document.body?.classList?.contains?.("user-mode")) return true;
   const minimumEpoch = Math.max(NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH, nexusTrueExperienceHomeResetEpoch);
   return nexusOsConversationTurns.some(turn => turn.role === "user" && Number(turn.epoch || 0) >= minimumEpoch);
 }
 
 function nexusTrueExperienceMode() {
   if (nexusTrueExperienceHasActiveWorkflow()) return "mission";
-  if (nexusGenesisExperienceActivated || currentNexusOsMission()) return "mission";
   if (nexusTrueExperienceHasCurrentConversation()) return "conversation";
-  return "home";
+  return "conversation";
 }
 
 function isNexusTrueExperienceReturnHomeCommand(command = "") {
@@ -31912,11 +31873,11 @@ function renderNexusTrueCoreOrb(options = {}) {
   const coreState = normalizeNexusCoreState(options.state || nexusCoreRuntimeState.current || "idle");
   const coreContract = getNexusCoreStateContract(coreState);
   const isHome = options.home === true;
-  const label = isHome ? "Activate Nexus" : nexusCoreStateAccessibleLabel(coreState);
+  const label = nexusCoreStateAccessibleLabel(coreState);
   return `
     <div class="nexus-true-orb-wrap ${isHome ? "home" : ""} ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
-      <button type="button" class="nexus-orb-stage nexus-true-orb-stage ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-entry="${isHome ? "true" : "false"}" data-nexus-os-orb-state="${escapeHtml(coreState)}" aria-label="${escapeHtml(translateText(label))}" title="${escapeHtml(coreContract.label)}">
-        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Press Enter or Space to activate Nexus. Conversation and text input appear after activation."))}</span>
+      <div class="nexus-orb-stage nexus-true-orb-stage nexus-presence-orb ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(translateText(label))}" title="${escapeHtml(coreContract.label)}">
+        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use the voice controls or type below to begin."))}</span>
         <span class="nexus-genesis-particle-field" data-nexus-genesis-particles="true" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
         </span>
@@ -31931,7 +31892,7 @@ function renderNexusTrueCoreOrb(options = {}) {
           <span></span>
           <span></span>
         </div>
-      </button>
+      </div>
       <span class="nexus-true-orb-status ${isHome ? "sr-only" : ""}" data-nexus-core-status-text aria-live="polite">${escapeHtml(translateText(coreContract.label || "Nexus is ready."))}</span>
     </div>
   `;
@@ -31973,6 +31934,45 @@ function renderNexusBrowserVoiceAvailabilityHint() {
   `;
 }
 
+function renderNexusVoiceFirstPresenceControls() {
+  const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false };
+  const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
+  const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
+  const enableLabel = recognitionActive
+    ? "Stop listening"
+    : permissionState === "granted-or-browser-managed"
+      ? "Press to talk"
+      : "Enable voice";
+  const enableAction = recognitionActive ? "stop-listening" : "enable-voice";
+  const help = permissionState === "denied" || nexusVoicePermissionDeniedThisSession
+    ? "Microphone permission is blocked. You can continue by typing, or change microphone permission in your browser."
+    : voiceReady
+      ? "Your browser needs permission before I can hear you."
+      : "Voice is unavailable here. You can continue by typing.";
+  const statusText = recognitionActive
+    ? "Nexus is listening."
+    : voiceFirstMode
+      ? "Hands-free Nexus is on while this page stays open."
+      : voiceReady
+        ? "Nexus is ready."
+        : "Voice is unavailable. You can continue by typing.";
+  return `
+    <div class="nexus-voice-first-presence" data-nexus-voice-first-presence="true" data-nexus-hands-free-active="${voiceFirstMode ? "true" : "false"}" data-nexus-microphone-permission="${escapeHtml(permissionState)}">
+      <span class="nexus-voice-first-status" data-nexus-voice-first-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
+      <small>${escapeHtml(translateText(help))}</small>
+      <div class="nexus-voice-first-actions" aria-label="${escapeHtml(translateText("Nexus voice controls"))}">
+        <button type="button" data-nexus-os-voice-control="${escapeHtml(enableAction)}" ${voiceReady || recognitionActive ? "" : "disabled"}>${escapeHtml(translateText(enableLabel))}</button>
+        <button type="button" data-nexus-os-voice-control="toggle-hands-free" aria-pressed="${voiceFirstMode ? "true" : "false"}" ${voiceReady ? "" : "disabled"}>${escapeHtml(translateText("Hands-free Nexus"))}</button>
+        <button type="button" data-nexus-os-voice-control="stop-listening">${escapeHtml(translateText("Stop listening"))}</button>
+        <button type="button" data-nexus-os-voice-control="stop-speaking">${escapeHtml(translateText("Stop speaking"))}</button>
+        <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
+        <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderNexusTrueCommandComposer(options = {}) {
   const compact = options.compact === true;
   return `
@@ -31987,6 +31987,7 @@ function renderNexusTrueCommandComposer(options = {}) {
       </button>
       <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to ask. Use Shift+Enter for a new line."))}</span>
     </form>
+    ${renderNexusVoiceFirstPresenceControls()}
     ${renderNexusBrowserVoiceAvailabilityHint()}
   `;
 }
@@ -31994,6 +31995,7 @@ function renderNexusTrueCommandComposer(options = {}) {
 function renderNexusTrueSecondaryAccess() {
   return `
     <nav class="nexus-true-secondary" data-nexus-true-secondary-access="true" aria-label="${escapeHtml(translateText("Secondary Nexus access"))}">
+      <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="Open Home.">${escapeHtml(translateText("Home"))}</button>
       <button type="button" data-toggle-user-language>${escapeHtml(translateText("Language"))}</button>
       <button type="button" data-nexus-command-prefill="Show mission history.">${escapeHtml(translateText("History"))}</button>
       <button type="button" data-nexus-command-prefill="Show accessibility and privacy settings.">${escapeHtml(translateText("Settings"))}</button>
@@ -32006,7 +32008,7 @@ function renderNexusTrueHome() {
     <section class="nexus-true-home nexus-genesis-orb-only-home" data-nexus-true-home="true" data-nexus-genesis-orb-only-home="true" data-nexus-accessible-first-impression="true" aria-label="${escapeHtml(translateText("Nexus orb home"))}">
       ${renderNexusTrueCoreOrb({ home: true })}
       <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus"))}</span>
-      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Activate the orb to speak or type."))}</span>
+      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use voice controls or type below."))}</span>
     </section>
   `;
 }
@@ -32016,9 +32018,7 @@ function renderNexusMinimalConversationExperience() {
 }
 
 function renderNexusCommandCenterHero() {
-  return nexusTrueExperienceMode() === "home"
-    ? renderNexusTrueHome()
-    : renderNexusCommandCenterHeroLegacy();
+  return renderNexusCommandCenterHeroLegacy();
 }
 
 function renderNexusCommandCenterHeroLegacy() {
@@ -32027,21 +32027,22 @@ function renderNexusCommandCenterHeroLegacy() {
   return `
     <section class="nexus-command-center-hero nexus-hero nexus-glass-card" data-nexus-command-center="true" data-nexus-accessible-first-impression="true" aria-labelledby="userWorkspaceTitle" aria-describedby="nexusFirstImpressionDescription nexusCommandTypedHint">
       <div class="nexus-command-center-copy">
-        <span class="eyebrow nexus-command-center-label">${translateText("Nexus Command Center")}</span>
+        <span class="eyebrow nexus-command-center-label">${translateText("Nexus is present")}</span>
         <div class="nexus-command-neural-wave" aria-hidden="true">
           <span></span>
           <i></i>
         </div>
-        <strong class="nexus-premium-hero-title">${translateText("Ask Nexus")}</strong>
-        <small class="nexus-premium-hero-subtitle">${translateText("Your AI assistant. Real answers. Real impact.")}</small>
-        <span class="eyebrow">${translateText("AI assistant home")}</span>
-        <h3 id="userWorkspaceTitle">${translateText("Good morning. I'm Nexus. What would you like to do?")}</h3>
-        <p id="nexusFirstImpressionDescription">${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping important actions gated.")}</p>
+        <strong class="nexus-premium-hero-title">${translateText("Nexus")}</strong>
+        <small class="nexus-premium-hero-subtitle">${translateText("Talk naturally. Type when voice is not available.")}</small>
+        <span class="eyebrow">${translateText("Conversational workspace")}</span>
+        <h3 id="userWorkspaceTitle">${translateText("Hello. I'm Nexus.")}</h3>
+        <p id="nexusFirstImpressionDescription">${translateText("You can talk to me or type below. Tell me what you need help with, and we'll work through it together.")}</p>
         ${renderNexusConversationalPresenceLayer()}
         ${renderNexusPresenceRuntimeBadge()}
+        ${renderNexusTrueSecondaryAccess()}
         <div class="nexus-command-landing-actions" data-nexus-command-landing-actions="true">
-          <button type="button" class="primary" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput">${escapeHtml(translateText("Start Mission"))}</button>
-          <button type="button" data-nexus-mode-shortcut="continue-mission" data-nexus-command="Continue my last workflow.">${escapeHtml(translateText("Continue Mission"))}</button>
+          <button type="button" class="primary" data-nexus-command-center-submit data-nexus-command-input-target="nexusCommandCenterInput">${escapeHtml(translateText("Send"))}</button>
+          <button type="button" data-nexus-mode-shortcut="continue-conversation" data-nexus-command="What were we talking about before?">${escapeHtml(translateText("Continue conversation"))}</button>
           <button type="button" data-nexus-mode-shortcut="view-receipts" data-nexus-command="Show action receipt.">${escapeHtml(translateText("View Receipts"))}</button>
           <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Provider Readiness"))}</button>
         </div>
@@ -32053,7 +32054,8 @@ function renderNexusCommandCenterHeroLegacy() {
           `).join("")}
         </div>
       </div>
-      <div class="nexus-orb-stage nexus-core-state-${escapeHtml(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
+      <div class="nexus-orb-stage nexus-core-state-${escapeHtml(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
+        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use the voice controls or type below to begin."))}</span>
         <div class="nexus-orb nexus-os-core-orb">
           <span class="nexus-orb-core">N</span>
           <span class="nexus-orb-ring nexus-orb-ring-one"></span>
@@ -32076,12 +32078,13 @@ function renderNexusCommandCenterHeroLegacy() {
         </div>
         <div class="nexus-command-context">
           <span class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use Talk or type to begin."))}</span>
-          <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Press Talk to speak, or type your request.")}</span>
+          <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Enable voice once, press Talk, or type your request.")}</span>
           <span id="nexusCommandTypedHint" class="nexus-primary-typed-hint" data-nexus-primary-typed-hint="true">${translateText("Press Enter to ask. Use Shift+Enter for a new line.")}</span>
           <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>
           <span>${translateText("Local-first")}</span>
           <span>${translateText("High-risk actions gated")}</span>
         </div>
+        ${renderNexusVoiceFirstPresenceControls()}
         <div class="nexus-command-examples" aria-label="${escapeHtml(translateText("Example Nexus prompts"))}">
           ${nexusCommandCenterExamples().map(prompt => `<button type="button" data-nexus-command-prefill="${escapeHtml(prompt)}">${translateText(prompt)}</button>`).join("")}
         </div>
@@ -36986,6 +36989,14 @@ function ensureNexusOsVisualBoundaryStyles() {
     }
     [data-nexus-os-core-orb] {
       transition: filter 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+      pointer-events: none;
+      cursor: default;
+      user-select: none;
+    }
+    [data-nexus-os-core-orb] *,
+    [data-nexus-genesis-orb-presence] * {
+      pointer-events: none;
+      cursor: default;
     }
     [data-nexus-os-core-orb].nexus-core-state-idle {
       filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.28));
@@ -41713,7 +41724,7 @@ function startAskNexusAfterLogin() {
   voiceFirstMode = false;
   voiceAutoRestart = false;
   voiceStopRequested = true;
-  localStorage.setItem("agrinexusVoiceFirst", "off");
+  localStorage.removeItem("agrinexusVoiceFirst");
   nexusAwaitingCommand = true;
   setVoiceStatus("standby");
   const message = `Welcome ${userFirstName()}. Nexus is ready. Click Talk to Nexus or type a request. I will keep important actions review-only.`;
@@ -45671,7 +45682,7 @@ function toggleVoiceFirstMode() {
     voiceConversationPaused = false;
   }
   voiceAutoRestart = voiceFirstMode;
-  localStorage.setItem("agrinexusVoiceFirst", voiceFirstMode ? "on" : "off");
+  localStorage.removeItem("agrinexusVoiceFirst");
   localStorage.setItem("agrinexusDemoQuiet", voiceDemoQuietMode ? "on" : "off");
   ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
     const button = $(selector);
@@ -45691,7 +45702,7 @@ function disableNexusVoiceForDemo(message = "Demo quiet mode is on. Nexus voice 
   voiceAutoRestart = false;
   voiceStopRequested = true;
   voiceResumeAfterSpeech = false;
-  localStorage.setItem("agrinexusVoiceFirst", "off");
+  localStorage.removeItem("agrinexusVoiceFirst");
   localStorage.setItem("agrinexusDemoQuiet", "on");
   clearAgentProgressTimers();
   if (voiceRecognition) {
@@ -45727,7 +45738,7 @@ function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, t
   voiceFirstMode = true;
   voiceAutoRestart = true;
   voiceStopRequested = false;
-  localStorage.setItem("agrinexusVoiceFirst", "on");
+  localStorage.removeItem("agrinexusVoiceFirst");
   localStorage.setItem("agrinexusDemoQuiet", "off");
   refreshMicSupport();
   setVoiceStatus("voice-first");
@@ -46597,14 +46608,52 @@ async function handleNexusOsMissionLifecycleAction(action = "") {
 async function handleNexusOsVoiceControlAction(action = "toggle-listening", options = {}) {
   const normalized = String(action || "toggle-listening").toLowerCase();
   const source = options.source || "nexus-os-voice-control";
+  if (normalized === "enable-voice") {
+    if (nexusVoicePermissionDeniedThisSession || nexusOsVoiceRuntimeState.permissionState === "denied") {
+      const response = "Microphone permission is blocked right now. You can continue by typing, or change microphone permission in your browser.";
+      recordNexusOsConversationTurn("assistant", response, { source });
+      showNexusVoiceFallbackMessage(response, { source: "voice-permission-denied-session", mode: "typed-fallback", trustChainState: "permission_denied" });
+      renderUserWorkspace();
+      return true;
+    }
+    await startVoiceListening({ source: "explicit-enable-voice" });
+    return true;
+  }
+  if (normalized === "toggle-hands-free") {
+    const nextEnabled = !voiceFirstMode;
+    voiceFirstMode = nextEnabled;
+    voiceAutoRestart = nextEnabled;
+    voiceStopRequested = false;
+    try {
+      localStorage.removeItem("agrinexusVoiceFirst");
+    } catch {}
+    const response = nextEnabled
+      ? "Hands-free Nexus is on while this page is open. Say Nexus, Hello Nexus, or Hey Nexus when the browser is listening."
+      : "Hands-free Nexus is off. You can press Talk or type below.";
+    updateNexusOsVoiceRuntimeState({
+      mode: nextEnabled ? "voice-first" : "standby",
+      listeningState: nextEnabled ? "wake-phrase-ready" : "idle",
+      hearingState: "idle"
+    }, source);
+    recordNexusOsConversationTurn("assistant", response, { source });
+    setVoiceResponse(response, false, { allowVoiceFirst: false, source });
+    renderUserWorkspace();
+    if (nextEnabled) await startVoiceListening({ source: "explicit-hands-free-toggle" });
+    return true;
+  }
   if (normalized === "stop-listening") {
     voiceStopRequested = true;
+    voiceAutoRestart = false;
+    voiceFirstMode = false;
+    try {
+      localStorage.removeItem("agrinexusVoiceFirst");
+    } catch {}
     try {
       if (voiceRecognition && typeof voiceRecognition.stop === "function") voiceRecognition.stop();
     } catch {}
     voiceRecognition = null;
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle", assistantSpeaking: false }, source);
-    const response = "Stopped listening. You can type your request, press Talk again, or return Home.";
+    const response = "Stopped listening. You can type your request or press Talk again.";
     recordNexusOsConversationTurn("assistant", response, { source });
     setVoiceResponse(response, false, { allowVoiceFirst: false, source });
     renderUserWorkspace();
@@ -48846,7 +48895,7 @@ function enableHeyAgriNexusMode() {
   voiceFirstMode = true;
   voiceAutoRestart = true;
   voiceStopRequested = false;
-  localStorage.setItem("agrinexusVoiceFirst", "on");
+  localStorage.removeItem("agrinexusVoiceFirst");
   localStorage.setItem("agrinexusDemoQuiet", "off");
   refreshMicSupport();
 }
@@ -54591,6 +54640,14 @@ async function startVoiceListening(options = {}) {
     const error = event.error || "microphone unavailable";
     const recoverableErrors = new Set(["no-speech", "aborted", "network", "audio-capture"]);
     const permissionBlocked = error === "not-allowed" || error === "service-not-allowed";
+    if (permissionBlocked) {
+      nexusVoicePermissionDeniedThisSession = true;
+      voiceFirstMode = false;
+      voiceAutoRestart = false;
+      try {
+        localStorage.removeItem("agrinexusVoiceFirst");
+      } catch {}
+    }
     const message = permissionBlocked
       ? profile.isChrome
         ? "Chrome blocked the microphone. Click the tune or lock icon near the address bar, set Microphone to Allow, then reload if needed."
@@ -55773,8 +55830,6 @@ function bindStatic() {
   document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
   document.addEventListener("input", handleNexusPresenceInputActivity, true);
   document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
-  document.addEventListener("click", handleNexusGenesisOrbActivation, true);
-  document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);
   document.addEventListener("click", event => {
     const voiceControl = event.target?.closest?.("[data-nexus-command-center-voice],[data-nexus-os-voice-control]");
     if (!voiceControl) return;

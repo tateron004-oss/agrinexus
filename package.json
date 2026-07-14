@@ -21,6 +21,7 @@
     "qa:nexus-genesis-trust-chain-acceptance": "node scripts/nexus-genesis-trust-chain-acceptance-qa.js",
     "qa:nexus-genesis-browser-voice-acceptance": "node scripts/nexus-genesis-browser-voice-acceptance-qa.js",
     "qa:nexus-companion-voice-activation-flow": "node scripts/nexus-companion-voice-activation-flow-qa.js",
+    "qa:nexus-genesis-voice-first-conversational-presence": "node scripts/nexus-genesis-voice-first-conversational-presence-qa.js",
     "qa:nexus-genesis-rail-09-understanding": "node scripts/nexus-genesis-rail-09-understanding-qa.js",
     "qa:nexus-genesis-rail-10-context": "node scripts/nexus-genesis-rail-10-context-qa.js",
     "qa:nexus-genesis-rail-11-memory": "node scripts/nexus-genesis-rail-11-memory-qa.js",

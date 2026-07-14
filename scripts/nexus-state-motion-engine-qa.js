@@ -10,8 +10,8 @@ const styles = fs.readFileSync(path.join(__dirname, "..", "public", "styles.css"
   "waiting", "confirmation", "executing", "verifying", "completed", "offline",
   "blocked", "error"
 ].forEach(state => assert(app.includes(`"${state}"`) || app.includes(`${state}:`), `${state} state remains represented`));
-assert(app.includes("setNexusCoreState(\"wake\""), "orb activation sets wake state");
-assert(app.includes("setNexusCoreState(\"waiting\""), "orb activation settles into waiting state");
+assert(app.includes("setNexusCoreState(\"waiting\""), "startup presence settles into waiting state");
+assert(app.includes("function handleNexusGenesisOrbActivation") && app.includes("return false;"), "orb activation handler is inert");
 assert(styles.includes('data-nexus-genesis-core-state="confirmation"'), "confirmation motion style exists");
 assert(styles.includes('data-nexus-genesis-core-state="error"'), "error motion style exists");
 
