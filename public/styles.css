@@ -14167,6 +14167,11 @@ body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
   min-height: clamp(250px, 30vw, 360px) !important;
 }
 
+body.user-mode .nexus-genesis-experience-root [data-nexus-genesis-home-orb="true"] {
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
 body.user-mode .nexus-genesis-experience-root .nexus-orb {
   width: clamp(210px, 25vw, 300px) !important;
 }

@@ -58,8 +58,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-427";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-428";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",

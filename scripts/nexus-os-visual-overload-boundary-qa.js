@@ -37,7 +37,9 @@ assert(app.includes("body.user-mode.nexus-os-visual-boundary #userMobileDock"), 
 assert(renderBlock.includes("data-nexus-os-standard-startup=\"true-conversation\""), "Standard User startup is marked as true conversational Nexus surface");
 assert(renderBlock.includes('data-nexus-true-conversational-root="true"'), "true conversational root is visible");
 assert(!renderBlock.includes("renderNexusTopWelcomeArea()"), "old welcome area is not mounted");
-assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "true Nexus command entry remains visible");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome)'), "audio-first Genesis home remains visible");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)'), "audio companion route remains available");
+assert(renderBlock.includes('renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)'), "workflow command entry remains available after voice/session activation");
 assert(renderBlock.includes('showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""'), "mission workspace remains conditional");
 assert(!renderBlock.includes('renderNexusUserWorkspaceSegment("Active workflow", renderNexusActiveWorkflowWorkspaceSafe)'), "active workflow workspace is not mounted on Home startup");
 assert(!renderBlock.includes('renderNexusUserWorkspaceSegment("Calm helper", renderNexusOsCalmHelper)'), "calm helper is not mounted on Home startup");
@@ -69,7 +71,8 @@ visibleStartupProhibited.forEach((call) => {
 
 assert(app.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "deferred legacy host is explicitly marked");
 assert(app.includes("data-standard-user-startup-visible=\"false\" hidden aria-hidden=\"true\""), "deferred legacy host is hidden and aria-hidden");
-assert(app.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "Standard User receives status-only orb guidance");
+assert(app.includes("Nexus voice companion visual status."), "Standard User receives status-only orb guidance");
+assert(app.includes("Nexus Genesis home is audio-only."), "Standard User startup is audio-only");
 assert(app.includes("[data-nexus-os-core-orb]") && app.includes("pointer-events: none"), "orb is non-interactive under the visual boundary");
 assert(app.includes("No provider handoff") || app.includes("noProviderHandoff"), "no-provider-handoff safety remains represented");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(renderBlock), "startup copy does not claim fake execution");

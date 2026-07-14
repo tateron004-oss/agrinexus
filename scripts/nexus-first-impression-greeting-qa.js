@@ -28,7 +28,8 @@ const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
 
 const topWelcome = sectionBetween(app, "function renderNexusTopWelcomeArea()", "function renderNexusCoreFeatureCards");
-const trueHome = sectionBetween(app, "function renderNexusTrueHome()", "function renderNexusMinimalConversationExperience");
+const trueHome = sectionBetween(app, "function renderNexusTrueHome()", "function renderNexusAudioCompanionExperience");
+const voiceGate = sectionBetween(app, "function renderNexusGenesisHomeVoiceGate()", "function renderNexusTrueHome()");
 const hero = sectionBetween(app, "function renderNexusCommandCenterHero()", "function nexusActiveSidebarId");
 const workspace = sectionBetween(app, "function renderUserWorkspace()", "function renderUserAccessibilityPanel");
 
@@ -40,7 +41,10 @@ assert(!topWelcome.includes("displayName"), "top welcome does not depend on role
 assert(trueHome.includes('data-nexus-genesis-orb-only-home="true"'), "true home fallback remains isolated");
 assert(!trueHome.includes("Good evening, Ron."), "true home does not show visible greeting");
 assert(!trueHome.includes("What are we working on today?"), "true home does not show visible helper text");
-assert(trueHome.includes("Activate the Nexus orb to begin a voice or typed conversation."), "true home preserves orb-first readiness language");
+assert(trueHome.includes("Nexus Genesis home is audio-only."), "true home preserves audio-first readiness language");
+assert(trueHome.includes("renderNexusGenesisHomeVoiceGate()"), "true home mounts a separate microphone permission gate");
+assert(voiceGate.includes("data-nexus-genesis-mic-permission-control"), "voice gate exposes a separate microphone permission control");
+assert(!trueHome.includes("Activate the Nexus orb"), "true home does not instruct orb activation");
 assert(hero.includes("Hello. I'm Nexus."), "hero owns the conversational first impression");
 assert(hero.includes("You can talk to me or type below. Tell me what you need help with, and we'll work through it together."), "hero includes natural voice-first greeting");
 assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");

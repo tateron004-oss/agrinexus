@@ -11,7 +11,9 @@ const styles = fs.readFileSync(path.join(__dirname, "..", "public", "styles.css"
   "blocked", "error"
 ].forEach(state => assert(app.includes(`"${state}"`) || app.includes(`${state}:`), `${state} state remains represented`));
 assert(app.includes("setNexusCoreState(\"waiting\""), "startup presence settles into waiting state");
-assert(app.includes("function handleNexusGenesisOrbActivation") && app.includes("return false;"), "orb activation handler is inert");
+assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler is removed");
+assert(app.includes('data-nexus-genesis-home-orb="true"'), "orb presence marker remains available for visual state");
+assert(app.includes("Nexus voice companion visual status."), "orb remains a non-interactive voice companion status");
 assert(styles.includes('data-nexus-genesis-core-state="confirmation"'), "confirmation motion style exists");
 assert(styles.includes('data-nexus-genesis-core-state="error"'), "error motion style exists");
 

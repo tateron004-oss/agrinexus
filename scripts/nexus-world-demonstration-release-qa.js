@@ -39,6 +39,8 @@ const workspaceRender = between(app, "function renderUserWorkspace", "function r
 includesAll(workspaceRender, [
   "trueExperienceMode === \"home\"",
   "renderNexusTrueHome",
+  "trueExperienceMode === \"conversation\"",
+  "renderNexusAudioCompanionExperience",
   "renderNexusCommandCenterHero",
   "renderNexusAgenticMissionWorkspace"
 ], "workspace render");
@@ -46,23 +48,35 @@ includesAll(workspaceRender, [
 const orbMarkup = between(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "orb markup");
 includesAll(orbMarkup, [
   "data-nexus-genesis-home-orb=\"true\"",
-  "role=\"button\"",
-  "tabindex=\"0\"",
-  "Wake Nexus"
+  "role=\"img\"",
+  "Nexus voice companion visual status."
 ], "orb markup");
+assert(!orbMarkup.includes('role="button"'), "orb markup must not expose button semantics");
+assert(!orbMarkup.includes('tabindex="0"'), "orb markup must not be keyboard focusable");
+assert(!orbMarkup.includes("Wake Nexus"), "orb markup must not expose launcher copy");
 
-const orbHandler = between(app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", "orb activation");
-includesAll(orbHandler, [
-  "[data-nexus-genesis-home-orb='true']",
-  "activateNexusGenesisExperience",
-  "handleNexusOsVoiceControlAction(\"enable-voice\"",
-  "event.type === \"keydown\"",
-  "\"Enter\", \" \""
-], "orb activation");
+const homeAndAudio = between(app, "function renderNexusTrueHome", "function renderNexusMinimalConversationExperience", "home and audio companion");
+includesAll(homeAndAudio, [
+  "renderNexusGenesisHomeVoiceGate()",
+  "Nexus Genesis home is audio-only.",
+  "non-interactive voice companion presence",
+  "data-nexus-audio-companion=\"true\"",
+  "data-read-only-transcript=\"true\""
+], "voice-native home");
+assert(!homeAndAudio.includes("Activate the Nexus orb"), "Genesis home must not instruct users to activate the orb");
+assert(!homeAndAudio.includes("renderNexusTrueCommandComposer()"), "Genesis home/audio companion must not mount a general composer");
+
+const voiceGate = between(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueHome", "voice gate");
+includesAll(voiceGate, [
+  "data-nexus-genesis-audio-gate=\"true\"",
+  "data-nexus-genesis-mic-permission-control=\"true\"",
+  "data-nexus-os-voice-control=\"enable-voice\"",
+  "Allow microphone"
+], "separate microphone permission gate");
 
 const staticBindings = between(app, "function bindStatic", "async function boot", "static bindings");
-assert(staticBindings.indexOf("document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);") < staticBindings.indexOf("document.addEventListener(\"click\", handleNexusStandardUserHomeClick, true);"), "orb click handler must run before legacy Standard User click handling");
-assert(staticBindings.includes("document.addEventListener(\"keydown\", handleNexusGenesisOrbActivation, true);"), "orb keyboard handler must be globally bound");
+assert(!staticBindings.includes("handleNexusGenesisOrbActivation"), "orb click/keyboard activation must not be globally bound");
+assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler must be removed");
 
 const voiceTroubleshooting = between(app, "function nexusVoiceTroubleshootingResponse", "function saveNexusDailyCompanionState", "voice status routing");
 includesAll(voiceTroubleshooting, [
@@ -72,32 +86,39 @@ includesAll(voiceTroubleshooting, [
 ], "voice status routing");
 assert(!voiceTroubleshooting.includes("Plan created."), "voice status routing must not create plan copy");
 
+const finalVoice = between(app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", "final voice processing");
+includesAll(finalVoice, [
+  "nexusGenesisExperienceActivated = true",
+  "nexusTrueExperienceSessionStarted = true",
+  "source: \"voice-final-transcript\""
+], "final voice processing");
+
 const orbCss = between(app, "[data-nexus-os-core-orb] {", "[data-nexus-os-core-orb].nexus-core-state-idle", "orb css");
 includesAll(orbCss, [
   "[data-nexus-genesis-home-orb=\"true\"]",
-  "pointer-events: auto",
-  "cursor: pointer"
-], "home orb pointer css");
+  "pointer-events: none !important",
+  "cursor: default !important"
+], "home orb non-interactive cursor override");
 
 const submitRouting = between(app, "function routeNexusCommandCenterCommunicationSubmit", "function isNexusPersistentOperationsCommand", "submit routing");
 assert(submitRouting.indexOf("handleNexusVoiceTroubleshootingCommand(command, { source })") < submitRouting.indexOf("advanceNexusOsMissionForCommand(command, { source });"), "voice status commands must run before mission planning");
 
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-427",
-  "/styles.css?v=nexus-behavior-427",
-  "/app.js?v=nexus-behavior-427"
+  "/manifest.webmanifest?v=nexus-behavior-428",
+  "/styles.css?v=nexus-behavior-428",
+  "/app.js?v=nexus-behavior-428"
 ], "index cache bust");
 includesAll(app, [
-  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-427\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v372\";"
+  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-428\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v373\";"
 ], "app cache bust");
 includesAll(sw, [
-  "const CACHE_NAME = \"agrinexus-pwa-v372\";",
-  "const BUILD_VERSION = \"nexus-behavior-427\";"
+  "const CACHE_NAME = \"agrinexus-pwa-v373\";",
+  "const BUILD_VERSION = \"nexus-behavior-428\";"
 ], "service worker cache bust");
 includesAll(server, [
-  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-427\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v372\";"
+  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-428\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v373\";"
 ], "server cache bust");
 
 assert.strictEqual(
@@ -111,9 +132,9 @@ console.log(JSON.stringify({
   ok: true,
   suite: "nexus-world-demonstration-release",
   verifies: [
-    "idle Standard User path is orb-only",
-    "home orb is the single accessible activation entry",
-    "orb activation reveals conversation and starts guarded voice",
+    "idle Standard User path is audio-only",
+    "home orb is non-interactive visual presence",
+    "separate microphone permission control owns guarded voice startup",
     "voice-status prompts run before mission planning",
     "production cache build is bumped"
   ]

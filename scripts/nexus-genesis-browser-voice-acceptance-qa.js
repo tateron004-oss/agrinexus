@@ -40,8 +40,8 @@ includesAll(app, [
   "function renderNexusBrowserVoiceAvailabilityHint",
   "data-nexus-browser-voice-fallback=\"true\"",
   "data-browser-voice-supported",
-  "Voice uses browser support. Typed Ask Nexus always works.",
-  "Voice is not available in this browser. You can keep using typed Ask Nexus.",
+  "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them.",
+  "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first.",
   "window.handleNexusPrimaryVoiceButtonClick = handleNexusPrimaryVoiceButtonClick",
   "onclick=\"return handleNexusPrimaryVoiceButtonClick(event)\"",
   "nexus-primary-visible-voice-button",
@@ -59,12 +59,12 @@ includesAll(app, [
   "setNexusGenesisTrustChainState(\"synthesis_failed\"",
   "setNexusGenesisTrustChainState(\"speech_preparing\"",
   "setNexusGenesisTrustChainState(\"recognition_unavailable\"",
-  "Keep typed Ask Nexus available.",
-  "Nexus voice is in text-only mode. Type your request in Ask Nexus",
+  "Workflow forms available after Nexus opens them",
+  "Nexus voice is muted. Captions remain available; unmute or allow microphone access to continue by voice.",
   "does not provide microphone speech recognition in this test browser",
   "realtime voice is not configured",
   "realtime-voice-not-configured",
-  "Voice recognition could not start. Type your request in Ask Nexus",
+  "Voice recognition could not start. Use the microphone control again after permission is available",
   "noAlwaysOnListeningClaim: true",
   "noHiddenMicrophoneStart: true"
 ], "browser voice acceptance runtime");
@@ -119,10 +119,10 @@ const availabilityHintSource = between(app, "function renderNexusBrowserVoiceAva
 includesAll(availabilityHintSource, [
   "browserVoiceRuntimeProfile()",
   "const message = profile.supported",
-  "Voice uses browser support. Typed Ask Nexus always works.",
+  "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them.",
   "data-browser-voice-supported",
   "data-nexus-browser-voice-fallback=\"true\"",
-  "Voice is not available in this browser. You can keep using typed Ask Nexus."
+  "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first."
 ], "browser voice availability hint");
 
 const renderWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "workspace render");
@@ -142,7 +142,7 @@ assert(
   "voice/all-safe suite must include browser voice acceptance QA"
 );
 assert(
-  index.includes("/app.js?v=nexus-behavior-427"),
+  index.includes("/app.js?v=nexus-behavior-428"),
   "index must bump app.js version so browser voice acceptance fixes load in real browser validation"
 );
 
@@ -154,7 +154,7 @@ includesAll(acceptanceDoc, [
   "SpeechRecognition: unavailable",
   "speechSynthesis: unavailable",
   "Actual audible output: not confirmed",
-  "Typed fallback: passed",
+  "Voice fallback: passed",
   "Console warnings/errors: 0",
   "No always-on listening",
   "not proof that audio was heard"

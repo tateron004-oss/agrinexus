@@ -48,8 +48,10 @@ const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()"
 ].forEach(label => assert(app.includes(`label: "${label}"`), `launcher label missing: ${label}`));
 
 [
-  'renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)',
-].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
+  'renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome)',
+  'renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)',
+  'renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)'
+].forEach(call => assert(workspace.includes(call), `Standard User workspace must route ${call}`));
 
 [
   "renderNexusTopWelcomeArea()",

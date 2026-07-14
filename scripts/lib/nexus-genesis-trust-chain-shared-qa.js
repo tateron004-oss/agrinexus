@@ -324,13 +324,17 @@ function assertOwnership(context, label) {
     "scheduleFinalVoiceCommand",
     "handleVoiceCommandCore",
     "standardUserAdminPreviewAllowed: false",
-    "textFallbackRequired: true",
     "speechRequiresStartEvent: true",
     "noWorkflowFromOrbActivation: true"
   ], label, "trust-chain ownership");
 
-  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
-  assertExcludes(orbSource, [
+  const finalVoiceSource = sourceBetween(context.app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", label);
+  assertIncludes(finalVoiceSource, [
+    "nexusGenesisExperienceActivated = true",
+    "nexusTrueExperienceSessionStarted = true",
+    "handleVoiceCommand(finalCommand"
+  ], label, "voice transcript owns entry");
+  assertExcludes(finalVoiceSource, [
     "renderNexusAutonomousRuntimePreview",
     "openWorkflow",
     "Plan Preview",
@@ -404,26 +408,9 @@ function assertSynthesis(context, label) {
 }
 
 function assertOrbActivation(context, label) {
-  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
-  assertIncludes(orbSource, [
-    "return false",
-    "activateNexusGenesisExperience",
-    "handleNexusOsVoiceControlAction(\"enable-voice\"",
-    "[data-nexus-genesis-home-orb='true']"
-  ], label, "deterministic orb wake activation");
-  assertExcludes(orbSource, [
-    "event.stopImmediatePropagation",
-    "voiceRecognition?.stop",
-    "stopVoicePlayback",
-    "genesis-orb-stop-speaking",
-    "genesis-orb-stop-listening",
-    "genesis-orb-processing-click",
-    "renderNexusAutonomousRuntimePreview",
-    "openWorkflow",
-    "Plan Preview",
-    "Evidence and Verification",
-    "goSection("
-  ], label, "forbidden orb side effect");
+  assert(!context.app.includes("function handleNexusGenesisOrbActivation"), `${label}: orb activation handler must be removed.`);
+  assert(!context.app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), `${label}: orb click activation must not be bound.`);
+  assert(!context.app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), `${label}: orb keyboard activation must not be bound.`);
 
   const activateSource = sourceBetween(context.app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", label);
   assertIncludes(activateSource, [
@@ -441,23 +428,27 @@ function assertOrbActivation(context, label) {
   assertIncludes(rendererSource, [
     'data-nexus-genesis-orb-presence="true"',
     'role="img"',
-    "Nexus visual status indicator. Use the voice controls or type below to begin."
+    "Nexus voice companion visual status."
   ], label, "presence orb renderer");
   assertExcludes(rendererSource, [
     "<button",
     "data-nexus-genesis-orb-entry",
+    'role="button"',
+    'tabindex="0"',
     "onclick"
   ], label, "forbidden orb interactive markup");
 
   const bindSource = sourceBetween(context.app, "function bindStatic", "async function boot", label);
-  assertIncludes(bindSource, [
+  assertExcludes(bindSource, [
     'document.addEventListener("click", handleNexusGenesisOrbActivation, true);',
     'document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);'
   ], label, "orb activation binding");
-  assert(
-    bindSource.indexOf('document.addEventListener("click", handleNexusGenesisOrbActivation, true);') < bindSource.indexOf('document.addEventListener("click", handleNexusStandardUserHomeClick, true);'),
-    `${label}: orb activation must be captured before legacy Standard User click handling.`
-  );
+  assertIncludes(context.app, [
+    'data-nexus-genesis-audio-gate="true"',
+    'data-nexus-genesis-mic-permission-control="true"',
+    "Nexus Genesis home is audio-only.",
+    "non-interactive voice companion presence"
+  ], label, "separate voice permission gate");
 }
 
 function assertRouting(context, label) {
@@ -485,8 +476,8 @@ function assertAdminIsolation(context, label) {
     "!options.explicitUserRequestedPreview"
   ], label, "Standard User preview isolation");
 
-  const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
-  assertExcludes(orbSource, [
+  const finalVoiceSource = sourceBetween(context.app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", label);
+  assertExcludes(finalVoiceSource, [
     "Plan Preview",
     "Execution Preview",
     "Provider Readiness",
@@ -518,8 +509,9 @@ function assertSynchronization(context, label) {
 function assertFallback(context, label) {
   assertIncludes(context.app, [
     "I heard you, but I am unable to speak right now. I will continue in text.",
-    "I cannot access the microphone here. You can continue by typing.",
-    "I cannot access speech recognition in this browser. You can continue by typing.",
+    "I cannot access the microphone here.",
+    "I cannot access speech recognition in this browser. Use a supported browser for the Genesis voice front door.",
+    "Workflow forms available after Nexus opens them",
     "Visible text remains available.",
     "typed-fallback",
     "synthesis_unavailable",

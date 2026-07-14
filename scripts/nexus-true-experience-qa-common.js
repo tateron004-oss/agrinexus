@@ -47,10 +47,14 @@ function assertTrueHomeMarkup() {
   assert(home.includes('data-nexus-true-home="true"'), "true home marker exists");
   assert(home.includes('data-nexus-genesis-orb-only-home="true"'), "orb-only Home marker exists");
   assert(home.includes("renderNexusTrueCoreOrb({ home: true })"), "home renders one activated Nexus orb");
+  assert(home.includes("renderNexusGenesisHomeVoiceGate()"), "home renders the separate microphone permission gate");
+  assert(home.includes("Nexus Genesis home is audio-only."), "home declares audio-only status");
+  assert(home.includes("non-interactive voice companion presence"), "home declares the orb is not interactive");
   assert(!home.includes("Good evening, Ron."), "idle Home does not render visible greeting");
   assert(!home.includes("renderNexusTrueCommandComposer()"), "idle Home does not render visible composer");
   assert(!home.includes("renderNexusTrueSecondaryAccess()"), "idle Home does not render visible secondary controls");
-  assert(home.includes("Activate the Nexus orb to begin a voice or typed conversation."), "nonvisual orb-first fallback instruction exists");
+  assert(!home.includes("Activate the Nexus orb"), "home must not instruct users to activate the orb");
+  assert(!home.includes("type below"), "home must not advertise a general typed fallback");
 }
 
 function assertLegacyHomeRemoved() {
@@ -79,14 +83,14 @@ function assertOrbPrimaryInteraction() {
   const orb = extractFunction("renderNexusTrueCoreOrb");
   assert(orb.includes('data-nexus-true-core-orb="true"'), "true orb marker exists");
   assert(orb.includes('data-nexus-genesis-orb-presence="true"'), "orb is presence-only");
-  assert(orb.includes('data-nexus-genesis-home-orb="true"'), "home orb owns guarded Home activation");
-  assert(orb.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "orb has screen-reader presence instruction");
-  assert(orb.includes('role="button"') && orb.includes('tabindex="0"'), "home orb supports keyboard button semantics");
-  assert(orb.includes('role="img"'), "non-home orb remains a status image");
-  assert(app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler exists");
-  assert(app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation listener is bound");
-  assert(app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation listener is bound");
-  assert(app.includes('handleNexusOsVoiceControlAction("enable-voice"'), "orb activation starts guarded voice activation");
+  assert(orb.includes('data-nexus-genesis-home-orb="true"'), "home orb marker exists for non-interactive visual presence");
+  assert(orb.includes("Nexus voice companion visual status."), "orb has screen-reader presence instruction");
+  assert(!orb.includes('role="button"'), "home orb must not expose button semantics");
+  assert(!orb.includes('tabindex="0"'), "home orb must not be keyboard focusable");
+  assert(orb.includes('role="img"'), "orb remains a status image");
+  assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler is removed");
+  assert(!app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation listener is removed");
+  assert(!app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation listener is removed");
   assert(orb.includes('data-nexus-os-orb-state="${escapeHtml(coreState)}"'), "orb reflects runtime state");
   assert(orb.includes("nexusCoreStateAccessibleLabel(coreState)"), "orb has accessible status name");
   assert(styles.includes(".nexus-true-orb-stage"), "true orb stage styles exist");
@@ -102,8 +106,9 @@ function assertMinimalConversation() {
   const submitHandler = extractFunction("handleNexusPresenceCommandSendSubmit");
   const keydownHandler = extractFunction("handleNexusTrueCommandComposerKeydown");
   const bindStatic = extractFunction("bindStatic");
-  assert(conversation.includes("return renderNexusCommandCenterHeroLegacy();"), "minimal conversation redirects to unified Standard User workspace");
-  assert(!conversation.includes('data-nexus-true-conversation="true"'), "minimal conversation marker is no longer mounted");
+  assert(conversation.includes("return renderNexusAudioCompanionExperience();"), "minimal conversation redirects to the audio companion experience");
+  assert(app.includes('data-nexus-audio-companion="true"'), "audio companion marker is mounted for voice-native conversation");
+  assert(app.includes('data-read-only-transcript="true"'), "audio companion keeps transcript/captions read-only");
   assert(!conversation.includes("renderNexusTrueCoreOrb({ compact: true })"), "minimal compact orb route is no longer mounted");
   assert(!conversation.includes('data-nexus-os-conversation-action="retry"'), "permanent retry control is not mounted");
   assert(!conversation.includes("data-nexus-voice-preference-action"), "voice preference wall is not mounted");
@@ -138,11 +143,11 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-427"'), "app build version bumped");
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-427"'), "server build version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v372"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-428"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-428"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v373"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");

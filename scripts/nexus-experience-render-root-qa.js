@@ -38,8 +38,10 @@ assert(count(renderUserWorkspace, 'data-nexus-standard-user-render-root="true-co
 assert(renderUserWorkspace.includes('data-nexus-os-standard-startup="true-conversation"'), "Standard User starts in true conversational Nexus mode");
 assert(renderUserWorkspace.includes('data-nexus-true-conversational-root="true"'), "true conversational root marker exists");
 assert(renderUserWorkspace.includes('data-nexus-genesis-first-viewport="true"'), "first viewport has an explicit Genesis target");
-assert(renderUserWorkspace.indexOf('data-nexus-genesis-experience-root="true"') < renderUserWorkspace.indexOf('renderNexusCommandCenterHero'), "Genesis root wraps the primary command center");
-assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "primary command center remains rendered");
+assert(renderUserWorkspace.indexOf('data-nexus-genesis-experience-root="true"') < renderUserWorkspace.indexOf('renderNexusTrueHome'), "Genesis root wraps the audio-first home");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome)'), "audio-first home remains rendered first");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)'), "audio companion remains available after voice/session activation");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)'), "primary command center remains available as workflow workspace");
 assert(app.includes('data-nexus-os-core-orb="true"'), "Nexus Core orb remains in the runtime surface");
 assert(app.includes('data-nexus-os-voice-control="toggle-listening"'), "primary voice control remains available");
 assert(app.includes('id="nexusCommandCenterInput"'), "primary typed command input remains available");

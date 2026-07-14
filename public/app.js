@@ -1215,8 +1215,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-427";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-428";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -31793,7 +31793,7 @@ function nexusVoiceTroubleshootingState() {
     permissionState,
     listeningState,
     outputState,
-    typedFallback: "Typed conversation available"
+    typedFallback: "Workflow forms available after Nexus opens them"
   };
 }
 
@@ -31806,7 +31806,7 @@ function nexusVoiceTroubleshootingResponse(command = "", options = {}) {
   if (/\b(i can't hear you|i cant hear you|i can t hear you|can't hear you|cant hear you|can t hear you|still can't hear you|still cant hear you|still can t hear you|why aren't you speaking|why arent you speaking|why aren t you speaking|why are you not speaking|sound not working|audio not working|voice not working)\b/.test(text)) {
     if (state.quiet) return "I can respond on screen, but voice is muted right now. Use Unmute or Repeat if you want me to try speaking aloud.";
     if (!state.synthesisSupported) return "I can respond on screen, but I cannot speak aloud in this browser right now. You can keep typing, or try a supported browser with audio enabled.";
-    return "I received your message. If you cannot hear me, check browser audio, then press Repeat. You can also continue by typing.";
+    return "I received your message. If you cannot hear me, check browser audio, then press Repeat or use the voice controls again.";
   }
   if (/\b(turn on voice|talk to me|speak to me|nexus talk to me)\b/.test(text)) {
     if (!state.profile.secureEnough) return "Voice needs HTTPS, localhost, or 127.0.0.1 in this browser. You can keep typing here, or return after opening a secure page.";
@@ -31971,7 +31971,7 @@ function handleNexusDailyCompanionCommand(command = "", options = {}) {
   return true;
 }
 
-async function activateNexusGenesisExperience(source = "orb") {
+async function activateNexusGenesisExperience(source = "voice") {
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;
   setNexusGenesisTrustChainState("waiting", { visibleFeedback: "Nexus is ready.", reason: `genesis-${source}` });
@@ -31992,20 +31992,6 @@ function resetNexusGenesisHomeViewport() {
     if (!home) return;
     window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
   });
-}
-
-function handleNexusGenesisOrbActivation(event) {
-  const orb = event?.target?.closest?.("[data-nexus-genesis-home-orb='true']");
-  if (!orb) return false;
-  if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return false;
-  event.preventDefault?.();
-  event.stopPropagation?.();
-  void activateNexusGenesisExperience(event.type === "keydown" ? "keyboard-orb" : "orb").then(() => {
-    if (typeof handleNexusOsVoiceControlAction === "function") {
-      void handleNexusOsVoiceControlAction("enable-voice", { source: "genesis-orb-activation" });
-    }
-  });
-  return true;
 }
 
 function nexusTrueExperienceHasActiveWorkflow() {
@@ -32083,12 +32069,12 @@ function renderNexusTrueCoreOrb(options = {}) {
   const isHome = options.home === true;
   const label = nexusCoreStateAccessibleLabel(coreState);
   const homeAttrs = isHome
-    ? ' data-nexus-genesis-home-orb="true" role="button" tabindex="0" aria-describedby="nexusFirstImpressionDescription"'
+    ? ' data-nexus-genesis-home-orb="true" role="img" aria-describedby="nexusFirstImpressionDescription"'
     : ' role="img"';
   return `
     <div class="nexus-true-orb-wrap ${isHome ? "home" : ""} ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
-      <div class="nexus-orb-stage nexus-true-orb-stage nexus-presence-orb ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}"${homeAttrs} aria-label="${escapeHtml(translateText(isHome ? "Wake Nexus" : label))}" title="${escapeHtml(coreContract.label)}">
-        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use the voice controls or type below to begin."))}</span>
+      <div class="nexus-orb-stage nexus-true-orb-stage nexus-presence-orb ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}"${homeAttrs} aria-label="${escapeHtml(translateText(isHome ? "Nexus voice companion" : label))}" title="${escapeHtml(coreContract.label)}">
+        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus voice companion visual status."))}</span>
         <span class="nexus-genesis-particle-field" data-nexus-genesis-particles="true" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
         </span>
@@ -32136,8 +32122,8 @@ function renderNexusBrowserVoiceAvailabilityHint() {
   if (typeof window === "undefined") return "";
   const profile = browserVoiceRuntimeProfile();
   const message = profile.supported
-    ? "Voice uses browser support. Typed Ask Nexus always works."
-    : "Voice is not available in this browser. You can keep using typed Ask Nexus.";
+    ? "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them."
+    : "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first.";
   return `
     <p class="nexus-browser-voice-fallback" data-nexus-browser-voice-fallback="true" data-browser-voice-supported="${profile.supported ? "true" : "false"}" role="status">
       ${escapeHtml(translateText(message))}
@@ -32157,17 +32143,17 @@ function renderNexusVoiceFirstPresenceControls() {
       : "Enable voice";
   const enableAction = recognitionActive ? "stop-listening" : "enable-voice";
   const help = permissionState === "denied" || nexusVoicePermissionDeniedThisSession
-    ? "Microphone permission is blocked. You can continue by typing, or change microphone permission in your browser."
+    ? "Microphone permission is blocked. Change microphone permission in your browser to speak with Nexus."
     : voiceReady
       ? "Your browser needs permission before I can hear you."
-      : "Voice is unavailable here. You can continue by typing.";
+      : "Voice is unavailable here. Use a supported browser for the Genesis voice front door.";
   const statusText = recognitionActive
     ? "Nexus is listening."
     : voiceFirstMode
       ? "Hands-free Nexus is on while this page stays open."
       : voiceReady
         ? "Nexus is ready."
-        : "Voice is unavailable. You can continue by typing.";
+        : "Voice is unavailable in this browser.";
   return `
     <div class="nexus-voice-first-presence" data-nexus-voice-first-presence="true" data-nexus-hands-free-active="${voiceFirstMode ? "true" : "false"}" data-nexus-microphone-permission="${escapeHtml(permissionState)}">
       <span class="nexus-voice-first-status" data-nexus-voice-first-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
@@ -32180,6 +32166,48 @@ function renderNexusVoiceFirstPresenceControls() {
         <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
         <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
       </div>
+    </div>
+  `;
+}
+
+function renderNexusGenesisHomeVoiceGate() {
+  const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
+  const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
+  const denied = permissionState === "denied" || nexusVoicePermissionDeniedThisSession;
+  const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
+  const showPermissionControl = voiceReady && !recognitionActive && !denied && permissionState !== "granted-or-browser-managed";
+  const statusText = recognitionActive
+    ? "Nexus is listening."
+    : denied
+      ? "Microphone permission is blocked."
+      : voiceReady
+        ? permissionState === "granted-or-browser-managed"
+          ? "Nexus is ready for voice."
+          : "Microphone permission is required before Nexus can hear."
+        : "Speech recognition is not available in this browser.";
+  const guidance = denied
+    ? "Use the browser site settings to allow microphone access, then reload."
+    : voiceReady
+      ? "The browser requires a separate permission control. The orb is only Nexus's visual presence."
+      : "Open Nexus in a browser with speech recognition support to use the voice-native front door.";
+  return `
+    <div class="nexus-genesis-audio-gate" data-nexus-genesis-audio-gate="true" data-microphone-permission="${escapeHtml(permissionState)}" data-recognition-supported="${voiceReady ? "true" : "false"}">
+      <span class="nexus-genesis-audio-status" data-nexus-genesis-audio-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
+      <small>${escapeHtml(translateText(guidance))}</small>
+      ${showPermissionControl ? `
+        <button type="button" class="nexus-genesis-mic-permission" data-nexus-genesis-mic-permission-control="true" data-nexus-os-voice-control="enable-voice" aria-describedby="nexusFirstImpressionDescription">
+          ${escapeHtml(translateText("Allow microphone"))}
+        </button>
+      ` : ""}
+      ${recognitionActive || permissionState === "granted-or-browser-managed" ? `
+        <div class="nexus-genesis-audio-controls" aria-label="${escapeHtml(translateText("Nexus voice safety controls"))}">
+          <button type="button" data-nexus-os-voice-control="stop-listening">${escapeHtml(translateText("Stop listening"))}</button>
+          <button type="button" data-nexus-os-voice-control="stop-speaking">${escapeHtml(translateText("Stop speaking"))}</button>
+          <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
+          <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -32219,13 +32247,38 @@ function renderNexusTrueHome() {
     <section class="nexus-true-home nexus-genesis-orb-only-home" data-nexus-true-home="true" data-nexus-genesis-orb-only-home="true" data-nexus-accessible-first-impression="true" aria-label="${escapeHtml(translateText("Nexus orb home"))}">
       ${renderNexusTrueCoreOrb({ home: true })}
       <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus"))}</span>
-      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Activate the Nexus orb to begin a voice or typed conversation."))}</span>
+      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus Genesis home is audio-only. The orb is a non-interactive voice companion presence."))}</span>
+      ${renderNexusGenesisHomeVoiceGate()}
+    </section>
+  `;
+}
+
+function renderNexusAudioCompanionExperience() {
+  const transcriptText = nexusPresenceState.lastUserInput
+    ? `Last heard: ${nexusPresenceState.lastUserInput}`
+    : "Voice transcript appears here when available.";
+  const lastResponse = lastVoiceResponse || nexusPresenceState.lastResponse || "Nexus is listening when microphone permission is active.";
+  return `
+    <section class="nexus-audio-companion" data-nexus-audio-companion="true" data-genesis-companion-state="audio-only" aria-labelledby="userWorkspaceTitle" aria-describedby="nexusFirstImpressionDescription">
+      <div class="nexus-audio-companion-core">
+        ${renderNexusTrueCoreOrb({ compact: true })}
+        <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus voice companion"))}</span>
+        <p id="nexusFirstImpressionDescription" class="sr-only">${escapeHtml(translateText("Nexus is operating through voice. Captions and transcripts are read-only."))}</p>
+        <div class="nexus-audio-companion-status" data-nexus-audio-companion-status="true" aria-live="polite">
+          <strong>${escapeHtml(translateText(nexusCoreStateAccessibleLabel(nexusCoreRuntimeState.current || "ready")))}</strong>
+          <span>${escapeHtml(translateText(lastResponse))}</span>
+        </div>
+      </div>
+      ${renderNexusGenesisHomeVoiceGate()}
+      <div class="nexus-audio-companion-caption" data-nexus-audio-companion-caption="true" data-read-only-transcript="true" aria-live="polite">
+        <span>${escapeHtml(translateText(transcriptText))}</span>
+      </div>
     </section>
   `;
 }
 
 function renderNexusMinimalConversationExperience() {
-  return renderNexusCommandCenterHeroLegacy();
+  return renderNexusAudioCompanionExperience();
 }
 
 function renderNexusCommandCenterHero() {
@@ -37206,13 +37259,59 @@ function ensureNexusOsVisualBoundaryStyles() {
       user-select: none;
     }
     [data-nexus-genesis-home-orb="true"] {
-      pointer-events: auto;
-      cursor: pointer;
+      pointer-events: none !important;
+      cursor: default !important;
     }
     [data-nexus-os-core-orb] *,
     [data-nexus-genesis-orb-presence] * {
       pointer-events: none;
       cursor: default;
+    }
+    .nexus-genesis-audio-gate {
+      position: fixed;
+      left: 50%;
+      bottom: clamp(24px, 6vh, 72px);
+      transform: translateX(-50%);
+      z-index: 6;
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 14px 16px;
+      border: 1px solid rgba(34, 211, 238, 0.22);
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.44);
+      color: rgba(226, 232, 240, 0.92);
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+    }
+    .nexus-genesis-audio-status {
+      color: rgba(255, 255, 255, 0.96);
+      font-weight: 800;
+      letter-spacing: 0;
+      text-shadow: 0 0 18px rgba(34, 211, 238, 0.24);
+    }
+    .nexus-genesis-audio-gate small {
+      color: rgba(203, 213, 225, 0.84);
+      max-width: 44ch;
+    }
+    .nexus-genesis-mic-permission,
+    .nexus-genesis-audio-controls button {
+      border: 1px solid rgba(34, 211, 238, 0.36);
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.88), rgba(20, 184, 166, 0.82));
+      color: #ffffff;
+      font-weight: 800;
+      padding: 10px 14px;
+      box-shadow: 0 14px 32px rgba(34, 211, 238, 0.22);
+      cursor: pointer;
+    }
+    .nexus-genesis-audio-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
     }
     [data-nexus-os-core-orb].nexus-core-state-idle {
       filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.28));
@@ -37915,7 +38014,11 @@ function renderUserWorkspace() {
   target.innerHTML = `
     <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root nexus-true-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="true-conversation" data-nexus-genesis-engine-root="true" data-nexus-genesis-experience-root="true" data-nexus-true-conversational-root="true" data-nexus-standard-user-render-root="true-conversational-experience" data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}" data-nexus-genesis-activated="${nexusGenesisExperienceActivated ? "true" : "false"}" data-nexus-genesis-core-state="${escapeHtml(normalizeNexusCoreState(nexusCoreRuntimeState.current || "idle"))}">
       <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus"))}">
-        ${trueExperienceMode === "home" ? renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome) : renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
+        ${trueExperienceMode === "home"
+          ? renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome)
+          : trueExperienceMode === "conversation"
+            ? renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)
+            : renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mode launcher", renderNexusModeLauncher) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Activity receipts", renderNexusPremiumActivityReceiptsPanel) : ""}
@@ -46622,12 +46725,12 @@ function renderNexusOsVoiceRuntimeStatus() {
   updateNexusOsVoiceRuntimeState({ mode: nexusOsVoiceRuntimeState.mode || "standby" }, "render-status");
   const voiceState = typeof nexusVoiceTroubleshootingState === "function"
     ? nexusVoiceTroubleshootingState()
-    : { listeningState: nexusOsVoiceRuntimeState.mode || "standby", outputState: "Speech output available", typedFallback: "Typed conversation available" };
+    : { listeningState: nexusOsVoiceRuntimeState.mode || "standby", outputState: "Speech output available", typedFallback: "Workflow forms available after Nexus opens them" };
   return `
     <div class="nexus-os-voice-runtime-status" data-nexus-os-voice-runtime-status="true">
       <span>${escapeHtml(translateText("Voice"))}</span>
       <strong>${escapeHtml(translateText(voiceState.listeningState || nexusOsVoiceRuntimeState.mode || "standby"))}</strong>
-      <small>${escapeHtml(translateText(`${voiceState.outputState || "Speech output available"}. ${voiceState.typedFallback || "Typed conversation available"}. ${nexusOsVoiceRuntimeSummary()}`))}</small>
+      <small>${escapeHtml(translateText(`${voiceState.outputState || "Speech output available"}. ${voiceState.typedFallback || "Workflow forms available after Nexus opens them"}. ${nexusOsVoiceRuntimeSummary()}`))}</small>
       <em>${escapeHtml(translateText("Push-to-talk. No always-on listening without explicit consent."))}</em>
       <small class="sr-only" aria-live="polite" data-nexus-presence-status-announcement="true">${escapeHtml(translateText(nexusCoreStateAccessibleLabel(nexusCoreRuntimeState.current)))}</small>
       <small class="nexus-presence-caption-sync" data-nexus-presence-caption-sync="true">${escapeHtml(lastVoiceResponse || nexusOsVoiceRuntimeSummary())}</small>
@@ -46892,7 +46995,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
   const source = options.source || "nexus-os-voice-control";
   if (normalized === "enable-voice") {
     if (nexusVoicePermissionDeniedThisSession || nexusOsVoiceRuntimeState.permissionState === "denied") {
-      const response = "Microphone permission is blocked right now. You can continue by typing, or change microphone permission in your browser.";
+      const response = "Microphone permission is blocked right now. Change microphone permission in your browser, then reload or allow microphone access again.";
       recordNexusOsConversationTurn("assistant", response, { source });
       showNexusVoiceFallbackMessage(response, { source: "voice-permission-denied-session", mode: "typed-fallback", trustChainState: "permission_denied" });
       renderUserWorkspace();
@@ -46911,7 +47014,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     } catch {}
     const response = nextEnabled
       ? "Hands-free Nexus is on while this page is open. Say Nexus, Hello Nexus, or Hey Nexus when the browser is listening."
-      : "Hands-free Nexus is off. You can press Talk or type below.";
+      : "Hands-free Nexus is off. Use the microphone permission control to resume voice when ready.";
     updateNexusOsVoiceRuntimeState({
       mode: nextEnabled ? "voice-first" : "standby",
       listeningState: nextEnabled ? "wake-phrase-ready" : "idle",
@@ -46935,7 +47038,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     } catch {}
     voiceRecognition = null;
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "stopped", hearingState: "idle", assistantSpeaking: false }, source);
-    const response = "Stopped listening. You can type your request or press Talk again.";
+    const response = "Stopped listening. Use the microphone permission control or say start listening when voice is available.";
     recordNexusOsConversationTurn("assistant", response, { source });
     setVoiceResponse(response, false, { allowVoiceFirst: false, source });
     renderUserWorkspace();
@@ -46944,7 +47047,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
   if (normalized === "stop-speaking") {
     stopVoicePlayback({ hard: true, reason: source });
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle", hearingState: "idle" }, source);
-    setVoiceResponse("Stopped speaking. Type or press Mic when you are ready.", false, { allowVoiceFirst: false, source });
+    setVoiceResponse("Stopped speaking. Voice remains available when microphone permission is active.", false, { allowVoiceFirst: false, source });
     return true;
   }
   if (normalized === "repeat-response") {
@@ -46956,7 +47059,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     nexusOsConversationMuted = true;
     disableNexusVoiceForDemo("Nexus voice is muted. Text responses remain available.", { silent: true });
     updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle" }, source);
-    recordNexusOsConversationTurn("assistant", "Nexus voice is muted. Text responses remain available.", { source });
+    recordNexusOsConversationTurn("assistant", "Nexus voice is muted. Captions and read-only transcript remain available.", { source });
     renderUserWorkspace();
     return true;
   }
@@ -46966,14 +47069,22 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     localStorage.setItem("agrinexusDemoQuiet", "off");
     saveNexusOsConversationTurns();
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle" }, source);
-    recordNexusOsConversationTurn("assistant", "Nexus voice is unmuted. Press Mic or type your request.", { source });
+    recordNexusOsConversationTurn("assistant", "Nexus voice is unmuted. Use voice when microphone permission is active.", { source });
     renderUserWorkspace();
     return true;
   }
   if (normalized === "typed-fallback") {
-    openAskNexus();
-    $("#nexusCommandCenterInput")?.focus?.();
-    updateNexusOsVoiceRuntimeState({ mode: "typed-fallback", listeningState: "typed" }, source);
+    if (nexusTrueExperienceHasActiveWorkflow()) {
+      openAskNexus();
+      $("#nexusCommandCenterInput")?.focus?.();
+      updateNexusOsVoiceRuntimeState({ mode: "workflow-structured-entry", listeningState: "workflow-entry" }, source);
+    } else {
+      const response = "General typed commands are not available on Genesis home. Voice is the front door; structured typing appears only inside an active workflow.";
+      recordNexusOsConversationTurn("assistant", response, { source });
+      setVoiceResponse(response, false, { allowVoiceFirst: false, source });
+      updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "audio-only-home" }, source);
+      renderUserWorkspace();
+    }
     return true;
   }
   await startVoiceListening({ source });
@@ -54634,6 +54745,11 @@ function scheduleVoiceRecovery(message = "I did not hear speech. I am still list
 function processFinalVoiceCommand(command = "", options = {}) {
   const finalCommand = normalizeVoicePartial(command);
   if (!finalCommand) return;
+  if (!nexusGenesisExperienceActivated || !nexusTrueExperienceSessionStarted) {
+    nexusGenesisExperienceActivated = true;
+    nexusTrueExperienceSessionStarted = true;
+    setNexusCoreState("processing", { source: "voice-final-transcript", statusText: "Nexus heard you." });
+  }
   clearStreamingVoicePartial();
   markNexusUserSpeechFinal(finalCommand, nexusVoiceTurnToken + 1);
   setNexusGenesisTrustChainState("transcript_finalized", {
@@ -54733,7 +54849,7 @@ async function startVoiceListening(options = {}) {
     updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle", hearingState: "idle" }, source);
     setVoiceStatus("standby");
     refreshMicSupport();
-    showNexusVoiceFallbackMessage("Nexus voice is in text-only mode. Type your request in Ask Nexus, and the same routing will apply.", {
+    showNexusVoiceFallbackMessage("Nexus voice is muted. Captions remain available; unmute or allow microphone access to continue by voice.", {
       source: "voice-text-only-mode",
       mode: "typed-fallback",
       trustChainState: "recognition_unavailable"
@@ -54745,8 +54861,8 @@ async function startVoiceListening(options = {}) {
   if (!profile.secureEnough) {
     markNexusListeningControllerEvent("unsupported-secure-context", { permissionState: "secure-context-required", inputMode: "typed-fallback" });
     setNexusGenesisTrustChainState("recognition_unavailable", {
-      visibleFeedback: "I cannot access the microphone here. You can continue by typing.",
-      failureRecovery: "Use the typed command input.",
+      visibleFeedback: "I cannot access the microphone here.",
+      failureRecovery: "Use HTTPS, localhost, or 127.0.0.1 with a supported browser before using the Genesis voice front door.",
       reason: "secure-context-required"
     });
     updateNexusOsVoiceRuntimeState({
@@ -54755,7 +54871,7 @@ async function startVoiceListening(options = {}) {
       permissionState: "secure-context-required"
     }, source);
     refreshMicSupport();
-    showNexusVoiceFallbackMessage(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. You can keep using typed Ask Nexus here.`, {
+    showNexusVoiceFallbackMessage(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Genesis home stays audio-only until voice is available.`, {
       source: "secure-context-required",
       mode: "typed-fallback",
       trustChainState: "recognition_unavailable"
@@ -54766,18 +54882,18 @@ async function startVoiceListening(options = {}) {
     nexusOsVoiceStartInFlight = false;
     markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
     setNexusGenesisTrustChainState("recognition_unavailable", {
-      visibleFeedback: "I cannot access speech recognition in this browser. You can continue by typing.",
-      failureRecovery: "Reveal the typed command input.",
+      visibleFeedback: "I cannot access speech recognition in this browser.",
+      failureRecovery: "Open Nexus in a browser with speech recognition support. Workflow forms can still use structured typing after a workflow opens.",
       reason: "speech-recognition-unavailable"
     });
     updateNexusOsVoiceRuntimeState({
       mode: "unsupported-browser",
-      listeningState: "typed-fallback",
+      listeningState: "blocked",
       permissionState: "unsupported",
       microphoneUnavailable: true
     }, source);
     refreshMicSupport();
-    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this test browser. You can keep using typed Ask Nexus and the same routing will apply.`, {
+    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this browser. Genesis home remains audio-only; use a supported browser for voice.`, {
       source: "speech-recognition-unavailable",
       mode: "typed-fallback",
       trustChainState: "recognition_unavailable"
@@ -54796,18 +54912,18 @@ async function startVoiceListening(options = {}) {
       nexusOsVoiceStartInFlight = false;
       markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, realtimeConfigured: false, inputMode: "typed-fallback" });
       setNexusGenesisTrustChainState("recognition_unavailable", {
-        visibleFeedback: "Realtime voice is not configured here. You can continue by typing.",
-        failureRecovery: "Reveal the typed command input.",
+        visibleFeedback: "Realtime voice is not configured here.",
+        failureRecovery: "Configure realtime voice or use a browser with speech recognition support.",
         reason: "realtime-voice-not-configured"
       });
       updateNexusOsVoiceRuntimeState({
-        mode: "typed-fallback",
-        listeningState: "typed-fallback",
+        mode: "unsupported-browser",
+        listeningState: "blocked",
         permissionState: "unsupported",
         microphoneUnavailable: true
       }, source);
       refreshMicSupport();
-      showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition here, and realtime voice is not configured. You can keep using typed Ask Nexus and the same routing will apply.`, {
+      showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition here, and realtime voice is not configured. Genesis home remains audio-only until a voice path is available.`, {
         source: "realtime-voice-not-configured",
         mode: "typed-fallback",
         trustChainState: "recognition_unavailable"
@@ -54869,8 +54985,8 @@ async function startVoiceListening(options = {}) {
     nexusOsVoiceStartInFlight = false;
     markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
     setNexusGenesisTrustChainState("recognition_unavailable", {
-      visibleFeedback: "I cannot access speech recognition in this browser. You can continue by typing.",
-      failureRecovery: "Reveal the typed command input.",
+      visibleFeedback: "I cannot access speech recognition in this browser. Use a supported browser for the Genesis voice front door.",
+      failureRecovery: "Keep Genesis home audio-first until a supported voice path is available.",
       reason: "speech-recognition-unavailable"
     });
     updateNexusOsVoiceRuntimeState({
@@ -54880,7 +54996,7 @@ async function startVoiceListening(options = {}) {
       microphoneUnavailable: true
     }, source);
     refreshMicSupport();
-    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this test browser. You can keep using typed Ask Nexus and the same routing will apply.`, {
+    showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition in this test browser. Use a supported browser for the Genesis voice front door; structured fields remain available inside opened workflows.`, {
       source: "speech-recognition-unavailable",
       mode: "typed-fallback",
       trustChainState: "recognition_unavailable"
@@ -54933,7 +55049,7 @@ async function startVoiceListening(options = {}) {
     const message = permissionBlocked
       ? profile.isChrome
         ? "Chrome blocked the microphone. Click the tune or lock icon near the address bar, set Microphone to Allow, then reload if needed."
-        : "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access, or type your request."
+        : "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access."
       : error === "no-speech"
         ? "I did not hear speech. I am still listening. Say Nexus, then tell me what you need."
         : error === "audio-capture"
@@ -54942,8 +55058,8 @@ async function startVoiceListening(options = {}) {
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
     setNexusGenesisTrustChainState(permissionBlocked ? "permission_denied" : "recognition_failed", {
-      visibleFeedback: permissionBlocked ? "I cannot access the microphone. You can continue by typing." : "I did not catch that. Please try again or type your request.",
-      failureRecovery: "Keep typed conversation available.",
+      visibleFeedback: permissionBlocked ? "I cannot access the microphone. Adjust browser microphone permission to speak with Nexus." : "I did not catch that. Please try again with the microphone control.",
+      failureRecovery: "Keep workflow-scoped forms available after Nexus opens a workflow.",
       reason: "recognition-error"
     });
     markNexusListeningControllerEvent(permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "failed", {
@@ -55027,7 +55143,7 @@ async function startVoiceListening(options = {}) {
       hearingState: "idle",
       lastError: error.message || "recognition-start-failed"
     }, source);
-    showNexusVoiceFallbackMessage("Voice recognition could not start. Type your request in Ask Nexus, and the same safety routing will apply.", {
+    showNexusVoiceFallbackMessage("Voice recognition could not start. Use the microphone control again after permission is available; structured fields remain available inside opened workflows.", {
       source: "recognition-start-failed",
       mode: "typed-fallback",
       trustChainState: "recognition_failed"
@@ -56111,8 +56227,6 @@ function bindStatic() {
   }
   document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
   document.addEventListener("input", handleNexusPresenceInputActivity, true);
-  document.addEventListener("click", handleNexusGenesisOrbActivation, true);
-  document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);
   document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
   document.addEventListener("click", event => {
     const voiceControl = event.target?.closest?.("[data-nexus-command-center-voice],[data-nexus-os-voice-control]");

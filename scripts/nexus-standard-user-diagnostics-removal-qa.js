@@ -32,7 +32,9 @@ const deferredLegacyHost = sectionBetween(app, "function renderNexusOsDeferredLe
 const shellPanel = sectionBetween(app, "function renderNexusOsApplicationShellPanel()", "function renderNexusOsCalmHelper()");
 
 assert(renderUserWorkspace.includes('data-nexus-genesis-experience-root="true"'), "Standard User render root remains the Genesis experience root");
-assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)'), "Ask Nexus command center is still visible");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome)'), "audio-first Genesis home is visible first");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)'), "audio companion is available after voice/session activation");
+assert(renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)'), "Ask Nexus command center remains available as workflow workspace");
 assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Application shell", renderNexusOsApplicationShellPanel)'), "diagnostic application shell is removed from the visible startup stack");
 assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Genesis release", renderNexusOsGenesisReleasePanel)'), "Genesis release diagnostics are removed from the visible startup stack");
 assert(deferredLegacyHost.includes("renderNexusOsApplicationShellPanel()"), "diagnostic application shell is preserved only in the deferred host");

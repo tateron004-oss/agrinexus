@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
 assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
 assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
 assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
-assert(index.includes('/manifest.webmanifest?v=nexus-behavior-427'), "index should version the manifest link to avoid stale manifest warnings");
+assert(index.includes("/manifest.webmanifest?v=nexus-behavior-428"), "index should version the manifest link to avoid stale manifest warnings");
 assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
 
 includesAll(app, [
@@ -44,9 +44,10 @@ includesAll(app, [
   "Voice can start from the Talk button.",
   "Microphone permission required",
   "Speech recognition unavailable",
-  "Speech output unavailable",
-  "Typed conversation available"
+  "Speech output unavailable"
 ], "voice troubleshooting runtime");
+assert(!app.includes("Typed conversation available"), "Genesis runtime must not advertise general typed chat fallback");
+assert(app.includes("Workflow forms available after Nexus opens them"), "voice status should describe workflow-scoped forms only");
 
 const troubleshootingSource = between(app, "function nexusVoiceTroubleshootingResponse", "function handleNexusVoiceTroubleshootingCommand", "voice troubleshooting response");
 includesAll(troubleshootingSource, [
@@ -58,26 +59,10 @@ includesAll(troubleshootingSource, [
   "turn on voice",
   "nexus talk to me",
   "is my microphone working",
-  "Press Talk",
-  "continue by typing"
+  "Press Talk"
 ], "voice troubleshooting response");
 assert(!troubleshootingSource.includes("Plan created"), "voice troubleshooting must never answer with Plan created");
-
-const typedSubmitSource = between(app, "async function handleNexusPresenceCommandSendSubmit", "function handleNexusTrueCommandComposerKeydown", "typed command submit");
-assert(
-  typedSubmitSource.indexOf("handleNexusVoiceTroubleshootingCommand(command") > typedSubmitSource.indexOf("isNexusPresenceWakePhrase(command)"),
-  "typed submit should handle voice troubleshooting after wake phrase handling"
-);
-assert(
-  typedSubmitSource.indexOf("handleNexusVoiceTroubleshootingCommand(command") < typedSubmitSource.indexOf("handleNexusGenesisProviderOrchestrationCommand"),
-  "typed submit should handle voice troubleshooting before provider/plan routing"
-);
-
-const voiceCoreSource = between(app, "async function handleVoiceCommandCore", "const a100SafeIntent", "voice command core");
-assert(
-  voiceCoreSource.includes("handleNexusVoiceTroubleshootingCommand(trustChainInput"),
-  "voice command core should route troubleshooting before broader planning"
-);
+assert(!troubleshootingSource.includes("continue by typing"), "voice troubleshooting must not advertise general typed fallback");
 
 const activationSource = between(app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", "Genesis presence activation");
 includesAll(activationSource, [
@@ -86,55 +71,39 @@ includesAll(activationSource, [
   "nexusTrueExperienceSessionStarted = true",
   "Nexus is ready."
 ], "Genesis presence activation");
-assert(!activationSource.includes("startNexusOsMission("), "Genesis orb activation must not create a mission");
-assert(!activationSource.includes("startVoiceListening("), "Genesis orb activation must not request microphone permission");
-
-const experienceModeSource = between(app, "function nexusTrueExperienceMode", "function isNexusTrueExperienceReturnHomeCommand", "Nexus true experience mode");
-assert(
-  experienceModeSource.includes("return \"conversation\";"),
-  "Standard User should open directly into conversation mode"
-);
+assert(!activationSource.includes("startNexusOsMission("), "voice activation must not create a mission");
+assert(!activationSource.includes("startVoiceListening("), "workspace activation must not request microphone permission by itself");
 
 const minimalConversationSource = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal companion surface");
 assert(
-  minimalConversationSource.includes("return renderNexusCommandCenterHeroLegacy();"),
-  "broken minimal companion route must redirect to the unified Standard User workspace hero"
-);
-
-const commandCenterHeroSource = between(app, "function renderNexusCommandCenterHero", "function renderNexusCommandCenterHeroLegacy", "command center hero route");
-assert(
-  commandCenterHeroSource.includes("return renderNexusCommandCenterHeroLegacy();"),
-  "Standard User route must render the unified conversational workspace hero"
+  minimalConversationSource.includes("return renderNexusAudioCompanionExperience();"),
+  "minimal companion route must redirect to the audio-only companion surface"
 );
 
 const orbSource = between(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "Genesis orb renderer");
 includesAll(orbSource, [
   "data-nexus-genesis-orb-presence=\"true\"",
   "data-nexus-genesis-home-orb=\"true\"",
-  "role=\"button\"",
   "role=\"img\"",
-  "Nexus visual status indicator. Use the voice controls or type below to begin."
+  "Nexus voice companion visual status."
 ], "Genesis accessible orb renderer");
+assert(!orbSource.includes("role=\"button\""), "Genesis orb must not expose button semantics");
+assert(!orbSource.includes("tabindex=\"0\""), "Genesis orb must not be focusable");
 assert(!orbSource.includes("<button"), "Genesis orb renderer must not use a separate button element");
 assert(!orbSource.includes("data-nexus-genesis-orb-entry"), "Genesis orb renderer must not expose activation entry metadata");
 
-const bindSource = between(app, "function bindStatic", "async function boot", "static binding");
-includesAll(bindSource, [
-  "document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);",
-  "document.addEventListener(\"keydown\", handleNexusGenesisOrbActivation, true);"
-], "static orb activation binding");
-assert(
-  bindSource.indexOf("document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);") < bindSource.indexOf("document.addEventListener(\"click\", handleNexusStandardUserHomeClick, true);"),
-  "static orb activation must run before legacy Standard User click handling"
-);
+const binding = between(app, "function bindStatic", "async function boot", "static binding");
+assert(!binding.includes("handleNexusGenesisOrbActivation"), "static binding must not attach orb click/keyboard activation");
 
 const userWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "Standard User workspace render");
 includesAll(userWorkspaceSource, [
+  "renderNexusTrueHome",
+  "renderNexusAudioCompanionExperience",
   "renderNexusAgenticMissionWorkspace",
   "renderNexusModeLauncher",
   "renderNexusPremiumActivityReceiptsPanel",
   "renderNexusPersistentMemoryPanel"
-], "full Standard User mission workspace");
+], "full Standard User mission workspace remains available after voice opens workflows");
 
 const voiceControlSource = between(app, "async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice controls");
 includesAll(voiceControlSource, [
@@ -144,19 +113,20 @@ includesAll(voiceControlSource, [
   "explicit-enable-voice",
   "explicit-hands-free-toggle",
   "voiceRecognition.stop",
-  "Stopped listening. You can type your request or press Talk again.",
+  "General typed commands are not available on Genesis home.",
   "renderUserWorkspace()"
 ], "voice controls");
+assert(!voiceControlSource.includes("Stopped listening. You can type your request"), "stop listening must not advertise general typed fallback");
 assert(!app.includes('localStorage.setItem("agrinexusVoiceFirst", "on")'), "hands-free voice mode must not persist as on across refresh");
 
-const cssSource = between(app, ".nexus-os-conversation-log {", "@media (max-width: 720px)", "companion conversation CSS");
-includesAll(cssSource, [
-  "max-height: min(38vh, 320px)",
-  "overflow-wrap: break-word",
-  "word-break: normal",
-  ".nexus-os-companion-voice-controls",
-  ".nexus-companion-recovery-hint"
-], "companion conversation CSS");
+const audioCompanion = between(app, "function renderNexusAudioCompanionExperience", "function renderNexusMinimalConversationExperience", "audio companion");
+includesAll(audioCompanion, [
+  "data-nexus-audio-companion=\"true\"",
+  "data-genesis-companion-state=\"audio-only\"",
+  "renderNexusGenesisHomeVoiceGate()",
+  "data-read-only-transcript=\"true\""
+], "audio-only companion");
+assert(!audioCompanion.includes("renderNexusTrueCommandComposer()"), "audio companion must not mount a general composer");
 
 assert(
   packageJson.scripts["qa:nexus-companion-voice-activation-flow"] === "node scripts/nexus-companion-voice-activation-flow-qa.js",
