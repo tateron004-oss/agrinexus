@@ -83,6 +83,162 @@ const TRUST_CHAIN_RAILS = Object.freeze([
       "registration",
       "acceptance"
     ]
+  },
+  {
+    railNumber: 9,
+    suiteId: "nexus-genesis-rail-09-understanding",
+    suiteName: "Nexus Genesis Rail 9 Understanding QA",
+    wrapper: "scripts/nexus-genesis-rail-09-understanding-qa.js",
+    alias: "qa:nexus-genesis-rail-09-understanding",
+    groups: ["understanding", "routing", "companion"]
+  },
+  {
+    railNumber: 10,
+    suiteId: "nexus-genesis-rail-10-context",
+    suiteName: "Nexus Genesis Rail 10 Context QA",
+    wrapper: "scripts/nexus-genesis-rail-10-context-qa.js",
+    alias: "qa:nexus-genesis-rail-10-context",
+    groups: ["context", "synchronization", "companion"]
+  },
+  {
+    railNumber: 11,
+    suiteId: "nexus-genesis-rail-11-memory",
+    suiteName: "Nexus Genesis Rail 11 Memory QA",
+    wrapper: "scripts/nexus-genesis-rail-11-memory-qa.js",
+    alias: "qa:nexus-genesis-rail-11-memory",
+    groups: ["memory", "privacy"]
+  },
+  {
+    railNumber: 12,
+    suiteId: "nexus-genesis-rail-12-planning",
+    suiteName: "Nexus Genesis Rail 12 Planning QA",
+    wrapper: "scripts/nexus-genesis-rail-12-planning-qa.js",
+    alias: "qa:nexus-genesis-rail-12-planning",
+    groups: ["planning", "context"]
+  },
+  {
+    railNumber: 13,
+    suiteId: "nexus-genesis-rail-13-capability-readiness",
+    suiteName: "Nexus Genesis Rail 13 Capability Readiness QA",
+    wrapper: "scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
+    alias: "qa:nexus-genesis-rail-13-capability-readiness",
+    groups: ["capabilityReadiness", "fallback"]
+  },
+  {
+    railNumber: 14,
+    suiteId: "nexus-genesis-rail-14-consent-confirmation",
+    suiteName: "Nexus Genesis Rail 14 Consent Confirmation QA",
+    wrapper: "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+    alias: "qa:nexus-genesis-rail-14-consent-confirmation",
+    groups: ["consent", "safety"]
+  },
+  {
+    railNumber: 15,
+    suiteId: "nexus-genesis-rail-15-execution-integrity",
+    suiteName: "Nexus Genesis Rail 15 Execution Integrity QA",
+    wrapper: "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+    alias: "qa:nexus-genesis-rail-15-execution-integrity",
+    groups: ["execution", "consent"]
+  },
+  {
+    railNumber: 16,
+    suiteId: "nexus-genesis-rail-16-outcome-receipts",
+    suiteName: "Nexus Genesis Rail 16 Outcome Receipts QA",
+    wrapper: "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
+    alias: "qa:nexus-genesis-rail-16-outcome-receipts",
+    groups: ["receipts", "execution"]
+  },
+  {
+    railNumber: 17,
+    suiteId: "nexus-genesis-rail-17-privacy-isolation",
+    suiteName: "Nexus Genesis Rail 17 Privacy Isolation QA",
+    wrapper: "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+    alias: "qa:nexus-genesis-rail-17-privacy-isolation",
+    groups: ["privacy", "adminIsolation"]
+  },
+  {
+    railNumber: 18,
+    suiteId: "nexus-genesis-rail-18-safety-escalation",
+    suiteName: "Nexus Genesis Rail 18 Safety Escalation QA",
+    wrapper: "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+    alias: "qa:nexus-genesis-rail-18-safety-escalation",
+    groups: ["safety", "companion"]
+  },
+  {
+    railNumber: 19,
+    suiteId: "nexus-genesis-rail-19-accessibility",
+    suiteName: "Nexus Genesis Rail 19 Accessibility QA",
+    wrapper: "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+    alias: "qa:nexus-genesis-rail-19-accessibility",
+    groups: ["accessibility", "fallback"]
+  },
+  {
+    railNumber: 20,
+    suiteId: "nexus-genesis-rail-20-multilingual",
+    suiteName: "Nexus Genesis Rail 20 Multilingual QA",
+    wrapper: "scripts/nexus-genesis-rail-20-multilingual-qa.js",
+    alias: "qa:nexus-genesis-rail-20-multilingual",
+    groups: ["multilingual", "synthesis"]
+  },
+  {
+    railNumber: 21,
+    suiteId: "nexus-genesis-rail-21-concurrency",
+    suiteName: "Nexus Genesis Rail 21 Concurrency QA",
+    wrapper: "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+    alias: "qa:nexus-genesis-rail-21-concurrency",
+    groups: ["concurrency", "synchronization"]
+  },
+  {
+    railNumber: 22,
+    suiteId: "nexus-genesis-rail-22-recovery",
+    suiteName: "Nexus Genesis Rail 22 Recovery QA",
+    wrapper: "scripts/nexus-genesis-rail-22-recovery-qa.js",
+    alias: "qa:nexus-genesis-rail-22-recovery",
+    groups: ["recovery", "fallback"]
+  },
+  {
+    railNumber: 23,
+    suiteId: "nexus-genesis-rail-23-companion-emotional-safety",
+    suiteName: "Nexus Genesis Rail 23 Companion Emotional Safety QA",
+    wrapper: "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+    alias: "qa:nexus-genesis-rail-23-companion-emotional-safety",
+    groups: ["companionEmotionalSafety", "companion"]
+  },
+  {
+    railNumber: 24,
+    suiteId: "nexus-genesis-rail-24-physical-browser-voice-proof",
+    suiteName: "Nexus Genesis Rail 24 Physical Browser Voice Proof QA",
+    wrapper: "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+    alias: "qa:nexus-genesis-rail-24-physical-browser-voice-proof",
+    groups: ["physicalVoiceProof", "synthesis", "fallback"]
+  },
+  {
+    railNumber: 25,
+    suiteId: "nexus-genesis-rail-25-end-to-end-standard-user-acceptance",
+    suiteName: "Nexus Genesis Rail 25 End-to-End Standard User Acceptance QA",
+    wrapper: "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+    alias: "qa:nexus-genesis-rail-25-end-to-end-standard-user-acceptance",
+    groups: [
+      "registration",
+      "acceptance",
+      "understanding",
+      "context",
+      "memory",
+      "planning",
+      "capabilityReadiness",
+      "consent",
+      "execution",
+      "receipts",
+      "privacy",
+      "safety",
+      "accessibility",
+      "multilingual",
+      "concurrency",
+      "recovery",
+      "companionEmotionalSafety",
+      "physicalVoiceProof",
+      "endToEndAcceptance"
+    ]
   }
 ]);
 
@@ -98,7 +254,24 @@ const APPROVED_GROUPS = new Set([
   "fallback",
   "companion",
   "registration",
-  "acceptance"
+  "acceptance",
+  "understanding",
+  "context",
+  "memory",
+  "planning",
+  "capabilityReadiness",
+  "consent",
+  "execution",
+  "receipts",
+  "privacy",
+  "safety",
+  "accessibility",
+  "multilingual",
+  "concurrency",
+  "recovery",
+  "companionEmotionalSafety",
+  "physicalVoiceProof",
+  "endToEndAcceptance"
 ]);
 
 function readSource(repositoryRoot, relativePath) {
@@ -352,11 +525,21 @@ function assertCompanion(context, label) {
 }
 
 function assertRegistration(context, label) {
+  const railNumbers = new Set();
+  const suiteIds = new Set();
+  const aliases = new Set();
   TRUST_CHAIN_RAILS.forEach(rail => {
+    assert(!railNumbers.has(rail.railNumber), `${label}: duplicate rail number ${rail.railNumber}.`);
+    assert(!suiteIds.has(rail.suiteId), `${label}: duplicate rail id ${rail.suiteId}.`);
+    assert(!aliases.has(rail.alias), `${label}: duplicate rail alias ${rail.alias}.`);
+    railNumbers.add(rail.railNumber);
+    suiteIds.add(rail.suiteId);
+    aliases.add(rail.alias);
     const wrapperSource = readSource(context.repositoryRoot, rail.wrapper);
     assert(wrapperSource.includes("runTrustChainQa"), `${label}: ${rail.wrapper} must invoke shared runTrustChainQa.`);
     assert(wrapperSource.includes(`railNumber: ${rail.railNumber}`), `${label}: ${rail.wrapper} must identify rail ${rail.railNumber}.`);
     assert(wrapperSource.includes(`suiteId: "${rail.suiteId}"`), `${label}: ${rail.wrapper} must identify suite id ${rail.suiteId}.`);
+    assert(wrapperSource.includes("acceptancePurpose:"), `${label}: ${rail.wrapper} must declare acceptancePurpose.`);
     rail.groups.forEach(group => {
       assert(wrapperSource.includes(`"${group}"`), `${label}: ${rail.wrapper} must select group ${group}.`);
     });
@@ -369,7 +552,12 @@ function assertRegistration(context, label) {
       `${label}: package alias ${rail.alias} must point to ${rail.wrapper}`
     );
   });
-  assert(context.qaSuite.includes("scripts/nexus-genesis-trust-chain-acceptance-qa.js"), `${label}: safe suite wiring must include final acceptance wrapper.`);
+  const finalRail = TRUST_CHAIN_RAILS.find(rail => rail.railNumber === 25);
+  assert(finalRail && finalRail.groups.includes("endToEndAcceptance"), `${label}: final acceptance rail must validate end-to-end acceptance.`);
+  for (let railNumber = 1; railNumber <= 25; railNumber += 1) {
+    assert(railNumbers.has(railNumber), `${label}: missing rail number ${railNumber}.`);
+  }
+  assert(context.qaSuite.includes("scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"), `${label}: safe suite wiring must include final acceptance wrapper.`);
 }
 
 function assertAcceptance(context, label) {
@@ -379,6 +567,277 @@ function assertAcceptance(context, label) {
   assert(appVersion && appVersion === swVersion && swVersion === serverVersion, `${label}: app, SW, and server build versions must align.`);
   assert(context.index.includes(`/app.js?v=${appVersion}`), `${label}: index must load current app build.`);
   assert(context.index.includes(`/styles.css?v=${appVersion}`), `${label}: index must load current stylesheet build.`);
+}
+
+function assertFullRailContract(context, label, contractName, tokens) {
+  assertIncludes(context.app, [
+    "NEXUS_GENESIS_FULL_RAIL_CONTRACT",
+    "nexus-genesis-full-rail-contract.v1",
+    "window.NEXUS_GENESIS_FULL_RAIL_CONTRACT"
+  ], label, "full Genesis rail runtime contract");
+  assertIncludes(context.app, tokens, label, contractName);
+}
+
+function assertUnderstanding(context, label) {
+  assertFullRailContract(context, label, "understanding integrity", [
+    "preservesUserWording",
+    "distinguishesCommandsQuestionsConversationAndHighRiskActions",
+    "ambiguityRequiresClarification",
+    "noSilentIntentSubstitution",
+    "noExecutionFromGuessedIntent",
+    "multiIntentDecompositionRequired",
+    "clarify_before_action",
+    "seniorFriendlyClarification"
+  ]);
+}
+
+function assertContext(context, label) {
+  assertFullRailContract(context, label, "context continuity", [
+    "conversationOwnershipRequired",
+    "missionIsolationRequired",
+    "pronounResolutionRequiresActiveMission",
+    "staleContextRejected",
+    "continueChangeCancelStartOverSupported",
+    "newTopicCreatesSeparateMission",
+    "sessionRestorationTruthful"
+  ]);
+}
+
+function assertMemory(context, label) {
+  assertFullRailContract(context, label, "memory truth lifecycle", [
+    "currentTurnContextDisclosed",
+    "persistentMemoryRequiresConsent",
+    "preferenceMemoryInspectable",
+    "correctionDeletionArchivalSupported",
+    "deceasedPatientClosureSupported",
+    "closedBusinessRemovalSupported",
+    "noMemoryClaimWhenPersistenceFails",
+    "storageScopeMustBeExplained"
+  ]);
+}
+
+function assertPlanning(context, label) {
+  assertFullRailContract(context, label, "planning decomposition", [
+    "decomposesGoals",
+    "detectsMissingInformation",
+    "tracksDependenciesAndBlockedSteps",
+    "revisesPlanOnUserChange",
+    "cancellationSupported",
+    "completionCriteriaRequired",
+    "planIsNotExecution"
+  ]);
+}
+
+function assertCapabilityReadiness(context, label) {
+  assertFullRailContract(context, label, "capability readiness", [
+    "adapterDiscoveryRequired",
+    "missingEnvNamesOnly",
+    "noSecretExposure",
+    "onlineOfflineStatusSeparated",
+    "localFallbackNamed",
+    "unsupportedActionsBlocked",
+    "noFakeProviderReadiness",
+    "providerSuccessRequiresEvidence"
+  ]);
+}
+
+function assertConsent(context, label) {
+  assertFullRailContract(context, label, "consent confirmation", [
+    "exactActionDetailsRequired",
+    "changedActionInvalidatesConfirmation",
+    "confirmationExpiryRequired",
+    "recipientPaymentMedicalDeletionDroneJobMessageRequireConfirmation",
+    "cancellationPathRequired"
+  ]);
+}
+
+function assertExecution(context, label) {
+  assertFullRailContract(context, label, "execution integrity", [
+    "exactPayloadRequired",
+    "permissionChecksRequired",
+    "duplicateSubmissionPrevented",
+    "idempotencyRequiredWhereApplicable",
+    "timeoutAndFailureNormalized",
+    "noExecutionFromPreview",
+    "noExecutionFromAssistantTextAlone",
+    "noFakeSuccess"
+  ]);
+}
+
+function assertReceipts(context, label) {
+  assertFullRailContract(context, label, "outcome receipts", [
+    "providerResponseVerificationRequired",
+    "successEvidenceRequired",
+    "failureEvidenceRequired",
+    "transactionIdentifiersRequiredWhenAvailable",
+    "timestampRequired",
+    "receiptOwnershipRequired",
+    "noInventedReceipt",
+    "noReceiptBeforeOutcome",
+    "staleReceiptCorrectionRequired"
+  ]);
+}
+
+function assertPrivacy(context, label) {
+  assertFullRailContract(context, label, "privacy isolation", [
+    "userDataIsolationRequired",
+    "sessionIsolationRequired",
+    "recordOwnershipRequired",
+    "adminBoundaryRequired",
+    "providerDataBoundaryRequired",
+    "noCrossUserLeakage",
+    "redactionRequired",
+    "safeLoggingRequired",
+    "accessDenialRequired"
+  ]);
+}
+
+function assertSafety(context, label) {
+  assertFullRailContract(context, label, "safety escalation", [
+    "emergencyEscalationRequired",
+    "noDiagnosis",
+    "noUnauthorizedFinancialAction",
+    "noUnconfirmedDroneOperation",
+    "noUnauthorizedEmploymentSubmission",
+    "noUnsafeAgriculturalChemicalDirection",
+    "noFabricatedShipmentLocation",
+    "noProviderControlBypass",
+    "respectfulUsefulRefusal"
+  ]);
+}
+
+function assertAccessibility(context, label) {
+  assertFullRailContract(context, label, "accessibility inclusive interaction", [
+    "keyboardAccessRequired",
+    "focusOrderRequired",
+    "accessibleNamesRequired",
+    "screenReaderAnnouncementsRequired",
+    "reducedMotionSupported",
+    "contrastAndZoomSupported",
+    "touchTargetsSupported",
+    "lowBandwidthSupported",
+    "typedFallbackRequired",
+    "voiceFreeCompletionRequired",
+    "seniorFriendlyLanguage"
+  ]);
+}
+
+function assertMultilingual(context, label) {
+  assertFullRailContract(context, label, "multilingual integrity", [
+    "supportedAcceptanceLanguages",
+    '"en"',
+    '"es"',
+    '"fr"',
+    '"sw"',
+    "explicitLanguageSwitchingRequired",
+    "transcriptLanguageTracked",
+    "responseLanguageTracked",
+    "synthesisLocaleGuarded",
+    "fallbackLanguageTruthful",
+    "highRiskConfirmationInActiveLanguage",
+    "noFalseVoiceAvailabilityClaim"
+  ]);
+}
+
+function assertConcurrency(context, label) {
+  assertFullRailContract(context, label, "concurrency control", [
+    "userInterruptionStopsSpeech",
+    "newMissionRequiresStateSeparation",
+    "staleCallbacksIgnored",
+    "duplicateBrowserEventsDebounced",
+    "duplicateSubmissionsPrevented",
+    "cancellationRacesDoNotCompleteMissions",
+    "backgroundTabRecoveryRequired",
+    "stateLocksReleaseOnFailure"
+  ]);
+}
+
+function assertRecovery(context, label) {
+  assertFullRailContract(context, label, "offline degraded recovery", [
+    "offlineStartupSupported",
+    "lostNetworkTruthful",
+    "providerTimeoutTruthful",
+    "staleCacheDetected",
+    "malformedResponseHandled",
+    "microphoneUnavailableTypedFallback",
+    "synthesisUnavailableTypedFallback",
+    "locationDeniedNoSilentFailure",
+    "databaseUnavailableNoFalseOnlineState",
+    "retryPathVisible"
+  ]);
+}
+
+function assertCompanionEmotionalSafety(context, label) {
+  assertFullRailContract(context, label, "companion emotional safety", [
+    "naturalGreeting",
+    "useNameOnlyWhenKnown",
+    "calmSupport",
+    "noAbandonmentLanguage",
+    "noDependencyLanguage",
+    "noConsciousnessClaim",
+    "noManipulativeAttachment",
+    "noFalseHeardOrSpokeClaim",
+    "dignifiedSeniorSupport",
+    "usefulNextStepAfterBoundary"
+  ]);
+  assertExcludes(context.app, [
+    "I am conscious",
+    "I need you",
+    "Do not leave me",
+    "I am your real human companion"
+  ], label, "forbidden emotional dependency claims");
+}
+
+function assertPhysicalVoiceProof(context, label) {
+  assertFullRailContract(context, label, "physical browser voice proof", [
+    "sourceWiringVerified",
+    "browserEventsVerified",
+    "audibleOutputRequiresHumanConfirmation",
+    "microphonePermissionMustBeRecorded",
+    "recognitionStartMustBeRecorded",
+    "transcriptMustBeRecorded",
+    "synthesisVoiceAvailabilityMustBeRecorded",
+    "playbackStartEventMustBeRecorded",
+    "stopRepeatMuteUnmuteSpeedInterruptionTestedWhenAvailable",
+    "typedRecoveryRequired",
+    "orbSynchronizationRequired"
+  ]);
+  assertIncludes(context.app, [
+    "browserVoiceRuntimeProfile",
+    "showNexusVoiceFallbackMessage",
+    "handleNexusPrimaryVoiceButtonClick"
+  ], label, "physical voice browser acceptance wiring");
+  const acceptanceDoc = readSource(context.repositoryRoot, "docs/NEXUS_GENESIS_BROWSER_VOICE_ACCEPTANCE.md");
+  assertIncludes(acceptanceDoc, [
+    "source wiring",
+    "browser events",
+    "actual audible output",
+    "Actual audible output confirmed: No",
+    "Do not claim audible speech was heard from this browser."
+  ], label, "physical voice proof truthfulness");
+}
+
+function assertEndToEndAcceptance(context, label) {
+  assertFullRailContract(context, label, "end-to-end Standard User acceptance", [
+    "validatesRails",
+    "1-25",
+    "standardUserJourneyRequired",
+    "providerReadinessVisible",
+    "executionOrTruthfulBlockingRequired",
+    "verifiedOutcomeBeforeReceipt",
+    "memoryUpdateTruthful",
+    "cancelCloseRecoverRequired",
+    "noUnrelatedMissionMixing"
+  ]);
+  const finalRail = TRUST_CHAIN_RAILS.find(rail => rail.railNumber === 25);
+  assert(finalRail, `${label}: final acceptance rail must exist.`);
+  APPROVED_GROUPS.forEach(group => {
+    if (group !== "endToEndAcceptance") return;
+    assert(finalRail.groups.includes(group), `${label}: final acceptance rail must include ${group}.`);
+  });
+  TRUST_CHAIN_RAILS.forEach(rail => {
+    assert(context.qaSuite.includes(rail.wrapper.replaceAll("\\", "/")), `${label}: qa-suite must register ${rail.wrapper}.`);
+  });
 }
 
 const GROUP_ASSERTIONS = Object.freeze({
@@ -393,7 +852,24 @@ const GROUP_ASSERTIONS = Object.freeze({
   fallback: assertFallback,
   companion: assertCompanion,
   registration: assertRegistration,
-  acceptance: assertAcceptance
+  acceptance: assertAcceptance,
+  understanding: assertUnderstanding,
+  context: assertContext,
+  memory: assertMemory,
+  planning: assertPlanning,
+  capabilityReadiness: assertCapabilityReadiness,
+  consent: assertConsent,
+  execution: assertExecution,
+  receipts: assertReceipts,
+  privacy: assertPrivacy,
+  safety: assertSafety,
+  accessibility: assertAccessibility,
+  multilingual: assertMultilingual,
+  concurrency: assertConcurrency,
+  recovery: assertRecovery,
+  companionEmotionalSafety: assertCompanionEmotionalSafety,
+  physicalVoiceProof: assertPhysicalVoiceProof,
+  endToEndAcceptance: assertEndToEndAcceptance
 });
 
 function runTrustChainQa(options = {}) {

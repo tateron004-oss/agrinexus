@@ -4,11 +4,11 @@ const { runTrustChainQa } = require("./lib/nexus-genesis-trust-chain-shared-qa")
 
 try {
   const result = runTrustChainQa({
-    railNumber: 1,
-    suiteId: "nexus-trust-chain-trace",
-    suiteName: "Nexus Genesis Trust Chain Rail 1 QA",
-    acceptancePurpose: "Protect input ownership, final transcript traceability, and synchronized trust-chain state.",
-    groups: ["ownership", "transcript", "synchronization"]
+    railNumber: 11,
+    suiteId: "nexus-genesis-rail-11-memory",
+    suiteName: "Nexus Genesis Rail 11 Memory QA",
+    acceptancePurpose: "Protect truthful session, preference, mission, persistent memory, correction, deletion, and closure lifecycle.",
+    groups: ["memory", "privacy"]
   });
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {

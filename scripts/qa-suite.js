@@ -4,6 +4,35 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 
+const GENESIS_RAIL_SCRIPTS = [
+  "scripts/nexus-trust-chain-trace-qa.js",
+  "scripts/nexus-conversation-acknowledgement-qa.js",
+  "scripts/nexus-audible-response-qa.js",
+  "scripts/nexus-orb-deterministic-activation-qa.js",
+  "scripts/nexus-conversation-first-routing-qa.js",
+  "scripts/nexus-admin-preview-isolation-qa.js",
+  "scripts/nexus-first-response-synchronization-qa.js",
+  "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+  "scripts/nexus-genesis-browser-voice-acceptance-qa.js",
+  "scripts/nexus-genesis-rail-09-understanding-qa.js",
+  "scripts/nexus-genesis-rail-10-context-qa.js",
+  "scripts/nexus-genesis-rail-11-memory-qa.js",
+  "scripts/nexus-genesis-rail-12-planning-qa.js",
+  "scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
+  "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+  "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+  "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
+  "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+  "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+  "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+  "scripts/nexus-genesis-rail-20-multilingual-qa.js",
+  "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+  "scripts/nexus-genesis-rail-22-recovery-qa.js",
+  "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+  "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+  "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
+];
+
 const suites = {
   provider: [
     "scripts/call-provider-registry-qa.js",
@@ -39,6 +68,23 @@ const suites = {
     "scripts/nexus-first-response-synchronization-qa.js",
     "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
     "scripts/nexus-genesis-browser-voice-acceptance-qa.js",
+    "scripts/nexus-genesis-rail-09-understanding-qa.js",
+    "scripts/nexus-genesis-rail-10-context-qa.js",
+    "scripts/nexus-genesis-rail-11-memory-qa.js",
+    "scripts/nexus-genesis-rail-12-planning-qa.js",
+    "scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
+    "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+    "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+    "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
+    "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+    "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+    "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+    "scripts/nexus-genesis-rail-20-multilingual-qa.js",
+    "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+    "scripts/nexus-genesis-rail-22-recovery-qa.js",
+    "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+    "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
     "scripts/voice-browser-policy-regression.js",
     "scripts/realtime-voice-provider-qa.js",
     "scripts/voice-phase1-alignment-qa.js",
@@ -59,6 +105,59 @@ const suites = {
     "scripts/companion-route-mismatch-smoke.js",
     "scripts/companion-confirmation-gate-smoke.js",
     "scripts/companion-response-quality-smoke.js"
+  ],
+  "genesis-rails-core": [
+    "scripts/nexus-genesis-rail-09-understanding-qa.js",
+    "scripts/nexus-genesis-rail-10-context-qa.js",
+    "scripts/nexus-genesis-rail-11-memory-qa.js",
+    "scripts/nexus-genesis-rail-12-planning-qa.js",
+    "scripts/nexus-genesis-rail-13-capability-readiness-qa.js"
+  ],
+  "genesis-rails-action": [
+    "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+    "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+    "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js"
+  ],
+  "genesis-rails-safety": [
+    "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+    "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+    "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+    "scripts/nexus-genesis-rail-20-multilingual-qa.js"
+  ],
+  "genesis-rails-companion": [
+    "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+    "scripts/nexus-genesis-rail-22-recovery-qa.js",
+    "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+    "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
+  ],
+  "genesis-rails-all": [
+    "scripts/nexus-trust-chain-trace-qa.js",
+    "scripts/nexus-conversation-acknowledgement-qa.js",
+    "scripts/nexus-audible-response-qa.js",
+    "scripts/nexus-orb-deterministic-activation-qa.js",
+    "scripts/nexus-conversation-first-routing-qa.js",
+    "scripts/nexus-admin-preview-isolation-qa.js",
+    "scripts/nexus-first-response-synchronization-qa.js",
+    "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+    "scripts/nexus-genesis-browser-voice-acceptance-qa.js",
+    "scripts/nexus-genesis-rail-09-understanding-qa.js",
+    "scripts/nexus-genesis-rail-10-context-qa.js",
+    "scripts/nexus-genesis-rail-11-memory-qa.js",
+    "scripts/nexus-genesis-rail-12-planning-qa.js",
+    "scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
+    "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+    "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+    "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
+    "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+    "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+    "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+    "scripts/nexus-genesis-rail-20-multilingual-qa.js",
+    "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+    "scripts/nexus-genesis-rail-22-recovery-qa.js",
+    "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+    "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
   ],
   app: [
     "scripts/app-behavior-audit.js",
@@ -105,6 +204,7 @@ const suites = {
     "scripts/nexus-pilot-platform-foundation-qa.js",
     "scripts/nexus-pilot-browser-readiness-qa.js",
     "scripts/nexus-production-platform-rails-qa.js",
+    ...GENESIS_RAIL_SCRIPTS,
     "scripts/nexus-live-knowledge-retrieval-qa.js",
     "scripts/nexus-live-knowledge-all-modes-qa.js",
     "scripts/nexus-global-live-knowledge-qa.js",

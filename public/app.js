@@ -849,6 +849,228 @@ const NEXUS_GENESIS_TRUST_CHAIN_CONTRACT = Object.freeze({
   speechRequiresStartEvent: true,
   noWorkflowFromOrbActivation: true
 });
+const NEXUS_GENESIS_FULL_RAIL_CONTRACT = Object.freeze({
+  schemaVersion: "nexus-genesis-full-rail-contract.v1",
+  runtimeOwner: "NexusGenesisTrustChainRuntime",
+  finalAcceptanceRail: "nexus-genesis-rail-25-end-to-end-standard-user-acceptance",
+  chain: [
+    "user_presence",
+    "input_ownership",
+    "listening_or_typed_intake",
+    "transcript",
+    "acknowledgement",
+    "understanding",
+    "context_retrieval",
+    "planning",
+    "capability_routing",
+    "consent",
+    "execution_or_truthful_blocking",
+    "outcome_verification",
+    "receipt",
+    "memory_update",
+    "spoken_or_visible_response",
+    "companion_continuity",
+    "recovery"
+  ],
+  rails: [
+    { number: 9, id: "nexus-genesis-rail-09-understanding", name: "Understanding and intent integrity" },
+    { number: 10, id: "nexus-genesis-rail-10-context", name: "Context and conversation continuity" },
+    { number: 11, id: "nexus-genesis-rail-11-memory", name: "Memory truth and lifecycle" },
+    { number: 12, id: "nexus-genesis-rail-12-planning", name: "Planning and mission decomposition" },
+    { number: 13, id: "nexus-genesis-rail-13-capability-readiness", name: "Capability and provider readiness" },
+    { number: 14, id: "nexus-genesis-rail-14-consent-confirmation", name: "Consent and confirmation" },
+    { number: 15, id: "nexus-genesis-rail-15-execution-integrity", name: "Execution integrity" },
+    { number: 16, id: "nexus-genesis-rail-16-outcome-receipts", name: "Outcome verification and receipts" },
+    { number: 17, id: "nexus-genesis-rail-17-privacy-isolation", name: "Privacy and user isolation" },
+    { number: 18, id: "nexus-genesis-rail-18-safety-escalation", name: "Safety and high-risk escalation" },
+    { number: 19, id: "nexus-genesis-rail-19-accessibility", name: "Accessibility and inclusive interaction" },
+    { number: 20, id: "nexus-genesis-rail-20-multilingual", name: "Multilingual integrity" },
+    { number: 21, id: "nexus-genesis-rail-21-concurrency", name: "Interruption, concurrency, and race-condition control" },
+    { number: 22, id: "nexus-genesis-rail-22-recovery", name: "Offline, degraded, and recovery behavior" },
+    { number: 23, id: "nexus-genesis-rail-23-companion-emotional-safety", name: "Companion continuity and emotional safety" },
+    { number: 24, id: "nexus-genesis-rail-24-physical-browser-voice-proof", name: "Physical browser voice proof" },
+    { number: 25, id: "nexus-genesis-rail-25-end-to-end-standard-user-acceptance", name: "End-to-end Standard User acceptance" }
+  ],
+  understanding: Object.freeze({
+    preservesUserWording: true,
+    distinguishesCommandsQuestionsConversationAndHighRiskActions: true,
+    ambiguityRequiresClarification: true,
+    noSilentIntentSubstitution: true,
+    noExecutionFromGuessedIntent: true,
+    multiIntentDecompositionRequired: true,
+    uncertaintyState: "clarify_before_action",
+    seniorFriendlyClarification: true
+  }),
+  context: Object.freeze({
+    conversationOwnershipRequired: true,
+    missionIsolationRequired: true,
+    pronounResolutionRequiresActiveMission: true,
+    staleContextRejected: true,
+    continueChangeCancelStartOverSupported: true,
+    newTopicCreatesSeparateMission: true,
+    sessionRestorationTruthful: true
+  }),
+  memory: Object.freeze({
+    currentTurnContextDisclosed: true,
+    persistentMemoryRequiresConsent: true,
+    preferenceMemoryInspectable: true,
+    correctionDeletionArchivalSupported: true,
+    deceasedPatientClosureSupported: true,
+    closedBusinessRemovalSupported: true,
+    noMemoryClaimWhenPersistenceFails: true,
+    storageScopeMustBeExplained: true
+  }),
+  planning: Object.freeze({
+    decomposesGoals: true,
+    detectsMissingInformation: true,
+    tracksDependenciesAndBlockedSteps: true,
+    revisesPlanOnUserChange: true,
+    cancellationSupported: true,
+    completionCriteriaRequired: true,
+    planIsNotExecution: true
+  }),
+  capabilityReadiness: Object.freeze({
+    adapterDiscoveryRequired: true,
+    missingEnvNamesOnly: true,
+    noSecretExposure: true,
+    onlineOfflineStatusSeparated: true,
+    localFallbackNamed: true,
+    unsupportedActionsBlocked: true,
+    noFakeProviderReadiness: true,
+    providerSuccessRequiresEvidence: true
+  }),
+  consent: Object.freeze({
+    exactActionDetailsRequired: true,
+    changedActionInvalidatesConfirmation: true,
+    confirmationExpiryRequired: true,
+    recipientPaymentMedicalDeletionDroneJobMessageRequireConfirmation: true,
+    cancellationPathRequired: true
+  }),
+  execution: Object.freeze({
+    exactPayloadRequired: true,
+    permissionChecksRequired: true,
+    duplicateSubmissionPrevented: true,
+    idempotencyRequiredWhereApplicable: true,
+    timeoutAndFailureNormalized: true,
+    noExecutionFromPreview: true,
+    noExecutionFromAssistantTextAlone: true,
+    noFakeSuccess: true
+  }),
+  receipts: Object.freeze({
+    providerResponseVerificationRequired: true,
+    successEvidenceRequired: true,
+    failureEvidenceRequired: true,
+    transactionIdentifiersRequiredWhenAvailable: true,
+    timestampRequired: true,
+    receiptOwnershipRequired: true,
+    noInventedReceipt: true,
+    noReceiptBeforeOutcome: true,
+    staleReceiptCorrectionRequired: true
+  }),
+  privacy: Object.freeze({
+    userDataIsolationRequired: true,
+    sessionIsolationRequired: true,
+    recordOwnershipRequired: true,
+    adminBoundaryRequired: true,
+    providerDataBoundaryRequired: true,
+    noCrossUserLeakage: true,
+    redactionRequired: true,
+    safeLoggingRequired: true,
+    accessDenialRequired: true
+  }),
+  safety: Object.freeze({
+    emergencyEscalationRequired: true,
+    noDiagnosis: true,
+    noUnauthorizedFinancialAction: true,
+    noUnconfirmedDroneOperation: true,
+    noUnauthorizedEmploymentSubmission: true,
+    noUnsafeAgriculturalChemicalDirection: true,
+    noFabricatedShipmentLocation: true,
+    noProviderControlBypass: true,
+    respectfulUsefulRefusal: true
+  }),
+  accessibility: Object.freeze({
+    keyboardAccessRequired: true,
+    focusOrderRequired: true,
+    accessibleNamesRequired: true,
+    screenReaderAnnouncementsRequired: true,
+    reducedMotionSupported: true,
+    contrastAndZoomSupported: true,
+    touchTargetsSupported: true,
+    lowBandwidthSupported: true,
+    typedFallbackRequired: true,
+    voiceFreeCompletionRequired: true,
+    seniorFriendlyLanguage: true
+  }),
+  multilingual: Object.freeze({
+    supportedAcceptanceLanguages: ["en", "es", "fr", "sw"],
+    explicitLanguageSwitchingRequired: true,
+    transcriptLanguageTracked: true,
+    responseLanguageTracked: true,
+    synthesisLocaleGuarded: true,
+    fallbackLanguageTruthful: true,
+    highRiskConfirmationInActiveLanguage: true,
+    noFalseVoiceAvailabilityClaim: true
+  }),
+  concurrency: Object.freeze({
+    userInterruptionStopsSpeech: true,
+    newMissionRequiresStateSeparation: true,
+    staleCallbacksIgnored: true,
+    duplicateBrowserEventsDebounced: true,
+    duplicateSubmissionsPrevented: true,
+    cancellationRacesDoNotCompleteMissions: true,
+    backgroundTabRecoveryRequired: true,
+    stateLocksReleaseOnFailure: true
+  }),
+  recovery: Object.freeze({
+    offlineStartupSupported: true,
+    lostNetworkTruthful: true,
+    providerTimeoutTruthful: true,
+    staleCacheDetected: true,
+    malformedResponseHandled: true,
+    microphoneUnavailableTypedFallback: true,
+    synthesisUnavailableTypedFallback: true,
+    locationDeniedNoSilentFailure: true,
+    databaseUnavailableNoFalseOnlineState: true,
+    retryPathVisible: true
+  }),
+  companionEmotionalSafety: Object.freeze({
+    naturalGreeting: true,
+    useNameOnlyWhenKnown: true,
+    calmSupport: true,
+    noAbandonmentLanguage: true,
+    noDependencyLanguage: true,
+    noConsciousnessClaim: true,
+    noManipulativeAttachment: true,
+    noFalseHeardOrSpokeClaim: true,
+    dignifiedSeniorSupport: true,
+    usefulNextStepAfterBoundary: true
+  }),
+  physicalVoiceProof: Object.freeze({
+    sourceWiringVerified: true,
+    browserEventsVerified: true,
+    audibleOutputRequiresHumanConfirmation: true,
+    microphonePermissionMustBeRecorded: true,
+    recognitionStartMustBeRecorded: true,
+    transcriptMustBeRecorded: true,
+    synthesisVoiceAvailabilityMustBeRecorded: true,
+    playbackStartEventMustBeRecorded: true,
+    stopRepeatMuteUnmuteSpeedInterruptionTestedWhenAvailable: true,
+    typedRecoveryRequired: true,
+    orbSynchronizationRequired: true
+  }),
+  endToEndAcceptance: Object.freeze({
+    validatesRails: "1-25",
+    standardUserJourneyRequired: true,
+    providerReadinessVisible: true,
+    executionOrTruthfulBlockingRequired: true,
+    verifiedOutcomeBeforeReceipt: true,
+    memoryUpdateTruthful: true,
+    cancelCloseRecoverRequired: true,
+    noUnrelatedMissionMixing: true
+  })
+});
+window.NEXUS_GENESIS_FULL_RAIL_CONTRACT = NEXUS_GENESIS_FULL_RAIL_CONTRACT;
 let nexusGenesisTrustChainState = {
   schemaVersion: NEXUS_GENESIS_TRUST_CHAIN_CONTRACT.schemaVersion,
   runtimeOwner: NEXUS_GENESIS_TRUST_CHAIN_CONTRACT.runtimeOwner,
@@ -984,7 +1206,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-423";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-424";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;

@@ -7,6 +7,7 @@ try {
     railNumber: 3,
     suiteId: "nexus-audible-response",
     suiteName: "Nexus Genesis Trust Chain Rail 3 QA",
+    acceptancePurpose: "Protect browser speech synthesis lifecycle evidence and honest spoken fallback behavior.",
     groups: ["synthesis", "fallback", "synchronization"]
   });
   console.log(JSON.stringify(result, null, 2));

@@ -7,6 +7,7 @@ try {
     railNumber: 6,
     suiteId: "nexus-admin-preview-isolation",
     suiteName: "Nexus Genesis Trust Chain Rail 6 QA",
+    acceptancePurpose: "Protect Standard User isolation from admin previews, diagnostics, and privileged surfaces.",
     groups: ["adminIsolation", "ownership", "fallback"]
   });
   console.log(JSON.stringify(result, null, 2));

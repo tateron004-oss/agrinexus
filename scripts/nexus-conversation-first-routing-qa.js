@@ -7,6 +7,7 @@ try {
     railNumber: 5,
     suiteId: "nexus-conversation-first-routing",
     suiteName: "Nexus Genesis Trust Chain Rail 5 QA",
+    acceptancePurpose: "Protect conversation-first routing before workflow launch or preview rendering.",
     groups: ["routing", "acknowledgement", "companion"]
   });
   console.log(JSON.stringify(result, null, 2));

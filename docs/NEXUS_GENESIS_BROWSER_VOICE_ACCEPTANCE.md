@@ -8,7 +8,7 @@
 - Browser used: Codex In-app Browser
 - Operating system: Windows, local Codex desktop workspace
 - Standard User path: role selector `User`, `Start as User`, activation through the Genesis orb
-- App bundle loaded for final browser pass: `/app.js?v=nexus-behavior-423`
+- App bundle loaded for final browser pass: `/app.js?v=nexus-behavior-424`
 
 ## Browser Voice Capability Detection
 
@@ -33,10 +33,11 @@
 
 - Recognition result: not available in this browser, so no real speech transcript was captured.
 - Synthesis event result: not available in this browser, so no browser `speechSynthesis` `start` event was observed.
+- Actual audible output confirmed: No.
 - Actual audible output: not confirmed. This environment did not expose speech synthesis, and no sound was heard or objectively confirmed.
 - Outcome class: speech synthesis unavailable or blocked in this browser environment.
 
-This record treats source wiring, `speak()` requests, screenshots, and deterministic QA as not proof that audio was heard. A future pass in a browser that exposes `speechSynthesis` may record `Browser synthesis event confirmed but audio could not be heard` or `Audible output confirmed` only if the evidence supports it.
+This record treats source wiring, browser events, `speak()` requests, screenshots, and deterministic QA as not proof that audio was heard. The actual audible output claim requires human confirmation from speakers or headphones. A future pass in a browser that exposes `speechSynthesis` may record `Browser synthesis event confirmed but audio could not be heard` or `Audible output confirmed` only if the evidence supports it.
 
 ## Controls and Fallbacks
 
@@ -57,5 +58,6 @@ This record treats source wiring, `speak()` requests, screenshots, and determini
 ## Remaining Environmental Limitations
 
 - The Codex In-app Browser used for this pass did not expose native speech recognition or speech synthesis APIs.
+- Do not claim audible speech was heard from this browser.
 - Microphone recognition, synthesis start/end events, and human-audible playback must be re-tested in a desktop browser that exposes those APIs, such as Chrome or Edge with microphone permission and audio output enabled.
 - This limitation does not block typed companion operation or safe Standard User fallback behavior.

@@ -7,6 +7,7 @@ try {
     railNumber: 8,
     suiteId: "nexus-genesis-trust-chain-acceptance",
     suiteName: "Nexus Genesis Trust Chain Rail 8 Acceptance QA",
+    acceptancePurpose: "Protect complete registration and acceptance coverage for the original Genesis rails.",
     groups: [
       "ownership",
       "transcript",
