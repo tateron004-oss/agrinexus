@@ -76,9 +76,9 @@ assert.ok(fs.existsSync(registryPath), "Static Nexus Tool Registry artifact must
 const registry = JSON.parse(readText(registryPath));
 
 assert.ok(registry.schemaVersion, "Registry must declare schemaVersion");
-assert.strictEqual(registry.productName, "Nexus Workforce AI", "Registry productName must match Nexus Workforce AI");
+assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "Registry productName must match Nexus Genesis | AgriNexus");
 assert.strictEqual(registry.assistantName, "Nexus", "Registry assistantName must be Nexus");
-assert.strictEqual(registry.edition, "workforce", "Registry edition must be workforce");
+assert.strictEqual(registry.edition, "workforce", "Registry edition must be genesis");
 assert.strictEqual(registry.legacyProductName, "AgriNexus", "Registry must preserve AgriNexus legacy compatibility");
 assert.match(registry.runtimeStatus || "", /static|spec/i, "Registry runtimeStatus must clearly be static/spec-only");
 assert.strictEqual(registry.generatedFrom, "docs/NEXUS_TOOL_REGISTRY_SPEC.md", "Registry must cite the Phase 7A spec");

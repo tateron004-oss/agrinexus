@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "productName": "Nexus Workforce AI",
+  "productName": "Nexus Genesis | AgriNexus",
   "assistantName": "Nexus",
-  "edition": "workforce",
+  "edition": "genesis",
   "legacyProductName": "AgriNexus",
   "runtimeStatus": "static-spec-only",
   "generatedFrom": "docs/NEXUS_TOOL_REGISTRY_SPEC.md",
@@ -701,7 +701,7 @@
       "displayName": "Agriculture and farmer help",
       "domain": "agriculture",
       "category": "answer",
-      "description": "Answers farmer, crop, and agriculture support questions as a retained Nexus Workforce AI domain.",
+      "description": "Answers farmer, crop, and agriculture support questions as a retained Nexus Genesis | AgriNexus domain.",
       "exampleAliases": [
         "what can you do for a farmer",
         "help with crops",

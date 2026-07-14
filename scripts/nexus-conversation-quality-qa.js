@@ -151,13 +151,13 @@ const checks = [
     prompt: "Are you AgriNexus?",
     intent: "conversation.platform_explained",
     section: "agent",
-    includes: ["Nexus is the assistant inside Nexus Workforce AI", "legacy/internal compatibility identity"]
+    includes: ["Nexus is the assistant inside Nexus Genesis | AgriNexus", "legacy/internal compatibility identity"]
   },
   {
-    prompt: "What is Nexus Workforce AI?",
+    prompt: "What is Nexus Genesis | AgriNexus?",
     intent: "conversation.platform_explained",
     section: "agent",
-    includes: ["Nexus is the assistant inside Nexus Workforce AI", "AgriTrade remain active"]
+    includes: ["Nexus is the assistant inside Nexus Genesis | AgriNexus", "AgriTrade remain active"]
   }
 ];
 

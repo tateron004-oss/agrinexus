@@ -1208,15 +1208,15 @@ let deferredInstallPrompt = null;
 let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const nexusProductIdentity = Object.freeze({
-  productName: "Nexus Workforce AI",
+  productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
-  edition: "workforce",
+  edition: "genesis",
   legacyProductName: "AgriNexus"
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-425";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-426";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v371";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -15638,10 +15638,10 @@ function speechSignalMatches(value = "", signals = []) {
 function isPlatformExplainVoiceCommand(command = "") {
   const lower = normalizeToolText(command);
   if (!lower) return false;
-  const platformName = /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
+  const platformName = /\b(nexus genesis|nexus workforce|agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
   const explainVerb = /\b(explain|describe|tell me about|tell me what|what is|whats|what are|who are you|what do you do|what does it do|what does this do|summarize|define)\b/.test(lower);
   return (platformName && explainVerb)
-    || /\b(explain the platform|tell me about the platform|tell me what the platform is|what is the platform|what can nexus workforce ai do|what can nexus workforce do|what can agrinexus do|what can agri nexus do|define nexus workforce ai|define nexus workforce|define agrinexus|define agri nexus|explain nexus workforce ai|explain nexus workforce|explain agrinexus|explain agri nexus|what nexus workforce ai is|what nexus workforce is|what agrinexus is|what agri nexus is)\b/.test(lower);
+    || /\b(explain the platform|tell me about the platform|tell me what the platform is|what is the platform|what can nexus genesis do|what can nexus workforce do|what can agrinexus do|what can agri nexus do|define nexus genesis|define nexus workforce|define agrinexus|define agri nexus|explain nexus genesis|explain nexus workforce|explain agrinexus|explain agri nexus|what nexus genesis is|what nexus workforce is|what agrinexus is|what agri nexus is)\b/.test(lower);
 }
 
 function voiceToolTokens(value = "") {
@@ -37987,7 +37987,7 @@ function renderUserAccessibilityPanel() {
         <button type="button" class="user-module-close" data-close-user-accessibility aria-label="${translateText("Close")}">${translateText("Close")}</button>
       </div>
       <span class="eyebrow">${translateText("Accessibility")}</span>
-      <h2>${translateText("Make Nexus Workforce AI easier to use")}</h2>
+      <h2>${translateText("Make Nexus Genesis easier to use")}</h2>
       <p>${translateText("Choose what helps you see, hear, read, or move through the app. You can change this any time.")}</p>
       <div class="user-accessibility-buttons">
         ${toggles.map(item => `<button type="button" data-accessibility="${item.key}" aria-pressed="${Boolean(accessibilityPrefs[item.key])}">
@@ -50712,11 +50712,11 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
 }
 
 function nexusPlatformExplainAnswer() {
-  return "Nexus is the assistant inside Nexus Workforce AI, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.";
+  return "Nexus is the assistant inside Nexus Genesis | AgriNexus, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.";
 }
 
 function nexusPlatformDifferentiatorAnswer() {
-  return "Nexus Workforce AI is different because Nexus is being built as a source-ready, provider-ready, permission-gated access platform: one assistant layer for training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus can prepare the next step now, but live calls, provider contact, payments, prescriptions, medical records, location sharing, or emergency dispatch stay disabled until the required connector, consent, approval, and audit controls are active.";
+  return "Nexus Genesis | AgriNexus is different because Nexus is being built as a source-ready, provider-ready, permission-gated access platform: one assistant layer for training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus can prepare the next step now, but live calls, provider contact, payments, prescriptions, medical records, location sharing, or emergency dispatch stay disabled until the required connector, consent, approval, and audit controls are active.";
 }
 
 function nexusWorkforceCapabilityAnswer() {
@@ -51129,7 +51129,7 @@ function nexusConversationFirstIntent(command = "") {
       suggestions: ["Nexus"]
     };
   }
-  if (isPlatformExplainVoiceCommand(command) || /\b(explain nexus workforce ai|explain nexus workforce|what is nexus workforce ai|what is nexus workforce|tell me about nexus workforce ai|tell me about nexus workforce|explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|are you agrinexus|who are you|what are you)\b/.test(lower)) {
+  if (isPlatformExplainVoiceCommand(command) || /\b(explain nexus genesis|explain nexus workforce|what is nexus genesis|what is nexus workforce|tell me about nexus genesis|tell me about nexus workforce|explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|are you agrinexus|who are you|what are you)\b/.test(lower)) {
     return {
       type: "answer",
       response: nexusPlatformExplainAnswer(),

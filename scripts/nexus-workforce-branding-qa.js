@@ -13,34 +13,34 @@ function includesAll(haystack, values, label) {
 }
 
 includesAll(html, [
-  "<title>Nexus Workforce AI</title>",
-  '<meta name="application-name" content="Nexus Workforce AI">',
-  '<meta name="apple-mobile-web-app-title" content="Nexus Workforce AI">',
-  '<h1 id="loginTitle">Nexus Workforce AI</h1>',
-  "<strong>Nexus Workforce AI</strong>",
+  "<title>Nexus Genesis | AgriNexus</title>",
+  '<meta name="application-name" content="Nexus Genesis | AgriNexus">',
+  '<meta name="apple-mobile-web-app-title" content="Nexus Genesis | AgriNexus">',
+  '<h1 id="loginTitle">Nexus Genesis | AgriNexus</h1>',
+  "<strong>Nexus Genesis | AgriNexus</strong>",
   'id="workspaceAskBtn" class="primary" type="button">Ask Nexus</button>',
   '<h2 id="globalAssistantTitle">Ask Nexus</h2>',
   'id="jarvisToggle" class="jarvis-toggle primary" type="button" aria-expanded="false" aria-controls="jarvisPanel">Ask Nexus</button>',
-  "Workforce AI platform for learning, job readiness, field support, health access, marketplace trade, maps, and guided Nexus assistance.",
+  "Nexus Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided Nexus assistance.",
   "marketplace trade",
   "AgriTrade"
-], "Visible Nexus Workforce shell");
+], "Visible Nexus Genesis shell");
 
 includesAll(app, [
   "const nexusProductIdentity = Object.freeze({",
-  'productName: "Nexus Workforce AI"',
+  'productName: "Nexus Genesis | AgriNexus"',
   'assistantName: "Nexus"',
-  'edition: "workforce"',
+  'edition: "genesis"',
   'legacyProductName: "AgriNexus"',
   '{ label: "Ask Nexus", detail: "Tell the assistant what you need in plain language.", command: "help me", primary: true }',
   "Open the unified profile with learning, work, care, agriculture, and activity evidence.",
   "Nexus can help with work, training, health access, maps, field support, and agriculture trade.",
-  "Make Nexus Workforce AI easier to use",
+  "Make Nexus Genesis easier to use",
   "Sell Crops",
   "Sell my crop",
   "Scan my field",
   "AgriTrade"
-], "Standard User Nexus Workforce copy");
+], "Standard User Nexus Genesis copy");
 
 assert(!html.includes(">Ask AgriNexus</button>"), "Visible Ask button should use Ask Nexus");
 assert(!html.includes("<h3 id=\"commandLaunchTitle\">Talk To AgriNexus</h3>"), "Conversation launch title should use Nexus");
@@ -71,4 +71,4 @@ includesAll(nativeBridge, [
   '"call.launch"'
 ], "Protected native bridge contract");
 
-console.log("Nexus Workforce branding QA passed");
+console.log("Nexus Genesis branding QA passed");

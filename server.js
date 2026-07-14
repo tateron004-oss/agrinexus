@@ -57,12 +57,12 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-425";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-426";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v371";
 const PRODUCT_IDENTITY = Object.freeze({
-  productName: "Nexus Workforce AI",
+  productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
-  edition: "workforce",
+  edition: "genesis",
   legacyProductName: "AgriNexus"
 });
 const ROOT = __dirname;
@@ -18321,7 +18321,7 @@ function isEverydayEncyclopediaQuestion(command = "") {
   if (!lower) return false;
   if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language)\b/.test(lower)) return false;
-  if (/\b(nexus workforce ai|nexus workforce)\b/.test(lower)) return false;
+  if (/\b(nexus genesis|nexus workforce)\b/.test(lower)) return false;
   if (/\b(platform|agrinexus|nexus|dashboard|admin|investor|workflow|live service|provider engine|render|github|login|password)\b/.test(lower)
     && /\b(how do i use|where is|open|start|button|tab|screen|page|mode|setting)\b/.test(lower)) return false;
   const questionShape = /^(what|what's|whats|why|how|how does|how do|when|where|who|which|can you explain|explain|tell me about|teach me|describe|define)\b/.test(lower);
@@ -18877,8 +18877,8 @@ function localNexusConversationCoreDecision(db, user, command = "", options = {}
       suggestions: ["I need medicine", "find a clinic near me", "my crop is bad"]
     });
   }
-  if (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(lower)
-    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower)) {
+  if (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower)) {
     return decision({
       type: "answer",
       response: nexusWorkforcePlatformExplanation(),
@@ -21245,11 +21245,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     );
   }
 
-  if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
-    || /\b(tell me|tell us)\s+(what|about)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
-    || /\b(what|who)\s+(is|are)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|the platform)\b/.test(value)
-    || /\bare you\s+(agrinexus|agri nexus|nexus workforce ai|nexus workforce)\b/.test(value)
-    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you|means|mean)\b/.test(value))) {
+  if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(tell me|tell us)\s+(what|about)\s+(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(what|who)\s+(is|are)\s+(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|the platform)\b/.test(value)
+    || /\bare you\s+(agrinexus|agri nexus|nexus genesis|nexus workforce)\b/.test(value)
+    || /\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you|means|mean)\b/.test(value))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -21480,7 +21480,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.reasoning_governance_status", "completed", "agent", "Reasoning proof is ready. Nexus records the command, module signal, confidence, safety boundary, provider truth, and next action so an admin or investor can inspect why it chose a route.", ["explain your brain", "show production readiness"]);
   }
   if (/\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b|\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
-    return response("conversation.platform_differentiator", "completed", "agent", nexusWorkforceDifferentiatorAnswer(), ["explain Nexus Workforce AI", "what can you do for a farmer", "show production readiness"]);
+    return response("conversation.platform_differentiator", "completed", "agent", nexusWorkforceDifferentiatorAnswer(), ["explain nexus genesis", "what can you do for a farmer", "show production readiness"]);
   }
   if (/\b(what is|what's|what are|explain|tell me about|describe|define)\b.*\bregenerative agriculture\b|\bregenerative agriculture\b.*\b(what is|explain|mean|means)\b/.test(value)) {
     return response("conversation.regenerative_agriculture_explained", "completed", "trade", "Regenerative agriculture means farming in ways that rebuild soil health, protect water, increase biodiversity, and keep farms productive over time. Common practices include cover crops, compost, reduced tillage, crop rotation, agroforestry, managed grazing, and measuring soil or field recovery. AgriNexus can turn that into learning, field notes, crop guidance, and buyer evidence.", ["open learning", "teach me about farming", "field notes"]);
@@ -25132,7 +25132,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       intent: "conversation.platform_differentiator",
       response: nexusWorkforceDifferentiatorAnswer(),
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["explain Nexus Workforce AI", "what can you do for a farmer", "open learning"] }
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["explain nexus genesis", "what can you do for a farmer", "open learning"] }
     };
   }
   if (conversational && /\b(explain|what is|what are|tell me about|describe)\b.*\b(mobile clinic|mobile clinics|field clinic|outreach clinic|rural clinic)\b/.test(lower)) {
@@ -25423,8 +25423,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"] }
     };
   }
-  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
-    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
+  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus genesis|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus genesis|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -25629,7 +25629,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     const next = smartNextActions(db, user, runtimeProviders(db)).items[0];
     return {
       intent: "conversation.guided_menu",
-      response: `Nexus is the assistant inside Nexus Workforce AI. I can help with training, job readiness, field support, health access, maps, marketplace or AgriTrade, and messages. Best next step: ${next?.title || "tell me the area you need"}. Say training, job pathways, health access, maps, marketplace, or AI help.`,
+      response: `Nexus is the assistant inside Nexus Genesis | AgriNexus. I can help with training, job readiness, field support, health access, maps, marketplace or AgriTrade, and messages. Best next step: ${next?.title || "tell me the area you need"}. Say training, job pathways, health access, maps, marketplace, or AI help.`,
       status: "guiding",
       metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendedAction: next || null }
     };
@@ -25659,8 +25659,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { memories, longTermMemory: summary }
     };
   }
-  if (!/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
-    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
+  if (!/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus genesis|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus genesis|nexus workforce|agrinexus|agri\s+nexus|nexus)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -39861,7 +39861,7 @@ async function api(req, res, url) {
     return send(res, 200, nexusGenesisProviderOrchestration.sdk());
   }
 
-  if (!user) return send(res, 401, { error: "Sign in required" });
+  if (!user && url.pathname !== "/api/config") return send(res, 401, { error: "Sign in required" });
 
   if (url.pathname === "/api/state" && req.method === "GET") {
     return send(res, 200, publicState(db, user));

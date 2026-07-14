@@ -57,13 +57,13 @@ node scripts\jarvis-behavior-qa.js
   - `voice` for browser voice, realtime voice, TTS, language, or phone greeting changes.
   - `core` for companion, utility, conversation core, and route safety changes.
   - `app` for frontend workflow, auth gate, and cross-platform behavior changes.
-  - `nexus-workforce` for Nexus Workforce AI branding, Standard User repositioning, assistant aliases, product metadata, and repurpose boundary changes.
+  - `nexus-workforce` for Nexus Genesis | AgriNexus branding, Standard User repositioning, assistant aliases, product metadata, and repurpose boundary changes.
 - Keep live, production, destructive, credentialed, provider-engine, database backup/restore, and native compile checks separate from local-safe QA.
 - Do not treat static native QA as Android or iOS build validation.
 
 ## Nexus Workforce Repurpose Boundary
 
-The `nexus-workforce` grouped suite is a focused local-safe guard for the AgriNexus-to-Nexus Workforce AI repurpose. It currently runs:
+The `nexus-workforce` grouped suite is a focused local-safe guard for the AgriNexus-to-Nexus Genesis | AgriNexus repurpose. It currently runs:
 
 ```powershell
 node scripts\nexus-workforce-branding-qa.js
@@ -74,7 +74,7 @@ node scripts\nexus-workforce-metadata-qa.js
 
 Use it before and after repurpose work to confirm:
 
-- Nexus Workforce AI is the visible product frame.
+- Nexus Genesis | AgriNexus is the visible product frame.
 - Nexus is the assistant identity.
 - AgriNexus remains the legacy/internal compatibility name.
 - Agriculture remains a supported domain.

@@ -29,7 +29,7 @@ async function waitForServer() {
       await wait(150);
     }
   }
-  throw new Error("Nexus Workforce alias QA server did not become reachable");
+  throw new Error("Nexus Genesis alias QA server did not become reachable");
 }
 
 async function call(route, body) {
@@ -46,7 +46,7 @@ async function call(route, body) {
 }
 
 const commandChecks = [
-  { command: "What is Nexus Workforce AI?", intent: "conversation.platform_explained", section: "agent", includes: "Nexus is the assistant inside Nexus Workforce AI" },
+  { command: "What is Nexus Genesis | AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "Nexus is the assistant inside Nexus Genesis | AgriNexus" },
   { command: "Are you AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "legacy/internal compatibility identity" },
   { command: "What can you do?", intent: "conversation.capability_summary", section: "agent", includes: "workforce development" },
   { command: "help me with training", intent: "conversation.learning_start", section: "learning", includes: "skill" },
@@ -67,7 +67,7 @@ const commandChecks = [
 (async () => {
   includesAll(app, [
     "function nexusPlatformExplainAnswer",
-    "Nexus is the assistant inside Nexus Workforce AI",
+    "Nexus is the assistant inside Nexus Genesis | AgriNexus",
     "function nexusWorkforceCapabilityAnswer",
     "help me with training",
     "show job pathways",
@@ -142,7 +142,7 @@ const commandChecks = [
     assert.strictEqual(callState.commandResult?.intent, "call.number_needed", "Call alias should still stage safely and ask for missing number");
     assert(/confirm|number|phone/i.test(callState.commandResult?.response || ""), "Call response should still require safe call details/confirmation path");
 
-    console.log("Nexus Workforce alias QA passed");
+    console.log("Nexus Genesis alias QA passed");
     commandChecks.forEach(check => console.log(`- ${check.command} -> ${check.intent}`));
   } finally {
     server.kill();

@@ -1,7 +1,7 @@
 {
-  "name": "AgriNexus",
-  "short_name": "AgriNexus",
-  "description": "Voice-first platform for learning, workforce, telehealth, agritrade, drone intelligence, maps, and AI workflow support.",
+  "name": "Nexus Genesis | AgriNexus",
+  "short_name": "Nexus",
+  "description": "Nexus Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided assistance.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -44,7 +44,7 @@
   ],
   "shortcuts": [
     {
-      "name": "Ask AgriNexus",
+      "name": "Ask Nexus",
       "short_name": "Ask",
       "description": "Open the voice and command workspace.",
       "url": "/?section=agent",

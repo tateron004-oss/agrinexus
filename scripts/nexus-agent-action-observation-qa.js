@@ -85,7 +85,7 @@ function assertAgentAction(state, prompt) {
   assert(Array.isArray(agentAction.safetyNotes), `${prompt} should expose safety notes`);
   assert(agentAction.safetyNotes.some(note => /existing router remains authoritative/i.test(note)), `${prompt} should state existing router remains authoritative`);
   assert(agentAction.safetyNotes.some(note => /Static Nexus Tool Registry is not runtime-authoritative/i.test(note)), `${prompt} should state static registry is non-authoritative`);
-  assert.strictEqual(agentAction.auditMetadata.productName, "Nexus Workforce AI", `${prompt} should preserve product identity`);
+  assert.strictEqual(agentAction.auditMetadata.productName, "Nexus Genesis | AgriNexus", `${prompt} should preserve product identity`);
   assert.strictEqual(agentAction.auditMetadata.assistantName, "Nexus", `${prompt} should preserve assistant identity`);
   assert.strictEqual(agentAction.auditMetadata.legacyProductName, "AgriNexus", `${prompt} should preserve legacy identity`);
   assert.strictEqual(agentAction.legacyCompatibility.legacyProductName, "AgriNexus", `${prompt} should expose legacy compatibility`);

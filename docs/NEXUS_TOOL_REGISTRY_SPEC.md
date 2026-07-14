@@ -4,7 +4,7 @@ Status: Phase 7A audit and specification only.
 
 Current checkpoint: `cc8227692dd5a3759b872b7ddda7f4edb0f62f6d`
 
-This document defines the next architecture boundary for Nexus Workforce AI. It does not change runtime behavior, endpoint contracts, workflow IDs, cache keys, local storage keys, native bridge fields, package names, or legacy AgriNexus compatibility.
+This document defines the next architecture boundary for Nexus Genesis | AgriNexus. It does not change runtime behavior, endpoint contracts, workflow IDs, cache keys, local storage keys, native bridge fields, package names, or legacy AgriNexus compatibility.
 
 Phase 8B note: `metadata.agentAction.selectedToolId` may expose conservative canonical IDs for explicit low-risk prompts, but it remains metadata-only and non-authoritative. Runtime code must not import or read `docs/nexus-tool-registry.v1.json`; existing routers and confirmation gates remain authoritative. See `docs/NEXUS_SELECTED_TOOL_ID_ALIGNMENT.md` for the current alignment boundary.
 
@@ -12,12 +12,12 @@ Phase 8B note: `metadata.agentAction.selectedToolId` may expose conservative can
 
 The public product identity remains:
 
-- `productName`: `Nexus Workforce AI`
+- `productName`: `Nexus Genesis | AgriNexus`
 - `assistantName`: `Nexus`
 - `edition`: `workforce`
 - `legacyProductName`: `AgriNexus`
 
-AgriNexus remains the legacy/internal compatibility name. AgriTrade remains the marketplace and agriculture-trade module. Agriculture, farm, crop, drone, rural health, and trade workflows remain supported domain modules inside Nexus Workforce AI.
+AgriNexus remains the legacy/internal compatibility name. AgriTrade remains the marketplace and agriculture-trade module. Agriculture, farm, crop, drone, rural health, and trade workflows remain supported domain modules inside Nexus Genesis | AgriNexus.
 
 Do not blindly replace internal names. Early registry work must map existing route IDs, workflow IDs, QA assumptions, storage keys, PWA cache names, native bridge fields, and backend contracts to new canonical tool metadata rather than renaming those contracts.
 
@@ -435,7 +435,7 @@ Agent routing should eventually return an additive action envelope. Early implem
   },
   nextStep: "User may open camera locally or choose to create a confirmed handoff record.",
   auditMetadata: {
-    productName: "Nexus Workforce AI",
+    productName: "Nexus Genesis | AgriNexus",
     assistantName: "Nexus",
     edition: "workforce",
     legacyProductName: "AgriNexus"

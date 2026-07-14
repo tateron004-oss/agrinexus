@@ -24,7 +24,7 @@ Package aliases:
 - `qa:voice`: local voice policy, realtime-provider configuration, phase QA, language, browser runtime, and phone greeting checks.
 - `qa:core`: app behavior, utility assistant, conversation core architecture, and currently green Companion smoke checks.
 - `qa:app`: static app behavior, workflow, cross-platform, and auth login gate audits.
-- `qa:nexus-workforce`: focused Nexus Workforce AI repurpose checks for visible branding, Standard User workflow positioning, assistant aliases, and backend product metadata.
+- `qa:nexus-workforce`: focused Nexus Genesis | AgriNexus repurpose checks for visible branding, Standard User workflow positioning, assistant aliases, and backend product metadata.
 - `qa:all-safe`: deduplicated sequential superset of the safe suites above.
 
 Direct Node usage is available when PowerShell blocks `npm run`:
@@ -46,7 +46,7 @@ Current local-safe QA posture, including the latest green `qa:all-safe` checkpoi
 
 ## Nexus Workforce Repurpose QA
 
-The Nexus Workforce AI repurpose is protected by a focused grouped suite:
+The Nexus Genesis | AgriNexus repurpose is protected by a focused grouped suite:
 
 ```powershell
 node scripts\qa-suite.js nexus-workforce
@@ -57,14 +57,14 @@ This suite is intentionally narrow and local-safe. It verifies the visible produ
 
 Included scripts:
 
-- `nexus-workforce-branding-qa.js`: checks visible Nexus Workforce AI and Ask Nexus branding while preserving protected AgriNexus runtime identifiers and native bridge compatibility.
+- `nexus-workforce-branding-qa.js`: checks visible Nexus Genesis | AgriNexus and Ask Nexus branding while preserving protected AgriNexus runtime identifiers and native bridge compatibility.
 - `nexus-workforce-standard-user-qa.js`: checks worker-first Standard User grouping/order and retained learning, job, field, health, map, marketplace, crop, and AgriTrade paths.
 - `nexus-workforce-alias-qa.js`: checks Nexus Workforce and legacy AgriNexus assistant prompts, workforce/training/field/health/map/marketplace aliases, agriculture/farmer prompts, and safe call staging.
 - `nexus-workforce-metadata-qa.js`: checks canonical backend product identity metadata and additive exposure through public metadata responses while preserving AgriNexus, AgriTrade, agriculture, route, and confirmation compatibility.
 
 Repurpose checklist:
 
-- Visible product is Nexus Workforce AI.
+- Visible product is Nexus Genesis | AgriNexus.
 - Assistant identity is Nexus.
 - Legacy/internal compatibility name remains AgriNexus.
 - Agriculture remains a supported domain.
@@ -124,7 +124,7 @@ Repurpose checklist:
 | `nexus-multilingual-general-conversation-regression.js` | `conversation:multilingual` | Regression Tests | Multilingual conversation regression. | No |
 | `nexus-open-conversation-regression.js` | `conversation:open` | Regression Tests | Open conversation regression. | No |
 | `nexus-workforce-alias-qa.js` | `qa:nexus-workforce` | Regression Tests | Verifies Nexus Workforce assistant aliases, legacy AgriNexus prompts, agriculture/trade compatibility, and safe call staging. | No |
-| `nexus-workforce-branding-qa.js` | `qa:nexus-workforce` | Regression Tests | Verifies visible Nexus Workforce AI branding while preserving protected AgriNexus runtime compatibility identifiers. | No |
+| `nexus-workforce-branding-qa.js` | `qa:nexus-workforce` | Regression Tests | Verifies visible Nexus Genesis | AgriNexus branding while preserving protected AgriNexus runtime compatibility identifiers. | No |
 | `nexus-workforce-metadata-qa.js` | `qa:nexus-workforce` | Regression Tests | Verifies canonical backend product identity metadata and additive public exposure. | No |
 | `nexus-workforce-standard-user-qa.js` | `qa:nexus-workforce` | Regression Tests | Verifies worker-first Standard User workflow positioning and retained AgriTrade/agriculture paths. | No |
 | `no-placeholder-audit.js` | `placeholder:audit` | Regression Tests | Static audit for placeholder/demo-only wording. | No |

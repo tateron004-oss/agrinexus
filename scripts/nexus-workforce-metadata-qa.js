@@ -29,7 +29,7 @@ async function waitForServer() {
       await wait(150);
     }
   }
-  throw new Error("Nexus Workforce metadata QA server did not become reachable");
+  throw new Error("Nexus Genesis metadata QA server did not become reachable");
 }
 
 async function call(route, body) {
@@ -47,9 +47,9 @@ async function call(route, body) {
 
 function assertIdentity(identity, label) {
   assert.deepStrictEqual(identity, {
-    productName: "Nexus Workforce AI",
+    productName: "Nexus Genesis | AgriNexus",
     assistantName: "Nexus",
-    edition: "workforce",
+    edition: "genesis",
     legacyProductName: "AgriNexus"
   }, `${label}: product identity mismatch`);
 }
@@ -57,9 +57,9 @@ function assertIdentity(identity, label) {
 (async () => {
   includesAll(serverSource, [
     "const PRODUCT_IDENTITY = Object.freeze({",
-    'productName: "Nexus Workforce AI"',
+    'productName: "Nexus Genesis | AgriNexus"',
     'assistantName: "Nexus"',
-    'edition: "workforce"',
+    'edition: "genesis"',
     'legacyProductName: "AgriNexus"',
     "function productIdentityMetadata()",
     "productIdentity: productIdentityMetadata()",
@@ -85,9 +85,9 @@ function assertIdentity(identity, label) {
 
   includesAll(appSource, [
     "const nexusProductIdentity = Object.freeze({",
-    'productName: "Nexus Workforce AI"',
+    'productName: "Nexus Genesis | AgriNexus"',
     'assistantName: "Nexus"',
-    'edition: "workforce"',
+    'edition: "genesis"',
     'legacyProductName: "AgriNexus"',
     'const assistantFullName = "AgriNexus";',
     'localStorage.getItem("agrinexusPersona")',
@@ -130,17 +130,17 @@ function assertIdentity(identity, label) {
     assert(state.profile && JSON.stringify(state).includes("AgriTrade"), "/api/state should retain AgriTrade compatibility data");
 
     const platform = await call("/api/agent/command", {
-      command: "What is Nexus Workforce AI?",
+      command: "What is Nexus Genesis | AgriNexus?",
       inputMode: "voice",
       outputMode: "voice",
       conversational: true,
       mode: "user",
       targetLanguage: "en"
     });
-    assert.strictEqual(platform.commandResult?.intent, "conversation.platform_explained", "Nexus Workforce identity prompt should route to platform explanation");
-    assert(String(platform.commandResult?.response || "").includes("Nexus is the assistant inside Nexus Workforce AI"), "Platform explanation should use canonical product identity wording");
+    assert.strictEqual(platform.commandResult?.intent, "conversation.platform_explained", "Nexus Genesis identity prompt should route to platform explanation");
+    assert(String(platform.commandResult?.response || "").includes("Nexus is the assistant inside Nexus Genesis | AgriNexus"), "Platform explanation should use canonical product identity wording");
 
-    console.log("Nexus Workforce metadata QA passed");
+    console.log("Nexus Genesis metadata QA passed");
     console.log("- backend PRODUCT_IDENTITY is canonical");
     console.log("- /api/healthz, /api/config, and /api/state expose additive productIdentity metadata");
     console.log("- AgriNexus, AgriTrade, agriculture, route, and confirmation compatibility remain present");
