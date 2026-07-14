@@ -79,19 +79,39 @@ assert(
   "voice command core should route troubleshooting before broader planning"
 );
 
+const activationSource = between(app, "async function activateNexusGenesisExperience", "function resetNexusGenesisHomeViewport", "Genesis orb activation");
+includesAll(activationSource, [
+  "startNexusOsMission(\"Open the full Nexus Standard User workspace\"",
+  "renderUserWorkspace()",
+  "nexusGenesisExperienceActivated = true",
+  "nexusTrueExperienceSessionStarted = true"
+], "Genesis orb activation");
+
+const experienceModeSource = between(app, "function nexusTrueExperienceMode", "function isNexusTrueExperienceReturnHomeCommand", "Nexus true experience mode");
+assert(
+  experienceModeSource.includes("if (nexusGenesisExperienceActivated || currentNexusOsMission()) return \"mission\";"),
+  "activated Genesis orb must route to mission/full workspace mode"
+);
+
 const minimalConversationSource = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal companion surface");
-includesAll(minimalConversationSource, [
-  "renderNexusOsVoiceRuntimeStatus()",
-  "data-nexus-os-voice-control=\"toggle-listening\"",
-  "Stop listening",
-  "Stop speaking",
-  "Repeat",
-  "Unmute",
-  "Mute",
-  "Continue without voice",
-  "Voice is optional.",
-  "Home"
-], "minimal companion surface");
+assert(
+  minimalConversationSource.includes("return renderNexusCommandCenterHeroLegacy();"),
+  "broken minimal companion route must redirect to the unified Standard User workspace hero"
+);
+
+const commandCenterHeroSource = between(app, "function renderNexusCommandCenterHero", "function renderNexusCommandCenterHeroLegacy", "command center hero route");
+assert(
+  commandCenterHeroSource.includes(": renderNexusCommandCenterHeroLegacy();"),
+  "non-home Standard User route must render the unified workspace hero, not the minimal companion screen"
+);
+
+const userWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "Standard User workspace render");
+includesAll(userWorkspaceSource, [
+  "renderNexusAgenticMissionWorkspace",
+  "renderNexusModeLauncher",
+  "renderNexusPremiumActivityReceiptsPanel",
+  "renderNexusPersistentMemoryPanel"
+], "full Standard User mission workspace");
 
 const voiceControlSource = between(app, "async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice controls");
 includesAll(voiceControlSource, [

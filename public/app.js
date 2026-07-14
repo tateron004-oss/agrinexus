@@ -31774,6 +31774,14 @@ function handleNexusDailyCompanionCommand(command = "", options = {}) {
 async function activateNexusGenesisExperience(source = "orb") {
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;
+  if (!currentNexusOsMission()) {
+    startNexusOsMission("Open the full Nexus Standard User workspace", {
+      source: `genesis-${source}-workspace-entry`,
+      domain: "general-assistant",
+      intent: "open-workflow",
+      interpretedGoal: "Unified Standard User workspace"
+    });
+  }
   setNexusGenesisTrustChainState("wake_requested", { visibleFeedback: "Nexus is waking.", reason: `genesis-${source}` });
   setNexusCoreState("wake", { source: `genesis-${source}`, statusText: "Nexus is waking." });
   renderUserWorkspace();
@@ -31885,6 +31893,7 @@ function nexusTrueExperienceHasCurrentConversation() {
 
 function nexusTrueExperienceMode() {
   if (nexusTrueExperienceHasActiveWorkflow()) return "mission";
+  if (nexusGenesisExperienceActivated || currentNexusOsMission()) return "mission";
   if (nexusTrueExperienceHasCurrentConversation()) return "conversation";
   return "home";
 }
@@ -32003,39 +32012,13 @@ function renderNexusTrueHome() {
 }
 
 function renderNexusMinimalConversationExperience() {
-  return `
-    <section class="nexus-true-conversation" data-nexus-true-conversation="true" aria-label="${escapeHtml(translateText("Nexus conversation"))}">
-      <div class="nexus-true-conversation-head">
-        ${renderNexusTrueCoreOrb({ compact: true })}
-        <div>
-          <p class="nexus-true-identity">${escapeHtml(translateText("NEXUS"))}</p>
-          <h1>${escapeHtml(translateText("I'm with you."))}</h1>
-        </div>
-        <button type="button" data-nexus-os-mission-action="return-home" data-nexus-return-home-from-mission="true">${escapeHtml(translateText("Home"))}</button>
-      </div>
-      <div class="nexus-true-conversation-log" data-nexus-os-conversation-log="true" aria-live="polite">
-        ${renderNexusOsConversationTurns()}
-      </div>
-      ${renderNexusOsVoiceRuntimeStatus()}
-      <div class="nexus-os-conversation-controls nexus-os-companion-voice-controls" data-nexus-companion-voice-controls="true" aria-label="${escapeHtml(translateText("Nexus voice controls"))}">
-        <button type="button" data-nexus-os-voice-control="toggle-listening">${escapeHtml(translateText("Talk"))}</button>
-        <button type="button" data-nexus-os-voice-control="stop-listening">${escapeHtml(translateText("Stop listening"))}</button>
-        <button type="button" data-nexus-os-voice-control="stop-speaking">${escapeHtml(translateText("Stop speaking"))}</button>
-        <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
-        <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
-        <button type="button" data-nexus-os-voice-control="typed-fallback">${escapeHtml(translateText("Continue without voice"))}</button>
-      </div>
-      <p class="nexus-companion-recovery-hint" data-nexus-companion-recovery-hint="true">${escapeHtml(translateText("Voice is optional. Type below, press Talk for microphone access, or use Home to return to the command center."))}</p>
-      ${renderNexusTrueCommandComposer({ compact: true })}
-      <div class="nexus-os-conversation-live-region sr-only" data-nexus-os-conversation-live-region="true" aria-live="polite"></div>
-    </section>
-  `;
+  return renderNexusCommandCenterHeroLegacy();
 }
 
 function renderNexusCommandCenterHero() {
   return nexusTrueExperienceMode() === "home"
     ? renderNexusTrueHome()
-    : renderNexusMinimalConversationExperience();
+    : renderNexusCommandCenterHeroLegacy();
 }
 
 function renderNexusCommandCenterHeroLegacy() {
@@ -37641,6 +37624,9 @@ function renderUserWorkspace() {
       <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus"))}">
         ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
+        ${showMission ? renderNexusUserWorkspaceSegment("Mode launcher", renderNexusModeLauncher) : ""}
+        ${showMission ? renderNexusUserWorkspaceSegment("Activity receipts", renderNexusPremiumActivityReceiptsPanel) : ""}
+        ${showMission ? renderNexusUserWorkspaceSegment("Memory", renderNexusPersistentMemoryPanel) : ""}
       </main>
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>

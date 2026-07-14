@@ -70,8 +70,9 @@ function assertLegacyHomeRemoved() {
   ];
   forbidden.forEach(token => {
     assert(!home.includes(token), `${token} is absent from true home`);
-    assert(!workspace.includes(token), `${token} is absent from startup root`);
   });
+  assert(!workspace.includes('renderNexusUserWorkspaceSegment("Calm helper"'), "calm helper is absent from startup root");
+  assert(!workspace.includes('renderNexusUserWorkspaceSegment("Review workspace details"'), "review details are absent from startup root");
 }
 
 function assertOrbPrimaryInteraction() {
@@ -96,11 +97,10 @@ function assertMinimalConversation() {
   const submitHandler = extractFunction("handleNexusPresenceCommandSendSubmit");
   const keydownHandler = extractFunction("handleNexusTrueCommandComposerKeydown");
   const bindStatic = extractFunction("bindStatic");
-  assert(conversation.includes('data-nexus-true-conversation="true"'), "minimal conversation marker exists");
-  assert(conversation.includes("renderNexusTrueCoreOrb({ compact: true })"), "conversation keeps compact orb");
-  assert(conversation.includes('data-nexus-os-conversation-log="true"'), "conversation log is available after input");
-  assert(conversation.includes("renderNexusTrueCommandComposer({ compact: true })"), "conversation keeps one composer");
-  assert(!conversation.includes("data-nexus-os-conversation-action=\"retry\""), "permanent retry control is not mounted");
+  assert(conversation.includes("return renderNexusCommandCenterHeroLegacy();"), "minimal conversation redirects to unified Standard User workspace");
+  assert(!conversation.includes('data-nexus-true-conversation="true"'), "minimal conversation marker is no longer mounted");
+  assert(!conversation.includes("renderNexusTrueCoreOrb({ compact: true })"), "minimal compact orb route is no longer mounted");
+  assert(!conversation.includes('data-nexus-os-conversation-action="retry"'), "permanent retry control is not mounted");
   assert(!conversation.includes("data-nexus-voice-preference-action"), "voice preference wall is not mounted");
   assert(submitHandler.includes("[data-nexus-command-composer]"), "submit handler accepts true composer form submissions");
   assert(submitHandler.includes("true-conversation-fallback"), "unclaimed typed commands still open a safe conversation");
