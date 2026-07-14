@@ -29,6 +29,7 @@ const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predicti
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
 const nexusGenesisProviderAbstraction = require("./public/nexus-genesis-provider-abstraction.js");
 const nexusGenesisProviderOrchestration = require("./public/nexus-genesis-provider-orchestration.js");
+const nexusGenesisConversationalModeOrchestrator = require("./public/nexus-genesis-conversational-mode-orchestrator.js");
 const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-deployment-profile.js");
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
@@ -27405,6 +27406,138 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     mode: body.mode,
     targetLanguage: commandLanguage
   });
+  const conversationalModeOrchestrator = nexusGenesisConversationalModeOrchestrator.orchestrate(command, {
+    recentTurns: db.profile.agentConversation || [],
+    activeTopic: db.profile.agentMemory?.activeTopic || db.profile.agentMemory?.lastTopic || body.modeContext?.section || body.mode || "general",
+    priorTopics: db.profile.agentMemory?.priorTopics || [],
+    activeWorkflows: db.profile.agentMemory?.activeWorkflows || [],
+    pausedWorkflows: db.profile.agentMemory?.pausedWorkflows || [],
+    sourceContext: db.profile.agentMemory?.lastSourceContext || db.profile.lastSourceContext || null,
+    userRole: user.role,
+    preferredLanguage: commandLanguage,
+    explanationDepth: db.profile.agentMemory?.explanationDepth || "adaptive",
+    emotionalTone: db.profile.agentMemory?.emotionalTone || "steady",
+    uncertainty: db.profile.agentMemory?.uncertainty || null,
+    safetyLevel: db.profile.agentMemory?.safetyLevel || "standard",
+    privacyLevel: db.profile.agentMemory?.privacyLevel || "standard",
+    providerReadiness: typeof nexusProductionPublicStatus === "function" ? nexusProductionPublicStatus(process.env).providerLanes : {},
+    executionIntent: body.confirm === true ? "confirmed" : "unconfirmed",
+    priorCorrections: db.profile.agentMemory?.correctionHistory || [],
+    interruptionState: db.profile.agentMemory?.interruptionState || "none",
+    memoryScope: db.profile.agentMemory?.memoryScope || "user-controlled",
+    accessibilityPreferences: db.profile.agentMemory?.accessibilityPreferences || {},
+    userName: db.profile.agentMemory?.userName || user.name?.split(/\s+/)[0] || ""
+  });
+  db.profile.agentMemory = db.profile.agentMemory || {};
+  db.profile.agentMemory.lastConversationalModeOrchestrator = {
+    schemaVersion: conversationalModeOrchestrator.schemaVersion,
+    command,
+    primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+    blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+    responseStrategy: conversationalModeOrchestrator.responseStrategy,
+    domain: conversationalModeOrchestrator.signals.domain,
+    language: conversationalModeOrchestrator.signals.language,
+    emotionalTone: conversationalModeOrchestrator.signals.emotionalTone,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.conversationalModeHistory = [
+    {
+      command,
+      primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+      blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+      responseStrategy: conversationalModeOrchestrator.responseStrategy,
+      createdAt: new Date().toISOString()
+    },
+    ...(db.profile.agentMemory.conversationalModeHistory || [])
+  ].slice(0, 20);
+  if (conversationalModeOrchestrator.signals.repair) {
+    db.profile.agentMemory.correctionHistory = [
+      {
+        command,
+        repairedMode: conversationalModeOrchestrator.primaryMode.id,
+        staleConfirmationInvalidated: true,
+        createdAt: new Date().toISOString()
+      },
+      ...(db.profile.agentMemory.correctionHistory || [])
+    ].slice(0, 20);
+    db.profile.agentPendingAction = null;
+  }
+  if (conversationalModeOrchestrator.signals.interruption) {
+    db.profile.agentMemory.interruptionState = "paused-by-user";
+  }
+  if (conversationalModeOrchestrator.signals.accessibility) {
+    db.profile.agentMemory.accessibilityPreferences = {
+      ...(db.profile.agentMemory.accessibilityPreferences || {}),
+      lastRequested: command,
+      oneStepAtATime: /\bone step at a time\b/i.test(command) || db.profile.agentMemory.accessibilityPreferences?.oneStepAtATime === true,
+      simplerWords: /\b(use simpler words|simple|simpler)\b/i.test(command) || db.profile.agentMemory.accessibilityPreferences?.simplerWords === true,
+      repeatAllowed: /\brepeat|say that again\b/i.test(command) || db.profile.agentMemory.accessibilityPreferences?.repeatAllowed === true,
+      updatedAt: new Date().toISOString()
+    };
+  }
+  if (conversationalModeOrchestrator.signals.memory && /\b(do not remember|don't remember|forget)\b/i.test(command)) {
+    db.profile.agentMemory.memoryScope = "restricted-by-user";
+  } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command)) {
+    db.profile.agentMemory.memoryScope = "consent-requested";
+  }
+  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response") {
+    let result = {
+      intent: `conversation.mode_orchestrator.${conversationalModeOrchestrator.primaryMode.id}`,
+      response: conversationalModeOrchestrator.response,
+      status: "completed",
+      metadata: {
+        inputMode,
+        outputMode: outputMode || undefined,
+        language: commandLanguage,
+        targetLanguage: commandLanguage,
+        companionUnderstanding,
+        conversationalModeOrchestrator,
+        selectedConversationalModes: conversationalModeOrchestrator.selectedModeIds,
+        noExecutionAuthorized: true,
+        fakeCitationsAllowed: false,
+        workflowOfferedNotForced: true,
+        providerHandoffAuthorized: false,
+        actionRequiresSeparateConfirmation: conversationalModeOrchestrator.highRiskActionRequiresExactConfirmation
+      }
+    };
+    const agentAction = buildAgentActionMetadata({
+      userMessage: command,
+      result,
+      inputMode,
+      outputMode: outputMode || undefined,
+      language: commandLanguage
+    });
+    result.metadata = {
+      ...(result.metadata || {}),
+      agentAction,
+      policyDecision: agentAction.policyDecision || null,
+      nexusPlan: agentAction.nexusPlan || null,
+      plannerObservation: agentAction.plannerObservation || null
+    };
+    commandRecord(db, user, command, result);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, {
+        response: result.response,
+        inputMode,
+        language: commandLanguage,
+        conversationalModeOrchestrator: {
+          primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+          blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id)
+        }
+      });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result,
+      companionUnderstanding,
+      companionRouteOutcome: {
+        route: "conversational-mode-orchestrator",
+        primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+        blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+        noExecutionAuthorized: true
+      }
+    };
+  }
   if (["voice", "phone", "native"].includes(inputMode)) {
     const label = inputMode === "phone" ? "Phone voice" : inputMode === "native" ? "Native voice" : "Voice";
     voiceRecord(db, user, "speech-to-text", `${label} command transcribed: ${command}`, {
@@ -27448,6 +27581,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     ...(result.metadata || {}),
     inputMode,
     outputMode: outputMode || undefined,
+    conversationalModeOrchestrator,
+    selectedConversationalModes: conversationalModeOrchestrator.selectedModeIds,
     companionUnderstanding,
     companionRouteOutcome,
     agentAction,
