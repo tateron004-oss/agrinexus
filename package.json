@@ -42,6 +42,7 @@
     "qa:nexus-genesis-rails-safety": "node scripts/qa-suite.js genesis-rails-safety",
     "qa:nexus-genesis-rails-companion": "node scripts/qa-suite.js genesis-rails-companion",
     "qa:nexus-genesis-rails-all": "node scripts/qa-suite.js genesis-rails-all",
+    "qa:nexus-genesis-standard-user-field-test": "node scripts/nexus-genesis-standard-user-field-test-qa.js",
     "qa:core": "node scripts/qa-suite.js core",
     "qa:app": "node scripts/qa-suite.js app",
     "qa:nexus-workforce": "node scripts/qa-suite.js nexus-workforce",

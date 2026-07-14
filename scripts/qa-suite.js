@@ -30,7 +30,8 @@ const GENESIS_RAIL_SCRIPTS = [
   "scripts/nexus-genesis-rail-22-recovery-qa.js",
   "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
   "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
-  "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
+  "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+  "scripts/nexus-genesis-standard-user-field-test-qa.js"
 ];
 
 const suites = {
@@ -85,6 +86,7 @@ const suites = {
     "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
     "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
     "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+    "scripts/nexus-genesis-standard-user-field-test-qa.js",
     "scripts/voice-browser-policy-regression.js",
     "scripts/realtime-voice-provider-qa.js",
     "scripts/voice-phase1-alignment-qa.js",
@@ -129,7 +131,8 @@ const suites = {
     "scripts/nexus-genesis-rail-22-recovery-qa.js",
     "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
     "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
-    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
+    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+    "scripts/nexus-genesis-standard-user-field-test-qa.js"
   ],
   "genesis-rails-all": [
     "scripts/nexus-trust-chain-trace-qa.js",
@@ -157,7 +160,8 @@ const suites = {
     "scripts/nexus-genesis-rail-22-recovery-qa.js",
     "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
     "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
-    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"
+    "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+    "scripts/nexus-genesis-standard-user-field-test-qa.js"
   ],
   app: [
     "scripts/app-behavior-audit.js",
