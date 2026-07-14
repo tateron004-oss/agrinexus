@@ -61,7 +61,13 @@ const requiredWorkflowIds = [
   "marketplace.buyer-readiness-checklist",
   "marketplace.seller-listing-prep",
   "logistics.shipment-intake",
-  "logistics.tracking-provider-readiness"
+  "logistics.tracking-provider-readiness",
+  "communications.phone-script-prep",
+  "communications.multichannel-message-prep",
+  "drone.safety-readiness-checklist",
+  "drone.crop-scan-prep",
+  "daily-life.caregiver-routine",
+  "daily-life.reminder-proposal"
 ];
 const registryIds = new Set(engine.WORKFLOW_REGISTRY.map(workflow => workflow.workflowId));
 for (const workflowId of requiredWorkflowIds) {
@@ -170,6 +176,30 @@ assert(/booking|dispatch|location sharing/i.test(shipmentIntake.options[0].confi
 const trackingReadiness = engine.buildTransitionProposal("Prepare tracking provider readiness for a shipment tracking number.", {});
 assert(trackingReadiness.options.some(workflow => workflow.workflowId === "logistics.tracking-provider-readiness"), "tracking-provider readiness workflow is available");
 assert(/provider result/i.test(trackingReadiness.options.find(workflow => workflow.workflowId === "logistics.tracking-provider-readiness").verificationRequirements.join(" ")), "tracking readiness requires provider result");
+
+const phoneScript = engine.buildTransitionProposal("Prepare a phone call script with talking points, but do not call.", {});
+assert(phoneScript.options.some(workflow => workflow.workflowId === "communications.phone-script-prep"), "phone script workflow is available");
+assert(/no call receipt/i.test(phoneScript.options.find(workflow => workflow.workflowId === "communications.phone-script-prep").receiptBehavior), "phone script does not fake call receipt");
+
+const messagePrep = engine.buildTransitionProposal("Prepare an SMS draft and WhatsApp draft for the provider, but do not send.", {});
+assert(messagePrep.options.some(workflow => workflow.workflowId === "communications.multichannel-message-prep"), "multichannel message prep workflow is available");
+assert(/provider message id/i.test(messagePrep.options.find(workflow => workflow.workflowId === "communications.multichannel-message-prep").verificationRequirements.join(" ")), "message prep requires provider message ID before sent claim");
+
+const droneSafety = engine.buildTransitionProposal("Create a drone safety checklist for a licensed operator and safe flight window.", {});
+assert(droneSafety.options.some(workflow => workflow.workflowId === "drone.safety-readiness-checklist"), "drone safety readiness workflow is available");
+assert(/licensed provider|jurisdiction/i.test(droneSafety.options.find(workflow => workflow.workflowId === "drone.safety-readiness-checklist").confirmationRequirements.join(" ")), "drone safety keeps licensed/jurisdiction gate");
+
+const cropScan = engine.buildTransitionProposal("Prepare a crop scan for my field without launching a drone.", {});
+assert(cropScan.options.some(workflow => workflow.workflowId === "drone.crop-scan-prep"), "crop scan prep workflow is available");
+assert(/no imagery|no scan/i.test(cropScan.options.find(workflow => workflow.workflowId === "drone.crop-scan-prep").receiptBehavior), "crop scan does not fake imagery receipt");
+
+const caregiverRoutine = engine.buildTransitionProposal("Create a caregiver routine to help my mother remember daily care steps.", {});
+assert(caregiverRoutine.options.some(workflow => workflow.workflowId === "daily-life.caregiver-routine"), "caregiver routine workflow is available");
+assert(/without scheduling or messaging/i.test(caregiverRoutine.options.find(workflow => workflow.workflowId === "daily-life.caregiver-routine").conversationalPurpose), "caregiver routine does not auto-schedule or message");
+
+const reminderProposal = engine.buildTransitionProposal("Prepare a reminder proposal to help me remember medication questions.", {});
+assert(reminderProposal.options.some(workflow => workflow.workflowId === "daily-life.reminder-proposal"), "reminder proposal workflow is available");
+assert(/no scheduled reminder receipt/i.test(reminderProposal.options.find(workflow => workflow.workflowId === "daily-life.reminder-proposal").receiptBehavior), "reminder proposal does not fake scheduling");
 
 includes(index, "/nexus-conversation-workflow-transition-engine.js", "index script loading");
 includes(index, "/app.js?v=nexus-behavior-425", "app cache version bump");
