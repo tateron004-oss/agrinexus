@@ -142,7 +142,7 @@ assert(
   "voice/all-safe suite must include browser voice acceptance QA"
 );
 assert(
-  index.includes("/app.js?v=nexus-behavior-424"),
+  index.includes("/app.js?v=nexus-behavior-425"),
   "index must bump app.js version so browser voice acceptance fixes load in real browser validation"
 );
 

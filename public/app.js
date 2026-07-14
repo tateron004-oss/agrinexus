@@ -1156,6 +1156,14 @@ let activeConversationIntake = JSON.parse(localStorage.getItem("agrinexusConvers
 let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
+let nexusConversationWorkflowTransitionState = {
+  schemaVersion: "nexus-conversation-workflow-transition-state.v1",
+  currentState: "exploring",
+  activeTopic: "",
+  lastProposal: null,
+  activeWorkflow: null,
+  turns: []
+};
 let nexusOsConversationTurns = JSON.parse(localStorage.getItem("nexusOsUnifiedConversationTurns") || "[]");
 let nexusOsConversationMuted = localStorage.getItem("nexusOsUnifiedConversationMuted") === "true";
 let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
@@ -1207,7 +1215,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-424";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-425";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v370";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -2579,6 +2587,185 @@ function isNexusGenesisAfricaAgOpportunityFallbackCommand(command = "") {
   return /\b(africa|agriculture training|agriculture pathway|young woman|women.*agriculture|youth.*agriculture|drc|dr congo|democratic republic of the congo|congo[-\s]?kinshasa|republic of the congo|congo[-\s]?brazzaville|congo|egypt|arab republic of egypt|nile delta|nile valley)\b/i.test(String(command || ""));
 }
 
+function nexusConversationWorkflowEngine() {
+  return window.NexusConversationWorkflowTransitionEngine || null;
+}
+
+function nexusConversationWorkflowContext(command = "") {
+  const activeSources = [];
+  if (nexusKnowledgeLastResult?.sources && Array.isArray(nexusKnowledgeLastResult.sources)) {
+    activeSources.push(...nexusKnowledgeLastResult.sources.slice(0, 5));
+  }
+  const topic = nexusConversationWorkflowTransitionState.activeTopic
+    || nexusOsConversationTurns?.slice?.().reverse?.().find?.(turn => turn.role === "user")?.text
+    || command;
+  return {
+    activeTopic: topic,
+    activeSources,
+    activeLanguage: languageCode(),
+    activeWorkflowId: nexusConversationWorkflowTransitionState.activeWorkflow?.workflowId || "",
+    lastProposal: nexusConversationWorkflowTransitionState.lastProposal,
+    userRole: "standard_user"
+  };
+}
+
+function renderNexusConversationWorkflowTransitionCard(state = nexusConversationWorkflowTransitionState) {
+  if (!state || !state.lastProposal) return "";
+  const proposal = state.lastProposal;
+  const classification = proposal.classification || {};
+  const options = Array.isArray(proposal.options) ? proposal.options : [];
+  const activeWorkflow = state.activeWorkflow || (proposal.opensWorkflow ? proposal.workflow : null);
+  const optionMarkup = options.length ? `
+    <div class="nexus-conversation-workflow-options" data-nexus-conversation-workflow-options="true">
+      ${options.map((workflow, index) => `
+        <button type="button" data-nexus-conversation-workflow-choice="${escapeHtml(workflow.workflowId)}" data-nexus-command="${escapeHtml(index === 0 ? "the first one" : index === 1 ? "the second one" : "the third one")}">
+          <strong>${escapeHtml(translateText(workflow.domain))}</strong>
+          <span>${escapeHtml(translateText(workflow.conversationalPurpose))}</span>
+        </button>
+      `).join("")}
+    </div>
+  ` : "";
+  const workflowMarkup = activeWorkflow ? `
+    <div class="nexus-conversation-workflow-surface" data-nexus-conversation-workflow-surface="true" data-nexus-workflow-id="${escapeHtml(activeWorkflow.workflowId)}" data-execution-authority="false" data-provider-handoff-authorized="false">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Workflow inside conversation"))}</span>
+        <h4>${escapeHtml(translateText(activeWorkflow.conversationalPurpose))}</h4>
+        <p>${escapeHtml(translateText("Here is what I carried into this workflow from our conversation. You can correct it before anything else happens."))}</p>
+      </div>
+      <ul>
+        <li><strong>${escapeHtml(translateText("Purpose"))}:</strong> ${escapeHtml(activeWorkflow.conversationalPurpose)}</li>
+        <li><strong>${escapeHtml(translateText("Known context"))}:</strong> ${escapeHtml(proposal.carriedContext?.carried?.topic || state.activeTopic || "Current conversation topic")}</li>
+        <li><strong>${escapeHtml(translateText("Missing information"))}:</strong> ${escapeHtml((activeWorkflow.missingInformationQuestions || []).slice(0, 2).join(" "))}</li>
+        <li><strong>${escapeHtml(translateText("Safety"))}:</strong> ${escapeHtml(activeWorkflow.safetyClass)}; ${escapeHtml(translateText("no external action is authorized"))}</li>
+        <li><strong>${escapeHtml(translateText("Sources"))}:</strong> ${escapeHtml((proposal.carriedContext?.carried?.sourceCount || 0) ? `${proposal.carriedContext.carried.sourceCount} active source(s) attached` : "No live source attached to this workflow yet")}</li>
+      </ul>
+      <div class="nexus-conversation-workflow-controls" aria-label="${escapeHtml(translateText("Workflow controls"))}">
+        <button type="button" data-nexus-conversation-workflow-control="revise" data-nexus-command="make this easier to understand">${escapeHtml(translateText("Revise"))}</button>
+        <button type="button" data-nexus-conversation-workflow-control="sources" data-nexus-command="show sources for that">${escapeHtml(translateText("Sources"))}</button>
+        <button type="button" data-nexus-conversation-workflow-control="close" data-nexus-command="close this workflow">${escapeHtml(translateText("Close"))}</button>
+      </div>
+    </div>
+  ` : "";
+  return `
+    <section class="nexus-conversation-workflow-transition nexus-glass-card" data-nexus-conversation-workflow-transition="true" data-conversation-state="${escapeHtml(classification.state || state.currentState || "exploring")}" data-execution-authority="false" data-provider-handoff-authorized="false" aria-label="${escapeHtml(translateText("Nexus conversation to workflow transition"))}">
+      <span class="eyebrow">${escapeHtml(translateText("Conversation state"))}: ${escapeHtml(translateText(classification.state || state.currentState || "exploring"))}</span>
+      <p>${escapeHtml(translateText(proposal.message || "Nexus is keeping the conversation primary."))}</p>
+      ${optionMarkup}
+      ${workflowMarkup}
+      <small>${escapeHtml(translateText("Workflows are offered, not forced. Calls, messages, payments, provider submissions, location sharing, medical or pharmacy execution, drone launch, and dispatch require explicit confirmation and configured providers."))}</small>
+    </section>
+  `;
+}
+
+function handleNexusConversationWorkflowTransitionCommand(command = "") {
+  const engine = nexusConversationWorkflowEngine();
+  if (!engine || experienceMode !== "user") return false;
+  const text = String(command || "").trim();
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  const hasActiveTransition = Boolean(nexusConversationWorkflowTransitionState.lastProposal || nexusConversationWorkflowTransitionState.activeWorkflow);
+  const transitionLikely = hasActiveTransition
+    || /\b(turn this into|create|make|prepare|organize|build|draft|write|checklist|briefing|guide|plan|workflow|the first one|the second one|the third one|not yet|show sources|where did that|go back|close this workflow|pause this|continue the|what should we do|put this into practice|process for this)\b/i.test(text)
+    || /\b(why|what causes|tell me about|explain)\b/i.test(text) && /\b(diabetes|heat|maize|crop|medication|jobs|training|marketplace|route|buyer|clinic|pharmacy)\b/i.test(text);
+  if (!transitionLikely) return false;
+  if (/\b(not yet|keep explaining|keep talking|not now)\b/i.test(lower)) {
+    nexusConversationWorkflowTransitionState.currentState = "exploring";
+    nexusConversationWorkflowTransitionState.activeWorkflow = null;
+    const message = "Okay. We will keep this as a conversation for now. I will not open a workflow unless you choose one.";
+    nexusConversationWorkflowTransitionState.lastProposal = {
+      schemaVersion: "nexus-conversation-transition-proposal.v1",
+      action: "answer_conversationally",
+      classification: { state: "exploring", domains: [], signals: ["workflow_declined"] },
+      message,
+      opensWorkflow: false,
+      executionAuthorized: false,
+      providerHandoffAuthorized: false
+    };
+    recordNexusOsConversationTurn("assistant", message, { source: "nexus-conversation-workflow-transition", workflowOpened: false });
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      message,
+      source: "nexus-conversation-workflow-transition",
+      preparedCards: [{ title: "Conversation continues", description: message, modeSummary: { id: "conversation-workflow-transition" } }],
+      localOnly: true,
+      noExecutionAuthorized: true
+    };
+    setVoiceResponse(message, true, { allowHandoff: false, source: "nexus-conversation-workflow-transition" });
+    renderUserWorkspace?.();
+    return true;
+  }
+  if (/\b(close this workflow|close workflow|cancel workflow|go back to the conversation)\b/i.test(lower) && nexusConversationWorkflowTransitionState.activeWorkflow) {
+    nexusConversationWorkflowTransitionState.activeWorkflow = null;
+    const message = "I closed the workflow and kept the conversation available. No action was executed.";
+    nexusConversationWorkflowTransitionState.lastProposal = {
+      schemaVersion: "nexus-conversation-transition-proposal.v1",
+      action: "close_workflow",
+      classification: { state: "returning_or_branching", domains: [], signals: ["workflow_closed"] },
+      message,
+      opensWorkflow: false,
+      executionAuthorized: false,
+      providerHandoffAuthorized: false
+    };
+    recordNexusOsConversationTurn("assistant", message, { source: "nexus-conversation-workflow-transition", workflowClosed: true });
+    setVoiceResponse(message, true, { allowHandoff: false, source: "nexus-conversation-workflow-transition" });
+    renderUserWorkspace?.();
+    return true;
+  }
+  const context = nexusConversationWorkflowContext(text);
+  const proposal = engine.buildTransitionProposal(text, context);
+  nexusConversationWorkflowTransitionState.currentState = proposal.classification?.state || "exploring";
+  nexusConversationWorkflowTransitionState.activeTopic = context.activeTopic || text;
+  nexusConversationWorkflowTransitionState.lastProposal = proposal;
+  if (proposal.opensWorkflow && proposal.workflow) {
+    nexusConversationWorkflowTransitionState.activeWorkflow = proposal.workflow;
+  }
+  nexusConversationWorkflowTransitionState.turns = [
+    ...nexusConversationWorkflowTransitionState.turns.slice(-8),
+    {
+      role: "user",
+      text,
+      state: nexusConversationWorkflowTransitionState.currentState,
+      action: proposal.action,
+      workflowId: proposal.workflow?.workflowId || "",
+      createdAt: new Date().toISOString()
+    }
+  ];
+  const message = proposal.message || "Nexus is keeping the conversation primary.";
+  recordNexusOsConversationTurn("assistant", message, {
+    source: "nexus-conversation-workflow-transition",
+    conversationState: nexusConversationWorkflowTransitionState.currentState,
+    workflowOpened: Boolean(proposal.opensWorkflow),
+    noExecutionAuthorized: true
+  });
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    command: text,
+    message,
+    source: "nexus-conversation-workflow-transition",
+    preparedCards: [{
+      title: proposal.opensWorkflow ? "Workflow opened inside conversation" : "Conversation transition options",
+      description: message,
+      modeSummary: { id: proposal.workflow?.workflowId || "conversation-workflow-transition" },
+      transitionProposal: proposal
+    }],
+    result: proposal,
+    localOnly: true,
+    noExecutionAuthorized: true,
+    providerHandoffAuthorized: false
+  };
+  setNexusCoreState(proposal.opensWorkflow ? "planning" : "reasoning", {
+    source: "conversation-workflow-transition",
+    statusText: proposal.opensWorkflow ? "Focused workflow opened inside conversation." : "Workflow opportunity offered conversationally."
+  });
+  setVoiceResponse(message, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-conversation-workflow-transition"
+  });
+  renderUserWorkspace?.();
+  return true;
+}
+
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
   if (isUniversalLanguageCommand(command)) {
@@ -2595,6 +2782,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
+  if (handleNexusConversationWorkflowTransitionCommand(command)) return true;
   if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;
   if (handleNexusSimulationCaptionCommand(command)) return true;
   if (handleNexusMapNavigationHandoffCaptionCommand(command)) return true;
@@ -32091,6 +32279,7 @@ function renderNexusCommandCenterHeroLegacy() {
       </div>
       ${renderNexusIntentDrivenWorkflowStatus()}
       ${renderNexusOsUnifiedConversationSurface()}
+      ${renderNexusConversationWorkflowTransitionCard()}
     </section>
   `;
 }
@@ -37106,6 +37295,72 @@ function ensureNexusOsVisualBoundaryStyles() {
       background: linear-gradient(145deg, rgba(15, 23, 42, 0.68), rgba(8, 13, 28, 0.5));
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 70px rgba(2, 6, 23, 0.26);
       backdrop-filter: blur(18px);
+    }
+    .nexus-conversation-workflow-transition {
+      grid-column: 1 / -1;
+      width: min(920px, 100%);
+      margin: 14px auto 0;
+      padding: 14px;
+      border: 1px solid rgba(34, 211, 238, 0.24);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(2, 6, 23, 0.62), rgba(15, 23, 42, 0.48));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 54px rgba(2, 6, 23, 0.24);
+      backdrop-filter: blur(16px);
+    }
+    .nexus-conversation-workflow-transition p,
+    .nexus-conversation-workflow-transition small,
+    .nexus-conversation-workflow-transition li {
+      color: rgba(226, 232, 240, 0.9);
+      line-height: 1.45;
+    }
+    .nexus-conversation-workflow-options,
+    .nexus-conversation-workflow-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .nexus-conversation-workflow-options button,
+    .nexus-conversation-workflow-controls button {
+      border: 1px solid rgba(125, 211, 252, 0.28);
+      border-radius: 16px;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.58);
+      color: rgba(248, 250, 252, 0.96);
+      box-shadow: 0 0 22px rgba(34, 211, 238, 0.1);
+      text-align: left;
+    }
+    .nexus-conversation-workflow-options button {
+      flex: 1 1 210px;
+    }
+    .nexus-conversation-workflow-options button:hover,
+    .nexus-conversation-workflow-controls button:hover {
+      border-color: rgba(34, 211, 238, 0.52);
+      box-shadow: 0 0 28px rgba(34, 211, 238, 0.18);
+      transform: translateY(-1px);
+    }
+    .nexus-conversation-workflow-options strong,
+    .nexus-conversation-workflow-surface h4 {
+      color: rgba(255, 255, 255, 0.98);
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.18);
+    }
+    .nexus-conversation-workflow-options span {
+      display: block;
+      color: rgba(203, 213, 225, 0.86);
+      margin-top: 3px;
+    }
+    .nexus-conversation-workflow-surface {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: 18px;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(5, 46, 22, 0.26), rgba(8, 47, 73, 0.22));
+    }
+    .nexus-conversation-workflow-surface ul {
+      margin: 0;
+      padding-left: 18px;
     }
     .nexus-os-conversation-header {
       display: flex;
