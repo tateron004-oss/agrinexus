@@ -269,6 +269,48 @@
       returnToConversationBehavior: "return to learning discussion"
     },
     {
+      domain: "learning",
+      workflowId: "learning.literacy-support-path",
+      conversationalPurpose: "Turn a learning need into a low-literacy, language-aware support path.",
+      transitionSignals: ["literacy support", "low literacy", "reading help", "language support", "study support", "help me learn in"],
+      requiredContext: ["learning need"],
+      optionalContext: ["language", "reading level", "device access", "offline need"],
+      missingInformationQuestions: ["What language should Nexus use?", "Should this be voice-first, picture-supported, or text-supported?"],
+      safetyClass: "education_prepare",
+      confirmationRequirements: ["acceptance and confirmation before opening", "confirmation before any future enrollment or provider handoff"],
+      providerRequirements: ["configured LMS or training provider for live enrollment"],
+      supportedVisualSurface: "literacy support workspace",
+      supportedVoiceCommands: ["make it easier", "translate", "use voice-first", "close the workflow"],
+      structuredInputRequirements: ["learner age", "language preference", "access needs"],
+      possibleOutputs: ["literacy support steps", "language support plan", "offline learning checklist"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["provider receipt for live enrollment or certification"],
+      receiptBehavior: "local literacy plan receipt only",
+      cancellationBehavior: "cancel literacy support path",
+      returnToConversationBehavior: "return to learning conversation"
+    },
+    {
+      domain: "learning",
+      workflowId: "learning.training-provider-questions",
+      conversationalPurpose: "Prepare questions for a training provider without enrolling the learner.",
+      transitionSignals: ["training provider questions", "course provider", "school questions", "training enrollment questions", "certificate questions"],
+      requiredContext: ["training goal"],
+      optionalContext: ["program name", "location", "cost", "credential"],
+      missingInformationQuestions: ["What training program or skill are you considering?", "Do you need cost, schedule, language, or certificate questions?"],
+      safetyClass: "education_provider_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "final confirmation and provider readiness before enrollment or provider contact"],
+      providerRequirements: ["verified training provider or LMS connector for live enrollment/contact"],
+      supportedVisualSurface: "training provider question workspace",
+      supportedVoiceCommands: ["add cost questions", "add schedule questions", "show blocked enrollment state", "close the workflow"],
+      structuredInputRequirements: ["program", "provider", "learner details", "contact details"],
+      possibleOutputs: ["provider question list", "enrollment readiness checklist", "blocked provider status"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["provider confirmation before claiming enrollment"],
+      receiptBehavior: "no enrollment receipt without provider evidence",
+      cancellationBehavior: "cancel training provider prep",
+      returnToConversationBehavior: "return to learning discussion"
+    },
+    {
       domain: "workforce",
       workflowId: "workforce.application-prep",
       conversationalPurpose: "Prepare job search, resume, interview, or application materials.",
@@ -288,6 +330,48 @@
       receiptBehavior: "receipt only for local prep or verified submission",
       cancellationBehavior: "cancel local job workflow",
       returnToConversationBehavior: "return to career conversation"
+    },
+    {
+      domain: "workforce",
+      workflowId: "workforce.interview-coaching",
+      conversationalPurpose: "Turn job goals into interview coaching and practice questions without applying.",
+      transitionSignals: ["interview coaching", "interview practice", "practice interview", "job interview", "prepare for interview"],
+      requiredContext: ["job target"],
+      optionalContext: ["skills", "experience", "language", "confidence need"],
+      missingInformationQuestions: ["What job or role is the interview for?", "Do you want practice questions, answers, or confidence coaching?"],
+      safetyClass: "employment_prepare",
+      confirmationRequirements: ["acceptance and confirmation before opening", "confirmation before any employer contact or application submission"],
+      providerRequirements: ["verified employer/job connector for live applications or scheduling"],
+      supportedVisualSurface: "interview coaching workspace",
+      supportedVoiceCommands: ["ask me a practice question", "make answer stronger", "translate", "close the workflow"],
+      structuredInputRequirements: ["job title", "resume details", "employer details"],
+      possibleOutputs: ["practice questions", "answer outline", "confidence checklist"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["employer/provider evidence for any live action"],
+      receiptBehavior: "local coaching receipt only",
+      cancellationBehavior: "cancel interview coaching",
+      returnToConversationBehavior: "return to workforce conversation"
+    },
+    {
+      domain: "workforce",
+      workflowId: "workforce.apprenticeship-path",
+      conversationalPurpose: "Prepare an apprenticeship, internship, or training-to-work pathway without submitting applications.",
+      transitionSignals: ["apprenticeship", "internship", "training to work", "youth employment", "pathway to work", "work placement"],
+      requiredContext: ["career pathway goal"],
+      optionalContext: ["age group", "location", "transport", "skills", "training provider"],
+      missingInformationQuestions: ["What type of work pathway are you looking for?", "Do you need training, transport, childcare, or equipment support included?"],
+      safetyClass: "employment_provider_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "final confirmation before provider contact or application submission"],
+      providerRequirements: ["verified employer, workforce, or training connector for live placement"],
+      supportedVisualSurface: "apprenticeship pathway workspace",
+      supportedVoiceCommands: ["add support needs", "add training options", "show blocked provider state", "close the workflow"],
+      structuredInputRequirements: ["candidate details", "program", "provider", "support needs"],
+      possibleOutputs: ["pathway plan", "support checklist", "provider questions"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["provider/employer response before claiming placement"],
+      receiptBehavior: "no placement receipt without provider evidence",
+      cancellationBehavior: "cancel pathway preparation",
+      returnToConversationBehavior: "return to workforce conversation"
     },
     {
       domain: "marketplace",
@@ -311,6 +395,48 @@
       returnToConversationBehavior: "return to marketplace conversation"
     },
     {
+      domain: "marketplace",
+      workflowId: "marketplace.buyer-readiness-checklist",
+      conversationalPurpose: "Prepare buyer-readiness questions without contacting buyers, taking orders, or payment.",
+      transitionSignals: ["buyer readiness", "buyer checklist", "sell to buyer", "buyer questions", "market access"],
+      requiredContext: ["product or market goal"],
+      optionalContext: ["quantity", "quality", "price", "delivery", "certification"],
+      missingInformationQuestions: ["What product do you want to sell?", "Do you need quality, quantity, price, or delivery questions?"],
+      safetyClass: "transaction_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "final confirmation before buyer contact, order, payment, or dispatch"],
+      providerRequirements: ["configured marketplace and payment/logistics connectors for live execution"],
+      supportedVisualSurface: "buyer readiness workspace",
+      supportedVoiceCommands: ["add quality checks", "draft buyer questions", "add delivery constraints", "close the workflow"],
+      structuredInputRequirements: ["buyer", "quantity", "price", "delivery route", "payment details"],
+      possibleOutputs: ["buyer readiness checklist", "inquiry draft", "market-access plan"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["marketplace/provider evidence before claiming transaction"],
+      receiptBehavior: "no buyer/order/payment receipt without provider evidence",
+      cancellationBehavior: "cancel buyer readiness prep",
+      returnToConversationBehavior: "return to marketplace conversation"
+    },
+    {
+      domain: "marketplace",
+      workflowId: "marketplace.seller-listing-prep",
+      conversationalPurpose: "Prepare a seller listing draft without publishing, buyer contact, or checkout.",
+      transitionSignals: ["seller listing", "create listing", "marketplace listing", "list my crop", "sell my crop"],
+      requiredContext: ["product to list"],
+      optionalContext: ["quantity", "quality", "price range", "photos", "pickup"],
+      missingInformationQuestions: ["What product should the listing describe?", "Do you know quantity, grade, and pickup/delivery needs?"],
+      safetyClass: "transaction_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "final confirmation and marketplace readiness before publishing or contact"],
+      providerRequirements: ["configured marketplace connector for live listing"],
+      supportedVisualSurface: "seller listing preparation workspace",
+      supportedVoiceCommands: ["add product details", "make it clearer", "show blocked publish state", "close the workflow"],
+      structuredInputRequirements: ["seller details", "product details", "price", "photos", "contact method"],
+      possibleOutputs: ["listing draft", "quality checklist", "blocked publish state"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["marketplace provider response before claiming publication"],
+      receiptBehavior: "no listing receipt without provider evidence",
+      cancellationBehavior: "cancel listing prep",
+      returnToConversationBehavior: "return to marketplace conversation"
+    },
+    {
       domain: "logistics",
       workflowId: "logistics.route-plan",
       conversationalPurpose: "Prepare route, shipment, field visit, or mobile clinic logistics without dispatch.",
@@ -329,6 +455,48 @@
       verificationRequirements: ["provider response for live route/dispatch"],
       receiptBehavior: "local prep receipt only unless provider verifies",
       cancellationBehavior: "cancel local logistics prep",
+      returnToConversationBehavior: "return to logistics conversation"
+    },
+    {
+      domain: "logistics",
+      workflowId: "logistics.shipment-intake",
+      conversationalPurpose: "Prepare shipment intake details without booking transport or dispatch.",
+      transitionSignals: ["shipment intake", "shipping details", "prepare shipment", "shipment checklist", "cargo details"],
+      requiredContext: ["shipment goal"],
+      optionalContext: ["origin", "destination", "cargo", "temperature need", "timing"],
+      missingInformationQuestions: ["What is being shipped?", "What origin and destination text should be used?"],
+      safetyClass: "location_dispatch_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "final confirmation before booking, dispatch, or location sharing"],
+      providerRequirements: ["configured logistics provider for live booking or tracking"],
+      supportedVisualSurface: "shipment intake workspace",
+      supportedVoiceCommands: ["add cold chain", "add pickup window", "show blocked dispatch state", "close the workflow"],
+      structuredInputRequirements: ["origin", "destination", "cargo", "recipient", "timing"],
+      possibleOutputs: ["shipment intake packet", "transport questions", "blocked dispatch status"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["logistics provider receipt before claiming booking or dispatch"],
+      receiptBehavior: "no shipment booking receipt without provider evidence",
+      cancellationBehavior: "cancel shipment intake",
+      returnToConversationBehavior: "return to logistics conversation"
+    },
+    {
+      domain: "logistics",
+      workflowId: "logistics.tracking-provider-readiness",
+      conversationalPurpose: "Prepare shipment tracking-provider readiness without claiming live tracking.",
+      transitionSignals: ["shipment tracking", "tracking provider", "track delivery", "where is shipment", "tracking readiness"],
+      requiredContext: ["tracking need"],
+      optionalContext: ["tracking number", "provider", "destination", "delivery window"],
+      missingInformationQuestions: ["Which provider or tracking number should be checked?", "Do you want a blocked-state summary or a tracking checklist?"],
+      safetyClass: "provider_status_gated",
+      confirmationRequirements: ["acceptance and confirmation before opening", "provider readiness required before live tracking claims"],
+      providerRequirements: ["configured tracking/logistics provider"],
+      supportedVisualSurface: "tracking readiness workspace",
+      supportedVoiceCommands: ["add tracking number", "show provider status", "prepare update message", "close the workflow"],
+      structuredInputRequirements: ["tracking number", "provider name", "recipient details"],
+      possibleOutputs: ["tracking readiness packet", "status-check checklist", "blocked provider state"],
+      executionCapability: "local_prepare_only",
+      verificationRequirements: ["provider result before claiming location/status"],
+      receiptBehavior: "no tracking receipt without provider evidence",
+      cancellationBehavior: "cancel tracking readiness prep",
       returnToConversationBehavior: "return to logistics conversation"
     },
     {
@@ -414,7 +582,11 @@
       ["drone", /\b(drone|scan|aerial|imagery|flight|mission)\b/],
       ["daily-life", /\b(remind|daily|organize my day|remember|family|caregiver)\b/]
     ];
-    return domainRules.filter(([, pattern]) => pattern.test(normalized)).map(([domain]) => domain);
+    const domains = domainRules.filter(([, pattern]) => pattern.test(normalized)).map(([domain]) => domain);
+    if (/\b(apprenticeship|internship|training to work|work placement|youth employment)\b/.test(normalized) && !domains.includes("workforce")) {
+      domains.push("workforce");
+    }
+    return domains;
   }
 
   function classifyTurn(text, context = {}) {
@@ -455,10 +627,21 @@
     const haystack = normalizeText(`${text} ${domains.join(" ")}`);
     let score = domains.includes(workflow.domain) ? 4 : 0;
     for (const signal of workflow.transitionSignals || []) {
-      if (haystack.includes(normalizeText(signal))) score += 3;
+      if (haystack.includes(normalizeText(signal))) {
+        score += 3;
+        if (normalizeText(signal).includes(" ")) score += 2;
+      }
     }
     if (workflow.domain === "pharmacy" && domains.includes("health")) score += 1;
     if (workflow.domain === "logistics" && /mobile clinic|field visit|route/i.test(text)) score += 2;
+    if (workflow.workflowId === "workforce.apprenticeship-path" && /\b(apprenticeship|internship|training to work|work placement|youth employment)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "workforce.interview-coaching" && /\b(interview coaching|interview practice|practice interview|job interview)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "learning.literacy-support-path" && /\b(literacy support|low literacy|reading help|language support)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "learning.training-provider-questions" && /\b(training provider|course provider|enrollment|certificate)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "marketplace.buyer-readiness-checklist" && /\b(buyer readiness|buyer checklist|market access)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "marketplace.seller-listing-prep" && /\b(seller listing|create listing|list my crop|sell my crop)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "logistics.shipment-intake" && /\b(shipment intake|shipping details|prepare shipment|cargo details|cold chain cargo)\b/i.test(text)) score += 5;
+    if (workflow.workflowId === "logistics.tracking-provider-readiness" && /\b(shipment tracking|tracking provider|tracking readiness|tracking number)\b/i.test(text)) score += 5;
     return score;
   }
 

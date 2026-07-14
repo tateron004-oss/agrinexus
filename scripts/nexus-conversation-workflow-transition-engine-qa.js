@@ -53,7 +53,15 @@ const requiredWorkflowIds = [
   "agriculture.field-inspection-checklist",
   "agriculture.source-backed-briefing",
   "agriculture.local-expert-questions",
-  "agriculture.delivery-planning"
+  "agriculture.delivery-planning",
+  "learning.literacy-support-path",
+  "learning.training-provider-questions",
+  "workforce.interview-coaching",
+  "workforce.apprenticeship-path",
+  "marketplace.buyer-readiness-checklist",
+  "marketplace.seller-listing-prep",
+  "logistics.shipment-intake",
+  "logistics.tracking-provider-readiness"
 ];
 const registryIds = new Set(engine.WORKFLOW_REGISTRY.map(workflow => workflow.workflowId));
 for (const workflowId of requiredWorkflowIds) {
@@ -132,6 +140,36 @@ assert(expertQuestions.options.some(workflow => workflow.workflowId === "agricul
 const deliveryPlan = engine.buildTransitionProposal("Prepare agriculture delivery planning for produce transport to market without payment.", {});
 assert(deliveryPlan.options.some(workflow => workflow.workflowId === "agriculture.delivery-planning"), "agriculture delivery planning workflow is available");
 assert(deliveryPlan.options.find(workflow => workflow.workflowId === "agriculture.delivery-planning").confirmationRequirements.join(" ").includes("payment"), "delivery planning keeps payment/dispatch confirmation gate");
+
+const literacyPath = engine.buildTransitionProposal("Create a literacy support path in Swahili for someone with low literacy.", {});
+assert(literacyPath.options[0]?.workflowId === "learning.literacy-support-path", "literacy support routes to language-aware support path");
+
+const trainingQuestions = engine.buildTransitionProposal("Prepare training provider questions about certificate costs and enrollment.", {});
+assert(trainingQuestions.options.some(workflow => workflow.workflowId === "learning.training-provider-questions"), "training provider question workflow is available");
+assert(trainingQuestions.options.find(workflow => workflow.workflowId === "learning.training-provider-questions").receiptBehavior.includes("No enrollment") || /no enrollment/i.test(trainingQuestions.options.find(workflow => workflow.workflowId === "learning.training-provider-questions").receiptBehavior), "training workflow does not claim enrollment");
+
+const interviewCoaching = engine.buildTransitionProposal("Turn this into interview coaching for a farm logistics job.", {});
+assert(interviewCoaching.options.some(workflow => workflow.workflowId === "workforce.interview-coaching"), "interview coaching workflow is available");
+
+const apprenticeshipPath = engine.buildTransitionProposal("Create an apprenticeship pathway with transport and equipment support.", {});
+assert(apprenticeshipPath.options[0]?.workflowId === "workforce.apprenticeship-path", "apprenticeship path routes correctly");
+assert(/provider|employer/i.test(apprenticeshipPath.options[0].verificationRequirements.join(" ")), "apprenticeship path requires provider/employer evidence for live placement");
+
+const buyerReadiness = engine.buildTransitionProposal("Prepare a buyer readiness checklist for maize market access.", {});
+assert(buyerReadiness.options[0]?.workflowId === "marketplace.buyer-readiness-checklist", "buyer readiness workflow routes correctly");
+assert(/payment|dispatch|buyer contact/i.test(buyerReadiness.options[0].confirmationRequirements.join(" ")), "buyer readiness keeps transaction gates");
+
+const listingPrep = engine.buildTransitionProposal("Create a seller listing draft to list my crop without publishing.", {});
+assert(listingPrep.options.some(workflow => workflow.workflowId === "marketplace.seller-listing-prep"), "seller listing prep workflow is available");
+assert(/no listing receipt/i.test(listingPrep.options.find(workflow => workflow.workflowId === "marketplace.seller-listing-prep").receiptBehavior), "seller listing does not fake publication receipt");
+
+const shipmentIntake = engine.buildTransitionProposal("Prepare shipment intake for cold chain cargo from the farm to market.", {});
+assert(shipmentIntake.options[0]?.workflowId === "logistics.shipment-intake", "shipment intake workflow routes correctly");
+assert(/booking|dispatch|location sharing/i.test(shipmentIntake.options[0].confirmationRequirements.join(" ")), "shipment intake keeps dispatch/location gates");
+
+const trackingReadiness = engine.buildTransitionProposal("Prepare tracking provider readiness for a shipment tracking number.", {});
+assert(trackingReadiness.options.some(workflow => workflow.workflowId === "logistics.tracking-provider-readiness"), "tracking-provider readiness workflow is available");
+assert(/provider result/i.test(trackingReadiness.options.find(workflow => workflow.workflowId === "logistics.tracking-provider-readiness").verificationRequirements.join(" ")), "tracking readiness requires provider result");
 
 includes(index, "/nexus-conversation-workflow-transition-engine.js", "index script loading");
 includes(index, "/app.js?v=nexus-behavior-425", "app cache version bump");
