@@ -42,6 +42,24 @@ for (const domain of requiredDomains) {
   assert(registryDomains.has(domain), `workflow registry must include ${domain}`);
 }
 
+const requiredWorkflowIds = [
+  "health.patient-risk-checklist",
+  "health.public-health-briefing",
+  "health.heat-risk-response",
+  "health.provider-discovery-prep",
+  "pharmacy.counseling-guide",
+  "pharmacy.caregiver-handout",
+  "pharmacy.community-medication-outreach",
+  "agriculture.field-inspection-checklist",
+  "agriculture.source-backed-briefing",
+  "agriculture.local-expert-questions",
+  "agriculture.delivery-planning"
+];
+const registryIds = new Set(engine.WORKFLOW_REGISTRY.map(workflow => workflow.workflowId));
+for (const workflowId of requiredWorkflowIds) {
+  assert(registryIds.has(workflowId), `workflow registry must include ${workflowId}`);
+}
+
 for (const workflow of engine.WORKFLOW_REGISTRY) {
   assert(workflow.workflowId, "workflow must declare workflowId");
   assert(workflow.conversationalPurpose, `${workflow.workflowId}: purpose required`);
@@ -85,6 +103,35 @@ assert(/cannot execute|confirmation|provider readiness/i.test(acting.message), "
 
 const ag = engine.buildTransitionProposal("My maize is turning yellow. I need something I can take into the field.", {});
 assert(ag.options.some(workflow => workflow.domain === "agriculture"), "agriculture concern offers field workflow");
+
+const publicHealth = engine.buildTransitionProposal("Create a public health briefing for community health workers about hypertension RPM.", {});
+assert(publicHealth.options[0]?.workflowId === "health.public-health-briefing", "public-health briefing routes to health briefing workflow");
+assert(publicHealth.options[0].safetyClass === "clinical_review_required", "public-health briefing keeps clinical review gate");
+
+const heatRisk = engine.buildTransitionProposal("Prepare a heat risk response workflow for older adults with diabetes during extreme heat.", {});
+assert(heatRisk.options.some(workflow => workflow.workflowId === "health.heat-risk-response"), "heat-risk command offers heat-risk workflow");
+
+const providerDiscovery = engine.buildTransitionProposal("Find provider discovery criteria for a nearby clinic and pharmacy using typed location only.", {});
+assert(providerDiscovery.options.some(workflow => workflow.workflowId === "health.provider-discovery-prep"), "provider discovery prep is available");
+assert(providerDiscovery.options.find(workflow => workflow.workflowId === "health.provider-discovery-prep").executionCapability === "local_prepare_only", "provider discovery remains local-only");
+
+const caregiverHandout = engine.buildTransitionProposal("Make a caregiver medication handout with pharmacist questions.", {});
+assert(caregiverHandout.options[0]?.workflowId === "pharmacy.caregiver-handout", "caregiver medication handout routes to pharmacy handout workflow");
+assert(/pharmacist|clinician|pharmacy/i.test(caregiverHandout.options[0].verificationRequirements.join(" ")), "caregiver handout requires pharmacy/clinical review");
+
+const medicationOutreach = engine.buildTransitionProposal("Create a community medication outreach plan for refill support.", {});
+assert(medicationOutreach.options.some(workflow => workflow.workflowId === "pharmacy.community-medication-outreach"), "medication outreach workflow is available");
+
+const agBriefing = engine.buildTransitionProposal("Create a source-backed agriculture briefing using extension sources for tomato blight.", {});
+assert(agBriefing.options[0]?.workflowId === "agriculture.source-backed-briefing", "source-backed agriculture briefing routes correctly");
+assert(/local expert|source/i.test(agBriefing.options[0].verificationRequirements.join(" ")), "agriculture briefing preserves local/source verification");
+
+const expertQuestions = engine.buildTransitionProposal("Prepare agronomist questions for a local agriculture specialist about yellow maize.", {});
+assert(expertQuestions.options.some(workflow => workflow.workflowId === "agriculture.local-expert-questions"), "local expert question workflow is available");
+
+const deliveryPlan = engine.buildTransitionProposal("Prepare agriculture delivery planning for produce transport to market without payment.", {});
+assert(deliveryPlan.options.some(workflow => workflow.workflowId === "agriculture.delivery-planning"), "agriculture delivery planning workflow is available");
+assert(deliveryPlan.options.find(workflow => workflow.workflowId === "agriculture.delivery-planning").confirmationRequirements.join(" ").includes("payment"), "delivery planning keeps payment/dispatch confirmation gate");
 
 includes(index, "/nexus-conversation-workflow-transition-engine.js", "index script loading");
 includes(index, "/app.js?v=nexus-behavior-425", "app cache version bump");
