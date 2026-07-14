@@ -406,8 +406,11 @@ function assertSynthesis(context, label) {
 function assertOrbActivation(context, label) {
   const orbSource = sourceBetween(context.app, "function handleNexusGenesisOrbActivation", "function nexusTrueExperienceHasActiveWorkflow", label);
   assertIncludes(orbSource, [
-    "return false"
-  ], label, "deterministic orb non-activation");
+    "return false",
+    "activateNexusGenesisExperience",
+    "handleNexusOsVoiceControlAction(\"enable-voice\"",
+    "[data-nexus-genesis-home-orb='true']"
+  ], label, "deterministic orb wake activation");
   assertExcludes(orbSource, [
     "event.stopImmediatePropagation",
     "voiceRecognition?.stop",
@@ -415,7 +418,6 @@ function assertOrbActivation(context, label) {
     "genesis-orb-stop-speaking",
     "genesis-orb-stop-listening",
     "genesis-orb-processing-click",
-    "void activateNexusGenesisExperience",
     "renderNexusAutonomousRuntimePreview",
     "openWorkflow",
     "Plan Preview",
@@ -448,7 +450,14 @@ function assertOrbActivation(context, label) {
   ], label, "forbidden orb interactive markup");
 
   const bindSource = sourceBetween(context.app, "function bindStatic", "async function boot", label);
-  assert(!bindSource.includes("handleNexusGenesisOrbActivation"), `${label}: static binding must not wire orb click or keyboard activation.`);
+  assertIncludes(bindSource, [
+    'document.addEventListener("click", handleNexusGenesisOrbActivation, true);',
+    'document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);'
+  ], label, "orb activation binding");
+  assert(
+    bindSource.indexOf('document.addEventListener("click", handleNexusGenesisOrbActivation, true);') < bindSource.indexOf('document.addEventListener("click", handleNexusStandardUserHomeClick, true);'),
+    `${label}: orb activation must be captured before legacy Standard User click handling.`
+  );
 }
 
 function assertRouting(context, label) {

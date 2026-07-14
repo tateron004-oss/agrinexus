@@ -26,23 +26,28 @@ function includesAll(source, tokens, label) {
 const orb = between("function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "orb renderer");
 includesAll(orb, [
   "data-nexus-genesis-orb-presence=\"true\"",
+  "data-nexus-genesis-home-orb=\"true\"",
+  "role=\"button\"",
   "role=\"img\"",
   "Nexus visual status indicator. Use the voice controls or type below to begin.",
   "data-nexus-core-status-text"
-], "presence-only orb");
-assert(!orb.includes("<button"), "orb must not render button semantics");
+], "accessible wake orb");
+assert(!orb.includes("<button"), "orb must not render a separate button element");
 assert(!orb.includes("data-nexus-genesis-orb-entry"), "orb must not expose activation metadata");
 assert(!orb.includes("onclick"), "orb must not carry inline click behavior");
 
 const binding = between("function bindStatic", "async function boot", "static bindings");
-assert(!binding.includes("handleNexusGenesisOrbActivation"), "document bindings must not attach orb activation");
+includesAll(binding, [
+  "document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);",
+  "document.addEventListener(\"keydown\", handleNexusGenesisOrbActivation, true);"
+], "orb wake bindings");
 
 const mode = between("function nexusTrueExperienceMode", "function isNexusTrueExperienceReturnHomeCommand", "experience mode");
 includesAll(mode, [
   "if (nexusTrueExperienceHasActiveWorkflow()) return \"mission\";",
   "if (nexusTrueExperienceHasCurrentConversation()) return \"conversation\";",
-  "return \"conversation\";"
-], "conversation-first startup");
+  "return \"home\";"
+], "orb-first startup");
 assert(!mode.includes("currentNexusOsMission()) return \"mission\""), "conversation startup must not depend on mission creation");
 
 const conversation = between("function renderNexusOsConversationTurns", "function renderNexusOsUnifiedConversationSurface", "conversation surface");
@@ -96,16 +101,15 @@ assert(!troubleshooting.includes("Plan created"), "voice troubleshooting must ne
 includesAll(troubleshooting, [
   "can you hear me",
   "still can t hear you",
-  "I received your typed message",
+  "Yes, I can hear you through this conversation.",
   "continue by typing"
 ], "voice troubleshooting direct responses");
 
 const css = between("[data-nexus-os-core-orb] {", "@media (prefers-reduced-motion: reduce)", "orb css");
 includesAll(css, [
   "pointer-events: none",
-  "cursor: default",
   "user-select: none"
-], "non-clickable orb css");
+], "orb inner-piece safety css");
 
 assert(pkg.scripts["qa:nexus-genesis-voice-first-conversational-presence"] === "node scripts/nexus-genesis-voice-first-conversational-presence-qa.js", "package alias must exist");
 assert(qaSuite.includes("scripts/nexus-genesis-voice-first-conversational-presence-qa.js"), "qa-suite must include focused presence QA");

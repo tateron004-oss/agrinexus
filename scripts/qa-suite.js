@@ -20,6 +20,7 @@ const GENESIS_RAIL_SCRIPTS = [
   "scripts/nexus-conversation-workflow-acceptance-qa.js",
   "scripts/nexus-genesis-visible-product-acceptance-qa.js",
   "scripts/nexus-genesis-conversational-mode-orchestrator-qa.js",
+  "scripts/nexus-world-demonstration-release-qa.js",
   "scripts/nexus-genesis-rail-09-understanding-qa.js",
   "scripts/nexus-genesis-rail-10-context-qa.js",
   "scripts/nexus-genesis-rail-11-memory-qa.js",

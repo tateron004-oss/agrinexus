@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
 assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
 assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
 assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
-assert(index.includes('/manifest.webmanifest?v=nexus-behavior-426'), "index should version the manifest link to avoid stale manifest warnings");
+assert(index.includes('/manifest.webmanifest?v=nexus-behavior-427'), "index should version the manifest link to avoid stale manifest warnings");
 assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
 
 includesAll(app, [
@@ -39,7 +39,7 @@ includesAll(app, [
   "function nexusVoiceTroubleshootingState",
   "function nexusVoiceTroubleshootingResponse",
   "function handleNexusVoiceTroubleshootingCommand",
-  "I received your typed message. Voice listening is not active right now.",
+  "Yes, I can hear you through this conversation. Voice listening is not active right now.",
   "I can respond on screen, but I cannot speak aloud in this browser right now.",
   "Voice can start from the Talk button.",
   "Microphone permission required",
@@ -110,14 +110,23 @@ assert(
 const orbSource = between(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "Genesis orb renderer");
 includesAll(orbSource, [
   "data-nexus-genesis-orb-presence=\"true\"",
+  "data-nexus-genesis-home-orb=\"true\"",
+  "role=\"button\"",
   "role=\"img\"",
   "Nexus visual status indicator. Use the voice controls or type below to begin."
-], "Genesis non-clickable orb renderer");
-assert(!orbSource.includes("<button"), "Genesis orb renderer must not use button semantics");
+], "Genesis accessible orb renderer");
+assert(!orbSource.includes("<button"), "Genesis orb renderer must not use a separate button element");
 assert(!orbSource.includes("data-nexus-genesis-orb-entry"), "Genesis orb renderer must not expose activation entry metadata");
 
 const bindSource = between(app, "function bindStatic", "async function boot", "static binding");
-assert(!bindSource.includes("handleNexusGenesisOrbActivation"), "static binding must not attach orb click or keyboard activation");
+includesAll(bindSource, [
+  "document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);",
+  "document.addEventListener(\"keydown\", handleNexusGenesisOrbActivation, true);"
+], "static orb activation binding");
+assert(
+  bindSource.indexOf("document.addEventListener(\"click\", handleNexusGenesisOrbActivation, true);") < bindSource.indexOf("document.addEventListener(\"click\", handleNexusStandardUserHomeClick, true);"),
+  "static orb activation must run before legacy Standard User click handling"
+);
 
 const userWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "Standard User workspace render");
 includesAll(userWorkspaceSource, [

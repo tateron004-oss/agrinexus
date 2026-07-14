@@ -1215,8 +1215,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-426";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v371";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-427";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -29703,6 +29703,15 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     setCommandInputs("");
     return true;
   }
+  if (handleNexusVoiceTroubleshootingCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    renderUserWorkspace();
+    return true;
+  }
   advanceNexusOsMissionForCommand(command, { source });
   recordNexusOsConversationTurn("user", command, { source });
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
@@ -31806,7 +31815,7 @@ function nexusVoiceTroubleshootingResponse(command = "", options = {}) {
   }
   if (/\b(is my microphone working|is my mic working|microphone working|mic working|can you hear me|do you hear me|are you listening|are you hearing me|you hear me|you listening)\b/.test(text)) {
     if (state.recognitionActive) return "Yes, I received your message. Voice listening is active right now.";
-    if (usedTypedInput) return "I received your typed message. Voice listening is not active right now. Press Talk if you want to try the microphone, or keep typing here.";
+    if (usedTypedInput) return "Yes, I can hear you through this conversation. Voice listening is not active right now. Press Talk if you want to try the microphone, or keep typing here.";
     if (state.profile.supported) return "I received your message. Voice listening is not active now; press Talk to start microphone listening when you are ready.";
     return "I received your message on screen. Microphone speech recognition is unavailable in this browser, but typed conversation works.";
   }
@@ -31986,7 +31995,17 @@ function resetNexusGenesisHomeViewport() {
 }
 
 function handleNexusGenesisOrbActivation(event) {
-  return false;
+  const orb = event?.target?.closest?.("[data-nexus-genesis-home-orb='true']");
+  if (!orb) return false;
+  if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return false;
+  event.preventDefault?.();
+  event.stopPropagation?.();
+  void activateNexusGenesisExperience(event.type === "keydown" ? "keyboard-orb" : "orb").then(() => {
+    if (typeof handleNexusOsVoiceControlAction === "function") {
+      void handleNexusOsVoiceControlAction("enable-voice", { source: "genesis-orb-activation" });
+    }
+  });
+  return true;
 }
 
 function nexusTrueExperienceHasActiveWorkflow() {
@@ -32038,7 +32057,6 @@ function clearNexusTrueExperienceStaleWorkflowState() {
 
 function nexusTrueExperienceHasCurrentConversation() {
   if (nexusGenesisExperienceActivated || nexusTrueExperienceSessionStarted) return true;
-  if (typeof document !== "undefined" && document.body?.classList?.contains?.("user-mode")) return true;
   const minimumEpoch = Math.max(NEXUS_TRUE_EXPERIENCE_LOAD_EPOCH, nexusTrueExperienceHomeResetEpoch);
   return nexusOsConversationTurns.some(turn => turn.role === "user" && Number(turn.epoch || 0) >= minimumEpoch);
 }
@@ -32046,7 +32064,7 @@ function nexusTrueExperienceHasCurrentConversation() {
 function nexusTrueExperienceMode() {
   if (nexusTrueExperienceHasActiveWorkflow()) return "mission";
   if (nexusTrueExperienceHasCurrentConversation()) return "conversation";
-  return "conversation";
+  return "home";
 }
 
 function isNexusTrueExperienceReturnHomeCommand(command = "") {
@@ -32064,9 +32082,12 @@ function renderNexusTrueCoreOrb(options = {}) {
   const coreContract = getNexusCoreStateContract(coreState);
   const isHome = options.home === true;
   const label = nexusCoreStateAccessibleLabel(coreState);
+  const homeAttrs = isHome
+    ? ' data-nexus-genesis-home-orb="true" role="button" tabindex="0" aria-describedby="nexusFirstImpressionDescription"'
+    : ' role="img"';
   return `
     <div class="nexus-true-orb-wrap ${isHome ? "home" : ""} ${options.compact ? "compact" : ""} ${nexusCoreStateClass(coreState)}" data-nexus-true-orb-wrap="true">
-      <div class="nexus-orb-stage nexus-true-orb-stage nexus-presence-orb ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(translateText(label))}" title="${escapeHtml(coreContract.label)}">
+      <div class="nexus-orb-stage nexus-true-orb-stage nexus-presence-orb ${nexusCoreStateClass(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-true-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}"${homeAttrs} aria-label="${escapeHtml(translateText(isHome ? "Wake Nexus" : label))}" title="${escapeHtml(coreContract.label)}">
         <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use the voice controls or type below to begin."))}</span>
         <span class="nexus-genesis-particle-field" data-nexus-genesis-particles="true" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -32198,7 +32219,7 @@ function renderNexusTrueHome() {
     <section class="nexus-true-home nexus-genesis-orb-only-home" data-nexus-true-home="true" data-nexus-genesis-orb-only-home="true" data-nexus-accessible-first-impression="true" aria-label="${escapeHtml(translateText("Nexus orb home"))}">
       ${renderNexusTrueCoreOrb({ home: true })}
       <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus"))}</span>
-      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use voice controls or type below."))}</span>
+      <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Activate the Nexus orb to begin a voice or typed conversation."))}</span>
     </section>
   `;
 }
@@ -37184,6 +37205,10 @@ function ensureNexusOsVisualBoundaryStyles() {
       cursor: default;
       user-select: none;
     }
+    [data-nexus-genesis-home-orb="true"] {
+      pointer-events: auto;
+      cursor: pointer;
+    }
     [data-nexus-os-core-orb] *,
     [data-nexus-genesis-orb-presence] * {
       pointer-events: none;
@@ -37890,7 +37915,7 @@ function renderUserWorkspace() {
   target.innerHTML = `
     <div class="nexus-command-center-shell nexus-shell nexus-os-startup-surface nexus-genesis-experience-root nexus-true-experience-root" data-testid="nexus-standard-user-home" data-nexus-os-standard-startup="true-conversation" data-nexus-genesis-engine-root="true" data-nexus-genesis-experience-root="true" data-nexus-true-conversational-root="true" data-nexus-standard-user-render-root="true-conversational-experience" data-nexus-true-experience-mode="${escapeHtml(trueExperienceMode)}" data-nexus-genesis-activated="${nexusGenesisExperienceActivated ? "true" : "false"}" data-nexus-genesis-core-state="${escapeHtml(normalizeNexusCoreState(nexusCoreRuntimeState.current || "idle"))}">
       <main class="nexus-command-main nexus-main" data-nexus-genesis-first-viewport="true" aria-label="${escapeHtml(translateText("Nexus"))}">
-        ${renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
+        ${trueExperienceMode === "home" ? renderNexusUserWorkspaceSegment("Genesis orb home", renderNexusTrueHome) : renderNexusUserWorkspaceSegment("Command center", renderNexusCommandCenterHero)}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mode launcher", renderNexusModeLauncher) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Activity receipts", renderNexusPremiumActivityReceiptsPanel) : ""}
@@ -56086,6 +56111,8 @@ function bindStatic() {
   }
   document.addEventListener("focusin", handleNexusPresenceInputActivity, true);
   document.addEventListener("input", handleNexusPresenceInputActivity, true);
+  document.addEventListener("click", handleNexusGenesisOrbActivation, true);
+  document.addEventListener("keydown", handleNexusGenesisOrbActivation, true);
   document.addEventListener("keydown", handleNexusTrueCommandComposerKeydown, true);
   document.addEventListener("click", event => {
     const voiceControl = event.target?.closest?.("[data-nexus-command-center-voice],[data-nexus-os-voice-control]");

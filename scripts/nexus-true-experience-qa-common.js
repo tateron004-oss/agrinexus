@@ -50,7 +50,7 @@ function assertTrueHomeMarkup() {
   assert(!home.includes("Good evening, Ron."), "idle Home does not render visible greeting");
   assert(!home.includes("renderNexusTrueCommandComposer()"), "idle Home does not render visible composer");
   assert(!home.includes("renderNexusTrueSecondaryAccess()"), "idle Home does not render visible secondary controls");
-  assert(home.includes("Nexus is ready. Use voice controls or type below."), "nonvisual presence fallback instruction exists");
+  assert(home.includes("Activate the Nexus orb to begin a voice or typed conversation."), "nonvisual orb-first fallback instruction exists");
 }
 
 function assertLegacyHomeRemoved() {
@@ -79,12 +79,14 @@ function assertOrbPrimaryInteraction() {
   const orb = extractFunction("renderNexusTrueCoreOrb");
   assert(orb.includes('data-nexus-true-core-orb="true"'), "true orb marker exists");
   assert(orb.includes('data-nexus-genesis-orb-presence="true"'), "orb is presence-only");
-  assert(!orb.includes("data-nexus-genesis-orb-entry"), "orb no longer owns Home activation");
+  assert(orb.includes('data-nexus-genesis-home-orb="true"'), "home orb owns guarded Home activation");
   assert(orb.includes("Nexus visual status indicator. Use the voice controls or type below to begin."), "orb has screen-reader presence instruction");
-  assert(!orb.includes("<button"), "orb does not use button semantics");
+  assert(orb.includes('role="button"') && orb.includes('tabindex="0"'), "home orb supports keyboard button semantics");
+  assert(orb.includes('role="img"'), "non-home orb remains a status image");
   assert(app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler exists");
-  assert(!app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation listener is removed");
-  assert(!app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation listener is removed");
+  assert(app.includes('document.addEventListener("click", handleNexusGenesisOrbActivation'), "orb click activation listener is bound");
+  assert(app.includes('document.addEventListener("keydown", handleNexusGenesisOrbActivation'), "orb keyboard activation listener is bound");
+  assert(app.includes('handleNexusOsVoiceControlAction("enable-voice"'), "orb activation starts guarded voice activation");
   assert(orb.includes('data-nexus-os-orb-state="${escapeHtml(coreState)}"'), "orb reflects runtime state");
   assert(orb.includes("nexusCoreStateAccessibleLabel(coreState)"), "orb has accessible status name");
   assert(styles.includes(".nexus-true-orb-stage"), "true orb stage styles exist");
@@ -136,11 +138,11 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-426"'), "app build version bumped");
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v371"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-426"'), "server build version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v371"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v371"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-427"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-427"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v372"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v372"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");

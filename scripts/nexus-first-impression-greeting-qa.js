@@ -40,7 +40,7 @@ assert(!topWelcome.includes("displayName"), "top welcome does not depend on role
 assert(trueHome.includes('data-nexus-genesis-orb-only-home="true"'), "true home fallback remains isolated");
 assert(!trueHome.includes("Good evening, Ron."), "true home does not show visible greeting");
 assert(!trueHome.includes("What are we working on today?"), "true home does not show visible helper text");
-assert(trueHome.includes("Nexus is ready. Use voice controls or type below."), "true home preserves status-only readiness language");
+assert(trueHome.includes("Activate the Nexus orb to begin a voice or typed conversation."), "true home preserves orb-first readiness language");
 assert(hero.includes("Hello. I'm Nexus."), "hero owns the conversational first impression");
 assert(hero.includes("You can talk to me or type below. Tell me what you need help with, and we'll work through it together."), "hero includes natural voice-first greeting");
 assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");
