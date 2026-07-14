@@ -15931,16 +15931,15 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: default;
+  pointer-events: none;
   outline: none;
   filter: saturate(1.08);
   isolation: isolate;
 }
 
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible {
-  outline: 3px solid rgba(125, 211, 252, .95);
-  outline-offset: 12px;
-  border-radius: 999px;
+  outline: none;
 }
 
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {

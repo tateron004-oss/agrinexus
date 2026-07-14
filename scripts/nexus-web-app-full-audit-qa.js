@@ -234,7 +234,7 @@ check("Standard User first screen remains conversation-first, not tab-heavy", ha
   'data-nexus-os-standard-startup="true-conversation"',
   'data-nexus-true-conversational-root="true"',
   "Hello. I'm Nexus.",
-  "Enable voice once, press Talk, or type your request.",
+  "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && hasAll(css, [
   "body.user-mode .nexus-mode-launcher",

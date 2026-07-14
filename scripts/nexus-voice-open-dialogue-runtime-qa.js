@@ -29,9 +29,9 @@ assert.equal(voice.localeForLanguage("sw"), "sw-KE");
 assert.equal(voice.localeForLanguage("ar"), "ar");
 assert.equal(voice.localeForLanguage("pt"), "pt-BR");
 
-assert.equal(voice.FALLBACKS.voiceInputUnavailable, "Voice input is unavailable in this browser. You can type the same command in Ask Nexus.");
+assert.equal(voice.FALLBACKS.voiceInputUnavailable, "Voice input is unavailable in this browser. Open Nexus in a supported browser for the voice front door; structured fields appear only after Nexus opens a workflow.");
 assert.equal(voice.FALLBACKS.voiceOutputUnavailable, "Voice output is unavailable in this browser. Nexus response is shown on screen.");
-assert.equal(voice.FALLBACKS.selectedLanguageInputUnsupported, "Voice input may not be supported for the selected language in this browser. You can type the command instead.");
+assert.equal(voice.FALLBACKS.selectedLanguageInputUnsupported, "Voice input may not be supported for the selected language in this browser. Keep using voice where supported; structured fields appear only after Nexus opens a workflow.");
 assert.equal(voice.FALLBACKS.selectedLanguageOutputUnsupported, "Voice output may not be available for the selected language in this browser. Nexus will show the response on screen.");
 
 const noVoiceSupport = voice.detectSupport({});

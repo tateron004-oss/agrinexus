@@ -52,7 +52,7 @@ assert(index.includes("/nexus-voice-demo-shell.js"), "Voice demo shell module mu
 assert(index.includes("Nexus Voice Demo"), "Standard User voice dock must include the Nexus Voice Demo label.");
 assert(index.includes("Push-to-talk access assistant. Demo-safe."), "Voice demo label must explain the demo-safe push-to-talk boundary.");
 assert(index.includes("No provider contact, calls, prescriptions, payments, or location sharing."), "Voice demo label must state no provider contact, calls, prescriptions, payments, or location sharing.");
-assert(index.includes("Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same."), "Voice demo UI must include browser speech-recognition fallback copy.");
+assert(index.includes("Browser speech recognition support varies; workflow fields appear only after Nexus opens a workflow."), "Voice demo UI must include browser speech-recognition recovery copy.");
 [
   "Nexus, I need telehealth",
   "Nexus, help me find a mobile clinic",
@@ -214,7 +214,7 @@ const quickPromptBlock = quickPromptMatch[0];
 });
 assert(quickPromptBlock.includes("safeFallbackResponse(prompt)"), "Quick prompts must use the safe voice demo response handler.");
 assert(quickPromptBlock.includes("bridge?.showResponse"), "Quick prompts may only show a safe response.");
-assert(shell.includes("Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same."), "Shell must expose browser speech-recognition fallback copy.");
+assert(shell.includes("Browser speech recognition support varies. Open Nexus in a supported browser for voice; structured fields appear only after Nexus opens a workflow."), "Shell must expose browser speech-recognition recovery copy.");
 
 [
   "fetch(",

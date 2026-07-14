@@ -1215,8 +1215,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-428";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-429";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v374";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -12946,7 +12946,7 @@ function renderNexusOsConversationTurns() {
     return `
       <article class="nexus-os-conversation-turn assistant" data-nexus-os-conversation-empty="true">
         <strong>${escapeHtml(translateText("Nexus"))}</strong>
-        <span>${escapeHtml(translateText("Hello. I'm Nexus. You can talk to me or type below. Tell me what you need help with, and we'll work through it together."))}</span>
+        <span>${escapeHtml(translateText("Hello. I'm Nexus. Speak naturally, and I will open structured fields only when a workflow needs exact details."))}</span>
         <time>${escapeHtml(translateText("Ready"))}</time>
       </article>
     `;
@@ -32139,7 +32139,7 @@ function renderNexusVoiceFirstPresenceControls() {
   const enableLabel = recognitionActive
     ? "Stop listening"
     : permissionState === "granted-or-browser-managed"
-      ? "Press to talk"
+      ? "Start listening"
       : "Enable voice";
   const enableAction = recognitionActive ? "stop-listening" : "enable-voice";
   const help = permissionState === "denied" || nexusVoicePermissionDeniedThisSession
@@ -32219,12 +32219,12 @@ function renderNexusTrueCommandComposer(options = {}) {
       <button type="button" class="nexus-command-mic nexus-primary-voice-entry nexus-true-mic" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" data-nexus-primary-voice-entry="true" onclick="return handleNexusPrimaryVoiceButtonClick(event)" aria-label="${escapeHtml(translateText("Talk to Nexus"))}" title="${escapeHtml(translateText("Talk to Nexus"))}">
         ${escapeHtml(translateText("Speak"))}
       </button>
-      <label class="sr-only" for="nexusCommandCenterInput">${escapeHtml(translateText("Ask Nexus anything"))}</label>
-      <textarea id="nexusCommandCenterInput" rows="1" data-nexus-primary-typed-entry="true" aria-describedby="nexusCommandTypedHint" placeholder="${escapeHtml(translateText("Ask Nexus anything..."))}"></textarea>
+      <label class="sr-only" for="nexusCommandCenterInput">${escapeHtml(translateText("Workflow details for Nexus"))}</label>
+      <textarea id="nexusCommandCenterInput" rows="1" data-nexus-primary-typed-entry="true" aria-describedby="nexusCommandTypedHint" placeholder="${escapeHtml(translateText("Enter workflow details..."))}"></textarea>
       <button type="submit" class="nexus-command-send nexus-primary-typed-submit nexus-true-send" data-nexus-command-center-submit data-nexus-primary-typed-submit="true" data-nexus-command-input-target="nexusCommandCenterInput" aria-label="${escapeHtml(translateText("Send to Nexus"))}">
         ${escapeHtml(translateText("Send"))}
       </button>
-      <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to ask. Use Shift+Enter for a new line."))}</span>
+      <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to add this workflow detail. Use Shift+Enter for a new line."))}</span>
     </form>
     ${renderNexusVoiceFirstPresenceControls()}
     ${renderNexusBrowserVoiceAvailabilityHint()}
@@ -32297,10 +32297,10 @@ function renderNexusCommandCenterHeroLegacy() {
           <i></i>
         </div>
         <strong class="nexus-premium-hero-title">${translateText("Nexus")}</strong>
-        <small class="nexus-premium-hero-subtitle">${translateText("Talk naturally. Type when voice is not available.")}</small>
+        <small class="nexus-premium-hero-subtitle">${translateText("Talk naturally. Structured fields appear only inside opened workflows.")}</small>
         <span class="eyebrow">${translateText("Conversational workspace")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Hello. I'm Nexus.")}</h3>
-        <p id="nexusFirstImpressionDescription">${translateText("You can talk to me or type below. Tell me what you need help with, and we'll work through it together.")}</p>
+        <p id="nexusFirstImpressionDescription">${translateText("Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow.")}</p>
         ${renderNexusConversationalPresenceLayer()}
         ${renderNexusPresenceRuntimeBadge()}
         ${renderNexusTrueSecondaryAccess()}
@@ -32319,7 +32319,7 @@ function renderNexusCommandCenterHeroLegacy() {
         </div>
       </div>
       <div class="nexus-orb-stage nexus-core-state-${escapeHtml(coreState)}" data-nexus-orb="true" data-nexus-os-core-orb="true" data-nexus-genesis-orb-presence="true" data-nexus-os-orb-state="${escapeHtml(coreState)}" role="img" aria-label="${escapeHtml(nexusCoreStateAccessibleLabel(coreState))}" title="${escapeHtml(coreContract.label)}">
-        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use the voice controls or type below to begin."))}</span>
+        <span class="sr-only" data-nexus-genesis-orb-instruction="true">${escapeHtml(translateText("Nexus visual status indicator. Use voice controls to continue."))}</span>
         <div class="nexus-orb nexus-os-core-orb">
           <span class="nexus-orb-core">N</span>
           <span class="nexus-orb-ring nexus-orb-ring-one"></span>
@@ -32342,8 +32342,8 @@ function renderNexusCommandCenterHeroLegacy() {
         </div>
         <div class="nexus-command-context">
           <span class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus is ready. Use Talk or type to begin."))}</span>
-          <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Enable voice once, press Talk, or type your request.")}</span>
-          <span id="nexusCommandTypedHint" class="nexus-primary-typed-hint" data-nexus-primary-typed-hint="true">${translateText("Press Enter to ask. Use Shift+Enter for a new line.")}</span>
+          <span class="nexus-primary-voice-hint" data-nexus-primary-voice-hint="true">${translateText("Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.")}</span>
+          <span id="nexusCommandTypedHint" class="nexus-primary-typed-hint" data-nexus-primary-typed-hint="true">${translateText("Press Enter to add this workflow detail. Use Shift+Enter for a new line.")}</span>
           <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>
           <span>${translateText("Local-first")}</span>
           <span>${translateText("High-risk actions gated")}</span>
@@ -46997,7 +46997,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     if (nexusVoicePermissionDeniedThisSession || nexusOsVoiceRuntimeState.permissionState === "denied") {
       const response = "Microphone permission is blocked right now. Change microphone permission in your browser, then reload or allow microphone access again.";
       recordNexusOsConversationTurn("assistant", response, { source });
-      showNexusVoiceFallbackMessage(response, { source: "voice-permission-denied-session", mode: "typed-fallback", trustChainState: "permission_denied" });
+      showNexusVoiceFallbackMessage(response, { source: "voice-permission-denied-session", mode: "voice-unavailable", trustChainState: "permission_denied" });
       renderUserWorkspace();
       return true;
     }
@@ -47085,6 +47085,15 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
       updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "audio-only-home" }, source);
       renderUserWorkspace();
     }
+    return true;
+  }
+  if (normalized === "voice-help") {
+    const response = "Voice help is available. Use the microphone permission control when your browser supports speech recognition. Structured fields appear only after Nexus opens a workflow.";
+    updateUserCaptionPanel(response);
+    recordNexusOsConversationTurn("assistant", response, { source });
+    setVoiceResponse(response, false, { allowVoiceFirst: false, source });
+    updateNexusOsVoiceRuntimeState({ mode: "voice-help", listeningState: "audio-only-home" }, source);
+    renderUserWorkspace();
     return true;
   }
   await startVoiceListening({ source });
@@ -48298,14 +48307,14 @@ function refreshMicSupport() {
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
       : realtimeVoiceActive()
-      ? `OpenAI Realtime conversation-only voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop. Use browser Mic or typed Ask Nexus for workflow actions.`
+      ? `OpenAI Realtime conversation-only voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop. Workflow fields appear only after Nexus opens a workflow.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()
         : `${profile.browserName} microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
       : profile.secureEnough
-        ? `${languageName} voice input is not available in ${profile.browserName}. Open desktop Chrome for the best Ask Nexus voice experience, or type your request and click Run command.`
-        : `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Type your request, or open the secure hosted URL.`;
+        ? `${languageName} voice input is not available in ${profile.browserName}. Open desktop Chrome for the best Nexus voice experience.`
+        : `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the secure hosted URL for voice.`;
   }
   ["#globalListenBtn", "#voiceListenBtn", "#jarvisListenBtn", "#workflowListenBtn"].forEach(selector => {
     const button = $(selector);
@@ -57188,9 +57197,8 @@ function bindStatic() {
         updateUserCaptionPanel(lastVoiceResponse || "Nexus is ready.");
         await handleNexusOsVoiceControlAction("repeat-response", { source: "user-voice-dock" });
       } else {
-        updateUserCaptionPanel(lastVoiceResponse || "Ask Nexus anything.");
-        await handleNexusOsVoiceControlAction("typed-fallback", { source: "user-voice-dock" });
-        $("#globalCommandInput")?.focus();
+        updateUserCaptionPanel(lastVoiceResponse || "Voice help is available. Structured fields appear only inside opened workflows.");
+        await handleNexusOsVoiceControlAction("voice-help", { source: "user-voice-dock" });
       }
       return;
     }
@@ -57564,7 +57572,7 @@ function bindStatic() {
   const topCaptionsBtn = $("#topCaptionsBtn");
   if (topCaptionsBtn) topCaptionsBtn.onclick = () => {
     closeTopSettingsMenu();
-    openCaptionBox("Nexus captions are open. Speak or type your request.");
+    openCaptionBox("Nexus captions are open. Speak to Nexus; structured fields appear only inside opened workflows.");
   };
   const topHomeBtn = $("#topHomeBtn");
   if (topHomeBtn) topHomeBtn.onclick = () => {

@@ -22,7 +22,7 @@
     en: {
       opened: "I opened the related workspace.",
       welcome: "You're welcome. I'm here when you need help.",
-      inputUnavailable: "Voice input is unavailable in this browser. You can type the same command in Ask Nexus.",
+      inputUnavailable: "Voice input is unavailable in this browser. Open Nexus in a supported browser for the voice front door; structured fields appear only after Nexus opens a workflow.",
       outputUnavailable: "Voice output is unavailable in this browser. Nexus response is shown on screen.",
       providerRequired: "This action requires provider activation.",
       localSafe: "This is local-safe test data.",
@@ -37,7 +37,7 @@
     es: {
       opened: "Abrí el espacio de trabajo relacionado.",
       welcome: "Con gusto. Estoy aquí cuando necesite ayuda.",
-      inputUnavailable: "La entrada de voz no está disponible en este navegador. Puede escribir el mismo comando en Ask Nexus.",
+      inputUnavailable: "La entrada de voz no está disponible en este navegador. Abra Nexus en un navegador compatible; los campos estructurados aparecen solo después de que Nexus abra un flujo de trabajo.",
       outputUnavailable: "La salida de voz no está disponible en este navegador. La respuesta de Nexus se muestra en pantalla.",
       providerRequired: "Esta acción requiere activación de proveedor.",
       localSafe: "Estos son datos locales seguros de prueba.",
@@ -52,7 +52,7 @@
     fr: {
       opened: "J'ai ouvert l'espace de travail lié.",
       welcome: "Avec plaisir. Je suis là quand vous avez besoin d'aide.",
-      inputUnavailable: "La saisie vocale n'est pas disponible dans ce navigateur. Vous pouvez taper la même commande dans Ask Nexus.",
+      inputUnavailable: "La saisie vocale n'est pas disponible dans ce navigateur. Ouvrez Nexus dans un navigateur compatible; les champs structurés apparaissent seulement après l'ouverture d'un flux de travail par Nexus.",
       outputUnavailable: "La sortie vocale n'est pas disponible dans ce navigateur. La réponse de Nexus est affichée à l'écran.",
       providerRequired: "Cette action nécessite l'activation d'un fournisseur.",
       localSafe: "Ce sont des données de test locales et sûres.",
@@ -67,7 +67,7 @@
     sw: {
       opened: "Nimefungua eneo husika la kazi.",
       welcome: "Karibu. Niko hapa unapohitaji msaada.",
-      inputUnavailable: "Sauti ya kuingiza haipatikani katika kivinjari hiki. Unaweza kuandika amri ile ile kwenye Ask Nexus.",
+      inputUnavailable: "Sauti ya kuingiza haipatikani katika kivinjari hiki. Fungua Nexus kwenye kivinjari kinachotumika; sehemu maalum huonekana tu baada ya Nexus kufungua mtiririko wa kazi.",
       outputUnavailable: "Sauti ya kujibu haipatikani katika kivinjari hiki. Jibu la Nexus linaonyeshwa kwenye skrini.",
       providerRequired: "Kitendo hiki kinahitaji mtoa huduma kuwezeshwa.",
       localSafe: "Hizi ni data za majaribio za ndani zilizo salama.",
@@ -82,7 +82,7 @@
     ar: {
       opened: "\u0641\u062a\u062d\u062a \u0645\u0633\u0627\u062d\u0629 \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0645\u0631\u062a\u0628\u0637\u0629.",
       welcome: "\u0639\u0641\u0648\u0627. \u0623\u0646\u0627 \u0647\u0646\u0627 \u0639\u0646\u062f\u0645\u0627 \u062a\u062d\u062a\u0627\u062c \u0625\u0644\u0649 \u0645\u0633\u0627\u0639\u062f\u0629.",
-      inputUnavailable: "\u0625\u062f\u062e\u0627\u0644 \u0627\u0644\u0635\u0648\u062a \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0645\u062a\u0635\u0641\u062d. \u064a\u0645\u0643\u0646\u0643 \u0643\u062a\u0627\u0628\u0629 \u0646\u0641\u0633 \u0627\u0644\u0623\u0645\u0631 \u0641\u064a Ask Nexus.",
+      inputUnavailable: "\u0625\u062f\u062e\u0627\u0644 \u0627\u0644\u0635\u0648\u062a \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0645\u062a\u0635\u0641\u062d. \u0627\u0641\u062a\u062d Nexus \u0641\u064a \u0645\u062a\u0635\u0641\u062d \u0645\u062f\u0639\u0648\u0645\u061b \u062a\u0638\u0647\u0631 \u0627\u0644\u062d\u0642\u0648\u0644 \u0627\u0644\u0645\u0646\u0638\u0645\u0629 \u0641\u0642\u0637 \u0628\u0639\u062f \u0623\u0646 \u064a\u0641\u062a\u062d Nexus \u0633\u064a\u0631 \u0639\u0645\u0644.",
       outputUnavailable: "\u0625\u062e\u0631\u0627\u062c \u0627\u0644\u0635\u0648\u062a \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0645\u062a\u0635\u0641\u062d. \u062a\u0638\u0647\u0631 \u0625\u062c\u0627\u0628\u0629 Nexus \u0639\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629.",
       providerRequired: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621 \u064a\u062a\u0637\u0644\u0628 \u062a\u0641\u0639\u064a\u0644 \u0645\u0632\u0648\u062f \u062e\u062f\u0645\u0629.",
       localSafe: "\u0647\u0630\u0647 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u062d\u0644\u064a\u0629 \u0622\u0645\u0646\u0629.",
@@ -97,7 +97,7 @@
     pt: {
       opened: "Abri o espaço de trabalho relacionado.",
       welcome: "De nada. Estou aqui quando precisar de ajuda.",
-      inputUnavailable: "A entrada de voz não está disponível neste navegador. Pode digitar o mesmo comando no Ask Nexus.",
+      inputUnavailable: "A entrada de voz não está disponível neste navegador. Abra o Nexus em um navegador compatível; campos estruturados aparecem somente depois que o Nexus abre um fluxo de trabalho.",
       outputUnavailable: "A saída de voz não está disponível neste navegador. A resposta do Nexus é mostrada na tela.",
       providerRequired: "Esta ação requer ativação de provedor.",
       localSafe: "Estes são dados locais seguros de teste.",

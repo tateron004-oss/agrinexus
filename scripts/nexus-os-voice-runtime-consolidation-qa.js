@@ -76,7 +76,7 @@ includes(bindBlock, 'handleNexusOsVoiceControlAction("repeat-response"', "legacy
 [
   'data-nexus-os-voice-control="toggle-listening"',
   'data-nexus-os-voice-control="repeat-response"',
-  'data-nexus-os-voice-control="typed-fallback"'
+  'data-nexus-os-voice-control="voice-help"'
 ].forEach(token => includes(index + app, token, `canonical voice control marker ${token}`));
 
 [

@@ -9,6 +9,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 
 const app = read("public/app.js");
 const index = read("public/index.html");
+const styles = read("public/styles.css");
 const server = read("server.js");
 const sw = read("public/sw.js");
 const packageJson = JSON.parse(read("package.json"));
@@ -26,6 +27,15 @@ function includesAll(source, tokens, label) {
   for (const token of tokens) assert(source.includes(token), `${label}: missing ${token}`);
 }
 
+function stylesBetweenHomeOrb() {
+  return between(
+    styles,
+    "body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {",
+    "body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible",
+    "home orb source CSS"
+  );
+}
+
 const orb = between(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "orb renderer");
 includesAll(orb, [
   "data-nexus-genesis-orb-presence=\"true\"",
@@ -37,6 +47,9 @@ assert(!orb.includes("role=\"button\""), "orb must not expose button semantics")
 assert(!orb.includes("tabindex=\"0\""), "orb must not be keyboard focusable");
 assert(!orb.includes("Wake Nexus"), "orb must not read as launcher");
 assert(!orb.includes("onclick"), "orb must not carry inline click behavior");
+assert(!stylesBetweenHomeOrb().includes("cursor: pointer"), "source CSS must not give home orb a pointer cursor");
+assert(stylesBetweenHomeOrb().includes("cursor: default"), "source CSS must give home orb a default cursor");
+assert(stylesBetweenHomeOrb().includes("pointer-events: none"), "source CSS must disable pointer events on the home orb stage");
 assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler must be removed");
 assert(!app.includes("handleNexusGenesisOrbActivation"), "orb activation references must be removed");
 assert(!app.includes("genesis-orb-activation"), "orb click activation source must be absent");
@@ -116,10 +129,10 @@ includesAll(orbCss, [
   "cursor: default !important"
 ], "home orb non-interactive cursor override");
 
-includesAll(index, ["/app.js?v=nexus-behavior-428", "/styles.css?v=nexus-behavior-428"], "index cache");
-includesAll(app, ["nexus-behavior-428", "agrinexus-pwa-v373"], "app cache");
-includesAll(server, ["nexus-behavior-428", "agrinexus-pwa-v373"], "server cache");
-includesAll(sw, ["nexus-behavior-428", "agrinexus-pwa-v373"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-429", "/styles.css?v=nexus-behavior-429"], "index cache");
+includesAll(app, ["nexus-behavior-429", "agrinexus-pwa-v374"], "app cache");
+includesAll(server, ["nexus-behavior-429", "agrinexus-pwa-v374"], "server cache");
+includesAll(sw, ["nexus-behavior-429", "agrinexus-pwa-v374"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",

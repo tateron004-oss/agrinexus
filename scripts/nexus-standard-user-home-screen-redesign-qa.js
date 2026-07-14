@@ -154,9 +154,9 @@ function excludes(source, token, label) {
   "All systems operational",
   "Ask Nexus",
   "Nexus is present",
-  "Talk naturally. Type when voice is not available.",
+  "Talk naturally. Structured fields appear only inside opened workflows.",
   "Hello. I'm Nexus.",
-  "You can talk to me or type below. Tell me what you need help with, and we'll work through it together.",
+  "Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow.",
   "Saved Questions",
   "Provider Support",
   "Platform Status",
@@ -247,8 +247,8 @@ function excludes(source, token, label) {
 });
 
 [
-  "Hello. I'm Nexus. You can talk to me or type below. Tell me what you need help with, and we'll work through it together.",
-  "Enable voice once, press Talk, or type your request.",
+  "Hello. I'm Nexus. Speak naturally, and I will open structured fields only when a workflow needs exact details.",
+  "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   "Playback depends on supported providers or accounts",
   "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
   "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
@@ -319,14 +319,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-428"', "app build version"],
-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-428"', "server build version"],
-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"', "server cache version"],
-  [sw, 'CACHE_NAME = "agrinexus-pwa-v373"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-428"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-428", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-428", "app script cache bust"]
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-429"', "app build version"],
+  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v374"', "app cache version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-429"', "server build version"],
+  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v374"', "server cache version"],
+  [sw, 'CACHE_NAME = "agrinexus-pwa-v374"', "service worker cache"],
+  [sw, 'BUILD_VERSION = "nexus-behavior-429"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-429", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-429", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

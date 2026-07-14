@@ -220,13 +220,13 @@ check("Standard User first screen remains conversation-first and uncluttered", h
   'data-nexus-os-standard-startup="true-conversation"',
   'data-nexus-true-conversational-root="true"',
   "Hello. I'm Nexus.",
-  "Enable voice once, press Talk, or type your request.",
+  "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
 
-check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-428", "agrinexus-pwa-v373"])
-  && hasAll(app, ["nexus-behavior-428", "agrinexus-pwa-v373"])
-  && hasAll(sw, ["nexus-behavior-428", "agrinexus-pwa-v373"]));
+check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-429", "agrinexus-pwa-v374"])
+  && hasAll(app, ["nexus-behavior-429", "agrinexus-pwa-v374"])
+  && hasAll(sw, ["nexus-behavior-429", "agrinexus-pwa-v374"]));
 
 check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));

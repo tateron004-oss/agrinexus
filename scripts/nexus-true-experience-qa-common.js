@@ -143,11 +143,11 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-428"'), "app build version bumped");
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-428"'), "server build version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v373"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v373"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-429"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v374"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-429"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v374"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v374"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");
@@ -164,8 +164,8 @@ function assertFinalAcceptance() {
   const composer = extractFunction("renderNexusTrueCommandComposer");
   assert((composer.match(/data-nexus-primary-voice-entry/g) || []).length === 1, "composer defines one primary voice entry");
   assert((composer.match(/data-nexus-primary-typed-entry/g) || []).length === 1, "composer defines one primary typed entry");
-  assert(composer.includes("Ask Nexus anything..."), "single typed entry uses approved placeholder");
-  assert(composer.includes("Send"), "single send action exists");
+  assert(composer.includes("Enter workflow details..."), "typed entry is explicitly workflow-scoped");
+  assert(composer.includes("Send"), "single workflow send action exists");
   assert(!extractFunction("renderNexusTrueHome").includes("Ask Nexus"), "idle home does not show old Ask Nexus branding");
 }
 

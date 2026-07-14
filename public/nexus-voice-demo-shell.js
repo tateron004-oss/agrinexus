@@ -591,8 +591,8 @@
     const Recognition = recognitionCtor();
     if (!Recognition) {
       setStatus(STATUS_UNSUPPORTED);
-      setTranscript("Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.");
-      speak("Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.");
+      setTranscript("Browser speech recognition support varies. Open Nexus in a supported browser for voice; structured fields appear only after Nexus opens a workflow.");
+      speak("Browser speech recognition support varies. Open Nexus in a supported browser for voice; structured fields appear only after Nexus opens a workflow.");
       return;
     }
     const recognition = new Recognition();
@@ -609,8 +609,8 @@
       activeRecognition = null;
       const blocked = event?.error === "not-allowed" || event?.error === "service-not-allowed";
       const message = blocked
-        ? "Microphone permission was blocked. Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same."
-        : "Voice recognition paused. Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.";
+        ? "Microphone permission was blocked. Browser speech recognition support varies; structured fields appear only after Nexus opens a workflow."
+        : "Voice recognition paused. Browser speech recognition support varies; structured fields appear only after Nexus opens a workflow.";
       setStatus(blocked ? "Microphone permission blocked" : STATUS_READY);
       setTranscript(message);
       if (!blocked) speak(message);

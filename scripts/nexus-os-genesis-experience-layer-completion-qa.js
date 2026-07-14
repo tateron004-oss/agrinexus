@@ -72,8 +72,8 @@ Object.entries(requiredAliases).forEach(([alias, command]) => {
 ].forEach(token => assert(app.includes(token), `${token} runtime marker exists`));
 
 [
-  "Nexus visual status indicator. Use the voice controls or type below to begin.",
-  "Enable voice once, press Talk, or type your request.",
+  "Nexus visual status indicator. Use voice controls to continue.",
+  "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   "Hello. I'm Nexus.",
   "Focused mission open",
   "No external action is authorized from this transition."

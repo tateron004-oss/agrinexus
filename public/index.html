@@ -9,11 +9,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Nexus Genesis | AgriNexus">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="/manifest.webmanifest?v=nexus-behavior-428">
+  <link rel="manifest" href="/manifest.webmanifest?v=nexus-behavior-429">
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-428">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-429">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -134,7 +134,7 @@
           </select>
         </label>
         <button type="button" data-user-voice-action="listen" data-nexus-os-voice-control="toggle-listening">Speak</button>
-        <button type="button" data-user-voice-action="type" data-nexus-os-voice-control="typed-fallback">Ask</button>
+        <button type="button" data-user-voice-action="voice-help" data-nexus-os-voice-control="voice-help">Voice help</button>
         <button type="button" data-user-voice-action="read" data-nexus-os-voice-control="repeat-response">Read</button>
         <button id="nexusVoiceDemoStopMusicBtn" type="button" data-nexus-voice-demo-action="stop-music">Stop Music</button>
         <div class="nexus-voice-demo-prompts" aria-label="Meeting-safe Nexus demo prompts">
@@ -145,7 +145,7 @@
           <button type="button" data-nexus-voice-demo-prompt="Nexus, call my doctor">Call my doctor</button>
         </div>
         <span id="nexusVoiceDemoStatus" data-nexus-voice-demo-status>Voice ready</span>
-        <span id="nexusVoiceDemoTranscript" data-nexus-voice-demo-transcript>Click Talk to Nexus for one safe voice command. Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.</span>
+        <span id="nexusVoiceDemoTranscript" data-nexus-voice-demo-transcript>Use the voice control for one safe Nexus command. Browser speech recognition support varies; workflow fields appear only after Nexus opens a workflow.</span>
         <section id="nexusMultilingualVoiceRuntime" class="nexus-conversation-runtime" data-nexus-conversational-voice-runtime="true" aria-label="Nexus multilingual conversational voice">
           <div class="nexus-conversation-runtime-head">
             <strong>Conversational Nexus</strong>
@@ -157,11 +157,9 @@
             <button type="button" data-nexus-conversation-action="repeat" data-nexus-conversation-label="repeat">Repeat</button>
             <button type="button" data-nexus-conversation-action="mute" data-nexus-conversation-label="mute">Mute</button>
           </div>
-          <label class="nexus-conversation-runtime-input" for="nexusConversationTextInput">
-            <span>Type when voice is unavailable</span>
-            <input id="nexusConversationTextInput" placeholder="Ask Nexus a question">
-            <button type="button" data-nexus-conversation-action="send" data-nexus-conversation-label="send">Ask</button>
-          </label>
+          <p class="nexus-conversation-runtime-input" data-nexus-conversation-readonly-recovery>
+            Voice recovery guidance appears here when browser speech recognition is unavailable. Workflow fields appear only after Nexus opens a workflow.
+          </p>
           <p data-nexus-conversation-state>Conversation ready</p>
           <p data-nexus-conversation-support>Voice support is checked in this browser.</p>
           <p data-nexus-conversation-transcript>Transcript will appear here.</p>
@@ -480,7 +478,7 @@
         <div id="userCaptionText" class="user-caption-text">Nexus is ready.</div>
         <label class="user-caption-input" for="userCaptionInput">
           <span>Speak or type back</span>
-          <input id="userCaptionInput" placeholder="Ask Nexus anything">
+          <input id="userCaptionInput" placeholder="Read-only caption support">
         </label>
         <div class="user-caption-actions">
           <button type="button" data-caption-action="listen">Mic</button>
@@ -633,7 +631,7 @@
                 <li>"Help me apply for a workforce role."</li>
                 <li>"Run a farmer mission and explain the result."</li>
               </ul>
-              <button id="guideConversationBtn" class="primary" type="button" data-command-preset="help me">Start conversation</button>
+              <button id="guideConversationBtn" class="primary" type="button" data-command-preset="help me">Voice help</button>
             </div>
           </div>
           <div class="local-pilot-studio" aria-labelledby="localPilotTitle">
@@ -701,7 +699,7 @@
               <div id="copilotActionStatus" class="agent-action-status" role="status">Ready to ask the copilot for the next best action.</div>
               <div class="action-row">
                 <button data-ai="copilot" class="primary">Ask copilot</button>
-                <button data-ai="command">Run command AI</button>
+                <button data-ai="command">Run workflow AI</button>
               </div>
             </article>
             <article>
@@ -1332,7 +1330,7 @@
               <h3>Map Inspector</h3>
               <div id="mapPanel" class="rows"></div>
               <div class="action-row stacked">
-                <button data-ai="command" class="primary">Run command center</button>
+                <button data-ai="command" class="primary">Run workflow center</button>
                 <button data-ai="inspector">Inspect route</button>
                 <button data-ai="route">Assess route risk</button>
               </div>
@@ -1453,7 +1451,7 @@
               </label>
               <div class="action-row">
                 <button id="voiceListenBtn" class="primary" type="button" data-nexus-os-voice-control="toggle-listening">Mic: Start listening</button>
-                <button id="voiceRunBtn" type="button">Run command</button>
+                <button id="voiceRunBtn" type="button">Run workflow step</button>
                 <button id="voiceFirstBtn" type="button">Voice-first mode</button>
                 <button id="voiceSpeakBtn" type="button" data-nexus-os-voice-control="repeat-response">Read response</button>
                 <button id="voiceHelpBtn" type="button">Voice help</button>
@@ -2036,7 +2034,7 @@
           <div class="global-assistant-actions">
             <button id="globalBackBtn" class="ghost" type="button">Back to app</button>
             <button id="globalListenBtn" class="primary" type="button" data-nexus-os-voice-control="toggle-listening">Mic: Start listening</button>
-            <button id="globalRunBtn" type="button">Run command</button>
+            <button id="globalRunBtn" type="button">Run workflow step</button>
             <button id="globalVoiceFirstBtn" type="button">Nexus voice: On</button>
             <button id="globalYesBtn" type="button">Yes, do it</button>
             <button id="globalNoBtn" type="button">No, cancel</button>
@@ -2214,7 +2212,7 @@
   <script src="/nexus-genesis-conversational-mode-orchestrator.js?v=nexus-genesis-conversational-mode-orchestrator-1"></script>
   <script src="/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1"></script>
   <script src="/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1"></script>
-  <script src="/app.js?v=nexus-behavior-428"></script>
+  <script src="/app.js?v=nexus-behavior-429"></script>
   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
 </html>

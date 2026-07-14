@@ -46,7 +46,7 @@ assert(trueHome.includes("renderNexusGenesisHomeVoiceGate()"), "true home mounts
 assert(voiceGate.includes("data-nexus-genesis-mic-permission-control"), "voice gate exposes a separate microphone permission control");
 assert(!trueHome.includes("Activate the Nexus orb"), "true home does not instruct orb activation");
 assert(hero.includes("Hello. I'm Nexus."), "hero owns the conversational first impression");
-assert(hero.includes("You can talk to me or type below. Tell me what you need help with, and we'll work through it together."), "hero includes natural voice-first greeting");
+assert(hero.includes("Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow."), "hero includes natural voice-first greeting");
 assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");
 assert(workspace.includes("renderNexusCommandCenterHero"), "hero remains the Standard User command center");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(topWelcome + trueHome + hero), "first impression does not claim external execution");

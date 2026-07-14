@@ -415,7 +415,8 @@ assert(html.includes("userVoiceDock"), "User app shell needs a compact always-av
 assert(html.includes("globalBackBtn"), "Ask Nexus needs a clear Back to app close control");
 assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant state indicator");
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
-assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
+assert(html.includes('data-user-voice-action="voice-help"'), "User voice dock needs a voice-help action instead of general typed fallback");
+assert(!html.includes('data-user-voice-action="type"'), "User voice dock must not expose a general type action on Genesis home");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
 assert(!html.includes('data-user-voice-action="stop"'), "User voice dock should stay voice-first without a visible stop button");
 assert(!html.includes('data-caption-action="stop"'), "Caption box should not expose a visible stop button");
