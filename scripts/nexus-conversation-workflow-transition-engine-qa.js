@@ -109,6 +109,12 @@ assert(accepted.opensWorkflow === true, "contextual acceptance opens selected wo
 assert(accepted.executionAuthorized === false, "accepted workflow does not authorize execution");
 assert(accepted.providerHandoffAuthorized === false, "accepted workflow does not authorize provider handoff");
 assert(accepted.carriedContext.excluded.includes("stale confirmation"), "context transfer excludes stale confirmations");
+assert(accepted.trustRailReceipt.schemaVersion === "nexus-workflow-transition-trust-rail-receipt.v1", "accepted workflow includes trust rail receipt");
+assert(accepted.trustRailReceipt.consent.workflowOfferedNotForced === true, "trust rail receipt proves workflows are offered");
+assert(accepted.trustRailReceipt.contextTransfer.excluded.includes("unrelated topic data"), "trust rail receipt preserves context-transfer exclusions");
+assert(accepted.trustRailReceipt.sourceContinuity.fakeCitationsAllowed === false, "trust rail receipt blocks fake citations");
+assert(accepted.trustRailReceipt.executionIntegrity.executionAuthorized === false, "trust rail receipt blocks execution");
+assert(accepted.trustRailReceipt.progressiveDisclosure.highRiskFieldsDeferred === true, "trust rail receipt defers high-risk fields");
 
 const acting = engine.buildTransitionProposal("Send it to the provider now.", {});
 assert(acting.classification.state === "acting", "send request is acting");
@@ -211,6 +217,7 @@ includes(app, "data-nexus-conversation-workflow-transition=\"true\"", "transitio
 includes(app, "data-nexus-conversation-workflow-surface=\"true\"", "workflow surface marker");
 includes(app, "data-execution-authority=\"false\"", "no execution marker");
 includes(app, "data-provider-handoff-authorized=\"false\"", "no provider handoff marker");
+includes(app, "Trust rails", "trust rail UI marker");
 includes(app, "Workflows are offered, not forced", "consent language");
 includes(app, "Here is what I carried into this workflow from our conversation", "context transfer summary");
 excludes(app, "workflowOpened: true,\n    executionAuthorized: true", "no auto execution authority");

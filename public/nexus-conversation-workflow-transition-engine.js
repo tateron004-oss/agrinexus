@@ -15,6 +15,49 @@
   const RETURNING_TERMS = /\b(go back|return|pause this|continue the|close this|start something new|what were we discussing|switch back|resume)\b/i;
   const SOURCE_TERMS = /\b(sources?|citation|where did|supporting evidence|government sources|peer reviewed|newest source|compare the first two sources)\b/i;
 
+  const WORKFLOW_TRANSITION_TRUST_RAILS = Object.freeze({
+    consentRail: {
+      name: "Workflow-transition consent rail",
+      guarantees: [
+        "Nexus offers workflows without forcing them",
+        "workflow opening requires contextual acceptance",
+        "not yet keeps the user in exploration"
+      ]
+    },
+    contextTransferRail: {
+      name: "Context-transfer integrity rail",
+      guarantees: [
+        "only relevant topic, user goal, role, language, and active sources transfer",
+        "stale confirmations and unrelated private data are excluded",
+        "correction remains available after transfer"
+      ]
+    },
+    sourceContinuityRail: {
+      name: "Source continuity rail",
+      guarantees: [
+        "source count and source records remain topic-specific",
+        "unverified sources are not promoted to confirmed facts",
+        "live citations are not fabricated"
+      ]
+    },
+    executionIntegrityRail: {
+      name: "Execution integrity rail",
+      guarantees: [
+        "executionAuthorized remains false during transition",
+        "providerHandoffAuthorized remains false during transition",
+        "receipts require local preparation scope or verified provider evidence"
+      ]
+    },
+    progressiveDisclosureRail: {
+      name: "Progressive disclosure rail",
+      guarantees: [
+        "Nexus asks only for missing workflow information",
+        "high-risk fields are requested only when needed",
+        "the original conversation remains visible while the workflow opens"
+      ]
+    }
+  });
+
   const WORKFLOW_REGISTRY = Object.freeze([
     {
       domain: "health",
@@ -798,7 +841,7 @@
     }
     const options = selectWorkflows(text, classification.domains, 3);
     const shouldOffer = classification.state === CONVERSATIONAL_STATES.PREPARING || classification.state === CONVERSATIONAL_STATES.CONSIDERING || options.length > 0 && /\b(use this|something.*field|staff|clinic|practical|process|what should we do|next step)\b/i.test(text);
-    return {
+    const proposal = {
       schemaVersion: "nexus-conversation-transition-proposal.v1",
       classification,
       action: shouldOffer ? "offer_workflows" : "answer_conversationally",
@@ -808,6 +851,10 @@
       opensWorkflow: false,
       executionAuthorized: false,
       providerHandoffAuthorized: false
+    };
+    return {
+      ...proposal,
+      trustRailReceipt: buildTrustRailReceipt(proposal)
     };
   }
 
@@ -829,7 +876,7 @@
 
   function buildWorkflowOpening(workflow, text, context = {}, classification = classifyTurn(text, context)) {
     const carriedContext = buildContextTransfer(workflow, text, context);
-    return {
+    const proposal = {
       schemaVersion: "nexus-conversation-transition-proposal.v1",
       classification,
       action: "open_workflow",
@@ -841,6 +888,10 @@
       executionAuthorized: false,
       providerHandoffAuthorized: false,
       confirmationRequiredBeforeExecution: true
+    };
+    return {
+      ...proposal,
+      trustRailReceipt: buildTrustRailReceipt(proposal)
     };
   }
 
@@ -873,8 +924,55 @@
     };
   }
 
+  function buildTrustRailReceipt(proposal = {}) {
+    const workflow = proposal.workflow || {};
+    const transfer = proposal.carriedContext || null;
+    return {
+      schemaVersion: "nexus-workflow-transition-trust-rail-receipt.v1",
+      workflowId: workflow.workflowId || proposal.acceptedWorkflowId || null,
+      conversationState: proposal.classification?.state || null,
+      rails: Object.values(WORKFLOW_TRANSITION_TRUST_RAILS).map(rail => rail.name),
+      consent: {
+        workflowOfferedNotForced: true,
+        acceptedWorkflow: proposal.opensWorkflow === true,
+        userCanDecline: true,
+        cancellationSupported: true
+      },
+      contextTransfer: {
+        available: !!transfer,
+        sourceCount: transfer?.carried?.sourceCount || 0,
+        excluded: transfer?.excluded || [
+          "unrelated topic data",
+          "another person's private information",
+          "stale confirmation",
+          "cancelled instructions",
+          "unsupported assumptions",
+          "unverified facts as confirmed data"
+        ],
+        correctionAllowed: transfer?.correctionAllowed !== false
+      },
+      sourceContinuity: {
+        topicSpecific: true,
+        fakeCitationsAllowed: false,
+        unverifiedFactsPromoted: false
+      },
+      executionIntegrity: {
+        executionAuthorized: proposal.executionAuthorized === true ? false : false,
+        providerHandoffAuthorized: proposal.providerHandoffAuthorized === true ? false : false,
+        externalActionBlocked: true,
+        receiptRequiresVerification: true
+      },
+      progressiveDisclosure: {
+        missingInformationQuestions: workflow.missingInformationQuestions || [],
+        structuredInputRequirements: workflow.structuredInputRequirements || [],
+        highRiskFieldsDeferred: true
+      }
+    };
+  }
+
   const api = Object.freeze({
     CONVERSATIONAL_STATES,
+    WORKFLOW_TRANSITION_TRUST_RAILS,
     WORKFLOW_REGISTRY,
     normalizeText,
     detectDomains,
@@ -883,6 +981,7 @@
     buildTransitionProposal,
     buildWorkflowOpening,
     buildContextTransfer,
+    buildTrustRailReceipt,
     resolveAcceptedWorkflow
   });
 

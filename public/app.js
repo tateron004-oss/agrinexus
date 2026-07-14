@@ -2615,6 +2615,7 @@ function renderNexusConversationWorkflowTransitionCard(state = nexusConversation
   const classification = proposal.classification || {};
   const options = Array.isArray(proposal.options) ? proposal.options : [];
   const activeWorkflow = state.activeWorkflow || (proposal.opensWorkflow ? proposal.workflow : null);
+  const trustReceipt = proposal.trustRailReceipt || {};
   const optionMarkup = options.length ? `
     <div class="nexus-conversation-workflow-options" data-nexus-conversation-workflow-options="true">
       ${options.map((workflow, index) => `
@@ -2638,6 +2639,7 @@ function renderNexusConversationWorkflowTransitionCard(state = nexusConversation
         <li><strong>${escapeHtml(translateText("Missing information"))}:</strong> ${escapeHtml((activeWorkflow.missingInformationQuestions || []).slice(0, 2).join(" "))}</li>
         <li><strong>${escapeHtml(translateText("Safety"))}:</strong> ${escapeHtml(activeWorkflow.safetyClass)}; ${escapeHtml(translateText("no external action is authorized"))}</li>
         <li><strong>${escapeHtml(translateText("Sources"))}:</strong> ${escapeHtml((proposal.carriedContext?.carried?.sourceCount || 0) ? `${proposal.carriedContext.carried.sourceCount} active source(s) attached` : "No live source attached to this workflow yet")}</li>
+        <li><strong>${escapeHtml(translateText("Trust rails"))}:</strong> ${escapeHtml((trustReceipt.rails || []).slice(0, 3).join("; ") || "Consent, context, and no-execution rails active")}</li>
       </ul>
       <div class="nexus-conversation-workflow-controls" aria-label="${escapeHtml(translateText("Workflow controls"))}">
         <button type="button" data-nexus-conversation-workflow-control="revise" data-nexus-command="make this easier to understand">${escapeHtml(translateText("Revise"))}</button>
