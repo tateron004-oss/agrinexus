@@ -269,7 +269,7 @@ check("key browser selectors and accessibility hooks exist", hasAll(app, [
 ]));
 
 check("no secret values are exposed in tracked source", hasNone(server + app + index + envExample + renderYaml, [
-  /sk-(?!plan-|action-)[A-Za-z0-9_-]{20,}/,
+  /sk-(?!plan-|action-|confirmation-)[A-Za-z0-9_-]{20,}/,
   /tvly-[A-Za-z0-9_-]{20,}/,
   /TWILIO_AUTH_TOKEN\s*[:=]\s*['"][^'"]+['"]/i,
   /STRIPE_SECRET_KEY\s*[:=]\s*['"][^'"]+['"]/i,

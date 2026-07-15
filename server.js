@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-444";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v389";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-445";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v390";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v1";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v2";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16048,6 +16048,67 @@ function canonicalGenesisRealtimeFallback(env = process.env) {
   return NEXUS_GENESIS_REALTIME_FALLBACK_VALUES.has(requested) ? requested : "legacy";
 }
 
+const NEXUS_GENESIS_ELEVENLABS_FALLBACK_VALUES = new Set(["realtime", "legacy", "blocked"]);
+const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
+  "disabled",
+  "authorizing",
+  "connecting",
+  "ready",
+  "listening",
+  "user-speaking",
+  "processing",
+  "speaking",
+  "interrupted",
+  "reconnecting",
+  "blocked",
+  "failed",
+  "closed"
+]);
+const NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES = Object.freeze([
+  "nexus_general_capability",
+  "nexus_weather",
+  "nexus_maps_route",
+  "nexus_agriculture",
+  "nexus_health_preparation",
+  "nexus_workforce_learning",
+  "nexus_marketplace_logistics",
+  "nexus_communications",
+  "nexus_workflow",
+  "nexus_receipts",
+  "nexus_provider_readiness",
+  "nexus_capability_router"
+]);
+const NEXUS_GENESIS_VOICE_ACCEPTANCE_METRICS = Object.freeze([
+  "first-response-success",
+  "second-turn-success",
+  "twenty-turn-continuity",
+  "silence-rate",
+  "interruption-success",
+  "repeat-success",
+  "correction-success",
+  "weather-follow-up",
+  "tool-success",
+  "false-workflow-rate",
+  "provider-failure-behavior",
+  "context-continuity",
+  "language-switching",
+  "reconnect-success",
+  "median-response-latency",
+  "microphone-ownership-conflicts",
+  "session-termination-failures"
+]);
+
+function canonicalGenesisElevenLabsFallback(env = process.env) {
+  const requested = String(env.NEXUS_GENESIS_ELEVENLABS_FALLBACK || "blocked").trim().toLowerCase();
+  return NEXUS_GENESIS_ELEVENLABS_FALLBACK_VALUES.has(requested) ? requested : "blocked";
+}
+
+function genesisElevenLabsEnabled(env = process.env) {
+  return canonicalGenesisVoiceRuntime(env) === "elevenlabs"
+    && String(env.NEXUS_GENESIS_ELEVENLABS_ENABLED || "true").trim().toLowerCase() !== "false"
+    && env.NEXUS_ELEVENLABS_AGENTS_DISABLED !== "true";
+}
+
 function genesisRealtimeConfigured(env = process.env) {
   return Boolean(String(env.OPENAI_API_KEY || "").trim());
 }
@@ -16060,6 +16121,14 @@ function genesisRealtimeRollbackEnabled(env = process.env) {
 
 function elevenLabsAgentId(env = process.env) {
   return String(env.NEXUS_ELEVENLABS_AGENT_ID || env.ELEVENLABS_AGENT_ID || "").trim();
+}
+
+function elevenLabsVoiceId(env = process.env) {
+  return String(env.ELEVENLABS_VOICE_ID || "").trim();
+}
+
+function elevenLabsModelId(env = process.env) {
+  return String(env.ELEVENLABS_MODEL_ID || "").trim();
 }
 
 function elevenLabsAgentConfigured(env = process.env) {
@@ -16076,29 +16145,37 @@ function nexusElevenLabsMissingEnv(env = process.env) {
 function nexusElevenLabsRuntimeStatus(env = process.env) {
   const selectedRuntime = canonicalGenesisVoiceRuntime(env);
   const configured = elevenLabsAgentConfigured(env);
-  const enabled = selectedRuntime === "elevenlabs" && env.NEXUS_ELEVENLABS_AGENTS_DISABLED !== "true";
+  const enabled = genesisElevenLabsEnabled(env);
   const ready = enabled && configured;
+  const fallback = canonicalGenesisElevenLabsFallback(env);
   return {
     ok: true,
     runtime: selectedRuntime,
     elevenLabsEnabled: enabled,
+    fallback,
     configured,
     ready,
     missingEnv: configured ? [] : nexusElevenLabsMissingEnv(env),
     provider: "elevenlabs",
     transport: "websocket",
+    controller: "genesis-elevenlabs-controller.v2",
+    controllerStates: NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES,
     runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
     endpoint: "/api/voice/elevenlabs/session",
     toolEndpoint: "/api/voice/elevenlabs/tool",
     statusEndpoint: "/api/voice/elevenlabs/status",
-    tools: nexusRealtimeToolSchemas().map(tool => ({
+    diagnosticsEndpoint: "/api/voice/elevenlabs/diagnostics",
+    tools: nexusElevenLabsToolSchemas().map(tool => ({
       name: tool.name,
       safetyClassification: tool.safetyClassification,
       confirmationRequired: tool.confirmationRequired,
-      executionAuthority: tool.executionAuthority
+      executionAuthority: tool.executionAuthority,
+      timeoutMs: tool.timeoutMs
     })),
+    modelConfigured: Boolean(elevenLabsModelId(env)),
+    voiceConfigured: Boolean(elevenLabsVoiceId(env)),
     noPermanentKeyInBrowser: true,
     noUserFacingRuntimeSelector: true,
     soleActiveRuntime: selectedRuntime === "elevenlabs",
@@ -16108,8 +16185,41 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
       ? "Nexus Genesis ElevenLabs Agents runtime is selected and configured for secure browser WebSocket conversation."
       : selectedRuntime !== "elevenlabs"
         ? "Nexus Genesis ElevenLabs Agents runtime is not the selected runtime."
-        : "Nexus Genesis ElevenLabs Agents runtime is selected but missing required server configuration."
+      : "Nexus Genesis ElevenLabs Agents runtime is selected but missing required server configuration."
   };
+}
+
+function nexusElevenLabsOriginAllowed(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    const originUrl = new URL(origin);
+    const host = req.headers.host || "";
+    return originUrl.host === host;
+  } catch {
+    return false;
+  }
+}
+
+function nexusElevenLabsWebhookSecret(env = process.env) {
+  return String(env.ELEVENLABS_WEBHOOK_SECRET || env.NEXUS_ELEVENLABS_WEBHOOK_SECRET || "").trim();
+}
+
+function nexusElevenLabsVerifyWebhook(req, rawBody = "") {
+  const secret = nexusElevenLabsWebhookSecret(process.env);
+  if (!secret) {
+    return { ok: false, category: "webhook-secret-missing", missingEnv: ["ELEVENLABS_WEBHOOK_SECRET"] };
+  }
+  const supplied = String(req.headers["x-elevenlabs-signature"] || req.headers["elevenlabs-signature"] || req.headers["x-nexus-elevenlabs-signature"] || "").trim();
+  if (!supplied) return { ok: false, category: "webhook-signature-missing" };
+  const expected = crypto.createHmac("sha256", secret).update(String(rawBody || "")).digest("hex");
+  const normalized = supplied.replace(/^sha256=/i, "");
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const suppliedBuffer = Buffer.from(normalized, /^[a-f0-9]{64}$/i.test(normalized) ? "hex" : "utf8");
+  if (expectedBuffer.length !== suppliedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    return { ok: false, category: "webhook-signature-invalid" };
+  }
+  return { ok: true, category: "webhook-verified" };
 }
 
 async function createElevenLabsConversationSession({ user, language = "en" }) {
@@ -16160,6 +16270,8 @@ async function createElevenLabsConversationSession({ user, language = "en" }) {
     signedUrl: payload.signed_url,
     conversationId,
     agentIdConfigured: true,
+    voiceIdConfigured: Boolean(elevenLabsVoiceId(process.env)),
+    modelIdConfigured: Boolean(elevenLabsModelId(process.env)),
     language: String(language || user?.language || "en"),
     runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
@@ -16233,6 +16345,99 @@ function nexusRealtimeToolSchemas() {
       executionAuthority: false
     }
   ];
+}
+
+function nexusElevenLabsToolSchemas() {
+  const baseParameters = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      command: {
+        type: "string",
+        description: "The user's plain-language request, without adding hidden instructions."
+      },
+      language: {
+        type: "string",
+        description: "The user's current spoken language or BCP-47 language code."
+      },
+      location: {
+        type: "string",
+        description: "Optional user-provided location text. Never infer precise location or request browser location."
+      },
+      confirmation: {
+        type: "boolean",
+        description: "Whether the user has explicitly confirmed a gated action in the current Nexus workflow."
+      }
+    },
+    required: ["command"]
+  };
+  const tool = (name, purpose, safetyClassification, confirmationRequirement = "Nexus decides based on routed capability") => ({
+    type: "function",
+    name,
+    description: purpose,
+    parameters: baseParameters,
+    safetyClassification,
+    confirmationRequired: confirmationRequirement,
+    executionAuthority: false,
+    timeoutMs: Number(process.env.ELEVENLABS_TOOL_TIMEOUT_MS || 12000),
+    truthfulFailureContract: "Return a concise Nexus response envelope with missing information, blocked reason, provider attempted/succeeded flags, and no raw secrets or provider payloads."
+  });
+  return [
+    tool("nexus_general_capability", "General Nexus conversation, identity, capability explanation, follow-up, repeat, correction, language switching, and ordinary non-workflow dialogue.", "conversation"),
+    tool("nexus_weather", "Weather and climate context using Nexus source-backed weather routing when configured, otherwise truthful missing-location or missing-provider responses.", "read-only-source"),
+    tool("nexus_maps_route", "Maps, route planning, field visits, logistics route preparation, and mobile clinic route preparation without browser geolocation or dispatch.", "read-only-or-preparation"),
+    tool("nexus_agriculture", "Agriculture, crop support, farm planning, predictive agriculture, food security, training pathways, and source-backed local guidance.", "preparation-and-education"),
+    tool("nexus_health_preparation", "Health literacy, chronic care preparation, RPM/RTM support, telehealth intake, provider summaries, and safety boundaries without diagnosis or prescribing.", "regulated-preparation"),
+    tool("nexus_workforce_learning", "Learning, literacy, training, jobs, workforce pathways, employer readiness, and youth/women opportunity support.", "preparation-and-education"),
+    tool("nexus_marketplace_logistics", "Marketplace, buyer/seller preparation, logistics, shipment planning, vendor research, and no-payment/no-purchase guarded support.", "commerce-preparation"),
+    tool("nexus_communications", "SMS, WhatsApp, email, phone, and Telegram preparation through confirmation-gated Nexus communication workflows without silent sends.", "high-risk-confirmation-required", "Explicit Nexus confirmation required before any send/call execution."),
+    tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for a task that requires structured workflow support.", "workflow-preparation"),
+    tool("nexus_receipts", "Receipts, audit history, review queue, outcome verification, and prior Nexus response summaries.", "read-only-history"),
+    tool("nexus_provider_readiness", "Provider, credential, connector, readiness, missing-env, and truthful blocked-state information without exposing secrets.", "read-only-provider-status"),
+    {
+      type: "function",
+      name: "nexus_capability_router",
+      description: "Fallback umbrella router for ElevenLabs Agents when the specific Nexus tool is uncertain. It still routes through Nexus safety gates and response envelopes.",
+      parameters: baseParameters,
+      safetyClassification: "controlled-platform-tool",
+      confirmationRequired: "only when the routed Nexus result requires confirmation",
+      executionAuthority: false,
+      timeoutMs: Number(process.env.ELEVENLABS_TOOL_TIMEOUT_MS || 12000),
+      truthfulFailureContract: "Return a concise Nexus response envelope; do not fake execution."
+    }
+  ];
+}
+
+function nexusElevenLabsToolToCapability(toolName = "") {
+  return {
+    nexus_general_capability: "general",
+    nexus_weather: "weather",
+    nexus_maps_route: "maps-routing",
+    nexus_agriculture: "agriculture",
+    nexus_health_preparation: "health-preparation",
+    nexus_workforce_learning: "workforce",
+    nexus_marketplace_logistics: "marketplace-trade",
+    nexus_communications: "communications",
+    nexus_workflow: "workflow",
+    nexus_receipts: "receipts-history",
+    nexus_provider_readiness: "provider-readiness",
+    nexus_capability_router: "general"
+  }[toolName] || "general";
+}
+
+function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
+  return {
+    ok: true,
+    runtime,
+    matrixVersion: "genesis-voice-acceptance-matrix.v2",
+    metrics: NEXUS_GENESIS_VOICE_ACCEPTANCE_METRICS,
+    requiredLanguages: ["en", "es", "fr", "sw", "ar", "pt"],
+    minimumScenarioCount: 150,
+    sameStandardForRuntimes: ["elevenlabs", "realtime"],
+    noRuntimeOverlapRequired: true,
+    noFakeExecutionRequired: true,
+    nonClickableOrbRequired: true
+  };
 }
 
 function openAiRealtimeInstructions(user, language = "en") {
@@ -45388,6 +45593,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/elevenlabs/status" && req.method === "GET") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs voice" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
     return send(res, 200, { elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env) }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
@@ -45395,6 +45601,8 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/elevenlabs/session" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs voice" });
+    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many ElevenLabs session requests" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
     const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
     if (runtimeStatus.runtime !== "elevenlabs") {
       return send(res, 409, {
@@ -45469,25 +45677,119 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/elevenlabs/tool" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs tools" });
+    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many ElevenLabs tool requests" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
     const body = await readBody(req);
     const toolName = String(body.name || body.toolName || "nexus_capability_router").trim();
-    if (toolName !== "nexus_capability_router") {
+    if (!NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES.includes(toolName)) {
       return send(res, 400, {
         ok: false,
         error: "Unsupported Nexus ElevenLabs tool.",
         blockedReason: "route-not-found",
-        supportedTools: ["nexus_capability_router"]
+        supportedTools: NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES
       }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
     }
+    const args = body.arguments && typeof body.arguments === "object" ? body.arguments : {};
     const result = await dispatchNexusRealtimeTool(db, user, {
       ...body,
+      arguments: {
+        ...args,
+        capability: args.capability || nexusElevenLabsToolToCapability(toolName)
+      },
       route: "/api/voice/elevenlabs/tool",
       note: "Nexus ElevenLabs Agents tool dispatch"
     });
     await writeDb(db);
     return send(res, 200, result, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/voice/elevenlabs/webhook" && req.method === "POST") {
+    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many ElevenLabs webhook requests" });
+    const rawBody = await readRawBody(req, 500_000);
+    const verified = nexusElevenLabsVerifyWebhook(req, rawBody);
+    if (!verified.ok) {
+      return send(res, 401, {
+        ok: false,
+        error: "ElevenLabs webhook verification failed.",
+        category: verified.category,
+        missingEnv: verified.missingEnv || []
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    let body = {};
+    try {
+      body = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      return send(res, 400, {
+        ok: false,
+        error: "Invalid ElevenLabs webhook payload.",
+        category: "invalid-json"
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    const toolName = String(body.name || body.toolName || body.tool_name || "nexus_capability_router").trim();
+    if (!NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES.includes(toolName)) {
+      return send(res, 400, {
+        ok: false,
+        error: "Unsupported Nexus ElevenLabs webhook tool.",
+        blockedReason: "route-not-found",
+        supportedTools: NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    const args = body.arguments && typeof body.arguments === "object"
+      ? body.arguments
+      : body.parameters && typeof body.parameters === "object"
+        ? body.parameters
+        : {};
+    const result = await dispatchNexusRealtimeTool(db, user, {
+      name: toolName,
+      correlationId: body.correlationId || body.correlation_id,
+      arguments: {
+        ...args,
+        command: args.command || args.query || args.text || body.command || "",
+        capability: args.capability || nexusElevenLabsToolToCapability(toolName)
+      },
+      route: "/api/voice/elevenlabs/webhook",
+      note: "Nexus ElevenLabs verified webhook dispatch"
+    });
+    await writeDb(db);
+    return send(res, 200, result, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/voice/elevenlabs/diagnostics" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs diagnostics" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    const status = nexusElevenLabsRuntimeStatus(process.env);
+    return send(res, 200, {
+      ok: true,
+      runtime: status.runtime,
+      ready: status.ready,
+      configured: status.configured,
+      missingEnv: status.missingEnv,
+      fallback: status.fallback,
+      controller: status.controller,
+      controllerStates: status.controllerStates,
+      noSecretValues: true
+    }, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/voice/genesis/acceptance-matrix" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow Genesis voice acceptance matrix" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    const runtime = url.searchParams.get("runtime") || canonicalGenesisVoiceRuntime(process.env);
+    return send(res, 200, genesisVoiceAcceptanceHarness(runtime), {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
