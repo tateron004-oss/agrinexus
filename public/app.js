@@ -803,6 +803,9 @@ let nexusVoicePreferencePendingConsent = JSON.parse(localStorage.getItem("nexusV
 let nexusOsVoiceStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartLastAttemptAt = 0;
+let nexusGenesisVoiceSessionActive = false;
+let nexusGenesisVoiceRestartTimer = null;
+let nexusGenesisRecognitionStartTimeout = null;
 let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRuntimeState") || "null") || {
   schemaVersion: "nexus-os-voice-runtime.v1",
   runtimeOwner: "nexus-os-canonical-voice",
@@ -817,9 +820,10 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   recognitionSupported: false,
   synthesisSupported: false,
   microphoneUnavailable: false,
-  privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
+  privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v434";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -844,7 +848,31 @@ function nexusMicrophonePermissionDisplayText(value = "unknown") {
 
 function nexusMicrophonePermissionCanAttemptStart(value = "unknown") {
   const normalized = normalizeNexusMicrophonePermissionState(value);
-  return normalized === "granted" || normalized === "browser-managed";
+  return normalized === "granted" || normalized === "browser-managed" || normalized === "prompt" || normalized === "unknown";
+}
+
+function isNexusGenesisHomeActive() {
+  return Boolean(typeof document !== "undefined" && document.querySelector("[data-nexus-genesis-orb-only-home='true']"));
+}
+
+function nexusGenesisVoiceDebugLog(stage, details = {}) {
+  if (!nexusGenesisVoiceDebugEnabled?.()) return;
+  const payload = {
+    stage,
+    build: typeof AGRINEXUS_BUILD_VERSION !== "undefined" ? AGRINEXUS_BUILD_VERSION : "unknown",
+    pwaCache: typeof AGRINEXUS_PWA_CACHE_VERSION !== "undefined" ? AGRINEXUS_PWA_CACHE_VERSION : "unknown",
+    voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION,
+    state: {
+      permissionState: nexusOsVoiceRuntimeState?.permissionState || "unknown",
+      listeningState: nexusOsVoiceRuntimeState?.listeningState || "idle",
+      mode: nexusOsVoiceRuntimeState?.mode || "standby",
+      recognitionConstructed: Boolean(nexusOsVoiceRuntimeState?.recognitionConstructed),
+      recognitionStartRequested: Boolean(nexusOsVoiceRuntimeState?.recognitionStartRequested),
+      recognitionOnStartReceived: Boolean(nexusOsVoiceRuntimeState?.recognitionOnStartReceived)
+    },
+    ...details
+  };
+  console.info("[Nexus Genesis voice]", payload);
 }
 const NEXUS_GENESIS_TRUST_CHAIN_STATES = Object.freeze([
   "idle",
@@ -1253,8 +1281,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-433";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v378";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-434";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v379";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -31842,20 +31870,20 @@ function nexusVoiceTroubleshootingResponse(command = "", options = {}) {
   const text = normalizeToolText(command);
   const usedTypedInput = source.includes("typed") || source.includes("command-send") || source.includes("chat");
   if (/\b(i can't hear you|i cant hear you|i can t hear you|can't hear you|cant hear you|can t hear you|still can't hear you|still cant hear you|still can t hear you|why aren't you speaking|why arent you speaking|why aren t you speaking|why are you not speaking|sound not working|audio not working|voice not working)\b/.test(text)) {
-    if (state.quiet) return "I can respond on screen, but voice is muted right now. Use Unmute or Repeat if you want me to try speaking aloud.";
-    if (!state.synthesisSupported) return "I can respond on screen, but I cannot speak aloud in this browser right now. You can keep typing, or try a supported browser with audio enabled.";
-    return "I received your message. If you cannot hear me, check browser audio, then press Repeat or use the voice controls again.";
+    if (state.quiet) return "I can respond, but voice is muted right now. Reload Genesis after audio is available.";
+    if (!state.synthesisSupported) return "I can respond, but I cannot speak aloud in this browser right now. Try a supported browser with audio enabled.";
+    return "I received your message. If you cannot hear me, check browser audio, then reload Genesis.";
   }
   if (/\b(turn on voice|talk to me|speak to me|nexus talk to me)\b/.test(text)) {
-    if (!state.profile.secureEnough) return "Voice needs HTTPS, localhost, or 127.0.0.1 in this browser. You can keep typing here, or return after opening a secure page.";
-    if (!state.profile.supported) return "Voice listening is not available in this browser right now, but typed conversation is ready. Try Chrome or Edge for microphone support.";
-    return "Voice can start from the Talk button. Press Talk, allow microphone access if the browser asks, and I will listen only while you choose to use voice.";
+    if (!state.profile.secureEnough) return "Voice needs a secure browser page before Genesis can listen.";
+    if (!state.profile.supported) return "Voice listening is not available in this browser right now. Try Chrome or Edge for microphone support.";
+    return "Genesis starts voice automatically. Allow the browser microphone prompt if it appears.";
   }
   if (/\b(is my microphone working|is my mic working|microphone working|mic working|can you hear me|do you hear me|are you listening|are you hearing me|you hear me|you listening)\b/.test(text)) {
     if (state.recognitionActive) return "Yes. Recognition is active and Nexus is listening now.";
-    if (nexusVoiceLastFinalTranscriptAt) return "I received a voice transcript earlier, but recognition is not actively listening right now. Press the microphone control to start listening again.";
+    if (nexusVoiceLastFinalTranscriptAt) return "I received a voice transcript earlier, but recognition is not actively listening right now. Reload Genesis to restart the automatic voice session.";
     if (usedTypedInput) return "I received this as on-screen text. Microphone recognition is not active right now, so I will not claim I can hear audio until recognition starts.";
-    if (state.profile.supported) return "Microphone permission may be available, but recognition is not actively listening now. Press the microphone control to start listening.";
+    if (state.profile.supported) return "Microphone permission may be available, but recognition is not actively listening now. Reload Genesis to restart the automatic voice session.";
     return "I received your message on screen. Microphone speech recognition is unavailable in this browser.";
   }
   return "I received your message. Voice status is visible here, and Genesis keeps the home screen audio-first until a workflow opens.";
@@ -31872,7 +31900,7 @@ function handleNexusVoiceTroubleshootingCommand(command = "", options = {}) {
     transcript: command,
     response,
     visibleFeedback: response,
-    failureRecovery: "Type your request below, press Talk to try microphone access, or return Home.",
+    failureRecovery: "Reload Genesis after browser microphone access is available, or return Home.",
     reason: "voice-troubleshooting"
   });
   updateNexusOsVoiceRuntimeState({
@@ -31886,10 +31914,10 @@ function handleNexusVoiceTroubleshootingCommand(command = "", options = {}) {
   setNexusPresenceState(NEXUS_PRESENCE_STATES.AWAITING_FOLLOWUP, {
     lastUserInput: command,
     lastResponse: response,
-    nextQuestion: "Type your request below, press Talk, or return Home.",
+    nextQuestion: "Reload Genesis after browser microphone access is available, or return Home.",
     source: options.source || "nexus-voice-troubleshooting"
   });
-  renderLiveVoiceSuggestions(["Press Talk", "Continue without voice", "Return Home"]);
+  renderLiveVoiceSuggestions(["Reload Genesis", "Return Home"]);
   setVoiceResponse(response, false, { allowHandoff: false, allowVoiceFirst: false, command, source: options.source || "nexus-voice-troubleshooting" });
   return true;
 }
@@ -32249,7 +32277,8 @@ function nexusGenesisTruthfulVoiceState() {
   else if (onstart) statusText = "Nexus is listening.";
   else if (startRequested) statusText = "Microphone permission granted. Speech recognition has not started.";
   else if (constructed) statusText = "Microphone permission granted. Speech recognition has not started.";
-  else if (activeTrack || nexusMicrophonePermissionCanAttemptStart(permissionState)) statusText = "Microphone permission granted. Speech recognition has not started.";
+  else if (activeTrack || permissionState === "granted" || permissionState === "browser-managed") statusText = "Microphone permission granted. Speech recognition has not started.";
+  else if (permissionState === "prompt" || permissionState === "unknown") statusText = "Nexus is preparing voice.";
   return {
     profile,
     permissionState,
@@ -32275,74 +32304,17 @@ function nexusGenesisTruthfulVoiceState() {
 }
 
 function renderNexusGenesisVoiceDebugPanel(truth = nexusGenesisTruthfulVoiceState()) {
-  if (!nexusGenesisVoiceDebugEnabled()) return "";
-  const state = nexusOsVoiceRuntimeState || {};
-  const rows = [
-    ["deployed build", AGRINEXUS_BUILD_VERSION],
-    ["PWA cache", AGRINEXUS_PWA_CACHE_VERSION],
-    ["microphone permission", truth.permissionState],
-    ["media track state", state.microphoneTrackState || "none"],
-    ["recognition support", truth.recognitionSupported ? "supported" : "unsupported"],
-    ["recognition constructed", truth.constructed ? "yes" : "no"],
-    ["recognition start requested", truth.startRequested ? "yes" : "no"],
-    ["onstart received", truth.onstart ? "yes" : "no"],
-    ["audio start", truth.audioStart ? "yes" : "no"],
-    ["sound start", truth.soundStart ? "yes" : "no"],
-    ["speech start", truth.speechStart ? "yes" : "no"],
-    ["result received", truth.resultReceived ? "yes" : "no"],
-    ["final transcript received", truth.finalTranscript ? "yes" : "no"],
-    ["command request started", truth.commandRequest ? "yes" : "no"],
-    ["command response status", state.commandResponseStatus || "none"],
-    ["response text available", truth.commandResponse ? "yes" : "no"],
-    ["synthesis supported", state.synthesisSupported ? "yes" : "no"],
-    ["voice count", String(truth.voiceCount)],
-    ["utterance requested", truth.utteranceRequested ? "yes" : "no"],
-    ["utterance onstart", truth.utteranceOnStart ? "yes" : "no"],
-    ["utterance onend", truth.utteranceOnEnd ? "yes" : "no"],
-    ["utterance error", truth.utteranceError || "none"],
-    ["last runtime error", state.lastRuntimeError || state.lastError || "none"],
-    ["current truthful Nexus state", truth.statusText]
-  ];
-  return `
-    <details class="nexus-genesis-voice-debug" data-nexus-genesis-voice-debug="true" open>
-      <summary>${escapeHtml(translateText("Voice diagnostics"))}</summary>
-      <dl>
-        ${rows.map(([label, value]) => `
-          <div>
-            <dt>${escapeHtml(label)}</dt>
-            <dd>${escapeHtml(String(value || "none"))}</dd>
-          </div>
-        `).join("")}
-      </dl>
-    </details>
-  `;
+  nexusGenesisVoiceDebugLog("debug-snapshot-render-request", { truthfulState: truth });
+  return "";
 }
 
 function renderNexusGenesisHomeVoiceGate() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
   const truthful = nexusGenesisTruthfulVoiceState();
   const permissionState = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
-  const denied = permissionState === "denied" || nexusVoicePermissionDeniedThisSession;
   const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
-  const showPermissionControl = voiceReady && !denied && !nexusMicrophonePermissionCanAttemptStart(permissionState) && !truthful.startRequested && !truthful.onstart;
-  const statusText = truthful.statusText;
-  const guidance = denied
-    ? "Use the browser site settings to allow microphone access, then reload."
-    : voiceReady
-      ? "The orb is only Nexus's visual presence. Voice state below is read-only and changes only after real browser events."
-      : "Open Nexus in a browser with speech recognition support to use the voice-native front door.";
   return `
-    <div class="nexus-genesis-audio-gate" data-nexus-genesis-audio-gate="true" data-microphone-permission="${escapeHtml(permissionState)}" data-microphone-permission-label="${escapeHtml(nexusMicrophonePermissionDisplayText(permissionState))}" data-recognition-supported="${voiceReady ? "true" : "false"}">
-      <span class="nexus-genesis-audio-status" data-nexus-genesis-audio-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
-      <small>${escapeHtml(translateText(guidance))}</small>
-      ${showPermissionControl ? `
-        <button type="button" class="nexus-genesis-mic-permission" data-nexus-genesis-mic-permission-control="true" data-nexus-os-voice-control="enable-voice" aria-describedby="nexusFirstImpressionDescription">
-          ${escapeHtml(translateText("Allow microphone"))}
-        </button>
-      ` : ""}
-      ${lastVoiceResponse ? `<p class="nexus-genesis-last-caption" data-nexus-genesis-last-caption="true">${escapeHtml(lastVoiceResponse)}</p>` : ""}
-      ${renderNexusGenesisVoiceDebugPanel(truthful)}
-    </div>
+    <span class="sr-only" data-nexus-genesis-audio-gate="true" data-nexus-genesis-voice-runtime="true" data-nexus-genesis-voice-runtime-version="${escapeHtml(NEXUS_GENESIS_VOICE_RUNTIME_VERSION)}" data-microphone-permission="${escapeHtml(permissionState)}" data-recognition-supported="${voiceReady ? "true" : "false"}" aria-live="polite">${escapeHtml(translateText(truthful.statusText))}</span>
   `;
 }
 
@@ -46132,6 +46104,14 @@ function setVoiceResponse(message, speak = false, options = {}) {
   });
   lastVoiceResponse = responseMessage;
   lastVoiceResponseAt = now;
+  recordNexusAudioPipelineEvent("agent-command-response", {
+    status: "ok",
+    responseLength: compactResponse.length
+  });
+  nexusGenesisVoiceDebugLog("response-received", {
+    responseLength: compactResponse.length,
+    speak: Boolean(speak || (voiceFirstMode && allowVoiceFirst))
+  });
   rememberNexusAnswerContext(responseMessage, options);
   rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
   recordNexusOsConversationTurn("assistant", responseMessage, { source: options.source || "set-voice-response", state: nexusCoreRuntimeState.current });
@@ -47511,7 +47491,11 @@ function clearStreamingVoicePartial() {
 function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
   if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
   voiceSpeaking = false;
-  voiceAutoRestart = voiceFirstMode;
+  if (nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive()) {
+    voiceFirstMode = true;
+    voiceStopRequested = false;
+  }
+  voiceAutoRestart = voiceFirstMode || (nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive());
   updateNexusVoiceSession({
     state: voiceFirstMode ? "listening-ready" : "standby",
     assistantSpeaking: false,
@@ -47524,11 +47508,16 @@ function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
   updateNexusBehaviorLayer(voiceFirstMode ? "listening" : "ready", message);
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
   refreshMicSupport();
-  const shouldResume = voiceFirstMode || voiceResumeAfterSpeech;
+  const shouldResume = voiceFirstMode || voiceResumeAfterSpeech || (nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive());
   if (shouldResume && !voiceRecognition && !voiceStopRequested && !document.hidden) {
     voiceResumeAfterSpeech = false;
-    setTimeout(() => {
-      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested && voiceFirstMode) startVoiceListening();
+    clearTimeout(nexusGenesisVoiceRestartTimer);
+    nexusGenesisVoiceRestartTimer = setTimeout(() => {
+      nexusGenesisVoiceRestartTimer = null;
+      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested && (voiceFirstMode || nexusGenesisVoiceSessionActive)) {
+        recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "speech-finished" });
+        startVoiceListening({ source: "genesis-speech-finished-restart" });
+      }
     }, VOICE_RESTART_DELAY_MS);
   }
 }
@@ -47959,7 +47948,8 @@ function speakVoiceResponse(textOverride) {
   lastSpokenText = compact;
   lastSpokenAt = now;
   stopVoicePlayback();
-  const keepListeningForAnswer = shouldKeepListeningDuringSpeech(compact);
+  const genesisActive = nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive();
+  const keepListeningForAnswer = genesisActive || shouldKeepListeningDuringSpeech(compact);
   const keepStreamingOpen = streamingVoiceEnabled();
   if (voiceRecognition && !keepListeningForAnswer && !keepStreamingOpen) {
     const activeRecognition = voiceRecognition;
@@ -48493,9 +48483,13 @@ async function chromeMicrophonePermissionState() {
 
 async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "genesis-home-render") {
   if (typeof window === "undefined" || typeof document === "undefined") return false;
-  const homeVisible = Boolean(document.querySelector("[data-nexus-genesis-audio-gate='true']"));
+  const homeVisible = isNexusGenesisHomeActive() || Boolean(document.querySelector("[data-nexus-genesis-audio-gate='true']"));
   if (!homeVisible) return false;
+  nexusGenesisVoiceSessionActive = true;
+  voiceFirstMode = true;
+  voiceAutoRestart = true;
   const profile = browserVoiceRuntimeProfile();
+  nexusGenesisVoiceDebugLog("automatic-start-entered", { source, secureContext: profile.secureEnough });
   const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (realtimeVoiceEnabled() && realtimeVoiceSupported()));
   const skipReason = !profile.secureEnough
     ? "secure-context-required"
@@ -48524,7 +48518,7 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
   });
   if (skipReason) return false;
   const now = Date.now();
-  if (now - nexusGenesisPermissionGrantedAutoStartLastAttemptAt < 2500) {
+  if (now - nexusGenesisPermissionGrantedAutoStartLastAttemptAt < 1200) {
     recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
       source,
       skipReason: "throttled"
@@ -48536,7 +48530,12 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
   try {
     const permission = normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState());
     const runtimePermission = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
-    const canAttemptStart = permission === "granted" || runtimePermission === "browser-managed";
+    const canAttemptStart = nexusMicrophonePermissionCanAttemptStart(permission) || runtimePermission === "browser-managed";
+    nexusGenesisVoiceDebugLog("permission-state-resolved", {
+      permissionState: permission,
+      runtimePermissionState: runtimePermission,
+      canAttemptStart
+    });
     if (permission === "denied" || runtimePermission === "denied") {
       nexusVoicePermissionDeniedThisSession = true;
       updateNexusOsVoiceRuntimeState({ permissionState: "denied", listeningState: "blocked" }, "genesis-auto-start-permission-denied");
@@ -48557,14 +48556,15 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
       return false;
     }
     updateNexusOsVoiceRuntimeState({
-      permissionState: permission === "granted" ? "granted" : "browser-managed",
-      recognitionSupported: true
+      permissionState: permission,
+      recognitionSupported: true,
+      voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION
     }, "genesis-auto-start-permission-granted");
     recordNexusAudioPipelineEvent("genesis-auto-start-triggered", {
       source,
       permissionState: permission,
       runtimePermissionState: runtimePermission,
-      authorizationProof: permission === "granted" ? "permissions-api-granted" : "browser-managed-state-requires-get-user-media-proof"
+      authorizationProof: permission === "granted" ? "permissions-api-granted-get-user-media-required" : "get-user-media-required"
     });
     await startVoiceListening({ source: "genesis-home-permission-granted-auto-start" });
     return true;
@@ -48605,6 +48605,7 @@ function recordNexusAudioPipelineEvent(stage, details = {}) {
     "media-stream-granted": { microphoneTrackState: "live", microphoneStreamActive: true, permissionState: "granted", permissionDisplayText: "granted" },
     "media-stream-stopped": { microphoneStreamActive: false, microphoneTrackState: "stopped" },
     "recognition-constructing": { recognitionConstructed: true, recognitionStartRequested: false, recognitionOnStartReceived: false },
+    "recognition-handlers-registered": { recognitionHandlersRegistered: true },
     "recognition-start-call": { recognitionStartRequested: true, recognitionOnStartReceived: false },
     "recognition-onstart": { recognitionOnStartReceived: true, listeningState: "active", hearingState: "waiting", mode: "listening" },
     "recognition-audiostart": { recognitionAudioStartReceived: true, hearingState: "audio-started" },
@@ -48634,7 +48635,7 @@ function recordNexusAudioPipelineEvent(stage, details = {}) {
       synthesisRequested: Boolean(safeDetails.synthesisRequested)
     }, "audio-pipeline");
   } catch {}
-  if (nexusVoiceAudioDebugEnabled()) {
+  if (nexusVoiceAudioDebugEnabled() || nexusGenesisVoiceDebugEnabled()) {
     console.info("[Nexus voice pipeline]", event);
   }
   return event;
@@ -48666,6 +48667,39 @@ function stopNexusVoicePermissionStream(reason = "stopped") {
   } catch {}
   nexusVoicePermissionStream = null;
   recordNexusAudioPipelineEvent("media-stream-stopped", { reason });
+}
+
+function stopNexusGenesisVoiceController(reason = "controller-stopped") {
+  nexusGenesisVoiceSessionActive = false;
+  voiceAutoRestart = false;
+  voiceStopRequested = true;
+  if (nexusGenesisRecognitionStartTimeout) {
+    clearTimeout(nexusGenesisRecognitionStartTimeout);
+    nexusGenesisRecognitionStartTimeout = null;
+  }
+  if (nexusGenesisVoiceRestartTimer) {
+    clearTimeout(nexusGenesisVoiceRestartTimer);
+    nexusGenesisVoiceRestartTimer = null;
+  }
+  try {
+    if (voiceRecognition) voiceRecognition.stop();
+  } catch {}
+  voiceRecognition = null;
+  stopNexusAudioFallbackRecorder(reason);
+  stopNexusVoicePermissionStream(reason);
+  recordNexusAudioPipelineEvent("genesis-controller-stopped", { reason });
+  nexusGenesisVoiceDebugLog("controller-stopped", { reason });
+  updateNexusOsVoiceRuntimeState({
+    mode: "standby",
+    listeningState: "stopped",
+    hearingState: "idle",
+    assistantSpeaking: false
+  }, reason);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => stopNexusGenesisVoiceController("pagehide"), { passive: true });
+  window.addEventListener("beforeunload", () => stopNexusGenesisVoiceController("beforeunload"), { passive: true });
 }
 
 function stopNexusAudioFallbackRecorder(reason = "stopped") {
@@ -48788,11 +48822,13 @@ function startNexusAudioFallbackRecorder(stream, options = {}) {
 async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-runtime") {
   if (!navigator.mediaDevices?.getUserMedia) {
     recordNexusAudioPipelineEvent("media-stream-unavailable", { reason: "getUserMedia-unavailable" });
+    nexusGenesisVoiceDebugLog("mediaDevices-unavailable", { source });
     return null;
   }
   stopNexusVoicePermissionStream("new-request");
   try {
     recordNexusAudioPipelineEvent("media-stream-request", { source });
+    nexusGenesisVoiceDebugLog("getUserMedia-requested", { source });
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
@@ -48800,14 +48836,41 @@ async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-run
         autoGainControl: true
       }
     });
+    const tracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+    const liveTrack = tracks.find(track => track && track.enabled !== false && track.readyState === "live");
+    if (!liveTrack) {
+      try {
+        tracks.forEach(track => track.stop?.());
+      } catch {}
+      recordNexusAudioPipelineEvent("media-stream-no-live-track", {
+        trackCount: tracks.length,
+        trackStates: tracks.map(track => track?.readyState || "unknown").join(",")
+      });
+      nexusGenesisVoiceDebugLog("live-audio-track-missing", { source, trackCount: tracks.length });
+      throw Object.assign(new Error("no-live-audio-track"), { name: "NoLiveAudioTrackError" });
+    }
     nexusVoicePermissionStream = stream;
     recordNexusAudioPipelineEvent("media-stream-granted", {
-      trackCount: stream.getAudioTracks?.().length || 0
+      trackCount: tracks.length,
+      liveTrackVerified: true,
+      trackState: liveTrack.readyState,
+      trackEnabled: liveTrack.enabled !== false
+    });
+    nexusGenesisVoiceDebugLog("live-audio-track-verified", {
+      source,
+      trackCount: tracks.length,
+      trackState: liveTrack.readyState,
+      trackEnabled: liveTrack.enabled !== false
     });
     return stream;
   } catch (error) {
     recordNexusAudioPipelineEvent("media-stream-denied", {
       error: error.name || error.message || "getUserMedia failed"
+    });
+    nexusGenesisVoiceDebugLog("getUserMedia-failed", {
+      source,
+      exceptionName: error.name || "Error",
+      exceptionMessage: error.message || "getUserMedia failed"
     });
     throw error;
   }
@@ -55403,6 +55466,14 @@ function processFinalVoiceCommand(command = "", options = {}) {
     visibleFeedback: "Nexus is preparing the right response.",
     reason: "response-pending"
   });
+  recordNexusAudioPipelineEvent("agent-command-request", {
+    source: options.source || "voice",
+    commandSubmitted: true
+  });
+  nexusGenesisVoiceDebugLog("command-submitted", {
+    source: options.source || "voice",
+    transcriptLength: String(cleanedCommand || localizedCommand || finalCommand).length
+  });
   request("/api/voice/transcribe", { method: "POST", body: { transcript: finalCommand, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
   handleVoiceCommand(finalCommand, { source: "voice", turnToken });
 }
@@ -55523,7 +55594,7 @@ async function startVoiceListening(options = {}) {
     }
   }
   if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
-    markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "press-to-talk" });
+    markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
     return;
   }
@@ -55545,6 +55616,11 @@ async function startVoiceListening(options = {}) {
     return;
   }
   if (voiceRecognition) {
+    if (nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive()) {
+      markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "voice-native", source });
+      updateNexusOsVoiceRuntimeState({ mode: "listening", listeningState: "active" }, source);
+      return;
+    }
     voiceStopRequested = true;
     stopNexusAudioFallbackRecorder("explicit-stop");
     stopNexusVoicePermissionStream("explicit-stop");
@@ -55557,7 +55633,13 @@ async function startVoiceListening(options = {}) {
     return;
   }
   nexusOsVoiceStartInFlight = true;
-  markNexusListeningControllerEvent("starting", { permissionState: "prompt-or-existing", inputMode: "press-to-talk" });
+  voiceStopRequested = false;
+  if (isNexusGenesisHomeActive()) {
+    nexusGenesisVoiceSessionActive = true;
+    voiceFirstMode = true;
+    voiceAutoRestart = true;
+  }
+  markNexusListeningControllerEvent("starting", { permissionState: "prompt", inputMode: "voice-native" });
   setNexusGenesisTrustChainState("voice_permission_pending", {
     visibleFeedback: "Nexus is requesting microphone access.",
     reason: "voice-permission-pending"
@@ -55566,7 +55648,8 @@ async function startVoiceListening(options = {}) {
     mode: "starting",
     listeningState: "starting",
     hearingState: "idle",
-    permissionState: "prompt-or-existing"
+    permissionState: "prompt",
+    voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION
   }, source);
   const realtimeStarted = await startRealtimeVoiceSession();
   if (realtimeStarted) {
@@ -55599,7 +55682,9 @@ async function startVoiceListening(options = {}) {
   let permissionStream = null;
   try {
     permissionStream = await acquireNexusMicrophoneStreamForVoice(source);
-    startNexusAudioFallbackRecorder(permissionStream, { source: "audio-fallback" });
+    if (!nexusGenesisVoiceSessionActive) {
+      startNexusAudioFallbackRecorder(permissionStream, { source: "audio-fallback" });
+    }
   } catch (error) {
     nexusOsVoiceStartInFlight = false;
     voiceRecognition = null;
@@ -55613,8 +55698,8 @@ async function startVoiceListening(options = {}) {
     setNexusGenesisTrustChainState(permissionBlocked ? "permission_denied" : "recognition_failed", {
       visibleFeedback: permissionBlocked ? "I cannot access the microphone yet." : "The microphone stream did not start.",
       failureRecovery: permissionBlocked
-        ? "Allow microphone permission, then press the microphone control again."
-        : "Check the microphone device, then press the microphone control again.",
+        ? "Use the browser permission prompt or site settings, then reload Genesis."
+        : "Check the microphone device, then reload Genesis.",
       reason: permissionBlocked ? "microphone-permission-denied" : "microphone-stream-failed"
     });
     updateNexusOsVoiceRuntimeState({
@@ -55638,18 +55723,27 @@ async function startVoiceListening(options = {}) {
   recordNexusAudioPipelineEvent("recognition-constructing", {
     recognitionName: profile.recognitionName || "SpeechRecognition"
   });
+  nexusGenesisVoiceDebugLog("recognition-constructor-resolved", {
+    recognitionName: profile.recognitionName || "SpeechRecognition",
+    source
+  });
   voiceStopRequested = false;
   voiceRecognition = new Recognition();
   applyChromeVoiceRuntimeDefaults(voiceRecognition);
-  Object.assign(voiceRecognition, createNexusRecognitionConfig({ inputMode: "press-to-talk" }));
+  Object.assign(voiceRecognition, createNexusRecognitionConfig({ inputMode: "voice-native" }));
   voiceRecognition.onstart = () => {
+    if (nexusGenesisRecognitionStartTimeout) {
+      clearTimeout(nexusGenesisRecognitionStartTimeout);
+      nexusGenesisRecognitionStartTimeout = null;
+    }
     recordNexusAudioPipelineEvent("recognition-onstart", {
       locale: voiceLocale(),
       recognitionName: profile.recognitionName || "SpeechRecognition"
     });
     nexusOsVoiceStartInFlight = false;
     registerNativeVoiceSession("web-streaming-start");
-    markNexusListeningControllerEvent("listening", { permissionState: "granted", inputMode: "press-to-talk" });
+    nexusGenesisVoiceDebugLog("recognition-onstart-received", { source });
+    markNexusListeningControllerEvent("listening", { permissionState: "granted", inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({
       mode: "listening",
       listeningState: "active",
@@ -55672,24 +55766,28 @@ async function startVoiceListening(options = {}) {
     refreshMicSupport();
   };
   voiceRecognition.onaudiostart = () => {
-    recordNexusAudioPipelineEvent("recognition-audiostart", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-audiostart", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({ hearingState: "audio-started" }, "recognition-audio-start");
   };
   voiceRecognition.onsoundstart = () => {
-    recordNexusAudioPipelineEvent("recognition-soundstart", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-soundstart", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({ hearingState: "sound-detected" }, "recognition-sound-start");
   };
   voiceRecognition.onspeechstart = () => {
-    recordNexusAudioPipelineEvent("recognition-speechstart", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-speechstart", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({ hearingState: "speech-detected" }, "recognition-speech-start");
   };
   voiceRecognition.onspeechend = () => {
-    recordNexusAudioPipelineEvent("recognition-speechend", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-speechend", { inputMode: "voice-native" });
   };
   voiceRecognition.onaudioend = () => {
-    recordNexusAudioPipelineEvent("recognition-audioend", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-audioend", { inputMode: "voice-native" });
   };
   voiceRecognition.onerror = event => {
+    if (nexusGenesisRecognitionStartTimeout) {
+      clearTimeout(nexusGenesisRecognitionStartTimeout);
+      nexusGenesisRecognitionStartTimeout = null;
+    }
     nexusOsVoiceStartInFlight = false;
     setVoiceStatus("standby");
     const error = event.error || "microphone unavailable";
@@ -55718,14 +55816,14 @@ async function startVoiceListening(options = {}) {
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
     setNexusGenesisTrustChainState(permissionBlocked ? "permission_denied" : "recognition_failed", {
-      visibleFeedback: permissionBlocked ? "I cannot access the microphone. Adjust browser microphone permission to speak with Nexus." : "I did not catch that. Please try again with the microphone control.",
-      failureRecovery: "Keep workflow-scoped forms available after Nexus opens a workflow.",
+      visibleFeedback: permissionBlocked ? "Please allow microphone access so we can talk." : "I didn't hear you.",
+      failureRecovery: "Genesis will restart listening automatically when the recoverable voice condition clears.",
       reason: "recognition-error"
     });
     markNexusListeningControllerEvent(permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "failed", {
       permissionState: permissionBlocked ? "denied" : "unknown",
       microphoneUnavailable: error === "audio-capture",
-      inputMode: "typed-fallback"
+      inputMode: "voice-native"
     });
     updateNexusOsVoiceRuntimeState({
       mode: permissionBlocked ? "permission-denied" : error === "audio-capture" ? "microphone-unavailable" : error === "no-speech" ? "recognition-timeout" : "recognition-interrupted",
@@ -55742,6 +55840,10 @@ async function startVoiceListening(options = {}) {
     });
   };
   voiceRecognition.onend = () => {
+    if (nexusGenesisRecognitionStartTimeout) {
+      clearTimeout(nexusGenesisRecognitionStartTimeout);
+      nexusGenesisRecognitionStartTimeout = null;
+    }
     nexusOsVoiceStartInFlight = false;
     recordNexusAudioPipelineEvent("recognition-onend", {
       autoRestart: Boolean(voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden)
@@ -55749,7 +55851,7 @@ async function startVoiceListening(options = {}) {
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
     clearStreamingVoicePartial();
-    markNexusListeningControllerEvent("stopped", { inputMode: voiceFirstMode && voiceAutoRestart ? "wake-phrase-gated" : "typed-fallback" });
+    markNexusListeningControllerEvent("stopped", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({
       mode: voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby",
       listeningState: voiceFirstMode && voiceAutoRestart ? "auto-restart" : "ended",
@@ -55758,8 +55860,13 @@ async function startVoiceListening(options = {}) {
     updateNativeVoiceBridgeState(voiceConversationPaused ? "paused" : voiceFirstMode ? "auto-restart" : "standby", { reason: "recognition-ended" });
     refreshMicSupport();
     if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
-      setTimeout(() => {
-        if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) startVoiceListening();
+      clearTimeout(nexusGenesisVoiceRestartTimer);
+      nexusGenesisVoiceRestartTimer = setTimeout(() => {
+        nexusGenesisVoiceRestartTimer = null;
+        if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) {
+          recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-onend" });
+          startVoiceListening({ source: "genesis-controlled-restart" });
+        }
       }, VOICE_RESTART_DELAY_MS);
     }
   };
@@ -55776,7 +55883,7 @@ async function startVoiceListening(options = {}) {
       const transcript = normalizeVoicePartial(result?.[0]?.transcript || "");
       if (!transcript) continue;
       if (typeof result?.[0]?.confidence === "number") {
-        markNexusListeningControllerEvent("speech-detected", { confidence: result[0].confidence, inputMode: "press-to-talk" });
+        markNexusListeningControllerEvent("speech-detected", { confidence: result[0].confidence, inputMode: "voice-native" });
         updateNexusOsVoiceRuntimeState({ speechConfidence: result[0].confidence }, "speech-confidence");
       }
       if (result.isFinal) finalTranscript = `${finalTranscript} ${transcript}`.trim();
@@ -55794,21 +55901,54 @@ async function startVoiceListening(options = {}) {
     if (finalTranscript) {
       nexusVoiceLastFinalTranscriptAt = Date.now();
       stopNexusAudioFallbackRecorder("web-speech-final");
-      stopNexusVoicePermissionStream("web-speech-final");
       const wake = normalizeNexusWakeTranscript(finalTranscript);
       recordNexusAudioPipelineEvent("recognition-final-transcript", {
         finalTranscript,
         wakeMatched: wake.wakeMatched
       });
-      markNexusListeningControllerEvent("final-transcript", { finalTranscript, inputMode: wake.wakeMatched ? "wake-phrase-gated" : "press-to-talk" });
+      nexusGenesisVoiceDebugLog("final-transcript-received", { source, transcriptLength: finalTranscript.length });
+      markNexusListeningControllerEvent("final-transcript", { finalTranscript, inputMode: "voice-native" });
       recordNexusOsConversationTurn("user", finalTranscript, { source: "voice-final-transcript" });
     }
     if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: "voice" });
   };
   try {
-    recordNexusAudioPipelineEvent("recognition-start-call", { inputMode: "press-to-talk" });
+    recordNexusAudioPipelineEvent("recognition-handlers-registered", { inputMode: "voice-native" });
+    nexusGenesisVoiceDebugLog("recognition-handlers-registered", { source });
+    recordNexusAudioPipelineEvent("recognition-start-call", { inputMode: "voice-native" });
+    nexusGenesisVoiceDebugLog("recognition-start-requested", { source });
     voiceRecognition.start();
+    if (nexusGenesisRecognitionStartTimeout) clearTimeout(nexusGenesisRecognitionStartTimeout);
+    nexusGenesisRecognitionStartTimeout = setTimeout(() => {
+      if (!voiceRecognition || nexusOsVoiceRuntimeState.recognitionOnStartReceived) return;
+      recordNexusAudioPipelineEvent("recognition-start-timeout", { source });
+      nexusGenesisVoiceDebugLog("recognition-start-timeout", { source });
+      nexusOsVoiceStartInFlight = false;
+      try {
+        voiceRecognition.stop();
+      } catch {}
+      voiceRecognition = null;
+      updateNexusOsVoiceRuntimeState({
+        mode: "recognition-interrupted",
+        listeningState: "recovering",
+        lastError: "recognition-start-timeout"
+      }, "recognition-start-timeout");
+      if (nexusGenesisVoiceSessionActive && !document.hidden && !voiceStopRequested) {
+        clearTimeout(nexusGenesisVoiceRestartTimer);
+        nexusGenesisVoiceRestartTimer = setTimeout(() => {
+          nexusGenesisVoiceRestartTimer = null;
+          if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
+            recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-start-timeout" });
+            startVoiceListening({ source: "genesis-recognition-start-timeout-restart" });
+          }
+        }, Math.max(VOICE_RESTART_DELAY_MS, 1200));
+      }
+    }, 5000);
   } catch (error) {
+    if (nexusGenesisRecognitionStartTimeout) {
+      clearTimeout(nexusGenesisRecognitionStartTimeout);
+      nexusGenesisRecognitionStartTimeout = null;
+    }
     nexusOsVoiceStartInFlight = false;
     voiceRecognition = null;
     stopNexusAudioFallbackRecorder("recognition-start-failed");
@@ -55823,7 +55963,7 @@ async function startVoiceListening(options = {}) {
       hearingState: "idle",
       lastError: error.message || "recognition-start-failed"
     }, source);
-    showNexusVoiceFallbackMessage("Voice recognition could not start. Use the microphone control again after permission is available; structured fields remain available inside opened workflows.", {
+    showNexusVoiceFallbackMessage("Voice recognition could not start. Reload Genesis after browser microphone permission is available; structured fields remain available inside opened workflows.", {
       source: "recognition-start-failed",
       mode: "typed-fallback",
       trustChainState: "recognition_failed"
@@ -58405,7 +58545,7 @@ function bindStatic() {
     if (voiceFirstMode && voiceAutoRestart && !voiceRecognition && !voiceSpeaking) {
       updateNexusBehaviorLayer("listening", "Nexus is resuming voice-first listening.");
       setTimeout(() => {
-        if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+        if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening({ source: "genesis-visible-resume" });
       }, 600);
     }
   });

@@ -42,8 +42,9 @@ assert(trueHome.includes('data-nexus-genesis-orb-only-home="true"'), "true home 
 assert(!trueHome.includes("Good evening, Ron."), "true home does not show visible greeting");
 assert(!trueHome.includes("What are we working on today?"), "true home does not show visible helper text");
 assert(trueHome.includes("Nexus Genesis home is audio-only."), "true home preserves audio-first readiness language");
-assert(trueHome.includes("renderNexusGenesisHomeVoiceGate()"), "true home mounts a separate microphone permission gate");
-assert(voiceGate.includes("data-nexus-genesis-mic-permission-control"), "voice gate exposes a separate microphone permission control");
+assert(trueHome.includes("renderNexusGenesisHomeVoiceGate()"), "true home mounts the nonvisual Genesis voice runtime marker");
+assert(voiceGate.includes("data-nexus-genesis-voice-runtime"), "voice gate exposes the automatic voice runtime marker");
+assert(!voiceGate.includes("data-nexus-genesis-mic-permission-control"), "voice gate does not render an application microphone control");
 assert(!trueHome.includes("Activate the Nexus orb"), "true home does not instruct orb activation");
 assert(hero.includes("Hello. I'm Nexus."), "hero owns the conversational first impression");
 assert(hero.includes("Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow."), "hero includes natural voice-first greeting");

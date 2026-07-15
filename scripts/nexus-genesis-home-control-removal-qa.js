@@ -23,16 +23,16 @@ function sectionBetween(source, start, end, label) {
 }
 
 function includesAll(source, tokens, label) {
-  for (const token of tokens) {
-    assert(source.includes(token), `${label} missing ${token}`);
-  }
+  for (const token of tokens) assert(source.includes(token), `${label} missing ${token}`);
 }
 
 const home = sectionBetween(app, "function renderNexusTrueHome", "function renderNexusAudioCompanionExperience", "Genesis home");
-const voiceGate = sectionBetween(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueCommandComposer", "Genesis home voice gate");
+const voiceGate = sectionBetween(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueCommandComposer", "Genesis home voice runtime marker");
 const orb = sectionBetween(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "Genesis orb renderer");
-const workspace = sectionBetween(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "workspace renderer");
-const autoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "permission-granted auto-start");
+const autoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic voice start");
+const startVoice = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
+const acquireStream = sectionBetween(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone stream acquisition");
+const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 const orbCss = sectionBetween(app, "[data-nexus-os-core-orb] {", "[data-nexus-os-core-orb].nexus-core-state-idle", "inline orb CSS");
 const homeOrbCss = sectionBetween(styles, "body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {", "body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible", "home orb CSS");
 
@@ -48,18 +48,22 @@ assert(!home.includes("nexusCommandCenterInput"), "Genesis home must not include
 assert(!home.includes("Talk to Nexus"), "Genesis home must not show a Talk button");
 assert(!home.includes("Start Conversation"), "Genesis home must not show a Start Conversation button");
 
-assert(!voiceGate.includes('data-nexus-os-voice-control="toggle-listening"'), "home voice gate must not include a Talk control");
-assert(!voiceGate.includes('data-nexus-os-voice-control="stop-listening"'), "home voice gate must not include permanent Stop listening");
-assert(!voiceGate.includes('data-nexus-os-voice-control="stop-speaking"'), "home voice gate must not include permanent Stop speaking");
-assert(!voiceGate.includes('data-nexus-os-voice-control="repeat-response"'), "home voice gate must not include permanent Repeat response");
-assert(!voiceGate.includes('data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}"'), "home voice gate must not include permanent Mute/Unmute");
 includesAll(voiceGate, [
-  "data-nexus-genesis-mic-permission-control=\"true\"",
-  "data-nexus-os-voice-control=\"enable-voice\"",
+  "data-nexus-genesis-audio-gate=\"true\"",
+  "data-nexus-genesis-voice-runtime=\"true\"",
+  "NEXUS_GENESIS_VOICE_RUNTIME_VERSION",
+  "aria-live=\"polite\""
+], "nonvisual Genesis voice runtime marker");
+[
+  "button",
+  "data-nexus-genesis-mic-permission-control",
+  "data-nexus-os-voice-control",
   "Allow microphone",
-  "showPermissionControl",
-  "renderNexusGenesisVoiceDebugPanel"
-], "pre-authorization microphone permission control");
+  "renderNexusGenesisVoiceDebugPanel",
+  "details",
+  "summary",
+  "lastVoiceResponse"
+].forEach(token => assert(!voiceGate.includes(token), `Genesis home voice marker must not render ${token}`));
 
 includesAll(orb, [
   "role=\"img\"",
@@ -76,17 +80,31 @@ includesAll(orbCss, ["pointer-events: none !important", "cursor: default !import
 includesAll(homeOrbCss, ["pointer-events: none", "cursor: default"], "home orb non-interaction CSS");
 
 includesAll(autoStart, [
-  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
-  "runtimePermission === \"browser-managed\"",
-  "permission === \"granted\"",
-  "permission-not-authorized",
-  "genesis-auto-start-triggered",
-  "genesis-home-permission-granted-auto-start"
-], "permission-granted recognition auto-start");
+  "nexusGenesisVoiceSessionActive = true",
+  "voiceFirstMode = true",
+  "voiceAutoRestart = true",
+  "nexusMicrophonePermissionCanAttemptStart(permission)",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "automatic Genesis voice startup");
 assert(!autoStart.includes("granted-or-browser-managed"), "auto-start must not compare against legacy human-readable permission labels");
-assert(!autoStart.includes("role=\"button\""), "auto-start must not add an orb/button path");
-assert(workspace.includes("maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"), "workspace render should schedule granted-permission auto-start");
-assert(app.includes("voiceDebug=1"), "debug panel must stay gated behind voiceDebug=1");
+
+includesAll(startVoice, [
+  "recognition-handlers-registered",
+  "recognition-start-call",
+  "recognition-onstart",
+  "recognition-restart-requested"
+], "voice startup path");
+includesAll(acquireStream, [
+  "navigator.mediaDevices.getUserMedia",
+  "media-stream-granted",
+  "liveTrackVerified: true",
+  "NoLiveAudioTrackError"
+], "microphone acquisition path");
+includesAll(speechResume, [
+  "nexusGenesisVoiceSessionActive",
+  "genesis-speech-finished-restart",
+  "recognition-restart-requested"
+], "speech-to-listening restart");
 
 assert(pkg.scripts["qa:nexus-genesis-home-control-removal"] === "node scripts/nexus-genesis-home-control-removal-qa.js", "package alias missing");
 assert(qaSuite.includes("scripts/nexus-genesis-home-control-removal-qa.js"), "qa-suite missing home control removal QA");
@@ -95,10 +113,10 @@ console.log(JSON.stringify({
   ok: true,
   suite: "nexus-genesis-home-control-removal",
   verifies: [
-    "Genesis home has no general typed composer",
-    "Genesis home has no Talk/Stop/Mute/Repeat row",
-    "separate microphone permission control remains before authorization",
+    "Genesis home has no text composer or application microphone controls",
+    "Genesis debug UI is not rendered",
     "orb remains permanently non-interactive",
-    "granted permission can bootstrap recognition without using the orb"
+    "Genesis automatically starts the voice path",
+    "speech completion restarts recognition"
   ]
 }, null, 2));

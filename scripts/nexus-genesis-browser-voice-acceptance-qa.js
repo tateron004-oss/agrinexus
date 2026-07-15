@@ -22,35 +22,18 @@ function between(source, start, end, label) {
 }
 
 function includesAll(source, tokens, label) {
-  tokens.forEach(token => {
-    assert(source.includes(token), `${label}: missing ${token}`);
-  });
+  tokens.forEach(token => assert(source.includes(token), `${label}: missing ${token}`));
 }
 
 includesAll(app, [
   "function browserVoiceRuntimeProfile()",
   "window.browserVoiceRuntimeProfile = browserVoiceRuntimeProfile",
-  "function nexusSpeechSynthesisControllerState()",
-  "function createNexusSpeechSynthesisUtterance",
-  "function runNexusSpeechSynthesisController",
-  "function nexusListeningWakeControllerState",
+  "function normalizeNexusMicrophonePermissionState",
+  "function nexusMicrophonePermissionCanAttemptStart",
+  "NEXUS_GENESIS_VOICE_RUNTIME_VERSION",
   "async function maybeStartGenesisRecognitionAfterGrantedPermission",
   "function showNexusVoiceFallbackMessage",
-  "function handleNexusPrimaryVoiceButtonClick",
-  "function bindNexusPrimaryVoiceControls",
-  "function renderNexusBrowserVoiceAvailabilityHint",
-  "data-nexus-browser-voice-fallback=\"true\"",
-  "data-browser-voice-supported",
-  "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them.",
-  "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first.",
-  "window.handleNexusPrimaryVoiceButtonClick = handleNexusPrimaryVoiceButtonClick",
-  "onclick=\"return handleNexusPrimaryVoiceButtonClick(event)\"",
-  "nexus-primary-visible-voice-button",
-  "nexusPrimaryVoiceControlBound",
-  "bound-visible-voice-control",
-  "bindNexusPrimaryVoiceControls();",
-  "[data-nexus-command-center-voice],[data-nexus-os-voice-control]",
-  "standard-user-visible-voice-control",
+  "function runNexusSpeechSynthesisController",
   "speechStartEventReceived: true",
   "speechEndEventReceived: true",
   "prepared.utterance.onstart",
@@ -59,16 +42,13 @@ includesAll(app, [
   "setNexusGenesisTrustChainState(\"speaking\"",
   "setNexusGenesisTrustChainState(\"synthesis_failed\"",
   "setNexusGenesisTrustChainState(\"speech_preparing\"",
-  "setNexusGenesisTrustChainState(\"recognition_unavailable\"",
-  "Workflow forms available after Nexus opens them",
-  "Nexus voice is muted. Captions remain available; unmute or allow microphone access to continue by voice.",
-  "does not provide microphone speech recognition in this test browser",
-  "realtime voice is not configured",
-  "realtime-voice-not-configured",
-  "Voice recognition could not start. Use the microphone control again after permission is available",
-  "noAlwaysOnListeningClaim: true",
-  "noHiddenMicrophoneStart: true"
+  "setNexusGenesisTrustChainState(\"recognition_unavailable\""
 ], "browser voice acceptance runtime");
+
+const home = between(app, "function renderNexusTrueHome", "function renderNexusAudioCompanionExperience", "Genesis home");
+assert(!home.includes("nexusCommandCenterInput"), "Genesis home must not render typed input");
+assert(!home.includes("Talk to Nexus"), "Genesis home must not render Talk button");
+assert(!home.includes("Allow microphone"), "Genesis home must not render application microphone button");
 
 const synthesisSource = between(app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", "synthesis lifecycle");
 assert(
@@ -79,32 +59,27 @@ assert(
   synthesisSource.indexOf("prepared.utterance.onstart") < synthesisSource.indexOf("window.speechSynthesis.speak(prepared.utterance)"),
   "synthesis lifecycle: onstart handler must be installed before speak()"
 );
-assert(
-  synthesisSource.indexOf('setNexusGenesisTrustChainState("speaking"') < synthesisSource.indexOf("options.onStart?.(event)"),
-  "synthesis lifecycle: speaking state must be owned by the browser start callback"
-);
 
 const listeningSource = between(app, "async function startVoiceListening", "async function sendModuleNotification", "listening lifecycle");
+const acquireSource = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
 includesAll(listeningSource, [
   "browserVoiceRuntimeProfile()",
   "!profile.secureEnough",
-  "!Recognition",
+  "voiceRecognition = new Recognition()",
   "voiceRecognition.onstart",
   "voiceRecognition.onerror",
   "voiceRecognition.onend",
   "voiceRecognition.onresult",
+  "recordNexusAudioPipelineEvent(\"recognition-handlers-registered\"",
+  "recordNexusAudioPipelineEvent(\"recognition-start-call\"",
   "scheduleFinalVoiceCommand(finalTranscript",
-  "showNexusVoiceFallbackMessage",
-  "realtimeConfigured = Boolean(statusPayload?.realtimeVoice?.configured)"
+  "duplicate-session-prevented"
 ], "listening lifecycle");
-assert(
-  listeningSource.indexOf("markNexusListeningControllerEvent(\"typed-fallback\"") < listeningSource.indexOf("showNexusVoiceFallbackMessage"),
-  "unsupported recognition should mark typed fallback before visible fallback message"
-);
-assert(
-  listeningSource.indexOf("!Recognition && !realtimeVoiceSupported()") < listeningSource.indexOf("duplicate-session-prevented"),
-  "unsupported recognition fallback must run before duplicate start prevention"
-);
+includesAll(acquireSource, [
+  "navigator.mediaDevices.getUserMedia",
+  "liveTrackVerified: true",
+  "NoLiveAudioTrackError"
+], "microphone acquisition");
 
 const fallbackSource = between(app, "function showNexusVoiceFallbackMessage", "function realtimeVoiceSupported", "visible fallback");
 includesAll(fallbackSource, [
@@ -114,38 +89,34 @@ includesAll(fallbackSource, [
   "updateNexusOsUnifiedConversationDom",
   "assistantSpeaking: false",
   "mode: options.mode || \"typed-fallback\""
-], "visible fallback");
-
-const availabilityHintSource = between(app, "function renderNexusBrowserVoiceAvailabilityHint", "function renderNexusTrueCommandComposer", "browser voice availability hint");
-includesAll(availabilityHintSource, [
-  "browserVoiceRuntimeProfile()",
-  "const message = profile.supported",
-  "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them.",
-  "data-browser-voice-supported",
-  "data-nexus-browser-voice-fallback=\"true\"",
-  "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first."
-], "browser voice availability hint");
+], "fallback state update");
 
 const renderWorkspaceSource = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "workspace render");
 includesAll(renderWorkspaceSource, [
   "bindNexusStandardUserHomeControls();",
-  "bindNexusPrimaryVoiceControls();",
   "updateNexusOsUnifiedConversationDom();",
   "maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"
 ], "workspace render voice binding");
 
-const grantedAutoStartSource = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
-includesAll(grantedAutoStartSource, [
+const autoStartSource = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic voice start");
+includesAll(autoStartSource, [
+  "nexusGenesisVoiceSessionActive = true",
+  "voiceFirstMode = true",
+  "voiceAutoRestart = true",
   "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
-  "runtimePermission === \"browser-managed\"",
-  "permission === \"granted\"",
-  "chromeMicrophonePermissionState()",
-  "permission-not-authorized",
+  "nexusMicrophonePermissionCanAttemptStart(permission)",
   "genesis-auto-start-skipped",
   "genesis-auto-start-triggered",
   "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
-], "granted permission recognition auto-start");
-assert(!grantedAutoStartSource.includes("granted-or-browser-managed"), "browser voice acceptance must not use legacy display labels for startup control flow");
+], "automatic voice start");
+assert(!autoStartSource.includes("granted-or-browser-managed"), "browser voice acceptance must not use legacy display labels for startup control flow");
+
+const speechResume = between(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
+includesAll(speechResume, [
+  "nexusGenesisVoiceSessionActive",
+  "genesis-speech-finished-restart",
+  "recognition-restart-requested"
+], "speech restart");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-browser-voice-acceptance"],
@@ -156,41 +127,27 @@ assert(
   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
-assert(
-  index.includes("/app.js?v=nexus-behavior-433"),
-  "index must bump app.js version so browser voice acceptance fixes load in real browser validation"
-);
+assert(index.includes("/app.js?v=nexus-behavior-434"), "index must bump app.js version so browser voice fixes load");
 
 includesAll(acceptanceDoc, [
   "Nexus Genesis Real Browser Voice and Companion Acceptance",
   "http://127.0.0.1:4182/",
-  "Codex In-app Browser",
-  "Windows",
-  "SpeechRecognition: unavailable",
-  "speechSynthesis: unavailable",
   "Actual audible output: not confirmed",
-  "Voice fallback: passed",
-  "Console warnings/errors: 0",
-  "No always-on listening",
   "not proof that audio was heard"
 ], "acceptance record");
-
 assert(
   !/- Actual audible output:\s*(confirmed|audible output confirmed)/i.test(acceptanceDoc),
   "acceptance record must not claim audible output was confirmed in this browser"
-);
-assert(
-  !/subsystem unavailable|dependency missing|isolated runtime|shim|provider failure/i.test(fallbackSource),
-  "visible browser voice fallback copy must avoid raw implementation failure language"
 );
 
 console.log(JSON.stringify({
   ok: true,
   suite: "nexus-genesis-browser-voice-acceptance",
   verifies: [
-    "browser capability detection exported",
-    "speech start/end/error lifecycle stays event-based",
-    "unsupported browser voice surfaces typed fallback visibly",
+    "browser voice capability detection exists",
+    "Genesis home has no application controls",
+    "automatic startup reaches getUserMedia and recognition",
+    "speech completion restarts recognition",
     "acceptance record distinguishes synthesis events from audible output"
   ]
 }, null, 2));

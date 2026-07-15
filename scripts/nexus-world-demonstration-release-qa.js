@@ -69,10 +69,11 @@ assert(!homeAndAudio.includes("renderNexusTrueCommandComposer()"), "Genesis home
 const voiceGate = between(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueHome", "voice gate");
 includesAll(voiceGate, [
   "data-nexus-genesis-audio-gate=\"true\"",
-  "data-nexus-genesis-mic-permission-control=\"true\"",
-  "data-nexus-os-voice-control=\"enable-voice\"",
-  "Allow microphone"
-], "separate microphone permission gate");
+  "data-nexus-genesis-voice-runtime=\"true\"",
+  "NEXUS_GENESIS_VOICE_RUNTIME_VERSION"
+], "nonvisual automatic voice runtime marker");
+assert(!voiceGate.includes("data-nexus-genesis-mic-permission-control"), "Genesis home must not render microphone permission controls");
+assert(!voiceGate.includes("Allow microphone"), "Genesis home must not render app permission controls");
 
 const staticBindings = between(app, "function bindStatic", "async function boot", "static bindings");
 assert(!staticBindings.includes("handleNexusGenesisOrbActivation"), "orb click/keyboard activation must not be globally bound");
@@ -90,8 +91,16 @@ const finalVoice = between(app, "function processFinalVoiceCommand", "function s
 includesAll(finalVoice, [
   "nexusGenesisExperienceActivated = true",
   "nexusTrueExperienceSessionStarted = true",
-  "source: \"voice-final-transcript\""
+  "source: \"voice-final-transcript\"",
+  "recordNexusAudioPipelineEvent(\"agent-command-request\""
 ], "final voice processing");
+
+const autoStart = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic startup");
+includesAll(autoStart, [
+  "nexusGenesisVoiceSessionActive = true",
+  "nexusMicrophonePermissionCanAttemptStart(permission)",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "automatic startup");
 
 const orbCss = between(app, "[data-nexus-os-core-orb] {", "[data-nexus-os-core-orb].nexus-core-state-idle", "orb css");
 includesAll(orbCss, [
@@ -104,21 +113,21 @@ const submitRouting = between(app, "function routeNexusCommandCenterCommunicatio
 assert(submitRouting.indexOf("handleNexusVoiceTroubleshootingCommand(command, { source })") < submitRouting.indexOf("advanceNexusOsMissionForCommand(command, { source });"), "voice status commands must run before mission planning");
 
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-433",
-  "/styles.css?v=nexus-behavior-433",
-  "/app.js?v=nexus-behavior-433"
+  "/manifest.webmanifest?v=nexus-behavior-434",
+  "/styles.css?v=nexus-behavior-434",
+  "/app.js?v=nexus-behavior-434"
 ], "index cache bust");
 includesAll(app, [
-  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-433\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v378\";"
+  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-434\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v379\";"
 ], "app cache bust");
 includesAll(sw, [
-  "const CACHE_NAME = \"agrinexus-pwa-v378\";",
-  "const BUILD_VERSION = \"nexus-behavior-433\";"
+  "const CACHE_NAME = \"agrinexus-pwa-v379\";",
+  "const BUILD_VERSION = \"nexus-behavior-434\";"
 ], "service worker cache bust");
 includesAll(server, [
-  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-433\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v378\";"
+  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-434\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v379\";"
 ], "server cache bust");
 
 assert.strictEqual(
@@ -134,7 +143,7 @@ console.log(JSON.stringify({
   verifies: [
     "idle Standard User path is audio-only",
     "home orb is non-interactive visual presence",
-    "separate microphone permission control owns guarded voice startup",
+    "automatic Genesis runtime owns guarded voice startup",
     "voice-status prompts run before mission planning",
     "production cache build is bumped"
   ]

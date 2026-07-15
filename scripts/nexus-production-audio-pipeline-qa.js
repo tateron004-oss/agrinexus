@@ -31,8 +31,10 @@ includesAll(app, [
   "genesis-home-permission-granted-auto-start",
   "normalizeNexusMicrophonePermissionState",
   "nexusMicrophonePermissionCanAttemptStart",
-  "browser-managed-state-requires-get-user-media-proof",
+  "get-user-media-required",
+  "liveTrackVerified: true",
   "recognition-constructing",
+  "recognition-handlers-registered",
   "recognition-start-call",
   "recognition-onstart",
   "recognition-audiostart",
@@ -52,6 +54,7 @@ includesAll(app, [
 includesAll(app, [
   "acquireNexusMicrophoneStreamForVoice",
   "navigator.mediaDevices.getUserMedia",
+  "NoLiveAudioTrackError",
   "startNexusAudioFallbackRecorder",
   "MediaRecorder",
   "submitNexusAudioFallbackForTranscription",
@@ -71,13 +74,15 @@ assert(app.includes("I will not claim I can hear audio until recognition starts.
 assert(app.includes("Microphone permission may be available, but recognition is not actively listening now."), "permission-granted recognition failure must be truthful");
 assert(app.includes("Genesis keeps the home screen audio-first"), "voice fallback copy must keep Genesis home audio-first");
 
-assert(app.includes("nexus-behavior-433"), "app build identifier must be bumped");
-assert(server.includes("nexus-behavior-433"), "server build identifier must be bumped");
-assert(app.includes("agrinexus-pwa-v378"), "app PWA cache identifier must be bumped");
-assert(server.includes("agrinexus-pwa-v378"), "server PWA cache identifier must be bumped");
+assert(app.includes("nexus-behavior-434"), "app build identifier must be bumped");
+assert(server.includes("nexus-behavior-434"), "server build identifier must be bumped");
+assert(app.includes("agrinexus-pwa-v379"), "app PWA cache identifier must be bumped");
+assert(server.includes("agrinexus-pwa-v379"), "server PWA cache identifier must be bumped");
 const autoStartBlock = app.slice(app.indexOf("async function maybeStartGenesisRecognitionAfterGrantedPermission"), app.indexOf("function nexusVoiceAudioDebugEnabled"));
-assert(autoStartBlock.includes("runtimePermission === \"browser-managed\""), "browser-managed permission must be eligible for startup attempt");
+assert(autoStartBlock.includes("nexusMicrophonePermissionCanAttemptStart(permission)"), "prompt/granted/browser-managed permission states must be eligible for getUserMedia attempt");
 assert(!autoStartBlock.includes("granted-or-browser-managed"), "auto-start must not compare against legacy display labels");
+const startBlock = app.slice(app.indexOf("async function startVoiceListening"), app.indexOf("async function sendModuleNotification"));
+assert(!startBlock.includes("stopNexusVoicePermissionStream(\"web-speech-final\")"), "valid microphone stream must remain alive after final transcript");
 
 const orbStyleBlock = app.match(/\[data-nexus-os-core-orb\]\s*\{[\s\S]*?\}/)?.[0] || "";
 assert(orbStyleBlock.includes("pointer-events: none"), "Genesis orb must remain pointer-events none");

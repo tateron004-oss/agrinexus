@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
 assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
 assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
 assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
-assert(index.includes("/manifest.webmanifest?v=nexus-behavior-433"), "index should version the manifest link to avoid stale manifest warnings");
+assert(index.includes("/manifest.webmanifest?v=nexus-behavior-434"), "index should version the manifest link to avoid stale manifest warnings");
 assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
 
 includesAll(app, [
@@ -40,8 +40,8 @@ includesAll(app, [
   "function nexusVoiceTroubleshootingResponse",
   "function handleNexusVoiceTroubleshootingCommand",
   "I received this as on-screen text. Microphone recognition is not active right now,",
-  "I can respond on screen, but I cannot speak aloud in this browser right now.",
-  "Voice can start from the Talk button.",
+  "I can respond, but I cannot speak aloud in this browser right now.",
+  "Genesis starts voice automatically.",
   "Microphone permission required",
   "Speech recognition unavailable",
   "Speech output unavailable"
@@ -59,8 +59,9 @@ includesAll(troubleshootingSource, [
   "turn on voice",
   "nexus talk to me",
   "is my microphone working",
-  "Press Talk"
+  "Reload Genesis"
 ], "voice troubleshooting response");
+assert(!troubleshootingSource.includes("Press Talk"), "voice troubleshooting must not refer to a Talk control");
 assert(!troubleshootingSource.includes("Plan created"), "voice troubleshooting must never answer with Plan created");
 assert(!troubleshootingSource.includes("continue by typing"), "voice troubleshooting must not advertise general typed fallback");
 
@@ -72,7 +73,7 @@ includesAll(activationSource, [
   "Nexus is ready."
 ], "Genesis presence activation");
 assert(!activationSource.includes("startNexusOsMission("), "voice activation must not create a mission");
-assert(!activationSource.includes("startVoiceListening("), "workspace activation must not request microphone permission by itself");
+assert(!activationSource.includes("startVoiceListening("), "presence activation must not request microphone directly; render-time Genesis controller owns startup");
 
 const minimalConversationSource = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal companion surface");
 assert(

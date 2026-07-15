@@ -445,10 +445,16 @@ function assertOrbActivation(context, label) {
   ], label, "orb activation binding");
   assertIncludes(context.app, [
     'data-nexus-genesis-audio-gate="true"',
-    'data-nexus-genesis-mic-permission-control="true"',
+    'data-nexus-genesis-voice-runtime="true"',
+    "NEXUS_GENESIS_VOICE_RUNTIME_VERSION",
     "Nexus Genesis home is audio-only.",
-    "non-interactive voice companion presence"
-  ], label, "separate voice permission gate");
+    "non-interactive voice companion presence",
+    "maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"
+  ], label, "automatic nonvisual voice runtime");
+  assertExcludes(context.app, [
+    'data-nexus-genesis-mic-permission-control="true"',
+    "Allow microphone"
+  ], label, "forbidden Genesis application microphone controls");
 }
 
 function assertRouting(context, label) {

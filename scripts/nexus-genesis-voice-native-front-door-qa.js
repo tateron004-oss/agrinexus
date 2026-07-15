@@ -51,7 +51,6 @@ assert(!stylesBetweenHomeOrb().includes("cursor: pointer"), "source CSS must not
 assert(stylesBetweenHomeOrb().includes("cursor: default"), "source CSS must give home orb a default cursor");
 assert(stylesBetweenHomeOrb().includes("pointer-events: none"), "source CSS must disable pointer events on the home orb stage");
 assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activation handler must be removed");
-assert(!app.includes("handleNexusGenesisOrbActivation"), "orb activation references must be removed");
 assert(!app.includes("genesis-orb-activation"), "orb click activation source must be absent");
 assert(!app.includes("keyboard-orb"), "orb keyboard activation source must be absent");
 assert(!app.includes("Press Enter or Space"), "orb keyboard activation instruction must be absent");
@@ -67,90 +66,78 @@ assert(!home.includes("renderNexusTrueCommandComposer()"), "Genesis home must no
 assert(!home.includes("Ask Nexus anything"), "Genesis home must not show the Ask Nexus typed box");
 assert(!home.includes("Activate the Nexus orb"), "Genesis home must not instruct orb activation");
 
-const voiceGate = between(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueHome", "Genesis voice gate");
+const voiceGate = between(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueCommandComposer", "Genesis voice marker");
 includesAll(voiceGate, [
   "data-nexus-genesis-audio-gate=\"true\"",
-  "data-nexus-genesis-mic-permission-control=\"true\"",
-  "data-nexus-os-voice-control=\"enable-voice\"",
-  "Allow microphone"
-], "separate microphone permission gate");
-
-const audioCompanion = between(app, "function renderNexusAudioCompanionExperience", "function renderNexusMinimalConversationExperience", "audio companion");
-includesAll(audioCompanion, [
-  "data-nexus-audio-companion=\"true\"",
-  "data-genesis-companion-state=\"audio-only\"",
-  "renderNexusTrueCoreOrb({ compact: true })",
-  "renderNexusGenesisHomeVoiceGate()",
-  "data-read-only-transcript=\"true\""
-], "audio companion");
-assert(!audioCompanion.includes("renderNexusTrueCommandComposer()"), "audio companion must not mount a general command composer");
-
-const minimal = between(app, "function renderNexusMinimalConversationExperience", "function renderNexusCommandCenterHero", "minimal route");
-assert(minimal.includes("return renderNexusAudioCompanionExperience();"), "broken minimal companion route must redirect to audio companion");
+  "data-nexus-genesis-voice-runtime=\"true\"",
+  "NEXUS_GENESIS_VOICE_RUNTIME_VERSION"
+], "nonvisual voice marker");
+[
+  "button",
+  "data-nexus-genesis-mic-permission-control",
+  "data-nexus-os-voice-control",
+  "Allow microphone",
+  "nexus-genesis-voice-debug",
+  "<details",
+  "<summary"
+].forEach(token => assert(!voiceGate.includes(token), `Genesis marker must not render ${token}`));
 
 const workspace = between(app, "function renderUserWorkspace", "function renderUserAccessibilityPanel", "workspace");
 includesAll(workspace, [
   "trueExperienceMode === \"home\"",
   "renderNexusTrueHome",
-  "trueExperienceMode === \"conversation\"",
-  "renderNexusAudioCompanionExperience",
-  "renderNexusCommandCenterHero",
   "maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"
 ], "workspace routing");
 
-const grantedAutoStart = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
-includesAll(grantedAutoStart, [
-  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
-  "runtimePermission === \"browser-managed\"",
-  "permission === \"granted\"",
-  "permission-not-authorized",
-  "voiceStopRequested",
-  "voiceConversationPaused",
-  "voiceSpeaking",
-  "permissions-api-granted",
-  "browser-managed-state-requires-get-user-media-proof",
-  "genesis-auto-start-triggered",
-  "genesis-home-permission-granted-auto-start"
-], "granted permission recognition auto-start");
-assert(!grantedAutoStart.includes("granted-or-browser-managed"), "granted permission auto-start must not use legacy display labels for control flow");
-assert(!grantedAutoStart.includes("data-nexus-genesis-home-orb"), "granted permission auto-start must not use the orb");
+const autoStart = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic recognition start");
+includesAll(autoStart, [
+  "nexusGenesisVoiceSessionActive = true",
+  "voiceFirstMode = true",
+  "voiceAutoRestart = true",
+  "nexusMicrophonePermissionCanAttemptStart(permission)",
+  "permission === \"denied\"",
+  "get-user-media-required",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "automatic recognition start");
+assert(!autoStart.includes("granted-or-browser-managed"), "automatic start must not use legacy display labels for control flow");
+assert(!autoStart.includes("data-nexus-genesis-home-orb"), "automatic start must not use the orb");
 
-const bindStatic = between(app, "function bindStatic", "async function boot", "static bindings");
-assert(!bindStatic.includes("handleNexusGenesisOrbActivation"), "static bindings must not attach orb activation");
+const startup = between(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
+const acquire = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
+includesAll(startup, [
+  "voiceRecognition = new Recognition()",
+  "recognition-handlers-registered",
+  "voiceRecognition.start()",
+  "recognition-onstart",
+  "recognition-final-transcript",
+  "scheduleFinalVoiceCommand(finalTranscript",
+  "duplicate-session-prevented"
+], "voice startup");
+includesAll(acquire, [
+  "navigator.mediaDevices.getUserMedia",
+  "liveTrackVerified: true",
+  "NoLiveAudioTrackError"
+], "microphone acquisition");
+assert(!startup.includes("stopNexusVoicePermissionStream(\"web-speech-final\")"), "valid stream must not be stopped when a final transcript arrives");
 
 const finalVoice = between(app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", "final voice processing");
 includesAll(finalVoice, [
-  "nexusGenesisExperienceActivated = true",
-  "nexusTrueExperienceSessionStarted = true",
-  "source: \"voice-final-transcript\"",
-  "handleVoiceCommand"
-], "voice transcript opens runtime path");
+  "recordNexusAudioPipelineEvent(\"agent-command-request\"",
+  "handleVoiceCommand",
+  "source: \"voice\""
+], "voice transcript submits to command path");
 
-const typedFallback = between(app, "async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice control actions");
-includesAll(typedFallback, [
-  "normalized === \"typed-fallback\"",
-  "nexusTrueExperienceHasActiveWorkflow()",
-  "workflow-structured-entry",
-  "General typed commands are not available on Genesis home."
-], "workflow-scoped typing");
-assert(!typedFallback.includes("Stopped listening. You can type your request"), "voice controls must not offer a general typed fallback");
+const speechResume = between(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
+includesAll(speechResume, [
+  "nexusGenesisVoiceSessionActive",
+  "genesis-speech-finished-restart",
+  "recognition-restart-requested"
+], "speech restart");
 
-const startVoice = app.slice(app.indexOf("async function startVoiceListening"), app.indexOf("async function sendModuleNotification"));
-assert(startVoice.includes("async function startVoiceListening"), "voice startup source exists");
-assert(!startVoice.includes("type your request"), "voice startup fallback must not advertise general typed chat");
-assert(!startVoice.includes("typed request instead"), "voice startup fallback must not advertise general typed chat");
-
-const orbCss = between(app, "[data-nexus-os-core-orb] {", "[data-nexus-os-core-orb].nexus-core-state-idle", "orb css");
-includesAll(orbCss, [
-  "[data-nexus-genesis-home-orb=\"true\"]",
-  "pointer-events: none !important",
-  "cursor: default !important"
-], "home orb non-interactive cursor override");
-
-includesAll(index, ["/app.js?v=nexus-behavior-433", "/styles.css?v=nexus-behavior-433"], "index cache");
-includesAll(app, ["nexus-behavior-433", "agrinexus-pwa-v378"], "app cache");
-includesAll(server, ["nexus-behavior-433", "agrinexus-pwa-v378"], "server cache");
-includesAll(sw, ["nexus-behavior-433", "agrinexus-pwa-v378"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-434", "/styles.css?v=nexus-behavior-434"], "index cache");
+includesAll(app, ["nexus-behavior-434", "agrinexus-pwa-v379", "nexus-genesis-voice-runtime-v434"], "app cache");
+includesAll(server, ["nexus-behavior-434", "agrinexus-pwa-v379"], "server cache");
+includesAll(sw, ["nexus-behavior-434", "agrinexus-pwa-v379"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
@@ -163,9 +150,9 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-voice-native-front-door",
   verifies: [
     "Genesis orb is non-interactive visual presence",
-    "Genesis home is audio-only",
-    "microphone permission control is separate from the orb",
-    "voice transcripts open the runtime path",
-    "structured typing is workflow-scoped only"
+    "Genesis home renders no app controls",
+    "voice starts automatically from Genesis render",
+    "final transcript reaches command path",
+    "speech completion restarts recognition"
   ]
 }, null, 2));

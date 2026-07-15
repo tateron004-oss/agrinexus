@@ -60,10 +60,11 @@ assert(!home.includes("Ask Nexus anything"), "Genesis home must not show a gener
 const voiceGate = between("function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueHome", "voice gate");
 includesAll(voiceGate, [
   "data-nexus-genesis-audio-gate=\"true\"",
-  "data-nexus-genesis-mic-permission-control=\"true\"",
-  "data-nexus-os-voice-control=\"enable-voice\"",
-  "Allow microphone"
-], "separate microphone permission gate");
+  "data-nexus-genesis-voice-runtime=\"true\"",
+  "NEXUS_GENESIS_VOICE_RUNTIME_VERSION"
+], "nonvisual automatic voice runtime marker");
+assert(!voiceGate.includes("data-nexus-genesis-mic-permission-control"), "Genesis home must not render a microphone permission control");
+assert(!voiceGate.includes("Allow microphone"), "Genesis home must not render app permission copy");
 
 const audioCompanion = between("function renderNexusAudioCompanionExperience", "function renderNexusMinimalConversationExperience", "audio companion");
 includesAll(audioCompanion, [
@@ -93,6 +94,15 @@ includesAll(voiceControls, [
   "data-nexus-hands-free-active",
   "data-nexus-microphone-permission"
 ], "voice permission controls");
+
+const autoStart = between("async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic startup");
+includesAll(autoStart, [
+  "nexusGenesisVoiceSessionActive = true",
+  "voiceFirstMode = true",
+  "voiceAutoRestart = true",
+  "nexusMicrophonePermissionCanAttemptStart(permission)",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "automatic Genesis startup");
 
 const voiceActions = between("async function handleNexusOsVoiceControlAction", "function userIsActivelySpeaking", "voice control actions");
 includesAll(voiceActions, [
