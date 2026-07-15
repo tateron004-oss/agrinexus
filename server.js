@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-439";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v384";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-440";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v385";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -24274,6 +24274,62 @@ function ensureSpeakableAgentResult(result = {}, fallbackIntent = "conversation.
   return normalized;
 }
 
+function genesisVoiceCorrelationId(value = "") {
+  const supplied = String(value || "").trim();
+  if (/^gv-[a-z0-9-]{8,80}$/i.test(supplied)) return supplied;
+  return `gv-${crypto.randomUUID()}`;
+}
+
+function safeGenesisVoiceStageEvent(db, event = {}) {
+  ensureAiProfile(db.profile);
+  const safe = {
+    correlationId: String(event.correlationId || "").slice(0, 96),
+    buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
+    voiceRuntimeVersion: event.voiceRuntimeVersion || AGRINEXUS_WEB_BUILD_VERSION,
+    stage: String(event.stage || "unknown").slice(0, 96),
+    success: event.success !== false,
+    route: String(event.route || "").slice(0, 120),
+    intent: String(event.intent || "").slice(0, 120),
+    httpStatus: Number.isFinite(Number(event.httpStatus)) ? Number(event.httpStatus) : null,
+    responseFieldSelected: String(event.responseFieldSelected || "").slice(0, 80),
+    responseLength: Number.isFinite(Number(event.responseLength)) ? Number(event.responseLength) : 0,
+    sanitizedLength: Number.isFinite(Number(event.sanitizedLength)) ? Number(event.sanitizedLength) : 0,
+    ttsProvider: String(event.ttsProvider || "").slice(0, 80),
+    audioByteLength: Number.isFinite(Number(event.audioByteLength)) ? Number(event.audioByteLength) : 0,
+    playbackStarted: event.playbackStarted === true,
+    elapsedTimeMs: Number.isFinite(Number(event.elapsedTimeMs)) ? Number(event.elapsedTimeMs) : null,
+    errorCategory: String(event.errorCategory || "").slice(0, 100),
+    sourceFunction: String(event.sourceFunction || "").slice(0, 120),
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.genesisVoicePipelineTrace = [
+    safe,
+    ...(db.profile.agentMemory.genesisVoicePipelineTrace || [])
+  ].slice(0, 120);
+  return safe;
+}
+
+function normalizeGenesisCommandResponse(result = {}, options = {}) {
+  const safeResult = ensureSpeakableAgentResult(result, options.fallbackIntent || "conversation.no_silence_guard");
+  const responseFieldSelected = safeResult.metadata?.responseFieldSelected
+    || (safeResult.response ? "response" : safeResult.message ? "message" : safeResult.answer ? "answer" : safeResult.summary ? "summary" : "final-no-silence-guard");
+  const response = sanitizeNexusSpokenResponseText(safeResult.response);
+  return {
+    ok: true,
+    correlationId: genesisVoiceCorrelationId(options.correlationId),
+    intent: safeResult.intent || options.fallbackIntent || "conversation.no_silence_guard",
+    route: options.route || "/api/agent/command",
+    response: response || "I heard you, but I couldn't complete that response. Please try again.",
+    speak: true,
+    diagnostics: {
+      responseFieldSelected,
+      responseLength: String(safeResult.response || "").length,
+      sanitizedLength: response.length,
+      status: safeResult.status || "completed"
+    }
+  };
+}
+
 function genesisCapabilityResponse() {
   return "I can help you talk through goals, plan next steps, learn skills, prepare workforce and agriculture tasks, support health-access preparation, check maps or weather when a source is available, and prepare messages or provider handoffs with approval. I will not send, call, book, pay, diagnose, prescribe, or share location unless the right provider is configured and you clearly confirm.";
 }
@@ -44574,15 +44630,71 @@ async function api(req, res, url) {
   if (url.pathname === "/api/agent/command" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
     const body = await readBody(req);
+    const correlationId = genesisVoiceCorrelationId(body.correlationId);
+    const routeStartedAt = Date.now();
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "command-route-received",
+      success: true,
+      route: "/api/agent/command",
+      sourceFunction: "api.agent.command"
+    });
     const { result, companionUnderstanding, companionRouteOutcome } = await runCompanionSafeAgentCommand(db, user, {
       ...body,
+      correlationId,
       inputMode: body.inputMode || "api"
+    });
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "intent-selected",
+      success: true,
+      route: "/api/agent/command",
+      intent: result?.intent || "unknown",
+      sourceFunction: "runCompanionSafeAgentCommand"
+    });
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "response-generated",
+      success: Boolean(result?.response || result?.message || result?.answer || result?.summary),
+      route: "/api/agent/command",
+      intent: result?.intent || "unknown",
+      responseLength: String(result?.response || result?.message || result?.answer || result?.summary || "").length,
+      sourceFunction: "runCompanionSafeAgentCommand"
+    });
+    const genesisResponse = normalizeGenesisCommandResponse(result, {
+      correlationId,
+      route: "/api/agent/command"
+    });
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "response-normalized",
+      success: Boolean(genesisResponse.response),
+      route: "/api/agent/command",
+      intent: genesisResponse.intent,
+      responseFieldSelected: genesisResponse.diagnostics.responseFieldSelected,
+      responseLength: genesisResponse.diagnostics.responseLength,
+      sanitizedLength: genesisResponse.diagnostics.sanitizedLength,
+      sourceFunction: "normalizeGenesisCommandResponse"
+    });
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "command-route-returned",
+      success: true,
+      route: "/api/agent/command",
+      intent: genesisResponse.intent,
+      httpStatus: 200,
+      responseFieldSelected: genesisResponse.diagnostics.responseFieldSelected,
+      responseLength: genesisResponse.diagnostics.responseLength,
+      sanitizedLength: genesisResponse.diagnostics.sanitizedLength,
+      elapsedTimeMs: Date.now() - routeStartedAt,
+      sourceFunction: "api.agent.command"
     });
     await writeDb(db);
     const state = publicState(db, user);
     state.commandResult = result;
     state.companionUnderstanding = companionUnderstanding;
     state.companionRouteOutcome = companionRouteOutcome;
+    state.genesisResponse = genesisResponse;
     return send(res, 200, state);
   }
 
@@ -44851,24 +44963,69 @@ async function api(req, res, url) {
   if (url.pathname === "/api/voice/speak" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice responses" });
     const body = await readBody(req);
+    const correlationId = genesisVoiceCorrelationId(body.correlationId);
+    const routeStartedAt = Date.now();
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "tts-route-received",
+      success: true,
+      route: "/api/voice/speak",
+      sourceFunction: "api.voice.speak"
+    });
     const language = canonicalVoiceLanguage(body.language || body.targetLanguage || user.language || "en");
     const text = sanitizeNexusSpokenResponseText(body.text || "");
     if (!text) return send(res, 400, { error: "Voice response text is required" });
     let audio = null;
     let speechError = null;
     let provider = process.env.VOICE_TTS_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "tts-provider-selected",
+      success: true,
+      route: "/api/voice/speak",
+      ttsProvider: provider,
+      sanitizedLength: text.length,
+      sourceFunction: "api.voice.speak"
+    });
     const shouldUseOpenAiAudio = Boolean(process.env.OPENAI_API_KEY) && provider !== "browser";
     if (provider === "openai" || body.forceOpenAi === true || shouldUseOpenAiAudio) {
       try {
+        safeGenesisVoiceStageEvent(db, {
+          correlationId,
+          stage: "tts-provider-requested",
+          success: true,
+          route: "/api/voice/speak",
+          ttsProvider: "openai",
+          sanitizedLength: text.length,
+          sourceFunction: "openAiSpeechAudio"
+        });
         audio = await openAiSpeechAudio({
           text,
           voice: body.voice || process.env.OPENAI_TTS_VOICE,
           responseFormat: body.responseFormat || "mp3"
         });
         provider = audio?.provider || "openai";
+        safeGenesisVoiceStageEvent(db, {
+          correlationId,
+          stage: "tts-provider-succeeded",
+          success: Boolean(audio?.audioDataUrl),
+          route: "/api/voice/speak",
+          ttsProvider: provider,
+          audioByteLength: String(audio?.audioDataUrl || "").length,
+          sourceFunction: "openAiSpeechAudio"
+        });
       } catch (error) {
         const errorType = error.errorType || classifyOpenAiVoiceError(error);
         speechError = openAiVoiceErrorMessage(errorType);
+        safeGenesisVoiceStageEvent(db, {
+          correlationId,
+          stage: "tts-provider-failed",
+          success: false,
+          route: "/api/voice/speak",
+          ttsProvider: "openai",
+          errorCategory: errorType,
+          sourceFunction: "openAiSpeechAudio"
+        });
         audio = {
           audioDataUrl: null,
           provider: "openai-audio-error",
@@ -44892,6 +45049,7 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.voiceResult = {
+      correlationId,
       text,
       sessionId: record.id,
       provider,
@@ -44913,6 +45071,18 @@ async function api(req, res, url) {
       language,
       locale: body.locale || voiceLocaleForLanguage(language)
     };
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "tts-route-returned",
+      success: true,
+      route: "/api/voice/speak",
+      httpStatus: 200,
+      ttsProvider: provider,
+      audioByteLength: String(audio?.audioDataUrl || "").length,
+      elapsedTimeMs: Date.now() - routeStartedAt,
+      errorCategory: speechError ? state.voiceResult.diagnostics?.errorType || "provider_error" : "",
+      sourceFunction: "api.voice.speak"
+    });
     return send(res, 200, state);
   }
 

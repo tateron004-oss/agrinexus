@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v439";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v440";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-439";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v384";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-440";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v385";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -46072,6 +46072,101 @@ async function createCloudAgentTemplate() {
   }
 }
 
+let activeGenesisVoiceCorrelationId = "";
+
+function createGenesisVoiceCorrelationId() {
+  if (window.crypto?.randomUUID) return `gv-${window.crypto.randomUUID()}`;
+  return `gv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function genesisVoiceDebugEnabled() {
+  try {
+    return new URLSearchParams(window.location.search).get("voiceDebug") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function recordGenesisSpokenResponsePipelineEvent(stage, details = {}) {
+  const safe = {
+    correlationId: String(details.correlationId || activeGenesisVoiceCorrelationId || "").slice(0, 96),
+    buildVersion: AGRINEXUS_BUILD_VERSION,
+    voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION,
+    stage,
+    success: details.success !== false,
+    route: String(details.route || "").slice(0, 120),
+    intent: String(details.intent || "").slice(0, 120),
+    httpStatus: Number.isFinite(Number(details.httpStatus)) ? Number(details.httpStatus) : null,
+    responseFieldSelected: String(details.responseFieldSelected || "").slice(0, 80),
+    responseLength: Number.isFinite(Number(details.responseLength)) ? Number(details.responseLength) : 0,
+    sanitizedLength: Number.isFinite(Number(details.sanitizedLength)) ? Number(details.sanitizedLength) : 0,
+    ttsProvider: String(details.ttsProvider || "").slice(0, 80),
+    audioByteLength: Number.isFinite(Number(details.audioByteLength)) ? Number(details.audioByteLength) : 0,
+    playbackStarted: details.playbackStarted === true,
+    elapsedTimeMs: Number.isFinite(Number(details.elapsedTimeMs)) ? Number(details.elapsedTimeMs) : null,
+    errorCategory: String(details.errorCategory || "").slice(0, 100),
+    sourceFunction: String(details.sourceFunction || "").slice(0, 120)
+  };
+  try {
+    const trace = Array.isArray(window.__nexusGenesisSpokenResponseTrace)
+      ? window.__nexusGenesisSpokenResponseTrace
+      : [];
+    trace.push({ ...safe, createdAt: new Date().toISOString() });
+    window.__nexusGenesisSpokenResponseTrace = trace.slice(-160);
+  } catch {
+    // Diagnostics must never interrupt voice.
+  }
+  recordNexusAudioPipelineEvent(stage, safe);
+  if (genesisVoiceDebugEnabled()) {
+    console.info(`[NexusVoiceTrace] ${stage}`, safe);
+  }
+  return safe;
+}
+
+function extractGenesisSpeakableResponse(payload = {}, correlationId = "") {
+  recordGenesisSpokenResponsePipelineEvent("speakable-extraction-started", {
+    correlationId,
+    route: "/api/agent/command",
+    sourceFunction: "extractGenesisSpeakableResponse"
+  });
+  const contract = payload?.genesisResponse || null;
+  if (!contract || contract.ok !== true || typeof contract.response !== "string") {
+    recordGenesisSpokenResponsePipelineEvent("speakable-extraction-empty", {
+      correlationId,
+      route: "/api/agent/command",
+      success: false,
+      errorCategory: "missing-normalized-genesis-response",
+      sourceFunction: "extractGenesisSpeakableResponse"
+    });
+    throw new Error("Nexus response contract was missing speakable content.");
+  }
+  const response = contract.response.replace(/\s+/g, " ").trim();
+  if (!response) {
+    recordGenesisSpokenResponsePipelineEvent("speakable-extraction-empty", {
+      correlationId: contract.correlationId || correlationId,
+      route: contract.route || "/api/agent/command",
+      intent: contract.intent || "",
+      success: false,
+      responseFieldSelected: contract.diagnostics?.responseFieldSelected || "response",
+      sourceFunction: "extractGenesisSpeakableResponse"
+    });
+    throw new Error("Nexus response contract was empty after extraction.");
+  }
+  recordGenesisSpokenResponsePipelineEvent("speakable-extraction-succeeded", {
+    correlationId: contract.correlationId || correlationId,
+    route: contract.route || "/api/agent/command",
+    intent: contract.intent || "",
+    responseFieldSelected: contract.diagnostics?.responseFieldSelected || "response",
+    responseLength: contract.diagnostics?.responseLength || response.length,
+    sanitizedLength: response.length,
+    sourceFunction: "extractGenesisSpeakableResponse"
+  });
+  return {
+    ...contract,
+    response
+  };
+}
+
 function setVoiceResponse(message, speak = false, options = {}) {
   if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
   if (speak || options.forceHandoff) clearAgentProgressTimers();
@@ -46088,6 +46183,17 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const compactResponse = String(responseMessage || "").replace(/\s+/g, " ").trim();
   const now = Date.now();
   const duplicateSpeech = Boolean(speak && compactResponse && compactResponse === String(lastVoiceResponse || "").replace(/\s+/g, " ").trim() && now - lastVoiceResponseAt < 8000);
+  if (speak || (voiceFirstMode && allowVoiceFirst)) {
+    const spokenPreview = sanitizeNexusSpokenResponseText(compactResponse);
+    recordGenesisSpokenResponsePipelineEvent(spokenPreview ? "speech-sanitization-succeeded" : "speech-sanitization-empty", {
+      correlationId: options.correlationId || activeGenesisVoiceCorrelationId || "",
+      intent: options.genesisResponse?.intent || "",
+      success: Boolean(spokenPreview),
+      responseLength: compactResponse.length,
+      sanitizedLength: spokenPreview.length,
+      sourceFunction: "setVoiceResponse"
+    });
+  }
   setNexusGenesisTrustChainState(compactResponse ? "response_ready" : "response_failed", {
     response: compactResponse,
     visibleFeedback: compactResponse || "I heard you, but I was not able to prepare a response. Please try again.",
@@ -47501,6 +47607,11 @@ function clearStreamingVoicePartial() {
 
 function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
   if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+  recordGenesisSpokenResponsePipelineEvent("listening-resume-started", {
+    correlationId: activeGenesisVoiceCorrelationId || "",
+    success: true,
+    sourceFunction: "resumeVoiceListeningAfterSpeech"
+  });
   voiceSpeaking = false;
   if (nexusGenesisVoiceSessionActive && isNexusGenesisHomeActive()) {
     voiceFirstMode = true;
@@ -47532,6 +47643,11 @@ function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
       }
     }, VOICE_RESTART_DELAY_MS);
   }
+  recordGenesisSpokenResponsePipelineEvent("listening-resumed", {
+    correlationId: activeGenesisVoiceCorrelationId || "",
+    success: true,
+    sourceFunction: "resumeVoiceListeningAfterSpeech"
+  });
 }
 
 function stopVoicePlayback(options = {}) {
@@ -47987,11 +48103,25 @@ function speakVoiceResponse(textOverride) {
     return;
   }
   const text = textOverride || lastVoiceResponse;
+  const correlationId = activeGenesisVoiceCorrelationId || createGenesisVoiceCorrelationId();
+  activeGenesisVoiceCorrelationId = correlationId;
   const compact = sanitizeNexusSpokenResponseText(text);
   if (!compact) {
+    recordGenesisSpokenResponsePipelineEvent("speech-sanitization-empty", {
+      correlationId,
+      success: false,
+      sourceFunction: "speakVoiceResponse"
+    });
     updateNexusOsVoiceRuntimeState({ mode: "caption-fallback", assistantSpeaking: false }, "speech-empty-after-sanitization");
     return;
   }
+  recordGenesisSpokenResponsePipelineEvent("speech-sanitization-succeeded", {
+    correlationId,
+    success: true,
+    responseLength: String(text || "").length,
+    sanitizedLength: compact.length,
+    sourceFunction: "speakVoiceResponse"
+  });
   const interruptToken = voiceInterruptToken;
   const now = Date.now();
   if (compact && compact === lastSpokenText && now - lastSpokenAt < 3500) return;
@@ -48045,8 +48175,15 @@ function speakVoiceResponse(textOverride) {
   const finishSpeaking = () => {
     if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
     activeVoiceAudio = null;
+    recordGenesisSpokenResponsePipelineEvent("audio-play-completed", {
+      correlationId,
+      success: true,
+      playbackStarted: Boolean(finishSpeaking.playbackStarted),
+      sourceFunction: "speakVoiceResponse.finishSpeaking"
+    });
     resumeVoiceListeningAfterSpeech(playbackToken, interruptToken);
   };
+  finishSpeaking.playbackStarted = false;
   const browserSpeak = reason => {
     const genesisRecoveryEnabled = genesisVoiceBrowserSpeechRecoveryEnabled();
     const optInBrowserFallbackEnabled = browserSpeechFallbackEnabled();
@@ -48064,10 +48201,44 @@ function speakVoiceResponse(textOverride) {
       finishSpeaking();
       return;
     }
+    recordGenesisSpokenResponsePipelineEvent("browser-speech-fallback-started", {
+      correlationId,
+      success: true,
+      ttsProvider: "browser-speech-synthesis",
+      sourceFunction: "speakVoiceResponse.browserSpeak"
+    });
     const speechResult = runNexusSpeechSynthesisController(compact, {
       reason: genesisRecoveryEnabled ? "genesis-browser-speech-recovery" : "browser-speech-fallback",
-      onEnd: finishSpeaking,
-      onError: finishSpeaking
+      onStart: event => {
+        finishSpeaking.playbackStarted = true;
+        recordGenesisSpokenResponsePipelineEvent("audio-play-started", {
+          correlationId,
+          success: true,
+          ttsProvider: "browser-speech-synthesis",
+          playbackStarted: true,
+          sourceFunction: "runNexusSpeechSynthesisController.onStart"
+        });
+      },
+      onEnd: event => {
+        recordGenesisSpokenResponsePipelineEvent("browser-speech-fallback-completed", {
+          correlationId,
+          success: true,
+          ttsProvider: "browser-speech-synthesis",
+          playbackStarted: true,
+          sourceFunction: "runNexusSpeechSynthesisController.onEnd"
+        });
+        finishSpeaking(event);
+      },
+      onError: event => {
+        recordGenesisSpokenResponsePipelineEvent("browser-speech-fallback-completed", {
+          correlationId,
+          success: false,
+          ttsProvider: "browser-speech-synthesis",
+          errorCategory: event?.error || "browser-speech-error",
+          sourceFunction: "runNexusSpeechSynthesisController.onError"
+        });
+        finishSpeaking(event);
+      }
     });
     if (speechResult.ok && (speechResult.requested || speechResult.started)) {
       const optInRecoveryLabel = "Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback.";
@@ -48081,12 +48252,30 @@ function speakVoiceResponse(textOverride) {
     }
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
+  recordGenesisSpokenResponsePipelineEvent("tts-request-started", {
+    correlationId,
+    route: "/api/voice/speak",
+    success: true,
+    ttsProvider: "openai",
+    sanitizedLength: compact.length,
+    sourceFunction: "speakVoiceResponse"
+  });
   activeVoiceRequestController = new AbortController();
-  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text: compact, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: preferredOpenAiTtsVoice() } })
+  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { correlationId, text: compact, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: preferredOpenAiTtsVoice() } })
     .then(result => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       activeVoiceRequestController = null;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
+      recordGenesisSpokenResponsePipelineEvent("tts-response-received", {
+        correlationId,
+        route: "/api/voice/speak",
+        success: true,
+        httpStatus: 200,
+        ttsProvider: result.voiceResult?.provider || "unknown",
+        audioByteLength: String(audioDataUrl || "").length,
+        errorCategory: result.voiceResult?.error ? result.voiceResult?.diagnostics?.errorType || "provider_error" : "",
+        sourceFunction: "speakVoiceResponse"
+      });
       if (result.voiceResult?.error) {
         const diagnostics = result.voiceResult?.diagnostics || {};
         const errorType = diagnostics.errorType || "provider_error";
@@ -48106,6 +48295,15 @@ function speakVoiceResponse(textOverride) {
         updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}). Spoken output prepared safely (${spokenLength} characters).`);
         audio.onplay = () => {
           if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+          finishSpeaking.playbackStarted = true;
+          recordGenesisSpokenResponsePipelineEvent("audio-play-started", {
+            correlationId,
+            success: true,
+            ttsProvider: "openai-tts",
+            audioByteLength: String(audioDataUrl || "").length,
+            playbackStarted: true,
+            sourceFunction: "HTMLAudioElement.onplay"
+          });
           updateNexusOsVoiceRuntimeState({
             mode: "speaking",
             assistantSpeaking: true,
@@ -48131,11 +48329,34 @@ function speakVoiceResponse(textOverride) {
         };
         audio.onended = finishSpeaking;
         audio.onerror = finishSpeaking;
+        recordGenesisSpokenResponsePipelineEvent("audio-play-requested", {
+          correlationId,
+          success: true,
+          ttsProvider: "openai-tts",
+          audioByteLength: String(audioDataUrl || "").length,
+          sourceFunction: "HTMLAudioElement.play"
+        });
         audio.play().catch(() => {
+          recordGenesisSpokenResponsePipelineEvent("audio-play-rejected", {
+            correlationId,
+            success: false,
+            ttsProvider: "openai-tts",
+            audioByteLength: String(audioDataUrl || "").length,
+            errorCategory: "browser-play-rejected",
+            sourceFunction: "HTMLAudioElement.play"
+          });
           browserSpeak("OpenAI audio was created, but the browser blocked playback.");
         });
         return;
       }
+      recordGenesisSpokenResponsePipelineEvent("tts-response-invalid", {
+        correlationId,
+        route: "/api/voice/speak",
+        success: false,
+        ttsProvider: result.voiceResult?.provider || "unknown",
+        errorCategory: "missing-audio-data-url",
+        sourceFunction: "speakVoiceResponse"
+      });
       browserSpeak(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
     })
     .catch(error => {
@@ -48145,6 +48366,14 @@ function speakVoiceResponse(textOverride) {
         updateVoiceOutputStatus("Voice playback interrupted.");
         return;
       }
+      recordGenesisSpokenResponsePipelineEvent("tts-response-invalid", {
+        correlationId,
+        route: "/api/voice/speak",
+        success: false,
+        ttsProvider: "openai",
+        errorCategory: /sign in required/i.test(error.message || "") ? "session-expired" : "tts-request-failed",
+        sourceFunction: "speakVoiceResponse.catch"
+      });
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
@@ -54806,6 +55035,9 @@ async function runBackendAgentCommand(command, locationContext = null, options =
   abortActiveAgentCommand();
   const controller = new AbortController();
   activeAgentCommandController = controller;
+  const correlationId = options.correlationId || createGenesisVoiceCorrelationId();
+  activeGenesisVoiceCorrelationId = correlationId;
+  const requestStartedAt = Date.now();
   try {
     const previousLanguage = languageCode();
     const commandLanguage = canonicalLanguageCode(options.targetLanguage || options.language || languageCode(), { allowPartial: true });
@@ -54814,16 +55046,18 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     setVoiceStatus("thinking");
     setAgentFastAcknowledgement(command);
     beginAgentNoDeadAir(command);
-    recordNexusAudioPipelineEvent("agent-command-request", {
-      transcript: command,
-      commandSubmitted: true,
-      source: "voice"
+    recordGenesisSpokenResponsePipelineEvent("command-request-started", {
+      correlationId,
+      route: "/api/agent/command",
+      success: true,
+      sourceFunction: "runBackendAgentCommand"
     });
     data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
       controller,
       abortReason: "superseded",
       body: {
+        correlationId,
         command,
         confirm: false,
         conversational: true,
@@ -54844,11 +55078,15 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
-    recordNexusAudioPipelineEvent("agent-command-response", {
+    recordGenesisSpokenResponsePipelineEvent("command-response-received", {
+      correlationId,
+      route: "/api/agent/command",
       intent: result.intent || "unknown",
-      workflow: result.metadata?.workflowType || result.metadata?.redirectSection || "",
-      status: result.status || data.status || "ok"
+      httpStatus: 200,
+      elapsedTimeMs: Date.now() - requestStartedAt,
+      sourceFunction: "runBackendAgentCommand"
     });
+    const genesisSpeakable = extractGenesisSpeakableResponse(data, correlationId);
     observeAgentActionMetadata(result, { source: "runBackendAgentCommand", command });
     if (!visibleControlledActionPreviewReadiness || isNexusSimulationCommand(command)) {
       paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
@@ -54899,12 +55137,17 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     markAgentPerformance("completed", result.intent || "agent-command");
     recordNexusAutonomousLearning({ type: "agent-completed", command, intent: result.intent || "agent-command" });
     updateNexusAwareness(command, { silent: true });
-    updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
-    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, command, turnToken });
+    updateNexusBehaviorLayer("speaking", genesisSpeakable.response);
+    setVoiceResponse(genesisSpeakable.response, true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, command, turnToken, correlationId, genesisResponse: genesisSpeakable, source: "genesis-normalized-command-response" });
     return result;
   } catch (error) {
-    recordNexusAudioPipelineEvent("agent-command-error", {
-      error: error.message || "agent command failed"
+    recordGenesisSpokenResponsePipelineEvent("command-response-parse-failed", {
+      correlationId,
+      route: "/api/agent/command",
+      success: false,
+      errorCategory: error.name === "AbortError" ? "abort" : "command-or-contract-error",
+      elapsedTimeMs: Date.now() - requestStartedAt,
+      sourceFunction: "runBackendAgentCommand"
     });
     if (activeAgentCommandController === controller) activeAgentCommandController = null;
     if (error.name === "AbortError" || ignoreStaleNexusTurn(turnToken, "backend error")) return null;
@@ -54922,6 +55165,9 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
   abortActiveAgentCommand();
   const controller = new AbortController();
   activeAgentCommandController = controller;
+  const correlationId = options.correlationId || createGenesisVoiceCorrelationId();
+  activeGenesisVoiceCorrelationId = correlationId;
+  const requestStartedAt = Date.now();
   try {
     const previousLanguage = languageCode();
     const commandLanguage = canonicalLanguageCode(options.targetLanguage || options.language || languageCode(), { allowPartial: true });
@@ -54929,16 +55175,18 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
     setVoiceStatus("thinking");
     updateNexusBehaviorLayer("thinking", "Nexus is checking the real platform record before answering.");
-    recordNexusAudioPipelineEvent("agent-command-request", {
-      transcript: command,
-      commandSubmitted: true,
-      source: "utility"
+    recordGenesisSpokenResponsePipelineEvent("command-request-started", {
+      correlationId,
+      route: "/api/agent/command",
+      success: true,
+      sourceFunction: "runUtilityAgentCommand"
     });
     data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
       controller,
       abortReason: "superseded",
       body: {
+        correlationId,
         command,
         confirm: false,
         conversational: true,
@@ -54958,12 +55206,15 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
-    recordNexusAudioPipelineEvent("agent-command-response", {
+    recordGenesisSpokenResponsePipelineEvent("command-response-received", {
+      correlationId,
+      route: "/api/agent/command",
       intent: result.intent || "unknown",
-      workflow: result.metadata?.workflowType || result.metadata?.redirectSection || "",
-      status: result.status || data.status || "ok",
-      source: "utility"
+      httpStatus: 200,
+      elapsedTimeMs: Date.now() - requestStartedAt,
+      sourceFunction: "runUtilityAgentCommand"
     });
+    const genesisSpeakable = extractGenesisSpeakableResponse(data, correlationId);
     observeAgentActionMetadata(result, { source: "runUtilityAgentCommand", command });
     if (!visibleControlledActionPreviewReadiness || isNexusSimulationCommand(command)) {
       paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
@@ -54994,13 +55245,17 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     markAgentPerformance("completed", result.intent || "utility-assistant");
     recordNexusAutonomousLearning({ type: "utility-completed", command, intent: result.intent || "utility-assistant" });
     updateNexusAwareness(command, { silent: true });
-    updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
-    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, turnToken });
+    updateNexusBehaviorLayer("speaking", genesisSpeakable.response || fallbackAnswer || "Done. I am ready for your next question.");
+    setVoiceResponse(genesisSpeakable.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, turnToken, correlationId, genesisResponse: genesisSpeakable, source: "genesis-normalized-utility-response" });
     return result;
   } catch (error) {
-    recordNexusAudioPipelineEvent("agent-command-error", {
-      error: error.message || "utility command failed",
-      source: "utility"
+    recordGenesisSpokenResponsePipelineEvent("command-response-parse-failed", {
+      correlationId,
+      route: "/api/agent/command",
+      success: false,
+      errorCategory: error.name === "AbortError" ? "abort" : "utility-command-or-contract-error",
+      elapsedTimeMs: Date.now() - requestStartedAt,
+      sourceFunction: "runUtilityAgentCommand"
     });
     if (activeAgentCommandController === controller) activeAgentCommandController = null;
     if (error.name === "AbortError" || ignoreStaleNexusTurn(turnToken, "utility error")) return null;
@@ -55550,6 +55805,11 @@ function processFinalVoiceCommand(command = "", options = {}) {
     transcript: finalCommand,
     visibleFeedback: `I heard: ${finalCommand}`,
     reason: "voice-final-transcript"
+  });
+  recordGenesisSpokenResponsePipelineEvent("transcript-finalized", {
+    correlationId: activeGenesisVoiceCorrelationId || "",
+    success: true,
+    sourceFunction: "processFinalVoiceCommand"
   });
   updateNativeVoiceBridgeState("final", { transcript: finalCommand, source: options.source || "voice" });
   if (voiceSpeaking) {
