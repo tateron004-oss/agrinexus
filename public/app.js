@@ -755,7 +755,7 @@ let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v2";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v3";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -857,7 +857,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v445";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v446";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1322,8 +1322,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-445";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v390";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-446";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v391";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48510,7 +48510,7 @@ function realtimeVoiceStatusMessage() {
 
 function elevenLabsVoiceSupported() {
   const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
-  return Boolean(window.WebSocket && navigator.mediaDevices?.getUserMedia && (window.AudioContext || window.webkitAudioContext) && secureEnough);
+  return Boolean(navigator.mediaDevices?.getUserMedia && window.RTCPeerConnection && secureEnough);
 }
 
 function elevenLabsVoiceEnabled() {
@@ -48523,7 +48523,7 @@ function elevenLabsVoiceActive() {
 }
 
 function elevenLabsVoiceStatusMessage() {
-  if (!elevenLabsVoiceSupported()) return "ElevenLabs voice needs HTTPS, WebSocket, Web Audio, and microphone permission.";
+  if (!elevenLabsVoiceSupported()) return "ElevenLabs voice needs HTTPS, WebRTC, and microphone permission.";
   const status = elevenLabsVoiceStatusCache?.elevenLabsVoice;
   if (status?.ready) return "Nexus ElevenLabs Agents voice is ready.";
   if (status && !status.configured) return status.note || `ElevenLabs Agents needs ${status.missingEnv?.join(", ") || "provider configuration"} in hosting.`;
@@ -48546,68 +48546,46 @@ async function loadElevenLabsVoiceStatus(options = {}) {
   return elevenLabsVoiceStatusCache;
 }
 
-function encodeElevenLabsPcm16(float32Samples) {
-  const buffer = new ArrayBuffer(float32Samples.length * 2);
-  const view = new DataView(buffer);
-  for (let index = 0; index < float32Samples.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, float32Samples[index] || 0));
-    view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-  }
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return btoa(binary);
-}
-
-function sendElevenLabsVoiceEvent(event = {}) {
-  const socket = elevenLabsVoiceSession?.socket;
-  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
-  socket.send(JSON.stringify(event));
-  return true;
-}
-
-function playElevenLabsAudioChunk(base64Audio = "") {
-  const session = elevenLabsVoiceSession;
-  const audioBase64 = String(base64Audio || "").trim();
-  if (!session || !audioBase64) return;
-  const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
-  session.activeAudio = audio;
-  updateNexusVoiceSession({ state: "elevenlabs-speaking", assistantSpeaking: true }, "elevenlabs-audio-started");
-  setNexusGenesisTrustChainState("speaking", {
-    visibleFeedback: "Nexus is speaking.",
-    reason: "elevenlabs-agent-audio"
-  });
-  audio.onended = () => {
-    if (elevenLabsVoiceSession === session) {
-      session.activeAudio = null;
-      updateNexusVoiceSession({
-        state: "elevenlabs-listening",
-        assistantSpeaking: false,
-        lastAssistantSpeechAt: Date.now()
-      }, "elevenlabs-audio-ended");
-      setNexusGenesisTrustChainState("listening", {
-        visibleFeedback: "Nexus is listening.",
-        reason: "elevenlabs-audio-ended"
-      });
+async function loadElevenLabsConversationSdk() {
+  if (window.ElevenLabsClient?.Conversation?.startSession) return window.ElevenLabsClient;
+  await new Promise((resolve, reject) => {
+    const existing = document.querySelector("script[data-nexus-elevenlabs-sdk='true']");
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", () => reject(new Error("ElevenLabs SDK failed to load.")), { once: true });
+      return;
     }
-  };
-  audio.onerror = () => {
-    if (elevenLabsVoiceSession === session) session.activeAudio = null;
-    updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false }, "elevenlabs-audio-error");
-  };
-  audio.play().catch(() => {
-    if (elevenLabsVoiceSession === session) session.activeAudio = null;
+    const script = document.createElementNS("http://www.w3.org/1999/xhtml", "script");
+    script.src = `/vendor/elevenlabs-client/lib.iife.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`;
+    script.async = true;
+    script.dataset.nexusElevenlabsSdk = "true";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("ElevenLabs SDK failed to load."));
+    document.head.appendChild(script);
   });
+  if (!window.ElevenLabsClient?.Conversation?.startSession) {
+    throw new Error("ElevenLabs SDK did not expose Conversation.startSession.");
+  }
+  return window.ElevenLabsClient;
 }
 
-async function dispatchElevenLabsToolCall(payload = {}) {
-  const toolCall = payload.client_tool_call || payload.tool_call || payload;
-  const toolName = toolCall.tool_name || toolCall.name || "nexus_capability_router";
-  const parameters = toolCall.parameters || toolCall.arguments || payload.parameters || {};
-  const toolCallId = toolCall.tool_call_id || toolCall.call_id || payload.tool_call_id || "";
+function nexusElevenLabsSafeToolResult(result = {}) {
+  const safe = {
+    ok: Boolean(result.ok),
+    response: String(result.response || result.message || "Nexus completed the local tool step."),
+    capability: String(result.capability || ""),
+    blockedReason: String(result.blockedReason || ""),
+    executionAttempted: Boolean(result.executionAttempted),
+    confirmationRequired: Boolean(result.confirmationRequired),
+    receipt: result.receipt ? {
+      id: String(result.receipt.id || ""),
+      status: String(result.receipt.status || "")
+    } : null
+  };
+  return JSON.stringify(safe);
+}
+
+async function runElevenLabsClientTool(toolName = "nexus_capability_router", parameters = {}, toolCallId = "") {
   try {
     const response = await fetch("/api/voice/elevenlabs/tool", {
       method: "POST",
@@ -48630,97 +48608,70 @@ async function dispatchElevenLabsToolCall(payload = {}) {
       response: "I could not complete that Nexus tool request.",
       blockedReason: "client-parse-failed"
     }));
-    sendElevenLabsVoiceEvent({
-      type: "client_tool_result",
-      tool_call_id: toolCallId,
-      result
-    });
+    return nexusElevenLabsSafeToolResult(result);
   } catch {
-    sendElevenLabsVoiceEvent({
-      type: "client_tool_result",
-      tool_call_id: toolCallId,
-      result: {
-        ok: false,
-        response: "I could not reach the Nexus tool layer right now.",
-        blockedReason: "provider-unavailable",
-        executionAttempted: false
-      }
+    return nexusElevenLabsSafeToolResult({
+      ok: false,
+      response: "I could not reach the Nexus tool layer right now.",
+      blockedReason: "provider-unavailable",
+      executionAttempted: false
     });
   }
 }
 
-function handleElevenLabsVoiceMessage(event) {
-  let payload = {};
-  try {
-    payload = typeof event === "string" ? JSON.parse(event) : JSON.parse(event?.data || "{}");
-  } catch {
-    return;
-  }
-  const type = String(payload.type || payload.event || "");
-  nexusGenesisVoiceDebugLog("elevenlabs-event", {
-    type,
+function nexusElevenLabsClientTools() {
+  const names = [
+    "nexus_general_capability",
+    "nexus_weather",
+    "nexus_maps_route",
+    "nexus_agriculture",
+    "nexus_health_preparation",
+    "nexus_workforce_learning",
+    "nexus_marketplace_logistics",
+    "nexus_communications",
+    "nexus_workflow",
+    "nexus_receipts",
+    "nexus_provider_readiness",
+    "nexus_capability_router"
+  ];
+  return names.reduce((tools, toolName) => {
+    tools[toolName] = async parameters => runElevenLabsClientTool(toolName, parameters || {});
+    return tools;
+  }, {});
+}
+
+function handleElevenLabsSdkMessage(message = {}) {
+  const source = String(message.source || message.role || "");
+  const text = String(message.message || message.text || "");
+  const safeSource = source || "unknown";
+  nexusGenesisVoiceDebugLog("elevenlabs-sdk-message", {
+    source: safeSource,
+    messageLength: text.length,
     conversationId: elevenLabsVoiceSession?.conversationId || ""
   });
-  if (type === "ping" || payload.ping_event) {
-    sendElevenLabsVoiceEvent({
-      type: "pong",
-      event_id: payload.event_id || payload.ping_event?.event_id || payload.ping_ms || ""
-    });
+  if (!text) return;
+  if (safeSource === "user" || safeSource === "human") {
+    updateStreamingVoicePartial(text, { source: "elevenlabs-sdk-user-transcript" });
+    recordNexusOsConversationTurn("user", text, { source: "elevenlabs-sdk-final-transcript" });
+    nexusGenesisVoiceDebugLog("final-transcript-received", { source: "elevenlabs-sdk", transcriptLength: text.length });
+    return;
   }
-  const transcript = payload.user_transcript || payload.user_transcription_event?.user_transcript || payload.transcript || "";
-  if (transcript) {
-    updateStreamingVoicePartial(transcript, { source: "elevenlabs-user-transcript" });
-    recordNexusOsConversationTurn("user", transcript, { source: "elevenlabs-final-transcript" });
-    nexusGenesisVoiceDebugLog("final-transcript-received", { source: "elevenlabs", transcriptLength: transcript.length });
-  }
-  const agentResponse = payload.agent_response || payload.agent_response_event?.agent_response || payload.response || "";
-  if (agentResponse) {
-    recordNexusOsConversationTurn("assistant", agentResponse, { source: "elevenlabs-agent-response" });
-    updateUserCaptionPanel(agentResponse, { expanded: true });
-    setNexusGenesisTrustChainState("response_ready", {
-      response: agentResponse,
-      visibleFeedback: agentResponse,
-      reason: "elevenlabs-agent-response"
-    });
-  }
-  const audioBase64 = payload.audio_event?.audio_base_64 || payload.audio?.chunk || payload.audio || payload.audio_base_64 || "";
-  if (audioBase64 && typeof audioBase64 === "string") playElevenLabsAudioChunk(audioBase64);
-  if (type === "client_tool_call" || payload.client_tool_call || payload.tool_call) {
-    dispatchElevenLabsToolCall(payload);
-  }
-  if (type === "interruption" || payload.interruption_event) {
-    try {
-      elevenLabsVoiceSession?.activeAudio?.pause?.();
-    } catch {}
-    updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false }, "elevenlabs-interruption");
-  }
+  recordNexusOsConversationTurn("assistant", text, { source: "elevenlabs-sdk-agent-response" });
+  updateUserCaptionPanel(text, { expanded: true });
+  setNexusGenesisTrustChainState("response_ready", {
+    response: text,
+    visibleFeedback: text,
+    reason: "elevenlabs-sdk-agent-response"
+  });
 }
 
 function stopElevenLabsVoiceSession(reason = "ElevenLabs voice stopped.") {
   if (!elevenLabsVoiceSession) return;
   const session = elevenLabsVoiceSession;
-  try {
-    session.audioProcessor?.disconnect?.();
-  } catch {}
-  try {
-    session.audioSource?.disconnect?.();
-  } catch {}
-  try {
-    session.silentGain?.disconnect?.();
-  } catch {}
-  try {
-    session.audioContext?.close?.();
-  } catch {}
-  try {
-    session.stream?.getTracks?.().forEach(track => track.stop());
-  } catch {}
-  try {
-    session.activeAudio?.pause?.();
-  } catch {}
-  try {
-    session.socket?.close?.();
-  } catch {}
   elevenLabsVoiceSession = null;
+  try {
+    session.conversation?.endSession?.();
+  } catch {}
   elevenLabsVoiceStarting = false;
   setVoiceStatus("standby");
   updateNexusBehaviorLayer("standby", reason);
@@ -48734,8 +48685,6 @@ async function startElevenLabsVoiceSession() {
   if (elevenLabsVoiceActive()) return true;
   if (elevenLabsVoiceStarting) return true;
   elevenLabsVoiceStarting = true;
-  let pendingStream = null;
-  let pendingAudioContext = null;
   try {
     const statusPayload = await loadElevenLabsVoiceStatus({ force: true });
     const status = statusPayload?.elevenLabsVoice || {};
@@ -48751,20 +48700,7 @@ async function startElevenLabsVoiceSession() {
     stopVoicePlayback();
     stopNexusAudioFallbackRecorder("elevenlabs-selected");
     stopNexusVoicePermissionStream("elevenlabs-selected");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-    pendingStream = stream;
-    const track = stream.getAudioTracks?.()[0] || null;
-    nexusGenesisVoiceDebugLog("microphone-track-created", {
-      source: "elevenlabs",
-      trackState: track?.readyState || "none",
-      trackEnabled: track ? Boolean(track.enabled) : false
-    });
+    const sdk = await loadElevenLabsConversationSdk();
     const sessionResponse = await fetch(`/api/voice/elevenlabs/session?language=${encodeURIComponent(languageCode())}`, {
       method: "POST",
       credentials: "same-origin",
@@ -48773,99 +48709,136 @@ async function startElevenLabsVoiceSession() {
       body: JSON.stringify({ language: languageCode() })
     });
     const sessionPayload = await sessionResponse.json().catch(() => ({}));
-    if (!sessionResponse.ok || !sessionPayload.signedUrl) {
+    if (!sessionResponse.ok || (!sessionPayload.conversationToken && !sessionPayload.signedUrl)) {
       throw new Error(sessionPayload.error || `ElevenLabs session failed: ${sessionResponse.status}`);
     }
-    const socket = new WebSocket(sessionPayload.signedUrl);
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const audioContext = new AudioContextClass({ sampleRate: 16000 });
-    pendingAudioContext = audioContext;
-    const audioSource = audioContext.createMediaStreamSource(stream);
-    const audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-    const silentGain = audioContext.createGain();
-    silentGain.gain.value = 0;
-    audioSource.connect(audioProcessor);
-    audioProcessor.connect(silentGain);
-    silentGain.connect(audioContext.destination);
+    const connectionType = sessionPayload.conversationToken ? "webrtc" : "websocket";
     elevenLabsVoiceSession = {
       active: true,
       runtime: "elevenlabs",
       provider: "elevenlabs",
-      socket,
-      stream,
-      audioContext,
-      audioSource,
-      audioProcessor,
-      silentGain,
-      activeAudio: null,
+      conversation: null,
+      connectionType,
       startedAt: Date.now(),
       conversationId: sessionPayload.conversationId || "",
       runtimeVersion: sessionPayload.runtimeVersion || NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION
     };
-    pendingStream = null;
-    pendingAudioContext = null;
-    audioProcessor.onaudioprocess = audioEvent => {
-      if (!elevenLabsVoiceSession?.active || socket.readyState !== WebSocket.OPEN) return;
-      const input = audioEvent.inputBuffer.getChannelData(0);
-      sendElevenLabsVoiceEvent({ user_audio_chunk: encodeElevenLabsPcm16(input) });
-    };
-    socket.onopen = () => {
-      elevenLabsVoiceStarting = false;
-      voiceStopRequested = false;
-      sendElevenLabsVoiceEvent({
-        type: "conversation_initiation_client_data",
-        conversation_config_override: {
-          agent: {
-            prompt: {
-              prompt: "You are Nexus Genesis, the live voice companion inside AgriNexus. Keep ordinary conversation conversational. Use Nexus tools only for real platform workflows, and never claim execution without verified evidence."
-            },
-            first_message: "Nexus is listening."
-          }
-        },
-        dynamic_variables: {
-          language: languageCode(),
-          product: "Nexus Genesis | AgriNexus"
+    nexusGenesisVoiceDebugLog("elevenlabs-sdk-session-authorized", {
+      connectionType,
+      authArtifact: sessionPayload.conversationToken ? "conversationToken" : "signedUrl",
+      conversationId: sessionPayload.conversationId || ""
+    });
+    const sdkOptions = {
+      connectionType,
+      clientTools: nexusElevenLabsClientTools(),
+      overrides: {
+        agent: {
+          prompt: {
+            prompt: "You are Nexus Genesis, the live voice companion inside AgriNexus. Keep ordinary conversation conversational. Use Nexus tools only for real platform workflows, and never claim execution without verified evidence."
+          },
+          firstMessage: "Nexus is listening."
         }
-      });
-      setVoiceStatus("listening");
-      updateNexusVoiceSession({
-        state: "elevenlabs-listening",
-        userSpeaking: false,
-        assistantSpeaking: false
-      }, "elevenlabs-started");
-      updateNativeVoiceBridgeState("elevenlabs-listening", { provider: "elevenlabs-agents", locale: voiceLocale() });
-      setNexusGenesisTrustChainState("listening", {
-        visibleFeedback: "Nexus is listening.",
-        reason: "elevenlabs-websocket-open"
-      });
-      const outputStatus = $("#globalVoiceOutputStatus");
-      if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
-      refreshMicSupport();
-    };
-    socket.onmessage = handleElevenLabsVoiceMessage;
-    socket.onerror = () => {
-      setNexusGenesisTrustChainState("recognition_failed", {
-        visibleFeedback: "The ElevenLabs voice session had a connection problem.",
-        failureRecovery: "Reload Genesis after ElevenLabs provider credentials are available.",
-        reason: "elevenlabs-websocket-error"
-      });
-    };
-    socket.onclose = () => {
-      if (elevenLabsVoiceSession?.socket === socket) {
-        stopElevenLabsVoiceSession("ElevenLabs voice session closed.");
+      },
+      dynamicVariables: {
+        language: languageCode(),
+        product: "Nexus Genesis | AgriNexus"
+      },
+      onConnect: info => {
+        const activeSession = elevenLabsVoiceSession;
+        if (!activeSession) return;
+        elevenLabsVoiceStarting = false;
+        voiceStopRequested = false;
+        activeSession.conversationId = info?.conversationId || activeSession.conversationId || "";
+        setVoiceStatus("listening");
+        updateNexusVoiceSession({
+          state: "elevenlabs-listening",
+          userSpeaking: false,
+          assistantSpeaking: false
+        }, "elevenlabs-sdk-connected");
+        updateNativeVoiceBridgeState("elevenlabs-listening", { provider: "elevenlabs-agents-sdk", locale: voiceLocale() });
+        setNexusGenesisTrustChainState("listening", {
+          visibleFeedback: "Nexus is listening.",
+          reason: "elevenlabs-sdk-connected"
+        });
+        const outputStatus = $("#globalVoiceOutputStatus");
+        if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-connected", {
+          connectionType: activeSession.connectionType,
+          conversationId: activeSession.conversationId
+        });
+        refreshMicSupport();
+      },
+      onDisconnect: details => {
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-disconnected", {
+          reason: String(details?.reason || details?.code || "closed")
+        });
+        if (elevenLabsVoiceSession) stopElevenLabsVoiceSession("ElevenLabs voice session closed.");
+      },
+      onMessage: handleElevenLabsSdkMessage,
+      onError: (message, context) => {
+        const safeMessage = String(message || context?.message || "ElevenLabs SDK session error.");
+        setNexusGenesisTrustChainState("recognition_failed", {
+          visibleFeedback: "The ElevenLabs voice session had a connection problem.",
+          failureRecovery: "Reload Genesis after ElevenLabs provider credentials are available.",
+          reason: "elevenlabs-sdk-error"
+        });
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-error", { reason: safeMessage.slice(0, 160) });
+      },
+      onUnhandledClientToolCall: toolCall => {
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-unhandled-tool", {
+          toolName: String(toolCall?.tool_name || toolCall?.name || "unknown").slice(0, 80)
+        });
+      },
+      onAgentToolRequest: toolRequest => {
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-agent-tool-request", {
+          toolName: String(toolRequest?.tool_name || toolRequest?.name || "unknown").slice(0, 80)
+        });
+      },
+      onModeChange: mode => {
+        const nextMode = String(mode?.mode || mode || "");
+        if (nextMode === "speaking") {
+          updateNexusVoiceSession({ state: "elevenlabs-speaking", assistantSpeaking: true, userSpeaking: false }, "elevenlabs-sdk-speaking");
+          setNexusGenesisTrustChainState("speaking", {
+            visibleFeedback: "Nexus is speaking.",
+            reason: "elevenlabs-sdk-speaking"
+          });
+        } else if (nextMode === "listening") {
+          updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false, lastAssistantSpeechAt: Date.now() }, "elevenlabs-sdk-listening");
+          setNexusGenesisTrustChainState("listening", {
+            visibleFeedback: "Nexus is listening.",
+            reason: "elevenlabs-sdk-listening"
+          });
+        }
+      },
+      onStatusChange: statusChange => {
+        const statusValue = String(statusChange?.status || statusChange || "");
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-status", { status: statusValue });
+      },
+      onVadScore: payload => {
+        const score = Number(payload?.vadScore ?? payload ?? 0);
+        if (score > 0.65) {
+          updateNexusVoiceSession({ state: "elevenlabs-user-speaking", userSpeaking: true, assistantSpeaking: false }, "elevenlabs-sdk-vad");
+          setNexusGenesisTrustChainState("hearing", {
+            visibleFeedback: "Nexus hears speech.",
+            reason: "elevenlabs-sdk-vad"
+          });
+        }
+      },
+      onInterruption: () => {
+        updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false }, "elevenlabs-sdk-interruption");
+        setNexusGenesisTrustChainState("listening", {
+          visibleFeedback: "Nexus is listening.",
+          reason: "elevenlabs-sdk-interruption"
+        });
       }
     };
+    if (sessionPayload.conversationToken) sdkOptions.conversationToken = sessionPayload.conversationToken;
+    else sdkOptions.signedUrl = sessionPayload.signedUrl;
+    const conversation = await sdk.Conversation.startSession(sdkOptions);
+    if (elevenLabsVoiceSession) elevenLabsVoiceSession.conversation = conversation;
     return true;
   } catch (error) {
     elevenLabsVoiceStarting = false;
-    if (!elevenLabsVoiceSession) {
-      try {
-        pendingStream?.getTracks?.().forEach(track => track.stop());
-      } catch {}
-      try {
-        pendingAudioContext?.close?.();
-      } catch {}
-    }
     stopElevenLabsVoiceSession("ElevenLabs voice did not start.");
     const status = elevenLabsVoiceStatusCache?.elevenLabsVoice || {};
     const missing = Array.isArray(status.missingEnv) && status.missingEnv.length ? ` Missing: ${status.missingEnv.join(", ")}.` : "";

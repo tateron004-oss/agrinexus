@@ -1117,6 +1117,7 @@
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
+    "@elevenlabs/client": "1.15.0",
     "pg": "^8.13.1"
   },
   "engines": {

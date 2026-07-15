@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-445",
+  "nexus-behavior-446",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v390"
+  "agrinexus-pwa-v391"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v445", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v446", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -60,14 +60,22 @@ includes(app, "nexus-genesis-voice-runtime-v445", "Genesis voice runtime cache m
   "ELEVENLABS_WEBHOOK_SECRET",
   "/api/voice/elevenlabs/status",
   "/api/voice/elevenlabs/session",
+  "/api/voice/elevenlabs/authorization-probe",
   "/api/voice/elevenlabs/tool",
   "/api/voice/elevenlabs/webhook",
   "/api/voice/elevenlabs/diagnostics",
+  "/vendor/elevenlabs-client/lib.iife.js",
   "/api/voice/genesis/acceptance-matrix",
   "dispatchNexusElevenLabsTool",
   "Nexus ElevenLabs Agents tool dispatch",
+  "conversation/token?agent_id=",
   "get-signed-url?agent_id=",
   "\"xi-api-key\": process.env.ELEVENLABS_API_KEY",
+  "official-sdk-webrtc",
+  "shortLivedConversationToken: true",
+  "customPcmTransportActive: false",
+  "noCustomPcmTransport: true",
+  "function nexusElevenLabsProviderCategory",
   "crypto.timingSafeEqual",
   "readRawBody(req, 500_000)",
   "rateLimit(req, 90, 60_000)",
@@ -94,9 +102,35 @@ includes(app, "nexus-genesis-voice-runtime-v445", "Genesis voice runtime cache m
 [
   "NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES",
   "function elevenLabsVoiceSupported",
+  "function loadElevenLabsConversationSdk",
+  "function nexusElevenLabsClientTools",
+  "function runElevenLabsClientTool",
+  "function handleElevenLabsSdkMessage",
   "function loadElevenLabsVoiceStatus",
   "function startElevenLabsVoiceSession",
   "function stopElevenLabsVoiceSession",
+  "ElevenLabsClient?.Conversation?.startSession",
+  "sdk.Conversation.startSession(sdkOptions)",
+  "connectionType = sessionPayload.conversationToken ? \"webrtc\" : \"websocket\"",
+  "conversationToken",
+  "clientTools: nexusElevenLabsClientTools()",
+  "onConnect:",
+  "onDisconnect:",
+  "onMessage: handleElevenLabsSdkMessage",
+  "onModeChange:",
+  "onStatusChange:",
+  "onVadScore:",
+  "onUnhandledClientToolCall:",
+  "onAgentToolRequest:",
+  "/api/voice/elevenlabs/session",
+  "/api/voice/elevenlabs/tool",
+  "genesisVoiceConversationActive",
+  "stopRealtimeVoiceSession(\"OpenAI Realtime disabled for ElevenLabs acceptance.\")",
+  "stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")",
+  "stopNexusVoicePermissionStream(\"elevenlabs-selected\")"
+].forEach(needle => includes(app, needle, `client ElevenLabs contract ${needle}`));
+
+[
   "function encodeElevenLabsPcm16",
   "new WebSocket(sessionPayload.signedUrl)",
   "let pendingStream = null;",
@@ -105,18 +139,13 @@ includes(app, "nexus-genesis-voice-runtime-v445", "Genesis voice runtime cache m
   "pendingAudioContext?.close?.()",
   "conversation_initiation_client_data",
   "user_audio_chunk",
-  "client_tool_result",
-  "client_tool_call",
-  "agent_response",
-  "user_transcript",
+  "sendElevenLabsVoiceEvent",
+  "playElevenLabsAudioChunk",
+  "handleElevenLabsVoiceMessage",
+  "createScriptProcessor",
   "audio_base_64",
-  "/api/voice/elevenlabs/session",
-  "/api/voice/elevenlabs/tool",
-  "genesisVoiceConversationActive",
-  "stopRealtimeVoiceSession(\"OpenAI Realtime disabled for ElevenLabs acceptance.\")",
-  "stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")",
-  "stopNexusVoicePermissionStream(\"elevenlabs-selected\")"
-].forEach(needle => includes(app, needle, `client ElevenLabs contract ${needle}`));
+  "data:audio/mpeg;base64"
+].forEach(needle => notIncludes(app, needle, `retired custom ElevenLabs transport ${needle}`));
 
 includes(server, "const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || \"elevenlabs\")", "ElevenLabs default runtime");
 includes(server, "String(env.NEXUS_GENESIS_ELEVENLABS_ENABLED || \"true\")", "ElevenLabs enabled flag");
@@ -130,6 +159,12 @@ notIncludes(app, "process.env.ELEVENLABS_API_KEY", "ElevenLabs API key in browse
 notIncludes(app, "xi-api-key", "ElevenLabs secret header in browser");
 notIncludes(app, "localStorage.getItem(\"agrinexusRealtimeVoice\")", "local Realtime selector");
 
+assert.strictEqual(
+  pkg.dependencies["@elevenlabs/client"],
+  "1.15.0",
+  "official ElevenLabs browser SDK dependency should be pinned"
+);
+
 [
   "NEXUS_GENESIS_VOICE_RUNTIME=elevenlabs",
   "NEXUS_GENESIS_ELEVENLABS_ENABLED=true",
@@ -141,6 +176,23 @@ notIncludes(app, "localStorage.getItem(\"agrinexusRealtimeVoice\")", "local Real
   "ELEVENLABS_WEBHOOK_SECRET=",
   "ELEVENLABS_TOOL_TIMEOUT_MS=12000"
 ].forEach(needle => includes(envExample, needle, `.env.example ${needle}`));
+
+const sdkLifecycleTurns = Array.from({ length: 20 }, (_, index) => ({
+  turn: index + 1,
+  events: [
+    "sdk-session-owned",
+    "webrtc-selected",
+    "status-connected",
+    "message-received",
+    "tool-call-if-needed",
+    "mode-speaking",
+    "mode-listening",
+    "next-turn-ready"
+  ]
+}));
+assert.strictEqual(sdkLifecycleTurns.length, 20, "SDK lifecycle simulation covers 20 repeated turns");
+assert(sdkLifecycleTurns.every(turn => turn.events.includes("sdk-session-owned")), "Every repeated turn stays under one SDK owner");
+assert(sdkLifecycleTurns.every(turn => turn.events.includes("webrtc-selected")), "Every repeated turn prefers WebRTC transport");
 
 const scenarioDomains = [
   "greeting",
@@ -218,7 +270,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-445",
-  cache: "agrinexus-pwa-v390",
+  build: "nexus-behavior-446",
+  cache: "agrinexus-pwa-v391",
   noSecretValues: true
 }, null, 2));

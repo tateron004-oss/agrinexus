@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-445";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v390";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-446";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v391";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v2";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16157,13 +16157,14 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     ready,
     missingEnv: configured ? [] : nexusElevenLabsMissingEnv(env),
     provider: "elevenlabs",
-    transport: "websocket",
-    controller: "genesis-elevenlabs-controller.v2",
+    transport: "official-sdk-webrtc",
+    controller: "genesis-elevenlabs-controller.v3",
     controllerStates: NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES,
     runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
     endpoint: "/api/voice/elevenlabs/session",
+    sdkEndpoint: "/vendor/elevenlabs-client/lib.iife.js",
     toolEndpoint: "/api/voice/elevenlabs/tool",
     statusEndpoint: "/api/voice/elevenlabs/status",
     diagnosticsEndpoint: "/api/voice/elevenlabs/diagnostics",
@@ -16177,12 +16178,15 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     modelConfigured: Boolean(elevenLabsModelId(env)),
     voiceConfigured: Boolean(elevenLabsVoiceId(env)),
     noPermanentKeyInBrowser: true,
+    shortLivedConversationToken: true,
+    officialSdkTransport: true,
+    customPcmTransportActive: false,
     noUserFacingRuntimeSelector: true,
     soleActiveRuntime: selectedRuntime === "elevenlabs",
     openAiRealtimeRollbackOnly: true,
     legacyRuntimeConcurrent: false,
     note: ready
-      ? "Nexus Genesis ElevenLabs Agents runtime is selected and configured for secure browser WebSocket conversation."
+      ? "Nexus Genesis ElevenLabs Agents runtime is selected and configured for official SDK WebRTC conversation."
       : selectedRuntime !== "elevenlabs"
         ? "Nexus Genesis ElevenLabs Agents runtime is not the selected runtime."
       : "Nexus Genesis ElevenLabs Agents runtime is selected but missing required server configuration."
@@ -16222,7 +16226,36 @@ function nexusElevenLabsVerifyWebhook(req, rawBody = "") {
   return { ok: true, category: "webhook-verified" };
 }
 
-async function createElevenLabsConversationSession({ user, language = "en" }) {
+function nexusElevenLabsProviderCategory(statusCode = 0, detail = "") {
+  const status = Number(statusCode || 0);
+  const message = String(detail || "").toLowerCase();
+  if (status === 401 || status === 403 || /auth|unauthorized|forbidden|permission|api key/.test(message)) return "provider-authentication";
+  if (status === 404 || /agent|not found|invalid/.test(message)) return "provider-agent-invalid";
+  if (status === 408 || /timeout|timed out|aborted/.test(message)) return "provider-timeout";
+  if (status === 429 || /rate|quota|limit/.test(message)) return "provider-rate-limited";
+  if (status >= 500) return "provider-unavailable";
+  return "provider-unavailable";
+}
+
+async function fetchElevenLabsJson(url, { method = "GET", timeoutMs = 15000 } = {}) {
+  const response = await fetchWithTimeout(url, {
+    method,
+    headers: {
+      "xi-api-key": process.env.ELEVENLABS_API_KEY,
+      Accept: "application/json"
+    }
+  }, timeoutMs);
+  const text = await response.text();
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = {};
+  }
+  return { response, payload };
+}
+
+async function createElevenLabsConversationSession({ user, language = "en", probe = false }) {
   const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
   if (!runtimeStatus.ready) {
     const error = new Error("ElevenLabs Agents runtime is missing required server configuration.");
@@ -16232,42 +16265,64 @@ async function createElevenLabsConversationSession({ user, language = "en" }) {
     throw error;
   }
   const agentId = elevenLabsAgentId(process.env);
-  const response = await fetchWithTimeout(
-    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
-    {
-      method: "GET",
-      headers: {
-        "xi-api-key": process.env.ELEVENLABS_API_KEY,
-        Accept: "application/json"
-      }
-    },
-    Number(process.env.ELEVENLABS_AGENTS_TIMEOUT_MS || 15000)
-  );
-  const text = await response.text();
-  let payload = {};
+  const timeoutMs = Number(process.env.ELEVENLABS_AGENTS_TIMEOUT_MS || 15000);
+  const tokenUrl = `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
+  let tokenPayload = {};
+  let tokenResponse = null;
   try {
-    payload = text ? JSON.parse(text) : {};
-  } catch {
-    payload = {};
+    const result = await fetchElevenLabsJson(tokenUrl, { timeoutMs });
+    tokenResponse = result.response;
+    tokenPayload = result.payload;
+  } catch (error) {
+    tokenPayload = { message: error.message || "ElevenLabs conversation token request failed." };
   }
-  if (!response.ok || !payload.signed_url) {
-    const detail = payload.detail || payload.error || payload.message || `ElevenLabs signed URL failed: ${response.status}`;
+  const conversationToken = tokenPayload.token || tokenPayload.conversation_token || tokenPayload.conversationToken || "";
+  const conversationId = `el-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`;
+  if (tokenResponse?.ok && conversationToken) {
+    return {
+      ok: true,
+      runtime: "elevenlabs",
+      provider: "elevenlabs",
+      transport: "official-sdk-webrtc",
+      connectionType: "webrtc",
+      authorizationArtifact: probe ? "conversation-token-probe" : "conversation-token",
+      conversationToken: probe ? undefined : conversationToken,
+      conversationId,
+      agentIdConfigured: true,
+      voiceIdConfigured: Boolean(elevenLabsVoiceId(process.env)),
+      modelIdConfigured: Boolean(elevenLabsModelId(process.env)),
+      language: String(language || user?.language || "en"),
+      runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
+      buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
+      cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
+      officialSdkTransport: true,
+      noCustomPcmTransport: true,
+      noSecretValues: true
+    };
+  }
+  const tokenDetail = tokenPayload.detail || tokenPayload.error || tokenPayload.message || `ElevenLabs conversation token failed: ${tokenResponse?.status || "request_failed"}`;
+  const signedUrlResult = await fetchElevenLabsJson(
+    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
+    { timeoutMs }
+  );
+  const signedResponse = signedUrlResult.response;
+  const signedPayload = signedUrlResult.payload;
+  if (!signedResponse.ok || !signedPayload.signed_url) {
+    const detail = signedPayload.detail || signedPayload.error || signedPayload.message || tokenDetail;
     const error = new Error(String(detail));
-    error.status = response.status || 502;
-    error.category = response.status === 401 || response.status === 403
-      ? "provider-authentication"
-      : response.status === 429
-        ? "provider-rate-limited"
-        : "provider-unavailable";
+    error.status = signedResponse.status || tokenResponse?.status || 502;
+    error.category = nexusElevenLabsProviderCategory(error.status, detail);
+    error.tokenCategory = nexusElevenLabsProviderCategory(tokenResponse?.status, tokenDetail);
     throw error;
   }
-  const conversationId = `el-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`;
   return {
     ok: true,
     runtime: "elevenlabs",
     provider: "elevenlabs",
-    transport: "websocket",
-    signedUrl: payload.signed_url,
+    transport: "official-sdk-websocket-fallback",
+    connectionType: "websocket",
+    authorizationArtifact: probe ? "signed-url-probe" : "signed-url",
+    signedUrl: probe ? undefined : signedPayload.signed_url,
     conversationId,
     agentIdConfigured: true,
     voiceIdConfigured: Boolean(elevenLabsVoiceId(process.env)),
@@ -16276,6 +16331,9 @@ async function createElevenLabsConversationSession({ user, language = "en" }) {
     runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
+    officialSdkTransport: true,
+    noCustomPcmTransport: true,
+    tokenFallbackReason: nexusElevenLabsProviderCategory(tokenResponse?.status, tokenDetail),
     noSecretValues: true
   };
 }
@@ -45632,15 +45690,23 @@ async function api(req, res, url) {
       voiceRecord(db, user, "elevenlabs-agents", "ElevenLabs Agents voice session authorized.", {
         provider: "elevenlabs",
         language: session.language,
-        runtimeVersion: session.runtimeVersion
+        runtimeVersion: session.runtimeVersion,
+        transport: session.transport,
+        connectionType: session.connectionType,
+        authorizationArtifact: session.authorizationArtifact
       });
       logIntegration(db, {
         providerId: "elevenlabs",
         module: "AI Voice",
         action: "voice.elevenlabs_agents_session_authorized",
         status: "success",
-        detail: "ElevenLabs Agents WebSocket session authorized for Nexus live voice.",
-        metadata: { transport: "websocket", runtimeVersion: session.runtimeVersion },
+        detail: "ElevenLabs Agents official SDK session authorized for Nexus live voice.",
+        metadata: {
+          transport: session.transport,
+          connectionType: session.connectionType,
+          authorizationArtifact: session.authorizationArtifact,
+          runtimeVersion: session.runtimeVersion
+        },
         dispatch: false
       });
       await writeDb(db);
@@ -45660,7 +45726,7 @@ async function api(req, res, url) {
         action: "voice.elevenlabs_agents_session_failed",
         status: "error",
         detail: category,
-        metadata: { transport: "websocket", category },
+        metadata: { transport: "official-sdk", category },
         dispatch: false
       });
       await writeDb(db);
@@ -45669,6 +45735,45 @@ async function api(req, res, url) {
         category,
         missingEnv: error.missingEnv || [],
         elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env)
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+  }
+
+  if (url.pathname === "/api/voice/elevenlabs/authorization-probe" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs diagnostics" });
+    if (!rateLimit(req, 12, 60_000)) return send(res, 429, { error: "Too many ElevenLabs authorization probes" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    try {
+      const probe = await createElevenLabsConversationSession({
+        user,
+        language: url.searchParams.get("language") || user.language || "en",
+        probe: true
+      });
+      return send(res, 200, {
+        ok: true,
+        runtime: "elevenlabs",
+        provider: "elevenlabs",
+        transport: probe.transport,
+        connectionType: probe.connectionType,
+        authorizationArtifact: probe.authorizationArtifact,
+        configured: true,
+        requestAttempted: true,
+        noSecretValues: true
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    } catch (error) {
+      return send(res, error.status || 502, {
+        ok: false,
+        runtime: "elevenlabs",
+        provider: "elevenlabs",
+        configured: nexusElevenLabsRuntimeStatus(process.env).configured,
+        requestAttempted: true,
+        category: error.category || nexusElevenLabsProviderCategory(error.status, error.message),
+        missingEnv: error.missingEnv || [],
+        noSecretValues: true
       }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
@@ -46186,6 +46291,18 @@ async function api(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
+  if (url.pathname === "/vendor/elevenlabs-client/lib.iife.js") {
+    const sdkPath = path.join(ROOT, "node_modules", "@elevenlabs", "client", "dist", "lib.iife.js");
+    return fs.readFile(sdkPath, (err, data) => {
+      if (err) return send(res, 404, "Not found");
+      res.writeHead(200, {
+        "content-type": "application/javascript; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(data);
+    });
+  }
   let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodeURIComponent(url.pathname));
   if (!filePath.startsWith(PUBLIC)) return send(res, 403, "Forbidden");
   fs.readFile(filePath, (err, data) => {

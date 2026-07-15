@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
 assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
 assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
 assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
-assert(index.includes("/manifest.webmanifest?v=nexus-behavior-445"), "index should version the manifest link to avoid stale manifest warnings");
+assert(index.includes("/manifest.webmanifest?v=nexus-behavior-446"), "index should version the manifest link to avoid stale manifest warnings");
 assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
 
 includesAll(app, [
