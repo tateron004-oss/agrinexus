@@ -34,6 +34,7 @@ const nexusOsAgriNexusDeploymentProfile = require("./public/nexus-os-agrinexus-d
 const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workforce-safety-pack.js");
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
+const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -58,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-438";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v383";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-439";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v384";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -15443,6 +15444,7 @@ function reasoningGovernanceReview(db, user, command, result = {}, supervisor = 
 
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
+  result = ensureSpeakableAgentResult(result);
   addConversationTurn(db.profile, "user", command, { email: user.email });
   addConversationTurn(db.profile, "assistant", result.response, {
     intent: result.intent,
@@ -15471,6 +15473,7 @@ function commandRecord(db, user, command, result) {
   memory.lastResponse = result.response;
   memory.lastStatus = result.status || "completed";
   memory.updatedAt = remembered.createdAt;
+  rememberGenesisSpokenResponse(db, command, result);
   const turnCoach = buildConversationTurnCoach(db, user, command, result);
   memory.turnCoach = turnCoach;
   result.metadata = { ...(result.metadata || {}), turnCoach };
@@ -24166,6 +24169,268 @@ async function utilityWeatherAnswer(db, text, options = {}) {
   return `Weather check ${locationLine}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}.${windLine} ${farmAdvice}`;
 }
 
+function isGenesisRepeatRequest(text = "") {
+  return /\b(repeat what you just said|repeat that|say that again|what did you just say|read that again)\b/i.test(String(text || ""));
+}
+
+function isGenesisCapabilityQuestion(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  return /\b(what can you do|what do you do|what can nexus do|what can you help with|what are your capabilities)\b/.test(lower);
+}
+
+function isGenesisIdentityQuestion(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  return /\b(tell me about yourself|who are you|what are you|introduce yourself)\b/.test(lower);
+}
+
+function isGenesisDayPlanningQuestion(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  return /\b(help me plan my day|plan my day|help plan my day|what should i do today|organize my day)\b/.test(lower);
+}
+
+function isSimpleWeatherQuestion(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  if (/\b(workflow|prepare packet|readiness|provider test|crop disease|crop advisor|farmer|farm|field|crop|plant|harvest|irrigation)\b/.test(lower)) return false;
+  return /\b(what is the weather|what's the weather|weather today|current weather|temperature outside|forecast)\b/.test(lower);
+}
+
+function extractWeatherLocationText(text = "") {
+  const compact = String(text || "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
+    .replace(/[?.!]+$/g, "")
+    .trim();
+  const patterns = [
+    /\b(?:weather|temperature|forecast)\s+(?:in|for|at|near)\s+(.+)$/i,
+    /\b(?:what(?:'s| is)?\s+)?(?:the\s+)?weather\s+(?:like\s+)?(?:in|for|at|near)\s+(.+)$/i,
+    /\b(?:weather|temperature|forecast)\b.*\b(?:in|for|at|near)\s+(.+)$/i,
+    /\b(?:in|for|at|near)\s+(.+?)\s+(?:weather|temperature|forecast)\b/i
+  ];
+  for (const pattern of patterns) {
+    const match = compact.match(pattern);
+    if (match && match[1]) {
+      return match[1]
+        .replace(/\b(today|right now|now|please|current|currently)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+  }
+  return "";
+}
+
+function locationTextFromAuthorizedContext(location = null) {
+  if (!location || typeof location !== "object") return "";
+  const source = String(location.source || "").toLowerCase();
+  if (/blocked|fail|unavailable|activecountry|platform/.test(source)) return "";
+  if (location.latitude || location.longitude || location.lat || location.lng || location.lon) {
+    return String(location.label || location.city || location.country || "your current location").trim();
+  }
+  return String(location.label || location.city || location.country || "").trim();
+}
+
+function storeGenesisWeatherLocation(db, locationText = "") {
+  if (!locationText) return;
+  ensureAiProfile(db.profile);
+  db.profile.agentMemory.genesisConversation = {
+    ...(db.profile.agentMemory.genesisConversation || {}),
+    currentLocationText: locationText,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function spokenResponseMemory(db) {
+  ensureAiProfile(db.profile);
+  return db.profile.agentMemory.genesisConversation || {};
+}
+
+function rememberGenesisSpokenResponse(db, command = "", result = {}) {
+  ensureAiProfile(db.profile);
+  const response = String(result.response || "").trim();
+  const spoken = sanitizeNexusSpokenResponseText(response);
+  db.profile.agentMemory.genesisConversation = {
+    ...(db.profile.agentMemory.genesisConversation || {}),
+    lastFinalUserUtterance: String(command || "").trim(),
+    lastIntentSelected: result.intent || "unknown",
+    lastCompleteAssistantResponse: response,
+    lastSpokenResponse: spoken,
+    relevantShortContext: `${result.intent || "conversation"}: ${spoken}`.slice(0, 500),
+    currentLocationText: result.metadata?.locationText || result.metadata?.weather?.locationText || db.profile.agentMemory.genesisConversation?.currentLocationText || "",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function ensureSpeakableAgentResult(result = {}, fallbackIntent = "conversation.no_silence_guard") {
+  const normalized = result && typeof result === "object" ? { ...result } : {};
+  const responseFieldSelected = normalized.response ? "response" : normalized.message ? "message" : normalized.answer ? "answer" : normalized.summary ? "summary" : "final-no-silence-guard";
+  const selected = String(normalized.response || normalized.message || normalized.answer || normalized.summary || "").trim();
+  normalized.response = selected || "I heard you, but I couldn't complete that response. Please try again.";
+  normalized.intent = normalized.intent || fallbackIntent;
+  normalized.status = normalized.status || (selected ? "completed" : "needs-retry");
+  normalized.metadata = {
+    ...(normalized.metadata || {}),
+    responseGenerated: Boolean(selected),
+    responseFieldSelected,
+    sanitizedSpeechLength: sanitizeNexusSpokenResponseText(normalized.response).length
+  };
+  return normalized;
+}
+
+function genesisCapabilityResponse() {
+  return "I can help you talk through goals, plan next steps, learn skills, prepare workforce and agriculture tasks, support health-access preparation, check maps or weather when a source is available, and prepare messages or provider handoffs with approval. I will not send, call, book, pay, diagnose, prescribe, or share location unless the right provider is configured and you clearly confirm.";
+}
+
+function genesisIdentityResponse() {
+  return "I am Nexus Genesis, the voice companion inside AgriNexus. My job is to listen, understand what you need, choose the safest next step, and guide agriculture, health access, learning, workforce, maps, marketplace, and communication workflows truthfully. I can prepare and explain a lot now, and I only execute real-world actions when the required provider, consent, and confirmation are in place.";
+}
+
+function genesisDayPlanningResponse() {
+  return "I can help plan your day. What are the top two things you need to handle today: health, work, learning, farming, travel, messages, or something personal?";
+}
+
+async function genesisWeatherResponse(db, user, text = "", options = {}) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory.genesisConversation || {};
+  const explicitLocation = extractWeatherLocationText(text);
+  const contextualLocation = locationTextFromAuthorizedContext(options.location || options.currentLocation || null);
+  const followUpLocation = db.profile.agentMemory.activeWeatherTurn && !isSimpleWeatherQuestion(text)
+    ? String(text || "").replace(/[?.!]+$/g, "").trim()
+    : "";
+  const locationText = explicitLocation || contextualLocation || followUpLocation || memory.currentLocationText || "";
+  if (!locationText) {
+    db.profile.agentMemory.activeWeatherTurn = {
+      id: crypto.randomUUID(),
+      status: "needs-location",
+      question: "What city would you like the weather for?",
+      createdAt: new Date().toISOString()
+    };
+    return {
+      intent: "conversation.weather_needs_location",
+      response: "What city would you like the weather for?",
+      status: "needs-location",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        suppressBehaviorNudge: true,
+        weather: { liveAttempted: false, locationRequired: true },
+        suggestedReplies: ["Stockton, CA", "Nairobi", "Lagos"]
+      }
+    };
+  }
+  db.profile.agentMemory.activeWeatherTurn = null;
+  storeGenesisWeatherLocation(db, locationText);
+  const sourceResult = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
+    locationText,
+    timeframe: "current",
+    queryType: "current weather"
+  }, process.env);
+  const sourceBacked = sourceResult.sourceStatus === "source-result-available" && sourceResult.evidenceStatus === "source-backed";
+  if (sourceBacked) {
+    return {
+      intent: "conversation.weather_answered",
+      response: `${sourceResult.resultSummary} Source: ${sourceResult.sourceName}.`,
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        suppressBehaviorNudge: true,
+        locationText,
+        weather: sourceResult,
+        noExecutionAuthorized: true
+      }
+    };
+  }
+  const blocked = sourceResult.sourceStatus === "provider-required"
+    ? "I need a city before I can check weather."
+    : `I can't retrieve live weather yet because the weather source is not configured. Required environment names include NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED, NEXUS_WEATHER_PROVIDER_ENABLED, and NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED.`;
+  return {
+    intent: "conversation.weather_blocked",
+    response: blocked,
+    status: sourceResult.sourceStatus === "provider-required" ? "needs-location" : "needs-provider",
+    metadata: {
+      conversationMode: true,
+      redirectSection: "agent",
+      suppressBehaviorNudge: true,
+      locationText,
+      weather: sourceResult,
+      noExecutionAuthorized: true
+    }
+  };
+}
+
+async function genesisStabilizationConversationRepair(db, user, rawText = "", options = {}) {
+  ensureAiProfile(db.profile);
+  const text = String(rawText || "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
+    .trim();
+  const lower = normalizeSpeechForIntent(text);
+  if (!lower) return null;
+  if (isGenesisRepeatRequest(text)) {
+    const memory = spokenResponseMemory(db);
+    const previous = String(memory.lastSpokenResponse || "").trim();
+    return {
+      intent: "conversation.repeat_last_response",
+      response: previous || "I haven't said anything yet.",
+      status: previous ? "completed" : "needs-context",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        suppressBehaviorNudge: true,
+        repeatedPriorResponse: Boolean(previous),
+        reranPriorCommand: false
+      }
+    };
+  }
+  if (isGenesisCapabilityQuestion(text)) {
+    if (/\b(farmer|farm|smallholder|grower|crop)\b/.test(lower)) {
+      return {
+        intent: "conversation.farmer_help",
+        response: "For a farmer, I can help check a bad crop, explain field or drone evidence, prepare buyer and sale evidence, compare route risk, and find training or workforce support. Tell me the crop and where the farm is.",
+        status: "completed",
+        metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, opensWorkflow: false, suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
+      };
+    }
+    return {
+      intent: "conversation.capability_summary",
+      response: genesisCapabilityResponse(),
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, opensWorkflow: false }
+    };
+  }
+  if (isGenesisIdentityQuestion(text)) {
+    return {
+      intent: "conversation.identity",
+      response: genesisIdentityResponse(),
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, opensWorkflow: false }
+    };
+  }
+  if (isGenesisDayPlanningQuestion(text)) {
+    return {
+      intent: "conversation.day_planning",
+      response: genesisDayPlanningResponse(),
+      status: "needs-input",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        suppressBehaviorNudge: true,
+        opensWorkflow: false,
+        frontierCommunication: {
+          urgency: "normal",
+          nextQuestion: "What are the top two things you need to handle today?",
+          confidence: 0.95,
+          responseShape: "begin planning conversation without opening a workflow"
+        }
+      }
+    };
+  }
+  const simpleWeatherNeedsLocation = isSimpleWeatherQuestion(text)
+    && !extractWeatherLocationText(text)
+    && !locationTextFromAuthorizedContext(options.location || options.currentLocation || null);
+  if (simpleWeatherNeedsLocation || db.profile.agentMemory.activeWeatherTurn) {
+    return genesisWeatherResponse(db, user, text, options);
+  }
+  return null;
+}
+
 function utilityMusicAnswer(text) {
   const intent = musicAssistantIntent(text);
   if (!intent) return "I can help find music, but I need the artist, style, decade, or playlist you want.";
@@ -25086,6 +25351,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["Nexus"] }
     };
   }
+  const stabilizationRepair = conversational ? await genesisStabilizationConversationRepair(db, user, text, options) : null;
+  if (stabilizationRepair) return stabilizationRepair;
   const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
   const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
@@ -25502,7 +25769,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: "completed",
       metadata: {
         conversationMode: true,
-        redirectSection: "agent",
+      redirectSection: "dashboard",
         suppressBehaviorNudge: true,
         frontierCommunication: {
           urgency: "normal",
@@ -27595,9 +27862,51 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command)) {
     db.profile.agentMemory.memoryScope = "consent-requested";
   }
+  const stabilizationRepair = await genesisStabilizationConversationRepair(db, user, command, {
+    ...body,
+    conversational: body.conversational === true,
+    language: commandLanguage,
+    targetLanguage: commandLanguage
+  });
+  if (stabilizationRepair && (body.conversational === true || ["voice", "phone", "native"].includes(inputMode))) {
+    let result = ensureSpeakableAgentResult(stabilizationRepair, "conversation.genesis_stabilization_repair");
+    result.metadata = {
+      ...(result.metadata || {}),
+      inputMode,
+      outputMode: outputMode || undefined,
+      language: commandLanguage,
+      targetLanguage: commandLanguage,
+      companionUnderstanding,
+      conversationalModeOrchestrator,
+      selectedConversationalModes: conversationalModeOrchestrator.selectedModeIds,
+      genesisStabilizationRepair: true,
+      noExecutionAuthorized: true,
+      providerHandoffAuthorized: false,
+      workflowOpened: false
+    };
+    commandRecord(db, user, command, result);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, {
+        response: result.response,
+        inputMode,
+        language: commandLanguage,
+        genesisStabilizationRepair: true
+      });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result,
+      companionUnderstanding,
+      companionRouteOutcome: {
+        route: "genesis-stabilization-conversation-repair",
+        noExecutionAuthorized: true,
+        workflowOpened: false
+      }
+    };
+  }
   if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response") {
     const directConversation = companionDirectConversationIntent(conversationalModeOrchestrator);
-    let result = {
+    let result = ensureSpeakableAgentResult({
       intent: directConversation.intent,
       response: conversationalModeOrchestrator.response,
       status: "completed",
@@ -27616,7 +27925,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
         providerHandoffAuthorized: false,
         actionRequiresSeparateConfirmation: conversationalModeOrchestrator.highRiskActionRequiresExactConfirmation
       }
-    };
+    }, directConversation.intent);
     const agentAction = buildAgentActionMetadata({
       userMessage: command,
       result,
@@ -27676,8 +27985,9 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     language: commandLanguage,
     targetLanguage: commandLanguage
   });
-  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
+  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command), command);
   result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
+  result = ensureSpeakableAgentResult(result);
   const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
   const workflowOffer = inputMode === "voice" || inputMode === "phone" || inputMode === "native" || body.conversational === true
     ? companionWorkflowOfferResult(db, command, companionUnderstanding, result, preliminaryRouteOutcome)

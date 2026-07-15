@@ -94,7 +94,7 @@ async function runCommand(command) {
     ["Talk to me.", "conversation.small_talk", "take this slowly"],
     ["What can you do?", "conversation.capability_summary", "agriculture"],
     ["How are you?", "conversation.how_are_you", "ready to help"],
-    ["Tell me about yourself.", "conversation.capability_summary", "voice-operated access assistant"]
+    ["Tell me about yourself.", "conversation.identity", "Nexus Genesis"]
   ];
 
   for (const [prompt, expectedIntent] of conversationCases) {
