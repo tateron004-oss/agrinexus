@@ -35,25 +35,27 @@ const truthfulState = sectionBetween(app, "function nexusGenesisTruthfulVoiceSta
 const debugPanel = sectionBetween(app, "function renderNexusGenesisVoiceDebugPanel", "function renderNexusGenesisHomeVoiceGate", "voice debug panel");
 const pipeline = sectionBetween(app, "function recordNexusAudioPipelineEvent", "function nexusVoiceAudioPipelineSnapshot", "audio pipeline event recorder");
 const grantedAutoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
+const permissionNormalizer = sectionBetween(app, "function normalizeNexusMicrophonePermissionState", "function nexusMicrophonePermissionDisplayText", "permission normalizer");
+const permissionEligibility = sectionBetween(app, "function nexusMicrophonePermissionCanAttemptStart", "const NEXUS_GENESIS_TRUST_CHAIN_STATES", "permission startup eligibility");
 const recognitionStart = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
 const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", "speech synthesis controller");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-432"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377"'
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-433"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v378"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-432",
-  "/styles.css?v=nexus-behavior-432",
-  "/app.js?v=nexus-behavior-432"
+  "/manifest.webmanifest?v=nexus-behavior-433",
+  "/styles.css?v=nexus-behavior-433",
+  "/app.js?v=nexus-behavior-433"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-432"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-433"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v378"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v377"',
-  'BUILD_VERSION = "nexus-behavior-432"'
+  'CACHE_NAME = "agrinexus-pwa-v378"',
+  'BUILD_VERSION = "nexus-behavior-433"'
 ], "service worker build");
 
 includesAll(truthfulState, [
@@ -115,8 +117,11 @@ includesAll(pipeline, [
 ], "callback-backed pipeline flags");
 
 includesAll(grantedAutoStart, [
+  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
+  "runtimePermission === \"browser-managed\"",
+  "permission === \"granted\"",
   "chromeMicrophonePermissionState()",
-  "permission !== \"granted\"",
+  "permission-not-authorized",
   "voiceRecognition",
   "nexusOsVoiceStartInFlight",
   "nexusGenesisPermissionGrantedAutoStartInFlight",
@@ -128,9 +133,25 @@ includesAll(grantedAutoStart, [
   "genesis-auto-start-check",
   "genesis-auto-start-skipped",
   "genesis-auto-start-triggered",
-  "granted-or-browser-managed",
+  "permissions-api-granted",
+  "browser-managed-state-requires-get-user-media-proof",
   "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
 ], "granted permission recognition auto-start");
+assert(app.includes("const NEXUS_MIC_PERMISSION_STATES = Object.freeze([\"unknown\", \"prompt\", \"granted\", \"denied\", \"unsupported\", \"browser-managed\"])"), "canonical microphone permission enum missing");
+assert(app.includes("function normalizeNexusMicrophonePermissionState"), "permission normalizer missing");
+assert(app.includes("function nexusMicrophonePermissionDisplayText"), "permission display text helper missing");
+assert(app.includes("function nexusMicrophonePermissionCanAttemptStart"), "permission startup eligibility helper missing");
+includesAll(permissionNormalizer, [
+  "granted-or-browser-managed",
+  "return \"browser-managed\"",
+  "return \"prompt\"",
+  "return \"unsupported\"",
+  "return \"denied\"",
+  "return \"unknown\""
+], "permission normalizer mappings");
+assert(permissionEligibility.includes('normalized === "granted" || normalized === "browser-managed"'), "only granted and browser-managed permission states may attempt startup");
+assert(grantedAutoStart.indexOf("normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())") < grantedAutoStart.indexOf("const canAttemptStart"), "auto-start must normalize permission before startup guard");
+assert(!grantedAutoStart.includes("granted-or-browser-managed"), "auto-start must not use human-readable legacy permission labels for control flow");
 assert(app.includes("maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"), "workspace render must schedule granted-permission recognition auto-start");
 assert(!grantedAutoStart.includes("data-nexus-os-core-orb"), "granted permission auto-start must not be wired to the orb");
 

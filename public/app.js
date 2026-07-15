@@ -820,6 +820,32 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Voice starts from an explicit button, wake phrase, or user action. Nexus does not run always-on listening without consent.",
   updatedAt: new Date().toISOString()
 };
+const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
+
+function normalizeNexusMicrophonePermissionState(value = "unknown") {
+  const raw = String(value || "unknown").toLowerCase().trim();
+  if (raw === "granted-or-browser-managed" || raw === "browser-managed-authorized" || raw === "browser_managed" || raw === "browser managed") return "browser-managed";
+  if (raw === "prompt-or-existing" || raw === "prompted" || raw === "ask" || raw === "request") return "prompt";
+  if (raw === "secure-context-required" || raw === "not-supported" || raw === "not_supported") return "unsupported";
+  if (raw === "blocked" || raw === "not-allowed" || raw === "permission-denied") return "denied";
+  if (raw === "granted" || raw === "denied" || raw === "prompt" || raw === "unsupported" || raw === "browser-managed" || raw === "unknown") return raw;
+  return "unknown";
+}
+
+function nexusMicrophonePermissionDisplayText(value = "unknown") {
+  const normalized = normalizeNexusMicrophonePermissionState(value);
+  if (normalized === "browser-managed") return "granted through browser-managed access";
+  if (normalized === "granted") return "granted";
+  if (normalized === "prompt") return "permission prompt required";
+  if (normalized === "denied") return "denied";
+  if (normalized === "unsupported") return "unsupported";
+  return "unknown";
+}
+
+function nexusMicrophonePermissionCanAttemptStart(value = "unknown") {
+  const normalized = normalizeNexusMicrophonePermissionState(value);
+  return normalized === "granted" || normalized === "browser-managed";
+}
 const NEXUS_GENESIS_TRUST_CHAIN_STATES = Object.freeze([
   "idle",
   "wake_requested",
@@ -1227,8 +1253,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-432";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-433";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v378";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -31784,7 +31810,7 @@ function nexusVoiceTroubleshootingState() {
   const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
   const synthesisSupported = typeof window !== "undefined" && Boolean(window.speechSynthesis || activeVoiceAudio || browserSpeechFallbackEnabled?.());
   const quiet = Boolean(voiceDemoQuietMode || nexusOsConversationMuted);
-  const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const permissionState = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
   const listeningState = recognitionActive
     ? "Voice ready"
     : !profile.secureEnough
@@ -32151,7 +32177,7 @@ function renderNexusVoiceFirstPresenceControls() {
   const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
   const enableLabel = recognitionActive
     ? "Stop listening"
-    : permissionState === "granted-or-browser-managed"
+    : nexusMicrophonePermissionCanAttemptStart(permissionState)
       ? "Start listening"
       : "Enable voice";
   const enableAction = recognitionActive ? "stop-listening" : "enable-voice";
@@ -32190,7 +32216,7 @@ function nexusGenesisVoiceDebugEnabled() {
 function nexusGenesisTruthfulVoiceState() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
   const state = nexusOsVoiceRuntimeState || {};
-  const permissionState = state.permissionState || "unknown";
+  const permissionState = normalizeNexusMicrophonePermissionState(state.permissionState || "unknown");
   const recognitionSupported = Boolean(profile.supported && profile.secureEnough !== false);
   const activeTrack = Boolean(state.microphoneStreamActive && state.microphoneTrackState !== "stopped");
   const constructed = Boolean(state.recognitionConstructed);
@@ -32223,7 +32249,7 @@ function nexusGenesisTruthfulVoiceState() {
   else if (onstart) statusText = "Nexus is listening.";
   else if (startRequested) statusText = "Microphone permission granted. Speech recognition has not started.";
   else if (constructed) statusText = "Microphone permission granted. Speech recognition has not started.";
-  else if (activeTrack || permissionState === "granted-or-browser-managed") statusText = "Microphone permission granted. Speech recognition has not started.";
+  else if (activeTrack || nexusMicrophonePermissionCanAttemptStart(permissionState)) statusText = "Microphone permission granted. Speech recognition has not started.";
   return {
     profile,
     permissionState,
@@ -32295,10 +32321,10 @@ function renderNexusGenesisVoiceDebugPanel(truth = nexusGenesisTruthfulVoiceStat
 function renderNexusGenesisHomeVoiceGate() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
   const truthful = nexusGenesisTruthfulVoiceState();
-  const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const permissionState = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
   const denied = permissionState === "denied" || nexusVoicePermissionDeniedThisSession;
   const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
-  const showPermissionControl = voiceReady && !denied && permissionState !== "granted-or-browser-managed" && !truthful.startRequested && !truthful.onstart;
+  const showPermissionControl = voiceReady && !denied && !nexusMicrophonePermissionCanAttemptStart(permissionState) && !truthful.startRequested && !truthful.onstart;
   const statusText = truthful.statusText;
   const guidance = denied
     ? "Use the browser site settings to allow microphone access, then reload."
@@ -32306,7 +32332,7 @@ function renderNexusGenesisHomeVoiceGate() {
       ? "The orb is only Nexus's visual presence. Voice state below is read-only and changes only after real browser events."
       : "Open Nexus in a browser with speech recognition support to use the voice-native front door.";
   return `
-    <div class="nexus-genesis-audio-gate" data-nexus-genesis-audio-gate="true" data-microphone-permission="${escapeHtml(permissionState)}" data-recognition-supported="${voiceReady ? "true" : "false"}">
+    <div class="nexus-genesis-audio-gate" data-nexus-genesis-audio-gate="true" data-microphone-permission="${escapeHtml(permissionState)}" data-microphone-permission-label="${escapeHtml(nexusMicrophonePermissionDisplayText(permissionState))}" data-recognition-supported="${voiceReady ? "true" : "false"}">
       <span class="nexus-genesis-audio-status" data-nexus-genesis-audio-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
       <small>${escapeHtml(translateText(guidance))}</small>
       ${showPermissionControl ? `
@@ -46832,9 +46858,15 @@ function syncNexusPresenceSurfaces(mode = "standby", details = {}) {
 
 function updateNexusOsVoiceRuntimeState(patch = {}, reason = "voice-runtime-update") {
   const profile = typeof browserVoiceRuntimeProfile === "function" ? browserVoiceRuntimeProfile() : {};
+  const incomingPermissionState = patch.permissionState !== undefined
+    ? patch.permissionState
+    : nexusOsVoiceRuntimeState.permissionState || "unknown";
+  const permissionState = normalizeNexusMicrophonePermissionState(incomingPermissionState);
   nexusOsVoiceRuntimeState = {
     ...nexusOsVoiceRuntimeState,
     ...patch,
+    permissionState,
+    permissionDisplayText: patch.permissionDisplayText || nexusMicrophonePermissionDisplayText(permissionState),
     schemaVersion: "nexus-os-voice-runtime.v1",
     runtimeOwner: "nexus-os-canonical-voice",
     language: languageCode(),
@@ -48502,8 +48534,10 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
   nexusGenesisPermissionGrantedAutoStartInFlight = true;
   nexusGenesisPermissionGrantedAutoStartLastAttemptAt = now;
   try {
-    const permission = await chromeMicrophonePermissionState();
-    if (permission === "denied") {
+    const permission = normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState());
+    const runtimePermission = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
+    const canAttemptStart = permission === "granted" || runtimePermission === "browser-managed";
+    if (permission === "denied" || runtimePermission === "denied") {
       nexusVoicePermissionDeniedThisSession = true;
       updateNexusOsVoiceRuntimeState({ permissionState: "denied", listeningState: "blocked" }, "genesis-auto-start-permission-denied");
       recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
@@ -48513,21 +48547,24 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
       });
       return false;
     }
-    if (permission !== "granted") {
+    if (!canAttemptStart) {
       recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
         source,
         permissionState: permission,
-        skipReason: "permission-not-granted"
+        runtimePermissionState: runtimePermission,
+        skipReason: "permission-not-authorized"
       });
       return false;
     }
     updateNexusOsVoiceRuntimeState({
-      permissionState: "granted-or-browser-managed",
+      permissionState: permission === "granted" ? "granted" : "browser-managed",
       recognitionSupported: true
     }, "genesis-auto-start-permission-granted");
     recordNexusAudioPipelineEvent("genesis-auto-start-triggered", {
       source,
-      permissionState: "granted"
+      permissionState: permission,
+      runtimePermissionState: runtimePermission,
+      authorizationProof: permission === "granted" ? "permissions-api-granted" : "browser-managed-state-requires-get-user-media-proof"
     });
     await startVoiceListening({ source: "genesis-home-permission-granted-auto-start" });
     return true;
@@ -48565,7 +48602,7 @@ function recordNexusAudioPipelineEvent(stage, details = {}) {
   }
   const stageStatePatch = {
     "media-stream-request": { microphonePermissionRequested: true },
-    "media-stream-granted": { microphoneTrackState: "live", microphoneStreamActive: true, permissionState: "granted-or-browser-managed" },
+    "media-stream-granted": { microphoneTrackState: "live", microphoneStreamActive: true, permissionState: "granted", permissionDisplayText: "granted" },
     "media-stream-stopped": { microphoneStreamActive: false, microphoneTrackState: "stopped" },
     "recognition-constructing": { recognitionConstructed: true, recognitionStartRequested: false, recognitionOnStartReceived: false },
     "recognition-start-call": { recognitionStartRequested: true, recognitionOnStartReceived: false },
@@ -48782,7 +48819,7 @@ async function refreshChromeVoicePermissionHint() {
   const status = $("#globalMicStatus");
   if (!status || voiceRecognition || voiceDemoQuietMode || voiceConversationPaused) return;
   if (!voiceFirstMode && !realtimeVoiceActive()) return;
-  const permissionState = await chromeMicrophonePermissionState();
+  const permissionState = normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState());
   if (permissionState === "denied") {
     status.classList.add("blocked");
     status.textContent = "Chrome blocked the microphone. Click the tune or lock icon near the address bar, set Microphone to Allow, then reload the page.";
@@ -55612,12 +55649,12 @@ async function startVoiceListening(options = {}) {
     });
     nexusOsVoiceStartInFlight = false;
     registerNativeVoiceSession("web-streaming-start");
-    markNexusListeningControllerEvent("listening", { permissionState: "granted-or-browser-managed", inputMode: "press-to-talk" });
+    markNexusListeningControllerEvent("listening", { permissionState: "granted", inputMode: "press-to-talk" });
     updateNexusOsVoiceRuntimeState({
       mode: "listening",
       listeningState: "active",
       hearingState: "waiting",
-      permissionState: "granted-or-browser-managed",
+      permissionState: "granted",
       microphoneUnavailable: false
     }, source);
     updateNativeVoiceBridgeState("listening", { locale: voiceLocale(), browser: profile.browserName, recognition: profile.recognitionName });

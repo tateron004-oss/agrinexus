@@ -100,13 +100,19 @@ includesAll(workspace, [
 
 const grantedAutoStart = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
 includesAll(grantedAutoStart, [
-  "permission !== \"granted\"",
+  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
+  "runtimePermission === \"browser-managed\"",
+  "permission === \"granted\"",
+  "permission-not-authorized",
   "voiceStopRequested",
   "voiceConversationPaused",
   "voiceSpeaking",
+  "permissions-api-granted",
+  "browser-managed-state-requires-get-user-media-proof",
   "genesis-auto-start-triggered",
   "genesis-home-permission-granted-auto-start"
 ], "granted permission recognition auto-start");
+assert(!grantedAutoStart.includes("granted-or-browser-managed"), "granted permission auto-start must not use legacy display labels for control flow");
 assert(!grantedAutoStart.includes("data-nexus-genesis-home-orb"), "granted permission auto-start must not use the orb");
 
 const bindStatic = between(app, "function bindStatic", "async function boot", "static bindings");
@@ -141,10 +147,10 @@ includesAll(orbCss, [
   "cursor: default !important"
 ], "home orb non-interactive cursor override");
 
-includesAll(index, ["/app.js?v=nexus-behavior-432", "/styles.css?v=nexus-behavior-432"], "index cache");
-includesAll(app, ["nexus-behavior-432", "agrinexus-pwa-v377"], "app cache");
-includesAll(server, ["nexus-behavior-432", "agrinexus-pwa-v377"], "server cache");
-includesAll(sw, ["nexus-behavior-432", "agrinexus-pwa-v377"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-433", "/styles.css?v=nexus-behavior-433"], "index cache");
+includesAll(app, ["nexus-behavior-433", "agrinexus-pwa-v378"], "app cache");
+includesAll(server, ["nexus-behavior-433", "agrinexus-pwa-v378"], "server cache");
+includesAll(sw, ["nexus-behavior-433", "agrinexus-pwa-v378"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",

@@ -76,10 +76,14 @@ includesAll(orbCss, ["pointer-events: none !important", "cursor: default !import
 includesAll(homeOrbCss, ["pointer-events: none", "cursor: default"], "home orb non-interaction CSS");
 
 includesAll(autoStart, [
-  "permission !== \"granted\"",
+  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
+  "runtimePermission === \"browser-managed\"",
+  "permission === \"granted\"",
+  "permission-not-authorized",
   "genesis-auto-start-triggered",
   "genesis-home-permission-granted-auto-start"
 ], "permission-granted recognition auto-start");
+assert(!autoStart.includes("granted-or-browser-managed"), "auto-start must not compare against legacy human-readable permission labels");
 assert(!autoStart.includes("role=\"button\""), "auto-start must not add an orb/button path");
 assert(workspace.includes("maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"), "workspace render should schedule granted-permission auto-start");
 assert(app.includes("voiceDebug=1"), "debug panel must stay gated behind voiceDebug=1");

@@ -136,12 +136,16 @@ includesAll(renderWorkspaceSource, [
 
 const grantedAutoStartSource = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
 includesAll(grantedAutoStartSource, [
+  "normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState())",
+  "runtimePermission === \"browser-managed\"",
+  "permission === \"granted\"",
   "chromeMicrophonePermissionState()",
-  "permission !== \"granted\"",
+  "permission-not-authorized",
   "genesis-auto-start-skipped",
   "genesis-auto-start-triggered",
   "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
 ], "granted permission recognition auto-start");
+assert(!grantedAutoStartSource.includes("granted-or-browser-managed"), "browser voice acceptance must not use legacy display labels for startup control flow");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-browser-voice-acceptance"],
@@ -153,7 +157,7 @@ assert(
   "voice/all-safe suite must include browser voice acceptance QA"
 );
 assert(
-  index.includes("/app.js?v=nexus-behavior-432"),
+  index.includes("/app.js?v=nexus-behavior-433"),
   "index must bump app.js version so browser voice acceptance fixes load in real browser validation"
 );
 
