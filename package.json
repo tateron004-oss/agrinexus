@@ -23,6 +23,7 @@
     "qa:nexus-companion-voice-activation-flow": "node scripts/nexus-companion-voice-activation-flow-qa.js",
     "qa:nexus-genesis-voice-first-conversational-presence": "node scripts/nexus-genesis-voice-first-conversational-presence-qa.js",
     "qa:nexus-genesis-voice-native-front-door": "node scripts/nexus-genesis-voice-native-front-door-qa.js",
+    "qa:nexus-production-audio-pipeline": "node scripts/nexus-production-audio-pipeline-qa.js",
     "qa:nexus-conversation-workflow-transition-engine": "node scripts/nexus-conversation-workflow-transition-engine-qa.js",
     "qa:nexus-conversation-workflow-acceptance": "node scripts/nexus-conversation-workflow-acceptance-qa.js",
     "qa:nexus-genesis-visible-product-acceptance": "node scripts/nexus-genesis-visible-product-acceptance-qa.js",

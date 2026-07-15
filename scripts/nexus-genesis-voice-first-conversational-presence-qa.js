@@ -119,7 +119,7 @@ assert(!troubleshooting.includes("Plan created"), "voice troubleshooting must ne
 includesAll(troubleshooting, [
   "can you hear me",
   "still can t hear you",
-  "Yes, I can hear you through this conversation."
+  "I received this as on-screen text. Microphone recognition is not active right now,"
 ], "voice troubleshooting direct responses");
 assert(!troubleshooting.includes("continue by typing"), "voice troubleshooting must not advertise general typed fallback");
 

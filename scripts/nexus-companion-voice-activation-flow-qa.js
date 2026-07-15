@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
 assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
 assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
 assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
-assert(index.includes("/manifest.webmanifest?v=nexus-behavior-429"), "index should version the manifest link to avoid stale manifest warnings");
+assert(index.includes("/manifest.webmanifest?v=nexus-behavior-430"), "index should version the manifest link to avoid stale manifest warnings");
 assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
 
 includesAll(app, [
@@ -39,7 +39,7 @@ includesAll(app, [
   "function nexusVoiceTroubleshootingState",
   "function nexusVoiceTroubleshootingResponse",
   "function handleNexusVoiceTroubleshootingCommand",
-  "Yes, I can hear you through this conversation. Voice listening is not active right now.",
+  "I received this as on-screen text. Microphone recognition is not active right now,",
   "I can respond on screen, but I cannot speak aloud in this browser right now.",
   "Voice can start from the Talk button.",
   "Microphone permission required",

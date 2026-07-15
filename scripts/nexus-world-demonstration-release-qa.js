@@ -80,7 +80,7 @@ assert(!app.includes("function handleNexusGenesisOrbActivation"), "orb activatio
 
 const voiceTroubleshooting = between(app, "function nexusVoiceTroubleshootingResponse", "function saveNexusDailyCompanionState", "voice status routing");
 includesAll(voiceTroubleshooting, [
-  "Yes, I can hear you through this conversation.",
+  "I received this as on-screen text. Microphone recognition is not active right now,",
   "I received your message. If you cannot hear me",
   "setVoiceResponse(response, false"
 ], "voice status routing");
@@ -104,21 +104,21 @@ const submitRouting = between(app, "function routeNexusCommandCenterCommunicatio
 assert(submitRouting.indexOf("handleNexusVoiceTroubleshootingCommand(command, { source })") < submitRouting.indexOf("advanceNexusOsMissionForCommand(command, { source });"), "voice status commands must run before mission planning");
 
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-429",
-  "/styles.css?v=nexus-behavior-429",
-  "/app.js?v=nexus-behavior-429"
+  "/manifest.webmanifest?v=nexus-behavior-430",
+  "/styles.css?v=nexus-behavior-430",
+  "/app.js?v=nexus-behavior-430"
 ], "index cache bust");
 includesAll(app, [
-  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-429\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v374\";"
+  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-430\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v375\";"
 ], "app cache bust");
 includesAll(sw, [
-  "const CACHE_NAME = \"agrinexus-pwa-v374\";",
-  "const BUILD_VERSION = \"nexus-behavior-429\";"
+  "const CACHE_NAME = \"agrinexus-pwa-v375\";",
+  "const BUILD_VERSION = \"nexus-behavior-430\";"
 ], "service worker cache bust");
 includesAll(server, [
-  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-429\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v374\";"
+  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-430\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v375\";"
 ], "server cache bust");
 
 assert.strictEqual(
