@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v440";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v441";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-440";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v385";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-441";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v386";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -46129,7 +46129,7 @@ function extractGenesisSpeakableResponse(payload = {}, correlationId = "") {
     route: "/api/agent/command",
     sourceFunction: "extractGenesisSpeakableResponse"
   });
-  const contract = payload?.genesisResponse || null;
+  const contract = payload?.nexusResponse || payload?.genesisResponse || null;
   if (!contract || contract.ok !== true || typeof contract.response !== "string") {
     recordGenesisSpokenResponsePipelineEvent("speakable-extraction-empty", {
       correlationId,

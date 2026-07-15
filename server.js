@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-440";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v385";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-441";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v386";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -24274,6 +24274,45 @@ function ensureSpeakableAgentResult(result = {}, fallbackIntent = "conversation.
   return normalized;
 }
 
+const NEXUS_RESPONSE_CONTRACT_VERSION = "nexus-response-envelope.v1";
+const NEXUS_REQUEST_LIFECYCLE_VERSION = "nexus-request-lifecycle.v1";
+const NEXUS_FAILURE_CATEGORIES = Object.freeze([
+  "input-not-received",
+  "intent-unresolved",
+  "capability-unavailable",
+  "missing-information",
+  "route-not-found",
+  "invalid-response-contract",
+  "empty-response",
+  "provider-not-configured",
+  "provider-authentication",
+  "provider-rate-limited",
+  "provider-timeout",
+  "provider-unavailable",
+  "provider-invalid-response",
+  "workflow-not-required",
+  "confirmation-required",
+  "execution-not-authorized",
+  "execution-failed",
+  "execution-unverified",
+  "client-parse-failed",
+  "output-sanitization-empty",
+  "tts-failed",
+  "playback-rejected",
+  "state-lost",
+  "stale-build",
+  "internal-error"
+]);
+
+const NEXUS_FINAL_STATUSES = Object.freeze([
+  "completed",
+  "awaiting-information",
+  "awaiting-confirmation",
+  "blocked",
+  "unavailable",
+  "failed-truthfully"
+]);
+
 function genesisVoiceCorrelationId(value = "") {
   const supplied = String(value || "").trim();
   if (/^gv-[a-z0-9-]{8,80}$/i.test(supplied)) return supplied;
@@ -24309,25 +24348,149 @@ function safeGenesisVoiceStageEvent(db, event = {}) {
   return safe;
 }
 
-function normalizeGenesisCommandResponse(result = {}, options = {}) {
+function classifyNexusCapability(intent = "", command = "", metadata = {}) {
+  const signal = `${intent || ""} ${command || ""} ${metadata.redirectSection || ""} ${metadata.workflowType || ""}`.toLowerCase();
+  if (/weather|climate|rain|temperature|forecast/.test(signal)) return "weather";
+  if (/map|route|transport|logistics|field.visit|clinic.route/.test(signal)) return "maps-routing";
+  if (/crop|farm|agri|agriculture|livestock|soil|irrigation|pest|food.security/.test(signal)) return "agriculture";
+  if (/market|trade|buyer|seller|vendor|price/.test(signal)) return "marketplace-trade";
+  if (/work|job|career|employer|workforce/.test(signal)) return "workforce";
+  if (/learn|training|course|literacy|education/.test(signal)) return "learning-training";
+  if (/health|care|clinic|telehealth|chronic|diabetes|hypertension|obesity|rpm|rtm|pharmacy|medicine|provider/.test(signal)) return "health-care-preparation";
+  if (/message|sms|whatsapp|telegram|email|call|communication/.test(signal)) return "communications";
+  if (/drone|field.operation/.test(signal)) return "field-drone-operations";
+  if (/receipt|history|audit/.test(signal)) return "receipts-history";
+  if (/language|spanish|french|swahili|arabic|portuguese|translate/.test(signal)) return "multilingual";
+  if (/offline|low.bandwidth|queue/.test(signal)) return "offline-low-bandwidth";
+  if (/workflow|mission|plan|intake/.test(signal)) return "workflow";
+  return /^conversation\./.test(intent) ? "conversation" : "general-assistant";
+}
+
+function nexusFinalStatusFromResult(result = {}, response = "") {
+  const status = String(result.status || "").toLowerCase();
+  if (/needs|missing|location|required|input|question/.test(status)) return "awaiting-information";
+  if (/confirm|approval|pending/.test(status)) return "awaiting-confirmation";
+  if (/blocked|not-authorized|denied|guard/.test(status)) return "blocked";
+  if (/unavailable|not-configured|needs-provider|provider/.test(status)) return "unavailable";
+  if (/fail|error|retry/.test(status) || !response) return "failed-truthfully";
+  return "completed";
+}
+
+function nexusFailureCategoryFromResult(result = {}, finalStatus = "completed") {
+  const status = String(result.status || "").toLowerCase();
+  const metadata = result.metadata || {};
+  if (finalStatus === "completed") return null;
+  if (/needs|missing|location|required|input|question/.test(status)) return "missing-information";
+  if (/confirm|approval|pending/.test(status)) return "confirmation-required";
+  if (metadata.noExecutionAuthorized === true || /not-authorized|denied/.test(status)) return "execution-not-authorized";
+  if (/not-configured|needs-provider|provider/.test(status)) return "provider-not-configured";
+  if (/timeout/.test(status)) return "provider-timeout";
+  if (/invalid/.test(status)) return "provider-invalid-response";
+  if (/unavailable/.test(status)) return "provider-unavailable";
+  if (/fail|error|retry/.test(status)) return "internal-error";
+  return finalStatus === "failed-truthfully" ? "empty-response" : "capability-unavailable";
+}
+
+function normalizeNexusResponseEnvelope(result = {}, options = {}) {
   const safeResult = ensureSpeakableAgentResult(result, options.fallbackIntent || "conversation.no_silence_guard");
   const responseFieldSelected = safeResult.metadata?.responseFieldSelected
     || (safeResult.response ? "response" : safeResult.message ? "message" : safeResult.answer ? "answer" : safeResult.summary ? "summary" : "final-no-silence-guard");
   const response = sanitizeNexusSpokenResponseText(safeResult.response);
+  const finalResponse = response || "I heard you, but I couldn't complete that response. Please try again.";
+  const capability = classifyNexusCapability(safeResult.intent || "", options.command || "", safeResult.metadata || {});
+  const status = nexusFinalStatusFromResult(safeResult, finalResponse);
+  const blockedReason = nexusFailureCategoryFromResult(safeResult, status);
+  const providerAttempted = Boolean(
+    safeResult.metadata?.providerAttempted
+    || safeResult.metadata?.weather?.liveAttempted
+    || safeResult.metadata?.sourceResult?.providerAttempted
+    || safeResult.metadata?.frontierCommunication?.providerAttempted
+  );
+  const providerSucceeded = Boolean(
+    safeResult.metadata?.providerSucceeded
+    || safeResult.metadata?.weather?.sourceStatus === "source-result-available"
+    || safeResult.metadata?.sourceResult?.sourceStatus === "source-result-available"
+  );
+  const workflowSelected = Boolean(safeResult.metadata?.workflowType || safeResult.metadata?.redirectSection || safeResult.metadata?.voiceMission);
+  const executionAttempted = Boolean(safeResult.metadata?.executionAttempted || safeResult.metadata?.dispatchAttempted);
+  const executionVerified = Boolean(safeResult.metadata?.executionVerified || safeResult.metadata?.dispatchVerified);
   return {
+    contractVersion: NEXUS_RESPONSE_CONTRACT_VERSION,
+    lifecycleVersion: NEXUS_REQUEST_LIFECYCLE_VERSION,
     ok: true,
     correlationId: genesisVoiceCorrelationId(options.correlationId),
     intent: safeResult.intent || options.fallbackIntent || "conversation.no_silence_guard",
+    capability,
     route: options.route || "/api/agent/command",
-    response: response || "I heard you, but I couldn't complete that response. Please try again.",
+    status,
+    response: finalResponse,
     speak: true,
+    requiresFollowUp: status === "awaiting-information",
+    missingInformation: status === "awaiting-information"
+      ? [safeResult.metadata?.missingInformation || safeResult.metadata?.weather?.locationRequired ? "requested follow-up information" : "clarification"].flat().filter(Boolean)
+      : [],
+    blockedReason,
+    provider: {
+      attempted: providerAttempted,
+      succeeded: providerSucceeded,
+      category: capability
+    },
+    workflow: {
+      selected: workflowSelected,
+      required: Boolean(safeResult.metadata?.workflowRequired),
+      opened: safeResult.metadata?.workflowOpened === true,
+      type: safeResult.metadata?.workflowType || safeResult.metadata?.redirectSection || ""
+    },
+    execution: {
+      attempted: executionAttempted,
+      verified: executionVerified,
+      authorized: safeResult.metadata?.executionAuthorized === true
+    },
     diagnostics: {
       responseFieldSelected,
       responseLength: String(safeResult.response || "").length,
       sanitizedLength: response.length,
-      status: safeResult.status || "completed"
+      status: safeResult.status || "completed",
+      failureCategory: blockedReason,
+      finalStatus: status
     }
   };
+}
+
+function normalizeGenesisCommandResponse(result = {}, options = {}) {
+  const envelope = normalizeNexusResponseEnvelope(result, options);
+  return {
+    ok: envelope.ok,
+    correlationId: envelope.correlationId,
+    intent: envelope.intent,
+    route: envelope.route,
+    response: envelope.response,
+    speak: envelope.speak,
+    diagnostics: envelope.diagnostics
+  };
+}
+
+function updateNexusSessionContext(db, command = "", envelope = {}) {
+  ensureAiProfile(db.profile);
+  const context = {
+    lastFinalUserRequest: String(command || "").trim().slice(0, 500),
+    lastSelectedIntent: envelope.intent || "unknown",
+    lastCapability: envelope.capability || "general-assistant",
+    lastCompleteAssistantResponse: envelope.response || "",
+    lastSpokenResponse: sanitizeNexusSpokenResponseText(envelope.response || ""),
+    pendingFollowUpIntent: envelope.requiresFollowUp ? envelope.intent || "" : "",
+    missingInformation: Array.isArray(envelope.missingInformation) ? envelope.missingInformation.slice(0, 8) : [],
+    sessionProvidedLocation: envelope.capability === "weather" && !envelope.requiresFollowUp ? envelope.missingInformation?.[0] || "" : "",
+    activeWorkflowReference: envelope.workflow?.selected ? envelope.workflow?.type || envelope.capability : "",
+    recentTopicContext: `${envelope.capability || "general"}:${envelope.intent || "unknown"}`.slice(0, 180),
+    contractVersion: NEXUS_RESPONSE_CONTRACT_VERSION,
+    lifecycleVersion: NEXUS_REQUEST_LIFECYCLE_VERSION,
+    updatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(),
+    privacyBoundary: "session-only"
+  };
+  db.profile.agentMemory.nexusSessionContext = context;
+  return context;
 }
 
 function genesisCapabilityResponse() {
@@ -44661,31 +44824,38 @@ async function api(req, res, url) {
       responseLength: String(result?.response || result?.message || result?.answer || result?.summary || "").length,
       sourceFunction: "runCompanionSafeAgentCommand"
     });
+    const nexusResponse = normalizeNexusResponseEnvelope(result, {
+      correlationId,
+      route: "/api/agent/command",
+      command: body.command || body.text || ""
+    });
     const genesisResponse = normalizeGenesisCommandResponse(result, {
       correlationId,
-      route: "/api/agent/command"
+      route: "/api/agent/command",
+      command: body.command || body.text || ""
     });
+    updateNexusSessionContext(db, body.command || body.text || "", nexusResponse);
     safeGenesisVoiceStageEvent(db, {
       correlationId,
       stage: "response-normalized",
-      success: Boolean(genesisResponse.response),
+      success: Boolean(nexusResponse.response),
       route: "/api/agent/command",
-      intent: genesisResponse.intent,
-      responseFieldSelected: genesisResponse.diagnostics.responseFieldSelected,
-      responseLength: genesisResponse.diagnostics.responseLength,
-      sanitizedLength: genesisResponse.diagnostics.sanitizedLength,
-      sourceFunction: "normalizeGenesisCommandResponse"
+      intent: nexusResponse.intent,
+      responseFieldSelected: nexusResponse.diagnostics.responseFieldSelected,
+      responseLength: nexusResponse.diagnostics.responseLength,
+      sanitizedLength: nexusResponse.diagnostics.sanitizedLength,
+      sourceFunction: "normalizeNexusResponseEnvelope"
     });
     safeGenesisVoiceStageEvent(db, {
       correlationId,
       stage: "command-route-returned",
       success: true,
       route: "/api/agent/command",
-      intent: genesisResponse.intent,
+      intent: nexusResponse.intent,
       httpStatus: 200,
-      responseFieldSelected: genesisResponse.diagnostics.responseFieldSelected,
-      responseLength: genesisResponse.diagnostics.responseLength,
-      sanitizedLength: genesisResponse.diagnostics.sanitizedLength,
+      responseFieldSelected: nexusResponse.diagnostics.responseFieldSelected,
+      responseLength: nexusResponse.diagnostics.responseLength,
+      sanitizedLength: nexusResponse.diagnostics.sanitizedLength,
       elapsedTimeMs: Date.now() - routeStartedAt,
       sourceFunction: "api.agent.command"
     });
@@ -44694,6 +44864,7 @@ async function api(req, res, url) {
     state.commandResult = result;
     state.companionUnderstanding = companionUnderstanding;
     state.companionRouteOutcome = companionRouteOutcome;
+    state.nexusResponse = nexusResponse;
     state.genesisResponse = genesisResponse;
     return send(res, 200, state);
   }

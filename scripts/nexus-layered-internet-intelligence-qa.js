@@ -161,15 +161,15 @@ includes(app, "No citations are shown because live retrieval is not configured",
 ].forEach(token => includes(css, token, `layered css ${token}`));
 
 [
-  "nexus-behavior-440",
-  "agrinexus-pwa-v385"
+  "nexus-behavior-441",
+  "agrinexus-pwa-v386"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
-includes(index, "/styles.css?v=nexus-behavior-440", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-440", "app cache bust");
+includes(index, "/styles.css?v=nexus-behavior-441", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-441", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-layered-internet-intelligence"],
