@@ -64,10 +64,10 @@ assert(app.includes("I will not claim I can hear audio until recognition starts.
 assert(app.includes("Microphone permission may be available, but recognition is not actively listening now."), "permission-granted recognition failure must be truthful");
 assert(app.includes("Genesis keeps the home screen audio-first"), "voice fallback copy must keep Genesis home audio-first");
 
-assert(app.includes("nexus-behavior-430"), "app build identifier must be bumped");
-assert(server.includes("nexus-behavior-430"), "server build identifier must be bumped");
-assert(app.includes("agrinexus-pwa-v375"), "app PWA cache identifier must be bumped");
-assert(server.includes("agrinexus-pwa-v375"), "server PWA cache identifier must be bumped");
+assert(app.includes("nexus-behavior-431"), "app build identifier must be bumped");
+assert(server.includes("nexus-behavior-431"), "server build identifier must be bumped");
+assert(app.includes("agrinexus-pwa-v376"), "app PWA cache identifier must be bumped");
+assert(server.includes("agrinexus-pwa-v376"), "server PWA cache identifier must be bumped");
 
 const orbStyleBlock = app.match(/\[data-nexus-os-core-orb\]\s*\{[\s\S]*?\}/)?.[0] || "";
 assert(orbStyleBlock.includes("pointer-events: none"), "Genesis orb must remain pointer-events none");

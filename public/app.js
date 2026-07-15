@@ -1225,8 +1225,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-430";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v375";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-431";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v376";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -32181,26 +32181,127 @@ function renderNexusVoiceFirstPresenceControls() {
   `;
 }
 
+function nexusGenesisVoiceDebugEnabled() {
+  return /(?:[?&])voiceDebug=1(?:&|$)/i.test(window.location.search || "");
+}
+
+function nexusGenesisTruthfulVoiceState() {
+  const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
+  const state = nexusOsVoiceRuntimeState || {};
+  const permissionState = state.permissionState || "unknown";
+  const recognitionSupported = Boolean(profile.supported && profile.secureEnough !== false);
+  const activeTrack = Boolean(state.microphoneStreamActive && state.microphoneTrackState !== "stopped");
+  const constructed = Boolean(state.recognitionConstructed);
+  const startRequested = Boolean(state.recognitionStartRequested);
+  const onstart = Boolean(state.recognitionOnStartReceived);
+  const audioStart = Boolean(state.recognitionAudioStartReceived);
+  const soundStart = Boolean(state.recognitionSoundStartReceived);
+  const speechStart = Boolean(state.recognitionSpeechStartReceived);
+  const resultReceived = Boolean(state.recognitionResultReceived);
+  const finalTranscript = Boolean(state.recognitionFinalTranscriptReceived);
+  const commandRequest = Boolean(state.commandRequestStarted);
+  const commandResponse = Boolean(state.commandResponseReceived);
+  const utteranceRequested = Boolean(state.utteranceRequested);
+  const utteranceOnStart = Boolean(state.utteranceOnStartReceived);
+  const utteranceOnEnd = Boolean(state.utteranceOnEndReceived);
+  const utteranceError = state.utteranceError || state.speechErrorCode || "";
+  const errorState = Boolean(state.lastError || state.lastRuntimeError || state.utteranceError || state.mode === "recognition-interrupted" || state.mode === "caption-fallback");
+  let statusText = "Microphone permission is required before Nexus can hear.";
+  if (!recognitionSupported) statusText = "Nexus cannot start speech recognition in this browser.";
+  else if (permissionState === "denied" || nexusVoicePermissionDeniedThisSession) statusText = "Microphone permission is blocked.";
+  else if (errorState && state.mode === "caption-fallback") statusText = "Nexus generated a response, but audio playback did not start.";
+  else if (errorState) statusText = "Nexus could not start voice recognition.";
+  else if (utteranceOnStart && !utteranceOnEnd) statusText = "Nexus is speaking.";
+  else if (commandResponse) statusText = "Nexus generated a response.";
+  else if (commandRequest) statusText = "Nexus is processing your request.";
+  else if (finalTranscript) statusText = "Nexus received your transcript.";
+  else if (resultReceived) statusText = "Nexus received speech results.";
+  else if (speechStart) statusText = "Nexus detected speech.";
+  else if (soundStart || audioStart) statusText = "Nexus detected microphone audio.";
+  else if (onstart) statusText = "Nexus is listening.";
+  else if (startRequested) statusText = "Microphone permission granted. Speech recognition has not started.";
+  else if (constructed) statusText = "Microphone permission granted. Speech recognition has not started.";
+  else if (activeTrack || permissionState === "granted-or-browser-managed") statusText = "Microphone permission granted. Speech recognition has not started.";
+  return {
+    profile,
+    permissionState,
+    recognitionSupported,
+    activeTrack,
+    constructed,
+    startRequested,
+    onstart,
+    audioStart,
+    soundStart,
+    speechStart,
+    resultReceived,
+    finalTranscript,
+    commandRequest,
+    commandResponse,
+    utteranceRequested,
+    utteranceOnStart,
+    utteranceOnEnd,
+    utteranceError,
+    voiceCount: typeof speechSynthesis !== "undefined" && speechSynthesis.getVoices ? speechSynthesis.getVoices().length : 0,
+    statusText
+  };
+}
+
+function renderNexusGenesisVoiceDebugPanel(truth = nexusGenesisTruthfulVoiceState()) {
+  if (!nexusGenesisVoiceDebugEnabled()) return "";
+  const state = nexusOsVoiceRuntimeState || {};
+  const rows = [
+    ["deployed build", AGRINEXUS_BUILD_VERSION],
+    ["PWA cache", AGRINEXUS_PWA_CACHE_VERSION],
+    ["microphone permission", truth.permissionState],
+    ["media track state", state.microphoneTrackState || "none"],
+    ["recognition support", truth.recognitionSupported ? "supported" : "unsupported"],
+    ["recognition constructed", truth.constructed ? "yes" : "no"],
+    ["recognition start requested", truth.startRequested ? "yes" : "no"],
+    ["onstart received", truth.onstart ? "yes" : "no"],
+    ["audio start", truth.audioStart ? "yes" : "no"],
+    ["sound start", truth.soundStart ? "yes" : "no"],
+    ["speech start", truth.speechStart ? "yes" : "no"],
+    ["result received", truth.resultReceived ? "yes" : "no"],
+    ["final transcript received", truth.finalTranscript ? "yes" : "no"],
+    ["command request started", truth.commandRequest ? "yes" : "no"],
+    ["command response status", state.commandResponseStatus || "none"],
+    ["response text available", truth.commandResponse ? "yes" : "no"],
+    ["synthesis supported", state.synthesisSupported ? "yes" : "no"],
+    ["voice count", String(truth.voiceCount)],
+    ["utterance requested", truth.utteranceRequested ? "yes" : "no"],
+    ["utterance onstart", truth.utteranceOnStart ? "yes" : "no"],
+    ["utterance onend", truth.utteranceOnEnd ? "yes" : "no"],
+    ["utterance error", truth.utteranceError || "none"],
+    ["last runtime error", state.lastRuntimeError || state.lastError || "none"],
+    ["current truthful Nexus state", truth.statusText]
+  ];
+  return `
+    <details class="nexus-genesis-voice-debug" data-nexus-genesis-voice-debug="true" open>
+      <summary>${escapeHtml(translateText("Voice diagnostics"))}</summary>
+      <dl>
+        ${rows.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(String(value || "none"))}</dd>
+          </div>
+        `).join("")}
+      </dl>
+    </details>
+  `;
+}
+
 function renderNexusGenesisHomeVoiceGate() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
+  const truthful = nexusGenesisTruthfulVoiceState();
   const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
-  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
   const denied = permissionState === "denied" || nexusVoicePermissionDeniedThisSession;
   const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
-  const showPermissionControl = voiceReady && !recognitionActive && !denied && permissionState !== "granted-or-browser-managed";
-  const statusText = recognitionActive
-    ? "Nexus is listening."
-    : denied
-      ? "Microphone permission is blocked."
-      : voiceReady
-        ? permissionState === "granted-or-browser-managed"
-          ? "Nexus is ready for voice."
-          : "Microphone permission is required before Nexus can hear."
-        : "Speech recognition is not available in this browser.";
+  const showPermissionControl = voiceReady && !denied && permissionState !== "granted-or-browser-managed" && !truthful.startRequested && !truthful.onstart;
+  const statusText = truthful.statusText;
   const guidance = denied
     ? "Use the browser site settings to allow microphone access, then reload."
     : voiceReady
-      ? "The browser requires a separate permission control. The orb is only Nexus's visual presence."
+      ? "The orb is only Nexus's visual presence. Voice state below is read-only and changes only after real browser events."
       : "Open Nexus in a browser with speech recognition support to use the voice-native front door.";
   return `
     <div class="nexus-genesis-audio-gate" data-nexus-genesis-audio-gate="true" data-microphone-permission="${escapeHtml(permissionState)}" data-recognition-supported="${voiceReady ? "true" : "false"}">
@@ -32211,14 +32312,8 @@ function renderNexusGenesisHomeVoiceGate() {
           ${escapeHtml(translateText("Allow microphone"))}
         </button>
       ` : ""}
-      ${recognitionActive || permissionState === "granted-or-browser-managed" ? `
-        <div class="nexus-genesis-audio-controls" aria-label="${escapeHtml(translateText("Nexus voice safety controls"))}">
-          <button type="button" data-nexus-os-voice-control="stop-listening">${escapeHtml(translateText("Stop listening"))}</button>
-          <button type="button" data-nexus-os-voice-control="stop-speaking">${escapeHtml(translateText("Stop speaking"))}</button>
-          <button type="button" data-nexus-os-voice-control="${nexusOsConversationMuted ? "unmute" : "mute"}">${escapeHtml(translateText(nexusOsConversationMuted ? "Unmute" : "Mute"))}</button>
-          <button type="button" data-nexus-os-voice-control="repeat-response">${escapeHtml(translateText("Repeat"))}</button>
-        </div>
-      ` : ""}
+      ${lastVoiceResponse ? `<p class="nexus-genesis-last-caption" data-nexus-genesis-last-caption="true">${escapeHtml(lastVoiceResponse)}</p>` : ""}
+      ${renderNexusGenesisVoiceDebugPanel(truthful)}
     </div>
   `;
 }
@@ -37306,6 +37401,47 @@ function ensureNexusOsVisualBoundaryStyles() {
     .nexus-genesis-audio-gate small {
       color: rgba(203, 213, 225, 0.84);
       max-width: 44ch;
+    }
+    .nexus-genesis-last-caption {
+      max-width: 52ch;
+      margin: 0;
+      color: rgba(226, 232, 240, 0.92);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .nexus-genesis-voice-debug {
+      width: min(520px, calc(100vw - 48px));
+      max-height: 42vh;
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.76);
+      color: rgba(226, 232, 240, 0.92);
+      text-align: left;
+    }
+    .nexus-genesis-voice-debug summary {
+      cursor: pointer;
+      font-weight: 800;
+      color: rgba(125, 211, 252, 0.96);
+    }
+    .nexus-genesis-voice-debug dl {
+      display: grid;
+      gap: 6px;
+      margin: 10px 0 0;
+    }
+    .nexus-genesis-voice-debug div {
+      display: grid;
+      grid-template-columns: minmax(140px, 0.9fr) 1.2fr;
+      gap: 10px;
+    }
+    .nexus-genesis-voice-debug dt {
+      color: rgba(203, 213, 225, 0.82);
+    }
+    .nexus-genesis-voice-debug dd {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.96);
+      overflow-wrap: anywhere;
     }
     .nexus-genesis-mic-permission,
     .nexus-genesis-audio-controls button {
@@ -48347,8 +48483,33 @@ function recordNexusAudioPipelineEvent(stage, details = {}) {
   while (nexusVoiceAudioPipelineEvents.length > NEXUS_AUDIO_PIPELINE_EVENT_LIMIT) {
     nexusVoiceAudioPipelineEvents.shift();
   }
+  const stageStatePatch = {
+    "media-stream-request": { microphonePermissionRequested: true },
+    "media-stream-granted": { microphoneTrackState: "live", microphoneStreamActive: true, permissionState: "granted-or-browser-managed" },
+    "media-stream-stopped": { microphoneStreamActive: false, microphoneTrackState: "stopped" },
+    "recognition-constructing": { recognitionConstructed: true, recognitionStartRequested: false, recognitionOnStartReceived: false },
+    "recognition-start-call": { recognitionStartRequested: true, recognitionOnStartReceived: false },
+    "recognition-onstart": { recognitionOnStartReceived: true, listeningState: "active", hearingState: "waiting", mode: "listening" },
+    "recognition-audiostart": { recognitionAudioStartReceived: true, hearingState: "audio-started" },
+    "recognition-soundstart": { recognitionSoundStartReceived: true, hearingState: "sound-detected" },
+    "recognition-speechstart": { recognitionSpeechStartReceived: true, hearingState: "speech-detected" },
+    "recognition-result-event": { recognitionResultReceived: true },
+    "recognition-final-transcript": { recognitionFinalTranscriptReceived: true, listeningState: "processing", mode: "processing" },
+    "recognition-error": { listeningState: "error", mode: "recognition-interrupted" },
+    "recognition-start-exception": { listeningState: "failed", mode: "recognition-interrupted" },
+    "agent-command-request": { commandRequestStarted: true, commandSubmitted: true, mode: "processing" },
+    "agent-command-response": { commandResponseReceived: true, commandResponseStatus: safeDetails.status || "ok", responseTextAvailable: true },
+    "agent-command-error": { commandResponseStatus: "error", lastRuntimeError: safeDetails.error || "agent-command-error" },
+    "speech-synthesis-request": { utteranceRequested: true, utteranceOnStartReceived: false },
+    "speech-synthesis-onstart": { utteranceOnStartReceived: true, assistantSpeaking: true, mode: "speaking" },
+    "speech-synthesis-onend": { utteranceOnEndReceived: true, assistantSpeaking: false },
+    "speech-synthesis-error": { utteranceError: safeDetails.error || "speech-synthesis-error", assistantSpeaking: false, mode: "caption-fallback" },
+    "speech-synthesis-start-unconfirmed": { utteranceError: "speech-start-unconfirmed", assistantSpeaking: false, mode: "caption-fallback" },
+    "speech-synthesis-start-failed": { utteranceError: safeDetails.error || "speech-start-failed", assistantSpeaking: false, mode: "caption-fallback" }
+  }[stage] || {};
   try {
     updateNexusOsVoiceRuntimeState({
+      ...stageStatePatch,
       audioPipelineStage: stage,
       audioPipelineLastEventAt: event.at,
       audioPipelineEventCount: nexusVoiceAudioPipelineEvents.length,
