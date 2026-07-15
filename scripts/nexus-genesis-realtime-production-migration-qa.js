@@ -168,9 +168,9 @@ const scenarios = [
 ];
 
 const requirements = [
-  ["Build markers bumped", server.includes("nexus-behavior-442") && app.includes("nexus-behavior-442") && sw.includes("nexus-behavior-442") && index.includes("nexus-behavior-442")],
-  ["PWA markers bumped", server.includes("agrinexus-pwa-v387") && app.includes("agrinexus-pwa-v387") && sw.includes("agrinexus-pwa-v387")],
-  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v442")],
+  ["Build markers bumped", server.includes("nexus-behavior-443") && app.includes("nexus-behavior-443") && sw.includes("nexus-behavior-443") && index.includes("nexus-behavior-443")],
+  ["PWA markers bumped", server.includes("agrinexus-pwa-v388") && app.includes("agrinexus-pwa-v388") && sw.includes("agrinexus-pwa-v388")],
+  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v443")],
   ["Realtime runtime version exists", server.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION") && app.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION")],
   ["Server runtime values", server.includes("NEXUS_GENESIS_VOICE_RUNTIME_VALUES") && server.includes("realtime") && server.includes("legacy") && server.includes("disabled")],
   ["Fallback policy values", server.includes("NEXUS_GENESIS_REALTIME_FALLBACK_VALUES") && server.includes("canonicalGenesisRealtimeFallback")],

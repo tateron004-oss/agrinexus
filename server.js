@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-442";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v387";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-443";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v388";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
@@ -16147,7 +16147,9 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
           type: "server_vad",
           threshold: 0.5,
           prefix_padding_ms: 300,
-          silence_duration_ms: 650
+          silence_duration_ms: 650,
+          create_response: true,
+          interrupt_response: true
         }
       },
       output: {

@@ -752,6 +752,19 @@ let realtimeVoiceStarting = false;
 let realtimeVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
+const NEXUS_REALTIME_CONTROLLER_STATES = Object.freeze([
+  "initializing",
+  "connecting",
+  "ready",
+  "listening",
+  "user-speaking",
+  "processing",
+  "responding",
+  "interrupted",
+  "reconnecting",
+  "blocked",
+  "closed"
+]);
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
 let activeVoiceRequestController = null;
@@ -825,7 +838,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v442";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v443";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1290,8 +1303,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-442";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v387";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-443";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v388";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48472,6 +48485,75 @@ function realtimeVoiceStatusMessage() {
   return "Nexus realtime voice can start when selected and configured by the server.";
 }
 
+function realtimeControllerSnapshot(extra = {}) {
+  const session = realtimeVoiceSession || {};
+  const track = session.stream?.getAudioTracks?.()[0] || null;
+  return {
+    sessionId: session.sessionId || "",
+    turnId: session.turnId || "",
+    controllerState: session.controllerState || "closed",
+    peerConnectionState: session.peerConnection?.connectionState || "",
+    iceConnectionState: session.peerConnection?.iceConnectionState || "",
+    signalingState: session.peerConnection?.signalingState || "",
+    dataChannelState: session.dataChannel?.readyState || "",
+    microphoneTrackState: track?.readyState || "none",
+    microphoneTrackEnabled: track ? Boolean(track.enabled) : false,
+    activeResponseId: session.activeResponseId || "",
+    responseInProgress: Boolean(session.responseInProgress),
+    elapsedMs: session.startedAt ? Date.now() - session.startedAt : 0,
+    ...extra
+  };
+}
+
+function updateRealtimeControllerState(state, eventType, extra = {}) {
+  if (!NEXUS_REALTIME_CONTROLLER_STATES.includes(state)) return;
+  if (realtimeVoiceSession) realtimeVoiceSession.controllerState = state;
+  nexusGenesisVoiceDebugLog(eventType, realtimeControllerSnapshot({
+    eventType,
+    state,
+    ...extra
+  }));
+}
+
+function nextRealtimeTurnId() {
+  if (!realtimeVoiceSession) return "";
+  realtimeVoiceSession.turnIndex = Number(realtimeVoiceSession.turnIndex || 0) + 1;
+  realtimeVoiceSession.turnId = `${realtimeVoiceSession.sessionId || "rt"}-turn-${String(realtimeVoiceSession.turnIndex).padStart(2, "0")}`;
+  return realtimeVoiceSession.turnId;
+}
+
+function markRealtimeResponseStarted(payload = {}, sourceEvent = "response-created") {
+  if (!realtimeVoiceSession) return;
+  const responseId = payload.response?.id || payload.response_id || payload.item_id || realtimeVoiceSession.activeResponseId || `${realtimeVoiceSession.turnId || "turn"}-response`;
+  realtimeVoiceSession.activeResponseId = responseId;
+  realtimeVoiceSession.responseInProgress = true;
+  realtimeVoiceSession.cancelInProgress = false;
+  updateRealtimeControllerState("responding", sourceEvent, { activeResponseId: responseId });
+}
+
+function markRealtimeResponseCompleted(sourceEvent = "response-completed") {
+  if (!realtimeVoiceSession) return;
+  realtimeVoiceSession.responseInProgress = false;
+  realtimeVoiceSession.activeResponseId = "";
+  realtimeVoiceSession.cancelInProgress = false;
+  updateRealtimeControllerState("listening", sourceEvent, { readyForNextInput: true });
+  updateRealtimeControllerState("listening", "turn-ready-for-next-input", { readyForNextInput: true });
+}
+
+function scheduleRealtimeRecovery(reason = "connection-state") {
+  const session = realtimeVoiceSession;
+  if (!session?.active || session.reconnectAttempted) return;
+  session.reconnectAttempted = true;
+  updateRealtimeControllerState("reconnecting", "bounded-recovery-scheduled", { reason });
+  window.setTimeout(() => {
+    if (realtimeVoiceSession !== session) return;
+    const state = session.peerConnection?.connectionState || "";
+    if (state !== "failed" && state !== "disconnected") return;
+    stopRealtimeVoiceSession("Realtime voice connection recovered by restarting the failed session.");
+    startRealtimeVoiceSession();
+  }, 1200);
+}
+
 async function loadRealtimeVoiceStatus(options = {}) {
   if (!options.force && realtimeVoiceStatusCache && Date.now() - (realtimeVoiceStatusCache.checkedAt || 0) < 60000) {
     return realtimeVoiceStatusCache;
@@ -48506,8 +48588,17 @@ function handleRealtimeVoiceEvent(event) {
   }
   if (type === "session.created" || type === "session.updated") {
     updateNexusBehaviorLayer("realtime-ready", "Nexus is ready.");
+    updateRealtimeControllerState("listening", "session-configured", { realtimeEventType: type });
+  }
+  if (type === "response.created") {
+    markRealtimeResponseStarted(payload, "response-created");
   }
   if (type === "response.audio.delta" || type === "response.output_audio.delta") {
+    if (!realtimeVoiceSession?.responseInProgress) {
+      markRealtimeResponseStarted(payload, "response-audio-started");
+    } else {
+      updateRealtimeControllerState("responding", "response-audio-started", { realtimeEventType: type });
+    }
     updateNexusVoiceSession({ state: "realtime-speaking", assistantSpeaking: true }, "openai-realtime-audio-delta");
   }
   if (type === "response.done" || type === "response.audio.done") {
@@ -48517,19 +48608,48 @@ function handleRealtimeVoiceEvent(event) {
       userSpeaking: false,
       lastAssistantSpeechAt: Date.now()
     }, "openai-realtime-response-done");
+    markRealtimeResponseCompleted(type === "response.done" ? "response-completed" : "output-audio-finished");
   }
   if (type === "input_audio_buffer.speech_started") {
+    const turnId = nextRealtimeTurnId();
     markNexusUserSpeech("Realtime voice detected speech.", "openai-realtime");
-    if (realtimeVoiceSession?.dataChannel?.readyState === "open") {
+    const isSecondTurn = Number(realtimeVoiceSession?.turnIndex || 0) >= 2;
+    updateRealtimeControllerState("user-speaking", isSecondTurn ? "second-user-speech-detected" : "user-speech-started", { turnId });
+    const shouldCancelActiveResponse = Boolean(realtimeVoiceSession?.responseInProgress || realtimeVoiceSession?.activeResponseId);
+    if (shouldCancelActiveResponse && realtimeVoiceSession?.dataChannel?.readyState === "open") {
       try {
+        realtimeVoiceSession.cancelInProgress = true;
+        updateRealtimeControllerState("interrupted", "response-cancel-requested", { guard: "active-response" });
         realtimeVoiceSession.dataChannel.send(JSON.stringify({ type: "response.cancel" }));
       } catch {
         // Barge-in cancellation is best effort.
       }
+    } else {
+      updateRealtimeControllerState("user-speaking", "response-cancel-skipped", { guard: "no-active-response-to-cancel" });
     }
   }
   if (type === "input_audio_buffer.speech_stopped") {
     updateNexusVoiceSession({ userSpeaking: false }, "openai-realtime-speech-stopped");
+    updateRealtimeControllerState("processing", "user-speech-stopped");
+  }
+  if (type === "input_audio_buffer.committed") {
+    updateRealtimeControllerState("processing", "input-audio-committed");
+  }
+  if (type === "response.cancelled" || type === "response.canceled") {
+    if (realtimeVoiceSession) {
+      realtimeVoiceSession.responseInProgress = false;
+      realtimeVoiceSession.activeResponseId = "";
+      realtimeVoiceSession.cancelInProgress = false;
+    }
+    updateRealtimeControllerState("listening", "response-cancel-cleared", { readyForNextInput: true });
+  }
+  if (type === "error") {
+    const errorType = payload.error?.type || payload.error?.code || "realtime-error";
+    if (/cancel/i.test(errorType) && realtimeVoiceSession) {
+      realtimeVoiceSession.cancelInProgress = false;
+      if (!realtimeVoiceSession.responseInProgress) realtimeVoiceSession.activeResponseId = "";
+    }
+    updateRealtimeControllerState("listening", "realtime-error", { errorType });
   }
   if (type === "response.function_call_arguments.delta") {
     const callId = payload.call_id || payload.item_id || payload.output_index || "pending";
@@ -48556,13 +48676,32 @@ function handleRealtimeVoiceEvent(event) {
 
 function sendRealtimeDataChannelEvent(event) {
   const channel = realtimeVoiceSession?.dataChannel;
-  if (!channel || channel.readyState !== "open") return false;
+  if (!channel || channel.readyState !== "open") {
+    updateRealtimeControllerState("blocked", "data-channel-send-blocked", {
+      eventType: event?.type || "",
+      guard: "data-channel-not-open"
+    });
+    return false;
+  }
+  if (event?.type === "response.create") {
+    const turnIndex = Number(realtimeVoiceSession?.turnIndex || 0);
+    updateRealtimeControllerState("processing", turnIndex >= 2 ? "second-response-requested" : "response-requested", {
+      guard: "data-channel-open"
+    });
+  }
+  if (event?.type === "input_audio_buffer.commit") {
+    updateRealtimeControllerState("processing", "input-audio-committed", { guard: "manual-commit" });
+  }
   channel.send(JSON.stringify(event));
   return true;
 }
 
 async function dispatchRealtimeToolCall(call = {}) {
   if (!realtimeVoiceSession?.active) return;
+  updateRealtimeControllerState("processing", "realtime-tool-dispatch-started", {
+    toolName: call.name || "nexus_capability_router",
+    callId: call.callId || ""
+  });
   let args = {};
   try {
     args = JSON.parse(call.argumentsText || "{}");
@@ -48648,6 +48787,7 @@ async function dispatchRealtimeToolCall(call = {}) {
 
 function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
   if (!realtimeVoiceSession) return;
+  updateRealtimeControllerState("closed", "controller-cleanup-entered", { reason });
   try {
     realtimeVoiceSession.dataChannel?.close?.();
   } catch (error) {
@@ -48685,6 +48825,8 @@ async function startRealtimeVoiceSession() {
   if (realtimeVoiceStarting) return true;
   realtimeVoiceStarting = true;
   try {
+    const sessionId = `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    nexusGenesisVoiceDebugLog("runtime-selected", { runtime: "realtime", sessionId });
     const statusPayload = await loadRealtimeVoiceStatus({ force: true });
     const status = statusPayload?.realtimeVoice || {};
     if (status.runtime === "disabled") throw new Error(status.note || "Nexus voice is disabled.");
@@ -48703,20 +48845,41 @@ async function startRealtimeVoiceSession() {
     stopNexusAudioFallbackRecorder("realtime-selected");
     stopNexusVoicePermissionStream("realtime-selected");
     const peerConnection = new RTCPeerConnection();
+    nexusGenesisVoiceDebugLog("peer-connection-created", { sessionId });
     const remoteAudio = new Audio();
     remoteAudio.autoplay = true;
     remoteAudio.setAttribute("data-nexus-realtime-remote-audio", "true");
+    remoteAudio.onended = () => {
+      updateRealtimeControllerState(realtimeVoiceSession?.responseInProgress ? "responding" : "listening", "output-audio-finished", {
+        guard: "audio-ended-does-not-cleanup-session"
+      });
+    };
     peerConnection.ontrack = event => {
       remoteAudio.srcObject = event.streams[0];
       updateNexusVoiceSession({ state: "realtime-remote-audio", assistantSpeaking: true }, "openai-realtime-remote-audio");
-      nexusGenesisVoiceDebugLog("remote-audio-received", { runtime: "realtime" });
+      updateRealtimeControllerState("responding", "remote-track-received", { runtime: "realtime" });
     };
     peerConnection.onconnectionstatechange = () => {
       const state = peerConnection.connectionState || "";
-      nexusGenesisVoiceDebugLog(state === "connected" ? "session-recovered" : state === "failed" ? "session-failed" : "peer-connection-state", { state });
+      updateRealtimeControllerState(
+        state === "connected" ? "listening" : state === "failed" || state === "disconnected" ? "reconnecting" : "connecting",
+        state === "connected" ? "session-recovered" : state === "failed" ? "session-failed" : "peer-connection-state",
+        { peerState: state }
+      );
       if (state === "failed" || state === "disconnected") {
         updateNexusBehaviorLayer("reconnecting", "I lost the connection. I'm reconnecting.");
+        scheduleRealtimeRecovery(`peer-${state}`);
       }
+    };
+    peerConnection.oniceconnectionstatechange = () => {
+      updateRealtimeControllerState(
+        peerConnection.iceConnectionState === "failed" || peerConnection.iceConnectionState === "disconnected" ? "reconnecting" : "connecting",
+        "ice-connection-state",
+        { iceState: peerConnection.iceConnectionState || "" }
+      );
+    };
+    peerConnection.onsignalingstatechange = () => {
+      updateRealtimeControllerState("connecting", "signaling-state", { signalingState: peerConnection.signalingState || "" });
     };
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -48725,11 +48888,38 @@ async function startRealtimeVoiceSession() {
         autoGainControl: true
       }
     });
-    nexusGenesisVoiceDebugLog("microphone-track-attached", {
-      tracks: String(stream.getAudioTracks?.().length || 0)
+    const audioTrack = stream.getAudioTracks?.()[0] || null;
+    nexusGenesisVoiceDebugLog("microphone-track-created", {
+      sessionId,
+      trackState: audioTrack?.readyState || "none",
+      trackEnabled: audioTrack ? Boolean(audioTrack.enabled) : false
     });
     stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
     const dataChannel = peerConnection.createDataChannel("oai-events");
+    realtimeVoiceSession = {
+      peerConnection,
+      dataChannel,
+      stream,
+      remoteAudio,
+      active: true,
+      runtime: "realtime",
+      startedAt: Date.now(),
+      controllerState: "connecting",
+      sessionId,
+      turnIndex: 0,
+      turnId: "",
+      responseInProgress: false,
+      activeResponseId: "",
+      cancelInProgress: false,
+      reconnectAttempted: false,
+      model: status.model,
+      voice: status.voice,
+      runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
+    };
+    updateRealtimeControllerState("connecting", "microphone-track-attached", {
+      tracks: String(stream.getAudioTracks?.().length || 0)
+    });
+    updateRealtimeControllerState("connecting", "data-channel-created", { label: "oai-events" });
     dataChannel.onmessage = handleRealtimeVoiceEvent;
     dataChannel.onopen = () => {
       sendRealtimeDataChannelEvent({
@@ -48748,17 +48938,22 @@ async function startRealtimeVoiceSession() {
       updateNexusBehaviorLayer("realtime-listening", "Nexus is listening.");
       const outputStatus = $("#globalVoiceOutputStatus");
       if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
-      nexusGenesisVoiceDebugLog("data-channel-open", { runtime: "realtime" });
+      updateRealtimeControllerState("listening", "data-channel-open", { runtime: "realtime" });
     };
     dataChannel.onerror = () => {
       updateNexusBehaviorLayer("recovering", "I lost the connection. I'm reconnecting.");
-      nexusGenesisVoiceDebugLog("session-failed", { errorCategory: "data-channel-error" });
+      updateRealtimeControllerState("reconnecting", "session-failed", { errorCategory: "data-channel-error" });
+      scheduleRealtimeRecovery("data-channel-error");
     };
     dataChannel.onclose = () => {
-      nexusGenesisVoiceDebugLog("session-closed", { runtime: "realtime" });
+      updateRealtimeControllerState("closed", "data-channel-close", { runtime: "realtime" });
     };
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
+    updateRealtimeControllerState("connecting", "session-authorization-requested", {
+      model: status.model || "",
+      voice: status.voice || ""
+    });
     const response = await fetch(`/api/voice/realtime/call?language=${encodeURIComponent(languageCode())}`, {
       method: "POST",
       credentials: "same-origin",
@@ -48777,18 +48972,6 @@ async function startRealtimeVoiceSession() {
       throw new Error(detail || `Realtime voice failed: ${response.status}`);
     }
     await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
-    realtimeVoiceSession = {
-      peerConnection,
-      dataChannel,
-      stream,
-      remoteAudio,
-      active: true,
-      runtime: "realtime",
-      startedAt: Date.now(),
-      model: status.model,
-      voice: status.voice,
-      runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
-    };
     realtimeVoiceStarting = false;
     voiceStopRequested = false;
     setVoiceStatus("listening");
@@ -48798,7 +48981,7 @@ async function startRealtimeVoiceSession() {
       assistantSpeaking: false
     }, "openai-realtime-started");
     updateNativeVoiceBridgeState("realtime-listening", { provider: "openai-realtime-webrtc", locale: voiceLocale() });
-    nexusGenesisVoiceDebugLog("realtime-session-authorized", {
+    updateRealtimeControllerState("listening", "session-authorization-succeeded", {
       model: status.model || "",
       voice: status.voice || "",
       runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION

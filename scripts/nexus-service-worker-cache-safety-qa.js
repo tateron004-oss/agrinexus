@@ -13,8 +13,8 @@ function includesAll(source, tokens, label) {
 }
 
 includesAll(sw, [
-  'const CACHE_NAME = "agrinexus-pwa-v387"',
-  'const BUILD_VERSION = "nexus-behavior-442"',
+  'const CACHE_NAME = "agrinexus-pwa-v388"',
+  'const BUILD_VERSION = "nexus-behavior-443"',
   "function isCacheableApplicationRequest",
   '["http:", "https:"].includes(url.protocol)',
   "url.origin !== self.location.origin",
@@ -48,9 +48,9 @@ assert(sw.includes(".catch(error =>"), "install cache failures must be handled")
 });
 
 includesAll(app, [
-  'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v442"',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-442"',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v387"',
+  'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v443"',
+  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-443"',
+  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v388"',
   "console.info(`[Nexus Genesis voice] ${stage}",
   "controller-initialized",
   "automatic-start-entered",
