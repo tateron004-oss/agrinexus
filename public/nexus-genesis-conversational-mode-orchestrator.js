@@ -615,8 +615,10 @@
       privacy: hasAny(lower, [/\b(password|secret key|api key|account number|social security|ssn|medical record|patient id|payment card|credit card|exact address|private employment|confidential)\b/]),
       safety: hasAny(lower, [/\b(emergency|chest pain|can't breathe|cannot breathe|suicide|self[- ]harm|kill myself|poison|overdose|abuse|unsafe chemical|fraud|dangerous equipment|unlawful|illegal drone)\b/]),
       status: hasAny(lower, [/\b(what is happening|are you still working|did it send|what is blocked|what are we waiting for|what step are we on|what failed|did you save|where is my shipment|status|progress)\b/]),
+      hearingCheck: hasAny(lower, [/\b(can you hear me|do you hear me|are you listening|are you hearing me|you hear me|you listening|is the mic working|microphone working|mic working|are you there)\b/]),
+      capabilityQuestion: hasAny(lower, [/\b(what can you do|what can do|what can nexus do|how can you help|what do you do|show me nexus modes|tell me about yourself|who are you)\b/]) && !/\b(patient|provider|doctor|clinic|pharmacy|medicine|medication|crop|farm|farmer|weather|platform|agri\s*nexus|agrinexus|nexus genesis)\b/.test(lower),
       greeting: hasAny(lower, [/^(hello|hi|hey|good morning|good afternoon|good evening|hello nexus|nexus hello|are you there|can you help me)\b/, /\bi don't know what to ask\b/]),
-      casual: hasAny(lower, [/\b(how are you|difficult morning|i'm nervous|i am nervous|i'm tired|i am tired|frustrated|that was helpful|help me think|just need someone)\b/]),
+      casual: hasAny(lower, [/\b(how are you|difficult morning|i'm nervous|i am nervous|i'm tired|i am tired|frustrated|that was helpful|help me think|just need someone)\b/, /^(nexus,\s*)?(talk to me|can we talk|let'?s talk|just talk|speak with me|stay with me)\b/]),
       teaching: hasAny(lower, [/\b(explain simply|teach me|step by step|give me an example|show me how|quiz me|check whether i understand|repeat the last|use fewer words|use an analogy|explain it in my language)\b/]),
       professional: hasAny(lower, [/\b(professional analysis|clinical|clinician|pharmacist|agronomist|methodology|evidence strength|guideline|differential|implementation considerations|policy implications|limitations)\b/]),
       advisory: hasAny(lower, [/\b(what are my choices|which approach is safer|what should i consider|what would you recommend|advantages and disadvantages|pros and cons|before deciding)\b/]),
@@ -695,7 +697,7 @@
     push(signals.casual || signals.emotionalTone !== "steady", "casual_relational");
     push(signals.proactive, "proactive_permission");
     push(signals.closure, "closure_continuity");
-    push(signals.greeting, "presence_greeting");
+    push(signals.greeting || signals.hearingCheck || signals.capabilityQuestion, "presence_greeting");
     push(signals.openCuriosity, "open_curiosity");
     if (!modeIds.length) modeIds.push("clarification_discovery");
     return modeIds
@@ -780,6 +782,8 @@
       return "Understood. I will keep suggestions limited and permission-based. If you say not now or stop suggesting that, I will respect it.";
     }
     if (primary === "presence_greeting") {
+      if (signals.hearingCheck) return "Yes, I can hear you. Nexus is listening. Tell me what you need in your own words.";
+      if (signals.capabilityQuestion) return "I am Nexus, your voice-operated access assistant. I can help with agriculture, chronic health support, telehealth preparation, pharmacy support, mobile clinic access, learning, workforce, maps, communications preparation, marketplace support, and source-backed questions. I will not open a workflow unless you clearly ask me to start one.";
       return `Hello${name}. I am Nexus. Take your time. Tell me what you need help with, or ask me a question.`;
     }
     if (primary === "open_curiosity") {
@@ -796,9 +800,7 @@
     const highRiskAction = signals.hasActionVerb && /\b(send|call|message|whatsapp|telegram|email|schedule|book|pay|submit|delete|share|dispatch|buy|checkout|refill|prescribe|diagnose)\b/.test(signals.lower);
     const existingRouterMustHandle = /\b(change|switch|set)\s+(the\s+)?language\s+(to\s+)?(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
       || /\b(speak|use)\s+(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
-      || /\b(what can you do|how can you help|what do you do|show me nexus modes|what can nexus do)\b/.test(signals.lower)
-      || /^(good morning|good afternoon|good evening)\b/.test(signals.lower)
-      || /\b(what time is it|current time|what date is it|today's date|what needs my attention today|weather in|weather for|weather today|hows the weather|how's the weather|temp like|temperature in|forecast for|when should i harvest|remind me about|route delays|prepare a buyer message|field alert|health safety reminder|play .*music|manage this situation|what works without providers|how long until my shipment|what time is my appointment|what is next today|what should i do next)\b/.test(signals.lower)
+      || /\b(what time is it|current time|what date is it|today's date|what needs my attention today|weather in|weather for|weather today|weather like|hows the weather|how's the weather|temp like|temperature in|forecast for|when should i harvest|remind me about|route delays|prepare a buyer message|field alert|health safety reminder|play .*music|stop .*music|manage this situation|what works without providers|how long until my shipment|what time is my appointment|what is next today|what should i do next)\b/.test(signals.lower)
       || /\b(what is photosynthesis|what causes malaria|why does .* matter for maize|what should a family know)\b/.test(signals.lower)
       || (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(signals.lower)
         || /\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(signals.lower));

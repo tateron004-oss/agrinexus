@@ -160,9 +160,9 @@ async function call(route, body) {
       inputMode: "voice",
       outputMode: "voice"
     });
-    assert.strictEqual(morningBrief.commandResult.intent, "conversation.personal_assistant_briefing", "Good morning should return a personal assistant briefing");
-    assert.strictEqual(morningBrief.commandResult.metadata.briefing.mode, "nexus-personal-assistant-briefing", "Briefing should expose the personal assistant mode");
-    assert(morningBrief.commandResult.response.includes("Here is what matters"), "Briefing should use human assistant language");
+    assert.strictEqual(morningBrief.commandResult.intent, "conversation.greeting", "Good morning should remain conversational until the user asks for a briefing");
+    assert.strictEqual(morningBrief.commandResult.metadata.redirectSection, "dashboard", "Greeting should not open a workflow or briefing");
+    assert(morningBrief.commandResult.response.includes("Hello"), "Greeting should use human assistant language");
     const attentionBrief = await call("/api/agent/command", {
       command: "Nexus, what needs my attention today?",
       conversational: true,

@@ -99,6 +99,11 @@ for (const rail of requiredRails) {
 
 const scenarios = [
   ["Hello Nexus.", "presence_greeting", "direct_conversational_response"],
+  ["Nexus, can you hear me?", "presence_greeting", "direct_conversational_response"],
+  ["Are you listening?", "presence_greeting", "direct_conversational_response"],
+  ["What can you do?", "presence_greeting", "direct_conversational_response"],
+  ["Tell me about yourself.", "presence_greeting", "direct_conversational_response"],
+  ["Talk to me.", "casual_relational", "direct_conversational_response"],
   ["I had a difficult morning.", "casual_relational", "direct_conversational_response"],
   ["Why are crop yields changing?", "open_curiosity", "continue_existing_router"],
   ["Show me the sources.", "source_evidence", "direct_conversational_response"],
@@ -137,7 +142,7 @@ for (const [prompt, expectedPrimary, expectedStrategy] of scenarios) {
   assert.equal(result.workflowOfferedNotForced, true, `${prompt} must keep workflows optional`);
 }
 
-for (const prompt of ["What is Nexus Genesis | AgriNexus?", "What can you do?", "Change language to Spanish", "Speak French"]) {
+for (const prompt of ["What is Nexus Genesis | AgriNexus?", "Change language to Spanish", "Speak French"]) {
   const result = orchestrator.orchestrate(prompt, { preferredLanguage: "en", userName: "Ron" });
   assert.equal(result.responseStrategy, "continue_existing_router", `${prompt} must pass through to existing router/confirmation behavior`);
 }
@@ -167,10 +172,11 @@ for (const prompt of domainPrompts) {
   assert.equal(result.noExecutionAuthorized, true, `${prompt} must remain no-execution by default`);
 }
 
-assert(html.includes("/nexus-genesis-conversational-mode-orchestrator.js?v=nexus-genesis-conversational-mode-orchestrator-1"), "Standard User page must load the shared orchestrator before app.js");
+assert(html.includes("/nexus-genesis-conversational-mode-orchestrator.js?v=nexus-genesis-conversational-mode-orchestrator-2"), "Standard User page must load the shared orchestrator before app.js");
 assert(server.includes('require("./public/nexus-genesis-conversational-mode-orchestrator.js")'), "server must import the shared orchestrator");
 assert(server.includes("conversationalModeOrchestrator = nexusGenesisConversationalModeOrchestrator.orchestrate"), "server must evaluate every agent command through orchestrator");
-assert(server.includes('intent: `conversation.mode_orchestrator.${conversationalModeOrchestrator.primaryMode.id}`'), "server must return direct conversational orchestrator intents");
+assert(server.includes("companionDirectConversationIntent(conversationalModeOrchestrator)"), "server must normalize direct conversational orchestrator intents");
+assert(server.includes('intent: directConversation.intent'), "server must return the normalized direct conversational intent");
 assert(server.includes("selectedConversationalModes"), "server must attach selected conversational modes to metadata");
 assert(server.includes("staleConfirmationInvalidated: true"), "repair behavior must invalidate stale confirmation");
 assert(server.includes("db.profile.agentPendingAction = null"), "repair behavior must clear pending action");

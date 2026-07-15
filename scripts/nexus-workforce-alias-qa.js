@@ -48,7 +48,7 @@ async function call(route, body) {
 const commandChecks = [
   { command: "What is Nexus Genesis | AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "Nexus is the assistant inside Nexus Genesis | AgriNexus" },
   { command: "Are you AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "legacy/internal compatibility identity" },
-  { command: "What can you do?", intent: "conversation.capability_summary", section: "agent", includes: "workforce development" },
+  { command: "What can you do?", intent: "conversation.capability_summary", section: "dashboard", includes: "agriculture" },
   { command: "help me with training", intent: "conversation.learning_start", section: "learning", includes: "skill" },
   { command: "start training", intent: "conversation.learning_start", section: "learning", includes: "skill" },
   { command: "open training", intent: "conversation.learning_start", section: "learning", includes: "skill" },

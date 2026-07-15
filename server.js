@@ -58,8 +58,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-436";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v381";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-437";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v382";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -27573,11 +27573,13 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     db.profile.agentMemory.memoryScope = "consent-requested";
   }
   if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response") {
+    const directConversation = companionDirectConversationIntent(conversationalModeOrchestrator);
     let result = {
-      intent: `conversation.mode_orchestrator.${conversationalModeOrchestrator.primaryMode.id}`,
+      intent: directConversation.intent,
       response: conversationalModeOrchestrator.response,
       status: "completed",
       metadata: {
+        redirectSection: directConversation.redirectSection,
         inputMode,
         outputMode: outputMode || undefined,
         language: commandLanguage,
@@ -27698,6 +27700,18 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     companionUnderstanding,
     companionRouteOutcome
   };
+}
+
+function companionDirectConversationIntent(orchestratorResult = {}) {
+  const signals = orchestratorResult.signals || {};
+  const primary = orchestratorResult.primaryMode?.id || "";
+  const lower = String(signals.lower || "");
+  if (signals.hearingCheck) return { intent: "conversation.hearing_check", redirectSection: "dashboard" };
+  if (signals.capabilityQuestion) return { intent: "conversation.capability_summary", redirectSection: "dashboard" };
+  if (signals.greeting) return { intent: "conversation.greeting", redirectSection: "dashboard" };
+  if (primary === "casual_relational") return { intent: /\bhow are you\b/.test(lower) ? "conversation.how_are_you" : "conversation.small_talk", redirectSection: "dashboard" };
+  if (primary === "open_curiosity") return { intent: "conversation.question", redirectSection: "dashboard" };
+  return { intent: `conversation.mode_orchestrator.${primary || "dialogue"}`, redirectSection: "dashboard" };
 }
 
 function aiModuleForType(type, fallback = "AI") {

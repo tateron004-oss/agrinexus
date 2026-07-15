@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v436";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v437";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-436";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v381";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-437";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v382";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -50802,6 +50802,70 @@ function answerNexusHearingCheck(options = {}) {
   setVoiceResponse(`${status} What do you need next?`, true, { allowHandoff: false, source: options.source || "hearing-check" });
 }
 
+function nexusNormalConversationPreflightIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  if (isNexusHearingCheckCommand(command)) {
+    return {
+      type: "hearing-check",
+      response: "Yes, I can hear you. Nexus is listening. Tell me what you need in your own words.",
+      suggestions: ["what can you do", "show me agriculture training", "find workforce opportunities"]
+    };
+  }
+  if (/^(hello|hi|hey|good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening)\b(?:\s+(nexus|agrinexus|agri nexus|agri))?$/.test(lower)) {
+    return {
+      type: "greeting",
+      response: `Hello ${userFirstName()}. I am listening. What would you like help with today?`,
+      suggestions: ["what can you do", "help with crops", "open training support"]
+    };
+  }
+  if (/^(talk to me|can we talk|let'?s talk|just talk|speak with me|stay with me)\b/.test(lower)) {
+    return {
+      type: "conversation",
+      response: "I am here with you. We can talk naturally. Tell me what is on your mind, or ask me what Nexus can do.",
+      suggestions: ["what can you do", "how can you help", "help me think this through"]
+    };
+  }
+  if (/\b(how are you|how do you feel|are you okay)\b/.test(lower)) {
+    return {
+      type: "small-talk",
+      response: "I am here and ready to help. I do not have feelings like a person, but I can listen, answer, and guide the next step.",
+      suggestions: ["what can you do", "help me plan", "show me agriculture training"]
+    };
+  }
+  if (/\b(what can you do|what can do|what can nexus do|how can you help|what do you do|show me nexus modes)\b/.test(lower)) {
+    return {
+      type: "capability-question",
+      response: "I can help with agriculture, chronic health support, telehealth preparation, pharmacy support, mobile clinic access, learning, workforce, maps, communications preparation, marketplace support, reminders, language, offline support, and source-backed questions. I will only open a workflow when you clearly ask me to start one.",
+      suggestions: ["show me agriculture training", "find workforce opportunities", "help with diabetes intake"]
+    };
+  }
+  if (/\b(tell me about yourself|who are you|what are you)\b/.test(lower)) {
+    return {
+      type: "identity-question",
+      response: "I am Nexus, a voice-operated access assistant for AgriNexus. I help people prepare, understand, organize, and safely route work across agriculture, health access, learning, workforce, maps, communications, marketplace, and source-backed support. I do not take real-world actions without the right provider, consent, and confirmation.",
+      suggestions: ["what can you do", "help with crops", "help with health access"]
+    };
+  }
+  return null;
+}
+
+function runNexusNormalConversationPreflight(command = "", options = {}) {
+  const intent = nexusNormalConversationPreflightIntent(command);
+  if (!intent) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  updateNexusBehaviorLayer("answering", `Nexus handled ${intent.type} as conversation, not workflow routing.`);
+  renderLiveVoiceSuggestions(intent.suggestions || ["what can you do", "help me get started"]);
+  setVoiceResponse(intent.response, true, {
+    allowHandoff: false,
+    command,
+    source: options.source || "conversation-preflight",
+    conversationalIntent: intent.type
+  });
+  return true;
+}
+
 function cleanSpokenUserName(name = "") {
   return String(name)
     .replace(/[^\p{L}\p{M}' -]/gu, " ")
@@ -53410,6 +53474,10 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     speak: true,
     source: options.source || "nexus-daily-companion",
     turnToken
+  })) return;
+  if (runNexusNormalConversationPreflight(trustChainInput, {
+    ...options,
+    source: options.source || "genesis-conversation-preflight"
   })) return;
   if (isNexusConversationOnlyTrustChainInput(trustChainInput)) {
     pendingAgentClarification = null;
