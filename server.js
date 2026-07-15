@@ -58,8 +58,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-435";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v380";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-436";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v381";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -15878,23 +15878,98 @@ async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", fil
   };
 }
 
+function openAiHttpStatusCategory(status) {
+  const numeric = Number(status);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "none";
+  if (numeric >= 200 && numeric < 300) return "2xx";
+  if (numeric === 401 || numeric === 403) return "auth";
+  if (numeric === 404) return "not_found";
+  if (numeric === 408 || numeric === 504) return "timeout";
+  if (numeric === 429) return "rate_limit";
+  if (numeric >= 400 && numeric < 500) return "4xx";
+  if (numeric >= 500) return "5xx";
+  return "unknown";
+}
+
+function openAiVoiceProviderDiagnostics(overrides = {}) {
+  return {
+    providerSelected: overrides.providerSelected || "openai",
+    credentialConfigured: Boolean(process.env.OPENAI_API_KEY),
+    clientInitialized: Boolean(process.env.OPENAI_API_KEY),
+    requestAttempted: Boolean(overrides.requestAttempted),
+    httpStatusCategory: overrides.httpStatusCategory || openAiHttpStatusCategory(overrides.httpStatus),
+    errorType: overrides.errorType || "none",
+    timeout: Boolean(overrides.timeout),
+    fallbackEnabled: Boolean(overrides.fallbackEnabled),
+    finalResponseRoute: overrides.finalResponseRoute || "openai-tts",
+    model: overrides.model || process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts"
+  };
+}
+
+function classifyOpenAiVoiceError(error = {}) {
+  const status = Number(error.status || error.httpStatus || 0);
+  const category = openAiHttpStatusCategory(status);
+  const message = String(error.message || "").toLowerCase();
+  if (error.name === "AbortError" || /timeout|timed out|aborted/.test(message) || category === "timeout") return "timeout";
+  if (category === "auth" || /authentication|api key|unauthorized|forbidden/.test(message)) return "authentication";
+  if (category === "rate_limit" || /rate limit|quota/.test(message)) return "rate_limit";
+  if (/model|does not exist|access/.test(message)) return "model_access";
+  if (category === "4xx") return "malformed_request";
+  if (category === "5xx") return "provider_error";
+  if (/network|fetch failed|econn|enotfound/.test(message)) return "network";
+  return "provider_error";
+}
+
+function openAiVoiceErrorMessage(errorType) {
+  const messages = {
+    authentication: "OpenAI speech authentication failed",
+    rate_limit: "OpenAI speech rate limit or quota was reached",
+    model_access: "OpenAI speech model access failed",
+    malformed_request: "OpenAI speech request was rejected",
+    timeout: "OpenAI speech request timed out",
+    network: "OpenAI speech network request failed",
+    missing_credential: "OpenAI speech credential is not configured",
+    provider_error: "OpenAI speech provider error"
+  };
+  return messages[errorType] || messages.provider_error;
+}
+
 async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
-  if (!process.env.OPENAI_API_KEY) return null;
+  const model = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
+  if (!process.env.OPENAI_API_KEY) {
+    return {
+      audioDataUrl: null,
+      provider: "openai-unconfigured",
+      model,
+      voice: voice || process.env.OPENAI_TTS_VOICE || "verse",
+      diagnostics: openAiVoiceProviderDiagnostics({
+        requestAttempted: false,
+        errorType: "missing_credential",
+        finalResponseRoute: "missing-openai-credential"
+      })
+    };
+  }
   const requestedVoice = voice || process.env.OPENAI_TTS_VOICE || "verse";
-  const createSpeech = selectedVoice => fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-      voice: selectedVoice,
-      input: String(text || "").slice(0, 4096),
-      response_format: responseFormat,
-      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character."
-    })
-  });
+  const createSpeech = selectedVoice => {
+    const controller = new AbortController();
+    const timeoutMs = Number(process.env.OPENAI_TTS_TIMEOUT_MS || 25000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        voice: selectedVoice,
+        input: String(text || "").slice(0, 4096),
+        response_format: responseFormat,
+        instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character."
+      })
+    }).finally(() => clearTimeout(timeout));
+  };
   let response = await createSpeech(requestedVoice);
   let finalVoice = requestedVoice;
   if (!response.ok && requestedVoice !== "coral") {
@@ -15903,14 +15978,31 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
   }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error?.message || `OpenAI speech failed: ${response.status}`);
+    const error = new Error(openAiVoiceErrorMessage(payload.error?.type || classifyOpenAiVoiceError({ status: response.status, message: payload.error?.message })));
+    error.status = response.status;
+    error.errorType = payload.error?.type || classifyOpenAiVoiceError({ status: response.status, message: payload.error?.message });
+    error.diagnostics = openAiVoiceProviderDiagnostics({
+      requestAttempted: true,
+      httpStatus: response.status,
+      errorType: error.errorType,
+      finalResponseRoute: "openai-tts-error",
+      model
+    });
+    throw error;
   }
   const buffer = Buffer.from(await response.arrayBuffer());
   return {
     audioDataUrl: `data:audio/${responseFormat};base64,${buffer.toString("base64")}`,
     provider: "openai-audio-speech",
-    model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-    voice: finalVoice
+    model,
+    voice: finalVoice,
+    diagnostics: openAiVoiceProviderDiagnostics({
+      requestAttempted: true,
+      httpStatus: response.status,
+      errorType: "none",
+      finalResponseRoute: "openai-tts-audio",
+      model
+    })
   };
 }
 
@@ -44428,14 +44520,46 @@ async function api(req, res, url) {
         });
         provider = audio?.provider || "openai";
       } catch (error) {
-        speechError = error.message || "OpenAI speech request failed";
+        const errorType = error.errorType || classifyOpenAiVoiceError(error);
+        speechError = openAiVoiceErrorMessage(errorType);
+        audio = {
+          audioDataUrl: null,
+          provider: "openai-audio-error",
+          model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
+          voice: body.voice || process.env.OPENAI_TTS_VOICE || null,
+          diagnostics: error.diagnostics || openAiVoiceProviderDiagnostics({
+            requestAttempted: true,
+            httpStatus: error.status || error.httpStatus,
+            errorType,
+            timeout: errorType === "timeout",
+            finalResponseRoute: "openai-tts-error"
+          })
+        };
         provider = "openai-audio-error";
       }
     }
     const record = voiceRecord(db, user, "text-to-speech", speechError ? `Speech response failed: ${speechError}` : `Speech response prepared: ${text}`, { language, locale: body.locale || voiceLocaleForLanguage(language), provider, model: audio?.model || null, voice: audio?.voice || null, error: speechError });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, error: speechError, configuredProvider: process.env.VOICE_TTS_PROVIDER || null, hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY), language, locale: body.locale || voiceLocaleForLanguage(language) };
+    state.voiceResult = {
+      text,
+      sessionId: record.id,
+      provider,
+      audioDataUrl: audio?.audioDataUrl || null,
+      model: audio?.model || null,
+      voice: audio?.voice || null,
+      error: speechError,
+      configuredProvider: process.env.VOICE_TTS_PROVIDER || null,
+      hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+      diagnostics: audio?.diagnostics || openAiVoiceProviderDiagnostics({
+        providerSelected: provider,
+        requestAttempted: false,
+        errorType: provider === "browser" ? "none" : "missing_credential",
+        finalResponseRoute: provider === "browser" ? "browser-speech-required" : "missing-openai-credential"
+      }),
+      language,
+      locale: body.locale || voiceLocaleForLanguage(language)
+    };
     return send(res, 200, state);
   }
 

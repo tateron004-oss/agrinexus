@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v435";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v436";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-435";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v380";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-436";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v381";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -46691,6 +46691,10 @@ function browserSpeechFallbackEnabled() {
   return localStorage.getItem(BROWSER_SPEECH_FALLBACK_STORAGE_KEY) === "on";
 }
 
+function genesisVoiceBrowserSpeechRecoveryEnabled() {
+  return Boolean(nexusGenesisVoiceSessionActive);
+}
+
 function nexusListeningReadyMessage() {
   return voiceFirstMode
     ? "Nexus is listening now. Ask your next question."
@@ -48022,7 +48026,9 @@ function speakVoiceResponse(textOverride) {
     resumeVoiceListeningAfterSpeech(playbackToken, interruptToken);
   };
   const browserSpeak = reason => {
-    if (!browserSpeechFallbackEnabled()) {
+    const genesisRecoveryEnabled = genesisVoiceBrowserSpeechRecoveryEnabled();
+    const optInBrowserFallbackEnabled = browserSpeechFallbackEnabled();
+    if (!optInBrowserFallbackEnabled && !genesisRecoveryEnabled) {
       const fallbackMessage = "I heard you, but I am unable to speak right now. I will continue in text.";
       updateVoiceOutputStatus(`${fallbackMessage} ${reason} Browser speech fallback is off by default.`);
       updateUserCaptionPanel(fallbackMessage, { expanded: true });
@@ -48037,12 +48043,16 @@ function speakVoiceResponse(textOverride) {
       return;
     }
     const speechResult = runNexusSpeechSynthesisController(compact, {
-      reason: "browser-speech-fallback",
+      reason: genesisRecoveryEnabled ? "genesis-browser-speech-recovery" : "browser-speech-fallback",
       onEnd: finishSpeaking,
       onError: finishSpeaking
     });
     if (speechResult.ok && (speechResult.requested || speechResult.started)) {
-      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback. Speech state will change to speaking after the browser start event.`);
+      const optInRecoveryLabel = "Using opt-in browser speech fallback. NexusSpeechSynthesisController is managing playback.";
+      const recoveryLabel = genesisRecoveryEnabled
+        ? "Using browser-native speech synthesis for the Genesis voice session because OpenAI voice audio is unavailable."
+        : optInRecoveryLabel;
+      updateVoiceOutputStatus(`${reason} ${recoveryLabel} Speech state will change to speaking after the browser start event.`);
     } else {
       updateVoiceOutputStatus(`${reason} Browser speech fallback could not start: ${speechResult.reason}.`);
       finishSpeaking();
@@ -48056,7 +48066,11 @@ function speakVoiceResponse(textOverride) {
       activeVoiceRequestController = null;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (result.voiceResult?.error) {
-        updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
+        const diagnostics = result.voiceResult?.diagnostics || {};
+        const errorType = diagnostics.errorType || "provider_error";
+        const statusCategory = diagnostics.httpStatusCategory || "unknown";
+        const attempted = diagnostics.requestAttempted ? "request attempted" : "request not attempted";
+        updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}. Provider diagnostic: ${errorType}, ${statusCategory}, ${attempted}.`);
         toast("OpenAI voice error. Check Render logs for /api/voice/speak.");
         browserSpeak(`OpenAI voice error: ${result.voiceResult.error}`);
         return;
