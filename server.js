@@ -41269,6 +41269,37 @@ async function api(req, res, url) {
     return send(res, 200, nexusGenesisProviderOrchestration.sdk());
   }
 
+  if (url.pathname === "/api/voice/elevenlabs/authorization-probe" && req.method === "POST") {
+    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many ElevenLabs authorization probes" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
+    return send(res, 200, {
+      ok: true,
+      runtime: "elevenlabs",
+      provider: "elevenlabs",
+      authenticatedBrowserSession: Boolean(user),
+      liveSessionRequiresSignIn: true,
+      liveSessionEndpoint: "/api/voice/elevenlabs/session",
+      configured: runtimeStatus.configured,
+      ready: runtimeStatus.ready,
+      runtimeSelected: runtimeStatus.runtime === "elevenlabs",
+      enabled: runtimeStatus.elevenLabsEnabled,
+      transport: runtimeStatus.transport,
+      connectionType: "webrtc-preferred",
+      missingEnv: runtimeStatus.missingEnv,
+      authorizationArtifactIssued: false,
+      providerRequestAttempted: false,
+      noConversationTokenReturned: true,
+      noSignedUrlReturned: true,
+      noSecretValues: true,
+      note: runtimeStatus.ready
+        ? "ElevenLabs is configured. The live session route mints short-lived authorization only for a signed-in browser session."
+        : runtimeStatus.note
+    }, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
   if (!user && url.pathname !== "/api/config") return send(res, 401, { error: "Sign in required" });
 
   if (url.pathname === "/api/state" && req.method === "GET") {
@@ -45735,45 +45766,6 @@ async function api(req, res, url) {
         category,
         missingEnv: error.missingEnv || [],
         elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env)
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-  }
-
-  if (url.pathname === "/api/voice/elevenlabs/authorization-probe" && req.method === "POST") {
-    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs diagnostics" });
-    if (!rateLimit(req, 12, 60_000)) return send(res, 429, { error: "Too many ElevenLabs authorization probes" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    try {
-      const probe = await createElevenLabsConversationSession({
-        user,
-        language: url.searchParams.get("language") || user.language || "en",
-        probe: true
-      });
-      return send(res, 200, {
-        ok: true,
-        runtime: "elevenlabs",
-        provider: "elevenlabs",
-        transport: probe.transport,
-        connectionType: probe.connectionType,
-        authorizationArtifact: probe.authorizationArtifact,
-        configured: true,
-        requestAttempted: true,
-        noSecretValues: true
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    } catch (error) {
-      return send(res, error.status || 502, {
-        ok: false,
-        runtime: "elevenlabs",
-        provider: "elevenlabs",
-        configured: nexusElevenLabsRuntimeStatus(process.env).configured,
-        requestAttempted: true,
-        category: error.category || nexusElevenLabsProviderCategory(error.status, error.message),
-        missingEnv: error.missingEnv || [],
-        noSecretValues: true
       }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });

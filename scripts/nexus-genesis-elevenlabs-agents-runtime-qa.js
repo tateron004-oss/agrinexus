@@ -85,6 +85,25 @@ includes(app, "nexus-genesis-voice-runtime-v446", "Genesis voice runtime cache m
   "openAiRealtimeRollbackOnly"
 ].forEach(needle => includes(server, needle, `server ElevenLabs contract ${needle}`));
 
+const probeRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/authorization-probe"');
+const signInGateIndex = server.indexOf('if (!user && url.pathname !== "/api/config")');
+assert(probeRouteIndex !== -1, "authorization probe route should exist");
+assert(signInGateIndex !== -1, "global sign-in gate should exist");
+assert(probeRouteIndex < signInGateIndex, "authorization probe should be safe readiness before sign-in gate");
+const probeRouteEndIndex = server.indexOf('if (!user && url.pathname !== "/api/config")', probeRouteIndex);
+const probeRouteBlock = server.slice(probeRouteIndex, probeRouteEndIndex);
+[
+  "authorizationArtifactIssued: false",
+  "providerRequestAttempted: false",
+  "noConversationTokenReturned: true",
+  "noSignedUrlReturned: true",
+  "noSecretValues: true",
+  "liveSessionRequiresSignIn: true"
+].forEach(needle => includes(probeRouteBlock, needle, `safe probe contract ${needle}`));
+notIncludes(probeRouteBlock, "createElevenLabsConversationSession", "authorization probe must not mint provider artifacts");
+notIncludes(probeRouteBlock, "conversationToken:", "authorization probe must not return conversationToken");
+notIncludes(probeRouteBlock, "signedUrl:", "authorization probe must not return signedUrl");
+
 [
   "nexus_general_capability",
   "nexus_weather",
