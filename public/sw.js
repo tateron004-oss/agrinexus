@@ -1,5 +1,5 @@
-const CACHE_NAME = "agrinexus-pwa-v386";
-const BUILD_VERSION = "nexus-behavior-441";
+const CACHE_NAME = "agrinexus-pwa-v387";
+const BUILD_VERSION = "nexus-behavior-442";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -30,6 +30,9 @@ function isCacheableApplicationRequest(request) {
     if (!["http:", "https:"].includes(url.protocol)) return false;
     if (url.origin !== self.location.origin) return false;
     if (request.method !== "GET") return false;
+    if (url.pathname.startsWith("/api/voice/realtime/")) return false;
+    if (url.pathname.startsWith("/api/voice/transcribe")) return false;
+    if (url.pathname.startsWith("/api/voice/speak")) return false;
     return true;
   } catch {
     return false;

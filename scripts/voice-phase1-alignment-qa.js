@@ -54,9 +54,9 @@ async function twilioPost(route, body) {
   assert(serverSource.includes("async function runCompanionSafeAgentCommand"), "server should expose shared Companion-safe command wrapper");
   assert(!serverSource.includes("runAgentCommand(db, phoneUser, command, { confirm: true"), "phone gather must not directly execute with unconditional confirm:true");
   assert(serverSource.includes('inputMode: "phone"'), "phone gather should preserve inputMode=phone");
-  assert(serverSource.includes('operationalMode: "conversation-only"') && serverSource.includes("canExecuteWorkflows: false"), "realtime status should be conversation-only");
-  assert(serverSource.includes("This Realtime session is conversational only"), "realtime model instructions should not claim tool execution");
-  assert(appSource.includes('localStorage.getItem("agrinexusRealtimeVoice") === "on"'), "realtime should be explicit opt-in, not the default mic path");
+  assert(serverSource.includes('operationalMode: "realtime-tools"') && serverSource.includes('toolName: "nexus_capability_router"'), "realtime status should expose the single safe Nexus tool router");
+  assert(serverSource.includes("Use tools only when a real Nexus capability is needed") && serverSource.includes("Never claim an action completed"), "realtime model instructions should allow gated tools without fake execution");
+  assert(appSource.includes('status.runtime !== "realtime"'), "realtime should be selected by the server runtime contract, not local browser opt-in");
   assert.equal(bridge.apiEndpoints.voice, "/api/voice/speak", "native bridge voice endpoint should reference the implemented TTS route");
 
   fs.copyFileSync(path.join(root, "db.json"), tempDb);

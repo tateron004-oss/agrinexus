@@ -49,21 +49,21 @@ const requirements = [
       handleCoreSource.includes('source: options.source || "voice"')
   ],
   [
-    "Realtime remains explicit opt-in and cannot silently replace Web Speech by default",
-    realtimeEnabledSource.includes('localStorage.getItem("agrinexusRealtimeVoice") === "on"') &&
+    "Realtime follows server-selected runtime and cannot run beside legacy recognition",
+    realtimeEnabledSource.includes('status?.runtime === "realtime"') &&
       startListeningSource.includes("const realtimeStarted = await startRealtimeVoiceSession();") &&
-      realtimeStartSource.includes("if (!realtimeVoiceEnabled() || !realtimeVoiceSupported()) return false;")
+      realtimeStartSource.includes('if (status.runtime !== "realtime") return false;')
   ],
   [
-    "Realtime UI is labeled conversation-only",
-    refreshMicSource.includes("OpenAI Realtime conversation-only voice is live") &&
-      realtimeStartSource.includes("Workflow actions still use browser Mic or typed Ask Nexus")
+    "Realtime UI is voice-first and workflow-scoped",
+    refreshMicSource.includes("Nexus realtime voice is live") &&
+      refreshMicSource.includes("Workflow fields appear only after Nexus opens a workflow")
   ],
   [
-    "Realtime server contract remains non-operational",
-    serverSource.includes('operationalMode: "conversation-only"') &&
-      serverSource.includes("canExecuteWorkflows: false") &&
-      serverSource.includes("This Realtime session is conversational only")
+    "Realtime server contract exposes gated tool routing",
+    serverSource.includes('operationalMode: "realtime-tools"') &&
+      serverSource.includes("nexus_capability_router") &&
+      serverSource.includes("Never claim an action completed")
   ],
   [
     "OpenAI TTS remains primary with Phase 2 language metadata",

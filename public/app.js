@@ -750,6 +750,8 @@ let activeVoiceAudio = null;
 let realtimeVoiceSession = null;
 let realtimeVoiceStarting = false;
 let realtimeVoiceStatusCache = null;
+const realtimeToolArgumentBuffers = new Map();
+const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
 let activeVoiceRequestController = null;
@@ -823,7 +825,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v441";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v442";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1290,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-441";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v386";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-442";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v387";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -46804,7 +46806,7 @@ function genesisVoiceBrowserSpeechRecoveryEnabled() {
 function nexusListeningReadyMessage() {
   return voiceFirstMode
     ? "Nexus is listening now. Ask your next question."
-    : "Nexus is ready. Press Mic or type your next question.";
+    : "Nexus is ready. Ask your next question.";
 }
 
 function streamingVoiceEnabled() {
@@ -48452,7 +48454,8 @@ function realtimeVoiceSupported() {
 }
 
 function realtimeVoiceEnabled() {
-  return localStorage.getItem("agrinexusRealtimeVoice") === "on";
+  const status = realtimeVoiceStatusCache?.realtimeVoice;
+  return Boolean(status?.runtime === "realtime" && status?.realtimeEnabled !== false);
 }
 
 function realtimeVoiceActive() {
@@ -48462,9 +48465,11 @@ function realtimeVoiceActive() {
 function realtimeVoiceStatusMessage() {
   if (!realtimeVoiceSupported()) return "Realtime voice needs HTTPS, localhost, or 127.0.0.1 with microphone permission.";
   const status = realtimeVoiceStatusCache?.realtimeVoice;
-  if (status?.configured) return `OpenAI Realtime conversation-only voice ready: ${status.voice || "voice"} (${status.model || "realtime"}). Use browser Mic or typed Ask Nexus for workflow actions.`;
+  if (status?.ready) return "Nexus realtime voice is ready.";
+  if (status?.runtime === "legacy") return "Nexus legacy voice runtime is selected by server configuration.";
+  if (status?.runtime === "disabled") return "Nexus voice is temporarily unavailable.";
   if (status && !status.configured) return status.note || "OpenAI Realtime voice needs OPENAI_API_KEY in hosting.";
-  return "OpenAI Realtime conversation-only voice can start when explicitly enabled and the live provider is configured.";
+  return "Nexus realtime voice can start when selected and configured by the server.";
 }
 
 async function loadRealtimeVoiceStatus(options = {}) {
@@ -48491,8 +48496,19 @@ function handleRealtimeVoiceEvent(event) {
   }
   const type = String(payload.type || "");
   const delta = payload.delta || payload.transcript || payload.text || "";
+  nexusGenesisVoiceDebugLog("realtime-event", {
+    type,
+    itemId: payload.item_id || payload.item?.id || "",
+    callId: payload.call_id || payload.item?.call_id || ""
+  });
   if (type.includes("transcript") && delta) {
     updateStreamingVoicePartial(delta, { source: "openai-realtime" });
+  }
+  if (type === "session.created" || type === "session.updated") {
+    updateNexusBehaviorLayer("realtime-ready", "Nexus is ready.");
+  }
+  if (type === "response.audio.delta" || type === "response.output_audio.delta") {
+    updateNexusVoiceSession({ state: "realtime-speaking", assistantSpeaking: true }, "openai-realtime-audio-delta");
   }
   if (type === "response.done" || type === "response.audio.done") {
     updateNexusVoiceSession({
@@ -48504,9 +48520,129 @@ function handleRealtimeVoiceEvent(event) {
   }
   if (type === "input_audio_buffer.speech_started") {
     markNexusUserSpeech("Realtime voice detected speech.", "openai-realtime");
+    if (realtimeVoiceSession?.dataChannel?.readyState === "open") {
+      try {
+        realtimeVoiceSession.dataChannel.send(JSON.stringify({ type: "response.cancel" }));
+      } catch {
+        // Barge-in cancellation is best effort.
+      }
+    }
   }
   if (type === "input_audio_buffer.speech_stopped") {
     updateNexusVoiceSession({ userSpeaking: false }, "openai-realtime-speech-stopped");
+  }
+  if (type === "response.function_call_arguments.delta") {
+    const callId = payload.call_id || payload.item_id || payload.output_index || "pending";
+    realtimeToolArgumentBuffers.set(callId, `${realtimeToolArgumentBuffers.get(callId) || ""}${payload.delta || ""}`);
+  }
+  if (type === "response.function_call_arguments.done") {
+    const callId = payload.call_id || payload.item_id || payload.output_index || "pending";
+    const argsText = payload.arguments || realtimeToolArgumentBuffers.get(callId) || "{}";
+    realtimeToolArgumentBuffers.delete(callId);
+    dispatchRealtimeToolCall({
+      callId,
+      name: payload.name || payload.tool_name || "nexus_capability_router",
+      argumentsText: argsText
+    });
+  }
+  if (type === "response.output_item.done" && payload.item?.type === "function_call") {
+    dispatchRealtimeToolCall({
+      callId: payload.item.call_id || payload.item.id,
+      name: payload.item.name || "nexus_capability_router",
+      argumentsText: payload.item.arguments || "{}"
+    });
+  }
+}
+
+function sendRealtimeDataChannelEvent(event) {
+  const channel = realtimeVoiceSession?.dataChannel;
+  if (!channel || channel.readyState !== "open") return false;
+  channel.send(JSON.stringify(event));
+  return true;
+}
+
+async function dispatchRealtimeToolCall(call = {}) {
+  if (!realtimeVoiceSession?.active) return;
+  let args = {};
+  try {
+    args = JSON.parse(call.argumentsText || "{}");
+  } catch {
+    args = { command: String(call.argumentsText || "") };
+  }
+  const correlationId = `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  nexusGenesisVoiceDebugLog("realtime-tool-call-requested", {
+    name: call.name,
+    callId: call.callId || "",
+    correlationId
+  });
+  try {
+    const response = await fetch("/api/voice/realtime/tool", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: call.name || "nexus_capability_router",
+        callId: call.callId,
+        correlationId,
+        arguments: args,
+        language: languageCode()
+      })
+    });
+    const result = await response.json().catch(() => ({
+      ok: false,
+      status: "failed-truthfully",
+      response: "I could not complete that Nexus tool request.",
+      blockedReason: "client-parse-failed"
+    }));
+    const toolPayload = JSON.stringify(result);
+    sendRealtimeDataChannelEvent({
+      type: "conversation.item.create",
+      item: {
+        type: "function_call_output",
+        call_id: call.callId,
+        output: toolPayload
+      }
+    });
+    sendRealtimeDataChannelEvent({
+      type: "response.create",
+      response: {
+        instructions: "Briefly explain the Nexus tool result in natural spoken language. Do not read JSON, metadata, or internal route names aloud."
+      }
+    });
+    nexusGenesisVoiceDebugLog("realtime-tool-call-completed", {
+      name: call.name,
+      status: result.status || "",
+      correlationId
+    });
+  } catch (error) {
+    const failed = {
+      ok: false,
+      correlationId,
+      capability: "conversation",
+      status: "failed-truthfully",
+      response: "I could not reach the Nexus tool layer right now.",
+      providerAttempted: false,
+      providerSucceeded: false,
+      executionAttempted: false,
+      executionVerified: false,
+      missingInformation: [],
+      blockedReason: "provider-unavailable"
+    };
+    sendRealtimeDataChannelEvent({
+      type: "conversation.item.create",
+      item: {
+        type: "function_call_output",
+        call_id: call.callId,
+        output: JSON.stringify(failed)
+      }
+    });
+    sendRealtimeDataChannelEvent({
+      type: "response.create",
+      response: {
+        instructions: "Tell the user the Nexus tool layer is temporarily unavailable, then ask what they want to try next."
+      }
+    });
   }
 }
 
@@ -48534,6 +48670,7 @@ function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
     // Audio node may already be detached.
   }
   realtimeVoiceSession = null;
+  realtimeToolArgumentBuffers.clear();
   realtimeVoiceStarting = false;
   setVoiceStatus("standby");
   updateNexusBehaviorLayer("standby", reason);
@@ -48543,18 +48680,43 @@ function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
 }
 
 async function startRealtimeVoiceSession() {
-  if (!realtimeVoiceEnabled() || !realtimeVoiceSupported()) return false;
+  if (!realtimeVoiceSupported()) return false;
   if (realtimeVoiceActive()) return true;
   if (realtimeVoiceStarting) return true;
   realtimeVoiceStarting = true;
   try {
-    const statusPayload = await loadRealtimeVoiceStatus();
-    if (!statusPayload?.realtimeVoice?.configured) throw new Error(statusPayload?.realtimeVoice?.note || "OpenAI Realtime voice is not configured.");
+    const statusPayload = await loadRealtimeVoiceStatus({ force: true });
+    const status = statusPayload?.realtimeVoice || {};
+    if (status.runtime === "disabled") throw new Error(status.note || "Nexus voice is disabled.");
+    if (status.runtime !== "realtime") return false;
+    if (!status.ready) throw new Error(status.note || "OpenAI Realtime voice is not configured.");
+    stopVoicePlayback();
+    voiceStopRequested = true;
+    if (voiceRecognition) {
+      try {
+        voiceRecognition.stop();
+      } catch {
+        // Legacy recognition may already be stopped.
+      }
+      voiceRecognition = null;
+    }
+    stopNexusAudioFallbackRecorder("realtime-selected");
+    stopNexusVoicePermissionStream("realtime-selected");
     const peerConnection = new RTCPeerConnection();
     const remoteAudio = new Audio();
     remoteAudio.autoplay = true;
+    remoteAudio.setAttribute("data-nexus-realtime-remote-audio", "true");
     peerConnection.ontrack = event => {
       remoteAudio.srcObject = event.streams[0];
+      updateNexusVoiceSession({ state: "realtime-remote-audio", assistantSpeaking: true }, "openai-realtime-remote-audio");
+      nexusGenesisVoiceDebugLog("remote-audio-received", { runtime: "realtime" });
+    };
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection.connectionState || "";
+      nexusGenesisVoiceDebugLog(state === "connected" ? "session-recovered" : state === "failed" ? "session-failed" : "peer-connection-state", { state });
+      if (state === "failed" || state === "disconnected") {
+        updateNexusBehaviorLayer("reconnecting", "I lost the connection. I'm reconnecting.");
+      }
     };
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -48563,22 +48725,44 @@ async function startRealtimeVoiceSession() {
         autoGainControl: true
       }
     });
+    nexusGenesisVoiceDebugLog("microphone-track-attached", {
+      tracks: String(stream.getAudioTracks?.().length || 0)
+    });
     stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
     const dataChannel = peerConnection.createDataChannel("oai-events");
     dataChannel.onmessage = handleRealtimeVoiceEvent;
     dataChannel.onopen = () => {
-      updateNexusBehaviorLayer("realtime-listening", "OpenAI Realtime conversation is live. Workflow actions still use browser Mic or typed Ask Nexus.");
+      sendRealtimeDataChannelEvent({
+        type: "session.update",
+        session: {
+          instructions: "Begin as Nexus Genesis. Greet briefly and invite the user to speak naturally. Use Nexus tools only when a platform capability is needed.",
+          tool_choice: "auto"
+        }
+      });
+      sendRealtimeDataChannelEvent({
+        type: "response.create",
+        response: {
+          instructions: "Greet the user naturally in one sentence. Do not mention Realtime, WebRTC, tools, or system state."
+        }
+      });
+      updateNexusBehaviorLayer("realtime-listening", "Nexus is listening.");
       const outputStatus = $("#globalVoiceOutputStatus");
-      if (outputStatus) outputStatus.textContent = translateText("OpenAI Realtime conversation is live. Workflow actions still use browser Mic or typed Ask Nexus.");
+      if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
+      nexusGenesisVoiceDebugLog("data-channel-open", { runtime: "realtime" });
     };
     dataChannel.onerror = () => {
-      updateNexusBehaviorLayer("recovering", "Realtime voice data channel had an issue. Nexus can fall back to browser voice.");
+      updateNexusBehaviorLayer("recovering", "I lost the connection. I'm reconnecting.");
+      nexusGenesisVoiceDebugLog("session-failed", { errorCategory: "data-channel-error" });
+    };
+    dataChannel.onclose = () => {
+      nexusGenesisVoiceDebugLog("session-closed", { runtime: "realtime" });
     };
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     const response = await fetch(`/api/voice/realtime/call?language=${encodeURIComponent(languageCode())}`, {
       method: "POST",
       credentials: "same-origin",
+      cache: "no-store",
       headers: { "Content-Type": "application/sdp", Accept: "application/sdp" },
       body: offer.sdp
     });
@@ -48593,7 +48777,18 @@ async function startRealtimeVoiceSession() {
       throw new Error(detail || `Realtime voice failed: ${response.status}`);
     }
     await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
-    realtimeVoiceSession = { peerConnection, dataChannel, stream, remoteAudio, active: true, startedAt: Date.now() };
+    realtimeVoiceSession = {
+      peerConnection,
+      dataChannel,
+      stream,
+      remoteAudio,
+      active: true,
+      runtime: "realtime",
+      startedAt: Date.now(),
+      model: status.model,
+      voice: status.voice,
+      runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
+    };
     realtimeVoiceStarting = false;
     voiceStopRequested = false;
     setVoiceStatus("listening");
@@ -48603,16 +48798,28 @@ async function startRealtimeVoiceSession() {
       assistantSpeaking: false
     }, "openai-realtime-started");
     updateNativeVoiceBridgeState("realtime-listening", { provider: "openai-realtime-webrtc", locale: voiceLocale() });
+    nexusGenesisVoiceDebugLog("realtime-session-authorized", {
+      model: status.model || "",
+      voice: status.voice || "",
+      runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
+    });
     refreshMicSupport();
     return true;
   } catch (error) {
     realtimeVoiceStarting = false;
     stopRealtimeVoiceSession("Realtime voice did not start.");
-    const message = `OpenAI Realtime voice unavailable: ${error.message || "provider failed"}. Falling back to browser voice.`;
+    const status = realtimeVoiceStatusCache?.realtimeVoice || {};
+    const allowLegacy = status?.fallback === "legacy";
+    const message = allowLegacy
+      ? `Nexus realtime voice is unavailable. I am using the safe legacy voice path.`
+      : `Nexus voice is temporarily unavailable.`;
     const outputStatus = $("#globalVoiceOutputStatus");
     if (outputStatus) outputStatus.textContent = translateText(message);
     updateNexusBehaviorLayer("fallback", message);
-    return false;
+    nexusGenesisVoiceDebugLog(allowLegacy ? "legacy-fallback-selected" : "session-failed", {
+      reason: error.message || "realtime-start-failed"
+    });
+    return allowLegacy ? false : true;
   }
 }
 
@@ -49221,11 +49428,11 @@ function refreshMicSupport() {
     status.classList.toggle("ready", ready);
     status.classList.toggle("blocked", !ready);
     status.textContent = voiceConversationPaused
-      ? "Nexus is paused. Background conversation is ignored. Say Nexus, listen or press Mic to continue."
+      ? "Nexus is paused. Background conversation is ignored. Say Nexus, listen to continue."
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
       : realtimeVoiceActive()
-      ? `OpenAI Realtime conversation-only voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop. Workflow fields appear only after Nexus opens a workflow.`
+      ? `Nexus realtime voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()
@@ -56028,7 +56235,7 @@ async function startVoiceListening(options = {}) {
     setVoiceResponse("I stopped speaking. I'm listening now.", false, { allowVoiceFirst: false });
   }
   if (realtimeVoiceActive()) {
-    stopRealtimeVoiceSession("Realtime voice stopped. Press Mic when you want Nexus to listen again.");
+    stopRealtimeVoiceSession("Realtime voice stopped.");
     return;
   }
   if (voiceRecognition) {
@@ -56070,6 +56277,16 @@ async function startVoiceListening(options = {}) {
   const realtimeStarted = await startRealtimeVoiceSession();
   if (realtimeStarted) {
     nexusOsVoiceStartInFlight = false;
+    if (!realtimeVoiceActive()) {
+      updateNexusOsVoiceRuntimeState({ mode: "realtime-blocked", listeningState: "blocked", hearingState: "idle" }, source);
+      setNexusGenesisTrustChainState("recognition_failed", {
+        visibleFeedback: "Voice is temporarily unavailable.",
+        failureRecovery: "Realtime voice did not initialize and legacy fallback is blocked by server policy.",
+        reason: "realtime-start-failed"
+      });
+      refreshMicSupport();
+      return;
+    }
     updateNexusOsVoiceRuntimeState({ mode: "listening", listeningState: "realtime", hearingState: "idle" }, source);
     return;
   }
@@ -58464,7 +58681,7 @@ function bindStatic() {
         const input = $("#userCaptionInput");
         const command = input?.value.trim();
         if (!command) {
-          updateUserCaptionPanel("Type a request or press Mic to speak.");
+          updateUserCaptionPanel("Speak naturally to Nexus.");
           return;
         }
         if (input) input.value = "";

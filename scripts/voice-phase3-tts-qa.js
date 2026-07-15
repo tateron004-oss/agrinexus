@@ -53,7 +53,7 @@ async function jsonCall(route, body) {
   assert(appSource.includes("language: languageCode()") && appSource.includes("locale: voiceLocale()"), "TTS requests must preserve Phase 2 language metadata");
   assert(appSource.includes("forceOpenAi: true"), "OpenAI TTS should remain the primary frontend path");
   assert(serverSource.includes("canonicalVoiceLanguage(body.language || body.targetLanguage || user.language || \"en\")"), "TTS route should preserve canonical language metadata");
-  assert(serverSource.includes("operationalMode: \"conversation-only\""), "Realtime must remain conversation-only during Phase 3");
+  assert(serverSource.includes('operationalMode: "realtime-tools"') && serverSource.includes("nexus_capability_router"), "Realtime must expose only the gated Nexus tool router after migration");
 
   fs.copyFileSync(path.join(root, "db.json"), tempDb);
   const server = spawn(process.execPath, ["server.js"], {
