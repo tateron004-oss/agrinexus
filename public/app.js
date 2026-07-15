@@ -801,6 +801,8 @@ let nexusVoiceSession = JSON.parse(localStorage.getItem("agrinexusVoiceSession")
 };
 let nexusVoicePreferencePendingConsent = JSON.parse(localStorage.getItem("nexusVoicePreferencePendingConsent") || "null");
 let nexusOsVoiceStartInFlight = false;
+let nexusGenesisPermissionGrantedAutoStartInFlight = false;
+let nexusGenesisPermissionGrantedAutoStartLastAttemptAt = 0;
 let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRuntimeState") || "null") || {
   schemaVersion: "nexus-os-voice-runtime.v1",
   runtimeOwner: "nexus-os-canonical-voice",
@@ -1225,8 +1227,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-431";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v376";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-432";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -38198,6 +38200,7 @@ function renderUserWorkspace() {
   setTimeout(() => {
     bindNexusPrimaryVoiceControls();
     updateNexusOsUnifiedConversationDom();
+    maybeStartGenesisRecognitionAfterGrantedPermission("render-user-workspace").catch(() => {});
   }, 0);
   if (!nexusPilotPlatformStatus) {
     setTimeout(() => {
@@ -48453,6 +48456,83 @@ async function chromeMicrophonePermissionState() {
     return result?.state || "unknown";
   } catch (error) {
     return "unknown";
+  }
+}
+
+async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "genesis-home-render") {
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  const homeVisible = Boolean(document.querySelector("[data-nexus-genesis-audio-gate='true']"));
+  if (!homeVisible) return false;
+  const profile = browserVoiceRuntimeProfile();
+  const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (realtimeVoiceEnabled() && realtimeVoiceSupported()));
+  const skipReason = !profile.secureEnough
+    ? "secure-context-required"
+    : !recognitionAvailable
+      ? "recognition-unsupported"
+      : voiceRecognition
+        ? "recognition-already-constructed"
+        : nexusOsVoiceStartInFlight || nexusGenesisPermissionGrantedAutoStartInFlight
+          ? "recognition-start-in-flight"
+          : voiceStopRequested
+            ? "explicit-stop-requested"
+            : voiceConversationPaused
+              ? "conversation-paused"
+              : voiceSpeaking
+                ? "assistant-speaking"
+                : voiceDemoQuietMode
+                  ? "voice-muted"
+                  : nexusVoicePermissionDeniedThisSession
+                    ? "permission-denied-this-session"
+                    : "";
+  recordNexusAudioPipelineEvent("genesis-auto-start-check", {
+    source,
+    supported: profile.supported,
+    secureEnough: profile.secureEnough,
+    skipReason: skipReason || "permission-check-required"
+  });
+  if (skipReason) return false;
+  const now = Date.now();
+  if (now - nexusGenesisPermissionGrantedAutoStartLastAttemptAt < 2500) {
+    recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
+      source,
+      skipReason: "throttled"
+    });
+    return false;
+  }
+  nexusGenesisPermissionGrantedAutoStartInFlight = true;
+  nexusGenesisPermissionGrantedAutoStartLastAttemptAt = now;
+  try {
+    const permission = await chromeMicrophonePermissionState();
+    if (permission === "denied") {
+      nexusVoicePermissionDeniedThisSession = true;
+      updateNexusOsVoiceRuntimeState({ permissionState: "denied", listeningState: "blocked" }, "genesis-auto-start-permission-denied");
+      recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
+        source,
+        permissionState: "denied",
+        skipReason: "permission-denied"
+      });
+      return false;
+    }
+    if (permission !== "granted") {
+      recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
+        source,
+        permissionState: permission,
+        skipReason: "permission-not-granted"
+      });
+      return false;
+    }
+    updateNexusOsVoiceRuntimeState({
+      permissionState: "granted-or-browser-managed",
+      recognitionSupported: true
+    }, "genesis-auto-start-permission-granted");
+    recordNexusAudioPipelineEvent("genesis-auto-start-triggered", {
+      source,
+      permissionState: "granted"
+    });
+    await startVoiceListening({ source: "genesis-home-permission-granted-auto-start" });
+    return true;
+  } finally {
+    nexusGenesisPermissionGrantedAutoStartInFlight = false;
   }
 }
 

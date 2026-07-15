@@ -25,6 +25,7 @@
     "qa:nexus-genesis-voice-native-front-door": "node scripts/nexus-genesis-voice-native-front-door-qa.js",
     "qa:nexus-production-audio-pipeline": "node scripts/nexus-production-audio-pipeline-qa.js",
     "qa:nexus-genesis-truthful-voice-state": "node scripts/nexus-genesis-truthful-voice-state-qa.js",
+    "qa:nexus-genesis-home-control-removal": "node scripts/nexus-genesis-home-control-removal-qa.js",
     "qa:nexus-conversation-workflow-transition-engine": "node scripts/nexus-conversation-workflow-transition-engine-qa.js",
     "qa:nexus-conversation-workflow-acceptance": "node scripts/nexus-conversation-workflow-acceptance-qa.js",
     "qa:nexus-genesis-visible-product-acceptance": "node scripts/nexus-genesis-visible-product-acceptance-qa.js",

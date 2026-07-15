@@ -34,25 +34,26 @@ const homeGate = sectionBetween(app, "function renderNexusGenesisHomeVoiceGate",
 const truthfulState = sectionBetween(app, "function nexusGenesisTruthfulVoiceState", "function renderNexusGenesisVoiceDebugPanel", "truthful voice state");
 const debugPanel = sectionBetween(app, "function renderNexusGenesisVoiceDebugPanel", "function renderNexusGenesisHomeVoiceGate", "voice debug panel");
 const pipeline = sectionBetween(app, "function recordNexusAudioPipelineEvent", "function nexusVoiceAudioPipelineSnapshot", "audio pipeline event recorder");
+const grantedAutoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
 const recognitionStart = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
 const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", "speech synthesis controller");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-431"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v376"'
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-432"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-431",
-  "/styles.css?v=nexus-behavior-431",
-  "/app.js?v=nexus-behavior-431"
+  "/manifest.webmanifest?v=nexus-behavior-432",
+  "/styles.css?v=nexus-behavior-432",
+  "/app.js?v=nexus-behavior-432"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-431"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v376"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-432"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v377"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v376"',
-  'BUILD_VERSION = "nexus-behavior-431"'
+  'CACHE_NAME = "agrinexus-pwa-v377"',
+  'BUILD_VERSION = "nexus-behavior-432"'
 ], "service worker build");
 
 includesAll(truthfulState, [
@@ -112,6 +113,26 @@ includesAll(pipeline, [
   '"speech-synthesis-onstart"',
   "utteranceOnStartReceived: true"
 ], "callback-backed pipeline flags");
+
+includesAll(grantedAutoStart, [
+  "chromeMicrophonePermissionState()",
+  "permission !== \"granted\"",
+  "voiceRecognition",
+  "nexusOsVoiceStartInFlight",
+  "nexusGenesisPermissionGrantedAutoStartInFlight",
+  "voiceStopRequested",
+  "voiceConversationPaused",
+  "voiceSpeaking",
+  "voiceDemoQuietMode",
+  "nexusVoicePermissionDeniedThisSession",
+  "genesis-auto-start-check",
+  "genesis-auto-start-skipped",
+  "genesis-auto-start-triggered",
+  "granted-or-browser-managed",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "granted permission recognition auto-start");
+assert(app.includes("maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"), "workspace render must schedule granted-permission recognition auto-start");
+assert(!grantedAutoStart.includes("data-nexus-os-core-orb"), "granted permission auto-start must not be wired to the orb");
 
 includesAll(recognitionStart, [
   "recognition-start-call",

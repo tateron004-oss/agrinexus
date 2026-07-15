@@ -34,6 +34,7 @@ includesAll(app, [
   "function createNexusSpeechSynthesisUtterance",
   "function runNexusSpeechSynthesisController",
   "function nexusListeningWakeControllerState",
+  "async function maybeStartGenesisRecognitionAfterGrantedPermission",
   "function showNexusVoiceFallbackMessage",
   "function handleNexusPrimaryVoiceButtonClick",
   "function bindNexusPrimaryVoiceControls",
@@ -129,8 +130,18 @@ const renderWorkspaceSource = between(app, "function renderUserWorkspace", "func
 includesAll(renderWorkspaceSource, [
   "bindNexusStandardUserHomeControls();",
   "bindNexusPrimaryVoiceControls();",
-  "updateNexusOsUnifiedConversationDom();"
+  "updateNexusOsUnifiedConversationDom();",
+  "maybeStartGenesisRecognitionAfterGrantedPermission(\"render-user-workspace\")"
 ], "workspace render voice binding");
+
+const grantedAutoStartSource = between(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "granted permission auto-start");
+includesAll(grantedAutoStartSource, [
+  "chromeMicrophonePermissionState()",
+  "permission !== \"granted\"",
+  "genesis-auto-start-skipped",
+  "genesis-auto-start-triggered",
+  "startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"
+], "granted permission recognition auto-start");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-browser-voice-acceptance"],
@@ -142,7 +153,7 @@ assert(
   "voice/all-safe suite must include browser voice acceptance QA"
 );
 assert(
-  index.includes("/app.js?v=nexus-behavior-431"),
+  index.includes("/app.js?v=nexus-behavior-432"),
   "index must bump app.js version so browser voice acceptance fixes load in real browser validation"
 );
 

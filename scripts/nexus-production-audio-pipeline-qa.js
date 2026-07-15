@@ -25,6 +25,10 @@ includesAll(app, [
   "recordNexusAudioPipelineEvent",
   "media-stream-request",
   "media-stream-granted",
+  "genesis-auto-start-check",
+  "genesis-auto-start-skipped",
+  "genesis-auto-start-triggered",
+  "genesis-home-permission-granted-auto-start",
   "recognition-constructing",
   "recognition-start-call",
   "recognition-onstart",
@@ -64,10 +68,10 @@ assert(app.includes("I will not claim I can hear audio until recognition starts.
 assert(app.includes("Microphone permission may be available, but recognition is not actively listening now."), "permission-granted recognition failure must be truthful");
 assert(app.includes("Genesis keeps the home screen audio-first"), "voice fallback copy must keep Genesis home audio-first");
 
-assert(app.includes("nexus-behavior-431"), "app build identifier must be bumped");
-assert(server.includes("nexus-behavior-431"), "server build identifier must be bumped");
-assert(app.includes("agrinexus-pwa-v376"), "app PWA cache identifier must be bumped");
-assert(server.includes("agrinexus-pwa-v376"), "server PWA cache identifier must be bumped");
+assert(app.includes("nexus-behavior-432"), "app build identifier must be bumped");
+assert(server.includes("nexus-behavior-432"), "server build identifier must be bumped");
+assert(app.includes("agrinexus-pwa-v377"), "app PWA cache identifier must be bumped");
+assert(server.includes("agrinexus-pwa-v377"), "server PWA cache identifier must be bumped");
 
 const orbStyleBlock = app.match(/\[data-nexus-os-core-orb\]\s*\{[\s\S]*?\}/)?.[0] || "";
 assert(orbStyleBlock.includes("pointer-events: none"), "Genesis orb must remain pointer-events none");
