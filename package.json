@@ -32,6 +32,7 @@
     "qa:nexus-system-wide-integrity-hardening": "node scripts/nexus-system-wide-integrity-hardening-qa.js",
     "qa:nexus-genesis-realtime-production-migration": "node scripts/nexus-genesis-realtime-production-migration-qa.js",
     "qa:nexus-genesis-realtime-repeated-turn-lifecycle": "node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
+    "qa:nexus-genesis-elevenlabs-agents-runtime": "node scripts/nexus-genesis-elevenlabs-agents-runtime-qa.js",
     "qa:nexus-genesis-conversation-routing-precedence": "node scripts/nexus-genesis-conversation-routing-precedence-qa.js",
     "qa:nexus-genesis-truthful-voice-state": "node scripts/nexus-genesis-truthful-voice-state-qa.js",
     "qa:nexus-genesis-home-control-removal": "node scripts/nexus-genesis-home-control-removal-qa.js",

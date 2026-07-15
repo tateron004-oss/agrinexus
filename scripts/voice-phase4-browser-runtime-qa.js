@@ -17,7 +17,7 @@ function sourceBetween(source, startNeedle, endNeedle) {
 const setVoiceResponseSource = sourceBetween(appSource, "function setVoiceResponse", "function stripStandaloneVoiceAcknowledgement");
 const stopPlaybackSource = sourceBetween(appSource, "function stopVoicePlayback", "function beginNexusVoiceTurn");
 const speakSource = sourceBetween(appSource, "function speakVoiceResponse", "function realtimeVoiceSupported");
-const realtimeEnabledSource = sourceBetween(appSource, "function realtimeVoiceEnabled", "function realtimeVoiceActive");
+const elevenLabsEnabledSource = sourceBetween(appSource, "function elevenLabsVoiceEnabled", "function elevenLabsVoiceActive");
 const realtimeStartSource = sourceBetween(appSource, "async function startRealtimeVoiceSession", "function browserVoiceRuntimeProfile");
 const refreshMicSource = sourceBetween(appSource, "function refreshMicSupport", "function normalizedWakeText");
 const finalCommandSource = sourceBetween(appSource, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand");
@@ -49,19 +49,21 @@ const requirements = [
       handleCoreSource.includes('source: options.source || "voice"')
   ],
   [
-    "Realtime follows server-selected runtime and cannot run beside legacy recognition",
-    realtimeEnabledSource.includes('status?.runtime === "realtime"') &&
-      startListeningSource.includes("const realtimeStarted = await startRealtimeVoiceSession();") &&
-      realtimeStartSource.includes('if (status.runtime !== "realtime") return false;')
+    "ElevenLabs follows server-selected runtime and cannot run beside legacy recognition",
+    elevenLabsEnabledSource.includes('status?.runtime === "elevenlabs"') &&
+      startListeningSource.includes("const elevenLabsStarted = await startElevenLabsVoiceSession();") &&
+      appSource.includes('if (status.runtime !== "elevenlabs") return false;') &&
+      appSource.includes("stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")")
   ],
   [
-    "Realtime UI is voice-first and workflow-scoped",
-    refreshMicSource.includes("Nexus realtime voice is live") &&
+    "ElevenLabs UI is voice-first and workflow-scoped",
+    refreshMicSource.includes("Nexus ElevenLabs Agents voice is live") &&
       refreshMicSource.includes("Workflow fields appear only after Nexus opens a workflow")
   ],
   [
-    "Realtime server contract exposes gated tool routing",
-    serverSource.includes('operationalMode: "realtime-tools"') &&
+    "Realtime server contract remains rollback-only while ElevenLabs exposes gated tool routing",
+    serverSource.includes("OpenAI Realtime is disabled after the production gate failure") &&
+      serverSource.includes("/api/voice/elevenlabs/tool") &&
       serverSource.includes("nexus_capability_router") &&
       serverSource.includes("Never claim an action completed")
   ],

@@ -750,8 +750,12 @@ let activeVoiceAudio = null;
 let realtimeVoiceSession = null;
 let realtimeVoiceStarting = false;
 let realtimeVoiceStatusCache = null;
+let elevenLabsVoiceSession = null;
+let elevenLabsVoiceStarting = false;
+let elevenLabsVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v1";
 const NEXUS_REALTIME_CONTROLLER_STATES = Object.freeze([
   "initializing",
   "connecting",
@@ -838,7 +842,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v443";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v444";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1303,8 +1307,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-443";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v388";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-444";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v389";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -31857,7 +31861,7 @@ function isNexusVoiceTroubleshootingCommand(command = "") {
 
 function nexusVoiceTroubleshootingState() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false, browserName: "this browser" };
-  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
+  const recognitionActive = Boolean(voiceRecognition || genesisVoiceConversationActive?.());
   const synthesisSupported = typeof window !== "undefined" && Boolean(window.speechSynthesis || activeVoiceAudio || browserSpeechFallbackEnabled?.());
   const quiet = Boolean(voiceDemoQuietMode || nexusOsConversationMuted);
   const permissionState = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
@@ -32223,8 +32227,8 @@ function renderNexusBrowserVoiceAvailabilityHint() {
 function renderNexusVoiceFirstPresenceControls() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false };
   const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
-  const recognitionActive = Boolean(voiceRecognition || realtimeVoiceActive?.());
-  const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
+  const recognitionActive = Boolean(voiceRecognition || genesisVoiceConversationActive?.());
+  const voiceReady = Boolean((profile.supported || elevenLabsVoiceSupported?.()) && profile.secureEnough !== false);
   const enableLabel = recognitionActive
     ? "Stop listening"
     : nexusMicrophonePermissionCanAttemptStart(permissionState)
@@ -48475,6 +48479,10 @@ function realtimeVoiceActive() {
   return Boolean(realtimeVoiceSession?.active);
 }
 
+function genesisVoiceConversationActive() {
+  return Boolean(elevenLabsVoiceActive() || realtimeVoiceActive());
+}
+
 function realtimeVoiceStatusMessage() {
   if (!realtimeVoiceSupported()) return "Realtime voice needs HTTPS, localhost, or 127.0.0.1 with microphone permission.";
   const status = realtimeVoiceStatusCache?.realtimeVoice;
@@ -48483,6 +48491,383 @@ function realtimeVoiceStatusMessage() {
   if (status?.runtime === "disabled") return "Nexus voice is temporarily unavailable.";
   if (status && !status.configured) return status.note || "OpenAI Realtime voice needs OPENAI_API_KEY in hosting.";
   return "Nexus realtime voice can start when selected and configured by the server.";
+}
+
+function elevenLabsVoiceSupported() {
+  const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
+  return Boolean(window.WebSocket && navigator.mediaDevices?.getUserMedia && (window.AudioContext || window.webkitAudioContext) && secureEnough);
+}
+
+function elevenLabsVoiceEnabled() {
+  const status = elevenLabsVoiceStatusCache?.elevenLabsVoice;
+  return Boolean(status?.runtime === "elevenlabs" && status?.elevenLabsEnabled !== false);
+}
+
+function elevenLabsVoiceActive() {
+  return Boolean(elevenLabsVoiceSession?.active);
+}
+
+function elevenLabsVoiceStatusMessage() {
+  if (!elevenLabsVoiceSupported()) return "ElevenLabs voice needs HTTPS, WebSocket, Web Audio, and microphone permission.";
+  const status = elevenLabsVoiceStatusCache?.elevenLabsVoice;
+  if (status?.ready) return "Nexus ElevenLabs Agents voice is ready.";
+  if (status && !status.configured) return status.note || `ElevenLabs Agents needs ${status.missingEnv?.join(", ") || "provider configuration"} in hosting.`;
+  if (status?.runtime && status.runtime !== "elevenlabs") return status.note || "ElevenLabs Agents is not selected.";
+  return "Nexus ElevenLabs Agents voice can start when configured by the server.";
+}
+
+async function loadElevenLabsVoiceStatus(options = {}) {
+  if (!options.force && elevenLabsVoiceStatusCache && Date.now() - (elevenLabsVoiceStatusCache.checkedAt || 0) < 60000) {
+    return elevenLabsVoiceStatusCache;
+  }
+  const response = await fetch("/api/voice/elevenlabs/status", {
+    method: "GET",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `ElevenLabs voice status failed: ${response.status}`);
+  elevenLabsVoiceStatusCache = { ...payload, checkedAt: Date.now() };
+  return elevenLabsVoiceStatusCache;
+}
+
+function encodeElevenLabsPcm16(float32Samples) {
+  const buffer = new ArrayBuffer(float32Samples.length * 2);
+  const view = new DataView(buffer);
+  for (let index = 0; index < float32Samples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, float32Samples[index] || 0));
+    view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function sendElevenLabsVoiceEvent(event = {}) {
+  const socket = elevenLabsVoiceSession?.socket;
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+  socket.send(JSON.stringify(event));
+  return true;
+}
+
+function playElevenLabsAudioChunk(base64Audio = "") {
+  const session = elevenLabsVoiceSession;
+  const audioBase64 = String(base64Audio || "").trim();
+  if (!session || !audioBase64) return;
+  const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+  session.activeAudio = audio;
+  updateNexusVoiceSession({ state: "elevenlabs-speaking", assistantSpeaking: true }, "elevenlabs-audio-started");
+  setNexusGenesisTrustChainState("speaking", {
+    visibleFeedback: "Nexus is speaking.",
+    reason: "elevenlabs-agent-audio"
+  });
+  audio.onended = () => {
+    if (elevenLabsVoiceSession === session) {
+      session.activeAudio = null;
+      updateNexusVoiceSession({
+        state: "elevenlabs-listening",
+        assistantSpeaking: false,
+        lastAssistantSpeechAt: Date.now()
+      }, "elevenlabs-audio-ended");
+      setNexusGenesisTrustChainState("listening", {
+        visibleFeedback: "Nexus is listening.",
+        reason: "elevenlabs-audio-ended"
+      });
+    }
+  };
+  audio.onerror = () => {
+    if (elevenLabsVoiceSession === session) session.activeAudio = null;
+    updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false }, "elevenlabs-audio-error");
+  };
+  audio.play().catch(() => {
+    if (elevenLabsVoiceSession === session) session.activeAudio = null;
+  });
+}
+
+async function dispatchElevenLabsToolCall(payload = {}) {
+  const toolCall = payload.client_tool_call || payload.tool_call || payload;
+  const toolName = toolCall.tool_name || toolCall.name || "nexus_capability_router";
+  const parameters = toolCall.parameters || toolCall.arguments || payload.parameters || {};
+  const toolCallId = toolCall.tool_call_id || toolCall.call_id || payload.tool_call_id || "";
+  try {
+    const response = await fetch("/api/voice/elevenlabs/tool", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: toolName,
+        callId: toolCallId,
+        correlationId: `el-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        arguments: {
+          ...parameters,
+          command: parameters.command || parameters.query || parameters.text || ""
+        },
+        language: languageCode()
+      })
+    });
+    const result = await response.json().catch(() => ({
+      ok: false,
+      response: "I could not complete that Nexus tool request.",
+      blockedReason: "client-parse-failed"
+    }));
+    sendElevenLabsVoiceEvent({
+      type: "client_tool_result",
+      tool_call_id: toolCallId,
+      result
+    });
+  } catch {
+    sendElevenLabsVoiceEvent({
+      type: "client_tool_result",
+      tool_call_id: toolCallId,
+      result: {
+        ok: false,
+        response: "I could not reach the Nexus tool layer right now.",
+        blockedReason: "provider-unavailable",
+        executionAttempted: false
+      }
+    });
+  }
+}
+
+function handleElevenLabsVoiceMessage(event) {
+  let payload = {};
+  try {
+    payload = typeof event === "string" ? JSON.parse(event) : JSON.parse(event?.data || "{}");
+  } catch {
+    return;
+  }
+  const type = String(payload.type || payload.event || "");
+  nexusGenesisVoiceDebugLog("elevenlabs-event", {
+    type,
+    conversationId: elevenLabsVoiceSession?.conversationId || ""
+  });
+  if (type === "ping" || payload.ping_event) {
+    sendElevenLabsVoiceEvent({
+      type: "pong",
+      event_id: payload.event_id || payload.ping_event?.event_id || payload.ping_ms || ""
+    });
+  }
+  const transcript = payload.user_transcript || payload.user_transcription_event?.user_transcript || payload.transcript || "";
+  if (transcript) {
+    updateStreamingVoicePartial(transcript, { source: "elevenlabs-user-transcript" });
+    recordNexusOsConversationTurn("user", transcript, { source: "elevenlabs-final-transcript" });
+    nexusGenesisVoiceDebugLog("final-transcript-received", { source: "elevenlabs", transcriptLength: transcript.length });
+  }
+  const agentResponse = payload.agent_response || payload.agent_response_event?.agent_response || payload.response || "";
+  if (agentResponse) {
+    recordNexusOsConversationTurn("assistant", agentResponse, { source: "elevenlabs-agent-response" });
+    updateUserCaptionPanel(agentResponse, { expanded: true });
+    setNexusGenesisTrustChainState("response_ready", {
+      response: agentResponse,
+      visibleFeedback: agentResponse,
+      reason: "elevenlabs-agent-response"
+    });
+  }
+  const audioBase64 = payload.audio_event?.audio_base_64 || payload.audio?.chunk || payload.audio || payload.audio_base_64 || "";
+  if (audioBase64 && typeof audioBase64 === "string") playElevenLabsAudioChunk(audioBase64);
+  if (type === "client_tool_call" || payload.client_tool_call || payload.tool_call) {
+    dispatchElevenLabsToolCall(payload);
+  }
+  if (type === "interruption" || payload.interruption_event) {
+    try {
+      elevenLabsVoiceSession?.activeAudio?.pause?.();
+    } catch {}
+    updateNexusVoiceSession({ state: "elevenlabs-listening", assistantSpeaking: false }, "elevenlabs-interruption");
+  }
+}
+
+function stopElevenLabsVoiceSession(reason = "ElevenLabs voice stopped.") {
+  if (!elevenLabsVoiceSession) return;
+  const session = elevenLabsVoiceSession;
+  try {
+    session.audioProcessor?.disconnect?.();
+  } catch {}
+  try {
+    session.audioSource?.disconnect?.();
+  } catch {}
+  try {
+    session.silentGain?.disconnect?.();
+  } catch {}
+  try {
+    session.audioContext?.close?.();
+  } catch {}
+  try {
+    session.stream?.getTracks?.().forEach(track => track.stop());
+  } catch {}
+  try {
+    session.activeAudio?.pause?.();
+  } catch {}
+  try {
+    session.socket?.close?.();
+  } catch {}
+  elevenLabsVoiceSession = null;
+  elevenLabsVoiceStarting = false;
+  setVoiceStatus("standby");
+  updateNexusBehaviorLayer("standby", reason);
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText(reason);
+  refreshMicSupport();
+}
+
+async function startElevenLabsVoiceSession() {
+  if (!elevenLabsVoiceSupported()) return false;
+  if (elevenLabsVoiceActive()) return true;
+  if (elevenLabsVoiceStarting) return true;
+  elevenLabsVoiceStarting = true;
+  let pendingStream = null;
+  let pendingAudioContext = null;
+  try {
+    const statusPayload = await loadElevenLabsVoiceStatus({ force: true });
+    const status = statusPayload?.elevenLabsVoice || {};
+    if (status.runtime !== "elevenlabs") return false;
+    if (!status.ready) throw new Error(status.note || "ElevenLabs Agents voice is not configured.");
+    if (realtimeVoiceActive()) stopRealtimeVoiceSession("OpenAI Realtime disabled for ElevenLabs acceptance.");
+    if (voiceRecognition) {
+      try {
+        voiceRecognition.stop();
+      } catch {}
+      voiceRecognition = null;
+    }
+    stopVoicePlayback();
+    stopNexusAudioFallbackRecorder("elevenlabs-selected");
+    stopNexusVoicePermissionStream("elevenlabs-selected");
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+    pendingStream = stream;
+    const track = stream.getAudioTracks?.()[0] || null;
+    nexusGenesisVoiceDebugLog("microphone-track-created", {
+      source: "elevenlabs",
+      trackState: track?.readyState || "none",
+      trackEnabled: track ? Boolean(track.enabled) : false
+    });
+    const sessionResponse = await fetch(`/api/voice/elevenlabs/session?language=${encodeURIComponent(languageCode())}`, {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ language: languageCode() })
+    });
+    const sessionPayload = await sessionResponse.json().catch(() => ({}));
+    if (!sessionResponse.ok || !sessionPayload.signedUrl) {
+      throw new Error(sessionPayload.error || `ElevenLabs session failed: ${sessionResponse.status}`);
+    }
+    const socket = new WebSocket(sessionPayload.signedUrl);
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContextClass({ sampleRate: 16000 });
+    pendingAudioContext = audioContext;
+    const audioSource = audioContext.createMediaStreamSource(stream);
+    const audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+    const silentGain = audioContext.createGain();
+    silentGain.gain.value = 0;
+    audioSource.connect(audioProcessor);
+    audioProcessor.connect(silentGain);
+    silentGain.connect(audioContext.destination);
+    elevenLabsVoiceSession = {
+      active: true,
+      runtime: "elevenlabs",
+      provider: "elevenlabs",
+      socket,
+      stream,
+      audioContext,
+      audioSource,
+      audioProcessor,
+      silentGain,
+      activeAudio: null,
+      startedAt: Date.now(),
+      conversationId: sessionPayload.conversationId || "",
+      runtimeVersion: sessionPayload.runtimeVersion || NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION
+    };
+    pendingStream = null;
+    pendingAudioContext = null;
+    audioProcessor.onaudioprocess = audioEvent => {
+      if (!elevenLabsVoiceSession?.active || socket.readyState !== WebSocket.OPEN) return;
+      const input = audioEvent.inputBuffer.getChannelData(0);
+      sendElevenLabsVoiceEvent({ user_audio_chunk: encodeElevenLabsPcm16(input) });
+    };
+    socket.onopen = () => {
+      elevenLabsVoiceStarting = false;
+      voiceStopRequested = false;
+      sendElevenLabsVoiceEvent({
+        type: "conversation_initiation_client_data",
+        conversation_config_override: {
+          agent: {
+            prompt: {
+              prompt: "You are Nexus Genesis, the live voice companion inside AgriNexus. Keep ordinary conversation conversational. Use Nexus tools only for real platform workflows, and never claim execution without verified evidence."
+            },
+            first_message: "Nexus is listening."
+          }
+        },
+        dynamic_variables: {
+          language: languageCode(),
+          product: "Nexus Genesis | AgriNexus"
+        }
+      });
+      setVoiceStatus("listening");
+      updateNexusVoiceSession({
+        state: "elevenlabs-listening",
+        userSpeaking: false,
+        assistantSpeaking: false
+      }, "elevenlabs-started");
+      updateNativeVoiceBridgeState("elevenlabs-listening", { provider: "elevenlabs-agents", locale: voiceLocale() });
+      setNexusGenesisTrustChainState("listening", {
+        visibleFeedback: "Nexus is listening.",
+        reason: "elevenlabs-websocket-open"
+      });
+      const outputStatus = $("#globalVoiceOutputStatus");
+      if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
+      refreshMicSupport();
+    };
+    socket.onmessage = handleElevenLabsVoiceMessage;
+    socket.onerror = () => {
+      setNexusGenesisTrustChainState("recognition_failed", {
+        visibleFeedback: "The ElevenLabs voice session had a connection problem.",
+        failureRecovery: "Reload Genesis after ElevenLabs provider credentials are available.",
+        reason: "elevenlabs-websocket-error"
+      });
+    };
+    socket.onclose = () => {
+      if (elevenLabsVoiceSession?.socket === socket) {
+        stopElevenLabsVoiceSession("ElevenLabs voice session closed.");
+      }
+    };
+    return true;
+  } catch (error) {
+    elevenLabsVoiceStarting = false;
+    if (!elevenLabsVoiceSession) {
+      try {
+        pendingStream?.getTracks?.().forEach(track => track.stop());
+      } catch {}
+      try {
+        pendingAudioContext?.close?.();
+      } catch {}
+    }
+    stopElevenLabsVoiceSession("ElevenLabs voice did not start.");
+    const status = elevenLabsVoiceStatusCache?.elevenLabsVoice || {};
+    const missing = Array.isArray(status.missingEnv) && status.missingEnv.length ? ` Missing: ${status.missingEnv.join(", ")}.` : "";
+    const message = `${status.note || "Nexus ElevenLabs Agents voice is not available yet."}${missing}`;
+    const outputStatus = $("#globalVoiceOutputStatus");
+    if (outputStatus) outputStatus.textContent = translateText(message);
+    updateNexusBehaviorLayer("blocked", message);
+    setNexusGenesisTrustChainState("recognition_failed", {
+      visibleFeedback: "Nexus voice is not configured yet.",
+      failureRecovery: message,
+      reason: "elevenlabs-start-failed"
+    });
+    nexusGenesisVoiceDebugLog("elevenlabs-session-failed", {
+      reason: error.message || "elevenlabs-start-failed"
+    });
+    return true;
+  }
 }
 
 function realtimeControllerSnapshot(extra = {}) {
@@ -49045,7 +49430,8 @@ function chromeVoiceStatusMessage() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const streamingStatus = streamingVoiceEnabled() ? " Streaming mode is on." : "";
-  if (realtimeVoiceEnabled() && realtimeVoiceSupported()) return `${realtimeVoiceStatusMessage()} Click Mic, choose Allow for microphone, and keep this tab open while testing.`;
+  if (elevenLabsVoiceEnabled() && elevenLabsVoiceSupported()) return `${elevenLabsVoiceStatusMessage()} Keep this tab open while testing the automatic voice session.`;
+  if (realtimeVoiceEnabled() && realtimeVoiceSupported()) return `${realtimeVoiceStatusMessage()} OpenAI Realtime is rollback-only and should not be used during ElevenLabs acceptance.`;
   if (!profile.supported) return `${profile.browserName} does not expose browser speech recognition here. Open the app in desktop Chrome, then use Ask AgriNexus typed commands until microphone support is available.`;
   if (!profile.secureEnough) return `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or your local server URL, then allow the microphone.`;
   if (profile.isChrome) return `Chrome voice ready for ${languageName} (${locale}). Click Mic, choose Allow for microphone, and keep this tab open while testing.${streamingStatus}`;
@@ -49181,7 +49567,7 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
     recognitionSupported: Boolean(profile.supported)
   });
   nexusGenesisVoiceDebugLog("automatic-start-entered", { source, secureContext: profile.secureEnough });
-  const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (realtimeVoiceEnabled() && realtimeVoiceSupported()));
+  const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (elevenLabsVoiceEnabled() && elevenLabsVoiceSupported()));
   const skipReason = !profile.secureEnough
     ? "secure-context-required"
     : !recognitionAvailable
@@ -49588,7 +49974,7 @@ async function refreshChromeVoicePermissionHint() {
   if (!profile.isChrome) return;
   const status = $("#globalMicStatus");
   if (!status || voiceRecognition || voiceDemoQuietMode || voiceConversationPaused) return;
-  if (!voiceFirstMode && !realtimeVoiceActive()) return;
+  if (!voiceFirstMode && !genesisVoiceConversationActive()) return;
   const permissionState = normalizeNexusMicrophonePermissionState(await chromeMicrophonePermissionState());
   if (permissionState === "denied") {
     status.classList.add("blocked");
@@ -49602,7 +49988,8 @@ async function refreshChromeVoicePermissionHint() {
 function refreshMicSupport() {
   const profile = browserVoiceRuntimeProfile();
   const realtimeReady = realtimeVoiceEnabled() && realtimeVoiceSupported();
-  const ready = (profile.supported || realtimeReady) && profile.secureEnough;
+  const elevenLabsReady = elevenLabsVoiceEnabled() && elevenLabsVoiceSupported();
+  const ready = (profile.supported || elevenLabsReady || realtimeReady) && profile.secureEnough;
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const status = $("#globalMicStatus");
@@ -49614,8 +50001,10 @@ function refreshMicSupport() {
       ? "Nexus is paused. Background conversation is ignored. Say Nexus, listen to continue."
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
+      : elevenLabsVoiceActive()
+      ? `Nexus ElevenLabs Agents voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
       : realtimeVoiceActive()
-      ? `Nexus realtime voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
+      ? `Nexus Realtime rollback voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()
@@ -49628,7 +50017,7 @@ function refreshMicSupport() {
     const button = $(selector);
     if (!button) return;
     button.disabled = !ready;
-    button.title = ready ? realtimeReady ? "Use OpenAI Realtime voice with Ask AgriNexus" : profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
+    button.title = ready ? elevenLabsReady ? "Use ElevenLabs Agents voice with Nexus Genesis" : realtimeReady ? "OpenAI Realtime is rollback-only during ElevenLabs acceptance" : profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
     if (!ready) {
       if (selector === "#globalListenBtn") button.textContent = "Mic unavailable";
       if (selector === "#voiceListenBtn") button.textContent = "Mic unavailable";
@@ -49649,9 +50038,9 @@ function refreshMicSupport() {
       button.title = "Nexus is ignoring background conversation. Press to listen again.";
       return;
     }
-    if (selector === "#globalListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop listening" : "Mic: Start listening";
-    if (selector === "#voiceListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop listening" : "Mic: Start listening";
-    if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop" : "Listen";
+    if (selector === "#globalListenBtn") button.textContent = voiceRecognition || genesisVoiceConversationActive() ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#voiceListenBtn") button.textContent = voiceRecognition || genesisVoiceConversationActive() ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition || genesisVoiceConversationActive() ? "Stop" : "Listen";
   });
   const voiceFirstButton = $("#globalVoiceFirstBtn");
   if (voiceFirstButton) {
@@ -56346,7 +56735,7 @@ async function startVoiceListening(options = {}) {
     });
     return;
   }
-  if (!Recognition && !realtimeVoiceSupported()) {
+  if (!Recognition && !elevenLabsVoiceSupported()) {
     nexusOsVoiceStartInFlight = false;
     markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, inputMode: "typed-fallback" });
     setNexusGenesisTrustChainState("recognition_unavailable", {
@@ -56368,21 +56757,21 @@ async function startVoiceListening(options = {}) {
     });
     return;
   }
-  if (!Recognition && realtimeVoiceEnabled() && realtimeVoiceSupported() && !realtimeVoiceActive()) {
-    let realtimeConfigured = false;
+  if (!Recognition && elevenLabsVoiceEnabled() && elevenLabsVoiceSupported() && !elevenLabsVoiceActive()) {
+    let elevenLabsConfigured = false;
     try {
-      const statusPayload = await loadRealtimeVoiceStatus();
-      realtimeConfigured = Boolean(statusPayload?.realtimeVoice?.configured);
+      const statusPayload = await loadElevenLabsVoiceStatus();
+      elevenLabsConfigured = Boolean(statusPayload?.elevenLabsVoice?.configured);
     } catch {
-      realtimeConfigured = false;
+      elevenLabsConfigured = false;
     }
-    if (!realtimeConfigured) {
+    if (!elevenLabsConfigured) {
       nexusOsVoiceStartInFlight = false;
-      markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, realtimeConfigured: false, inputMode: "typed-fallback" });
+      markNexusListeningControllerEvent("typed-fallback", { permissionState: "unsupported", microphoneUnavailable: true, elevenLabsConfigured: false, inputMode: "typed-fallback" });
       setNexusGenesisTrustChainState("recognition_unavailable", {
-        visibleFeedback: "Realtime voice is not configured here.",
-        failureRecovery: "Configure realtime voice or use a browser with speech recognition support.",
-        reason: "realtime-voice-not-configured"
+        visibleFeedback: "ElevenLabs voice is not configured here.",
+        failureRecovery: "Configure ElevenLabs Agents voice or use a browser with speech recognition support.",
+        reason: "elevenlabs-voice-not-configured"
       });
       updateNexusOsVoiceRuntimeState({
         mode: "unsupported-browser",
@@ -56391,15 +56780,15 @@ async function startVoiceListening(options = {}) {
         microphoneUnavailable: true
       }, source);
       refreshMicSupport();
-      showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition here, and realtime voice is not configured. Genesis home remains audio-only until a voice path is available.`, {
-        source: "realtime-voice-not-configured",
+      showNexusVoiceFallbackMessage(`${profile.browserName} does not provide microphone speech recognition here, and ElevenLabs Agents voice is not configured. Genesis home remains audio-only until a voice path is available.`, {
+        source: "elevenlabs-voice-not-configured",
         mode: "typed-fallback",
         trustChainState: "recognition_unavailable"
       });
       return;
     }
   }
-  if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive()) {
+  if (nexusOsVoiceStartInFlight && !voiceRecognition && !genesisVoiceConversationActive()) {
     markNexusListeningControllerEvent("duplicate-session-prevented", { inputMode: "voice-native" });
     updateNexusOsVoiceRuntimeState({ mode: "starting", listeningState: "starting" }, source);
     return;
@@ -56417,8 +56806,9 @@ async function startVoiceListening(options = {}) {
     stopVoicePlayback();
     setVoiceResponse("I stopped speaking. I'm listening now.", false, { allowVoiceFirst: false });
   }
-  if (realtimeVoiceActive()) {
-    stopRealtimeVoiceSession("Realtime voice stopped.");
+  if (genesisVoiceConversationActive()) {
+    if (elevenLabsVoiceActive()) stopElevenLabsVoiceSession("ElevenLabs voice stopped.");
+    if (realtimeVoiceActive()) stopRealtimeVoiceSession("Realtime voice stopped.");
     return;
   }
   if (voiceRecognition) {
@@ -56457,20 +56847,20 @@ async function startVoiceListening(options = {}) {
     permissionState: "prompt",
     voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION
   }, source);
-  const realtimeStarted = await startRealtimeVoiceSession();
-  if (realtimeStarted) {
+  const elevenLabsStarted = await startElevenLabsVoiceSession();
+  if (elevenLabsStarted) {
     nexusOsVoiceStartInFlight = false;
-    if (!realtimeVoiceActive()) {
-      updateNexusOsVoiceRuntimeState({ mode: "realtime-blocked", listeningState: "blocked", hearingState: "idle" }, source);
+    if (!elevenLabsVoiceActive()) {
+      updateNexusOsVoiceRuntimeState({ mode: "elevenlabs-blocked", listeningState: "blocked", hearingState: "idle" }, source);
       setNexusGenesisTrustChainState("recognition_failed", {
         visibleFeedback: "Voice is temporarily unavailable.",
-        failureRecovery: "Realtime voice did not initialize and legacy fallback is blocked by server policy.",
-        reason: "realtime-start-failed"
+        failureRecovery: "ElevenLabs Agents voice did not initialize and fallback runtimes are blocked by server policy.",
+        reason: "elevenlabs-start-failed"
       });
       refreshMicSupport();
       return;
     }
-    updateNexusOsVoiceRuntimeState({ mode: "listening", listeningState: "realtime", hearingState: "idle" }, source);
+    updateNexusOsVoiceRuntimeState({ mode: "listening", listeningState: "elevenlabs", hearingState: "idle" }, source);
     return;
   }
   if (!Recognition) {

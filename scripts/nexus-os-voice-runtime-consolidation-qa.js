@@ -54,7 +54,8 @@ const surfaceBlock = sectionBetween(app, "function renderNexusOsUnifiedConversat
   "typed-fallback"
 ].forEach(state => includes(startBlock + runtimeBlock, state, `voice fallback state ${state}`));
 
-includes(startBlock, "if (nexusOsVoiceStartInFlight && !voiceRecognition && !realtimeVoiceActive())", "duplicate recognition start guard");
+includes(startBlock, "if (nexusOsVoiceStartInFlight && !voiceRecognition && !genesisVoiceConversationActive())", "duplicate recognition start guard");
+includes(app, "function genesisVoiceConversationActive", "duplicate guard checks all active Genesis voice runtimes");
 includes(startBlock, "new Recognition()", "canonical runtime creates one browser recognition instance");
 includes(startBlock, "applyChromeVoiceRuntimeDefaults(voiceRecognition)", "language-aware browser recognition defaults");
 includes(app, "recognition.lang = voiceLocale()", "recognition locale follows app language");
