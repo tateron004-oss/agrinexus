@@ -1,5 +1,5 @@
-const CACHE_NAME = "agrinexus-pwa-v379";
-const BUILD_VERSION = "nexus-behavior-434";
+const CACHE_NAME = "agrinexus-pwa-v380";
+const BUILD_VERSION = "nexus-behavior-435";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -24,11 +24,59 @@ async function purgeOldCaches() {
   await Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
 }
 
+function isCacheableApplicationRequest(request) {
+  try {
+    const url = new URL(request.url);
+    if (!["http:", "https:"].includes(url.protocol)) return false;
+    if (url.origin !== self.location.origin) return false;
+    if (request.method !== "GET") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function safeCachePut(request, response) {
+  if (!isCacheableApplicationRequest(request)) return;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, response);
+  } catch (error) {
+    console.warn("[AgriNexus service worker] cache put skipped", {
+      reason: error?.name || "CachePutError",
+      message: error?.message || "cache put failed"
+    });
+  }
+}
+
+async function safeCacheMatch(request) {
+  if (!isCacheableApplicationRequest(request)) return undefined;
+  try {
+    return await caches.match(request);
+  } catch {
+    return undefined;
+  }
+}
+
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
+      .then(cache => cache.addAll(APP_SHELL.filter(path => {
+        try {
+          const url = new URL(path, self.location.origin);
+          return ["http:", "https:"].includes(url.protocol) && url.origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      })))
       .then(() => self.skipWaiting())
+      .catch(error => {
+        console.warn("[AgriNexus service worker] install cache skipped", {
+          reason: error?.name || "InstallCacheError",
+          message: error?.message || "install cache failed"
+        });
+        return self.skipWaiting();
+      })
   );
 });
 
@@ -46,9 +94,9 @@ self.addEventListener("message", event => {
 });
 
 self.addEventListener("fetch", event => {
+  if (!isCacheableApplicationRequest(event.request)) return;
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
-  if (event.request.method !== "GET") return;
   const networkFirst = event.request.mode === "navigate"
     || ["/", "/index.html", "/app.js", "/styles.css", "/sw.js"].includes(url.pathname)
     || url.searchParams.has("v");
@@ -57,10 +105,9 @@ self.addEventListener("fetch", event => {
     fetch(event.request)
       .then(response => {
         if (!response || response.status !== 200 || response.type === "opaque") return response;
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        safeCachePut(event.request, response.clone());
         return response;
       })
-      .catch(() => caches.match(event.request).then(cached => cached || (networkFirst ? caches.match("/index.html") : caches.match("/index.html"))))
+      .catch(() => safeCacheMatch(event.request).then(cached => cached || (networkFirst ? caches.match("/index.html") : caches.match("/index.html"))))
   );
 });

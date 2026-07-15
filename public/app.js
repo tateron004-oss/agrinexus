@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v434";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v435";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -857,22 +857,29 @@ function isNexusGenesisHomeActive() {
 
 function nexusGenesisVoiceDebugLog(stage, details = {}) {
   if (!nexusGenesisVoiceDebugEnabled?.()) return;
+  const state = {
+    permissionState: nexusOsVoiceRuntimeState?.permissionState || "unknown",
+    listeningState: nexusOsVoiceRuntimeState?.listeningState || "idle",
+    mode: nexusOsVoiceRuntimeState?.mode || "standby",
+    recognitionConstructed: Boolean(nexusOsVoiceRuntimeState?.recognitionConstructed),
+    recognitionStartRequested: Boolean(nexusOsVoiceRuntimeState?.recognitionStartRequested),
+    recognitionOnStartReceived: Boolean(nexusOsVoiceRuntimeState?.recognitionOnStartReceived)
+  };
+  const safeDetails = Object.fromEntries(Object.entries(details || {}).filter(([key, value]) => {
+    if (/transcript|token|secret|password|credential/i.test(key)) return false;
+    return typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null || value === undefined;
+  }));
   const payload = {
-    stage,
     build: typeof AGRINEXUS_BUILD_VERSION !== "undefined" ? AGRINEXUS_BUILD_VERSION : "unknown",
     pwaCache: typeof AGRINEXUS_PWA_CACHE_VERSION !== "undefined" ? AGRINEXUS_PWA_CACHE_VERSION : "unknown",
     voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION,
-    state: {
-      permissionState: nexusOsVoiceRuntimeState?.permissionState || "unknown",
-      listeningState: nexusOsVoiceRuntimeState?.listeningState || "idle",
-      mode: nexusOsVoiceRuntimeState?.mode || "standby",
-      recognitionConstructed: Boolean(nexusOsVoiceRuntimeState?.recognitionConstructed),
-      recognitionStartRequested: Boolean(nexusOsVoiceRuntimeState?.recognitionStartRequested),
-      recognitionOnStartReceived: Boolean(nexusOsVoiceRuntimeState?.recognitionOnStartReceived)
-    },
-    ...details
+    ...state,
+    ...safeDetails
   };
-  console.info("[Nexus Genesis voice]", payload);
+  const detailText = Object.entries(payload)
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join(" ");
+  console.info(`[Nexus Genesis voice] ${stage}${detailText ? ` | ${detailText}` : ""}`);
 }
 const NEXUS_GENESIS_TRUST_CHAIN_STATES = Object.freeze([
   "idle",
@@ -1281,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-434";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v379";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-435";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v380";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -47516,6 +47523,7 @@ function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
       nexusGenesisVoiceRestartTimer = null;
       if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested && (voiceFirstMode || nexusGenesisVoiceSessionActive)) {
         recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "speech-finished" });
+        nexusGenesisVoiceDebugLog("recognition-restarted", { source: "speech-finished" });
         startVoiceListening({ source: "genesis-speech-finished-restart" });
       }
     }, VOICE_RESTART_DELAY_MS);
@@ -47691,9 +47699,18 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       selectedVoice: prepared.controllerState.selectedVoiceName || "browser-default",
       locale: prepared.controllerState.selectedLocale
     });
+    nexusGenesisVoiceDebugLog("synthesis-requested", {
+      selectedVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+      locale: prepared.controllerState.selectedLocale,
+      textLength: compact.length
+    });
     window.speechSynthesis.cancel();
     prepared.utterance.onstart = event => {
       recordNexusAudioPipelineEvent("speech-synthesis-onstart", { synthesisRequested: true });
+      nexusGenesisVoiceDebugLog("synthesis-started", {
+        selectedVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+        locale: prepared.controllerState.selectedLocale
+      });
       updateNexusOsVoiceRuntimeState({
         mode: "speaking",
         assistantSpeaking: true,
@@ -47742,6 +47759,10 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
     };
     prepared.utterance.onend = event => {
       recordNexusAudioPipelineEvent("speech-synthesis-onend", { synthesisRequested: true });
+      nexusGenesisVoiceDebugLog("synthesis-completed", {
+        selectedVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+        locale: prepared.controllerState.selectedLocale
+      });
       updateNexusOsVoiceRuntimeState({
         mode: "standby",
         assistantSpeaking: false,
@@ -47762,6 +47783,7 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
         error: event?.error || "unknown",
         synthesisRequested: true
       });
+      nexusGenesisVoiceDebugLog("synthesis-error", { error: event?.error || "unknown" });
       updateNexusOsVoiceRuntimeState({
         mode: "caption-fallback",
         assistantSpeaking: false,
@@ -47797,6 +47819,10 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
       reason: "speech-synthesis-preparing"
     });
     window.speechSynthesis.speak(prepared.utterance);
+    nexusGenesisVoiceDebugLog("synthesis-speak-called", {
+      selectedVoice: prepared.controllerState.selectedVoiceName || "browser-default",
+      locale: prepared.controllerState.selectedLocale
+    });
     setTimeout(() => {
       const startStillUnconfirmed = nexusOsVoiceRuntimeState.speechSynthesisReason === prepared.reason
         && nexusOsVoiceRuntimeState.captionText === compact;
@@ -48488,7 +48514,13 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
   nexusGenesisVoiceSessionActive = true;
   voiceFirstMode = true;
   voiceAutoRestart = true;
+  voiceStopRequested = false;
   const profile = browserVoiceRuntimeProfile();
+  nexusGenesisVoiceDebugLog("controller-initialized", {
+    source,
+    secureContext: profile.secureEnough,
+    recognitionSupported: Boolean(profile.supported)
+  });
   nexusGenesisVoiceDebugLog("automatic-start-entered", { source, secureContext: profile.secureEnough });
   const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (realtimeVoiceEnabled() && realtimeVoiceSupported()));
   const skipReason = !profile.secureEnough
@@ -48516,12 +48548,24 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
     secureEnough: profile.secureEnough,
     skipReason: skipReason || "permission-check-required"
   });
-  if (skipReason) return false;
+  if (skipReason) {
+    nexusGenesisVoiceDebugLog("startup-guard", {
+      source,
+      skipReason,
+      secureContext: profile.secureEnough
+    });
+    return false;
+  }
   const now = Date.now();
   if (now - nexusGenesisPermissionGrantedAutoStartLastAttemptAt < 1200) {
     recordNexusAudioPipelineEvent("genesis-auto-start-skipped", {
       source,
       skipReason: "throttled"
+    });
+    nexusGenesisVoiceDebugLog("startup-guard", {
+      source,
+      skipReason: "throttled",
+      secureContext: profile.secureEnough
     });
     return false;
   }
@@ -48855,6 +48899,10 @@ async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-run
       liveTrackVerified: true,
       trackState: liveTrack.readyState,
       trackEnabled: liveTrack.enabled !== false
+    });
+    nexusGenesisVoiceDebugLog("stream-acquired", {
+      source,
+      trackCount: tracks.length
     });
     nexusGenesisVoiceDebugLog("live-audio-track-verified", {
       source,
@@ -55729,6 +55777,10 @@ async function startVoiceListening(options = {}) {
   });
   voiceStopRequested = false;
   voiceRecognition = new Recognition();
+  nexusGenesisVoiceDebugLog("recognition-constructed", {
+    source,
+    recognitionName: profile.recognitionName || "SpeechRecognition"
+  });
   applyChromeVoiceRuntimeDefaults(voiceRecognition);
   Object.assign(voiceRecognition, createNexusRecognitionConfig({ inputMode: "voice-native" }));
   voiceRecognition.onstart = () => {
@@ -55767,14 +55819,17 @@ async function startVoiceListening(options = {}) {
   };
   voiceRecognition.onaudiostart = () => {
     recordNexusAudioPipelineEvent("recognition-audiostart", { inputMode: "voice-native" });
+    nexusGenesisVoiceDebugLog("onaudiostart", { source });
     updateNexusOsVoiceRuntimeState({ hearingState: "audio-started" }, "recognition-audio-start");
   };
   voiceRecognition.onsoundstart = () => {
     recordNexusAudioPipelineEvent("recognition-soundstart", { inputMode: "voice-native" });
+    nexusGenesisVoiceDebugLog("onsoundstart", { source });
     updateNexusOsVoiceRuntimeState({ hearingState: "sound-detected" }, "recognition-sound-start");
   };
   voiceRecognition.onspeechstart = () => {
     recordNexusAudioPipelineEvent("recognition-speechstart", { inputMode: "voice-native" });
+    nexusGenesisVoiceDebugLog("onspeechstart", { source });
     updateNexusOsVoiceRuntimeState({ hearingState: "speech-detected" }, "recognition-speech-start");
   };
   voiceRecognition.onspeechend = () => {
@@ -55792,6 +55847,7 @@ async function startVoiceListening(options = {}) {
     setVoiceStatus("standby");
     const error = event.error || "microphone unavailable";
     recordNexusAudioPipelineEvent("recognition-error", { error });
+    nexusGenesisVoiceDebugLog("recognition-error", { source, error });
     const recoverableErrors = new Set(["no-speech", "aborted", "network", "audio-capture"]);
     const permissionBlocked = error === "not-allowed" || error === "service-not-allowed";
     if (permissionBlocked) {
@@ -55848,6 +55904,10 @@ async function startVoiceListening(options = {}) {
     recordNexusAudioPipelineEvent("recognition-onend", {
       autoRestart: Boolean(voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden)
     });
+    nexusGenesisVoiceDebugLog("recognition-onend", {
+      source,
+      autoRestart: Boolean(voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden)
+    });
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
     clearStreamingVoicePartial();
@@ -55865,6 +55925,7 @@ async function startVoiceListening(options = {}) {
         nexusGenesisVoiceRestartTimer = null;
         if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) {
           recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-onend" });
+          nexusGenesisVoiceDebugLog("recognition-restarted", { source: "recognition-onend" });
           startVoiceListening({ source: "genesis-controlled-restart" });
         }
       }, VOICE_RESTART_DELAY_MS);
@@ -55872,6 +55933,11 @@ async function startVoiceListening(options = {}) {
   };
   voiceRecognition.onresult = event => {
     recordNexusAudioPipelineEvent("recognition-result-event", {
+      resultIndex: typeof event.resultIndex === "number" ? event.resultIndex : 0,
+      resultCount: event.results?.length || 0
+    });
+    nexusGenesisVoiceDebugLog("onresult", {
+      source,
       resultIndex: typeof event.resultIndex === "number" ? event.resultIndex : 0,
       resultCount: event.results?.length || 0
     });
@@ -55939,6 +56005,7 @@ async function startVoiceListening(options = {}) {
           nexusGenesisVoiceRestartTimer = null;
           if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
             recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-start-timeout" });
+            nexusGenesisVoiceDebugLog("recognition-restarted", { source: "recognition-start-timeout" });
             startVoiceListening({ source: "genesis-recognition-start-timeout-restart" });
           }
         }, Math.max(VOICE_RESTART_DELAY_MS, 1200));
