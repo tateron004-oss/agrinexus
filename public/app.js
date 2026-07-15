@@ -823,7 +823,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v437";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v438";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1288,8 +1288,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-437";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v382";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-438";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v383";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -47584,6 +47584,22 @@ function stripStandaloneVoiceAcknowledgement(text = "") {
     .trim();
 }
 
+function sanitizeNexusSpokenResponseText(value = "") {
+  return String(value || "")
+    .replace(/```[\s\S]*?```/g, " code block omitted from spoken response. ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, " source link available in text ")
+    .replace(/\b[A-Z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|AUTHORIZATION|BEARER)\s*[:=]\s*\S+/gi, match => `${match.split(/[:=]/)[0]} redacted`)
+    .replace(/\b(api[_-]?key|secret|token|authorization|bearer)\s*[:=]\s*\S+/gi, "$1 redacted")
+    .replace(/[*_#>|~]+/g, " ")
+    .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "redacted credential")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "email address")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 3600);
+}
+
 const NEXUS_SPEECH_SYNTHESIS_CONTROLLER_CONTRACT = Object.freeze({
   schemaVersion: "nexus-speech-synthesis-controller.v1",
   controllerName: "NexusSpeechSynthesisController",
@@ -47971,7 +47987,11 @@ function speakVoiceResponse(textOverride) {
     return;
   }
   const text = textOverride || lastVoiceResponse;
-  const compact = String(text || "").replace(/\s+/g, " ").trim();
+  const compact = sanitizeNexusSpokenResponseText(text);
+  if (!compact) {
+    updateNexusOsVoiceRuntimeState({ mode: "caption-fallback", assistantSpeaking: false }, "speech-empty-after-sanitization");
+    return;
+  }
   const interruptToken = voiceInterruptToken;
   const now = Date.now();
   if (compact && compact === lastSpokenText && now - lastSpokenAt < 3500) return;
@@ -48000,6 +48020,8 @@ function speakVoiceResponse(textOverride) {
     hearingState: "idle",
     assistantSpeaking: false,
     lastSpokenPreview: compact.slice(0, 180),
+    spokenTextSanitized: true,
+    spokenTextLength: compact.length,
     captionText: compact
   }, "speech-playback-preparing");
   setNexusGenesisTrustChainState("speech_preparing", {
@@ -48060,7 +48082,7 @@ function speakVoiceResponse(textOverride) {
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   activeVoiceRequestController = new AbortController();
-  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: preferredOpenAiTtsVoice() } })
+  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text: compact, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: preferredOpenAiTtsVoice() } })
     .then(result => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       activeVoiceRequestController = null;
@@ -48080,7 +48102,8 @@ function speakVoiceResponse(textOverride) {
         activeVoiceAudio = audio;
         const voice = result.voiceResult?.voice || "OpenAI";
         const model = result.voiceResult?.model || "speech";
-        updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}).`);
+        const spokenLength = Number(result.voiceResult?.spokenTextLength || compact.length);
+        updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}). Spoken output prepared safely (${spokenLength} characters).`);
         audio.onplay = () => {
           if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
           updateNexusOsVoiceRuntimeState({
@@ -48088,6 +48111,9 @@ function speakVoiceResponse(textOverride) {
             assistantSpeaking: true,
             speechSynthesisProvider: "openai-tts",
             speechStartEventReceived: true,
+            spokenTextSanitized: true,
+            spokenTextLength: spokenLength,
+            speechResponseFormat: result.voiceResult?.responseFormat || "mp3",
             captionText: compact
           }, "openai-audio-onplay");
           setNexusGenesisTrustChainState("speaking", {

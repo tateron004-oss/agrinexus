@@ -58,8 +58,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-437";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v382";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-438";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v383";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
   assistantName: "Nexus",
@@ -15934,14 +15934,34 @@ function openAiVoiceErrorMessage(errorType) {
   return messages[errorType] || messages.provider_error;
 }
 
+function sanitizeNexusSpokenResponseText(value = "") {
+  return String(value || "")
+    .replace(/```[\s\S]*?```/g, " code block omitted from spoken response. ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, " source link available in text ")
+    .replace(/\b[A-Z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|AUTHORIZATION|BEARER)\s*[:=]\s*\S+/gi, match => `${match.split(/[:=]/)[0]} redacted`)
+    .replace(/\b(api[_-]?key|secret|token|authorization|bearer)\s*[:=]\s*\S+/gi, "$1 redacted")
+    .replace(/[*_#>|~]+/g, " ")
+    .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "redacted credential")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "email address")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 3600);
+}
+
 async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
   const model = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
+  const spokenText = sanitizeNexusSpokenResponseText(text);
   if (!process.env.OPENAI_API_KEY) {
     return {
       audioDataUrl: null,
       provider: "openai-unconfigured",
       model,
       voice: voice || process.env.OPENAI_TTS_VOICE || "verse",
+      spokenText,
+      spokenTextLength: spokenText.length,
+      responseFormat,
       diagnostics: openAiVoiceProviderDiagnostics({
         requestAttempted: false,
         errorType: "missing_credential",
@@ -15964,9 +15984,9 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
       body: JSON.stringify({
         model,
         voice: selectedVoice,
-        input: String(text || "").slice(0, 4096),
+        input: spokenText,
         response_format: responseFormat,
-        instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character."
+        instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Pause briefly between ideas. Do not read markdown symbols, URLs, code blocks, or diagnostic labels aloud. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character."
       })
     }).finally(() => clearTimeout(timeout));
   };
@@ -15996,6 +16016,9 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     provider: "openai-audio-speech",
     model,
     voice: finalVoice,
+    spokenText,
+    spokenTextLength: spokenText.length,
+    responseFormat,
     diagnostics: openAiVoiceProviderDiagnostics({
       requestAttempted: true,
       httpStatus: response.status,
@@ -44519,7 +44542,7 @@ async function api(req, res, url) {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice responses" });
     const body = await readBody(req);
     const language = canonicalVoiceLanguage(body.language || body.targetLanguage || user.language || "en");
-    const text = String(body.text || "").trim();
+    const text = sanitizeNexusSpokenResponseText(body.text || "");
     if (!text) return send(res, 400, { error: "Voice response text is required" });
     let audio = null;
     let speechError = null;
@@ -44541,6 +44564,9 @@ async function api(req, res, url) {
           provider: "openai-audio-error",
           model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
           voice: body.voice || process.env.OPENAI_TTS_VOICE || null,
+          spokenText: text,
+          spokenTextLength: text.length,
+          responseFormat: body.responseFormat || "mp3",
           diagnostics: error.diagnostics || openAiVoiceProviderDiagnostics({
             requestAttempted: true,
             httpStatus: error.status || error.httpStatus,
@@ -44562,6 +44588,9 @@ async function api(req, res, url) {
       audioDataUrl: audio?.audioDataUrl || null,
       model: audio?.model || null,
       voice: audio?.voice || null,
+      spokenText: audio?.spokenText || text,
+      spokenTextLength: audio?.spokenTextLength || text.length,
+      responseFormat: audio?.responseFormat || body.responseFormat || "mp3",
       error: speechError,
       configuredProvider: process.env.VOICE_TTS_PROVIDER || null,
       hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),

@@ -26,6 +26,7 @@
     "qa:nexus-production-audio-pipeline": "node scripts/nexus-production-audio-pipeline-qa.js",
     "qa:nexus-service-worker-cache-safety": "node scripts/nexus-service-worker-cache-safety-qa.js",
     "qa:nexus-genesis-voice-response-provider": "node scripts/nexus-genesis-voice-response-provider-qa.js",
+    "qa:nexus-genesis-spoken-output-non-regression": "node scripts/nexus-genesis-spoken-output-non-regression-qa.js",
     "qa:nexus-genesis-conversation-routing-precedence": "node scripts/nexus-genesis-conversation-routing-precedence-qa.js",
     "qa:nexus-genesis-truthful-voice-state": "node scripts/nexus-genesis-truthful-voice-state-qa.js",
     "qa:nexus-genesis-home-control-removal": "node scripts/nexus-genesis-home-control-removal-qa.js",
