@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-455";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v400";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-456";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v401";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -19232,9 +19232,11 @@ async function fetchProviderBridgeKnowledge(query, command) {
 async function liveKnowledgeContextForCommand(db, user, command = "") {
   const query = extractKnowledgeSearchQuery(command);
   const attempts = [
-    () => fetchProviderBridgeKnowledge(query, command),
     () => fetchTavilyKnowledge(query),
     () => fetchBraveKnowledge(query),
+    () => fetchExaKnowledge(query),
+    () => fetchConfiguredLiveKnowledgeEndpoint(query, command),
+    () => fetchProviderBridgeKnowledge(query, command),
     () => fetchOpenAiWebKnowledge(query)
   ];
   const errors = [];

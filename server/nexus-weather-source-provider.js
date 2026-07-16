@@ -45,21 +45,22 @@ function buildWeatherSourceQuery(request) {
 
 function resolveWeatherProviderConfig(env = process.env) {
   const providerMode = getConfiguredProviderMode(WEATHER_PROVIDER_NAME, env);
+  const openMeteoPublicProviderEnabled = env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED !== "false";
   return Object.freeze({
     providerName: WEATHER_PROVIDER_NAME,
     providerMode,
-    liveSourceEnabled: env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true",
-    weatherProviderEnabled: env.NEXUS_WEATHER_PROVIDER_ENABLED === "true",
-    openMeteoPublicProviderEnabled: env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED === "true",
+    liveSourceEnabled: env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED !== "false",
+    weatherProviderEnabled: env.NEXUS_WEATHER_PROVIDER_ENABLED !== "false",
+    openMeteoPublicProviderEnabled,
     hasProviderKey: hasText(env.NEXUS_WEATHER_PROVIDER_API_KEY),
     providerCandidates: WEATHER_PROVIDER_CANDIDATES
   });
 }
 
 function isOpenMeteoPublicProviderConfigured(env = process.env) {
-  return env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true"
-    && env.NEXUS_WEATHER_PROVIDER_ENABLED === "true"
-    && env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED === "true";
+  return env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED !== "false"
+    && env.NEXUS_WEATHER_PROVIDER_ENABLED !== "false"
+    && env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED !== "false";
 }
 
 function buildMockWeatherResult(request = {}) {

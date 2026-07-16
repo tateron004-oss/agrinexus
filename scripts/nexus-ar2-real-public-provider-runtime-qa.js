@@ -170,10 +170,23 @@ async function assertSafeSkipsAndBlocks() {
   const offCalls = [];
   const offResult = await weather.getWeatherSourceResultAsync(
     { locationText: "Stockton, CA" },
-    { NEXUS_WEATHER_FETCH_IMPL: buildFakeOpenMeteoFetch(offCalls) }
+    {
+      NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "true",
+      NEXUS_WEATHER_PROVIDER_ENABLED: "true",
+      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "false",
+      NEXUS_WEATHER_FETCH_IMPL: buildFakeOpenMeteoFetch(offCalls)
+    }
   );
-  assert.equal(offCalls.length, 0, "Disabled Open-Meteo flags must not call fetch.");
+  assert.equal(offCalls.length, 0, "Explicitly disabled Open-Meteo flags must not call fetch.");
   assert(["provider-not-configured", "source-query-ready", "source-result-available"].includes(offResult.sourceStatus), "Disabled Open-Meteo path must return existing safe provider status.");
+
+  const defaultOnCalls = [];
+  const defaultOnResult = await weather.getWeatherSourceResultAsync(
+    { locationText: "Stockton, CA" },
+    { NEXUS_WEATHER_FETCH_IMPL: buildFakeOpenMeteoFetch(defaultOnCalls) }
+  );
+  assert.equal(defaultOnCalls.length, 2, "Default Open-Meteo public provider path must execute one geocoding and one forecast call.");
+  assert.equal(defaultOnResult.sourceName, "Open-Meteo", "Default Open-Meteo public provider must return source-backed weather.");
 
   const missingLocationCalls = [];
   const missingLocationResult = await weather.runOpenMeteoReadOnlyLookup({}, buildOpenMeteoEnv(buildFakeOpenMeteoFetch(missingLocationCalls)));

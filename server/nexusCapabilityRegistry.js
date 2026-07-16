@@ -237,6 +237,32 @@ const CAPABILITIES = [
     safetyNotes: "Follow-up suggestions do not create external actions automatically."
   },
   {
+    id: "knowledge.weather",
+    domain: "knowledge",
+    description: "Retrieve read-only weather and forecast context from public Open-Meteo when enabled.",
+    supportedIntents: ["weather_lookup", "forecast_lookup", "heat_risk_lookup"],
+    riskLevel: "low",
+    requiresConfirmation: false,
+    liveExecutionSupported: false,
+    connectorKey: "public_weather_open_meteo",
+    fallbackBehavior: "ask_for_explicit_location_or_show_disabled_state",
+    verifyBehavior: "source_citation",
+    safetyNotes: "Uses typed or spoken location text only. No browser geolocation, dispatch, routing, or medical advice."
+  },
+  {
+    id: "knowledge.liveWeb",
+    domain: "knowledge",
+    description: "Retrieve current internet information and citation-ready sources through configured live knowledge providers.",
+    supportedIntents: ["current_information_lookup", "source_backed_research", "citation_lookup"],
+    riskLevel: "low",
+    requiresConfirmation: false,
+    liveExecutionSupported: true,
+    connectorKey: "live_knowledge_provider",
+    fallbackBehavior: "truthful_missing_credentials_with_general_guidance",
+    verifyBehavior: "source_citation",
+    safetyNotes: "No fake citations. Sources are shown only when a configured provider returns them."
+  },
+  {
     id: "agriculture.learning",
     domain: "agriculture",
     description: "Find agriculture learning and source-backed support.",
@@ -377,6 +403,15 @@ function registryStatus(env = process.env, connectorReadinessByKey = {}) {
 }
 
 function missingConfigForConnector(connectorKey, env = process.env) {
+  if (connectorKey === "live_knowledge_provider") {
+    const hasAnyProvider = Boolean(
+      clean(env.TAVILY_API_KEY)
+      || clean(env.BRAVE_SEARCH_API_KEY)
+      || clean(env.EXA_API_KEY)
+      || clean(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT)
+    );
+    return hasAnyProvider ? [] : ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"];
+  }
   const config = {
     medical_provider_api: ["NEXUS_MEDICAL_PROVIDER_API_URL", "NEXUS_MEDICAL_PROVIDER_API_KEY"],
     telehealth_video: ["NEXUS_VIDEO_PROVIDER_API_URL", "NEXUS_VIDEO_PROVIDER_API_KEY"],

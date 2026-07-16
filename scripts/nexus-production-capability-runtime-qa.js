@@ -44,6 +44,8 @@ const ids = new Set(capabilities.map(capability => capability.id));
   "workflow.offlineQueue",
   "workflow.activityLog",
   "workflow.followUp",
+  "knowledge.weather",
+  "knowledge.liveWeb",
   "agriculture.learning",
   "workforce.learning",
   "marketplace.inquiry",

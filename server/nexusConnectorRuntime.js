@@ -58,8 +58,25 @@ function getReadiness(connectorKey = "none", env = process.env) {
   if (!connectorKey || connectorKey === "none") {
     return { connectorKey: "none", status: "not_applicable", executionEnabled: false, missingConfig: [] };
   }
-  if (connectorKey.startsWith("local_") || connectorKey === "agriculture_source_registry" || connectorKey === "learning_provider_bridge") {
+  if (connectorKey.startsWith("local_") || connectorKey === "agriculture_source_registry" || connectorKey === "learning_provider_bridge" || connectorKey === "public_weather_open_meteo") {
     return { connectorKey, status: "local_only", executionEnabled: true, missingConfig: [], liveExecutionEnabled: false };
+  }
+  if (connectorKey === "live_knowledge_provider") {
+    const provider = clean(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER || "auto").toLowerCase();
+    const configured = Boolean(
+      clean(env.TAVILY_API_KEY)
+      || clean(env.BRAVE_SEARCH_API_KEY)
+      || clean(env.EXA_API_KEY)
+      || (clean(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT) && (provider === "generic" || provider === "auto"))
+    );
+    return {
+      connectorKey,
+      status: configured ? "ready" : "missing_config",
+      executionEnabled: configured,
+      liveExecutionEnabled: configured,
+      missingConfig: configured ? [] : ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"],
+      requiredFlag: "NEXUS_LIVE_KNOWLEDGE_ENABLED"
+    };
   }
   const missingConfig = missingConfigForConnector(connectorKey, env);
   const liveEnabled = connectorLiveEnabled(connectorKey, env);
