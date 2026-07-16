@@ -755,7 +755,7 @@ let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v3";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v4";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -857,7 +857,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v446";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v447";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1322,8 +1322,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-446";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v391";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-447";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v392";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48701,14 +48701,28 @@ async function startElevenLabsVoiceSession() {
     stopNexusAudioFallbackRecorder("elevenlabs-selected");
     stopNexusVoicePermissionStream("elevenlabs-selected");
     const sdk = await loadElevenLabsConversationSdk();
+    const sessionCorrelationId = `el-session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    nexusGenesisVoiceDebugLog("elevenlabs-session-request-started", {
+      correlationId: sessionCorrelationId,
+      credentialsMode: "same-origin",
+      language: languageCode()
+    });
     const sessionResponse = await fetch(`/api/voice/elevenlabs/session?language=${encodeURIComponent(languageCode())}`, {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ language: languageCode() })
+      body: JSON.stringify({ language: languageCode(), correlationId: sessionCorrelationId })
     });
     const sessionPayload = await sessionResponse.json().catch(() => ({}));
+    nexusGenesisVoiceDebugLog(sessionResponse.ok ? "authorization-request-succeeded" : "authorization-request-failed", {
+      correlationId: sessionCorrelationId,
+      httpStatus: sessionResponse.status,
+      authMechanism: sessionPayload.authMechanism || "",
+      providerAttempted: sessionPayload.providerAttempted === true,
+      artifactType: sessionPayload.conversationToken ? "conversationToken" : sessionPayload.signedUrl ? "signedUrl" : "",
+      errorCategory: sessionPayload.category || ""
+    });
     if (!sessionResponse.ok || (!sessionPayload.conversationToken && !sessionPayload.signedUrl)) {
       throw new Error(sessionPayload.error || `ElevenLabs session failed: ${sessionResponse.status}`);
     }
@@ -48834,6 +48848,12 @@ async function startElevenLabsVoiceSession() {
     };
     if (sessionPayload.conversationToken) sdkOptions.conversationToken = sessionPayload.conversationToken;
     else sdkOptions.signedUrl = sessionPayload.signedUrl;
+    nexusGenesisVoiceDebugLog("SDK-session-started", {
+      correlationId: sessionPayload.correlationId || sessionCorrelationId,
+      connectionType,
+      conversationId: sessionPayload.conversationId || "",
+      authArtifact: sessionPayload.conversationToken ? "conversationToken" : "signedUrl"
+    });
     const conversation = await sdk.Conversation.startSession(sdkOptions);
     if (elevenLabsVoiceSession) elevenLabsVoiceSession.conversation = conversation;
     return true;

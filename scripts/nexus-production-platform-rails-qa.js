@@ -137,8 +137,8 @@ function excludes(source, token, label) {
 ].forEach(token => includes(css, token, `production rail CSS ${token}`));
 
 [
-  "nexus-behavior-446",
-  "agrinexus-pwa-v391"
+  "nexus-behavior-447",
+  "agrinexus-pwa-v392"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);

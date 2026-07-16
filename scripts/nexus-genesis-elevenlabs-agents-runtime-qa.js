@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-446",
+  "nexus-behavior-447",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v391"
+  "agrinexus-pwa-v392"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v446", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v447", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -48,6 +48,10 @@ includes(app, "nexus-genesis-voice-runtime-v446", "Genesis voice runtime cache m
   "function canonicalGenesisElevenLabsFallback",
   "function genesisElevenLabsEnabled",
   "function nexusElevenLabsRuntimeStatus",
+  "function resolveElevenLabsVoiceAuthContext",
+  "function genesisVoiceGuestSessionsEnabled",
+  "bounded_genesis_voice_guest_cookie",
+  "nexus_genesis_voice_sid",
   "function createElevenLabsConversationSession",
   "function nexusElevenLabsToolSchemas",
   "function nexusElevenLabsVerifyWebhook",
@@ -86,23 +90,70 @@ includes(app, "nexus-genesis-voice-runtime-v446", "Genesis voice runtime cache m
 ].forEach(needle => includes(server, needle, `server ElevenLabs contract ${needle}`));
 
 const probeRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/authorization-probe"');
+const sessionRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/session"');
+const statusRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/status"');
+const toolRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/tool"');
 const signInGateIndex = server.indexOf('if (!user && url.pathname !== "/api/config")');
 assert(probeRouteIndex !== -1, "authorization probe route should exist");
+assert(sessionRouteIndex !== -1, "ElevenLabs session route should exist");
+assert(statusRouteIndex !== -1, "ElevenLabs status route should exist");
+assert(toolRouteIndex !== -1, "ElevenLabs tool route should exist");
 assert(signInGateIndex !== -1, "global sign-in gate should exist");
 assert(probeRouteIndex < signInGateIndex, "authorization probe should be safe readiness before sign-in gate");
-const probeRouteEndIndex = server.indexOf('if (!user && url.pathname !== "/api/config")', probeRouteIndex);
+assert(sessionRouteIndex < signInGateIndex, "ElevenLabs session should use shared Genesis voice auth before sign-in gate");
+assert(statusRouteIndex < signInGateIndex, "ElevenLabs status should be safe readiness before sign-in gate");
+assert(toolRouteIndex < signInGateIndex, "ElevenLabs tool route should reuse Genesis voice auth before sign-in gate");
+const probeRouteEndIndex = sessionRouteIndex;
 const probeRouteBlock = server.slice(probeRouteIndex, probeRouteEndIndex);
 [
   "authorizationArtifactIssued: false",
   "providerRequestAttempted: false",
+  "authorizationRequestAttempted: false",
   "noConversationTokenReturned: true",
   "noSignedUrlReturned: true",
   "noSecretValues: true",
-  "liveSessionRequiresSignIn: true"
+  "liveSessionRequiresAuthorization: true",
+  "resolveElevenLabsVoiceAuthContext(req, db, user"
 ].forEach(needle => includes(probeRouteBlock, needle, `safe probe contract ${needle}`));
 notIncludes(probeRouteBlock, "createElevenLabsConversationSession", "authorization probe must not mint provider artifacts");
 notIncludes(probeRouteBlock, "conversationToken:", "authorization probe must not return conversationToken");
 notIncludes(probeRouteBlock, "signedUrl:", "authorization probe must not return signedUrl");
+
+const sessionRouteEndIndex = server.indexOf('if (url.pathname === "/api/voice/elevenlabs/tool"', sessionRouteIndex);
+const sessionRouteBlock = server.slice(sessionRouteIndex, sessionRouteEndIndex);
+[
+  "resolveElevenLabsVoiceAuthContext(req, db, user",
+  "issueGuest: true",
+  "Genesis voice session authorization required.",
+  "category: \"user-authentication-required\"",
+  "category: \"user-authorization-forbidden\"",
+  "providerAttempted: false",
+  "authorizationArtifactIssued: false",
+  "createElevenLabsConversationSession({",
+  "correlationId",
+  "authMechanism",
+  "authorizationType: session.authorizationArtifact",
+  "noPermanentApiKeyReturned: true",
+  "\"set-cookie\": authContext.setCookie",
+  "authorization-request-sent",
+  "authorization-request-succeeded",
+  "authorization-request-failed",
+  "auth-context-found",
+  "auth-context-missing"
+].forEach(needle => includes(sessionRouteBlock, needle, `session auth boundary ${needle}`));
+notIncludes(sessionRouteBlock, "ELEVENLABS_API_KEY:", "session route must not return permanent API key");
+notIncludes(sessionRouteBlock, "xi-api-key", "session route must not expose provider secret header");
+
+const toolRouteEndIndex = server.indexOf('if (!user && url.pathname !== "/api/config")', toolRouteIndex);
+const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
+[
+  "resolveElevenLabsVoiceAuthContext(req, db, user",
+  "issueGuest: false",
+  "Genesis voice tool authorization required.",
+  "dispatchNexusRealtimeTool(db, authContext.user",
+  "executionAttempted: false",
+  "noSecretValues: true"
+].forEach(needle => includes(toolRouteBlock, needle, `tool auth boundary ${needle}`));
 
 [
   "nexus_general_capability",
@@ -131,6 +182,12 @@ notIncludes(probeRouteBlock, "signedUrl:", "authorization probe must not return 
   "ElevenLabsClient?.Conversation?.startSession",
   "sdk.Conversation.startSession(sdkOptions)",
   "connectionType = sessionPayload.conversationToken ? \"webrtc\" : \"websocket\"",
+  "credentials: \"same-origin\"",
+  "elevenlabs-session-request-started",
+  "authorization-request-succeeded",
+  "authorization-request-failed",
+  "SDK-session-started",
+  "correlationId: sessionCorrelationId",
   "conversationToken",
   "clientTools: nexusElevenLabsClientTools()",
   "onConnect:",
@@ -289,7 +346,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-446",
-  cache: "agrinexus-pwa-v391",
+  build: "nexus-behavior-447",
+  cache: "agrinexus-pwa-v392",
   noSecretValues: true
 }, null, 2));
