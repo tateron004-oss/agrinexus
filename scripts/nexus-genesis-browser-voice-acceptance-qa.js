@@ -60,7 +60,14 @@ assert(
   "synthesis lifecycle: onstart handler must be installed before speak()"
 );
 
-const listeningSource = between(app, "async function startVoiceListening", "async function sendModuleNotification", "listening lifecycle");
+const supervisorStartSource = between(app, "async function startVoiceListening", "async function sendModuleNotification", "supervisor listening lifecycle");
+includesAll(supervisorStartSource, [
+  "nexusGenesisConversationSupervisor",
+  "supervisor.start(options.source || \"start-voice-listening\")",
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+], "supervisor listening lifecycle");
+
+const listeningSource = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "listening lifecycle");
 const acquireSource = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
 includesAll(listeningSource, [
   "browserVoiceRuntimeProfile()",
@@ -127,7 +134,7 @@ assert(
   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
-assert(index.includes("/app.js?v=nexus-behavior-453"), "index must bump app.js version so browser voice fixes load");
+assert(index.includes("/app.js?v=nexus-behavior-454"), "index must bump app.js version so browser voice fixes load");
 
 includesAll(acceptanceDoc, [
   "Nexus Genesis Real Browser Voice and Companion Acceptance",

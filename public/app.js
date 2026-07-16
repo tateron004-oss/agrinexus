@@ -755,9 +755,10 @@ let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
 let nexusGenesisVoiceRuntimePolicyCache = null;
 let nexusGenesisVoiceRuntimeManager = null;
+let nexusGenesisConversationSupervisor = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v10";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -859,8 +860,16 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v453";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v454";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
+const NEXUS_OS_VOICE_FALLBACK_STATES = Object.freeze([
+  "permission-denied",
+  "unsupported-browser",
+  "microphone-unavailable",
+  "recognition-interrupted",
+  "recognition-timeout",
+  "typed-fallback"
+]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
   const raw = String(value || "unknown").toLowerCase().trim();
@@ -1324,8 +1333,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-453";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-454";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -38238,6 +38247,7 @@ function renderUserWorkspace() {
   `;
   bindNexusStandardUserHomeControls();
   bindNexusPrimaryVoiceControls();
+  updateNexusGenesisExperienceDom();
   setTimeout(() => {
     bindNexusPrimaryVoiceControls();
     updateNexusOsUnifiedConversationDom();
@@ -46236,6 +46246,10 @@ function setVoiceResponse(message, speak = false, options = {}) {
     failureRecovery: compactResponse ? "" : "Ask the user to try again or type the request.",
     reason: options.source || "set-voice-response"
   });
+  nexusGenesisConversationSupervisor?.observeResponse?.(compactResponse, {
+    source: options.source || "set-voice-response",
+    command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || ""
+  });
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   if (!options.skipPresenceUpdate) {
     const inferredPresence = inferNexusPresenceStateFromMessage(responseMessage, options);
@@ -47948,6 +47962,7 @@ function runNexusSpeechSynthesisController(text = "", options = {}) {
         visibleFeedback: "Nexus is ready for your next request.",
         reason: "speech-synthesis-finished"
       });
+      nexusGenesisConversationSupervisor?.speechOutputEnded?.("browser-speech-finished");
       options.onEnd?.(event);
     };
     prepared.utterance.onerror = event => {
@@ -48217,6 +48232,7 @@ function speakVoiceResponse(textOverride) {
       playbackStarted: Boolean(finishSpeaking.playbackStarted),
       sourceFunction: "speakVoiceResponse.finishSpeaking"
     });
+    nexusGenesisConversationSupervisor?.speechOutputEnded?.("audio-play-completed");
     resumeVoiceListeningAfterSpeech(playbackToken, interruptToken);
   };
   finishSpeaking.playbackStarted = false;
@@ -48561,14 +48577,62 @@ function initializeNexusGenesisVoiceRuntimeManager(policyPayload = {}) {
   const factory = window.NexusGenesisVoiceRuntimeManagerFactory;
   if (!factory?.createNexusVoiceRuntimeManager) return null;
   const policy = policyPayload.voiceRuntime || {};
+  const lock = factory.createVoiceOwnershipLock();
+  const sessionContext = factory.createSessionContext();
+  const legacyAdapter = factory.LegacyBrowserVoiceAdapter({
+    lock,
+    sessionContext,
+    startSession: async options => {
+      await startVoiceRuntimeTransport({ ...(options || {}), runtimeOnly: "legacy", managedRuntime: true });
+      return Boolean(voiceRecognition || nexusOsVoiceStartInFlight);
+    },
+    stopSession: reason => stopNexusGenesisVoiceController(reason || "manager-legacy-stop"),
+    startListening: async () => {
+      await startVoiceRuntimeTransport({ source: "manager-legacy-listen", runtimeOnly: "legacy", managedRuntime: true });
+      return Boolean(voiceRecognition || nexusOsVoiceStartInFlight);
+    },
+    stopListening: () => stopNexusGenesisVoiceController("manager-legacy-stop-listening"),
+    recover: async () => {
+      await startVoiceRuntimeTransport({ source: "manager-legacy-recover", runtimeOnly: "legacy", managedRuntime: true });
+      return Boolean(voiceRecognition || nexusOsVoiceStartInFlight);
+    },
+    updateLanguage: () => {
+      if (voiceRecognition) applyChromeVoiceRuntimeDefaults(voiceRecognition);
+    },
+    interrupt: () => stopVoicePlayback(),
+    releaseOwnership: reason => stopNexusGenesisVoiceController(reason || "manager-legacy-release")
+  });
+  const elevenLabsAdapter = factory.ElevenLabsVoiceAdapter({
+    lock,
+    sessionContext,
+    startSession: () => startElevenLabsVoiceSession({ managedRuntime: true }),
+    stopSession: reason => stopElevenLabsVoiceSession(reason || "manager-elevenlabs-stop"),
+    startListening: () => Boolean(elevenLabsVoiceActive()),
+    stopListening: () => elevenLabsVoiceSession?.conversation?.setMicMuted?.(true),
+    recover: () => startElevenLabsVoiceSession({ managedRuntime: true, recovery: true }),
+    interrupt: () => elevenLabsVoiceSession?.conversation?.sendUserActivity?.(),
+    updateLanguage: language => elevenLabsVoiceSession?.conversation?.sendContextualUpdate?.(`Continue in language ${language}.`),
+    releaseOwnership: reason => stopElevenLabsVoiceSession(reason || "manager-elevenlabs-release")
+  });
   nexusGenesisVoiceRuntimeManager = factory.createNexusVoiceRuntimeManager({
+    lock,
+    sessionContext,
+    legacyAdapter,
+    elevenLabsAdapter,
     activeRuntime: policy.activeRuntime || "legacy",
     candidateRuntime: policy.candidateRuntime || "elevenlabs",
     candidateEnabled: policy.candidateEnabled !== false,
     candidateAllowed: policy.candidateAllowed === true,
     automaticRollback: policy.automaticRollback !== false
   });
+  nexusGenesisConversationSupervisor = factory.createGenesisConversationSupervisor({
+    runtimeManager: nexusGenesisVoiceRuntimeManager,
+    sessionContext,
+    language: languageCode(),
+    voice: "browser-native"
+  });
   window.NexusGenesisVoiceRuntimeManager = nexusGenesisVoiceRuntimeManager;
+  window.NexusGenesisConversationSupervisor = nexusGenesisConversationSupervisor;
   return nexusGenesisVoiceRuntimeManager;
 }
 
@@ -48746,7 +48810,7 @@ function stopElevenLabsVoiceSession(reason = "ElevenLabs voice stopped.") {
   refreshMicSupport();
 }
 
-async function startElevenLabsVoiceSession() {
+async function startElevenLabsVoiceSession(options = {}) {
   if (!elevenLabsVoiceSupported()) return false;
   if (elevenLabsVoiceActive()) return true;
   if (elevenLabsVoiceStarting) return true;
@@ -48854,7 +48918,12 @@ async function startElevenLabsVoiceSession() {
         nexusGenesisVoiceDebugLog("elevenlabs-sdk-disconnected", {
           reason: String(details?.reason || details?.code || "closed")
         });
-        if (elevenLabsVoiceSession) stopElevenLabsVoiceSession("ElevenLabs voice session closed.");
+        if (elevenLabsVoiceSession) {
+          stopElevenLabsVoiceSession("ElevenLabs voice session closed.");
+          if (options.managedRuntime && nexusGenesisVoiceRuntimeManager?.policy?.automaticRollback !== false) {
+            void nexusGenesisVoiceRuntimeManager.rollbackToLegacy("candidate-disconnect", { announce: true });
+          }
+        }
       },
       onMessage: handleElevenLabsSdkMessage,
       onError: (message, context) => {
@@ -48869,6 +48938,9 @@ async function startElevenLabsVoiceSession() {
           errorType: normalizedError.errorType,
           malformedProviderEvent: normalizedError.malformed
         });
+        if (options.managedRuntime && nexusGenesisVoiceRuntimeManager?.policy?.automaticRollback !== false) {
+          void nexusGenesisVoiceRuntimeManager.rollbackToLegacy(normalizedError.malformed ? "malformed-provider-error" : normalizedError.errorType, { announce: true });
+        }
       },
       onUnhandledClientToolCall: toolCall => {
         nexusGenesisVoiceDebugLog("elevenlabs-sdk-unhandled-tool", {
@@ -48946,7 +49018,7 @@ async function startElevenLabsVoiceSession() {
     nexusGenesisVoiceDebugLog("elevenlabs-session-failed", {
       reason: error.message || "elevenlabs-start-failed"
     });
-    return true;
+    return false;
   }
 }
 
@@ -56779,7 +56851,7 @@ function scheduleFinalVoiceCommand(command = "", options = {}) {
   }, Number(options.delay ?? VOICE_FINAL_DEBOUNCE_MS));
 }
 
-async function startVoiceListening(options = {}) {
+async function startVoiceRuntimeTransport(options = {}) {
   const source = options.source || "nexus-os-voice-runtime";
   if (voiceDemoQuietMode) {
     markNexusListeningControllerEvent("typed-fallback", { inputMode: "typed-fallback" });
@@ -56927,7 +56999,7 @@ async function startVoiceListening(options = {}) {
     permissionState: "prompt",
     voiceRuntimeVersion: NEXUS_GENESIS_VOICE_RUNTIME_VERSION
   }, source);
-  const elevenLabsStarted = await startElevenLabsVoiceSession();
+  const elevenLabsStarted = options.runtimeOnly === "legacy" ? false : await startElevenLabsVoiceSession({ managedRuntime: options.managedRuntime === true });
   if (elevenLabsStarted) {
     nexusOsVoiceStartInFlight = false;
     if (!elevenLabsVoiceActive()) {
@@ -57128,6 +57200,9 @@ async function startVoiceListening(options = {}) {
       lastError: error
     }, source);
     updateNativeVoiceBridgeState(permissionBlocked ? "permission-blocked" : "recovering", { error });
+    if (!permissionBlocked) {
+      void nexusGenesisConversationSupervisor?.recover?.(`recognition-error:${error}`);
+    }
     scheduleVoiceRecovery(message, {
       recoverable: !permissionBlocked && recoverableErrors.has(error),
       delay: error === "no-speech" ? 180 : VOICE_RESTART_DELAY_MS
@@ -57156,6 +57231,9 @@ async function startVoiceListening(options = {}) {
       hearingState: "idle"
     }, "recognition-ended");
     updateNativeVoiceBridgeState(voiceConversationPaused ? "paused" : voiceFirstMode ? "auto-restart" : "standby", { reason: "recognition-ended" });
+    if (voiceFirstMode && voiceAutoRestart && !voiceStopRequested && !document.hidden) {
+      void nexusGenesisConversationSupervisor?.recognitionEnded?.("recognition-ended-unexpectedly");
+    }
     refreshMicSupport();
     if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
       clearTimeout(nexusGenesisVoiceRestartTimer);
@@ -57164,7 +57242,7 @@ async function startVoiceListening(options = {}) {
         if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) {
           recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-onend" });
           nexusGenesisVoiceDebugLog("recognition-restarted", { source: "recognition-onend" });
-          startVoiceListening({ source: "genesis-controlled-restart" });
+          startVoiceRuntimeTransport({ source: "genesis-controlled-restart", runtimeOnly: "legacy", managedRuntime: true });
         }
       }, VOICE_RESTART_DELAY_MS);
     }
@@ -57213,6 +57291,7 @@ async function startVoiceListening(options = {}) {
       nexusGenesisVoiceDebugLog("final-transcript-received", { source, transcriptLength: finalTranscript.length });
       markNexusListeningControllerEvent("final-transcript", { finalTranscript, inputMode: "voice-native" });
       recordNexusOsConversationTurn("user", finalTranscript, { source: "voice-final-transcript" });
+      nexusGenesisConversationSupervisor?.observeTranscript?.(finalTranscript, { source: "voice-final-transcript" });
     }
     if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: "voice" });
   };
@@ -57244,7 +57323,7 @@ async function startVoiceListening(options = {}) {
           if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
             recordNexusAudioPipelineEvent("recognition-restart-requested", { source: "recognition-start-timeout" });
             nexusGenesisVoiceDebugLog("recognition-restarted", { source: "recognition-start-timeout" });
-            startVoiceListening({ source: "genesis-recognition-start-timeout-restart" });
+            startVoiceRuntimeTransport({ source: "genesis-recognition-start-timeout-restart", runtimeOnly: "legacy", managedRuntime: true });
           }
         }, Math.max(VOICE_RESTART_DELAY_MS, 1200));
       }
@@ -57274,6 +57353,23 @@ async function startVoiceListening(options = {}) {
       trustChainState: "recognition_failed"
     });
   }
+}
+
+async function startVoiceListening(options = {}) {
+  let manager = nexusGenesisVoiceRuntimeManager;
+  if (!manager) {
+    const policyPayload = await loadNexusGenesisVoiceRuntimePolicy();
+    manager = initializeNexusGenesisVoiceRuntimeManager(policyPayload);
+  }
+  if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "legacy" });
+  const supervisor = nexusGenesisConversationSupervisor || window.NexusGenesisConversationSupervisor;
+  const result = supervisor
+    ? await supervisor.start(options.source || "start-voice-listening")
+    : await manager.startSession(options);
+  if (!result?.ok && manager.getState().activeRuntime === "legacy") {
+    return startVoiceRuntimeTransport({ ...options, runtimeOnly: "legacy", managedRuntime: true });
+  }
+  return result;
 }
 
 async function sendModuleNotification(moduleName) {

@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-453";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-454";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v10";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16187,11 +16187,13 @@ function nexusGenesisVoiceRuntimePolicy(user = {}, env = process.env) {
     automaticRollback: genesisVoiceAutomaticRollbackEnabled(env),
     supportedRuntimes: Array.from(NEXUS_GENESIS_VOICE_RUNTIME_VALUES),
     stableVoiceRuntimeContract: "NexusGenesisVoiceRuntimeManager",
+    conversationSupervisor: "NexusGenesisContinuousConversationSupervisor",
+    supervisorOwnsConversationLifecycle: true,
     oneOwnerAtATime: true,
     noRuntimeOverlap: true,
     legacyBrowserVoiceActiveForNormalUsers: runtime === "legacy" && !(candidateEnabled && candidateAllowed),
     elevenLabsCandidateOnly: true,
-    openAiRealtimeRollbackOnly: true,
+    openAiRealtimeDisabled: true,
     noSecretValues: true
   };
 }
@@ -16337,7 +16339,7 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     customPcmTransportActive: false,
     noUserFacingRuntimeSelector: true,
     soleActiveRuntime: selectedRuntime === "elevenlabs",
-    openAiRealtimeRollbackOnly: true,
+    openAiRealtimeDisabled: true,
     legacyRuntimeConcurrent: false,
     note: ready
       ? "Nexus Genesis ElevenLabs Agents runtime is selected and configured for official SDK WebRTC conversation."
@@ -41541,6 +41543,16 @@ async function api(req, res, url) {
     if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
     return send(res, 200, {
       voiceRuntime: nexusGenesisVoiceRuntimePolicy(user, process.env),
+      conversationSupervisor: {
+        ok: true,
+        name: "NexusGenesisContinuousConversationSupervisor",
+        states: ["idle", "acquiring", "listening", "processing", "speaking", "recovering", "terminated"],
+        terminalReasons: ["user-stop-listening", "stop-button", "permission-revoked", "signed-out", "left-genesis", "security-policy"],
+        toolsOwnMicrophone: false,
+        typedAndSpokenSharePipeline: true,
+        watchdogRecovery: true,
+        noSecretValues: true
+      },
       elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
       noSecretValues: true
     }, {

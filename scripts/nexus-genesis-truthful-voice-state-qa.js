@@ -36,27 +36,28 @@ const autoStart = sectionBetween(app, "async function maybeStartGenesisRecogniti
 const permissionNormalizer = sectionBetween(app, "function normalizeNexusMicrophonePermissionState", "function nexusMicrophonePermissionDisplayText", "permission normalizer");
 const permissionEligibility = sectionBetween(app, "function nexusMicrophonePermissionCanAttemptStart", "function isNexusGenesisHomeActive", "permission startup eligibility");
 const microphoneStreamOwner = sectionBetween(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone stream owner");
-const recognitionStart = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
+const recognitionSupervisor = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice supervisor startup");
+const recognitionStart = sectionBetween(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "voice startup");
 const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisController", "function isGuidedHealthVoiceResponse", "speech synthesis controller");
 const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-453"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398"',
-  'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v453"'
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-454"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399"',
+  'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v454"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-453",
-  "/styles.css?v=nexus-behavior-453",
-  "/app.js?v=nexus-behavior-453"
+  "/manifest.webmanifest?v=nexus-behavior-454",
+  "/styles.css?v=nexus-behavior-454",
+  "/app.js?v=nexus-behavior-454"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-453"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-454"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v398"',
-  'BUILD_VERSION = "nexus-behavior-453"'
+  'CACHE_NAME = "agrinexus-pwa-v399"',
+  'BUILD_VERSION = "nexus-behavior-454"'
 ], "service worker build");
 
 includesAll(truthfulState, [
@@ -159,6 +160,12 @@ includesAll(microphoneStreamOwner, [
   "liveTrackVerified: true",
   "NoLiveAudioTrackError"
 ], "microphone stream owner live-track proof");
+
+includesAll(recognitionSupervisor, [
+  "nexusGenesisConversationSupervisor",
+  "supervisor.start(options.source || \"start-voice-listening\")",
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+], "recognition supervisor proof");
 
 includesAll(recognitionStart, [
   "recognition-handlers-registered",

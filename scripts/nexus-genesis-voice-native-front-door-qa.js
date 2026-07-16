@@ -102,7 +102,14 @@ includesAll(autoStart, [
 assert(!autoStart.includes("granted-or-browser-managed"), "automatic start must not use legacy display labels for control flow");
 assert(!autoStart.includes("data-nexus-genesis-home-orb"), "automatic start must not use the orb");
 
-const startup = between(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
+const supervisorStartup = between(app, "async function startVoiceListening", "async function sendModuleNotification", "voice supervisor startup");
+includesAll(supervisorStartup, [
+  "nexusGenesisConversationSupervisor",
+  "supervisor.start(options.source || \"start-voice-listening\")",
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+], "voice supervisor startup");
+
+const startup = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "voice startup");
 const acquire = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
 includesAll(startup, [
   "voiceRecognition = new Recognition()",
@@ -134,10 +141,10 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech restart");
 
-includesAll(index, ["/app.js?v=nexus-behavior-453", "/styles.css?v=nexus-behavior-453"], "index cache");
-includesAll(app, ["nexus-behavior-453", "agrinexus-pwa-v398", "nexus-genesis-voice-runtime-v453"], "app cache");
-includesAll(server, ["nexus-behavior-453", "agrinexus-pwa-v398"], "server cache");
-includesAll(sw, ["nexus-behavior-453", "agrinexus-pwa-v398"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-454", "/styles.css?v=nexus-behavior-454"], "index cache");
+includesAll(app, ["nexus-behavior-454", "agrinexus-pwa-v399", "nexus-genesis-voice-runtime-v454"], "app cache");
+includesAll(server, ["nexus-behavior-454", "agrinexus-pwa-v399"], "server cache");
+includesAll(sw, ["nexus-behavior-454", "agrinexus-pwa-v399"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",

@@ -18,7 +18,8 @@ const requirements = [
   ["Browser realtime session", app.includes("async function startRealtimeVoiceSession") && app.includes("createDataChannel(\"oai-events\")") && app.includes("/api/voice/realtime/call")],
   ["Realtime event handling", app.includes("function handleRealtimeVoiceEvent") && app.includes("input_audio_buffer.speech_started") && app.includes("response.audio.done")],
   ["Realtime rollback-only after production failure", server.includes("function genesisRealtimeRollbackEnabled") && server.includes("NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED") && server.includes("OpenAI Realtime is disabled after the production gate failure")],
-  ["ElevenLabs starts before rollback or legacy fallback", app.includes("const elevenLabsStarted = await startElevenLabsVoiceSession();") && app.includes("fallback runtimes are blocked by server policy")],
+  ["Supervisor owns voice startup before provider fallback", app.includes("nexusGenesisConversationSupervisor") && app.includes("createGenesisConversationSupervisor") && app.includes("supervisor.start(options.source || \"start-voice-listening\")")],
+  ["ElevenLabs is a managed candidate adapter", app.includes("startElevenLabsVoiceSession({ managedRuntime: true })") && app.includes("factory.ElevenLabsVoiceAdapter")],
   ["Realtime stop path", app.includes("function stopRealtimeVoiceSession") && app.includes("Realtime voice stopped")],
   ["Realtime tool dispatch path", server.includes("/api/voice/realtime/tool") && app.includes("dispatchRealtimeToolCall")],
   ["Realtime status does not expose permanent key", server.includes("noPermanentKeyInBrowser: true") && !app.includes("Authorization: `Bearer ${process.env.OPENAI_API_KEY}`") && !app.includes("process.env.OPENAI_API_KEY")]

@@ -30,7 +30,8 @@ const home = sectionBetween(app, "function renderNexusTrueHome", "function rende
 const voiceGate = sectionBetween(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueCommandComposer", "Genesis home voice runtime marker");
 const orb = sectionBetween(app, "function renderNexusTrueCoreOrb", "function handleNexusPrimaryVoiceButtonClick", "Genesis orb renderer");
 const autoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic voice start");
-const startVoice = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice startup");
+const supervisorStartVoice = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "voice supervisor startup");
+const startVoice = sectionBetween(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "voice startup");
 const acquireStream = sectionBetween(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone stream acquisition");
 const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 const orbCss = sectionBetween(app, "[data-nexus-os-core-orb] {", "[data-nexus-os-core-orb].nexus-core-state-idle", "inline orb CSS");
@@ -94,6 +95,11 @@ includesAll(startVoice, [
   "recognition-onstart",
   "recognition-restart-requested"
 ], "voice startup path");
+includesAll(supervisorStartVoice, [
+  "nexusGenesisConversationSupervisor",
+  "supervisor.start(options.source || \"start-voice-listening\")",
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+], "voice supervisor startup path");
 includesAll(acquireStream, [
   "navigator.mediaDevices.getUserMedia",
   "media-stream-granted",

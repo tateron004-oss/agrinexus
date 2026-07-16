@@ -35,6 +35,7 @@ async function run() {
     "getState",
     "isHealthy",
     "ownsMicrophone",
+    "ownsAudioOutput",
     "startListening",
     "stopListening",
     "interrupt",
@@ -42,6 +43,7 @@ async function run() {
     "callTool",
     "updateLanguage",
     "getSessionContext",
+    "releaseOwnership",
     "on",
     "onStateChange",
     "onUserSpeechStart",
@@ -66,8 +68,24 @@ async function run() {
     "recovering",
     "blocked",
     "failed",
+    "stopping",
     "closed"
   ].forEach(state => assertIncludes(managerSource, `"${state}"`, `VoiceRuntime state ${state}`));
+  [
+    "createGenesisConversationSupervisor",
+    "NexusGenesisContinuousConversationSupervisor",
+    "CONVERSATION_SUPERVISOR_STATES",
+    "CONVERSATION_TERMINAL_REASONS",
+    "CONVERSATION_WATCHDOGS",
+    "observeTranscript",
+    "observeResponse",
+    "typedTurn",
+    "spokenTurn",
+    "runFaultInjectionHarness",
+    "terminalOnlyOnExplicitStop: true",
+    "typedAndSpokenSharePipeline: true",
+    "toolsOwnMicrophone: false"
+  ].forEach(needle => assertIncludes(managerSource, needle, `Conversation supervisor contract ${needle}`));
   assertIncludes(managerSource, "createVoiceOwnershipLock", "one-owner lock");
   assertIncludes(managerSource, "createSessionContext", "bounded session context");
   assertIncludes(managerSource, "createCircuitBreaker", "candidate circuit breaker");
@@ -77,7 +95,7 @@ async function run() {
   assertIncludes(managerSource, "runContinuousConversationHarness", "continuous-turn harness");
   assertIncludes(managerSource, "runFailureInjectionHarness", "failure injection harness");
   assertIncludes(managerSource, "elevenLabsCandidateOnly: true", "ElevenLabs candidate-only flag");
-  assertIncludes(managerSource, "openAiRealtimeRollbackOnly: true", "OpenAI rollback-only flag");
+  assertIncludes(managerSource, "openAiRealtimeDisabled: true", "OpenAI disabled flag");
 
   assertIncludes(serverSource, 'NEXUS_GENESIS_VOICE_RUNTIME || "legacy"', "server legacy default");
   assertIncludes(serverSource, 'NEXUS_GENESIS_CANDIDATE_RUNTIME || "elevenlabs"', "candidate runtime default");
@@ -87,6 +105,11 @@ async function run() {
   assertIncludes(serverSource, 'url.pathname === "/api/voice/runtime/status"', "runtime status endpoint");
   assertIncludes(serverSource, 'url.pathname === "/api/voice/runtime/tool"', "provider-neutral voice tool gateway");
   assertIncludes(serverSource, "nexusGenesisVoiceRuntimePolicy", "server runtime policy");
+  assertIncludes(serverSource, 'conversationSupervisor: "NexusGenesisContinuousConversationSupervisor"', "server runtime supervisor policy");
+  assertIncludes(serverSource, "supervisorOwnsConversationLifecycle: true", "server supervisor lifecycle flag");
+  assertIncludes(serverSource, 'name: "NexusGenesisContinuousConversationSupervisor"', "status endpoint supervisor name");
+  assertIncludes(serverSource, "toolsOwnMicrophone: false", "status endpoint tool microphone boundary");
+  assertIncludes(serverSource, "watchdogRecovery: true", "status endpoint watchdog recovery flag");
   assertIncludes(serverSource, "candidateAllowed", "server candidate gate");
   assertIncludes(serverSource, "noSecretValues: true", "secret-free status");
   assertIncludes(serverSource, 'runtimePolicy.selectedRuntime !== "elevenlabs"', "session route candidate gate");
@@ -96,11 +119,19 @@ async function run() {
   assertIncludes(appSource, 'fetch("/api/voice/runtime/status"', "client runtime status fetch");
   assertIncludes(appSource, 'fetch("/api/voice/runtime/tool"', "client uses provider-neutral voice tool gateway");
   assertIncludes(appSource, "initializeNexusGenesisVoiceRuntimeManager", "client manager initializer");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor", "client conversation supervisor instance");
+  assertIncludes(appSource, "window.NexusGenesisConversationSupervisor", "client exposes supervisor");
+  assertIncludes(appSource, "supervisor.start(options.source || \"start-voice-listening\")", "startVoiceListening uses supervisor");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor?.observeTranscript", "final transcripts enter supervisor");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor?.observeResponse", "responses enter supervisor");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor?.speechOutputEnded", "speech end returns supervisor to listening");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor?.recognitionEnded", "recognition end recovers through supervisor");
+  assertIncludes(appSource, "nexusGenesisConversationSupervisor?.recover", "recognition errors recover through supervisor");
   assertIncludes(appSource, "nexusGenesisElevenLabsCandidateAllowed", "client candidate gate");
   assertIncludes(appSource, "if (!candidateAllowed) return false;", "client skips ElevenLabs unless allowlisted");
   assertIncludes(appSource, "legacyBrowserVoiceActiveForNormalUsers", "client legacy policy fallback");
-  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-453", "manager script loaded");
-  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-453"), "manager script must load before app.js");
+  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-454", "manager script loaded");
+  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-454"), "manager script must load before app.js");
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-genesis-safe-voice-runtime-manager"],
@@ -151,6 +182,40 @@ async function run() {
   assert(injected.injections.length >= 16, "failure injection harness should cover all required failure classes");
   assert(canary.getState().rolloutStages.includes("owner-canary"), "rollout stages should include owner-canary");
   assert(canary.getState().metricNames.includes("twentyTurnSuccess"), "metrics should include twenty-turn success");
+
+  const supervisedManager = managerApi.createNexusVoiceRuntimeManager({
+    activeRuntime: "legacy",
+    candidateRuntime: "elevenlabs",
+    candidateEnabled: true,
+    candidateAllowed: false,
+    automaticRollback: true
+  });
+  const supervisor = managerApi.createGenesisConversationSupervisor({
+    runtimeManager: supervisedManager,
+    language: "en",
+    voice: "browser-native"
+  });
+  const supervisorStart = await supervisor.start("qa-start");
+  assert.strictEqual(supervisorStart.ok, true, "supervisor should start the active runtime");
+  assert.strictEqual(supervisor.getState().state, "listening", "supervisor should enter listening");
+  assert.strictEqual(supervisor.getState().runtime.activeRuntime, "legacy", "supervisor should preserve legacy production default");
+  assert.strictEqual(supervisor.getState().toolsOwnMicrophone, false, "tools must not own microphone");
+  const typedTurn = await supervisor.typedTurn("What can Nexus do?");
+  const spokenTurn = await supervisor.spokenTurn("Nexus, can you hear me?");
+  assert.strictEqual(typedTurn.state, "listening", "typed turn should return to listening");
+  assert.strictEqual(spokenTurn.state, "listening", "spoken turn should return to listening");
+  assert(supervisor.getState().typedAndSpokenSharePipeline, "typed and spoken turns share supervisor pipeline");
+  const recoveredEnd = await supervisor.recognitionEnded("recognition-ended-unexpectedly");
+  assert.strictEqual(recoveredEnd.state, "listening", "recognition end should recover to listening");
+  const interrupted = await supervisor.interrupt("Actually, help with crop support.");
+  assert.strictEqual(interrupted.state, "listening", "barge-in interruption should return to listening");
+  const faultHarness = await supervisor.runFaultInjectionHarness();
+  assert.strictEqual(faultHarness.ok, true, "supervisor fault injection harness should pass");
+  assert(faultHarness.cases.length >= 11, "supervisor should cover required fault-injection cases");
+  assert.strictEqual(supervisor.getState().singleMicrophoneOwner, true, "supervisor should enforce one microphone owner");
+  assert.strictEqual(supervisor.getState().terminalOnlyOnExplicitStop, true, "supervisor should terminate only on explicit stop conditions");
+  const stopped = await supervisor.spokenTurn("Nexus, stop listening");
+  assert.strictEqual(stopped.state, "terminated", "explicit stop listening should terminate");
 
   console.log("Nexus Genesis safe voice runtime manager QA passed.");
 }

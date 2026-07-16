@@ -21,15 +21,16 @@ const elevenLabsEnabledSource = sourceBetween(appSource, "function elevenLabsVoi
 const realtimeStartSource = sourceBetween(appSource, "async function startRealtimeVoiceSession", "function browserVoiceRuntimeProfile");
 const refreshMicSource = sourceBetween(appSource, "function refreshMicSupport", "function normalizedWakeText");
 const finalCommandSource = sourceBetween(appSource, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand");
-const scheduleFinalSource = sourceBetween(appSource, "function scheduleFinalVoiceCommand", "async function startVoiceListening");
+const scheduleFinalSource = sourceBetween(appSource, "function scheduleFinalVoiceCommand", "async function startVoiceRuntimeTransport");
+const voiceTransportSource = sourceBetween(appSource, "async function startVoiceRuntimeTransport", "async function startVoiceListening");
 const startListeningSource = sourceBetween(appSource, "async function startVoiceListening", "async function sendModuleNotification");
 const handleCoreSource = sourceBetween(appSource, "async function handleVoiceCommandCore", "async function handleVoiceCommand");
 
 const requirements = [
   [
     "Web Speech final transcript enters debounced Companion-safe command path",
-    startListeningSource.includes("voiceRecognition.onresult") &&
-      startListeningSource.includes("if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: \"voice\" });") &&
+    voiceTransportSource.includes("voiceRecognition.onresult") &&
+      voiceTransportSource.includes("if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: \"voice\" });") &&
       scheduleFinalSource.includes("processFinalVoiceCommand(finalCommand, options)")
   ],
   [
@@ -51,7 +52,8 @@ const requirements = [
   [
     "ElevenLabs follows server-selected runtime and cannot run beside legacy recognition",
     elevenLabsEnabledSource.includes('status?.runtime === "elevenlabs"') &&
-      startListeningSource.includes("const elevenLabsStarted = await startElevenLabsVoiceSession();") &&
+      startListeningSource.includes("supervisor.start(options.source || \"start-voice-listening\")") &&
+      voiceTransportSource.includes("const elevenLabsStarted = options.runtimeOnly === \"legacy\" ? false : await startElevenLabsVoiceSession") &&
       appSource.includes('if (status.runtime !== "elevenlabs") return false;') &&
       appSource.includes("stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")")
   ],
@@ -119,7 +121,7 @@ const requirements = [
   ],
   [
     "Voice runtime carries locale to native bridge state",
-    startListeningSource.includes("updateNativeVoiceBridgeState(\"listening\", { locale: voiceLocale()") &&
+    voiceTransportSource.includes("updateNativeVoiceBridgeState(\"listening\", { locale: voiceLocale()") &&
       appSource.includes("language: languageCode()") &&
       appSource.includes("locale: voiceLocale()")
   ]

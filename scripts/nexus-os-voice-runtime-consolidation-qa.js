@@ -21,6 +21,7 @@ function sectionBetween(source, start, end) {
 
 const stateBlock = sectionBetween(app, 'let nexusOsVoiceStartInFlight = false;', 'let queuedVoiceSpeechTimer = null;');
 const runtimeBlock = sectionBetween(app, "function persistNexusOsVoiceRuntimeState", "function userIsActivelySpeaking");
+const voiceTransportBlock = sectionBetween(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening");
 const startBlock = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification");
 const clickBlock = sectionBetween(app, 'const commandCenterVoice = event.target.closest("[data-nexus-command-center-voice]");', 'const modeShortcut = event.target.closest("[data-nexus-mode-shortcut]");');
 const userVoiceBlock = sectionBetween(app, 'const userVoiceButton = event.target.closest("[data-user-voice-action]");', 'const captionButton = event.target.closest("[data-caption-action]");');
@@ -52,18 +53,18 @@ const surfaceBlock = sectionBetween(app, "function renderNexusOsUnifiedConversat
   "recognition-interrupted",
   "recognition-timeout",
   "typed-fallback"
-].forEach(state => includes(startBlock + runtimeBlock, state, `voice fallback state ${state}`));
+].forEach(state => includes(stateBlock + startBlock + runtimeBlock, state, `voice fallback state ${state}`));
 
-includes(startBlock, "if (nexusOsVoiceStartInFlight && !voiceRecognition && !genesisVoiceConversationActive())", "duplicate recognition start guard");
+includes(voiceTransportBlock, "if (nexusOsVoiceStartInFlight && !voiceRecognition && !genesisVoiceConversationActive())", "duplicate recognition start guard");
 includes(app, "function genesisVoiceConversationActive", "duplicate guard checks all active Genesis voice runtimes");
-includes(startBlock, "new Recognition()", "canonical runtime creates one browser recognition instance");
-includes(startBlock, "applyChromeVoiceRuntimeDefaults(voiceRecognition)", "language-aware browser recognition defaults");
+includes(voiceTransportBlock, "new Recognition()", "canonical runtime creates one browser recognition instance");
+includes(voiceTransportBlock, "applyChromeVoiceRuntimeDefaults(voiceRecognition)", "language-aware browser recognition defaults");
 includes(app, "recognition.lang = voiceLocale()", "recognition locale follows app language");
 includes(app, "utterance.lang = voiceLocale()", "speech synthesis locale follows app language");
 includes(app, "utterance.rate = speechRateForLanguage()", "speech synthesis rate follows app language");
 includes(app, "utterance.pitch = speechPitchForLanguage()", "speech synthesis pitch follows app language");
-includes(startBlock, "speechConfidence: result[0].confidence", "speech confidence captured when available");
-includes(startBlock, 'recordNexusOsConversationTurn("user", finalTranscript', "final voice transcript delivered to unified conversation");
+includes(voiceTransportBlock, "speechConfidence: result[0].confidence", "speech confidence captured when available");
+includes(voiceTransportBlock, 'recordNexusOsConversationTurn("user", finalTranscript', "final voice transcript delivered to unified conversation");
 includes(surfaceBlock, "${renderNexusOsVoiceRuntimeStatus()}", "voice status rendered in unified conversation surface");
 
 includes(clickBlock, 'handleNexusOsVoiceControlAction("toggle-listening"', "command center mic uses canonical handler");

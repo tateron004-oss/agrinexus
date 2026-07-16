@@ -4,10 +4,10 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const runtime = require(path.join(root, "public", "nexus-enterprise-health-evidence-trust.js"));
-const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
-const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const server = fs.readFileSync(path.join(root, "server.js"), "utf8").replace(/\r\n/g, "\n");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
+const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8").replace(/\r\n/g, "\n");
 
 function includes(source, needle, label) {
   assert(source.includes(needle), label);

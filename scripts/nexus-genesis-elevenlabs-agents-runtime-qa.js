@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-453",
+  "nexus-behavior-454",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v398"
+  "agrinexus-pwa-v399"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v453", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v454", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -94,7 +94,7 @@ includes(app, "nexus-genesis-voice-runtime-v453", "Genesis voice runtime cache m
   "nexusElevenLabsOriginAllowed(req)",
   "noSecretValues: true",
   "soleActiveRuntime",
-  "openAiRealtimeRollbackOnly"
+  "openAiRealtimeDisabled"
 ].forEach(needle => includes(server, needle, `server ElevenLabs contract ${needle}`));
 
 const probeRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/authorization-probe"');
@@ -282,7 +282,10 @@ includes(server, "String(env.NEXUS_GENESIS_ELEVENLABS_FALLBACK || \"blocked\")",
 includes(server, "function genesisRealtimeRollbackEnabled", "Realtime rollback gate");
 includes(server, "OpenAI Realtime is disabled after the production gate failure", "Realtime disabled response");
 includes(server, "NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED", "Realtime rollback env guard");
-includes(app, "const elevenLabsStarted = await startElevenLabsVoiceSession();", "Genesis startup calls ElevenLabs first");
+includes(app, "nexusGenesisConversationSupervisor", "Genesis startup uses the conversation supervisor");
+includes(app, "factory.ElevenLabsVoiceAdapter", "ElevenLabs is represented as a manager adapter");
+includes(app, "startElevenLabsVoiceSession({ managedRuntime: true })", "ElevenLabs starts only through managed runtime adapter");
+includes(app, "supervisor.start(options.source || \"start-voice-listening\")", "Genesis startup goes through supervisor");
 includes(app, "if (!candidateAllowed) return false;", "Genesis skips ElevenLabs unless candidate is allowed");
 includes(app, "legacyBrowserVoiceActiveForNormalUsers", "normal users remain on legacy browser voice");
 notIncludes(app, "process.env.ELEVENLABS_API_KEY", "ElevenLabs API key in browser");
@@ -404,7 +407,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-453",
-  cache: "agrinexus-pwa-v398",
+  build: "nexus-behavior-454",
+  cache: "agrinexus-pwa-v399",
   noSecretValues: true
 }, null, 2));

@@ -135,7 +135,7 @@ function assertContextualMission() {
   assert(app.includes("nexusGenesisExperienceActivated = false;"), "return home resets orb activation");
   assert(app.includes("function resetNexusGenesisHomeViewport()"), "return home owns Genesis viewport reset");
   assert(app.includes("resetNexusGenesisHomeViewport();"), "return home calls Genesis viewport reset after render");
-  assert(app.includes("renderUserWorkspace();\n  updateNexusGenesisExperienceDom();"), "Genesis DOM state syncs immediately after workspace render");
+  assert(workspace.includes("bindNexusPrimaryVoiceControls();\n  updateNexusGenesisExperienceDom();"), "Genesis DOM state syncs immediately after workspace render");
   assert(app.includes("document.body.dataset.nexusGenesisMode = mode;"), "body tracks Genesis mode for viewport control");
   assert(styles.includes('body.user-mode[data-nexus-genesis-mode="home"]'), "Home mode hides overflow at body level");
   assert(styles.includes("position: fixed !important;"), "Home mode owns a fixed full-window orb scene");
@@ -143,11 +143,11 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-453"'), "app build version bumped");
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-453"'), "server build version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v398"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-454"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-454"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v399"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v399"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");

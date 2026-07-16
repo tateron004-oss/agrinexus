@@ -27,6 +27,7 @@ function blockBetween(source, start, end) {
 }
 
 const contractBlock = blockBetween(app, "const NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT", "async function chromeMicrophonePermissionState");
+const voiceTransportBlock = blockBetween(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening");
 const startBlock = blockBetween(app, "async function startVoiceListening", "async function sendModuleNotification");
 const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "function exposeNexusBrainIntelligenceRuntimeApis()");
 
@@ -70,7 +71,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
   "recordNexusOsConversationTurn(\"user\", finalTranscript",
   "scheduleFinalVoiceCommand(finalTranscript, { source: \"voice\" })",
   "markNexusListeningControllerEvent(\"failed\""
-].forEach(token => includes(startBlock, token, `startVoiceListening controller wiring ${token}`));
+].forEach(token => includes(voiceTransportBlock, token, `voice runtime transport controller wiring ${token}`));
 
 [
   "recognition.lang = voiceLocale()",
@@ -82,7 +83,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
   "recognition-timeout",
   "I did not hear speech. I am still listening.",
   "Type your request in Ask Nexus"
-].forEach(token => includes(startBlock + app, token, `existing recognition safety token ${token}`));
+].forEach(token => includes(voiceTransportBlock + startBlock + app, token, `existing recognition safety token ${token}`));
 
 [
   "window.NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT = NEXUS_LISTENING_WAKE_CONTROLLER_CONTRACT",
@@ -91,7 +92,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
   "window.normalizeNexusWakeTranscript = normalizeNexusWakeTranscript"
 ].forEach(token => includes(exposeBlock, token, `listening/wake API exposure ${token}`));
 
-assert(!/always-on listening is enabled|silent microphone start|hidden microphone|nexus heard you.*permission-denied/i.test(contractBlock + startBlock), "listening controller avoids unsafe microphone and heard claims");
+assert(!/always-on listening is enabled|silent microphone start|hidden microphone|nexus heard you.*permission-denied/i.test(contractBlock + voiceTransportBlock + startBlock), "listening controller avoids unsafe microphone and heard claims");
 assert(pkg.scripts["qa:nexus-listening-wake-runtime"] === "node scripts/nexus-listening-wake-runtime-qa.js", "package alias exists");
 assert(qaSuite.includes("scripts/nexus-listening-wake-runtime-qa.js"), "safe QA suite includes listening/wake runtime QA");
 

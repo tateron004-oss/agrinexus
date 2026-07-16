@@ -28,7 +28,8 @@ function includesAll(source, tokens, label) {
 const autoStart = sectionBetween(app, "async function maybeStartGenesisRecognitionAfterGrantedPermission", "function nexusVoiceAudioDebugEnabled", "automatic microphone startup");
 const pipeline = sectionBetween(app, "function recordNexusAudioPipelineEvent", "function nexusVoiceAudioPipelineSnapshot", "audio pipeline event recorder");
 const streamOwner = sectionBetween(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "getUserMedia owner");
-const recognitionStart = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "recognition startup");
+const supervisorStart = sectionBetween(app, "async function startVoiceListening", "async function sendModuleNotification", "recognition supervisor startup");
+const recognitionStart = sectionBetween(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "recognition startup");
 const speechOutput = sectionBetween(app, "function speakVoiceResponse", "function setVoiceStatus", "spoken output");
 
 includesAll(autoStart, [
@@ -47,6 +48,11 @@ includesAll(pipeline, [
   '"agent-command-request"',
   "commandRequestStarted: true"
 ], "audio pipeline live-track state lock");
+includesAll(supervisorStart, [
+  "nexusGenesisConversationSupervisor",
+  "supervisor.start(options.source || \"start-voice-listening\")",
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+], "SpeechRecognition supervisor lock");
 includesAll(recognitionStart, [
   "recognition-handlers-registered",
   "voiceRecognition.onstart",
