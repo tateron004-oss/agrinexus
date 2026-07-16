@@ -113,21 +113,21 @@ const submitRouting = between(app, "function routeNexusCommandCenterCommunicatio
 assert(submitRouting.indexOf("handleNexusVoiceTroubleshootingCommand(command, { source })") < submitRouting.indexOf("advanceNexusOsMissionForCommand(command, { source });"), "voice status commands must run before mission planning");
 
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-452",
-  "/styles.css?v=nexus-behavior-452",
-  "/app.js?v=nexus-behavior-452"
+  "/manifest.webmanifest?v=nexus-behavior-453",
+  "/styles.css?v=nexus-behavior-453",
+  "/app.js?v=nexus-behavior-453"
 ], "index cache bust");
 includesAll(app, [
-  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-452\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v397\";"
+  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-453\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v398\";"
 ], "app cache bust");
 includesAll(sw, [
-  "const CACHE_NAME = \"agrinexus-pwa-v397\";",
-  "const BUILD_VERSION = \"nexus-behavior-452\";"
+  "const CACHE_NAME = \"agrinexus-pwa-v398\";",
+  "const BUILD_VERSION = \"nexus-behavior-453\";"
 ], "service worker cache bust");
 includesAll(server, [
-  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-452\";",
-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v397\";"
+  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-453\";",
+  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v398\";"
 ], "server cache bust");
 
 assert.strictEqual(

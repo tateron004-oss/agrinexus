@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-452",
+  "nexus-behavior-453",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v397"
+  "agrinexus-pwa-v398"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v452", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v453", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -65,6 +65,7 @@ includes(app, "nexus-genesis-voice-runtime-v452", "Genesis voice runtime cache m
   "/api/voice/elevenlabs/status",
   "/api/voice/elevenlabs/session",
   "/api/voice/elevenlabs/authorization-probe",
+  "/api/voice/runtime/tool",
   "/api/voice/elevenlabs/tool",
   "/api/voice/elevenlabs/webhook",
   "/api/voice/elevenlabs/diagnostics",
@@ -72,7 +73,7 @@ includes(app, "nexus-genesis-voice-runtime-v452", "Genesis voice runtime cache m
   "/vendor/livekit-client/livekit-client.esm.mjs",
   "/api/voice/genesis/acceptance-matrix",
   "dispatchNexusElevenLabsTool",
-  "Nexus ElevenLabs Agents tool dispatch",
+  "Nexus provider-neutral voice runtime tool dispatch",
   "conversation/token?${tokenParams.toString()}",
   "agent_id: agentId",
   "source: \"js_sdk\"",
@@ -99,17 +100,19 @@ includes(app, "nexus-genesis-voice-runtime-v452", "Genesis voice runtime cache m
 const probeRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/authorization-probe"');
 const sessionRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/session"');
 const statusRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/status"');
-const toolRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/tool"');
+const toolRouteIndex = server.indexOf('url.pathname === "/api/voice/runtime/tool"');
+const legacyToolRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/tool"');
 const signInGateIndex = server.indexOf('if (!user && url.pathname !== "/api/config")');
 assert(probeRouteIndex !== -1, "authorization probe route should exist");
 assert(sessionRouteIndex !== -1, "ElevenLabs session route should exist");
 assert(statusRouteIndex !== -1, "ElevenLabs status route should exist");
-assert(toolRouteIndex !== -1, "ElevenLabs tool route should exist");
+assert(toolRouteIndex !== -1, "provider-neutral voice runtime tool route should exist");
+assert(legacyToolRouteIndex !== -1, "ElevenLabs tool compatibility route should exist");
 assert(signInGateIndex !== -1, "global sign-in gate should exist");
 assert(probeRouteIndex < signInGateIndex, "authorization probe should be safe readiness before sign-in gate");
 assert(sessionRouteIndex < signInGateIndex, "ElevenLabs session should use shared Genesis voice auth before sign-in gate");
 assert(statusRouteIndex < signInGateIndex, "ElevenLabs status should be safe readiness before sign-in gate");
-assert(toolRouteIndex < signInGateIndex, "ElevenLabs tool route should reuse Genesis voice auth before sign-in gate");
+assert(toolRouteIndex < signInGateIndex, "provider-neutral voice tool route should reuse Genesis voice auth before sign-in gate");
 const probeRouteEndIndex = sessionRouteIndex;
 const probeRouteBlock = server.slice(probeRouteIndex, probeRouteEndIndex);
 [
@@ -126,7 +129,7 @@ notIncludes(probeRouteBlock, "createElevenLabsConversationSession", "authorizati
 notIncludes(probeRouteBlock, "conversationToken:", "authorization probe must not return conversationToken");
 notIncludes(probeRouteBlock, "signedUrl:", "authorization probe must not return signedUrl");
 
-const sessionRouteEndIndex = server.indexOf('if (url.pathname === "/api/voice/elevenlabs/tool"', sessionRouteIndex);
+const sessionRouteEndIndex = server.indexOf('if ((url.pathname === "/api/voice/runtime/tool"', sessionRouteIndex);
 const sessionRouteBlock = server.slice(sessionRouteIndex, sessionRouteEndIndex);
 [
   "resolveElevenLabsVoiceAuthContext(req, db, user",
@@ -186,7 +189,7 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
 [
   "resolveElevenLabsVoiceAuthContext(req, db, user",
   "issueGuest: false",
-  "Genesis voice tool authorization required.",
+  "Genesis voice tool gateway authorization required.",
   "dispatchNexusRealtimeTool(db, authContext.user",
   "executionAttempted: false",
   "noSecretValues: true"
@@ -238,7 +241,7 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
   "onUnhandledClientToolCall:",
   "onAgentToolRequest:",
   "/api/voice/elevenlabs/session",
-  "/api/voice/elevenlabs/tool",
+  "/api/voice/runtime/tool",
   "genesisVoiceConversationActive",
   "stopRealtimeVoiceSession(\"OpenAI Realtime disabled for ElevenLabs acceptance.\")",
   "stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")",
@@ -401,7 +404,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-452",
-  cache: "agrinexus-pwa-v397",
+  build: "nexus-behavior-453",
+  cache: "agrinexus-pwa-v398",
   noSecretValues: true
 }, null, 2));

@@ -20,6 +20,8 @@
 
   const VOICE_RUNTIME_METHODS = Object.freeze([
     "initialize",
+    "startSession",
+    "stopSession",
     "start",
     "stop",
     "destroy",
@@ -33,7 +35,60 @@
     "callTool",
     "updateLanguage",
     "getSessionContext",
-    "on"
+    "on",
+    "onStateChange",
+    "onUserSpeechStart",
+    "onUserSpeechEnd",
+    "onTranscript",
+    "onAgentResponseStart",
+    "onAgentResponseEnd",
+    "onError",
+    "onDisconnect"
+  ]);
+
+  const VOICE_RUNTIME_ROLLOUT_STAGES = Object.freeze([
+    "disabled",
+    "shadow-test",
+    "owner-canary",
+    "internal-canary",
+    "limited-canary",
+    "production-candidate",
+    "production-default"
+  ]);
+
+  const VOICE_RUNTIME_METRICS = Object.freeze([
+    "sessionStartSuccess",
+    "firstTurnSuccess",
+    "secondTurnSuccess",
+    "fiveTurnSuccess",
+    "twentyTurnSuccess",
+    "silenceRate",
+    "disconnectRate",
+    "reconnectSuccess",
+    "rollbackSuccess",
+    "medianResponseLatency",
+    "interruptionSuccess",
+    "toolCallSuccess",
+    "microphoneOwnershipConflictCount"
+  ]);
+
+  const VOICE_RUNTIME_FAILURE_INJECTIONS = Object.freeze([
+    "token-issuance-failure",
+    "invalid-agent-configuration",
+    "webrtc-disconnect",
+    "sdk-exception",
+    "malformed-sdk-error",
+    "data-channel-failure",
+    "microphone-unavailable",
+    "microphone-track-ending",
+    "network-interruption",
+    "provider-timeout",
+    "tool-timeout",
+    "tool-invalid-response",
+    "tab-background-foreground",
+    "service-worker-update",
+    "runtime-switch",
+    "candidate-rollback"
   ]);
 
   function createVoiceOwnershipLock() {
@@ -143,9 +198,39 @@
     };
   }
 
+  function createRuntimeMetrics() {
+    const metrics = {
+      sessionStartSuccess: 0,
+      firstTurnSuccess: 0,
+      secondTurnSuccess: 0,
+      fiveTurnSuccess: 0,
+      twentyTurnSuccess: 0,
+      silenceRate: 0,
+      disconnectRate: 0,
+      reconnectSuccess: 0,
+      rollbackSuccess: 0,
+      medianResponseLatency: 0,
+      interruptionSuccess: 0,
+      toolCallSuccess: 0,
+      microphoneOwnershipConflictCount: 0
+    };
+    return {
+      increment(key, amount = 1) {
+        if (Object.prototype.hasOwnProperty.call(metrics, key)) metrics[key] += amount;
+      },
+      set(key, value) {
+        if (Object.prototype.hasOwnProperty.call(metrics, key)) metrics[key] = value;
+      },
+      snapshot() {
+        return { ...metrics };
+      }
+    };
+  }
+
   function createAdapter(name, behavior = {}) {
     let state = "closed";
     const listeners = new Map();
+    const metrics = behavior.metrics || createRuntimeMetrics();
     const sessionContext = behavior.sessionContext || createSessionContext();
     const owner = `voice-runtime:${name}`;
     const lock = behavior.lock || createVoiceOwnershipLock();
@@ -155,8 +240,9 @@
     function setState(nextState) {
       state = VOICE_RUNTIME_STATES.includes(nextState) ? nextState : "failed";
       emit("state", { state });
+      emit("stateChange", { state });
     }
-    return {
+    const adapter = {
       name,
       owner,
       initialize() {
@@ -164,27 +250,36 @@
         setState("ready");
         return Promise.resolve(this.getState());
       },
+      startSession() {
+        return this.start();
+      },
       start() {
         const mic = lock.acquire("microphone", owner);
         const audio = lock.acquire("audio", owner);
         const session = lock.acquire("session", owner);
         if (!mic.ok || !audio.ok || !session.ok) {
+          metrics.increment("microphoneOwnershipConflictCount");
           setState("blocked");
           return Promise.resolve({ ok: false, conflict: mic.ok ? audio.ok ? session : audio : mic });
         }
+        metrics.increment("sessionStartSuccess");
         setState("listening");
         return Promise.resolve({ ok: true, state });
+      },
+      stopSession() {
+        return this.stop();
       },
       stop() {
         ["microphone", "audio", "session", "turn", "reconnect"].forEach(resource => lock.release(resource, owner));
         setState("closed");
+        emit("disconnect", { reason: "stopped" });
         return Promise.resolve({ ok: true, state });
       },
       destroy() {
         return this.stop();
       },
       getState() {
-        return { runtime: name, state, healthy: this.isHealthy(), ownsMicrophone: this.ownsMicrophone(), context: sessionContext.snapshot() };
+        return { runtime: name, state, healthy: this.isHealthy(), ownsMicrophone: this.ownsMicrophone(), context: sessionContext.snapshot(), metrics: metrics.snapshot() };
       },
       isHealthy() {
         return !["failed", "closed", "blocked"].includes(state);
@@ -202,6 +297,7 @@
       },
       interrupt() {
         setState("interrupted");
+        metrics.increment("interruptionSuccess");
         emit("interrupt", {});
         return Promise.resolve({ ok: true, state });
       },
@@ -212,13 +308,18 @@
       },
       callTool(toolName, args = {}) {
         setState("processing");
+        emit("userSpeechEnd", {});
         if (behavior.failTool) {
+          emit("error", { category: "provider-failure" });
           setState("recovering");
           return Promise.resolve({ ok: false, toolName, blockedReason: "provider-failure", executionAttempted: false });
         }
         const response = behavior.toolResponse || "Nexus completed the local tool step.";
+        emit("agentResponseStart", { toolName });
         sessionContext.updateTurn({ user: args.command || args.query || toolName, response, spoken: response, topic: toolName });
         setState("agent-speaking");
+        emit("agentResponseEnd", { toolName });
+        metrics.increment("toolCallSuccess");
         setState("listening");
         return Promise.resolve({ ok: true, toolName, response, executionAttempted: false });
       },
@@ -233,14 +334,40 @@
         if (!listeners.has(event)) listeners.set(event, []);
         listeners.get(event).push(listener);
         return () => listeners.set(event, (listeners.get(event) || []).filter(item => item !== listener));
+      },
+      onStateChange(listener) {
+        return this.on("stateChange", listener);
+      },
+      onUserSpeechStart(listener) {
+        return this.on("userSpeechStart", listener);
+      },
+      onUserSpeechEnd(listener) {
+        return this.on("userSpeechEnd", listener);
+      },
+      onTranscript(listener) {
+        return this.on("transcript", listener);
+      },
+      onAgentResponseStart(listener) {
+        return this.on("agentResponseStart", listener);
+      },
+      onAgentResponseEnd(listener) {
+        return this.on("agentResponseEnd", listener);
+      },
+      onError(listener) {
+        return this.on("error", listener);
+      },
+      onDisconnect(listener) {
+        return this.on("disconnect", listener);
       }
     };
+    return adapter;
   }
 
   function createNexusVoiceRuntimeManager(options = {}) {
     const lock = options.lock || createVoiceOwnershipLock();
     const sessionContext = options.sessionContext || createSessionContext();
     const circuitBreaker = options.circuitBreaker || createCircuitBreaker({ threshold: 1 });
+    const metrics = options.metrics || createRuntimeMetrics();
     const adapters = {
       legacy: options.legacyAdapter || createAdapter("legacy", { lock, sessionContext }),
       elevenlabs: options.elevenLabsAdapter || createAdapter("elevenlabs", { lock, sessionContext }),
@@ -251,7 +378,8 @@
       candidateRuntime: String(options.candidateRuntime || "elevenlabs").toLowerCase(),
       candidateEnabled: options.candidateEnabled !== false,
       candidateAllowed: Boolean(options.candidateAllowed),
-      automaticRollback: options.automaticRollback !== false
+      automaticRollback: options.automaticRollback !== false,
+      rolloutStage: VOICE_RUNTIME_ROLLOUT_STAGES.includes(options.rolloutStage) ? options.rolloutStage : "owner-canary"
     };
     let activeName = policy.activeRuntime in adapters ? policy.activeRuntime : "legacy";
     const manager = {
@@ -274,6 +402,7 @@
           circuitBreaker.recordFailure("candidate-start-failed");
           await adapter.stop();
           activeName = "legacy";
+          metrics.increment("rollbackSuccess");
           await adapters.legacy.initialize();
           return adapters.legacy.start();
         }
@@ -283,6 +412,12 @@
       async stop() {
         return this.adapter(activeName).stop();
       },
+      async startSession() {
+        return this.start();
+      },
+      async stopSession() {
+        return this.stop();
+      },
       async switchRuntime(nextRuntime, reason = "runtime-switch") {
         const normalized = String(nextRuntime || "legacy").toLowerCase();
         await this.stop();
@@ -291,7 +426,10 @@
       },
       recordProviderFailure(reason = "provider-failure") {
         const result = circuitBreaker.recordFailure(reason);
-        if (policy.automaticRollback) activeName = "legacy";
+        if (policy.automaticRollback) {
+          activeName = "legacy";
+          metrics.increment("rollbackSuccess");
+        }
         return { ...result, activeRuntime: activeName };
       },
       getState() {
@@ -304,6 +442,11 @@
           ownership: lock.snapshot(),
           context: sessionContext.snapshot(),
           circuitBreaker: circuitBreaker.snapshot(),
+          rolloutStage: policy.rolloutStage,
+          rolloutStages: VOICE_RUNTIME_ROLLOUT_STAGES,
+          metrics: metrics.snapshot(),
+          metricNames: VOICE_RUNTIME_METRICS,
+          failureInjections: VOICE_RUNTIME_FAILURE_INJECTIONS,
           oneOwnerAtATime: true,
           legacyProductionDefault: true,
           elevenLabsCandidateOnly: true,
@@ -328,6 +471,10 @@
                 ? this.recordProviderFailure("injected-provider-failure")
                 : await adapter.callTool(toolName, { command: `turn ${turn}` });
               if (turn === 19) await adapter.recover();
+              if (turn === 1) metrics.increment("firstTurnSuccess");
+              if (turn === 2) metrics.increment("secondTurnSuccess");
+              if (turn === 5) metrics.increment("fiveTurnSuccess");
+              if (turn === 20) metrics.increment("twentyTurnSuccess");
               results.push({ turn, state: adapter.getState(), result, ownsMicrophone: adapter.ownsMicrophone() });
             }
             return {
@@ -338,6 +485,30 @@
               managerState: this.getState()
             };
           });
+      },
+      async runFailureInjectionHarness(runtimeName = "elevenlabs") {
+        const adapter = this.adapter(runtimeName);
+        const results = [];
+        await adapter.initialize();
+        await adapter.start();
+        for (const failure of VOICE_RUNTIME_FAILURE_INJECTIONS) {
+          if (failure === "runtime-switch") await this.switchRuntime(runtimeName, failure);
+          await adapter.stop();
+          const rollback = this.recordProviderFailure(failure);
+          results.push({
+            failure,
+            rollback,
+            activeRuntime: this.getState().activeRuntime,
+            microphoneOwner: this.getState().ownership.microphone || ""
+          });
+          if (runtimeName !== "legacy") await adapters.legacy.start();
+        }
+        return {
+          ok: results.every(result => result.activeRuntime === "legacy"),
+          runtime: runtimeName,
+          injections: results,
+          managerState: this.getState()
+        };
       }
     };
     return manager;
@@ -346,9 +517,13 @@
   const api = {
     VOICE_RUNTIME_STATES,
     VOICE_RUNTIME_METHODS,
+    VOICE_RUNTIME_ROLLOUT_STAGES,
+    VOICE_RUNTIME_METRICS,
+    VOICE_RUNTIME_FAILURE_INJECTIONS,
     createVoiceOwnershipLock,
     createSessionContext,
     createCircuitBreaker,
+    createRuntimeMetrics,
     LegacyBrowserVoiceAdapter: behavior => createAdapter("legacy", behavior),
     ElevenLabsVoiceAdapter: behavior => createAdapter("elevenlabs", behavior),
     OpenAIRealtimeAdapter: behavior => createAdapter("realtime", behavior),

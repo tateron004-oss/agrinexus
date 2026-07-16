@@ -757,7 +757,7 @@ let nexusGenesisVoiceRuntimePolicyCache = null;
 let nexusGenesisVoiceRuntimeManager = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v9";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v10";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -859,7 +859,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v452";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v453";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1324,8 +1324,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-452";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v397";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-453";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48653,7 +48653,7 @@ function nexusElevenLabsSafeToolResult(result = {}) {
 
 async function runElevenLabsClientTool(toolName = "nexus_capability_router", parameters = {}, toolCallId = "") {
   try {
-    const response = await fetch("/api/voice/elevenlabs/tool", {
+    const response = await fetch("/api/voice/runtime/tool", {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",

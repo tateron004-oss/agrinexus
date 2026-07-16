@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-452";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v397";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-453";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v398";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v9";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v10";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16318,7 +16318,8 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
     endpoint: "/api/voice/elevenlabs/session",
     sdkEndpoint: "/vendor/elevenlabs-client/dist/platform/web/index.js",
-    toolEndpoint: "/api/voice/elevenlabs/tool",
+    toolEndpoint: "/api/voice/runtime/tool",
+    compatibilityToolEndpoint: "/api/voice/elevenlabs/tool",
     statusEndpoint: "/api/voice/elevenlabs/status",
     diagnosticsEndpoint: "/api/voice/elevenlabs/diagnostics",
     tools: nexusElevenLabsToolSchemas().map(tool => ({
@@ -41774,8 +41775,9 @@ async function api(req, res, url) {
     }
   }
 
-  if (url.pathname === "/api/voice/elevenlabs/tool" && req.method === "POST") {
-    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many ElevenLabs tool requests" });
+  if ((url.pathname === "/api/voice/runtime/tool" || url.pathname === "/api/voice/elevenlabs/tool") && req.method === "POST") {
+    const isRuntimeGateway = url.pathname === "/api/voice/runtime/tool";
+    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus voice tool requests" });
     if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
     const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
       language: url.searchParams.get("language") || user?.language || "en",
@@ -41784,7 +41786,7 @@ async function api(req, res, url) {
     if (!authContext.authenticated) {
       return send(res, 401, {
         ok: false,
-        error: "Genesis voice tool authorization required.",
+        error: "Genesis voice tool gateway authorization required.",
         category: "user-authentication-required",
         executionAttempted: false,
         noSecretValues: true
@@ -41795,7 +41797,7 @@ async function api(req, res, url) {
     if (!authContext.authorized) {
       return send(res, 403, {
         ok: false,
-        error: "Role does not allow ElevenLabs tools.",
+        error: "Role does not allow Nexus voice tools.",
         category: "user-authorization-forbidden",
         executionAttempted: false,
         noSecretValues: true
@@ -41808,7 +41810,7 @@ async function api(req, res, url) {
     if (!NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES.includes(toolName)) {
       return send(res, 400, {
         ok: false,
-        error: "Unsupported Nexus ElevenLabs tool.",
+        error: "Unsupported Nexus voice tool.",
         blockedReason: "route-not-found",
         supportedTools: NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES
       }, {
@@ -41822,8 +41824,8 @@ async function api(req, res, url) {
         ...args,
         capability: args.capability || nexusElevenLabsToolToCapability(toolName)
       },
-      route: "/api/voice/elevenlabs/tool",
-      note: "Nexus ElevenLabs Agents tool dispatch"
+      route: isRuntimeGateway ? "/api/voice/runtime/tool" : "/api/voice/elevenlabs/tool",
+      note: isRuntimeGateway ? "Nexus provider-neutral voice runtime tool dispatch" : "Nexus ElevenLabs Agents tool dispatch"
     });
     await writeDb(db);
     return send(res, 200, result, {

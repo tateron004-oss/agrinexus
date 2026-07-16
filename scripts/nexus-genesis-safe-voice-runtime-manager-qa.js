@@ -27,6 +27,8 @@ async function run() {
   assertIncludes(managerSource, "OpenAIRealtimeAdapter", "OpenAI Realtime rollback adapter contract");
   [
     "initialize",
+    "startSession",
+    "stopSession",
     "start",
     "stop",
     "destroy",
@@ -40,7 +42,15 @@ async function run() {
     "callTool",
     "updateLanguage",
     "getSessionContext",
-    "on"
+    "on",
+    "onStateChange",
+    "onUserSpeechStart",
+    "onUserSpeechEnd",
+    "onTranscript",
+    "onAgentResponseStart",
+    "onAgentResponseEnd",
+    "onError",
+    "onDisconnect"
   ].forEach(method => assertIncludes(managerSource, `"${method}"`, `VoiceRuntime method ${method}`));
   [
     "disabled",
@@ -61,7 +71,11 @@ async function run() {
   assertIncludes(managerSource, "createVoiceOwnershipLock", "one-owner lock");
   assertIncludes(managerSource, "createSessionContext", "bounded session context");
   assertIncludes(managerSource, "createCircuitBreaker", "candidate circuit breaker");
+  assertIncludes(managerSource, "VOICE_RUNTIME_ROLLOUT_STAGES", "runtime rollout stages");
+  assertIncludes(managerSource, "VOICE_RUNTIME_METRICS", "runtime metrics");
+  assertIncludes(managerSource, "VOICE_RUNTIME_FAILURE_INJECTIONS", "failure injection list");
   assertIncludes(managerSource, "runContinuousConversationHarness", "continuous-turn harness");
+  assertIncludes(managerSource, "runFailureInjectionHarness", "failure injection harness");
   assertIncludes(managerSource, "elevenLabsCandidateOnly: true", "ElevenLabs candidate-only flag");
   assertIncludes(managerSource, "openAiRealtimeRollbackOnly: true", "OpenAI rollback-only flag");
 
@@ -71,6 +85,7 @@ async function run() {
   assertIncludes(serverSource, "NEXUS_GENESIS_CANDIDATE_ALLOWLIST", "candidate allowlist env");
   assertIncludes(serverSource, "NEXUS_GENESIS_AUTOMATIC_ROLLBACK", "automatic rollback env");
   assertIncludes(serverSource, 'url.pathname === "/api/voice/runtime/status"', "runtime status endpoint");
+  assertIncludes(serverSource, 'url.pathname === "/api/voice/runtime/tool"', "provider-neutral voice tool gateway");
   assertIncludes(serverSource, "nexusGenesisVoiceRuntimePolicy", "server runtime policy");
   assertIncludes(serverSource, "candidateAllowed", "server candidate gate");
   assertIncludes(serverSource, "noSecretValues: true", "secret-free status");
@@ -79,12 +94,13 @@ async function run() {
 
   assertIncludes(appSource, "loadNexusGenesisVoiceRuntimePolicy", "client runtime policy loader");
   assertIncludes(appSource, 'fetch("/api/voice/runtime/status"', "client runtime status fetch");
+  assertIncludes(appSource, 'fetch("/api/voice/runtime/tool"', "client uses provider-neutral voice tool gateway");
   assertIncludes(appSource, "initializeNexusGenesisVoiceRuntimeManager", "client manager initializer");
   assertIncludes(appSource, "nexusGenesisElevenLabsCandidateAllowed", "client candidate gate");
   assertIncludes(appSource, "if (!candidateAllowed) return false;", "client skips ElevenLabs unless allowlisted");
   assertIncludes(appSource, "legacyBrowserVoiceActiveForNormalUsers", "client legacy policy fallback");
-  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-452", "manager script loaded");
-  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-452"), "manager script must load before app.js");
+  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-453", "manager script loaded");
+  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-453"), "manager script must load before app.js");
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-genesis-safe-voice-runtime-manager"],
@@ -111,6 +127,9 @@ async function run() {
   assert.strictEqual(legacyHarness.turns.length, 20, "legacy harness should run 20 turns");
   assert.strictEqual(legacyHarness.finalState.state, "listening", "legacy should return to listening");
   assert.strictEqual(legacyHarness.finalState.context.pendingLanguage, "es", "language switch turn should persist");
+  assert.strictEqual(typeof manager.adapter("legacy").startSession, "function", "adapter should expose startSession alias");
+  assert.strictEqual(typeof manager.adapter("legacy").stopSession, "function", "adapter should expose stopSession alias");
+  assert.strictEqual(typeof manager.adapter("legacy").onTranscript, "function", "adapter should expose transcript callback");
 
   await manager.stop();
   const canary = managerApi.createNexusVoiceRuntimeManager({
@@ -127,6 +146,11 @@ async function run() {
   const failure = canary.recordProviderFailure("malformed-sdk-error");
   assert.strictEqual(failure.activeRuntime, "legacy", "candidate failure should roll back to legacy");
   assert.strictEqual(canary.getState().circuitBreaker.open, true, "candidate circuit breaker should open");
+  const injected = await canary.runFailureInjectionHarness("elevenlabs");
+  assert.strictEqual(injected.ok, true, "failure injection harness should restore legacy for every injected failure");
+  assert(injected.injections.length >= 16, "failure injection harness should cover all required failure classes");
+  assert(canary.getState().rolloutStages.includes("owner-canary"), "rollout stages should include owner-canary");
+  assert(canary.getState().metricNames.includes("twentyTurnSuccess"), "metrics should include twenty-turn success");
 
   console.log("Nexus Genesis safe voice runtime manager QA passed.");
 }
