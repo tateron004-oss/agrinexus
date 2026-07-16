@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-447";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v392";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-448";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v393";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v4";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v5";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16330,6 +16330,71 @@ function nexusElevenLabsProviderCategory(statusCode = 0, detail = "") {
   return "provider-unavailable";
 }
 
+function safeElevenLabsProviderDetail(value, fallback = "ElevenLabs provider authorization failed.") {
+  if (value === null || value === undefined || value === "") return fallback;
+  let detail = "";
+  if (typeof value === "string") {
+    detail = value;
+  } else if (typeof value === "object") {
+    const preferred = [
+      value.detail,
+      value.error,
+      value.message,
+      value.status,
+      value.code
+    ].find(item => item !== null && item !== undefined && item !== "");
+    if (preferred && preferred !== value) {
+      detail = safeElevenLabsProviderDetail(preferred, fallback);
+    } else {
+      try {
+        detail = JSON.stringify(value);
+      } catch {
+        detail = fallback;
+      }
+    }
+  } else {
+    detail = String(value);
+  }
+  detail = String(detail || fallback)
+    .replace(/sk-[A-Za-z0-9_-]{12,}/g, "[redacted-token]")
+    .replace(/[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}/g, "[redacted-token]")
+    .replace(/(xi-api-key|api[_-]?key|authorization|token|secret)["'\s:=]+[^"',\s}]+/gi, "$1=[redacted]")
+    .slice(0, 360);
+  return detail && detail !== "[object Object]" ? detail : fallback;
+}
+
+function elevenLabsProviderDiagnostics({
+  tokenResponse,
+  tokenDetail,
+  signedResponse,
+  signedDetail,
+  finalRoute = "unresolved",
+  timeout = false
+} = {}) {
+  const tokenStatus = Number(tokenResponse?.status || 0);
+  const signedStatus = Number(signedResponse?.status || 0);
+  const tokenStatusCategory = nexusElevenLabsProviderCategory(tokenStatus, tokenDetail);
+  const signedUrlStatusCategory = nexusElevenLabsProviderCategory(signedStatus, signedDetail);
+  const finalStatus = signedStatus || tokenStatus || 0;
+  const finalDetail = signedDetail || tokenDetail || "";
+  return {
+    providerSelected: "elevenlabs",
+    credentialConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
+    clientInitialized: true,
+    requestAttempted: true,
+    authorizationRequestAttempted: true,
+    conversationTokenAttempted: true,
+    signedUrlFallbackAttempted: Boolean(signedResponse),
+    tokenHttpStatusCategory: tokenStatus ? tokenStatusCategory : "request-failed",
+    signedUrlHttpStatusCategory: signedStatus ? signedUrlStatusCategory : "not-attempted",
+    providerStatusCategory: nexusElevenLabsProviderCategory(finalStatus, finalDetail),
+    timeout: Boolean(timeout),
+    fallbackEnabled: true,
+    finalResponseRoute: finalRoute,
+    noSecretValues: true
+  };
+}
+
 async function fetchElevenLabsJson(url, { method = "GET", timeoutMs = 15000 } = {}) {
   const response = await fetchWithTimeout(url, {
     method,
@@ -16362,11 +16427,13 @@ async function createElevenLabsConversationSession({ user, language = "en", prob
   const tokenUrl = `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
   let tokenPayload = {};
   let tokenResponse = null;
+  let tokenRequestTimedOut = false;
   try {
     const result = await fetchElevenLabsJson(tokenUrl, { timeoutMs });
     tokenResponse = result.response;
     tokenPayload = result.payload;
   } catch (error) {
+    tokenRequestTimedOut = /timeout|timed out|aborted/i.test(error.message || "");
     tokenPayload = { message: error.message || "ElevenLabs conversation token request failed." };
   }
   const conversationToken = tokenPayload.token || tokenPayload.conversation_token || tokenPayload.conversationToken || "";
@@ -16393,19 +16460,41 @@ async function createElevenLabsConversationSession({ user, language = "en", prob
       noSecretValues: true
     };
   }
-  const tokenDetail = tokenPayload.detail || tokenPayload.error || tokenPayload.message || `ElevenLabs conversation token failed: ${tokenResponse?.status || "request_failed"}`;
-  const signedUrlResult = await fetchElevenLabsJson(
-    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
-    { timeoutMs }
+  const tokenDetail = safeElevenLabsProviderDetail(
+    tokenPayload.detail || tokenPayload.error || tokenPayload.message,
+    `ElevenLabs conversation token failed: ${tokenResponse?.status || "request_failed"}`
   );
-  const signedResponse = signedUrlResult.response;
-  const signedPayload = signedUrlResult.payload;
-  if (!signedResponse.ok || !signedPayload.signed_url) {
-    const detail = signedPayload.detail || signedPayload.error || signedPayload.message || tokenDetail;
-    const error = new Error(String(detail));
-    error.status = signedResponse.status || tokenResponse?.status || 502;
+  let signedResponse = null;
+  let signedPayload = {};
+  let signedRequestTimedOut = false;
+  try {
+    const signedUrlResult = await fetchElevenLabsJson(
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
+      { timeoutMs }
+    );
+    signedResponse = signedUrlResult.response;
+    signedPayload = signedUrlResult.payload;
+  } catch (error) {
+    signedRequestTimedOut = /timeout|timed out|aborted/i.test(error.message || "");
+    signedPayload = { message: error.message || "ElevenLabs signed URL request failed." };
+  }
+  if (!signedResponse?.ok || !signedPayload.signed_url) {
+    const detail = safeElevenLabsProviderDetail(
+      signedPayload.detail || signedPayload.error || signedPayload.message,
+      tokenDetail
+    );
+    const error = new Error(detail);
+    error.status = signedResponse?.status || tokenResponse?.status || 502;
     error.category = nexusElevenLabsProviderCategory(error.status, detail);
     error.tokenCategory = nexusElevenLabsProviderCategory(tokenResponse?.status, tokenDetail);
+    error.providerDiagnostics = elevenLabsProviderDiagnostics({
+      tokenResponse,
+      tokenDetail,
+      signedResponse,
+      signedDetail: detail,
+      finalRoute: "provider-error",
+      timeout: tokenRequestTimedOut || signedRequestTimedOut
+    });
     throw error;
   }
   return {
@@ -41585,6 +41674,18 @@ async function api(req, res, url) {
         correlationId,
         providerAttempted: true,
         authorizationArtifactIssued: false,
+        providerDiagnostics: error.providerDiagnostics || {
+          providerSelected: "elevenlabs",
+          credentialConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
+          clientInitialized: true,
+          requestAttempted: true,
+          authorizationRequestAttempted: true,
+          providerStatusCategory: category,
+          timeout: /timeout|timed out|aborted/i.test(error.message || ""),
+          fallbackEnabled: true,
+          finalResponseRoute: "provider-error",
+          noSecretValues: true
+        },
         missingEnv: error.missingEnv || [],
         elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
         noSecretValues: true

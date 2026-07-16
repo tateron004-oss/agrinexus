@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-447",
+  "nexus-behavior-448",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v392"
+  "agrinexus-pwa-v393"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v447", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v448", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -80,6 +80,8 @@ includes(app, "nexus-genesis-voice-runtime-v447", "Genesis voice runtime cache m
   "customPcmTransportActive: false",
   "noCustomPcmTransport: true",
   "function nexusElevenLabsProviderCategory",
+  "function safeElevenLabsProviderDetail",
+  "function elevenLabsProviderDiagnostics",
   "crypto.timingSafeEqual",
   "readRawBody(req, 500_000)",
   "rateLimit(req, 90, 60_000)",
@@ -139,10 +141,40 @@ const sessionRouteBlock = server.slice(sessionRouteIndex, sessionRouteEndIndex);
   "authorization-request-succeeded",
   "authorization-request-failed",
   "auth-context-found",
-  "auth-context-missing"
+  "auth-context-missing",
+  "providerDiagnostics: error.providerDiagnostics",
+  "credentialConfigured: Boolean(process.env.ELEVENLABS_API_KEY)",
+  "authorizationRequestAttempted: true",
+  "finalResponseRoute: \"provider-error\""
 ].forEach(needle => includes(sessionRouteBlock, needle, `session auth boundary ${needle}`));
 notIncludes(sessionRouteBlock, "ELEVENLABS_API_KEY:", "session route must not return permanent API key");
 notIncludes(sessionRouteBlock, "xi-api-key", "session route must not expose provider secret header");
+notIncludes(sessionRouteBlock, "[object Object]", "session route must not expose object-stringified provider errors");
+
+const detailHelperIndex = server.indexOf("function safeElevenLabsProviderDetail");
+const providerDiagnosticsIndex = server.indexOf("function elevenLabsProviderDiagnostics");
+assert(detailHelperIndex !== -1, "safe provider detail helper should exist");
+assert(providerDiagnosticsIndex !== -1, "provider diagnostics helper should exist");
+const providerDetailBlock = server.slice(detailHelperIndex, providerDiagnosticsIndex);
+[
+  "JSON.stringify(value)",
+  ".replace(/sk-[A-Za-z0-9_-]{12,}/g, \"[redacted-token]\")",
+  "api[_-]?key",
+  "return detail && detail !== \"[object Object]\" ? detail : fallback"
+].forEach(needle => includes(providerDetailBlock, needle, `safe provider detail ${needle}`));
+
+const providerDiagnosticsEnd = server.indexOf("async function fetchElevenLabsJson", providerDiagnosticsIndex);
+const providerDiagnosticsBlock = server.slice(providerDiagnosticsIndex, providerDiagnosticsEnd);
+[
+  "providerSelected: \"elevenlabs\"",
+  "credentialConfigured: Boolean(process.env.ELEVENLABS_API_KEY)",
+  "clientInitialized: true",
+  "requestAttempted: true",
+  "conversationTokenAttempted: true",
+  "signedUrlFallbackAttempted: Boolean(signedResponse)",
+  "providerStatusCategory:",
+  "noSecretValues: true"
+].forEach(needle => includes(providerDiagnosticsBlock, needle, `provider diagnostics ${needle}`));
 
 const toolRouteEndIndex = server.indexOf('if (!user && url.pathname !== "/api/config")', toolRouteIndex);
 const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
@@ -346,7 +378,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-447",
-  cache: "agrinexus-pwa-v392",
+  build: "nexus-behavior-448",
+  cache: "agrinexus-pwa-v393",
   noSecretValues: true
 }, null, 2));
