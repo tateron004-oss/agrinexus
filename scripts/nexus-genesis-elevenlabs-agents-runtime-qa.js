@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-451",
+  "nexus-behavior-452",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v396"
+  "agrinexus-pwa-v397"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v451", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v452", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -269,14 +269,19 @@ includes(index, "\"livekit-client\": \"/vendor/livekit-client/livekit-client.esm
   "data:audio/mpeg;base64"
 ].forEach(needle => notIncludes(app, needle, `retired custom ElevenLabs transport ${needle}`));
 
-includes(server, "const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || \"elevenlabs\")", "ElevenLabs default runtime");
+includes(server, "const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || \"legacy\")", "legacy default runtime");
+includes(server, "function nexusGenesisVoiceRuntimePolicy", "safe runtime policy");
+includes(server, "NEXUS_GENESIS_CANDIDATE_RUNTIME", "ElevenLabs candidate runtime env");
+includes(server, "NEXUS_GENESIS_CANDIDATE_ALLOWLIST", "ElevenLabs candidate allowlist env");
+includes(server, "NEXUS_GENESIS_AUTOMATIC_ROLLBACK", "automatic rollback env");
 includes(server, "String(env.NEXUS_GENESIS_ELEVENLABS_ENABLED || \"true\")", "ElevenLabs enabled flag");
 includes(server, "String(env.NEXUS_GENESIS_ELEVENLABS_FALLBACK || \"blocked\")", "ElevenLabs blocked fallback default");
 includes(server, "function genesisRealtimeRollbackEnabled", "Realtime rollback gate");
 includes(server, "OpenAI Realtime is disabled after the production gate failure", "Realtime disabled response");
 includes(server, "NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED", "Realtime rollback env guard");
 includes(app, "const elevenLabsStarted = await startElevenLabsVoiceSession();", "Genesis startup calls ElevenLabs first");
-includes(app, "ElevenLabs Agents voice did not initialize and fallback runtimes are blocked by server policy.", "blocked fallback message");
+includes(app, "if (!candidateAllowed) return false;", "Genesis skips ElevenLabs unless candidate is allowed");
+includes(app, "legacyBrowserVoiceActiveForNormalUsers", "normal users remain on legacy browser voice");
 notIncludes(app, "process.env.ELEVENLABS_API_KEY", "ElevenLabs API key in browser");
 notIncludes(app, "xi-api-key", "ElevenLabs secret header in browser");
 notIncludes(app, "localStorage.getItem(\"agrinexusRealtimeVoice\")", "local Realtime selector");
@@ -288,7 +293,11 @@ assert.strictEqual(
 );
 
 [
-  "NEXUS_GENESIS_VOICE_RUNTIME=elevenlabs",
+  "NEXUS_GENESIS_VOICE_RUNTIME=legacy",
+  "NEXUS_GENESIS_CANDIDATE_RUNTIME=elevenlabs",
+  "NEXUS_GENESIS_CANDIDATE_ENABLED=true",
+  "NEXUS_GENESIS_CANDIDATE_ALLOWLIST=",
+  "NEXUS_GENESIS_AUTOMATIC_ROLLBACK=true",
   "NEXUS_GENESIS_ELEVENLABS_ENABLED=true",
   "NEXUS_GENESIS_ELEVENLABS_FALLBACK=blocked",
   "ELEVENLABS_API_KEY=",
@@ -392,7 +401,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-451",
-  cache: "agrinexus-pwa-v396",
+  build: "nexus-behavior-452",
+  cache: "agrinexus-pwa-v397",
   noSecretValues: true
 }, null, 2));

@@ -1,10 +1,11 @@
-const CACHE_NAME = "agrinexus-pwa-v396";
-const BUILD_VERSION = "nexus-behavior-451";
+const CACHE_NAME = "agrinexus-pwa-v397";
+const BUILD_VERSION = "nexus-behavior-452";
 const APP_SHELL = [
   "/",
   "/index.html",
   `/styles.css?v=${BUILD_VERSION}`,
   `/app.js?v=${BUILD_VERSION}`,
+  `/nexus-genesis-voice-runtime-manager.js?v=${BUILD_VERSION}`,
   "/manifest.webmanifest",
   "/native-bridge.json",
   `/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1`,

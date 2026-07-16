@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-451";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v396";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-452";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v397";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v8";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v9";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16132,8 +16132,68 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
 }
 
 function canonicalGenesisVoiceRuntime(env = process.env) {
-  const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || "elevenlabs").trim().toLowerCase();
+  const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || "legacy").trim().toLowerCase();
+  return NEXUS_GENESIS_VOICE_RUNTIME_VALUES.has(requested) ? requested : "legacy";
+}
+
+function canonicalGenesisCandidateRuntime(env = process.env) {
+  const requested = String(env.NEXUS_GENESIS_CANDIDATE_RUNTIME || "elevenlabs").trim().toLowerCase();
   return NEXUS_GENESIS_VOICE_RUNTIME_VALUES.has(requested) ? requested : "elevenlabs";
+}
+
+function genesisVoiceCandidateEnabled(env = process.env) {
+  return String(env.NEXUS_GENESIS_CANDIDATE_ENABLED || "true").trim().toLowerCase() !== "false";
+}
+
+function genesisVoiceAutomaticRollbackEnabled(env = process.env) {
+  return String(env.NEXUS_GENESIS_AUTOMATIC_ROLLBACK || "true").trim().toLowerCase() !== "false";
+}
+
+function genesisVoiceCandidateAllowlist(env = process.env) {
+  return String(env.NEXUS_GENESIS_CANDIDATE_ALLOWLIST || "")
+    .split(/[,\s;]+/)
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function genesisVoiceCandidateAllowed(user = {}, env = process.env) {
+  const allowlist = genesisVoiceCandidateAllowlist(env);
+  if (!allowlist.length) return false;
+  const identifiers = [
+    user?.id,
+    user?.email,
+    user?.username,
+    user?.name,
+    user?.role
+  ].map(value => String(value || "").trim().toLowerCase()).filter(Boolean);
+  return identifiers.some(identifier => allowlist.includes(identifier));
+}
+
+function nexusGenesisVoiceRuntimePolicy(user = {}, env = process.env) {
+  const runtime = canonicalGenesisVoiceRuntime(env);
+  const candidateRuntime = canonicalGenesisCandidateRuntime(env);
+  const candidateEnabled = genesisVoiceCandidateEnabled(env);
+  const candidateAllowed = genesisVoiceCandidateAllowed(user, env);
+  return {
+    ok: true,
+    schemaVersion: "nexus-genesis-voice-runtime-policy.v1",
+    activeRuntime: runtime,
+    productionDefaultRuntime: "legacy",
+    selectedRuntime: candidateEnabled && candidateAllowed ? candidateRuntime : runtime,
+    candidateRuntime,
+    candidateEnabled,
+    candidateAllowed,
+    candidateAllowlistConfigured: genesisVoiceCandidateAllowlist(env).length > 0,
+    automaticRollback: genesisVoiceAutomaticRollbackEnabled(env),
+    supportedRuntimes: Array.from(NEXUS_GENESIS_VOICE_RUNTIME_VALUES),
+    stableVoiceRuntimeContract: "NexusGenesisVoiceRuntimeManager",
+    oneOwnerAtATime: true,
+    noRuntimeOverlap: true,
+    legacyBrowserVoiceActiveForNormalUsers: runtime === "legacy" && !(candidateEnabled && candidateAllowed),
+    elevenLabsCandidateOnly: true,
+    openAiRealtimeRollbackOnly: true,
+    noSecretValues: true
+  };
 }
 
 function canonicalGenesisRealtimeFallback(env = process.env) {
@@ -16197,7 +16257,7 @@ function canonicalGenesisElevenLabsFallback(env = process.env) {
 }
 
 function genesisElevenLabsEnabled(env = process.env) {
-  return canonicalGenesisVoiceRuntime(env) === "elevenlabs"
+  return (canonicalGenesisVoiceRuntime(env) === "elevenlabs" || genesisVoiceCandidateEnabled(env))
     && String(env.NEXUS_GENESIS_ELEVENLABS_ENABLED || "true").trim().toLowerCase() !== "false"
     && env.NEXUS_ELEVENLABS_AGENTS_DISABLED !== "true";
 }
@@ -16281,7 +16341,7 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     note: ready
       ? "Nexus Genesis ElevenLabs Agents runtime is selected and configured for official SDK WebRTC conversation."
       : selectedRuntime !== "elevenlabs"
-        ? "Nexus Genesis ElevenLabs Agents runtime is not the selected runtime."
+        ? "Nexus Genesis ElevenLabs Agents runtime is candidate-only; normal users stay on the proven browser-native voice runtime."
       : "Nexus Genesis ElevenLabs Agents runtime is selected but missing required server configuration."
   };
 }
@@ -41476,6 +41536,17 @@ async function api(req, res, url) {
     });
   }
 
+  if (url.pathname === "/api/voice/runtime/status" && req.method === "GET") {
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    return send(res, 200, {
+      voiceRuntime: nexusGenesisVoiceRuntimePolicy(user, process.env),
+      elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
+      noSecretValues: true
+    }, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
   if (url.pathname === "/api/voice/elevenlabs/authorization-probe" && req.method === "POST") {
     if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many ElevenLabs authorization probes" });
     if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
@@ -41572,12 +41643,15 @@ async function api(req, res, url) {
       }, baseHeaders);
     }
     const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
-    if (runtimeStatus.runtime !== "elevenlabs") {
+    const runtimePolicy = nexusGenesisVoiceRuntimePolicy(user, process.env);
+    if (runtimeStatus.runtime !== "elevenlabs" && runtimePolicy.selectedRuntime !== "elevenlabs") {
       await writeDb(db);
       return send(res, 409, {
         error: "ElevenLabs Agents is not the selected Genesis voice runtime.",
         category: "capability-unavailable",
         correlationId,
+        selectedRuntime: runtimePolicy.selectedRuntime,
+        candidateAllowed: runtimePolicy.candidateAllowed,
         elevenLabsVoice: runtimeStatus
       }, baseHeaders);
     }

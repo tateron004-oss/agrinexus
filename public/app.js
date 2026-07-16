@@ -753,9 +753,11 @@ let realtimeVoiceStatusCache = null;
 let elevenLabsVoiceSession = null;
 let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
+let nexusGenesisVoiceRuntimePolicyCache = null;
+let nexusGenesisVoiceRuntimeManager = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v8";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v9";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -857,7 +859,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v451";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v452";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1322,8 +1324,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-451";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v396";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-452";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v397";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48522,6 +48524,71 @@ function elevenLabsVoiceActive() {
   return Boolean(elevenLabsVoiceSession?.active);
 }
 
+async function loadNexusGenesisVoiceRuntimePolicy(options = {}) {
+  if (!options.force && nexusGenesisVoiceRuntimePolicyCache && Date.now() - (nexusGenesisVoiceRuntimePolicyCache.checkedAt || 0) < 60000) {
+    return nexusGenesisVoiceRuntimePolicyCache;
+  }
+  try {
+    const response = await fetch("/api/voice/runtime/status", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Voice runtime policy failed: ${response.status}`);
+    nexusGenesisVoiceRuntimePolicyCache = { ...payload, checkedAt: Date.now() };
+  } catch {
+    nexusGenesisVoiceRuntimePolicyCache = {
+      voiceRuntime: {
+        activeRuntime: "legacy",
+        selectedRuntime: "legacy",
+        candidateRuntime: "elevenlabs",
+        candidateEnabled: true,
+        candidateAllowed: false,
+        automaticRollback: true,
+        legacyBrowserVoiceActiveForNormalUsers: true,
+        noSecretValues: true
+      },
+      checkedAt: Date.now()
+    };
+  }
+  return nexusGenesisVoiceRuntimePolicyCache;
+}
+
+function initializeNexusGenesisVoiceRuntimeManager(policyPayload = {}) {
+  if (nexusGenesisVoiceRuntimeManager) return nexusGenesisVoiceRuntimeManager;
+  const factory = window.NexusGenesisVoiceRuntimeManagerFactory;
+  if (!factory?.createNexusVoiceRuntimeManager) return null;
+  const policy = policyPayload.voiceRuntime || {};
+  nexusGenesisVoiceRuntimeManager = factory.createNexusVoiceRuntimeManager({
+    activeRuntime: policy.activeRuntime || "legacy",
+    candidateRuntime: policy.candidateRuntime || "elevenlabs",
+    candidateEnabled: policy.candidateEnabled !== false,
+    candidateAllowed: policy.candidateAllowed === true,
+    automaticRollback: policy.automaticRollback !== false
+  });
+  window.NexusGenesisVoiceRuntimeManager = nexusGenesisVoiceRuntimeManager;
+  return nexusGenesisVoiceRuntimeManager;
+}
+
+async function nexusGenesisElevenLabsCandidateAllowed() {
+  const policyPayload = await loadNexusGenesisVoiceRuntimePolicy({ force: true });
+  const manager = initializeNexusGenesisVoiceRuntimeManager(policyPayload);
+  const policy = policyPayload.voiceRuntime || {};
+  nexusGenesisVoiceDebugLog("voice-runtime-policy-resolved", {
+    activeRuntime: policy.activeRuntime || "legacy",
+    selectedRuntime: policy.selectedRuntime || "legacy",
+    candidateRuntime: policy.candidateRuntime || "elevenlabs",
+    candidateEnabled: policy.candidateEnabled !== false,
+    candidateAllowed: policy.candidateAllowed === true,
+    automaticRollback: policy.automaticRollback !== false,
+    managerAvailable: Boolean(manager),
+    noSecretValues: true
+  });
+  return Boolean(policy.selectedRuntime === "elevenlabs" && policy.candidateAllowed === true && policy.candidateEnabled !== false);
+}
+
 function elevenLabsVoiceStatusMessage() {
   if (!elevenLabsVoiceSupported()) return "ElevenLabs voice needs HTTPS, WebRTC, and microphone permission.";
   const status = elevenLabsVoiceStatusCache?.elevenLabsVoice;
@@ -48685,6 +48752,8 @@ async function startElevenLabsVoiceSession() {
   if (elevenLabsVoiceStarting) return true;
   elevenLabsVoiceStarting = true;
   try {
+    const candidateAllowed = await nexusGenesisElevenLabsCandidateAllowed();
+    if (!candidateAllowed) return false;
     const statusPayload = await loadElevenLabsVoiceStatus({ force: true });
     const status = statusPayload?.elevenLabsVoice || {};
     if (status.runtime !== "elevenlabs") return false;
