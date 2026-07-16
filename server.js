@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-457";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v402";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-458";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v403";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -25108,6 +25108,17 @@ function storeGenesisWeatherLocation(db, locationText = "") {
   };
 }
 
+function isFreshNonWeatherCommandDuringWeatherTurn(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  if (!lower) return false;
+  if (isSimpleWeatherQuestion(text) || extractWeatherLocationText(text)) return false;
+  if (/\b(weather|temperature|forecast)\b/.test(lower)) return false;
+  const explicitAction = /\b(open|start|show|review|prepare|find|help|record|route|change|switch|send|message|call|apply|buy|sell|learn|train|explain)\b/.test(lower);
+  const newDomain = /\b(agriculture|agritrade|marketplace|market|buyer|seller|selling|maize|crop|farm|field|pest|disease|job|jobs|workforce|training|course|learning|diabetes|blood pressure|hypertension|obesity|rpm|rtm|health|clinic|telehealth|pharmacy|medicine|sms|whatsapp|email|phone|maps?|route|mobile clinic|reminder|language|spanish|french|swahili|arabic|portuguese)\b/.test(lower);
+  const moduleSignal = conversationModuleSignal(text);
+  return newDomain && (explicitAction || Number(moduleSignal.score || 0) >= 2);
+}
+
 function spokenResponseMemory(db) {
   ensureAiProfile(db.profile);
   return db.profile.agentMemory.genesisConversation || {};
@@ -25221,14 +25232,14 @@ function safeGenesisVoiceStageEvent(db, event = {}) {
 
 function classifyNexusCapability(intent = "", command = "", metadata = {}) {
   const signal = `${intent || ""} ${command || ""} ${metadata.redirectSection || ""} ${metadata.workflowType || ""}`.toLowerCase();
+  if (/market|trade|buyer|seller|vendor|price|selling|sale|sell|buy/.test(signal)) return "marketplace-trade";
+  if (/crop|farm|agri|agriculture|livestock|soil|irrigation|pest|food.security/.test(signal)) return "agriculture";
   if (/weather|climate|rain|temperature|forecast/.test(signal)) return "weather";
   if (/map|route|transport|logistics|field.visit|clinic.route/.test(signal)) return "maps-routing";
-  if (/crop|farm|agri|agriculture|livestock|soil|irrigation|pest|food.security/.test(signal)) return "agriculture";
-  if (/market|trade|buyer|seller|vendor|price/.test(signal)) return "marketplace-trade";
   if (/work|job|career|employer|workforce/.test(signal)) return "workforce";
   if (/learn|training|course|literacy|education/.test(signal)) return "learning-training";
-  if (/health|care|clinic|telehealth|chronic|diabetes|hypertension|obesity|rpm|rtm|pharmacy|medicine|provider/.test(signal)) return "health-care-preparation";
   if (/message|sms|whatsapp|telegram|email|call|communication/.test(signal)) return "communications";
+  if (/health|care|clinic|telehealth|chronic|diabetes|hypertension|obesity|rpm|rtm|pharmacy|medicine|provider/.test(signal)) return "health-care-preparation";
   if (/drone|field.operation/.test(signal)) return "field-drone-operations";
   if (/receipt|history|audit/.test(signal)) return "receipts-history";
   if (/language|spanish|french|swahili|arabic|portuguese|translate/.test(signal)) return "multilingual";
@@ -25262,6 +25273,137 @@ function nexusFailureCategoryFromResult(result = {}, finalStatus = "completed") 
   return finalStatus === "failed-truthfully" ? "empty-response" : "capability-unavailable";
 }
 
+function nexusActivationTraceForResponse(safeResult = {}, options = {}) {
+  const metadata = safeResult.metadata || {};
+  const companionUnderstanding = options.companionUnderstanding || metadata.companionUnderstanding || null;
+  const routeOutcome = options.companionRouteOutcome || metadata.companionRouteOutcome || null;
+  const orchestrator = metadata.conversationalModeOrchestrator || null;
+  const agentAction = metadata.agentAction || null;
+  const policyDecision = metadata.policyDecision || agentAction?.policyDecision || null;
+  const nexusPlan = metadata.nexusPlan || agentAction?.nexusPlan || null;
+  const evidenceReceipt = metadata.institutionalEvidenceReceipt || null;
+  const citations = Array.isArray(metadata.citations) ? metadata.citations : [];
+  const liveKnowledge = metadata.liveKnowledge || metadata.sourceResult || metadata.weather || null;
+  const truthfulBlockedOrMissingState = /\b(needs|missing|required|provider|not-configured|unavailable|blocked|failed)\b/i.test(String(safeResult.status || ""));
+  const language = metadata.targetLanguage || metadata.language || options.language || "";
+  const responseText = safeResult.response || safeResult.message || safeResult.answer || safeResult.summary || "";
+  const command = options.command || "";
+  const capability = options.capability || classifyNexusCapability(safeResult.intent || "", command, metadata);
+  const providerAttempted = Boolean(
+    metadata.providerAttempted
+    || metadata.weather?.liveAttempted
+    || metadata.sourceResult?.providerAttempted
+    || metadata.frontierCommunication?.providerAttempted
+    || liveKnowledge?.ok
+    || liveKnowledge?.provider
+  );
+  const toolSelected = Boolean(
+    metadata.tool
+    || agentAction?.selectedToolId
+    || agentAction?.nexusPlan?.selectedToolId
+    || nexusPlan?.selectedToolId
+    || routeOutcome?.selectedToolId
+  );
+  const evidenceActive = Boolean(evidenceReceipt || citations.length || liveKnowledge?.ok || liveKnowledge?.reason || truthfulBlockedOrMissingState);
+  const confirmationActive = Boolean(
+    metadata.confirmationRequired
+    || metadata.actionRequiresSeparateConfirmation
+    || metadata.confirmationPrompt
+    || safeResult.status === "needs-confirmation"
+    || agentAction?.confirmationRequired
+  );
+  const safetyActive = Boolean(
+    policyDecision
+    || agentAction
+    || metadata.noExecutionAuthorized === true
+    || metadata.providerHandoffAuthorized === false
+    || confirmationActive
+  );
+  const sequence = [
+    {
+      stage: "user_input",
+      component: options.inputMode || metadata.inputMode || "api",
+      active: Boolean(command || responseText),
+      detail: command ? "command-received" : "response-only"
+    },
+    {
+      stage: "language_understanding",
+      component: "companionUnderstandingClassification",
+      active: Boolean(companionUnderstanding),
+      detail: companionUnderstanding?.primaryIntent || companionUnderstanding?.intent || language || "not-recorded"
+    },
+    {
+      stage: "conversational_behavior",
+      component: "nexusGenesisConversationalModeOrchestrator",
+      active: Boolean(orchestrator),
+      detail: orchestrator?.primaryMode?.id || orchestrator?.primaryModeId || metadata.selectedConversationalModes?.[0] || "not-recorded"
+    },
+    {
+      stage: "intent_reasoning",
+      component: "runCompanionSafeAgentCommand",
+      active: Boolean(safeResult.intent),
+      detail: safeResult.intent || "unknown"
+    },
+    {
+      stage: "capability_selection",
+      component: "classifyNexusCapability",
+      active: Boolean(capability),
+      detail: capability
+    },
+    {
+      stage: "tool_or_retrieval",
+      component: providerAttempted ? (liveKnowledge?.provider || metadata.provider || "provider-route") : toolSelected ? "tool-selector" : "not-required",
+      active: providerAttempted || toolSelected || /^conversation\./.test(String(safeResult.intent || "")),
+      detail: providerAttempted ? "provider-attempted" : toolSelected ? "tool-selected" : "conversation-no-tool-required"
+    },
+    {
+      stage: "evidence_verification",
+      component: evidenceReceipt ? "institutional-evidence-receipt" : citations.length ? "citation-normalizer" : (liveKnowledge?.reason || truthfulBlockedOrMissingState) ? "truthful-missing-provider-state" : "not-required",
+      active: evidenceActive || !/\b(current|latest|source|cite|weather|research)\b/i.test(command),
+      detail: evidenceReceipt?.receiptId || (citations.length ? `${citations.length}-citation(s)` : liveKnowledge?.reason || (truthfulBlockedOrMissingState ? String(safeResult.status || "truthful-missing-state") : "no-material-source-claim"))
+    },
+    {
+      stage: "safety_confirmation",
+      component: safetyActive ? "policy-confirmation-safety-metadata" : "low-risk-conversation",
+      active: true,
+      detail: confirmationActive ? "confirmation-required-or-staged" : metadata.noExecutionAuthorized === true ? "no-execution-authorized" : "low-risk-or-no-action"
+    },
+    {
+      stage: "natural_response",
+      component: "ensureSpeakableAgentResult",
+      active: Boolean(responseText),
+      detail: responseText ? "speakable-response-prepared" : "empty-response"
+    },
+    {
+      stage: "context_update",
+      component: "updateNexusSessionContext",
+      active: true,
+      detail: "scheduled-after-normalization"
+    },
+    {
+      stage: "continued_conversation",
+      component: metadata.outputMode === "voice" || options.outputMode === "voice" ? "voice-response-and-resume-path" : "typed-response-path",
+      active: true,
+      detail: metadata.outputMode === "voice" || options.outputMode === "voice" ? "voice-continuation-expected" : "typed-continuation-ready"
+    }
+  ];
+  return {
+    traceVersion: "nexus.activationTrace.v1",
+    route: options.route || "/api/agent/command",
+    inputMode: options.inputMode || metadata.inputMode || "api",
+    outputMode: options.outputMode || metadata.outputMode || "",
+    language: language || "en",
+    capability,
+    intent: safeResult.intent || "",
+    sharedLayerSequence: sequence,
+    bypassWarnings: sequence
+      .filter(item => item.active === false)
+      .map(item => `${item.stage}:${item.component}`),
+    noDuplicateRuntimeCreated: true,
+    noVoiceRuntimeModified: true
+  };
+}
+
 function normalizeNexusResponseEnvelope(result = {}, options = {}) {
   const safeResult = ensureSpeakableAgentResult(result, options.fallbackIntent || "conversation.no_silence_guard");
   const responseFieldSelected = safeResult.metadata?.responseFieldSelected
@@ -25285,6 +25427,13 @@ function normalizeNexusResponseEnvelope(result = {}, options = {}) {
   const workflowSelected = Boolean(safeResult.metadata?.workflowType || safeResult.metadata?.redirectSection || safeResult.metadata?.voiceMission);
   const executionAttempted = Boolean(safeResult.metadata?.executionAttempted || safeResult.metadata?.dispatchAttempted);
   const executionVerified = Boolean(safeResult.metadata?.executionVerified || safeResult.metadata?.dispatchVerified);
+  const activationTrace = nexusActivationTraceForResponse(safeResult, {
+    ...options,
+    capability,
+    inputMode: safeResult.metadata?.inputMode || options.inputMode,
+    outputMode: safeResult.metadata?.outputMode || options.outputMode,
+    language: safeResult.metadata?.targetLanguage || safeResult.metadata?.language || options.language
+  });
   return {
     contractVersion: NEXUS_RESPONSE_CONTRACT_VERSION,
     lifecycleVersion: NEXUS_REQUEST_LIFECYCLE_VERSION,
@@ -25326,6 +25475,7 @@ function normalizeNexusResponseEnvelope(result = {}, options = {}) {
         || (Array.isArray(safeResult.metadata?.citations) && safeResult.metadata.citations.length)
       )
     },
+    activationTrace,
     diagnostics: {
       responseFieldSelected,
       responseLength: String(safeResult.response || "").length,
@@ -25391,7 +25541,8 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
   const memory = db.profile.agentMemory.genesisConversation || {};
   const explicitLocation = extractWeatherLocationText(text);
   const contextualLocation = locationTextFromAuthorizedContext(options.location || options.currentLocation || null);
-  const followUpLocation = db.profile.agentMemory.activeWeatherTurn && !isSimpleWeatherQuestion(text)
+  const weatherTurnCanUseFollowUp = db.profile.agentMemory.activeWeatherTurn && !isFreshNonWeatherCommandDuringWeatherTurn(text);
+  const followUpLocation = weatherTurnCanUseFollowUp && !isSimpleWeatherQuestion(text)
     ? String(text || "").replace(/[?.!]+$/g, "").trim()
     : "";
   const locationText = explicitLocation || contextualLocation || followUpLocation || memory.currentLocationText || "";
@@ -25565,6 +25716,13 @@ async function genesisStabilizationConversationRepair(db, user, rawText = "", op
       inferredFromLastSpokenPrompt: true,
       createdAt: new Date().toISOString()
     };
+  }
+  const freshNonWeatherCommand = db.profile.agentMemory.activeWeatherTurn && isFreshNonWeatherCommandDuringWeatherTurn(text);
+  if (freshNonWeatherCommand) {
+    db.profile.agentMemory.activeWeatherTurn = null;
+    db.profile.agentMemory.lastStatus = "weather-turn-interrupted";
+    db.profile.agentMemory.lastSummary = `Weather follow-up paused so Nexus could handle: ${text}`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
   }
   if (simpleWeatherNeedsLocation || db.profile.agentMemory.activeWeatherTurn) {
     return genesisWeatherResponse(db, user, text, options);
@@ -46337,12 +46495,22 @@ async function api(req, res, url) {
     const nexusResponse = normalizeNexusResponseEnvelope(result, {
       correlationId,
       route: "/api/agent/command",
-      command: body.command || body.text || ""
+      command: body.command || body.text || "",
+      inputMode: body.inputMode || "api",
+      outputMode: body.outputMode || "",
+      language: body.targetLanguage || body.language || user.language,
+      companionUnderstanding,
+      companionRouteOutcome
     });
     const genesisResponse = normalizeGenesisCommandResponse(result, {
       correlationId,
       route: "/api/agent/command",
-      command: body.command || body.text || ""
+      command: body.command || body.text || "",
+      inputMode: body.inputMode || "api",
+      outputMode: body.outputMode || "",
+      language: body.targetLanguage || body.language || user.language,
+      companionUnderstanding,
+      companionRouteOutcome
     });
     updateNexusSessionContext(db, body.command || body.text || "", nexusResponse);
     safeGenesisVoiceStageEvent(db, {
