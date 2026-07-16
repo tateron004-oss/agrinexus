@@ -755,7 +755,7 @@ let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v7";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v8";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -857,7 +857,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v450";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v451";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1322,8 +1322,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-450";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v395";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-451";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v396";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48548,7 +48548,7 @@ async function loadElevenLabsVoiceStatus(options = {}) {
 
 async function loadElevenLabsConversationSdk() {
   if (window.NexusElevenLabsClientModule?.Conversation?.startSession) return window.NexusElevenLabsClientModule;
-  const sdkModule = await import(`/vendor/elevenlabs-client/module/platform/web/index.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`);
+  const sdkModule = await import(`/vendor/elevenlabs-client/dist/platform/web/index.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`);
   if (!sdkModule?.Conversation?.startSession) {
     throw new Error("ElevenLabs SDK module did not expose Conversation.startSession.");
   }

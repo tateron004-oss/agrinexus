@@ -224,9 +224,9 @@ check("Standard User first screen remains conversation-first and uncluttered", h
   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
 
-check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-450", "agrinexus-pwa-v395"])
-  && hasAll(app, ["nexus-behavior-450", "agrinexus-pwa-v395"])
-  && hasAll(sw, ["nexus-behavior-450", "agrinexus-pwa-v395"]));
+check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-451", "agrinexus-pwa-v396"])
+  && hasAll(app, ["nexus-behavior-451", "agrinexus-pwa-v396"])
+  && hasAll(sw, ["nexus-behavior-451", "agrinexus-pwa-v396"]));
 
 check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));

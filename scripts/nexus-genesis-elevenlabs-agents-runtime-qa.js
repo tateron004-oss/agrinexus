@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-450",
+  "nexus-behavior-451",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v395"
+  "agrinexus-pwa-v396"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v450", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v451", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -68,7 +68,7 @@ includes(app, "nexus-genesis-voice-runtime-v450", "Genesis voice runtime cache m
   "/api/voice/elevenlabs/tool",
   "/api/voice/elevenlabs/webhook",
   "/api/voice/elevenlabs/diagnostics",
-  "/vendor/elevenlabs-client/module/platform/web/index.js",
+  "/vendor/elevenlabs-client/dist/platform/web/index.js",
   "/vendor/livekit-client/livekit-client.esm.mjs",
   "/api/voice/genesis/acceptance-matrix",
   "dispatchNexusElevenLabsTool",
@@ -217,7 +217,7 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
   "function startElevenLabsVoiceSession",
   "function stopElevenLabsVoiceSession",
   "window.NexusElevenLabsClientModule",
-  "import(`/vendor/elevenlabs-client/module/platform/web/index.js",
+  "import(`/vendor/elevenlabs-client/dist/platform/web/index.js",
   "function normalizeElevenLabsSdkErrorEvent",
   "sdk.Conversation.startSession(sdkOptions)",
   "connectionType = sessionPayload.conversationToken ? \"webrtc\" : \"websocket\"",
@@ -248,6 +248,8 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
 notIncludes(app, "ElevenLabsClient?.Conversation?.startSession", "app must not rely on browser-global ElevenLabs IIFE");
 notIncludes(app, "/vendor/elevenlabs-client/lib.iife.js", "app must not load hand-served ElevenLabs IIFE bundle");
 notIncludes(server, "/vendor/elevenlabs-client/lib.iife.js", "server must not serve obsolete ElevenLabs IIFE bundle");
+notIncludes(app, "/vendor/elevenlabs-client/module/", "app must preserve the ElevenLabs dist directory layout for relative ESM imports");
+notIncludes(server, "/vendor/elevenlabs-client/module/", "server must not serve ElevenLabs from a synthetic module path");
 includes(index, "\"livekit-client\": \"/vendor/livekit-client/livekit-client.esm.mjs\"", "index import map should resolve LiveKit ESM dependency");
 
 [
@@ -390,7 +392,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-450",
-  cache: "agrinexus-pwa-v395",
+  build: "nexus-behavior-451",
+  cache: "agrinexus-pwa-v396",
   noSecretValues: true
 }, null, 2));
