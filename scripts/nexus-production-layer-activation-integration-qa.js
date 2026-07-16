@@ -128,6 +128,18 @@ function assertTrace(state, label, expectations = {}) {
   if (expectations.capability) assert.equal(response.capability, expectations.capability, `${label} capability`);
   if (expectations.inputMode) assert.equal(trace.inputMode, expectations.inputMode, `${label} input mode`);
   if (expectations.outputMode) assert.equal(trace.outputMode, expectations.outputMode, `${label} output mode`);
+  if (expectations.behaviorIncludes) {
+    assert(
+      String(stage(trace, "conversational_behavior")?.detail || "").includes(expectations.behaviorIncludes),
+      `${label} behavior should include ${expectations.behaviorIncludes}`
+    );
+  }
+  if (expectations.evidenceActive) {
+    assert.notEqual(stage(trace, "evidence_verification")?.active, false, `${label} should activate evidence/truthfulness handling`);
+  }
+  if (expectations.safetyActive) {
+    assert.notEqual(stage(trace, "safety_confirmation")?.active, false, `${label} should activate safety handling`);
+  }
   if (expectations.sourceBacked) {
     assert.equal(response.evidence.sourceBacked, true, `${label} should be source backed`);
     assert(response.evidence.receiptId, `${label} should include evidence receipt id`);
@@ -206,6 +218,13 @@ async function run() {
         inputMode: "typed"
       }, { capability: "conversation", inputMode: "typed", noWorkflow: true });
 
+      await command("voice presence check stays conversational", {
+        command: "Hey Nexus, are you with me today?",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, behaviorIncludes: "presence" });
+
       await command("voice source-backed agriculture", {
         command: "Nexus, what are current sources about climate-smart agriculture in Africa?",
         conversational: true,
@@ -221,17 +240,36 @@ async function run() {
         outputMode: "voice"
       }, { inputMode: "voice", outputMode: "voice", noWorkflow: true });
 
+      await command("informal crop issue stays agriculture", {
+        command: "My maize leaves are yellow and I do not know why",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "agriculture", inputMode: "voice", outputMode: "voice", safetyActive: true });
+
       await command("health safety lane", {
         command: "Nexus, help with diabetes intake.",
         conversational: true,
         inputMode: "typed"
       }, { capability: "health-care-preparation", inputMode: "typed" });
 
+      await command("farm jobs stays workforce", {
+        command: "I need training for farm jobs but my internet is weak",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "workforce", inputMode: "typed", safetyActive: true });
+
       await command("communications preparation lane", {
         command: "Nexus, prepare an SMS to my care team.",
         conversational: true,
         inputMode: "typed"
       }, { capability: "communications", inputMode: "typed" });
+
+      await command("buyer SMS stays communications", {
+        command: "Nexus, prepare an SMS to the buyer about pickup tomorrow.",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "communications", inputMode: "typed", safetyActive: true });
 
       await command("language switching lane", {
         command: "Nexus, change language to Spanish.",
@@ -247,11 +285,30 @@ async function run() {
         inputMode: "typed"
       }, { capability: "weather", inputMode: "typed" });
 
+      await command("weather with location keeps source honesty", {
+        command: "Nexus, what is the weather in Stockton, CA?",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "weather", inputMode: "typed", evidenceActive: true });
+
+      await command("reminder mode is classified", {
+        command: "Nexus, remind me to check my blood pressure tomorrow morning.",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "reminders-scheduling", inputMode: "typed", safetyActive: true });
+
       await command("marketplace inquiry lane", {
         command: "Nexus, review marketplace options for selling maize.",
         conversational: true,
         inputMode: "typed"
       }, { capability: "marketplace-trade", inputMode: "typed" });
+
+      await command("emergency safety stays safety behavior", {
+        command: "Nexus, someone has chest pain and trouble breathing.",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", behaviorIncludes: "emergency_safety", safetyActive: true, noWorkflow: true });
     });
   } finally {
     await closeServer(providerServer);

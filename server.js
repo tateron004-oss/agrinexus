@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-458";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v403";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-459";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v404";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -19837,7 +19837,7 @@ function localNexusConversationCoreDecision(db, user, command = "", options = {}
       suggestions: ["I need a doctor", "help me sell my crop", "start a course", "open map"]
     });
   }
-  if (/\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+  if (/\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
     return decision({
       type: "answer",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -24569,6 +24569,7 @@ function utilityAssistantKind(text, lower) {
   if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return "situation-agent";
   if (/\b(pre provider|pre-provider|before providers|until providers|providerless|no vendor|without vendors|without providers|provider readiness|provider hardening|real providers arrive|live providers arrive|what works without providers)\b/.test(lower)) return "pre-provider-readiness";
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
+  if (/\b(route|directions|map|field visit|farm visit|from .+ to .+)\b/.test(lower)) return "";
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
   if (/\b(what should i do next|what next|next best action|next best step|recommend next|guide my next step|what do you recommend)\b/.test(lower)) return "next-step";
@@ -25024,20 +25025,85 @@ function utilityShipmentEtaAnswer(db) {
 }
 
 async function utilityWeatherAnswer(db, text, options = {}) {
-  const context = await dailyContextSnapshot(db, text, options.location || options.currentLocation || null);
-  const provider = runtimeProviderById(db, "weather") || runtimeProviderById(db, "map-tiles");
-  const live = context.source === "live-weather-provider" || context.source === "live-open-meteo-browser-location" || provider?.status === "connected";
-  const walkingAdvice = context.temperatureF >= 90
-    ? "For walking, I recommend early morning or evening, shade, water, and shorter distance."
-    : "For walking, conditions look manageable, but check water, shade, and local safety before going.";
-  const farmAdvice = /\b(farm|crop|plant|harvest|field|drone|water|irrigat)\b/i.test(text)
-    ? "For farming, use this as a planning signal: check field moisture, inspect crop stress, and run drone or map intelligence before planting, watering, or moving harvest."
-    : walkingAdvice;
-  const locationLine = context.location?.source === "browser-geolocation"
-    ? "using your current browser location"
-    : `for ${context.location?.label || context.country}`;
-  const windLine = context.windSpeed ? ` Wind is about ${context.windSpeed}.` : "";
-  return `Weather check ${locationLine}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}.${windLine} ${farmAdvice}`;
+  const explicitLocation = extractWeatherLocationText(text);
+  const contextualLocation = locationTextFromAuthorizedContext(options.location || options.currentLocation || null);
+  const knownLocation = knownAfricanCityLocation(text);
+  const locationText = explicitLocation || contextualLocation || knownLocation?.label || knownLocation?.city || knownLocation?.country || "";
+  if (!locationText) {
+    return {
+      response: "Which city or country should I check for weather?",
+      status: "needs-location",
+      metadata: {
+        weather: { liveAttempted: false, locationRequired: true },
+        noExecutionAuthorized: true
+      }
+    };
+  }
+  const sourceResult = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
+    locationText,
+    timeframe: "current",
+    queryType: "current weather"
+  }, process.env);
+  const sourceBacked = sourceResult.sourceStatus === "source-result-available" && sourceResult.evidenceStatus === "source-backed";
+  if (sourceBacked) {
+    const weatherCitation = normalizeNexusKnowledgeCitations([{
+      title: sourceResult.sourceName || "Weather source",
+      url: sourceResult.sourceUrl || sourceResult.sourceReference || "https://open-meteo.com/",
+      snippet: sourceResult.resultSummary || "",
+      source: sourceResult.sourceName || "Weather provider",
+      publisher: sourceResult.sourceName || "Weather provider",
+      category: "weather"
+    }]);
+    const institutionalEvidenceReceipt = createInstitutionalEvidenceReceipt({
+      question: text || `Weather for ${locationText}`,
+      answer: sourceResult.resultSummary,
+      category: "weather",
+      provider: sourceResult.sourceName || "weather",
+      status: "retrieved",
+      citations: weatherCitation,
+      route: "/api/agent/command",
+      geography: locationText,
+      retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+    });
+    db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
+    db.nexusInstitutionalEvidenceReceipts.splice(100);
+    return {
+      response: `${sourceResult.resultSummary} Source: ${sourceResult.sourceName}.`,
+      status: "completed",
+      metadata: {
+        locationText,
+        weather: sourceResult,
+        sourceResult,
+        citations: weatherCitation,
+        institutionalEvidenceReceipt,
+        evidenceReceiptId: institutionalEvidenceReceipt.receiptId,
+        noExecutionAuthorized: true
+      }
+    };
+  }
+  if (sourceResult.sourceStatus === "provider-required" || sourceResult.evidenceStatus === "provider-required") {
+    return {
+      response: `I cannot retrieve live weather for ${locationText} yet because the weather source is not configured. Required environment names include NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED, NEXUS_WEATHER_PROVIDER_ENABLED, and NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED.`,
+      status: "needs-provider",
+      metadata: {
+        locationText,
+        weather: sourceResult,
+        sourceResult,
+        noExecutionAuthorized: true
+      }
+    };
+  }
+  return {
+    response: `I cannot retrieve live weather for ${locationText} from a verified weather source right now. The weather provider returned ${sourceResult.sourceStatus || sourceResult.evidenceStatus || "unavailable"}, so I will not substitute platform context as current weather.`,
+    status: "needs-provider",
+    metadata: {
+      locationText,
+      weather: sourceResult,
+      sourceResult,
+      noExecutionAuthorized: true
+    }
+  };
 }
 
 function isGenesisRepeatRequest(text = "") {
@@ -25232,13 +25298,16 @@ function safeGenesisVoiceStageEvent(db, event = {}) {
 
 function classifyNexusCapability(intent = "", command = "", metadata = {}) {
   const signal = `${intent || ""} ${command || ""} ${metadata.redirectSection || ""} ${metadata.workflowType || ""}`.toLowerCase();
-  if (/market|trade|buyer|seller|vendor|price|selling|sale|sell|buy/.test(signal)) return "marketplace-trade";
+  const commandSignal = String(command || "").toLowerCase();
+  if (/message|sms|whatsapp|telegram|email|call|communication/.test(signal)) return "communications";
+  if (/remind|reminder|notify/.test(signal)) return "reminders-scheduling";
+  if (/marketplace|agritrade|market|buyer|seller|vendor|price|selling|sale|sell|buy/.test(commandSignal)
+    || /marketplace|buyer|seller|vendor|price|selling|sale|sell|buy/.test(signal)) return "marketplace-trade";
+  if (/work|job|career|employer|workforce/.test(signal)) return "workforce";
   if (/crop|farm|agri|agriculture|livestock|soil|irrigation|pest|food.security/.test(signal)) return "agriculture";
   if (/weather|climate|rain|temperature|forecast/.test(signal)) return "weather";
   if (/map|route|transport|logistics|field.visit|clinic.route/.test(signal)) return "maps-routing";
-  if (/work|job|career|employer|workforce/.test(signal)) return "workforce";
   if (/learn|training|course|literacy|education/.test(signal)) return "learning-training";
-  if (/message|sms|whatsapp|telegram|email|call|communication/.test(signal)) return "communications";
   if (/health|care|clinic|telehealth|chronic|diabetes|hypertension|obesity|rpm|rtm|pharmacy|medicine|provider/.test(signal)) return "health-care-preparation";
   if (/drone|field.operation/.test(signal)) return "field-drone-operations";
   if (/receipt|history|audit/.test(signal)) return "receipts-history";
@@ -25297,12 +25366,18 @@ function nexusActivationTraceForResponse(safeResult = {}, options = {}) {
     || liveKnowledge?.ok
     || liveKnowledge?.provider
   );
+  const inferredCapabilityRoute = Boolean(
+    capability
+    && !["conversation", "general-assistant"].includes(capability)
+    && !/^conversation\./.test(String(safeResult.intent || ""))
+  );
   const toolSelected = Boolean(
     metadata.tool
     || agentAction?.selectedToolId
     || agentAction?.nexusPlan?.selectedToolId
     || nexusPlan?.selectedToolId
     || routeOutcome?.selectedToolId
+    || inferredCapabilityRoute
   );
   const evidenceActive = Boolean(evidenceReceipt || citations.length || liveKnowledge?.ok || liveKnowledge?.reason || truthfulBlockedOrMissingState);
   const confirmationActive = Boolean(
@@ -25354,7 +25429,7 @@ function nexusActivationTraceForResponse(safeResult = {}, options = {}) {
       stage: "tool_or_retrieval",
       component: providerAttempted ? (liveKnowledge?.provider || metadata.provider || "provider-route") : toolSelected ? "tool-selector" : "not-required",
       active: providerAttempted || toolSelected || /^conversation\./.test(String(safeResult.intent || "")),
-      detail: providerAttempted ? "provider-attempted" : toolSelected ? "tool-selected" : "conversation-no-tool-required"
+      detail: providerAttempted ? "provider-attempted" : toolSelected ? (inferredCapabilityRoute ? "capability-route-selected" : "tool-selected") : "conversation-no-tool-required"
     },
     {
       stage: "evidence_verification",
@@ -26016,10 +26091,11 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   if (!kind) return null;
   if (kind === "music") return await musicProviderCommandResponse(db, user, text, options);
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
+  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, options) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
-      ? await utilityWeatherAnswer(db, text, options)
+      ? weatherUtilityResult.response
       : kind === "music"
         ? utilityMusicAnswer(text)
       : kind === "crop-timing"
@@ -26077,7 +26153,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   return {
     intent: `utility.${kind}`,
     response,
-    status: "completed",
+    status: weatherUtilityResult?.status || "completed",
     metadata: {
       conversationMode: true,
       redirectSection,
@@ -26085,6 +26161,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       situationAgent,
       preProviderHardening: preProviderModel,
       kind,
+      ...(weatherUtilityResult?.metadata || {}),
       music: kind === "music" ? musicAssistantIntent(text) : null,
       location: options.location || options.currentLocation || knownAfricanCityLocation(text) || null,
       suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder", "what works without providers"]
@@ -26925,7 +27002,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     || /\b(current mission|mission status|guided mission)\b/.test(lower);
   const earlyFollowUp = conversational && earlyFollowUpCommand ? conversationFollowUpResponse(db, user, text, lower) : null;
   if (earlyFollowUp) return earlyFollowUp;
-  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
     const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
@@ -27049,7 +27126,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
     };
   }
-  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
     const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
