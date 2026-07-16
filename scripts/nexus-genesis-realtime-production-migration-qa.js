@@ -168,9 +168,9 @@ const scenarios = [
 ];
 
 const requirements = [
-  ["Build markers bumped", server.includes("nexus-behavior-448") && app.includes("nexus-behavior-448") && sw.includes("nexus-behavior-448") && index.includes("nexus-behavior-448")],
-  ["PWA markers bumped", server.includes("agrinexus-pwa-v393") && app.includes("agrinexus-pwa-v393") && sw.includes("agrinexus-pwa-v393")],
-  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v448")],
+  ["Build markers bumped", server.includes("nexus-behavior-449") && app.includes("nexus-behavior-449") && sw.includes("nexus-behavior-449") && index.includes("nexus-behavior-449")],
+  ["PWA markers bumped", server.includes("agrinexus-pwa-v394") && app.includes("agrinexus-pwa-v394") && sw.includes("agrinexus-pwa-v394")],
+  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v449")],
   ["Realtime runtime version exists", server.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION") && app.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION")],
   ["Server runtime values", server.includes("NEXUS_GENESIS_VOICE_RUNTIME_VALUES") && server.includes("elevenlabs") && server.includes("realtime") && server.includes("legacy") && server.includes("disabled")],
   ["ElevenLabs is default runtime", server.includes('env.NEXUS_GENESIS_VOICE_RUNTIME || "elevenlabs"') && server.includes("nexusElevenLabsRuntimeStatus")],

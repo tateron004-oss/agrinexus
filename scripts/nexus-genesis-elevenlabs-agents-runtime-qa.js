@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-448",
+  "nexus-behavior-449",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v393"
+  "agrinexus-pwa-v394"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v448", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v449", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -72,7 +72,11 @@ includes(app, "nexus-genesis-voice-runtime-v448", "Genesis voice runtime cache m
   "/api/voice/genesis/acceptance-matrix",
   "dispatchNexusElevenLabsTool",
   "Nexus ElevenLabs Agents tool dispatch",
-  "conversation/token?agent_id=",
+  "conversation/token?${tokenParams.toString()}",
+  "agent_id: agentId",
+  "source: \"js_sdk\"",
+  "version: \"1.15.0\"",
+  "ELEVENLABS_ENVIRONMENT",
   "get-signed-url?agent_id=",
   "\"xi-api-key\": process.env.ELEVENLABS_API_KEY",
   "official-sdk-webrtc",
@@ -378,7 +382,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-448",
-  cache: "agrinexus-pwa-v393",
+  build: "nexus-behavior-449",
+  cache: "agrinexus-pwa-v394",
   noSecretValues: true
 }, null, 2));

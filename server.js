@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-448";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v393";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-449";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v394";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v5";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v6";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16424,7 +16424,14 @@ async function createElevenLabsConversationSession({ user, language = "en", prob
   }
   const agentId = elevenLabsAgentId(process.env);
   const timeoutMs = Number(process.env.ELEVENLABS_AGENTS_TIMEOUT_MS || 15000);
-  const tokenUrl = `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
+  const tokenParams = new URLSearchParams({
+    agent_id: agentId,
+    source: "js_sdk",
+    version: "1.15.0"
+  });
+  const environment = String(process.env.ELEVENLABS_ENVIRONMENT || process.env.NEXUS_ELEVENLABS_ENVIRONMENT || "").trim();
+  if (environment) tokenParams.set("environment", environment);
+  const tokenUrl = `https://api.elevenlabs.io/v1/convai/conversation/token?${tokenParams.toString()}`;
   let tokenPayload = {};
   let tokenResponse = null;
   let tokenRequestTimedOut = false;
