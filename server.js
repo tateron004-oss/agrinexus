@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-456";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v401";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-457";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v402";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -18610,7 +18610,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     Workforce: `Workforce can help someone build a profile, review readiness gaps, match roles, apply, schedule interviews, assign mentors, verify documents, plan shifts, and prepare payroll or performance evidence.`,
     AgriTrade: `AgriTrade can help a farmer or seller review crop readiness, run drone field intelligence, prepare buyer communication, create orders, assess route risk, check quality and cold-chain needs, and prepare payment evidence.`,
     "Women & Family": `Women and family agriculture support can guide women farmers, mothers, caregivers, youth learners, and cooperatives through safe learning, family health navigation, crop-to-market selling, accessibility support, and evidence for partners without replacing clinicians or exposing children to labor.`,
-    Maps: `Maps can connect country context, route checkpoints, facility access, route risk, public-health or trade evidence, and live location tracking when the browser allows GPS.`,
+    Maps: `Maps can connect country context, typed route checkpoints, facility access, route risk, public-health or trade evidence, and typed-location routing. Nexus does not use browser GPS or live location tracking unless a separate approved permission path is active.`,
     Integrations: `Integrations can test live engines, provider status, OpenAI, voice, translation, maps, jobs, courses, telehealth, trade, drones, communications, billing, and auth readiness.`,
     "Agent AI": `The agent layer can listen, remember context, answer questions, stage safe actions, ask for confirmation, run approved workflows, summarize what happened, and recommend the next best step.`
   };
@@ -20137,6 +20137,7 @@ async function generalConversationResponse(db, user, command = "", options = {})
 }
 
 async function currentKnowledgeQuestionResponse(db, user, command = "", options = {}) {
+  ensureNexusProductionRailsState(db);
   const live = await liveKnowledgeContextForCommand(db, user, command);
   const moduleSignal = conversationModuleSignal(command);
   const memories = retrieveAgentMemories(db.profile, command, 5);
@@ -20212,6 +20213,24 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
     { id: crypto.randomUUID(), command, provider, ok: live.ok, query: live.query, checkedAt: live.checkedAt, response },
     ...(db.profile.agentMemory.liveKnowledgeHistory || [])
   ].slice(0, 25);
+  const citations = normalizeNexusKnowledgeCitations(live.results || []);
+  const receiptCategory = nexusKnowledgeCategoryForQuestion(command);
+  const institutionalEvidenceReceipt = createInstitutionalEvidenceReceipt({
+    question: command,
+    query: live.query,
+    answer: response,
+    category: receiptCategory,
+    provider,
+    status: live.ok ? "retrieved" : "not_source_backed",
+    citations,
+    route: "/api/agent/command",
+    retrievedAt: live.checkedAt,
+    limitation: live.ok
+      ? "Source-backed current knowledge still requires local context and review before action."
+      : live.reason || "Live source retrieval is not configured or did not return citable sources."
+  });
+  db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
+  db.nexusInstitutionalEvidenceReceipts.splice(100);
   return {
     intent: live.ok ? "conversation.current_knowledge_answered" : "conversation.current_knowledge_needs_provider",
     status: live.ok ? "completed" : "needs-provider",
@@ -20221,6 +20240,9 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
       redirectSection: moduleSignal.section === "dashboard" ? "agent" : moduleSignal.section,
       provider,
       liveKnowledge: live,
+      citations,
+      institutionalEvidenceReceipt,
+      evidenceReceiptId: institutionalEvidenceReceipt.receiptId,
       suggestedReplies: live.ok ? ["compare markets", "open trade", "track route"] : ["create buyer price check", "open trade", "run live service check"]
     }
   };
@@ -25295,6 +25317,15 @@ function normalizeNexusResponseEnvelope(result = {}, options = {}) {
       verified: executionVerified,
       authorized: safeResult.metadata?.executionAuthorized === true
     },
+    evidence: {
+      receiptId: safeResult.metadata?.evidenceReceiptId || safeResult.metadata?.institutionalEvidenceReceipt?.receiptId || "",
+      institutionalEvidenceReceipt: safeResult.metadata?.institutionalEvidenceReceipt || null,
+      citations: Array.isArray(safeResult.metadata?.citations) ? safeResult.metadata.citations : [],
+      sourceBacked: Boolean(
+        safeResult.metadata?.institutionalEvidenceReceipt?.status === "source_backed"
+        || (Array.isArray(safeResult.metadata?.citations) && safeResult.metadata.citations.length)
+      )
+    },
     diagnostics: {
       responseFieldSelected,
       responseLength: String(safeResult.response || "").length,
@@ -25355,6 +25386,7 @@ function genesisDayPlanningResponse() {
 }
 
 async function genesisWeatherResponse(db, user, text = "", options = {}) {
+  ensureNexusProductionRailsState(db);
   ensureAiProfile(db.profile);
   const memory = db.profile.agentMemory.genesisConversation || {};
   const explicitLocation = extractWeatherLocationText(text);
@@ -25392,6 +25424,28 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
   }, process.env);
   const sourceBacked = sourceResult.sourceStatus === "source-result-available" && sourceResult.evidenceStatus === "source-backed";
   if (sourceBacked) {
+    const weatherCitation = normalizeNexusKnowledgeCitations([{
+      title: sourceResult.sourceName || "Open-Meteo weather source",
+      url: sourceResult.sourceUrl || sourceResult.sourceReference || "https://open-meteo.com/",
+      snippet: sourceResult.resultSummary || "",
+      source: sourceResult.sourceName || "Open-Meteo",
+      publisher: sourceResult.sourceName || "Open-Meteo",
+      category: "weather"
+    }]);
+    const institutionalEvidenceReceipt = createInstitutionalEvidenceReceipt({
+      question: text || `Weather for ${locationText}`,
+      answer: sourceResult.resultSummary,
+      category: "weather",
+      provider: sourceResult.sourceName || "weather",
+      status: "retrieved",
+      citations: weatherCitation,
+      route: "/api/agent/command",
+      geography: locationText,
+      retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+    });
+    db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
+    db.nexusInstitutionalEvidenceReceipts.splice(100);
     return {
       intent: "conversation.weather_answered",
       response: `${sourceResult.resultSummary} Source: ${sourceResult.sourceName}.`,
@@ -25402,6 +25456,9 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
         suppressBehaviorNudge: true,
         locationText,
         weather: sourceResult,
+        citations: weatherCitation,
+        institutionalEvidenceReceipt,
+        evidenceReceiptId: institutionalEvidenceReceipt.receiptId,
         noExecutionAuthorized: true
       }
     };
@@ -29739,6 +29796,7 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusKnowledgeQueries)) db.nexusKnowledgeQueries = [];
   if (!Array.isArray(db.nexusKnowledgeSavedResults)) db.nexusKnowledgeSavedResults = [];
   if (!Array.isArray(db.nexusKnowledgeReviewSummaries)) db.nexusKnowledgeReviewSummaries = [];
+  if (!Array.isArray(db.nexusInstitutionalEvidenceReceipts)) db.nexusInstitutionalEvidenceReceipts = [];
   if (!Array.isArray(db.nexusProviderPathwayRequests)) db.nexusProviderPathwayRequests = [];
   if (!Array.isArray(db.nexusProviderOrganizations)) db.nexusProviderOrganizations = [];
   if (!Array.isArray(db.nexusProviderReviewers)) db.nexusProviderReviewers = [];
@@ -29861,6 +29919,7 @@ function nexusKnowledgeSourceList() {
     id,
     label: item.label,
     preferredSources: item.preferredSources,
+    authoritativeSourceCandidates: NEXUS_AUTHORITATIVE_SOURCE_CATALOG[nexusReceiptCategoryForKnowledge(id)] || NEXUS_AUTHORITATIVE_SOURCE_CATALOG.general,
     safetyNote: item.safetyNote,
     recordType: item.recordType,
     fallbackWhenUnavailable: "Use honest built-in guidance, zero citations, local save/offline queue, and review-summary preparation.",
@@ -30375,6 +30434,145 @@ function normalizeNexusKnowledgeCitations(results = []) {
     });
 }
 
+const NEXUS_AUTHORITATIVE_SOURCE_CATALOG = Object.freeze({
+  general: [
+    { organization: "Encyclopaedia Britannica", url: "https://www.britannica.com/", category: "recognized reference", tier: "secondary_institutional" },
+    { organization: "Library of Congress", url: "https://www.loc.gov/", category: "government/public record", tier: "primary_government" }
+  ],
+  current: [
+    { organization: "Associated Press", url: "https://apnews.com/", category: "established reporting", tier: "primary_reporting" },
+    { organization: "Reuters", url: "https://www.reuters.com/", category: "established reporting", tier: "primary_reporting" }
+  ],
+  health: [
+    { organization: "World Health Organization", url: "https://www.who.int/", category: "public health authority", tier: "primary_institutional" },
+    { organization: "MedlinePlus", url: "https://medlineplus.gov/", category: "patient health education", tier: "primary_institutional" },
+    { organization: "Centers for Disease Control and Prevention", url: "https://www.cdc.gov/", category: "public health authority", tier: "primary_government" },
+    { organization: "National Institutes of Health", url: "https://www.nih.gov/", category: "biomedical research authority", tier: "primary_government" }
+  ],
+  government: [
+    { organization: "USA.gov", url: "https://www.usa.gov/", category: "government services", tier: "primary_government" },
+    { organization: "Federal Register", url: "https://www.federalregister.gov/", category: "regulatory record", tier: "primary_government" }
+  ],
+  agriculture: [
+    { organization: "FAO", url: "https://www.fao.org/", category: "food and agriculture authority", tier: "primary_institutional" },
+    { organization: "USDA", url: "https://www.usda.gov/", category: "agriculture authority", tier: "primary_government" },
+    { organization: "Extension Foundation", url: "https://extension.org/", category: "extension education", tier: "extension_institutional" }
+  ],
+  workforce: [
+    { organization: "OSHA", url: "https://www.osha.gov/", category: "workplace safety authority", tier: "primary_government" },
+    { organization: "Bureau of Labor Statistics", url: "https://www.bls.gov/", category: "labor statistics", tier: "primary_government" },
+    { organization: "O*NET", url: "https://www.onetonline.org/", category: "occupational standards", tier: "primary_government" }
+  ],
+  maps: [
+    { organization: "OpenStreetMap", url: "https://www.openstreetmap.org/", category: "public map data", tier: "public_utility" },
+    { organization: "Open Source Routing Machine", url: "https://project-osrm.org/", category: "route computation", tier: "public_utility" }
+  ],
+  weather: [
+    { organization: "Open-Meteo", url: "https://open-meteo.com/", category: "public weather API", tier: "public_utility" },
+    { organization: "National Weather Service", url: "https://www.weather.gov/", category: "weather authority", tier: "primary_government" }
+  ],
+  marketplace: [
+    { organization: "FAOSTAT", url: "https://www.fao.org/faostat/", category: "food and agriculture statistics", tier: "primary_institutional" },
+    { organization: "World Bank Data", url: "https://data.worldbank.org/", category: "economic data", tier: "primary_institutional" }
+  ],
+  education: [
+    { organization: "UNESCO", url: "https://www.unesco.org/", category: "education authority", tier: "primary_institutional" },
+    { organization: "U.S. Department of Education", url: "https://www.ed.gov/", category: "education authority", tier: "primary_government" }
+  ],
+  multilingual: [
+    { organization: "Unicode Consortium", url: "https://unicode.org/", category: "language/script standards", tier: "standards_body" },
+    { organization: "W3C Internationalization", url: "https://www.w3.org/International/", category: "web language standards", tier: "standards_body" }
+  ]
+});
+
+function nexusEvidenceSourceQuality(citation = {}, category = "general") {
+  const url = String(citation.url || "").toLowerCase();
+  const domain = String(citation.domain || "").toLowerCase();
+  const haystack = `${url} ${domain}`;
+  if (/\.(gov|mil)(\/|$)|who\.int|cdc\.gov|nih\.gov|osha\.gov|bls\.gov|weather\.gov|federalregister\.gov|usda\.gov/.test(haystack)) return { classification: "primary", qualityTier: "primary_government_or_institutional" };
+  if (/\.edu(\/|$)|extension\.org|cgiar\.org|fao\.org|worldbank\.org|unesco\.org/.test(haystack)) return { classification: "primary_or_institutional", qualityTier: "university_extension_or_multilateral" };
+  if (/reuters\.com|apnews\.com|british?medicaljournal|nejm\.org|thelancet\.com|nature\.com|science\.org/.test(haystack)) return { classification: "secondary", qualityTier: "recognized_reporting_or_peer_reviewed" };
+  if (/openstreetmap\.org|open-meteo\.com|project-osrm\.org/.test(haystack)) return { classification: "public_utility", qualityTier: "public_provider" };
+  return { classification: "secondary", qualityTier: "general_web_source" };
+}
+
+function nexusReceiptCategoryForKnowledge(category = "general", question = "") {
+  if (category === "chronicCare" || category === "telehealth" || category === "pharmacy" || category === "mobileClinic") return "health";
+  if (category === "jobs" || category === "learning") return "workforce";
+  if (category === "music_media") return "general";
+  if (/\b(weather|forecast|temperature|rain|heat)\b/i.test(question)) return "weather";
+  if (/\b(route|map|directions|travel time)\b/i.test(question)) return "maps";
+  if (/\b(translate|language|spanish|french|swahili|arabic|portuguese)\b/i.test(question)) return "multilingual";
+  if (/\b(policy|government|benefit|regulation|law|program)\b/i.test(question)) return "government";
+  if (/\b(current|latest|today|news|recent)\b/i.test(question)) return "current";
+  return category || "general";
+}
+
+function createInstitutionalEvidenceReceipt(payload = {}) {
+  const now = payload.retrievedAt || new Date().toISOString();
+  const category = nexusReceiptCategoryForKnowledge(payload.category || "general", payload.question || payload.query || "");
+  const citations = (Array.isArray(payload.citations) ? payload.citations : []).slice(0, 8);
+  const sourceRecords = citations.map((citation, index) => {
+    const quality = nexusEvidenceSourceQuality(citation, category);
+    return {
+      sourceId: citation.id || `source-${index + 1}`,
+      claimSupported: sanitizePilotText(payload.claimSupported || payload.answer || payload.summary || "Source-backed factual context", 260),
+      sourceOrganization: sanitizePilotText(citation.publisher || citation.source || citation.domain || "Retrieved source", 180),
+      title: sanitizePilotText(citation.title || citation.url || "Retrieved source", 220),
+      sourceUrlOrInternalId: sanitizePilotText(citation.url || citation.id || `source-${index + 1}`, 500),
+      url: sanitizePilotText(citation.url || "", 500),
+      publisher: sanitizePilotText(citation.publisher || citation.domain || "", 180),
+      publicationOrUpdateDate: citation.publishedAt || citation.updatedAt || null,
+      retrievalTimestamp: citation.retrievedAt || now,
+      jurisdiction: sanitizePilotText(payload.jurisdiction || citation.jurisdiction || "not specified", 120),
+      geography: sanitizePilotText(payload.geography || citation.geography || "not specified", 120),
+      population: sanitizePilotText(payload.population || "general public", 120),
+      timeframe: sanitizePilotText(payload.timeframe || "current as retrieved", 120),
+      primaryOrSecondary: quality.classification,
+      sourceClassification: quality.classification,
+      sourceCategory: sanitizePilotText(citation.category || category, 80),
+      qualityTier: quality.qualityTier,
+      providerOrToolUsed: sanitizePilotText(payload.provider || citation.provider || "knowledge-provider", 120),
+      supportingSummary: sanitizePilotText(citation.snippet || citation.sourceSummary || "", 360),
+      uncertainty: sanitizePilotText(payload.uncertainty || "Review the source date, local context, and any conflicting evidence before acting.", 220),
+      freshnessStatus: sanitizePilotText(citation.freshnessStatus || payload.freshnessStatus || "retrieved", 80)
+    };
+  });
+  const candidateSources = (NEXUS_AUTHORITATIVE_SOURCE_CATALOG[category] || NEXUS_AUTHORITATIVE_SOURCE_CATALOG.general).slice(0, 6);
+  const status = citations.length ? "source_backed" : payload.status === "built_in" ? "built_in_no_citation" : "not_source_backed";
+  return {
+    receiptId: payload.receiptId || `nexus-institutional-evidence-${crypto.randomUUID()}`,
+    receiptType: "institutional_evidence_receipt",
+    schemaVersion: "nexus.institutionalEvidenceReceipt.v1",
+    status,
+    question: sanitizePilotText(payload.question || payload.query || "", 600),
+    answerSummary: sanitizePilotText(payload.answer || payload.summary || "", 900),
+    category,
+    provider: sanitizePilotText(payload.provider || "not-configured", 120),
+    route: sanitizePilotText(payload.route || "/api/nexus/knowledge/query", 160),
+    correlationId: sanitizePilotText(payload.correlationId || "", 160),
+    createdAt: now,
+    retrievalTimestamp: now,
+    claimSupport: sourceRecords,
+    candidateAuthoritativeSources: citations.length ? [] : candidateSources,
+    distinctions: {
+      sourcedFacts: citations.length ? "Supported by retrieved source records in claimSupport." : "No retrieved source was cited for this answer.",
+      nexusAnalysis: "Nexus may summarize, organize, or recommend next review steps separately from sourced facts.",
+      userProvidedInformation: "User-supplied context is not treated as verified source evidence.",
+      recommendations: "Recommendations require user review and, in regulated/high-risk domains, professional or provider review.",
+      unverifiedInformation: citations.length ? "" : "Treat this as built-in/local guidance or a blocked state until retrieval returns citable sources."
+    },
+    limitations: [
+      payload.limitation || "Evidence receipts do not authorize provider contact, payment, dispatch, diagnosis, prescribing, legal advice, or other high-risk execution.",
+      citations.length ? "Citations are source records, not a guarantee that every downstream decision is safe or locally valid." : "No fake citation was generated."
+    ],
+    noSecretValuesReturned: true,
+    noExecutionAuthorized: true,
+    noProviderContactAuthorized: true,
+    noFakeCitations: citations.length === 0
+  };
+}
+
 function nexusKnowledgeSafetyCopy(category = "general") {
   const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
   if (category === "health" || category === "chronicCare" || category === "telehealth" || category === "pharmacy" || category === "mobileClinic") {
@@ -30689,8 +30887,26 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
     noExecutionAuthorized: true,
     noSensitiveDetailLogged: true
   };
+  const institutionalEvidenceReceipt = createInstitutionalEvidenceReceipt({
+    question,
+    answer: result.answer,
+    category,
+    provider: result.provider || status.provider,
+    status: result.retrievalStatus === "built_in" ? "built_in" : result.retrievalStatus,
+    citations: Array.isArray(result.citations) ? result.citations : [],
+    route: "/api/nexus/knowledge/query",
+    jurisdiction: classification?.trustedSourceCategory?.jurisdiction || "not specified",
+    retrievedAt: result.retrievalCheckedAt || result.retrievedAt || new Date().toISOString(),
+    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote
+  });
+  result.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
+  result.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
+  queryRecord.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
+  queryRecord.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
   result.providerOffer = nexusProviderPathwayOffer(db, category, question);
   db.nexusKnowledgeQueries.unshift(queryRecord);
+  db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
+  db.nexusInstitutionalEvidenceReceipts.splice(100);
   addNexusPilotAuditEvent(db, "knowledge_query_checked", {
     actor: user?.name || "Standard User",
     role: user?.role || "Standard User",
@@ -33966,9 +34182,11 @@ function nexusKnowledgePrepareReviewSummary(db, body = {}, user = null) {
 function nexusKnowledgeReadiness(db, env = process.env) {
   ensureNexusProductionRailsState(db);
   const status = nexusKnowledgeProviderStatus(env);
+  const evidenceStatus = nexusInstitutionalEvidenceStatus(db, env);
   return {
     ok: true,
     liveKnowledge: status,
+    institutionalEvidence: evidenceStatus,
     classificationReady: true,
     retrievalDecisionReady: true,
     trustedSourcePolicyReady: true,
@@ -33984,6 +34202,98 @@ function nexusKnowledgeReadiness(db, env = process.env) {
       "Built-in guidance is labeled and never displayed as source-backed.",
       "Sensitive health/pharmacy/mobile clinic review queue actions require consent."
     ]
+  };
+}
+
+function nexusInstitutionalEvidenceStatus(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const liveKnowledge = nexusKnowledgeProviderStatus(env);
+  const weatherConfigured = nexusWeatherSourceProvider.isOpenMeteoPublicProviderConfigured(env);
+  const mapsStatus = nexusRealProviders.googleMaps.status(env);
+  const toolStatus = nexusRealProviderStatus(db, env);
+  const providerCardById = id => (toolStatus.cards || toolStatus.readiness || []).find(item => item.id === id) || {};
+  const resources = [
+    {
+      id: "live-knowledge",
+      label: "Live web/current-information retrieval",
+      state: liveKnowledge.enabled
+        ? liveKnowledge.configured ? "live_and_verified_when_provider_returns_citations" : "credential_required"
+        : "intentionally_unavailable",
+      providerOrder: liveKnowledge.providerPriority,
+      selectedProvider: liveKnowledge.provider,
+      missingEnvVars: liveKnowledge.configured ? [] : (liveKnowledge.missingEnvVars || liveKnowledge.missingEnv || []),
+      evidenceReceiptReady: true
+    },
+    {
+      id: "weather-open-meteo",
+      label: "Weather and forecasts",
+      state: weatherConfigured ? "public_fallback_active" : "intentionally_unavailable",
+      providerOrder: ["Open-Meteo public API"],
+      selectedProvider: weatherConfigured ? "Open-Meteo" : "disabled",
+      missingEnvVars: weatherConfigured ? [] : ["NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED must not be false"],
+      evidenceReceiptReady: true
+    },
+    {
+      id: "maps-routing",
+      label: "Maps, directions, and travel time",
+      state: mapsStatus.configured ? "live_and_verified_when_request_confirmed" : mapsStatus.publicOsmRouteEnabled ? "public_fallback_active" : "credential_required",
+      providerOrder: ["Google Maps when configured", "OpenStreetMap Nominatim public fallback", "OSRM public route fallback"],
+      selectedProvider: mapsStatus.configured ? "Google Maps" : mapsStatus.publicOsmRouteEnabled ? "OpenStreetMap/OSRM" : "not-configured",
+      missingEnvVars: mapsStatus.configured || mapsStatus.publicOsmRouteEnabled ? [] : ["GOOGLE_MAPS_API_KEY"],
+      confirmationRequired: true,
+      evidenceReceiptReady: true
+    },
+    {
+      id: "communications",
+      label: "SMS, WhatsApp, calls, and email preparation",
+      state: "confirmation_gated",
+      providerOrder: ["Twilio SMS/WhatsApp/Voice when configured", "email provider endpoint when configured", "local draft fallback"],
+      missingEnvVars: [
+        ...(providerCardById("sms").missingConfig || []),
+        ...(providerCardById("whatsapp").missingConfig || []),
+        ...(providerCardById("calls").missingConfig || [])
+      ].filter(Boolean),
+      confirmationRequired: true,
+      evidenceReceiptReady: true
+    },
+    {
+      id: "health-provider-lanes",
+      label: "Health, telehealth, pharmacy, mobile clinic, RPM/RTM",
+      state: "confirmation_gated",
+      providerOrder: ["configured medical bridge/provider connector", "local education/intake fallback"],
+      missingEnvVars: [
+        "NEXUS_TELEHEALTH_PROVIDER_BASE_URL",
+        "NEXUS_TELEHEALTH_PROVIDER_API_KEY",
+        "NEXUS_PHARMACY_PROVIDER_BASE_URL",
+        "NEXUS_PHARMACY_PROVIDER_API_KEY"
+      ],
+      confirmationRequired: true,
+      evidenceReceiptReady: true
+    },
+    {
+      id: "authoritative-source-catalog",
+      label: "Authoritative source candidate catalog",
+      state: "implemented_locally_not_cited_until_retrieved",
+      categories: Object.keys(NEXUS_AUTHORITATIVE_SOURCE_CATALOG),
+      sourceCount: Object.values(NEXUS_AUTHORITATIVE_SOURCE_CATALOG).reduce((sum, list) => sum + list.length, 0),
+      evidenceReceiptReady: true
+    }
+  ];
+  return {
+    ok: true,
+    receiptSchema: "nexus.institutionalEvidenceReceipt.v1",
+    receiptCount: db.nexusInstitutionalEvidenceReceipts.length,
+    recentReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 10).map(item => ({
+      receiptId: item.receiptId,
+      status: item.status,
+      category: item.category,
+      provider: item.provider,
+      createdAt: item.createdAt,
+      sourceCount: Array.isArray(item.claimSupport) ? item.claimSupport.length : 0
+    })),
+    resources,
+    noSecretValuesReturned: true,
+    noExecutionAuthorized: true
   };
 }
 
@@ -39105,6 +39415,10 @@ async function api(req, res, url) {
     return send(res, 200, nexusKnowledgeReadiness(db, process.env));
   }
 
+  if (url.pathname === "/api/nexus/institutional-evidence/status" && req.method === "GET") {
+    return send(res, 200, nexusInstitutionalEvidenceStatus(db, process.env));
+  }
+
   if (url.pathname === "/api/nexus/intelligence/ask" && req.method === "POST") {
     const result = await nexusIntelligenceAsk(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
@@ -39118,7 +39432,8 @@ async function api(req, res, url) {
       ok: true,
       queries: db.nexusKnowledgeQueries.slice(0, 50),
       savedResults: db.nexusKnowledgeSavedResults.slice(0, 50),
-      reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50)
+      reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50),
+      institutionalEvidenceReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 50)
     });
   }
 
@@ -39131,12 +39446,14 @@ async function api(req, res, url) {
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
     const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
     const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
+    const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary);
     return send(res, 200, {
       ok: true,
       query,
       savedResults,
       reviewSummaries,
       providerRequests,
+      institutionalEvidenceReceipts,
       noExternalAction: true
     });
   }
