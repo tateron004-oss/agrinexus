@@ -755,7 +755,7 @@ let elevenLabsVoiceStarting = false;
 let elevenLabsVoiceStatusCache = null;
 const realtimeToolArgumentBuffers = new Map();
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v6";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v7";
 const NEXUS_GENESIS_ELEVENLABS_CONTROLLER_STATES = Object.freeze([
   "disabled",
   "authorizing",
@@ -857,7 +857,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v449";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v450";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 
 function normalizeNexusMicrophonePermissionState(value = "unknown") {
@@ -1322,8 +1322,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-449";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v394";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-450";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v395";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48547,26 +48547,25 @@ async function loadElevenLabsVoiceStatus(options = {}) {
 }
 
 async function loadElevenLabsConversationSdk() {
-  if (window.ElevenLabsClient?.Conversation?.startSession) return window.ElevenLabsClient;
-  await new Promise((resolve, reject) => {
-    const existing = document.querySelector("script[data-nexus-elevenlabs-sdk='true']");
-    if (existing) {
-      existing.addEventListener("load", resolve, { once: true });
-      existing.addEventListener("error", () => reject(new Error("ElevenLabs SDK failed to load.")), { once: true });
-      return;
-    }
-    const script = document.createElementNS("http://www.w3.org/1999/xhtml", "script");
-    script.src = `/vendor/elevenlabs-client/lib.iife.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`;
-    script.async = true;
-    script.dataset.nexusElevenlabsSdk = "true";
-    script.onload = resolve;
-    script.onerror = () => reject(new Error("ElevenLabs SDK failed to load."));
-    document.head.appendChild(script);
-  });
-  if (!window.ElevenLabsClient?.Conversation?.startSession) {
-    throw new Error("ElevenLabs SDK did not expose Conversation.startSession.");
+  if (window.NexusElevenLabsClientModule?.Conversation?.startSession) return window.NexusElevenLabsClientModule;
+  const sdkModule = await import(`/vendor/elevenlabs-client/module/platform/web/index.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`);
+  if (!sdkModule?.Conversation?.startSession) {
+    throw new Error("ElevenLabs SDK module did not expose Conversation.startSession.");
   }
-  return window.ElevenLabsClient;
+  window.NexusElevenLabsClientModule = sdkModule;
+  return sdkModule;
+}
+
+function normalizeElevenLabsSdkErrorEvent(message, context = {}) {
+  const raw = context && typeof context === "object" ? context : {};
+  const candidate = raw.error || raw.event || raw.detail || raw.message || message || {};
+  const errorType = String(candidate?.error_type || candidate?.type || candidate?.code || raw.error_type || "sdk-error");
+  const errorMessage = String(candidate?.message || candidate?.error || message || raw.message || "ElevenLabs SDK session error.");
+  return {
+    errorType: errorType.slice(0, 80),
+    message: errorMessage.slice(0, 180),
+    malformed: !candidate || typeof candidate !== "object" || !("error_type" in candidate)
+  };
 }
 
 function nexusElevenLabsSafeToolResult(result = {}) {
@@ -48790,13 +48789,17 @@ async function startElevenLabsVoiceSession() {
       },
       onMessage: handleElevenLabsSdkMessage,
       onError: (message, context) => {
-        const safeMessage = String(message || context?.message || "ElevenLabs SDK session error.");
+        const normalizedError = normalizeElevenLabsSdkErrorEvent(message, context);
         setNexusGenesisTrustChainState("recognition_failed", {
           visibleFeedback: "The ElevenLabs voice session had a connection problem.",
           failureRecovery: "Reload Genesis after ElevenLabs provider credentials are available.",
           reason: "elevenlabs-sdk-error"
         });
-        nexusGenesisVoiceDebugLog("elevenlabs-sdk-error", { reason: safeMessage.slice(0, 160) });
+        nexusGenesisVoiceDebugLog("elevenlabs-sdk-error", {
+          reason: normalizedError.message,
+          errorType: normalizedError.errorType,
+          malformedProviderEvent: normalizedError.malformed
+        });
       },
       onUnhandledClientToolCall: toolCall => {
         nexusGenesisVoiceDebugLog("elevenlabs-sdk-unhandled-tool", {

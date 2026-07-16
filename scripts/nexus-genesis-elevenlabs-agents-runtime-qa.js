@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-449",
+  "nexus-behavior-450",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,13 +30,13 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v394"
+  "agrinexus-pwa-v395"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v449", "Genesis voice runtime cache marker");
+includes(app, "nexus-genesis-voice-runtime-v450", "Genesis voice runtime cache marker");
 
 [
   "NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION",
@@ -68,7 +68,8 @@ includes(app, "nexus-genesis-voice-runtime-v449", "Genesis voice runtime cache m
   "/api/voice/elevenlabs/tool",
   "/api/voice/elevenlabs/webhook",
   "/api/voice/elevenlabs/diagnostics",
-  "/vendor/elevenlabs-client/lib.iife.js",
+  "/vendor/elevenlabs-client/module/platform/web/index.js",
+  "/vendor/livekit-client/livekit-client.esm.mjs",
   "/api/voice/genesis/acceptance-matrix",
   "dispatchNexusElevenLabsTool",
   "Nexus ElevenLabs Agents tool dispatch",
@@ -215,7 +216,9 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
   "function loadElevenLabsVoiceStatus",
   "function startElevenLabsVoiceSession",
   "function stopElevenLabsVoiceSession",
-  "ElevenLabsClient?.Conversation?.startSession",
+  "window.NexusElevenLabsClientModule",
+  "import(`/vendor/elevenlabs-client/module/platform/web/index.js",
+  "function normalizeElevenLabsSdkErrorEvent",
   "sdk.Conversation.startSession(sdkOptions)",
   "connectionType = sessionPayload.conversationToken ? \"webrtc\" : \"websocket\"",
   "credentials: \"same-origin\"",
@@ -241,6 +244,11 @@ const toolRouteBlock = server.slice(toolRouteIndex, toolRouteEndIndex);
   "stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")",
   "stopNexusVoicePermissionStream(\"elevenlabs-selected\")"
 ].forEach(needle => includes(app, needle, `client ElevenLabs contract ${needle}`));
+
+notIncludes(app, "ElevenLabsClient?.Conversation?.startSession", "app must not rely on browser-global ElevenLabs IIFE");
+notIncludes(app, "/vendor/elevenlabs-client/lib.iife.js", "app must not load hand-served ElevenLabs IIFE bundle");
+notIncludes(server, "/vendor/elevenlabs-client/lib.iife.js", "server must not serve obsolete ElevenLabs IIFE bundle");
+includes(index, "\"livekit-client\": \"/vendor/livekit-client/livekit-client.esm.mjs\"", "index import map should resolve LiveKit ESM dependency");
 
 [
   "function encodeElevenLabsPcm16",
@@ -382,7 +390,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-449",
-  cache: "agrinexus-pwa-v394",
+  build: "nexus-behavior-450",
+  cache: "agrinexus-pwa-v395",
   noSecretValues: true
 }, null, 2));

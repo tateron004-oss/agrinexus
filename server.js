@@ -59,10 +59,10 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-449";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v394";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-450";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v395";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v6";
+const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v7";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
@@ -16257,7 +16257,7 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
     endpoint: "/api/voice/elevenlabs/session",
-    sdkEndpoint: "/vendor/elevenlabs-client/lib.iife.js",
+    sdkEndpoint: "/vendor/elevenlabs-client/module/platform/web/index.js",
     toolEndpoint: "/api/voice/elevenlabs/tool",
     statusEndpoint: "/api/voice/elevenlabs/status",
     diagnosticsEndpoint: "/api/voice/elevenlabs/diagnostics",
@@ -46616,13 +46616,28 @@ async function api(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  if (url.pathname === "/vendor/elevenlabs-client/lib.iife.js") {
-    const sdkPath = path.join(ROOT, "node_modules", "@elevenlabs", "client", "dist", "lib.iife.js");
+  if (url.pathname.startsWith("/vendor/elevenlabs-client/module/")) {
+    const relativeModulePath = decodeURIComponent(url.pathname.replace("/vendor/elevenlabs-client/module/", ""));
+    const sdkRoot = path.join(ROOT, "node_modules", "@elevenlabs", "client", "dist");
+    const sdkPath = path.normalize(path.join(sdkRoot, relativeModulePath));
+    if (!sdkPath.startsWith(sdkRoot) || path.extname(sdkPath) !== ".js") return send(res, 403, "Forbidden");
     return fs.readFile(sdkPath, (err, data) => {
       if (err) return send(res, 404, "Not found");
       res.writeHead(200, {
         "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "public, max-age=3600",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(data);
+    });
+  }
+  if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
+    const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
+    return fs.readFile(livekitPath, (err, data) => {
+      if (err) return send(res, 404, "Not found");
+      res.writeHead(200, {
+        "content-type": "application/javascript; charset=utf-8",
+        "cache-control": "no-store",
         "x-content-type-options": "nosniff"
       });
       res.end(data);

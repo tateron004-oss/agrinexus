@@ -226,9 +226,9 @@ check("multilingual status avoids full certification claim", hasAll(server, [
   "noFullCertificationClaim"
 ]));
 
-check("service worker/cache bumped", server.includes("nexus-behavior-449")
-  && app.includes("nexus-behavior-449")
-  && sw.includes("agrinexus-pwa-v394"));
+check("service worker/cache bumped", server.includes("nexus-behavior-450")
+  && app.includes("nexus-behavior-450")
+  && sw.includes("agrinexus-pwa-v395"));
 
 check("package alias exists", pkg.scripts["qa:nexus-endgame-production-platform"] === "node scripts/nexus-endgame-production-platform-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-endgame-production-platform-qa.js"));
