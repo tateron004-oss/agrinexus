@@ -127,11 +127,14 @@ async function run() {
   assertIncludes(appSource, "nexusGenesisConversationSupervisor?.speechOutputEnded", "speech end returns supervisor to listening");
   assertIncludes(appSource, "nexusGenesisConversationSupervisor?.recognitionEnded", "recognition end recovers through supervisor");
   assertIncludes(appSource, "nexusGenesisConversationSupervisor?.recover", "recognition errors recover through supervisor");
+  assertIncludes(appSource, "isTransportActive: () => Boolean(voiceRecognition || nexusOsVoiceStartInFlight || elevenLabsVoiceActive() || realtimeVoiceActive())", "supervisor checks real active voice transport before reuse");
+  assertIncludes(appSource, 'startVoiceListening({ source: "genesis-controlled-restart" })', "recognition-end restart returns through supervisor");
+  assertIncludes(appSource, 'startVoiceListening({ source: "genesis-recognition-start-timeout-restart" })', "recognition timeout restart returns through supervisor");
   assertIncludes(appSource, "nexusGenesisElevenLabsCandidateAllowed", "client candidate gate");
   assertIncludes(appSource, "if (!candidateAllowed) return false;", "client skips ElevenLabs unless allowlisted");
   assertIncludes(appSource, "legacyBrowserVoiceActiveForNormalUsers", "client legacy policy fallback");
-  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-454", "manager script loaded");
-  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-454"), "manager script must load before app.js");
+  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-455", "manager script loaded");
+  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-455"), "manager script must load before app.js");
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-genesis-safe-voice-runtime-manager"],
@@ -216,6 +219,75 @@ async function run() {
   assert.strictEqual(supervisor.getState().terminalOnlyOnExplicitStop, true, "supervisor should terminate only on explicit stop conditions");
   const stopped = await supervisor.spokenTurn("Nexus, stop listening");
   assert.strictEqual(stopped.state, "terminated", "explicit stop listening should terminate");
+
+  let browserTransportActive = false;
+  let browserTransportStarts = 0;
+  let browserToolCalls = 0;
+  const browserMockLock = managerApi.createVoiceOwnershipLock();
+  const browserMockSessionContext = managerApi.createSessionContext();
+  const browserMockAdapter = managerApi.LegacyBrowserVoiceAdapter({
+    lock: browserMockLock,
+    sessionContext: browserMockSessionContext,
+    startSession: () => {
+      browserTransportActive = true;
+      browserTransportStarts += 1;
+      return { ok: true };
+    },
+    recover: () => {
+      browserTransportActive = true;
+      browserTransportStarts += 1;
+      return { ok: true };
+    },
+    callTool: (toolName, args) => {
+      browserToolCalls += 1;
+      return {
+        ok: true,
+        response: `Mock response ${browserToolCalls}: ${args.command || toolName}`,
+        executionAttempted: false
+      };
+    },
+    updateLanguage: language => ({ ok: true, language })
+  });
+  const browserMockManager = managerApi.createNexusVoiceRuntimeManager({
+    lock: browserMockLock,
+    sessionContext: browserMockSessionContext,
+    legacyAdapter: browserMockAdapter,
+    activeRuntime: "legacy",
+    candidateEnabled: false,
+    automaticRollback: true
+  });
+  const browserMockSupervisor = managerApi.createGenesisConversationSupervisor({
+    runtimeManager: browserMockManager,
+    language: "en",
+    voice: "browser-native",
+    isTransportActive: () => browserTransportActive
+  });
+  await browserMockSupervisor.start("mock-browser-start");
+  assert.strictEqual(browserTransportStarts, 1, "mock browser transport should start once");
+  browserMockSupervisor.observeResponse("Good morning. I am Nexus.", { source: "mock-good-morning" });
+  browserTransportActive = false;
+  const afterGreeting = await browserMockSupervisor.speechOutputEnded("mock-good-morning-ended");
+  assert.strictEqual(afterGreeting.state, "listening", "Good morning speech completion should return to listening");
+  assert.strictEqual(browserTransportActive, true, "Good morning speech completion should restore browser recognition transport");
+  assert.strictEqual(browserTransportStarts, 2, "missing transport should be restarted exactly once after greeting");
+  const secondTurn = await browserMockSupervisor.spokenTurn("Nexus, can you hear me?");
+  assert.strictEqual(secondTurn.state, "listening", "second utterance should be accepted after greeting");
+  for (let index = 0; index < 10; index += 1) {
+    const phrase = index === 2
+      ? "Nexus, change the language to Spanish."
+      : index === 5
+        ? "Nexus, show agriculture training."
+        : `Nexus, continue conversation turn ${index + 1}.`;
+    if (index === 2) browserMockSupervisor.updateLanguage("es");
+    const result = await browserMockSupervisor.spokenTurn(phrase, { toolName: index % 3 === 0 ? "nexus_agriculture" : "nexus_capability_router" });
+    assert.strictEqual(result.state, "listening", `continuous turn ${index + 1} should return to listening`);
+    await browserMockSupervisor.speechOutputEnded(`mock-turn-${index + 1}-speech-ended`);
+  }
+  const browserMockState = browserMockSupervisor.getState();
+  assert.strictEqual(browserMockState.context.pendingLanguage, "es", "selected language should survive continuous turns");
+  assert.strictEqual(browserMockState.singleMicrophoneOwner, true, "continuous browser mock should keep one microphone owner");
+  assert.strictEqual(browserMockState.singleAudioOwner, true, "continuous browser mock should keep one audio owner");
+  assert(browserMockState.context.turnCount >= 10, "continuous browser mock should retain turn context");
 
   console.log("Nexus Genesis safe voice runtime manager QA passed.");
 }

@@ -730,6 +730,7 @@
     let interruptionState = "none";
     let selectedLanguage = String(options.language || "en");
     let selectedVoice = String(options.voice || "browser-native");
+    let pendingListeningRecovery = false;
 
     function logTransition(nextState, reason = "state-transition", extra = {}) {
       const normalized = CONVERSATION_SUPERVISOR_STATES.includes(nextState) ? nextState : "recovering";
@@ -773,7 +774,12 @@
     const supervisor = {
       supervisorName: "NexusGenesisContinuousConversationSupervisor",
       async start(reason = "genesis-start") {
-        if (active && state !== "terminated") return { ok: true, reused: true, state, sessionId };
+        if (active && state !== "terminated") {
+          if (typeof options.isTransportActive === "function" && !options.isTransportActive()) {
+            return this.recover(`transport-missing:${reason}`);
+          }
+          return { ok: true, reused: true, state, sessionId };
+        }
         generation += 1;
         active = true;
         logTransition("acquiring", reason);
@@ -841,11 +847,21 @@
       },
       async recognitionEnded(reason = "recognition-ended-unexpectedly") {
         if (!active || state === "terminated") return { ok: true, ignored: true, state };
+        if (state === "speaking") {
+          pendingListeningRecovery = true;
+          return { ok: true, deferred: true, state, reason };
+        }
         return this.recover(reason);
       },
       async speechOutputEnded(reason = "speech-output-ended") {
         clearWatchdog("speech-synthesis-end-missing");
-        if (active && state !== "terminated") logTransition("listening", reason);
+        if (active && state !== "terminated") {
+          logTransition("listening", reason);
+          if (pendingListeningRecovery || (typeof options.isTransportActive === "function" && !options.isTransportActive())) {
+            pendingListeningRecovery = false;
+            return this.recover(`speech-ended:${reason}`);
+          }
+        }
         return { ok: true, state };
       },
       async interrupt(text = "") {
@@ -857,6 +873,7 @@
       async recover(reason = "recover") {
         if (!active || state === "terminated") return { ok: false, state, reason: "inactive" };
         generation += 1;
+        pendingListeningRecovery = false;
         const safeReason = String(reason || "recover").slice(0, 120);
         recoveryLog.push({ reason: safeReason, at: new Date().toISOString(), generation });
         if (recoveryLog.length > 80) recoveryLog.shift();
