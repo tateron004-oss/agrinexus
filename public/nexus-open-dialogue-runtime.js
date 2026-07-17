@@ -185,6 +185,24 @@
     return found ? found[0] : "general";
   }
 
+  function hasNonEnglishQuestionShape(lower) {
+    return /^(que|como|por que|pourquoi|comment|kwa nini|jinsi|o que|como)\b/i.test(lower);
+  }
+
+  function isMultilingualOwnedInput(lower, language) {
+    return canonicalLanguage(language) !== "en" || hasNonEnglishQuestionShape(lower);
+  }
+
+  function isExplicitProviderReadinessQuestion(lower) {
+    return /\b(provider|providers|connector|connectors|credential|credentials|configured|configuration|ready|readiness|status|available|enabled|disabled|missing env|environment variable|api key|live service|live provider|integration|integrations)\b/i.test(lower)
+      && /\b(what|which|show|list|are|is|can|do|does|connected|configured|ready|missing|status|enabled|disabled|available)\b/i.test(lower);
+  }
+
+  function isExplicitWorkspaceOrSupportRequest(lower, domain, route) {
+    if (domain === "general" && !route?.matchedMiniApp) return false;
+    return /\b(open|start|show|go to|launch|workspace|mode|dashboard|support|help|prepare|review|intake|record|route|planner|plan|summary|checklist)\b/i.test(lower);
+  }
+
   function classify(input, options = {}) {
     const rawInput = normalizeInput(input);
     const lower = normalizeLower(rawInput);
@@ -195,13 +213,17 @@
     if (!rawInput) return { intentType: "unknown", domain, language, route, shouldHandleInApp: false };
     if (hasAlias(lower, "stop")) return { intentType: "cancellation", domain, language, route, shouldHandleInApp: true };
     if (hasAlias(lower, "repeat")) return { intentType: "repeat", domain, language, route, shouldHandleInApp: true };
-    if (hasAlias(lower, "thanks")) return { intentType: "polite_social", domain, language, route, shouldHandleInApp: true };
+    if (hasAlias(lower, "thanks")) return { intentType: "polite_social", domain, language, route, shouldHandleInApp: isMultilingualOwnedInput(lower, language) };
     if (hasAlias(lower, "capabilities")) return { intentType: "global_capability_question", domain: "general", language, route, shouldHandleInApp: true };
     if (hasAlias(lower, "connected")) return { intentType: "provider_readiness_question", domain: "provider_activation", language, route, shouldHandleInApp: true };
     if (/\b(emergency|not breathing|unconscious|severe chest pain|dispatch ambulance)\b/i.test(lower)) return { intentType: "safety_sensitive_question", domain: "health", language, route, shouldHandleInApp: true };
-    if (isQuestion(lower)) return { intentType: "open_ended_question", domain, language, route, shouldHandleInApp: true };
+    if (isExplicitProviderReadinessQuestion(lower)) return { intentType: "provider_readiness_question", domain: "provider_activation", language, route, shouldHandleInApp: true };
+    if (isQuestion(lower)) {
+      const shouldHandleInApp = isMultilingualOwnedInput(lower, language) || isExplicitWorkspaceOrSupportRequest(lower, domain, route);
+      return { intentType: "open_ended_question", domain, language, route, shouldHandleInApp };
+    }
     if (route?.matchedMiniApp && /\b(open|start|show|go to|launch)\b/i.test(lower)) return { intentType: "direct_navigation_command", domain, language, route, shouldHandleInApp: false };
-    if (domain !== "general" && /\b(help|support|need|prepare|review|explain)\b/i.test(lower)) return { intentType: "workspace_explanation_request", domain, language, route, shouldHandleInApp: true };
+    if (domain !== "general" && isExplicitWorkspaceOrSupportRequest(lower, domain, route)) return { intentType: "workspace_explanation_request", domain, language, route, shouldHandleInApp: true };
     return { intentType: "unknown_or_unclear_request", domain, language, route, shouldHandleInApp: false };
   }
 
@@ -237,7 +259,7 @@
     if (domain === "learning_workforce") return "For farm logistics jobs, useful training can include digital literacy, basic logistics, cold-chain handling, route planning, safety, customer communication, and agriculture market basics. Nexus can open workforce support and prepare a training-to-job path.";
     if (domain === "drone") return "Nexus can prepare drone mission scope, field survey objectives, flight readiness questions, and expert review packets. It does not launch drones, capture imagery, or approve flights without a configured drone provider and compliance approval.";
     if (domain === "communications") return "Nexus can prepare SMS, email, WhatsApp, phone, or Telegram drafts with recipient, purpose, language, and confirmation details. It will not send or call without provider credentials, explicit confirmation, audit, and outcome verification.";
-    return "I can answer that in local-safe mode and route you to the right workspace when useful. Tell me the domain: health, agriculture, marketplace, logistics, learning, workforce, communications, provider readiness, or drone support.";
+    return classification.shouldHandleInApp ? localized(language, "next") : "";
   }
 
   function missingInfoFor(domain) {

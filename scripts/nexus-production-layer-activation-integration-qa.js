@@ -10,6 +10,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 const serverSource = read("server.js");
 const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
+const openDialogueRuntime = require(path.join(root, "public/nexus-open-dialogue-runtime.js"));
 
 function requestJson(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -160,6 +161,12 @@ function assertTrace(state, label, expectations = {}) {
   if (expectations.noWorkflow) {
     assert.equal(response.workflow.opened, false, `${label} must not open workflow`);
   }
+  if (expectations.noCannedWorkspaceStatus) {
+    assert(
+      !/(route you to the right workspace|prepared locally|completed local|completed locally|I may have heard only part|Say one word: health|Tell me one thing: health|workspace-routing|readiness status|internal status)/i.test(response.response),
+      `${label} must not expose workspace/status fallback language: ${response.response}`
+    );
+  }
   if (expectations.noExecution !== false) {
     assert.equal(response.execution.attempted, false, `${label} must not execute`);
   }
@@ -191,6 +198,31 @@ async function run() {
     "package alias should run layer activation integration QA"
   );
   assert(qaSuite.includes("scripts/nexus-production-layer-activation-integration-qa.js"), "qa suite should include layer activation integration QA");
+
+  [
+    "Nexus, are you with me today?",
+    "How are you?",
+    "What have you been working on?",
+    "Tell me something interesting.",
+    "What else can we talk about?",
+    "Why is that useful?"
+  ].forEach(prompt => {
+    assert.equal(
+      openDialogueRuntime.shouldHandleBeforeLegacy(prompt, { language: "en" }),
+      false,
+      `frontend open-dialogue runtime must not preempt ordinary conversation: ${prompt}`
+    );
+  });
+  [
+    "What providers are connected?",
+    "que puede hacer nexus"
+  ].forEach(prompt => {
+    assert.equal(
+      openDialogueRuntime.shouldHandleBeforeLegacy(prompt, { language: prompt.startsWith("que") ? "es" : "en" }),
+      true,
+      `frontend open-dialogue runtime should still own provider/multilingual behavior: ${prompt}`
+    );
+  });
 
   const providerServer = http.createServer((req, res) => {
     req.resume();
@@ -239,14 +271,42 @@ async function run() {
         command: "Hello Nexus. Can you hear me?",
         conversational: true,
         inputMode: "typed"
-      }, { capability: "conversation", inputMode: "typed", noWorkflow: true });
+      }, { capability: "conversation", inputMode: "typed", noWorkflow: true, noCannedWorkspaceStatus: true });
 
       await command("voice presence check stays conversational", {
         command: "Hey Nexus, are you with me today?",
         conversational: true,
         inputMode: "voice",
         outputMode: "voice"
-      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, behaviorIncludes: "presence" });
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, behaviorIncludes: "presence", noCannedWorkspaceStatus: true });
+
+      await command("open-ended assistant question stays conversational", {
+        command: "What have you been working on?",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, noCannedWorkspaceStatus: true });
+
+      await command("complete conversational statement stays conversational", {
+        command: "Tell me something interesting.",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, noCannedWorkspaceStatus: true });
+
+      await command("open-ended topic prompt stays conversational", {
+        command: "What else can we talk about?",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, noCannedWorkspaceStatus: true });
+
+      await command("contextual follow-up uses recent response", {
+        command: "Why is that useful?",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      }, { capability: "conversation", inputMode: "voice", outputMode: "voice", noWorkflow: true, noCannedWorkspaceStatus: true });
 
       await command("voice source-backed agriculture", {
         command: "Nexus, what are current sources about climate-smart agriculture in Africa?",

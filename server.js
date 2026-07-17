@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-460";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v405";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-461";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v406";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -19303,9 +19303,13 @@ function isEverydayEncyclopediaQuestion(command = "") {
     && /\b(simple|plain|explain|summarize|read|interpret)\b/.test(lower)) return false;
   if (/\b(different from|difference between|what makes this different|normal app|ordinary app)\b/.test(lower)
     && /\b(app|platform|agrinexus|nexus|this)\b/.test(lower)) return false;
+  if (/\b(you|yourself|with me|talk about|talk to me|chat|conversation|working on|been working|something interesting)\b/.test(lower)
+    && !/\b(define|explain|describe|teach|source|current|latest|research|evidence|citation)\b/.test(lower)) return false;
+  const genuineInformationalIntent = /^(what is|what are|what's|whats|why does|why do|how does|how do|how can|when does|where is|who is|which|can you explain|explain|tell me about|teach me|describe|define)\b/.test(lower)
+    || /\b(mean|means|definition|difference between|what causes|how .* works?|how .* is made|why .* happens|explain .* to me|teach me about)\b/.test(lower);
   const everydayTopics = /\b(photosynthesis|soil|fertilizer|compost|irrigation|maize|cassava|rice|beans|crop|crops|plant|plants|harvest|rain|drought|pest|malaria|cholera|fever|cold|cough|medicine|nutrition|pregnancy|first aid|clean water|sanitation|saving|savings|budget|money|loan|interest|inflation|business|market|education|school|study|job|career|internet|phone|whatsapp|ai|drone|gps|weather|climate|safety|child|children|women|family)\b/.test(lower);
   const ruralQuestion = /\b(farmer|farm|grandma|mother|child|village|rural|clinic|pharmacy|school|market|buyer|seller)\b/.test(lower) && /\b(what|why|how|explain|tell|teach|mean|means|understand)\b/.test(lower);
-  return questionShape && (everydayTopics || ruralQuestion || lower.split(/\s+/).length >= 5);
+  return questionShape && genuineInformationalIntent && (everydayTopics || ruralQuestion);
 }
 
 function encyclopediaTopicSignal(command = "") {
@@ -19444,13 +19448,18 @@ function isGeneralConversationQuestion(command = "") {
   if (!lower) return false;
   if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
+  if (/\b(are you|who are you|what are you|what is|what's|explain|describe|tell me about)\b.*\b(nexus|agrinexus|agri nexus|platform)\b/.test(lower)
+    || /\b(nexus|agrinexus|agri nexus|platform)\b.*\b(are you|who are you|what are you|what is|what's|explain|describe|tell me about)\b/.test(lower)) return false;
   if (/\b(doctor|clinic|medicine|pharmacy|crop|farm|buyer|seller|job|course|lesson|map|route|shipment|drone|provider|intake)\b/.test(lower)
     && /\b(need|want|help|find|where|nearest|apply|sell|track|start|open|show|call|contact)\b/.test(lower)) return false;
   const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus|bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|je suis fatigue|fatigue|je suis triste|je suis perdu|raconte moi|histoire|encourage moi|hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|estoy cansad\w*|estoy triste|estoy perdido|cuentame|historia|dame motivacion|jambo|habari|mambo|tunaweza kuongea|nimechoka|nina huzuni|nimepotea|niambie hadithi|hadithi|nipe tumaini|ola|olá|bom dia|boa tarde|boa noite|podemos conversar|estou cansad\w*|estou triste|estou perdido|conte uma historia|historia|me de coragem)\b|هل يمكننا التحدث|كيف حالك|أنا متعب|انا متعب|أنا حزين|انا حزين|أنا خائف|انا خائف|احكي لي قصة|شجعني/.test(lower);
   const generalQuestion = /^(who|what|why|how|when|where|can|could|would|should|tell|explain|describe|define)\b/.test(lower)
     && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication|rural farmers|farmers|helping rural)\b/.test(lower);
   const multilingualGeneral = /\b(agriculteurs ruraux|agricultores rurales|agricultores rurais|wakulima|educacion|educación|education|éducation|elimu|educacao|educação|travail d equipe|trabajo en equipo|kazi ya pamoja|trabalho em equipe|paciencia|paciência|subira|la patience|liderazgo|lideranca|liderança|uongozi|le leadership)\b|المزارعين|التعليم|عمل جماعي|العمل الجماعي|الصبر|القيادة/.test(lower);
-  return smallTalk || generalQuestion || multilingualGeneral;
+  const openEndedDialogue = /^(what|how|why|tell|share|say|talk|chat|can|could|would|are)\b/.test(lower)
+    && /\b(you|yourself|we|us|me|conversation|talk|chat|interesting|working on|been working|else can we|something interesting|with me)\b/.test(lower)
+    && !/\b(source|sources|citation|current|latest|research|weather|forecast|price|map|route|clinic|pharmacy|provider|buyer|seller|job listing|course|payment|booking|dispatch)\b/.test(lower);
+  return smallTalk || generalQuestion || openEndedDialogue || multilingualGeneral;
 }
 
 function normalizeConversationLanguage(value = "") {
@@ -21511,9 +21520,14 @@ function conversationFollowUpResponse(db, user, text, lower) {
   }
 
   if (wantsExplanation) {
+    const spokenMemory = spokenResponseMemory(db);
+    const recentAssistantResponse = String(spokenMemory.lastSpokenResponse || spokenMemory.lastCompleteAssistantResponse || "").trim();
+    const explicitContextReference = /\b(that|this|it|previous|last|you said|your answer|that answer|what you said|what do you mean|say that again|read that|summarize that|explain that)\b/.test(lower);
+    if (!pending && !explicitContextReference) return null;
+    if (!pending && !recentAssistantResponse) return null;
     const detail = pending
       ? `The pending action is ${pending.action || "a workflow"} in ${pending.module || "AgriNexus"}. I am waiting because this action may create or change workflow evidence. Say yes to run it, or no to cancel.`
-      : memory.lastSummary || "I do not have a recent answer to explain yet.";
+      : recentAssistantResponse;
     return {
       intent: "conversation.followup_explained",
       response: detail,
@@ -25364,7 +25378,7 @@ function classifyNexusCapability(intent = "", command = "", metadata = {}) {
   if (/remind|reminder|notify/.test(signal)) return "reminders-scheduling";
   if (/marketplace|agritrade|market|buyer|seller|vendor|price|selling|sale|sell|buy/.test(commandSignal)
     || /marketplace|buyer|seller|vendor|price|selling|sale|sell|buy/.test(signal)) return "marketplace-trade";
-  if (/work|job|career|employer|workforce/.test(signal)) return "workforce";
+  if (/\b(job|jobs|career|employer|workforce|employment|work readiness|need work|find work|farm jobs|worker)\b/.test(signal)) return "workforce";
   if (/crop|farm|agri|agriculture|livestock|soil|irrigation|pest|food.security/.test(signal)) return "agriculture";
   if (/weather|climate|rain|temperature|forecast/.test(signal)) return "weather";
   if (/map|route|transport|logistics|field.visit|clinic.route/.test(signal)) return "maps-routing";
