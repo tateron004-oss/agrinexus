@@ -1333,8 +1333,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-459";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v404";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-460";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v405";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -46186,7 +46186,7 @@ function extractGenesisSpeakableResponse(payload = {}, correlationId = "") {
     });
     throw new Error("Nexus response contract was missing speakable content.");
   }
-  const response = contract.response.replace(/\s+/g, " ").trim();
+  const response = authoritativeNexusFinalAnswer(contract, payload?.commandResult || {}, payload?.result || {});
   if (!response) {
     recordGenesisSpokenResponsePipelineEvent("speakable-extraction-empty", {
       correlationId: contract.correlationId || correlationId,
@@ -46211,6 +46211,37 @@ function extractGenesisSpeakableResponse(payload = {}, correlationId = "") {
     ...contract,
     response
   };
+}
+
+function isNexusInternalStatusOnlyResponse(value = "") {
+  const compact = String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+  if (!compact) return true;
+  if (/^(prepared|prepared locally|completed local|completed locally|completed_local|prepared_local|routed|blocked|confirmation required|confirmation_required|execution blocked|queued|pending)$/i.test(compact)) return true;
+  if (/^(prepared|completed|routed|blocked|queued|pending)[_ -]?(local|locally|only)?$/i.test(compact)) return true;
+  if (/^status[: ]/.test(compact)) return true;
+  return false;
+}
+
+function authoritativeNexusFinalAnswer(...candidates) {
+  const flattened = candidates.flatMap(candidate => {
+    if (!candidate || typeof candidate !== "object") return [candidate];
+    return [
+      candidate.response,
+      candidate.answer,
+      candidate.finalAnswer,
+      candidate.spokenResponse,
+      candidate.displayResponse,
+      candidate.userVisibleStatus,
+      candidate.conversationalResponse,
+      candidate.summary,
+      candidate.message
+    ];
+  });
+  const normalized = flattened
+    .map(value => String(value || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const natural = normalized.find(value => !isNexusInternalStatusOnlyResponse(value));
+  return natural || normalized[0] || "";
 }
 
 function setVoiceResponse(message, speak = false, options = {}) {
@@ -47758,7 +47789,7 @@ function sanitizeNexusSpokenResponseText(value = "") {
     .replace(/https?:\/\/\S+/g, " source link available in text ")
     .replace(/\b[A-Z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|AUTHORIZATION|BEARER)\s*[:=]\s*\S+/gi, match => `${match.split(/[:=]/)[0]} redacted`)
     .replace(/\b(api[_-]?key|secret|token|authorization|bearer)\s*[:=]\s*\S+/gi, "$1 redacted")
-    .replace(/[*_#>|~]+/g, " ")
+    .replace(/[*#>|~]+/g, " ")
     .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "redacted credential")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "email address")
     .replace(/\s+/g, " ")
@@ -54195,7 +54226,11 @@ async function handleNexusFullCommunicationRuntimeCommand(command = "", options 
     "what communications are connected"
   ]);
   updateNexusBehaviorLayer("communicating", "Nexus prepared a local-safe communication response with provider and confirmation gates.");
-  setVoiceResponse(result.answer || result.message || "Nexus prepared the communication locally. No external message or call was sent.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result,
+    result.draft || {},
+    "Nexus prepared a communication draft for review. No external message or call was sent."
+  ), true, {
     allowHandoff: false,
     command: text,
     source: "nexus-full-communication-runtime",
@@ -54229,7 +54264,12 @@ async function handleNexusMessagePreparationRuntimeCommand(command = "", options
     "notify logistics"
   ]);
   updateNexusBehaviorLayer("message-prep", "Nexus prepared a local-safe message draft with provider and confirmation gates.");
-  setVoiceResponse(result?.message || "Nexus prepared the message locally. No external message was sent.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result || {},
+    result?.preparedMessage || {},
+    result?.draft || {},
+    "Nexus prepared a message draft for review. No external message was sent."
+  ), true, {
     allowHandoff: false,
     command: text,
     source: "nexus-message-preparation-runtime",
@@ -54239,7 +54279,11 @@ async function handleNexusMessagePreparationRuntimeCommand(command = "", options
 }
 
 function renderNexusAgenticCommandResult(result = {}) {
-  const message = result.message || result.response || result.unifiedBrainResult?.userVisibleStatus || result.unifiedBrainResult?.conversationalResponse || "Nexus prepared this locally. No external action was executed.";
+  const message = authoritativeNexusFinalAnswer(
+    result,
+    result.unifiedBrainResult || {},
+    "Nexus prepared a local review result. No external action was executed."
+  );
   nexusAgenticBrainLastResult = {
     ok: result.ok !== false,
     status: result.status || "prepared_local",
@@ -54344,7 +54388,11 @@ async function handleNexusHealthcareCollaborationRuntimeCommand(command = "", op
     "prepare a pharmacy handoff"
   ]);
   updateNexusBehaviorLayer("healthcare-collaboration", "Nexus prepared healthcare collaboration locally with provider, consent, clinician review, and audit gates.");
-  setVoiceResponse(result.answer || result.message || "Nexus prepared the healthcare collaboration packet locally. No external healthcare action was executed.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result,
+    result.packet || {},
+    "Nexus prepared a healthcare collaboration packet for review. No external healthcare action was executed."
+  ), true, {
     allowHandoff: false,
     command: text,
     source: "nexus-healthcare-collaboration-runtime",
@@ -54379,7 +54427,11 @@ async function handleNexusAgricultureCollaborationRuntimeCommand(command = "", o
     "prepare a drone field observation"
   ]);
   updateNexusBehaviorLayer("agriculture-collaboration", "Nexus prepared agriculture collaboration locally with source, expert review, marketplace, logistics, drone, and receipt gates.");
-  setVoiceResponse(result.userVisibleStatus || result.answer || result.message || "Nexus prepared the agriculture collaboration packet locally. No external agriculture action was executed.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result,
+    result.packet || {},
+    "Nexus prepared an agriculture collaboration packet for review. No external agriculture action was executed."
+  ), true, {
     allowHandoff: false,
     command: text,
     source: "nexus-agriculture-collaboration-runtime",
@@ -54429,7 +54481,11 @@ async function handleNexusTelephonyCallRuntimeCommand(text = "", options = {}) {
     "what calls are configured"
   ]);
   updateNexusBehaviorLayer("call-prep", "Nexus prepared a local-safe call script and did not place a call.");
-  setVoiceResponse(result.message || "I prepared the call locally. Real outbound calling requires telephony provider credentials.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result,
+    result.call || {},
+    "I prepared a call script for review. Real outbound calling requires telephony provider credentials."
+  ), true, {
     allowHandoff: false,
     command: text,
     source: "nexus-telephony-call-runtime",
@@ -54484,7 +54540,12 @@ function handleNexusMessagePreparationRuntimeDelegatedClick(event) {
   }
   if (action === "queue") {
     const result = runtime.getLastResult?.();
-    setVoiceResponse(result?.message || "Nexus can queue the prepared message for review locally. No external message was sent.", true, {
+    setVoiceResponse(authoritativeNexusFinalAnswer(
+      result || {},
+      result?.preparedMessage || {},
+      result?.draft || {},
+      "Nexus can queue the message draft for review. No external message was sent."
+    ), true, {
       allowHandoff: false,
       source: "nexus-message-preparation-runtime"
     });
@@ -54534,7 +54595,11 @@ function handleNexusHealthcareCollaborationRuntimeDelegatedClick(event) {
   }
   const result = runtime.handlePanelAction?.(action, actionType);
   runtime.render?.(result);
-  setVoiceResponse(result?.message || "Healthcare collaboration packet prepared locally. No external action was executed.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result || {},
+    result?.packet || {},
+    "Nexus prepared a healthcare collaboration packet for review. No external action was executed."
+  ), true, {
     allowHandoff: false,
     source: "nexus-healthcare-collaboration-runtime",
     healthcareCollaborationResult: result
@@ -54627,7 +54692,11 @@ function handleNexusAgricultureCollaborationRuntimeDelegatedClick(event) {
   }
   const result = runtime.handlePanelAction?.(action, actionType);
   runtime.render?.(result);
-  setVoiceResponse(result?.userVisibleStatus || "Agriculture collaboration packet prepared locally. No external action was executed.", true, {
+  setVoiceResponse(authoritativeNexusFinalAnswer(
+    result || {},
+    result?.packet || {},
+    "Nexus prepared an agriculture collaboration packet for review. No external action was executed."
+  ), true, {
     allowHandoff: false,
     source: "nexus-agriculture-collaboration-runtime",
     agricultureCollaborationResult: result

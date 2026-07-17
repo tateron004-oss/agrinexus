@@ -75,7 +75,7 @@ function sanitizeExpectedSpoken(value = "") {
     .replace(/https?:\/\/\S+/g, " source link available in text ")
     .replace(/\b[A-Z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|AUTHORIZATION|BEARER)\s*[:=]\s*\S+/gi, match => `${match.split(/[:=]/)[0]} redacted`)
     .replace(/\b(api[_-]?key|secret|token|authorization|bearer)\s*[:=]\s*\S+/gi, "$1 redacted")
-    .replace(/[*_#>|~]+/g, " ")
+    .replace(/[*#>|~]+/g, " ")
     .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "redacted credential")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "email address")
     .replace(/\s+/g, " ")

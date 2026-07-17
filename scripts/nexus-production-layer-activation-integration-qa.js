@@ -101,6 +101,7 @@ function stage(trace, id) {
 
 function assertTrace(state, label, expectations = {}) {
   const response = state.nexusResponse;
+  const commandResult = state.commandResult || {};
   assert(response, `${label} should include nexusResponse`);
   assert(response.activationTrace, `${label} should include activation trace`);
   const trace = response.activationTrace;
@@ -125,6 +126,10 @@ function assertTrace(state, label, expectations = {}) {
   assert.equal(trace.noDuplicateRuntimeCreated, true, `${label} must not create duplicate runtime`);
   assert.equal(trace.noVoiceRuntimeModified, true, `${label} must not modify voice runtime`);
   assert(response.response && response.response.trim(), `${label} should produce natural response`);
+  assert(!/^(prepared|prepared locally|completed local|completed locally|completed_local|prepared_local|routed|blocked|confirmation required|confirmation_required)$/i.test(String(response.response || "").trim()), `${label} must not expose an internal status as the final answer`);
+  if (commandResult.response) {
+    assert.equal(response.response, commandResult.response, `${label} displayed/spoken response must match commandResult.response`);
+  }
   if (expectations.capability) assert.equal(response.capability, expectations.capability, `${label} capability`);
   if (expectations.inputMode) assert.equal(trace.inputMode, expectations.inputMode, `${label} input mode`);
   if (expectations.outputMode) assert.equal(trace.outputMode, expectations.outputMode, `${label} output mode`);
@@ -140,9 +145,17 @@ function assertTrace(state, label, expectations = {}) {
   if (expectations.safetyActive) {
     assert.notEqual(stage(trace, "safety_confirmation")?.active, false, `${label} should activate safety handling`);
   }
+  if (expectations.intent) assert.equal(response.intent, expectations.intent, `${label} intent`);
   if (expectations.sourceBacked) {
     assert.equal(response.evidence.sourceBacked, true, `${label} should be source backed`);
     assert(response.evidence.receiptId, `${label} should include evidence receipt id`);
+  }
+  if (expectations.sourceFollowUp) {
+    assert.equal(commandResult.metadata?.sourceFollowUp, true, `${label} should be a source follow-up`);
+    assert(
+      response.response.includes("source") || response.response.includes("Source") || response.response.includes("Evidence") || response.response.includes("citation"),
+      `${label} should explain the relevant source/evidence context`
+    );
   }
   if (expectations.noWorkflow) {
     assert.equal(response.workflow.opened, false, `${label} must not open workflow`);
@@ -161,6 +174,16 @@ async function run() {
     "evidence_verification",
     "noVoiceRuntimeModified"
   ].forEach(token => assert(serverSource.includes(token), `server should include ${token}`));
+  const appSource = read("public/app.js");
+  [
+    "function authoritativeNexusFinalAnswer",
+    "function isNexusInternalStatusOnlyResponse",
+    "const response = authoritativeNexusFinalAnswer(contract, payload?.commandResult || {}, payload?.result || {})"
+  ].forEach(token => assert(appSource.includes(token), `app should include final-answer protection: ${token}`));
+  assert(
+    appSource.includes("authoritativeNexusFinalAnswer(") && appSource.includes("handleNexusMessagePreparationRuntimeCommand"),
+    "message preparation should use authoritative final-answer selection"
+  );
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-production-layer-activation-integration"],
@@ -291,6 +314,12 @@ async function run() {
         inputMode: "typed"
       }, { capability: "weather", inputMode: "typed", evidenceActive: true });
 
+      await command("source follow-up uses prior evidence context", {
+        command: "Where did you get that?",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "conversation", inputMode: "typed", intent: "conversation.source_followup", sourceFollowUp: true, evidenceActive: true });
+
       await command("reminder mode is classified", {
         command: "Nexus, remind me to check my blood pressure tomorrow morning.",
         conversational: true,
@@ -302,6 +331,12 @@ async function run() {
         conversational: true,
         inputMode: "typed"
       }, { capability: "marketplace-trade", inputMode: "typed" });
+
+      await command("message preparation returns natural answer", {
+        command: "Prepare a message to John",
+        conversational: true,
+        inputMode: "typed"
+      }, { capability: "communications", inputMode: "typed", safetyActive: true });
 
       await command("emergency safety stays safety behavior", {
         command: "Nexus, someone has chest pain and trouble breathing.",

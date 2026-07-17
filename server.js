@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-459";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v404";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-460";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v405";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -16044,7 +16044,7 @@ function sanitizeNexusSpokenResponseText(value = "") {
     .replace(/https?:\/\/\S+/g, " source link available in text ")
     .replace(/\b[A-Z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|AUTHORIZATION|BEARER)\s*[:=]\s*\S+/gi, match => `${match.split(/[:=]/)[0]} redacted`)
     .replace(/\b(api[_-]?key|secret|token|authorization|bearer)\s*[:=]\s*\S+/gi, "$1 redacted")
-    .replace(/[*_#>|~]+/g, " ")
+    .replace(/[*#>|~]+/g, " ")
     .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "redacted credential")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "email address")
     .replace(/\s+/g, " ")
@@ -21474,10 +21474,13 @@ function conversationFollowUpResponse(db, user, text, lower) {
   const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
   const context = lastWorkflowContext(db.profile);
   const wantsExplanation = /\b(explain|repeat|say that again|read that|what do you mean|why|summarize that)\b/.test(lower);
+  const wantsSource = /\b(where did you get that|what source|which source|sources?|citations?|cite that|evidence|receipt|where is that from|source are you using)\b/.test(lower);
   const wantsMission = /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me|checklist|guided mission)\b/.test(lower);
   const wantsNavigation = /\b(take me there|open that|show me|go there|go to it|where is that)\b/.test(lower);
   const wantsNext = /\b(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed)\b/.test(lower);
-  if (!wantsExplanation && !wantsNavigation && !wantsNext && !wantsMission) return null;
+  if (!wantsExplanation && !wantsSource && !wantsNavigation && !wantsNext && !wantsMission) return null;
+
+  if (wantsSource) return genesisSourceFollowUpResponse(db, user, text);
 
   if (wantsMission) {
     const outcome = activeOutcomeLoopBrief(db);
@@ -25194,15 +25197,73 @@ function rememberGenesisSpokenResponse(db, command = "", result = {}) {
   ensureAiProfile(db.profile);
   const response = String(result.response || "").trim();
   const spoken = sanitizeNexusSpokenResponseText(response);
+  const citations = Array.isArray(result.metadata?.citations) ? result.metadata.citations : [];
+  const receipt = result.metadata?.institutionalEvidenceReceipt || null;
+  const sourceResult = result.metadata?.sourceResult || result.metadata?.weather || null;
+  const lastSourceContext = citations.length || receipt || sourceResult ? {
+    command: String(command || "").trim(),
+    intent: result.intent || "unknown",
+    responseSummary: spoken.slice(0, 500),
+    citations: citations.slice(0, 5).map(item => ({
+      title: String(item.title || item.source || item.publisher || "Source").slice(0, 160),
+      url: String(item.url || item.href || "").slice(0, 300),
+      publisher: String(item.publisher || item.source || "").slice(0, 160),
+      snippet: String(item.snippet || item.summary || "").slice(0, 260)
+    })),
+    receiptId: String(receipt?.receiptId || result.metadata?.evidenceReceiptId || "").slice(0, 120),
+    provider: String(sourceResult?.sourceName || sourceResult?.provider || sourceResult?.sourceStatus || "").slice(0, 120),
+    sourceStatus: String(sourceResult?.sourceStatus || sourceResult?.evidenceStatus || result.status || "").slice(0, 120),
+    retrievedAt: String(sourceResult?.retrievedAt || receipt?.retrievedAt || "").slice(0, 80),
+    updatedAt: new Date().toISOString()
+  } : (db.profile.agentMemory.genesisConversation?.lastSourceContext || null);
   db.profile.agentMemory.genesisConversation = {
     ...(db.profile.agentMemory.genesisConversation || {}),
     lastFinalUserUtterance: String(command || "").trim(),
     lastIntentSelected: result.intent || "unknown",
     lastCompleteAssistantResponse: response,
     lastSpokenResponse: spoken,
+    lastSourceContext,
     relevantShortContext: `${result.intent || "conversation"}: ${spoken}`.slice(0, 500),
     currentLocationText: result.metadata?.locationText || result.metadata?.weather?.locationText || db.profile.agentMemory.genesisConversation?.currentLocationText || "",
     updatedAt: new Date().toISOString()
+  };
+}
+
+function genesisSourceFollowUpResponse(db, user, text = "") {
+  ensureAiProfile(db.profile);
+  const sourceContext = db.profile.agentMemory.genesisConversation?.lastSourceContext || null;
+  if (!sourceContext) {
+    return {
+      intent: "conversation.source_followup",
+      response: "I do not have a source-backed answer in this conversation yet. Ask me to research a topic or check a configured source, and I will show the source details when available.",
+      status: "needs-source",
+      metadata: { conversationMode: true, sourceFollowUp: true, suggestedReplies: ["research this with sources", "what can you cite?", "ask a new question"] }
+    };
+  }
+  const sourceLines = [];
+  if (sourceContext.citations?.length) {
+    sourceLines.push(`I used ${sourceContext.citations.length} cited source${sourceContext.citations.length === 1 ? "" : "s"}: ${sourceContext.citations.map(item => item.title).filter(Boolean).join("; ")}.`);
+  } else if (sourceContext.provider || sourceContext.sourceStatus) {
+    sourceLines.push(`I checked the configured source path: ${sourceContext.provider || sourceContext.sourceStatus}.`);
+  }
+  if (sourceContext.receiptId) sourceLines.push(`Evidence receipt: ${sourceContext.receiptId}.`);
+  if (sourceContext.retrievedAt) sourceLines.push(`Retrieved at ${sourceContext.retrievedAt}.`);
+  sourceLines.push("If a live provider was not configured or failed, I label that limitation instead of inventing citations.");
+  return {
+    intent: "conversation.source_followup",
+    response: sourceLines.join(" "),
+    status: "completed",
+    metadata: {
+      conversationMode: true,
+      sourceFollowUp: true,
+      citations: sourceContext.citations || [],
+      evidenceReceiptId: sourceContext.receiptId || "",
+      sourceResult: {
+        sourceName: sourceContext.provider || "",
+        sourceStatus: sourceContext.sourceStatus || "",
+        retrievedAt: sourceContext.retrievedAt || ""
+      }
+    }
   };
 }
 
@@ -26974,6 +27035,10 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["crop problem", "route support", "field scan", "sell my crop"] }
     };
   }
+  const earlyFollowUpCommand = /^(explain that|repeat that|say that again|read that|what do you mean|why|where did you get that|what source|which source|cite that|where is that from|where are we|what are we doing|what step|where am i|orient me|what is my checklist|continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|go there)\b/.test(lower)
+    || /\b(current mission|mission status|guided mission|source are you using|citations?|evidence receipt)\b/.test(lower);
+  const earlyFollowUp = conversational && earlyFollowUpCommand ? conversationFollowUpResponse(db, user, text, lower) : null;
+  if (earlyFollowUp) return earlyFollowUp;
   if (conversational && isEverydayEncyclopediaQuestion(text)) {
     return everydayEncyclopediaResponse(db, user, text, options);
   }
@@ -26998,10 +27063,6 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
     };
   }
-  const earlyFollowUpCommand = /^(explain that|repeat that|say that again|read that|what do you mean|why|where are we|what are we doing|what step|where am i|orient me|what is my checklist|continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|go there)\b/.test(lower)
-    || /\b(current mission|mission status|guided mission)\b/.test(lower);
-  const earlyFollowUp = conversational && earlyFollowUpCommand ? conversationFollowUpResponse(db, user, text, lower) : null;
-  if (earlyFollowUp) return earlyFollowUp;
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
     const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
     return {

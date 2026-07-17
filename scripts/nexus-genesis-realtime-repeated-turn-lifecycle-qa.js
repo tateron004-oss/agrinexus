@@ -64,7 +64,7 @@ includes(server, "create_response: true", "server VAD repeated response creation
 includes(server, "interrupt_response: true", "server VAD interruption support");
 includes(server, "silence_duration_ms: 650", "server VAD silence duration retained");
 
-["nexus-behavior-459", "agrinexus-pwa-v404"].forEach(marker => {
+["nexus-behavior-460", "agrinexus-pwa-v405"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
   includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
