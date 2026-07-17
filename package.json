@@ -113,6 +113,7 @@
     "qa:nexus-live-knowledge-provider-activation": "node scripts/nexus-live-knowledge-provider-activation-qa.js",
     "qa:nexus-open-domain-institutional-evidence": "node scripts/nexus-open-domain-institutional-evidence-qa.js",
     "qa:nexus-production-layer-activation-integration": "node scripts/nexus-production-layer-activation-integration-qa.js",
+    "qa:nexus-response-architecture-acceptance": "node scripts/nexus-response-architecture-acceptance-qa.js",
     "qa:nexus-global-agriculture-intelligence": "node scripts/nexus-global-agriculture-intelligence-qa.js",
     "qa:nexus-global-training-workforce": "node scripts/nexus-global-training-workforce-qa.js",
     "qa:nexus-global-chronic-care-health": "node scripts/nexus-global-chronic-care-health-qa.js",

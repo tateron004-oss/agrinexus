@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-461";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v406";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-462";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v407";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -12935,7 +12935,10 @@ function networkIntelligenceModel(db, user, providers = runtimeProviders(db)) {
 
 function networkIntelligenceCommandResponse(db, user, text, options = {}) {
   const lower = String(text || "").toLowerCase();
-  const networkSignal = /\b(network intelligence|networked intelligence|live provider|real provider|provider network|outside world|current|today|latest|closest|near me|market price|weather|live job|live course|live clinic|live pharmacy|route my crop|track.*shipment|internet brain)\b/.test(lower);
+  const asksForSourceResearch = /\b(research|source|sources|cite|citation|current information|source-backed|look up|search)\b/.test(lower);
+  const concreteNetworkAction = /\b(network intelligence|networked intelligence|live provider|real provider|provider network|outside world|closest|near me|nearby|nearest|market price|weather|live job|live course|live clinic|live pharmacy|route my crop|track.*shipment|shipment|clinic|pharmacy|hospital|provider status|what providers|what is connected|credentials missing|internet brain)\b/.test(lower);
+  if (asksForSourceResearch && !concreteNetworkAction) return null;
+  const networkSignal = concreteNetworkAction || /\b(today|latest)\b.*\b(price|market|weather|clinic|pharmacy|job|course|shipment|route)\b/.test(lower);
   if (!networkSignal) return null;
   if (/\b(status|readiness|what is connected|what providers|network intelligence)\b/.test(lower) && !/\b(find|route|price|weather|closest|near|track|check)\b/.test(lower)) {
     const model = networkIntelligenceModel(db, user);
@@ -17088,7 +17091,10 @@ function localTranslateText(text, targetLanguage) {
 
 async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform" }) {
   const runtime = providerRuntime("translation");
-  let translatedText = localTranslateText(text, targetLanguage);
+  const evidenceContext = /\b(source|evidence|citation|receipt|provenance|source_followup|current_knowledge|weather)\b/i.test(`${context || ""} ${text || ""}`);
+  let translatedText = evidenceContext && targetLanguage && targetLanguage !== "en"
+    ? `[${String(targetLanguage).toUpperCase()}] ${String(text || "")}`
+    : localTranslateText(text, targetLanguage);
   let provider = "local-dictionary";
   if (runtime.mode !== "local-dictionary" && runtime.mode !== "sandbox" && runtime.webhookUrl && runtime.apiKey) {
     try {
@@ -17843,7 +17849,7 @@ function conversationModuleSignal(text) {
     { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "mobile clinic", "register", "registration", "mother", "mama", "mi mama", "body pain", "pain", "sick", "what now", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "remedio", "dawa", "magani", "oogun", "kliniki", "daktari", "likita", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
     { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "graduate", "graduated", "university", "degree", "captions", "audio guide"] },
     { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "jobs", "career", "role", "worker", "candidate", "biochemistry", "biology", "chemistry", "laboratory", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
-    { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm", "no rain", "crop dying", "crop bad", "plant sick", "maize bad", "cassava bad", "pest", "disease", "drought", "irrigation", "field moisture", "yellow leaves", "bugs eating"] },
+    { module: "AgriTrade", section: "trade", keys: ["agriculture", "agriculture support", "agriculture help", "agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm", "no rain", "crop dying", "crop bad", "plant sick", "maize bad", "cassava bad", "pest", "disease", "drought", "irrigation", "field moisture", "yellow leaves", "bugs eating"] },
     { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk", "driver lost", "lost driver", "no gps", "where to go", "road safe", "road unsafe", "clinic near", "pharmacy near"] },
     { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
     { module: "Agent AI", section: "agent", keys: ["agent", "agrinexus", "nexus", "assistant", "voice", "conversation", "autopilot", "mission", "reason"] }
@@ -17865,7 +17871,7 @@ function isClearWorkflowExecution(lower) {
   const value = String(lower || "").trim();
   if (!value) return false;
   return /^(open|start|run|show|change|switch|translate|track|apply|complete|issue|create|call|message|contact|schedule|submit|send)\b/.test(value)
-    && /\b(map|course|lesson|certificate|language|route|shipment|job|role|doctor|provider|clinic|buyer|seller|crop|order|payment|wallet|intake|caption|audio|drone|health check|live service|mission|autopilot)\b/.test(value);
+    && /\b(map|course|lesson|certificate|language|route|shipment|job|role|doctor|provider|clinic|buyer|seller|crop|agriculture|field support|farm support|order|payment|wallet|intake|caption|audio|drone|health check|live service|mission|autopilot)\b/.test(value);
 }
 
 function isOpenDialogConversation(command = "", options = {}) {
@@ -18885,8 +18891,8 @@ function isCurrentKnowledgeQuestion(command = "") {
   if (/\b(find|show|open|need|want)\b.*\b(clinic|pharmacy|hospital)\b/.test(lower)
     || /\b(clinic|pharmacy|hospital)\b.*\b(near me|nearby|near|closest|map|route)\b/.test(lower)) return false;
   if (/\b(track|show|open|follow|monitor)\b.*\b(route|shipment|delivery|farm to market|market route)\b/.test(lower)) return false;
-  const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
-  const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
+  const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search|research)\b/.test(lower);
+  const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability|source|sources|source-backed|cite|citation|research)\b/.test(lower);
   const definitionShape = /^(what is|what's|whats|explain|define|tell me about|describe|teach me)\b/.test(lower) && !currentSignal;
   if (definitionShape) return false;
   const domainSignal = /\b(maize|corn|rice|cassava|yam|beans|crop|crops|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
@@ -20238,6 +20244,7 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
       ? "Source-backed current knowledge still requires local context and review before action."
       : live.reason || "Live source retrieval is not configured or did not return citable sources."
   });
+  db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
   db.nexusInstitutionalEvidenceReceipts.splice(100);
   return {
@@ -22514,6 +22521,57 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.paused", "paused", "dashboard", "Paused. Say Nexus when you want me again.", ["Nexus"]);
   }
 
+  return null;
+}
+
+function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
+  const value = normalizeSpeechForIntent(text || lower);
+  if (!/^(open|start|show|launch|go to)\b/.test(value)) return null;
+  const response = (intent, status, redirectSection, message, suggestedReplies = [], extraMetadata = {}) => ({
+    intent,
+    response: message,
+    status,
+    metadata: {
+      conversationMode: true,
+      suppressBehaviorNudge: true,
+      explicitWorkspaceOpen: true,
+      workflowOpened: true,
+      workflowType: redirectSection,
+      redirectSection,
+      moduleSignal: { module: conversationModuleSignal(text).module, section: redirectSection },
+      suggestedReplies,
+      noExecutionAuthorized: true,
+      providerHandoffAuthorized: false,
+      ...extraMetadata
+    }
+  });
+  if (/\b(agriculture|agriculture help|agriculture support|crop support|field support|farm support)\b/.test(value)) {
+    return response(
+      "conversation.crop_help",
+      "needs-details",
+      "trade",
+      "I opened agriculture support. Tell me the crop, farm location, and what looks wrong, and I will guide the next safe step without claiming live field dispatch.",
+      ["crop problem", "field evidence", "market support"]
+    );
+  }
+  if (/\b(workforce|jobs?|career|work support)\b/.test(value)) {
+    return response("conversation.workforce_help", "needs-details", "workforce", "I opened workforce support. Tell me the country, job type, and your skills, and I will guide the next step without submitting anything.", ["show job pathways", "review my skills", "training support"]);
+  }
+  if (/\b(training|learning|literacy|course|lesson)\b/.test(value)) {
+    return response("conversation.learning_start", "needs-topic", "learning", "I opened learning support. Tell me the skill or lesson you want, and I will guide the next step with captions or simpler wording if needed.", ["start course", "read lesson", "training for jobs"]);
+  }
+  if (/\b(health|chronic|telehealth|provider|clinic|mobile clinic)\b/.test(value)) {
+    return response("conversation.health_intake", "needs-details", "health", "I opened health access support. This is not a diagnosis; I can help prepare intake, provider summaries, and safe next steps for review.", ["start intake", "find clinic", "provider summary"]);
+  }
+  if (/\b(pharmacy|medicine|refill)\b/.test(value)) {
+    return response("conversation.medicine_help", "needs-details", "health", "I opened pharmacy support. I cannot prescribe or approve refills, but I can help organize the question for a pharmacist or clinician.", ["medicine question", "prepare refill question", "find pharmacy support"]);
+  }
+  if (/\b(marketplace|agritrade|trade|buyer|seller)\b/.test(value)) {
+    return response("conversation.crop_sale_help", "needs-details", "trade", "I opened AgriTrade support for marketplace planning. Tell me the crop, quantity, location, or buyer context, and I will prepare the next safe step without a transaction.", ["sell crop", "buyer message", "route support"]);
+  }
+  if (/\b(map|maps|route|field visit|location)\b/.test(value)) {
+    return response("conversation.map_open", "completed", "map", "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments. Share a starting point and destination if you want route planning; I will not use live location without permission.", ["plan route", "field visit", "clinic map"]);
+  }
   return null;
 }
 
@@ -25083,6 +25141,7 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
       limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
     });
+    db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
     db.nexusInstitutionalEvidenceReceipts.splice(100);
     return {
@@ -25539,6 +25598,8 @@ function nexusActivationTraceForResponse(safeResult = {}, options = {}) {
   ];
   return {
     traceVersion: "nexus.activationTrace.v1",
+    turnId: genesisVoiceCorrelationId(options.correlationId),
+    correlationId: genesisVoiceCorrelationId(options.correlationId),
     route: options.route || "/api/agent/command",
     inputMode: options.inputMode || metadata.inputMode || "api",
     outputMode: options.outputMode || metadata.outputMode || "",
@@ -25588,12 +25649,14 @@ function normalizeNexusResponseEnvelope(result = {}, options = {}) {
     contractVersion: NEXUS_RESPONSE_CONTRACT_VERSION,
     lifecycleVersion: NEXUS_REQUEST_LIFECYCLE_VERSION,
     ok: true,
+    turnId: genesisVoiceCorrelationId(options.correlationId),
     correlationId: genesisVoiceCorrelationId(options.correlationId),
     intent: safeResult.intent || options.fallbackIntent || "conversation.no_silence_guard",
     capability,
     route: options.route || "/api/agent/command",
     status,
     response: finalResponse,
+    spoken: finalResponse,
     speak: true,
     requiresFollowUp: status === "awaiting-information",
     missingInformation: status === "awaiting-information"
@@ -25645,6 +25708,7 @@ function normalizeGenesisCommandResponse(result = {}, options = {}) {
     intent: envelope.intent,
     route: envelope.route,
     response: envelope.response,
+    spoken: envelope.response,
     speak: envelope.speak,
     diagnostics: envelope.diagnostics
   };
@@ -25745,6 +25809,7 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
       limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
     });
+    db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
     db.nexusInstitutionalEvidenceReceipts.splice(100);
     return {
@@ -26788,6 +26853,19 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "start a course"] }
     };
   }
+  if (isLanguageCommand(lower)) {
+    const language = languageFromCommand(text);
+    if (!language) {
+      return {
+        intent: "conversation.language_change",
+        response: "I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which one you want.",
+        status: "needs-input",
+        metadata: { conversationMode: true, redirectSection: "dashboard", languageChangeRequested: true, noExecutionAuthorized: true }
+      };
+    }
+    const gatedLanguageChange = phase4RiskyActionForCommand(text);
+    if (gatedLanguageChange) return stageAgentAction(db, text, gatedLanguageChange);
+  }
   if (conversational && isGlobalVoiceStopIntent(text)) {
     clearSimpleVoiceTurn(db);
     db.profile.agentMemory.activeClarification = null;
@@ -27243,6 +27321,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
+  const explicitWorkspaceOpen = explicitWorkspaceOpenResponse(db, user, text, lower);
+  if (explicitWorkspaceOpen) return explicitWorkspaceOpen;
   const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
   if (healthVoiceAcceptance) return healthVoiceAcceptance;
   const platformVoiceAcceptance = platformWideVoiceAcceptanceResponse(db, user, text, lower, options);
@@ -28410,6 +28490,36 @@ async function runAgentCommand(db, user, command, options = {}) {
         : `I prepared the outbound call, but it needs setup before it can dial live: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`,
       status: call.delivery?.ok ? "completed" : "needs-setup",
       metadata: { conversationMode: true, redirectSection: purpose.includes("buyer") ? "trade" : purpose.includes("telehealth") ? "health" : "agent", outboundCall: call, suggestedReplies: ["explain that", "open communications", "cancel"] }
+    };
+  }
+
+  if (/\b(prepare|draft|write|compose)\b.*\b(message|sms|text|whatsapp|email|telegram|phone call|call script)\b/.test(lower)
+    || /\b(message|sms|text|whatsapp|email|telegram)\b.*\b(to|for)\b\s+[a-z0-9 .'-]{2,80}/i.test(text)) {
+    const channel = /\bwhatsapp\b/i.test(text) ? "WhatsApp"
+      : /\bemail\b/i.test(text) ? "Email"
+      : /\btelegram\b/i.test(text) ? "Telegram"
+      : /\b(call|phone)\b/i.test(text) ? "phone script"
+      : /\b(sms|text)\b/i.test(text) ? "SMS"
+      : "message";
+    const recipient = (String(text || "").match(/\b(?:to|for)\s+([a-z][a-z0-9 .'-]{1,50})(?:\s+about\b|$|[,.!?])/i)?.[1] || "the recipient").trim();
+    const topic = (String(text || "").match(/\babout\s+(.+)$/i)?.[1] || "your requested topic").replace(/[.!?]+$/g, "").trim();
+    return {
+      intent: "communications.message_prepared",
+      response: `I prepared a ${channel} draft for ${recipient} about ${topic}. I did not send anything. Review the draft and give explicit confirmation only when you want a configured provider to send it.`,
+      status: "needs-confirmation",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "agent",
+        channel,
+        recipient,
+        messageTopic: topic,
+        confirmationRequired: true,
+        executionDeferred: true,
+        noExecutionAuthorized: true,
+        providerHandoffAuthorized: false,
+        communicationsPreparation: true,
+        suggestedReplies: ["show draft", "change the message", "cancel"]
+      }
     };
   }
 
@@ -31214,6 +31324,8 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
   queryRecord.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
   queryRecord.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
   result.providerOffer = nexusProviderPathwayOffer(db, category, question);
+  db.nexusKnowledgeQueries = db.nexusKnowledgeQueries || [];
+  db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusKnowledgeQueries.unshift(queryRecord);
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
   db.nexusInstitutionalEvidenceReceipts.splice(100);
@@ -32060,6 +32172,7 @@ async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env =
     noExecutionAuthorized: true,
     noSensitiveDetailLogged: true
   };
+  db.nexusKnowledgeQueries = db.nexusKnowledgeQueries || [];
   db.nexusKnowledgeQueries.unshift(queryRecord);
   addNexusPilotAuditEvent(db, "live_knowledge_research_packet_prepared", {
     actor: user?.name || "Standard User",

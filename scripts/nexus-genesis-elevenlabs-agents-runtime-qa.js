@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-461",
+  "nexus-behavior-462",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,7 +30,7 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v406"
+  "agrinexus-pwa-v407"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -407,7 +407,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs",
   realtime: "rollback-only",
-  build: "nexus-behavior-461",
-  cache: "agrinexus-pwa-v406",
+  build: "nexus-behavior-462",
+  cache: "agrinexus-pwa-v407",
   noSecretValues: true
 }, null, 2));

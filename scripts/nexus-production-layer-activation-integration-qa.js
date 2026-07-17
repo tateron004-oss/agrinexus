@@ -154,8 +154,8 @@ function assertTrace(state, label, expectations = {}) {
   if (expectations.sourceFollowUp) {
     assert.equal(commandResult.metadata?.sourceFollowUp, true, `${label} should be a source follow-up`);
     assert(
-      response.response.includes("source") || response.response.includes("Source") || response.response.includes("Evidence") || response.response.includes("citation"),
-      `${label} should explain the relevant source/evidence context`
+      /\b(source|evidence|citation)\b/i.test(response.response),
+      `${label} should explain the relevant source/evidence context: ${JSON.stringify({ response: response.response, intent: response.intent, metadata: commandResult.metadata }, null, 2)}`
     );
   }
   if (expectations.noWorkflow) {

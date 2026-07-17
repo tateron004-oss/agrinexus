@@ -207,15 +207,15 @@ const setupDoc = read("docs/NEXUS_LIVE_KNOWLEDGE_PROVIDER_CONFIGURATION.md");
 ].forEach(token => excludes(setupDoc, token, `setup documentation secret pattern ${token}`));
 
 [
-  "nexus-behavior-461",
-  "agrinexus-pwa-v406"
+  "nexus-behavior-462",
+  "agrinexus-pwa-v407"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
-includes(index, "/styles.css?v=nexus-behavior-461", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-461", "app cache bust");
+includes(index, "/styles.css?v=nexus-behavior-462", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-462", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-live-knowledge-retrieval"],

@@ -1,5 +1,5 @@
-const CACHE_NAME = "agrinexus-pwa-v406";
-const BUILD_VERSION = "nexus-behavior-461";
+const CACHE_NAME = "agrinexus-pwa-v407";
+const BUILD_VERSION = "nexus-behavior-462";
 const APP_SHELL = [
   "/",
   "/index.html",
