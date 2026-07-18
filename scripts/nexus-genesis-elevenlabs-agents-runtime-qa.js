@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-463",
+  "nexus-behavior-464",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,7 +30,7 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v408"
+  "agrinexus-pwa-v409"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -299,9 +299,9 @@ assert.strictEqual(
 );
 
 [
-  "NEXUS_GENESIS_VOICE_RUNTIME=legacy",
-  "NEXUS_GENESIS_CANDIDATE_RUNTIME=elevenlabs",
-  "NEXUS_GENESIS_CANDIDATE_ENABLED=true",
+  "NEXUS_GENESIS_VOICE_RUNTIME=realtime",
+  "NEXUS_GENESIS_CANDIDATE_RUNTIME=",
+  "NEXUS_GENESIS_CANDIDATE_ENABLED=false",
   "NEXUS_GENESIS_CANDIDATE_ALLOWLIST=",
   "NEXUS_GENESIS_AUTOMATIC_ROLLBACK=true",
   "NEXUS_GENESIS_ELEVENLABS_ENABLED=true",
@@ -405,9 +405,9 @@ includes(qaSuite, "scripts/nexus-genesis-elevenlabs-agents-runtime-qa.js", "qa-s
 console.log(JSON.stringify({
   ok: true,
   suite: "nexus-genesis-elevenlabs-agents-runtime",
-  runtime: "elevenlabs",
-  realtime: "rollback-only",
-  build: "nexus-behavior-463",
-  cache: "agrinexus-pwa-v408",
+  runtime: "elevenlabs-inactive-provider-guard",
+  realtime: "openai-agents-realtime-default",
+  build: "nexus-behavior-464",
+  cache: "agrinexus-pwa-v409",
   noSecretValues: true
 }, null, 2));

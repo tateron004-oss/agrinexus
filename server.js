@@ -59,13 +59,13 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-463";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v408";
-const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-464";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v409";
+const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v2";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
-const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-2"]);
+const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-mini", "gpt-realtime-2", "gpt-realtime-2.1"]);
 const NEXUS_REALTIME_ALLOWED_VOICES = new Set(["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]);
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Genesis | AgriNexus",
@@ -16616,8 +16616,8 @@ function openAiRealtimeVoice(env = process.env) {
 }
 
 function openAiRealtimeModel(env = process.env) {
-  const requested = String(env.OPENAI_REALTIME_MODEL || "gpt-realtime").trim();
-  return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime";
+  const requested = String(env.OPENAI_REALTIME_MODEL || "gpt-realtime-2").trim();
+  return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime-2";
 }
 
 function nexusRealtimeFailureCategory(error = {}) {
@@ -16795,11 +16795,19 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
     model: openAiRealtimeModel(env),
     audio: {
       input: {
+        noise_reduction: {
+          type: String(env.OPENAI_REALTIME_NOISE_REDUCTION || "near_field").trim() || "near_field"
+        },
+        transcription: {
+          model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
+          language: String(language || "en").slice(0, 12)
+        },
         turn_detection: {
-          type: "server_vad",
-          threshold: 0.5,
+          type: String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad",
+          eagerness: String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto",
+          threshold: Number(env.OPENAI_REALTIME_VAD_THRESHOLD || 0.5),
           prefix_padding_ms: 300,
-          silence_duration_ms: 650,
+          silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),
           create_response: true,
           interrupt_response: true
         }
@@ -16808,9 +16816,85 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         voice: openAiRealtimeVoice(env)
       }
     },
+    output_modalities: ["audio"],
     instructions: openAiRealtimeInstructions(user, language),
-    tools: nexusRealtimeToolSchemas(),
+    tools: nexusOpenAiNativeToolSchemas().map(({ metadata, ...tool }) => tool),
     tool_choice: "auto"
+  };
+}
+
+function openAiAgentsRealtimeClientConfig(user, language = "en", env = process.env) {
+  const session = openAiRealtimeSessionConfig(user, language, env);
+  return {
+    model: session.model,
+    instructions: session.instructions,
+    outputModalities: ["audio"],
+    audio: {
+      input: {
+        noiseReduction: session.audio.input.noise_reduction,
+        transcription: session.audio.input.transcription,
+        turnDetection: {
+          type: session.audio.input.turn_detection.type,
+          createResponse: true,
+          interruptResponse: true,
+          eagerness: session.audio.input.turn_detection.eagerness,
+          threshold: session.audio.input.turn_detection.threshold,
+          prefixPaddingMs: session.audio.input.turn_detection.prefix_padding_ms,
+          silenceDurationMs: session.audio.input.turn_detection.silence_duration_ms
+        }
+      },
+      output: {
+        voice: session.audio.output.voice
+      }
+    },
+    toolChoice: "auto"
+  };
+}
+
+async function openAiRealtimeClientSecret({ user, language = "en" }) {
+  if (!genesisRealtimeConfigured(process.env)) throw new Error("OPENAI_API_KEY is required for OpenAI Realtime voice.");
+  const session = openAiRealtimeSessionConfig(user, language, process.env);
+  const clientSecretsEndpoint = String(process.env.OPENAI_REALTIME_CLIENT_SECRETS_URL || "https://api.openai.com/v1/realtime/client_secrets").trim();
+  const safetyId = crypto
+    .createHash("sha256")
+    .update(String(user?.id || user?.email || "anonymous"))
+    .digest("hex");
+  const response = await fetchWithTimeout(clientSecretsEndpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+      "OpenAI-Safety-Identifier": safetyId
+    },
+    body: JSON.stringify(session)
+  }, Number(process.env.OPENAI_REALTIME_TIMEOUT_MS || 20000));
+  const payload = await response.json().catch(async () => ({ raw: await response.text().catch(() => "") }));
+  if (!response.ok) {
+    const detail = payload?.error?.message || payload?.message || `OpenAI Realtime client secret failed: ${response.status}`;
+    const error = new Error(detail);
+    error.httpStatus = response.status;
+    error.category = nexusRealtimeFailureCategory(error);
+    throw error;
+  }
+  const value = payload?.client_secret?.value || payload?.value || "";
+  if (!String(value || "").startsWith("ek_")) {
+    const error = new Error("OpenAI Realtime did not return a browser client secret.");
+    error.category = "provider-invalid-response";
+    throw error;
+  }
+  return {
+    clientSecret: value,
+    expiresAt: payload?.client_secret?.expires_at || payload?.expires_at || null,
+    provider: "openai-realtime",
+    clientSecretsEndpointConfigured: Boolean(process.env.OPENAI_REALTIME_CLIENT_SECRETS_URL),
+    model: session.model,
+    voice: session.audio.output.voice,
+    transport: "agents-sdk-webrtc",
+    runtimeVersion: NEXUS_GENESIS_REALTIME_RUNTIME_VERSION,
+    clientConfig: openAiAgentsRealtimeClientConfig(user, language, process.env),
+    toolNames: nexusOpenAiNativeToolSchemas().map(tool => tool.name),
+    noPermanentKeyInBrowser: true,
+    noSecretValuesReturned: true
   };
 }
 
@@ -16857,13 +16941,13 @@ function nexusRealtimeRuntimeStatus(env = process.env) {
   const fallback = canonicalGenesisRealtimeFallback(env);
   const configured = genesisRealtimeConfigured(env);
   const rollbackEnabled = genesisRealtimeRollbackEnabled(env);
-  const enabled = rollbackEnabled;
-  const ready = selectedRuntime === "realtime" && rollbackEnabled && configured;
+  const enabled = selectedRuntime === "realtime";
+  const ready = selectedRuntime === "realtime" && configured;
   return {
     ok: true,
     runtime: selectedRuntime,
     realtimeEnabled: enabled,
-    rollbackOnly: true,
+    rollbackOnly: false,
     rollbackEnabled,
     fallback,
     configured,
@@ -16872,31 +16956,33 @@ function nexusRealtimeRuntimeStatus(env = process.env) {
     provider: "openai",
     model: openAiRealtimeModel(env),
     voice: openAiRealtimeVoice(env),
-    transport: "webrtc",
     runtimeVersion: NEXUS_GENESIS_REALTIME_RUNTIME_VERSION,
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
-    endpoint: "/api/voice/realtime/call",
+    endpoint: "/api/voice/realtime/session",
+    legacySdpEndpoint: "/api/voice/realtime/call",
     toolEndpoint: "/api/voice/realtime/tool",
     statusEndpoint: "/api/voice/realtime/status",
-    tools: nexusRealtimeToolSchemas().map(tool => ({
+    transport: "agents-sdk-webrtc",
+    sdk: "@openai/agents/realtime",
+    tools: nexusOpenAiNativeToolSchemas().map(tool => ({
       name: tool.name,
-      safetyClassification: tool.safetyClassification,
-      confirmationRequired: tool.confirmationRequired,
-      executionAuthority: tool.executionAuthority
+      safetyClassification: tool.metadata?.safetyClassification || "controlled-platform-tool",
+      confirmationRequired: tool.name === "nexus_communications" ? "Explicit Nexus confirmation required before send/call execution." : "Nexus decides based on routed capability",
+      executionAuthority: Boolean(tool.metadata?.executionAuthority)
     })),
     noPermanentKeyInBrowser: true,
     noUserFacingRuntimeSelector: true,
     legacyFallbackAvailable: false,
     note: ready
-      ? "Nexus Genesis Realtime rollback mode is explicitly selected and configured."
+      ? "Nexus Genesis OpenAI Agents Realtime is selected, configured, and ready to issue short-lived browser credentials."
       : selectedRuntime === "disabled"
         ? "Nexus Genesis voice runtime is disabled by server configuration."
-        : selectedRuntime === "elevenlabs"
-          ? "OpenAI Realtime is disabled for acceptance testing. ElevenLabs Agents is the sole active Genesis runtime."
+      : selectedRuntime === "elevenlabs"
+          ? "OpenAI Realtime is not selected. Set NEXUS_GENESIS_VOICE_RUNTIME=realtime for the OpenAI-native Genesis runtime."
         : selectedRuntime === "legacy"
           ? "Nexus Genesis legacy voice runtime is selected by server configuration."
-          : "OpenAI Realtime is rollback-only and requires NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED=true before it can run."
+          : "OpenAI Realtime requires NEXUS_GENESIS_VOICE_RUNTIME=realtime and OPENAI_API_KEY."
   };
 }
 
@@ -47590,6 +47676,87 @@ async function api(req, res, url) {
     return send(res, 200, { realtimeVoice: nexusRealtimeRuntimeStatus(process.env) }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
+  }
+
+  if (url.pathname === "/api/voice/realtime/session" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime voice" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    const runtimeStatus = nexusRealtimeRuntimeStatus(process.env);
+    if (runtimeStatus.runtime === "disabled") {
+      return send(res, 409, { error: "Nexus Genesis voice runtime is disabled.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    if (runtimeStatus.runtime !== "realtime") {
+      return send(res, 409, { error: "Nexus Genesis OpenAI Realtime is not the selected runtime.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    if (!runtimeStatus.configured) {
+      return send(res, 503, { error: "OpenAI Realtime is missing required server configuration.", category: "provider-not-configured", missingEnv: runtimeStatus.missingEnv, realtimeVoice: runtimeStatus }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    try {
+      const body = await readBody(req);
+      const language = body.language || url.searchParams.get("language") || user.language || "en";
+      const session = await openAiRealtimeClientSecret({ user, language });
+      voiceRecord(db, user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
+        provider: session.provider,
+        model: session.model,
+        voice: session.voice,
+        transport: session.transport,
+        language
+      });
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI Voice",
+        action: "voice.openai_agents_realtime_session_authorized",
+        status: "success",
+        detail: "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        metadata: { model: session.model, voice: session.voice, transport: session.transport },
+        dispatch: false
+      });
+      await writeDb(db);
+      return send(res, 200, {
+        ok: true,
+        runtime: "realtime",
+        provider: session.provider,
+        transport: session.transport,
+        model: session.model,
+        voice: session.voice,
+        runtimeVersion: session.runtimeVersion,
+        clientSecret: session.clientSecret,
+        expiresAt: session.expiresAt,
+        clientConfig: session.clientConfig,
+        toolEndpoint: "/api/voice/realtime/tool",
+        tools: session.toolNames,
+        noPermanentKeyInBrowser: true,
+        noSecretValuesReturned: true
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    } catch (error) {
+      const category = error.category || nexusRealtimeFailureCategory(error);
+      voiceRecord(db, user, "openai-agents-realtime", `OpenAI Agents Realtime session failed: ${error.message}`, {
+        provider: "openai-realtime",
+        errorCategory: category,
+        language: url.searchParams.get("language") || user.language || "en"
+      });
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI Voice",
+        action: "voice.openai_agents_realtime_session_failed",
+        status: "error",
+        detail: category,
+        metadata: { transport: "agents-sdk-webrtc", category, httpStatus: error.httpStatus || null },
+        dispatch: false
+      });
+      await writeDb(db);
+      return send(res, 502, { error: "OpenAI Agents Realtime session failed truthfully.", category, realtimeVoice: nexusRealtimeRuntimeStatus(process.env) }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
   }
 
   if (url.pathname === "/api/voice/realtime/call" && req.method === "POST") {

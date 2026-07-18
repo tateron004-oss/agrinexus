@@ -1334,8 +1334,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-463";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v408";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-464";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v409";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49368,6 +49368,16 @@ function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
   if (!realtimeVoiceSession) return;
   updateRealtimeControllerState("closed", "controller-cleanup-entered", { reason });
   try {
+    realtimeVoiceSession.sdkController?.close?.(reason);
+  } catch (error) {
+    // SDK session may already be closed.
+  }
+  try {
+    realtimeVoiceSession.sdkSession?.close?.();
+  } catch (error) {
+    // SDK session may already be closed.
+  }
+  try {
     realtimeVoiceSession.dataChannel?.close?.();
   } catch (error) {
     // Already closed.
@@ -49398,6 +49408,214 @@ function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
   refreshMicSupport();
 }
 
+let nexusOpenAiRealtimeAgentModulePromise = null;
+
+function loadNexusOpenAiRealtimeAgentModule() {
+  if (!nexusOpenAiRealtimeAgentModulePromise) {
+    nexusOpenAiRealtimeAgentModulePromise = import(`/vendor/nexus-openai-realtime-agent.bundle.mjs?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`);
+  }
+  return nexusOpenAiRealtimeAgentModulePromise;
+}
+
+async function requestNexusOpenAiRealtimeSession(status = {}) {
+  const response = await fetch(`/api/voice/realtime/session?language=${encodeURIComponent(languageCode())}`, {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      language: languageCode(),
+      model: status.model || "",
+      transport: "agents-sdk-webrtc"
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `OpenAI Realtime session failed: ${response.status}`);
+  if (!String(payload.clientSecret || "").startsWith("ek_")) throw new Error("OpenAI Realtime session did not return a browser client secret.");
+  return payload;
+}
+
+async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
+  const command = String(args.command || args.query || "").trim();
+  const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
+    toolName,
+    correlationId,
+    commandLength: command.length
+  });
+  const response = await fetch("/api/voice/realtime/tool", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      name: toolName || "nexus_general_conversation",
+      correlationId,
+      arguments: {
+        ...args,
+        command,
+        language: args.language || languageCode()
+      },
+      language: args.language || languageCode()
+    })
+  });
+  const result = await response.json().catch(() => ({
+    ok: false,
+    status: "failed-truthfully",
+    response: "I could not parse the Nexus tool result.",
+    blockedReason: "client-parse-failed"
+  }));
+  nexusGenesisVoiceDebugLog("openai-agents-tool-call-completed", {
+    toolName,
+    correlationId,
+    status: result.status || "",
+    providerAttempted: Boolean(result.providerAttempted || result.provider?.attempted),
+    executionAttempted: Boolean(result.executionAttempted || result.execution?.attempted)
+  });
+  return result;
+}
+
+function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
+  const eventType = String(payload.type || "");
+  nexusGenesisVoiceDebugLog(`openai-agents-${eventName}`, {
+    type: eventType,
+    status: payload.status || "",
+    toolName: payload.toolName || ""
+  });
+  if (eventName === "transport_event") {
+    if (eventType === "input_audio_buffer.speech_started") {
+      const turnId = nextRealtimeTurnId();
+      markNexusUserSpeech("Realtime voice detected speech.", "openai-agents-realtime");
+      updateRealtimeControllerState("user-speaking", Number(realtimeVoiceSession?.turnIndex || 0) >= 2 ? "second-user-speech-detected" : "user-speech-started", { turnId });
+    }
+    if (eventType === "input_audio_buffer.speech_stopped" || eventType === "input_audio_buffer.committed") {
+      updateRealtimeControllerState("processing", eventType === "input_audio_buffer.committed" ? "input-audio-committed" : "user-speech-stopped");
+    }
+    if (eventType === "response.done") {
+      markRealtimeResponseCompleted("response-completed");
+    }
+  }
+  if (eventName === "audio_start") {
+    markRealtimeResponseStarted({}, "openai-agents-audio-started");
+    updateNexusVoiceSession({ state: "realtime-speaking", assistantSpeaking: true, userSpeaking: false }, "openai-agents-realtime-audio-start");
+  }
+  if (eventName === "audio_stopped") {
+    updateNexusVoiceSession({ state: "realtime-listening", assistantSpeaking: false, userSpeaking: false, lastAssistantSpeechAt: Date.now() }, "openai-agents-realtime-audio-stopped");
+    markRealtimeResponseCompleted("output-audio-finished");
+  }
+  if (eventName === "audio_interrupted") {
+    updateNexusVoiceSession({ state: "realtime-listening", assistantSpeaking: false }, "openai-agents-realtime-interruption");
+    updateRealtimeControllerState("interrupted", "openai-agents-interruption", { interrupted: true });
+  }
+  if (eventName === "agent_tool_start") {
+    updateRealtimeControllerState("processing", "openai-agents-tool-dispatch-started", { toolName: payload.toolName || "" });
+  }
+  if (eventName === "agent_tool_end") {
+    updateRealtimeControllerState("responding", "openai-agents-tool-dispatch-completed", { toolName: payload.toolName || "" });
+  }
+  if (eventName === "agent_end") {
+    updateRealtimeControllerState("listening", "openai-agents-agent-response-completed", { readyForNextInput: true });
+  }
+  if (eventName === "error") {
+    updateRealtimeControllerState("reconnecting", "openai-agents-sdk-error", { errorType: payload.type || "sdk-error" });
+    scheduleRealtimeRecovery(payload.type || "openai-agents-sdk-error");
+  }
+}
+
+async function startOpenAiAgentsRealtimeVoiceSession(status = {}) {
+  const sessionId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  nexusGenesisVoiceDebugLog("runtime-selected", { runtime: "realtime", transport: "agents-sdk-webrtc", sessionId });
+  stopVoicePlayback();
+  voiceStopRequested = true;
+  if (voiceRecognition) {
+    try {
+      voiceRecognition.stop();
+    } catch {
+      // Legacy recognition may already be stopped.
+    }
+    voiceRecognition = null;
+  }
+  stopNexusAudioFallbackRecorder("openai-agents-realtime-selected");
+  stopNexusVoicePermissionStream("openai-agents-realtime-selected");
+  realtimeVoiceSession = {
+    active: true,
+    runtime: "realtime",
+    transport: "agents-sdk-webrtc",
+    startedAt: Date.now(),
+    controllerState: "connecting",
+    sessionId,
+    turnIndex: 0,
+    turnId: "",
+    responseInProgress: false,
+    activeResponseId: "",
+    cancelInProgress: false,
+    reconnectAttempted: false,
+    model: status.model,
+    voice: status.voice,
+    runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
+  };
+  updateRealtimeControllerState("authorizing", "openai-agents-session-requested", {
+    model: status.model || "",
+    voice: status.voice || ""
+  });
+  const [module, sessionPayload] = await Promise.all([
+    loadNexusOpenAiRealtimeAgentModule(),
+    requestNexusOpenAiRealtimeSession(status)
+  ]);
+  updateRealtimeControllerState("connecting", "openai-agents-client-secret-issued", {
+    model: sessionPayload.model || "",
+    voice: sessionPayload.voice || "",
+    expiresAt: sessionPayload.expiresAt || null,
+    noPermanentKeyInBrowser: true
+  });
+  const controller = await module.startNexusOpenAiRealtimeGenesisSession({
+    clientSecret: sessionPayload.clientSecret,
+    model: sessionPayload.model || status.model || "gpt-realtime-2",
+    voice: sessionPayload.voice || status.voice || "marin",
+    instructions: sessionPayload.clientConfig?.instructions || "",
+    clientConfig: sessionPayload.clientConfig || {},
+    language: () => languageCode(),
+    lastUserCommand: () => nexusOsVoiceRuntimeState.lastFinal || "",
+    callNexusTool: callNexusOpenAiRealtimeTool,
+    onToolResult: (toolName, result) => {
+      updateRealtimeControllerState("responding", "openai-agents-tool-result-returned", {
+        toolName,
+        status: result?.status || "",
+        providerAttempted: Boolean(result?.providerAttempted || result?.provider?.attempted),
+        executionAttempted: Boolean(result?.executionAttempted || result?.execution?.attempted)
+      });
+    },
+    onEvent: handleOpenAiAgentsRealtimeEvent
+  });
+  if (!realtimeVoiceSession || realtimeVoiceSession.sessionId !== sessionId) {
+    controller.close?.("stale-openai-agents-session");
+    return false;
+  }
+  realtimeVoiceSession.sdkController = controller;
+  realtimeVoiceSession.sdkSession = controller.session;
+  realtimeVoiceSession.model = sessionPayload.model || status.model;
+  realtimeVoiceSession.voice = sessionPayload.voice || status.voice;
+  realtimeVoiceStarting = false;
+  voiceStopRequested = false;
+  setVoiceStatus("listening");
+  updateNexusBehaviorLayer("realtime-listening", "Nexus is listening.");
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText("Nexus is listening.");
+  updateNexusVoiceSession({
+    state: "realtime-listening",
+    userSpeaking: false,
+    assistantSpeaking: false
+  }, "openai-agents-realtime-started");
+  updateNativeVoiceBridgeState("realtime-listening", { provider: "openai-agents-realtime", locale: voiceLocale() });
+  updateRealtimeControllerState("listening", "openai-agents-sdk-session-started", {
+    model: realtimeVoiceSession.model || "",
+    voice: realtimeVoiceSession.voice || "",
+    runtimeVersion: realtimeVoiceSession.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION
+  });
+  refreshMicSupport();
+  return true;
+}
+
 async function startRealtimeVoiceSession() {
   if (!realtimeVoiceSupported()) return false;
   if (realtimeVoiceActive()) return true;
@@ -49411,6 +49629,9 @@ async function startRealtimeVoiceSession() {
     if (status.runtime === "disabled") throw new Error(status.note || "Nexus voice is disabled.");
     if (status.runtime !== "realtime") return false;
     if (!status.ready) throw new Error(status.note || "OpenAI Realtime voice is not configured.");
+    if (status.transport === "agents-sdk-webrtc" || status.endpoint === "/api/voice/realtime/session") {
+      return await startOpenAiAgentsRealtimeVoiceSession(status);
+    }
     stopVoicePlayback();
     voiceStopRequested = true;
     if (voiceRecognition) {

@@ -1,0 +1,287 @@
+const assert = require("node:assert");
+const fs = require("node:fs");
+const http = require("node:http");
+const os = require("node:os");
+const path = require("node:path");
+const { spawn } = require("node:child_process");
+
+const root = path.resolve(__dirname, "..");
+const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
+
+const server = read("server.js");
+const app = read("public/app.js");
+const envExample = read(".env.example");
+const packageJson = JSON.parse(read("package.json"));
+const qaSuite = read("scripts/qa-suite.js");
+const agentSource = read("public/nexus-openai-realtime-agent.js");
+const agentBundle = read("public/vendor/nexus-openai-realtime-agent.bundle.mjs");
+
+function requestJson(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const body = options.body ? JSON.stringify(options.body) : "";
+    const req = http.request({
+      hostname: parsed.hostname,
+      port: parsed.port,
+      path: parsed.pathname + parsed.search,
+      method: options.method || (body ? "POST" : "GET"),
+      headers: {
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
+        origin: options.origin || `http://${parsed.host}`,
+        ...(options.cookie ? { cookie: options.cookie } : {})
+      }
+    }, res => {
+      let raw = "";
+      res.setEncoding("utf8");
+      res.on("data", chunk => {
+        raw += chunk;
+      });
+      res.on("end", () => {
+        try {
+          resolve({
+            status: res.statusCode,
+            body: raw ? JSON.parse(raw) : null,
+            raw,
+            setCookie: res.headers["set-cookie"]
+          });
+        } catch (error) {
+          reject(new Error(`Invalid JSON from ${url}: ${raw.slice(0, 240)} (${error.message})`));
+        }
+      });
+    });
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+function listen(serverInstance) {
+  return new Promise(resolve => serverInstance.listen(0, "127.0.0.1", () => resolve(serverInstance.address().port)));
+}
+
+async function waitForServer(baseUrl, child) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 30000) {
+    if (child.exitCode !== null) throw new Error(`Server exited before readiness with code ${child.exitCode}`);
+    try {
+      const health = await requestJson(`${baseUrl}/api/health`);
+      if (health.status === 200) return;
+    } catch {
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  throw new Error("Nexus server did not become ready");
+}
+
+async function withNexusServer(env, callback) {
+  const port = 6400 + Math.floor(Math.random() * 400);
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-openai-realtime-"));
+  const dbPath = path.join(tmpDir, "db.json");
+  const child = spawn(process.execPath, ["server.js"], {
+    cwd: root,
+    env: {
+      ...process.env,
+      ...env,
+      PORT: String(port),
+      AGRINEXUS_DB_PATH: dbPath,
+      REQUIRE_LIVE_SERVICES: "false"
+    },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  let output = "";
+  child.stdout.on("data", chunk => {
+    output += chunk.toString();
+  });
+  child.stderr.on("data", chunk => {
+    output += chunk.toString();
+  });
+  const baseUrl = `http://127.0.0.1:${port}`;
+  try {
+    await waitForServer(baseUrl, child);
+    await callback(baseUrl);
+  } finally {
+    child.kill();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+  assert(!/test-openai-secret|sk-test|Bearer\s+test/i.test(output), "server logs must not expose OpenAI secret values");
+}
+
+function assertNoSecrets(value, label) {
+  const text = JSON.stringify(value);
+  assert(!/test-openai-secret|sk-test|Bearer\s+|OPENAI_API_KEY=/.test(text), `${label} must not expose permanent OpenAI secrets`);
+}
+
+function staticAssertions() {
+  [
+    "@openai/agents/realtime",
+    "RealtimeAgent",
+    "RealtimeSession",
+    "startNexusOpenAiRealtimeGenesisSession",
+    "nexus_weather",
+    "nexus_live_knowledge",
+    "nexus_maps_route",
+    "nexus_agriculture",
+    "nexus_health_preparation",
+    "nexus_workforce_learning",
+    "nexus_marketplace_logistics",
+    "nexus_communications",
+    "nexus_workflow",
+    "nexus_provider_readiness"
+  ].forEach(token => assert(agentSource.includes(token), `Realtime agent source should include ${token}`));
+
+  [
+    "/api/voice/realtime/session",
+    "/v1/realtime/client_secrets",
+    "OPENAI_REALTIME_CLIENT_SECRETS_URL",
+    "openAiRealtimeClientSecret",
+    "clientSecret",
+    "noPermanentKeyInBrowser",
+    "agents-sdk-webrtc",
+    "gpt-realtime-2",
+    "nexusOpenAiNativeToolSchemas"
+  ].forEach(token => assert(server.includes(token), `server should include ${token}`));
+
+  [
+    "startOpenAiAgentsRealtimeVoiceSession",
+    "requestNexusOpenAiRealtimeSession",
+    "loadNexusOpenAiRealtimeAgentModule",
+    "/vendor/nexus-openai-realtime-agent.bundle.mjs",
+    "/api/voice/realtime/tool",
+    "openai-agents-sdk-session-started"
+  ].forEach(token => assert(app.includes(token), `app should include ${token}`));
+
+  [
+    "NEXUS_GENESIS_VOICE_RUNTIME=realtime",
+    "OPENAI_REALTIME_MODEL=gpt-realtime-2",
+    "OPENAI_REALTIME_CLIENT_SECRETS_URL=",
+    "NEXUS_OPENAI_NATIVE_ENABLED=true"
+  ].forEach(token => assert(envExample.includes(token), `.env.example should include ${token}`));
+
+  assert(agentBundle.includes("RealtimeSession"), "bundled Realtime agent should include the official SDK session");
+  assert(!agentBundle.includes("OPENAI_API_KEY"), "browser bundle must not include permanent OpenAI key names");
+  assert.equal(packageJson.scripts["qa:nexus-openai-realtime-genesis"], "node scripts/nexus-openai-realtime-genesis-qa.js");
+  assert.equal(packageJson.scripts["build:nexus-openai-realtime-agent"], "esbuild public/nexus-openai-realtime-agent.js --bundle --format=esm --platform=browser --target=es2020 --outfile=public/vendor/nexus-openai-realtime-agent.bundle.mjs");
+  assert(qaSuite.includes("scripts/nexus-openai-realtime-genesis-qa.js"), "qa-suite should include Realtime Genesis QA");
+}
+
+async function routeAssertions() {
+  let clientSecretRequests = 0;
+  const openAiMock = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", chunk => {
+      raw += chunk.toString();
+    });
+    req.on("end", () => {
+      clientSecretRequests += 1;
+      assert.equal(req.method, "POST", "Realtime client-secret request should use POST");
+      assert.equal(req.url, "/v1/realtime/client_secrets", "Realtime client-secret path should match OpenAI contract");
+      assert.equal(req.headers.authorization, "Bearer test-openai-secret", "permanent key should only be sent server-to-server");
+      const body = JSON.parse(raw || "{}");
+      assert.equal(body.model, "gpt-realtime-2", "Realtime session should target gpt-realtime-2 by default");
+      assert(Array.isArray(body.tools), "Realtime session should include tool schemas");
+      assert(body.tools.some(tool => tool.name === "nexus_weather"), "Realtime session should expose Nexus weather tool");
+      assert(body.tools.some(tool => tool.name === "nexus_provider_readiness"), "Realtime session should expose provider readiness tool");
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({
+        type: "realtime.client_secret",
+        client_secret: {
+          value: "ek_test_ephemeral_realtime_secret",
+          expires_at: Math.floor(Date.now() / 1000) + 60
+        }
+      }));
+    });
+  });
+  const openAiPort = await listen(openAiMock);
+  try {
+    await withNexusServer({
+      OPENAI_API_KEY: "",
+      NEXUS_GENESIS_VOICE_RUNTIME: "realtime",
+      NEXUS_OPENAI_NATIVE_ENABLED: "true"
+    }, async baseUrl => {
+      const login = await requestJson(`${baseUrl}/api/login`, {
+        body: {
+          email: "admin@agrinexus.org",
+          password: "Admin2026!"
+        }
+      });
+      assert.equal(login.status, 200, "login should succeed for seeded admin");
+      const cookie = (login.setCookie || []).map(item => item.split(";")[0]).join("; ");
+      const status = await requestJson(`${baseUrl}/api/voice/realtime/status`, { cookie });
+      assert.equal(status.status, 200, "Realtime status should return HTTP 200");
+      assert.equal(status.body.realtimeVoice.ready, false, "Realtime status should be credential-blocked without a key");
+      assert.deepEqual(status.body.realtimeVoice.missingEnv, ["OPENAI_API_KEY"], "missing config should name only OPENAI_API_KEY");
+      assertNoSecrets(status.body, "missing-key Realtime status");
+    });
+
+    await withNexusServer({
+      OPENAI_API_KEY: "test-openai-secret",
+      OPENAI_REALTIME_CLIENT_SECRETS_URL: `http://127.0.0.1:${openAiPort}/v1/realtime/client_secrets`,
+      NEXUS_GENESIS_VOICE_RUNTIME: "realtime",
+      NEXUS_OPENAI_NATIVE_ENABLED: "true"
+    }, async baseUrl => {
+      const login = await requestJson(`${baseUrl}/api/login`, {
+        body: {
+          email: "admin@agrinexus.org",
+          password: "Admin2026!"
+        }
+      });
+      assert.equal(login.status, 200, "login should succeed for seeded admin");
+      const cookie = (login.setCookie || []).map(item => item.split(";")[0]).join("; ");
+
+      const status = await requestJson(`${baseUrl}/api/voice/realtime/status`, { cookie });
+      assert.equal(status.status, 200);
+      assert.equal(status.body.realtimeVoice.ready, true, "Realtime status should be ready with key and runtime");
+      assert.equal(status.body.realtimeVoice.transport, "agents-sdk-webrtc");
+      assert.equal(status.body.realtimeVoice.endpoint, "/api/voice/realtime/session");
+      assertNoSecrets(status.body, "configured Realtime status");
+
+      const session = await requestJson(`${baseUrl}/api/voice/realtime/session?language=en`, {
+        cookie,
+        body: {
+          language: "en",
+          transport: "agents-sdk-webrtc"
+        }
+      });
+      assert.equal(session.status, 200, `Realtime session should issue an ephemeral credential: ${session.raw}`);
+      assert.equal(session.body.ok, true);
+      assert.equal(session.body.transport, "agents-sdk-webrtc");
+      assert.equal(session.body.sdk, undefined, "session response should not expose an SDK implementation object");
+      assert(String(session.body.clientSecret).startsWith("ek_"), "session response should expose only an ephemeral client secret");
+      assert.equal(session.body.noPermanentKeyInBrowser, true);
+      assert.equal(session.body.noSecretValuesReturned, true);
+      assert(Array.isArray(session.body.tools) && session.body.tools.includes("nexus_weather"), "session response should list Nexus tools");
+      assertNoSecrets(session.body, "Realtime client-secret response");
+
+      const tool = await requestJson(`${baseUrl}/api/voice/realtime/tool`, {
+        cookie,
+        body: {
+          name: "nexus_provider_readiness",
+          correlationId: "qa-openai-realtime-tool",
+          arguments: {
+            command: "check provider readiness",
+            language: "en"
+          }
+        }
+      });
+      assert.equal(tool.status, 200, `Realtime tool gateway should return HTTP 200: ${tool.raw}`);
+      assert.equal(tool.body.ok, true, "Realtime tool gateway should return a normalized Nexus result");
+      assert.equal(tool.body.noUngatedExecution, true, "Realtime tool results must preserve no-ungated-execution guard");
+      assertNoSecrets(tool.body, "Realtime tool response");
+    });
+  } finally {
+    await new Promise(resolve => openAiMock.close(resolve));
+  }
+  assert.equal(clientSecretRequests, 1, "QA should make exactly one mocked OpenAI client-secret request");
+}
+
+async function main() {
+  staticAssertions();
+  await routeAssertions();
+  console.log("Nexus OpenAI Realtime Genesis QA passed");
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

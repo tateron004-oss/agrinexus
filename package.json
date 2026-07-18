@@ -111,10 +111,12 @@
     "qa:nexus-live-knowledge-all-modes": "node scripts/nexus-live-knowledge-all-modes-qa.js",
     "qa:nexus-global-live-knowledge": "node scripts/nexus-global-live-knowledge-qa.js",
     "qa:nexus-openai-native-genesis": "node scripts/nexus-openai-native-genesis-qa.js",
+    "qa:nexus-openai-realtime-genesis": "node scripts/nexus-openai-realtime-genesis-qa.js",
     "qa:nexus-live-knowledge-provider-activation": "node scripts/nexus-live-knowledge-provider-activation-qa.js",
     "qa:nexus-open-domain-institutional-evidence": "node scripts/nexus-open-domain-institutional-evidence-qa.js",
     "qa:nexus-production-layer-activation-integration": "node scripts/nexus-production-layer-activation-integration-qa.js",
     "qa:nexus-response-architecture-acceptance": "node scripts/nexus-response-architecture-acceptance-qa.js",
+    "build:nexus-openai-realtime-agent": "esbuild public/nexus-openai-realtime-agent.js --bundle --format=esm --platform=browser --target=es2020 --outfile=public/vendor/nexus-openai-realtime-agent.bundle.mjs",
     "qa:nexus-global-agriculture-intelligence": "node scripts/nexus-global-agriculture-intelligence-qa.js",
     "qa:nexus-global-training-workforce": "node scripts/nexus-global-training-workforce-qa.js",
     "qa:nexus-global-chronic-care-health": "node scripts/nexus-global-chronic-care-health-qa.js",
@@ -1124,9 +1126,14 @@
   },
   "dependencies": {
     "@elevenlabs/client": "1.15.0",
-    "pg": "^8.13.1"
+    "@openai/agents": "^0.13.5",
+    "pg": "^8.13.1",
+    "zod": "^4.4.3"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
   }
 }
