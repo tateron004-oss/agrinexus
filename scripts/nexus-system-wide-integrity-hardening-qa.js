@@ -214,7 +214,7 @@ async function waitForServer() {
 
 async function call(route, body) {
   let lastError;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     try {
       const response = await fetch(`${base}${route}`, {
         method: body ? "POST" : "GET",
@@ -229,10 +229,10 @@ async function call(route, body) {
     } catch (error) {
       lastError = error;
       const message = String(error?.cause?.code || error?.code || error?.message || "");
-      if (!/ECONNRESET|ECONNREFUSED|fetch failed/i.test(message) || attempt === 2) {
+      if (!/ECONNRESET|ECONNREFUSED|fetch failed/i.test(message) || attempt === 7) {
         throw error;
       }
-      await wait(250 + (attempt * 250));
+      await wait(250 + (attempt * 350));
     }
   }
   throw lastError;
@@ -277,19 +277,19 @@ function assertEnvelope(envelope, label, correlationId) {
   ].forEach(token => assert(serverSource.includes(token), `server missing ${token}`));
   FAILURE_CATEGORIES.forEach(category => assert(serverSource.includes(category), `failure taxonomy missing ${category}`));
   [
-    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-465\"",
-    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v410\"",
+    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-466\"",
+    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v411\"",
     "const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = \"nexus-genesis-voice-runtime-v455\"",
     "payload?.nexusResponse || payload?.genesisResponse"
   ].forEach(token => assert(appSource.includes(token), `app missing ${token}`));
   [
-    "const CACHE_NAME = \"agrinexus-pwa-v410\"",
-    "const BUILD_VERSION = \"nexus-behavior-465\""
+    "const CACHE_NAME = \"agrinexus-pwa-v411\"",
+    "const BUILD_VERSION = \"nexus-behavior-466\""
   ].forEach(token => assert(swSource.includes(token), `service worker missing ${token}`));
   [
-    "/app.js?v=nexus-behavior-465",
-    "/styles.css?v=nexus-behavior-465",
-    "/manifest.webmanifest?v=nexus-behavior-465"
+    "/app.js?v=nexus-behavior-466",
+    "/styles.css?v=nexus-behavior-466",
+    "/manifest.webmanifest?v=nexus-behavior-466"
   ].forEach(token => assert(indexSource.includes(token), `index missing ${token}`));
   assert(appSource.includes("startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"), "Genesis mic auto-start must remain intact");
   assert(appSource.includes("voiceRecognition.start()"), "SpeechRecognition start must remain intact");

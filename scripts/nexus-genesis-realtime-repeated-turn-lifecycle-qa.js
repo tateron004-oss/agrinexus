@@ -45,26 +45,25 @@ function notIncludes(source, needle, label) {
   "second-user-speech-detected",
   "second-response-requested",
   "turn-ready-for-next-input",
-  "output-audio-finished",
-  "audio-ended-does-not-cleanup-session",
+  "audio_stopped",
+  "openai-agents-realtime-audio-stopped",
   "controller-cleanup-entered"
 ].forEach(needle => includes(app, needle, `Realtime lifecycle marker ${needle}`));
 
 includes(app, "realtimeVoiceSession?.responseInProgress || realtimeVoiceSession?.activeResponseId", "active-response cancel guard");
-includes(app, "dataChannel.onerror", "Realtime data channel error handler");
-includes(app, "scheduleRealtimeRecovery(\"data-channel-error\")", "bounded data-channel recovery");
-includes(app, "scheduleRealtimeRecovery(`peer-${state}`)", "bounded peer recovery");
-includes(app, "stopNexusAudioFallbackRecorder(\"realtime-selected\")", "fallback recorder stopped when Realtime owns mic");
-includes(app, "stopNexusVoicePermissionStream(\"realtime-selected\")", "permission stream stopped when Realtime owns mic");
+includes(app, "handleOpenAiAgentsRealtimeEvent", "Agents SDK event handler");
+includes(app, "connection_change", "Agents SDK connection state handler");
+includes(app, "legacyListenerPreserved", "legacy listener preserved until Agents SDK owns mic");
+includes(app, "inactive-realtime-owns-microphone", "fallback recorder inactive after Realtime owns mic");
 includes(app, "voiceRecognition = null", "legacy recognition released when Realtime starts");
-includes(app, "remoteAudio.onended", "remote audio end handled");
+includes(app, "markRealtimeResponseCompleted", "Agents SDK audio end handled");
 notIncludes(app.slice(app.indexOf("if (type === \"response.done\""), app.indexOf("if (type === \"input_audio_buffer.speech_started\"")), "stopRealtimeVoiceSession(", "response completion block");
 
 includes(server, "create_response: true", "server VAD repeated response creation");
 includes(server, "interrupt_response: true", "server VAD interruption support");
 includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
 
-["nexus-behavior-465", "agrinexus-pwa-v410"].forEach(marker => {
+["nexus-behavior-466", "agrinexus-pwa-v411"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
   includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);

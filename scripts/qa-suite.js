@@ -1938,9 +1938,13 @@ const transientRetryScripts = new Set([
   "scripts/companion-understanding-smoke.js",
   "scripts/companion-route-mismatch-smoke.js",
   "scripts/companion-response-quality-smoke.js",
+  "scripts/nexus-system-wide-integrity-hardening-qa.js",
+  "scripts/nexus-response-architecture-acceptance-qa.js",
+  "scripts/nexus-openai-realtime-genesis-qa.js",
   "scripts/voice-phase1-alignment-qa.js",
   "scripts/voice-phase3-tts-qa.js"
 ]);
+const WINDOWS_NODE_CHILD_PROCESS_CRASH = 3221226505;
 
 const suiteName = process.argv[2];
 const suiteNames = Object.keys(suites).sort();
@@ -1973,8 +1977,8 @@ for (const script of scripts) {
     windowsHide: true
   });
 
-  if (!result.error && !result.signal && result.status !== 0 && transientRetryScripts.has(script)) {
-    console.warn(`[qa-suite] ${script} failed once; retrying transient temp-server smoke`);
+  if (!result.error && !result.signal && result.status !== 0 && (transientRetryScripts.has(script) || result.status === WINDOWS_NODE_CHILD_PROCESS_CRASH)) {
+    console.warn(`[qa-suite] ${script} failed once; retrying transient child process`);
     result = spawnSync(process.execPath, [script], {
       cwd: root,
       env: process.env,

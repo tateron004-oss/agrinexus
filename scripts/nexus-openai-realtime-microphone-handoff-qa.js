@@ -99,6 +99,25 @@ function assertManagerContract() {
   assert(server.includes("openAiRealtimeDisabled: selectedRuntime !== \"realtime\""), "server diagnostics should not falsely disable selected Realtime runtime");
 }
 
+function assertLiveStatusAndFallbackContract() {
+  assert(server.includes('activeRuntime: "unconfirmed-browser-client"'), "runtime status must not report server policy as live active runtime");
+  assert(server.includes("serverSelectedRuntime: voiceRuntimePolicy.selectedRuntime"), "runtime status must expose selected runtime separately from active client state");
+  assert(server.includes("realtimeVoice: nexusRealtimeRuntimeStatus(process.env)"), "runtime status must expose OpenAI Realtime provider status separately");
+  assert(server.includes("elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env)"), "runtime status must keep ElevenLabs provider status separate");
+  assert(server.includes("clientRuntime"), "runtime status must include a secret-free client runtime facts block");
+  assert(server.includes('connectionState: "not-reported-to-server"'), "server must require browser client proof for live connection state");
+
+  assert(app.includes("window.NexusGenesisRealtimeClientStatus = nexusRealtimeClientRuntimeStatus"), "browser must expose secret-free Realtime client facts");
+  assert(app.includes("activeRuntime: connected ? \"realtime\" : \"unconfirmed\""), "browser must mark Realtime active only after live client proof");
+  assert(app.includes("liveMicrophoneTrack: snapshot.liveMicrophoneTrack"), "browser status must include live microphone track state");
+  assert(app.includes("lastModelEvent"), "browser status must include last model event");
+  assert(app.includes("lastToolEvent"), "browser status must include last tool event");
+  assert(app.includes("legacy-transcript-ignored-realtime-active"), "legacy transcript must be ignored once Realtime owns audio");
+  assert(app.includes("legacy-transcript-routed-openai-native-fallback"), "Realtime fallback transcript must bypass legacy planner");
+  assert(app.includes("voice-realtime-unconfirmed-backend-responses"), "unconfirmed Realtime fallback must route through backend OpenAI Responses path");
+  assert(app.includes("OpenAI Realtime direct SDP startup is disabled"), "obsolete direct SDP branch must not take over the microphone");
+}
+
 function assertFailureMatrix() {
   [
     ["failed client secret", { clientSecret: false }, "client-secret"],
@@ -132,6 +151,7 @@ function assertWiring() {
 assertStaticHandoffContract();
 assertSdkMicrophoneProofContract();
 assertManagerContract();
+assertLiveStatusAndFallbackContract();
 assertFailureMatrix();
 assertWiring();
 

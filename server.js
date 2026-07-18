@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-465";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v410";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-466";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v411";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -42834,8 +42834,29 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/runtime/status" && req.method === "GET") {
     if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    const voiceRuntimePolicy = nexusGenesisVoiceRuntimePolicy(user, process.env);
     return send(res, 200, {
-      voiceRuntime: nexusGenesisVoiceRuntimePolicy(user, process.env),
+      voiceRuntime: {
+        ...voiceRuntimePolicy,
+        activeRuntime: "unconfirmed-browser-client",
+        serverSelectedRuntime: voiceRuntimePolicy.selectedRuntime,
+        activeRuntimeSource: "browser-client-required",
+        activeRuntimeIsServerPolicy: false,
+        note: "Server policy selects the preferred runtime, but active runtime is not confirmed until the browser reports a connected session, live microphone track, and event channel."
+      },
+      realtimeVoice: nexusRealtimeRuntimeStatus(process.env),
+      clientRuntime: {
+        activeRuntime: "unconfirmed",
+        connectionState: "not-reported-to-server",
+        transport: "",
+        model: "",
+        microphoneTrackState: "unknown",
+        inboundAudioState: "unknown",
+        lastModelEvent: "",
+        lastToolEvent: "",
+        fallbackState: "browser-client-owned",
+        noSecretValues: true
+      },
       conversationSupervisor: {
         ok: true,
         name: "NexusGenesisContinuousConversationSupervisor",
