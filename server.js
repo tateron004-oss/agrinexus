@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-462";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v407";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-463";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v408";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-realtime-runtime-v1";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -6577,6 +6577,15 @@ function maskEngineValue(value) {
   return `${clean.slice(0, 4)}...${clean.slice(-4)}`;
 }
 
+function isSensitiveEngineEnvKey(key = "") {
+  return /(KEY|TOKEN|SECRET|PASSWORD|PRIVATE|CREDENTIAL|DATABASE_URL|WEBHOOK_SECRET|AUTH_TOKEN|SID)/i.test(String(key || ""));
+}
+
+function publicEngineEnvValue(key = "", value = "") {
+  if (!String(value || "").trim()) return "";
+  return isSensitiveEngineEnvKey(key) ? maskEngineValue(value) : String(value);
+}
+
 function engineCredentialState(keys) {
   return keys.map(rawKey => {
     const { key, suggestedValue } = engineCredentialEntry(rawKey);
@@ -6604,7 +6613,14 @@ function renderEngineEnvPlan(db) {
   const add = (key, value = "") => {
     if (!key || seen.has(key)) return;
     seen.add(key);
-    lines.push({ key, value, renderValue: value || "<add in Render>" });
+    const publicValue = publicEngineEnvValue(key, value);
+    lines.push({
+      key,
+      value: publicValue,
+      configured: Boolean(String(value || "").trim()),
+      secretValueRedacted: Boolean(String(value || "").trim() && isSensitiveEngineEnvKey(key)),
+      renderValue: publicValue || "<add in Render>"
+    });
   };
   const defaults = {
     PROVIDER_ENGINE_BASE_URL: process.env.PROVIDER_ENGINE_BASE_URL || "https://agrinexus-provider-engines.onrender.com",
@@ -6659,7 +6675,8 @@ function renderEngineEnvPlan(db) {
       userAction: engine.userAction
     })),
     lines,
-    envText: lines.map(item => `${item.key}=${item.value}`).join("\n")
+    envText: lines.map(item => `${item.key}=${item.value}`).join("\n"),
+    noSecretValuesReturned: true
   };
 }
 
@@ -16953,6 +16970,418 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     missingInformation: envelope.missingInformation || [],
     blockedReason: envelope.blockedReason || null
   };
+}
+
+function nexusOpenAiNativeEnabled(env = process.env) {
+  return String(env.NEXUS_OPENAI_NATIVE_ENABLED || "true").trim().toLowerCase() !== "false";
+}
+
+function nexusOpenAiNativeResponsesEndpoint(env = process.env) {
+  return String(env.OPENAI_RESPONSES_URL || env.OPENAI_BASE_URL && `${String(env.OPENAI_BASE_URL).replace(/\/+$/, "")}/responses` || "https://api.openai.com/v1/responses").trim();
+}
+
+function nexusOpenAiNativeModel(env = process.env) {
+  return String(env.OPENAI_AGENT_MODEL || env.OPENAI_MODEL || "gpt-5.4-mini").trim() || "gpt-5.4-mini";
+}
+
+function nexusOpenAiNativeToolSchemas() {
+  const baseParameters = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      command: { type: "string", description: "The user's plain-language Nexus request." },
+      query: { type: "string", description: "A concise research or tool query when different from the original command." },
+      capability: {
+        type: "string",
+        enum: [
+          "general",
+          "weather",
+          "live-knowledge",
+          "maps-routing",
+          "agriculture",
+          "health-preparation",
+          "workforce",
+          "learning-training",
+          "marketplace-trade",
+          "logistics",
+          "communications",
+          "workflow",
+          "provider-readiness",
+          "receipts-history"
+        ],
+        description: "The safest Nexus capability lane for this tool call."
+      },
+      language: { type: "string", description: "The user's active language or BCP-47 language code." },
+      location: { type: "string", description: "Optional user-provided location text. Never infer precise location." },
+      confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." }
+    },
+    required: ["command"]
+  };
+  const tool = (name, description, safetyClassification) => ({
+    type: "function",
+    name,
+    description,
+    parameters: baseParameters,
+    strict: false,
+    metadata: {
+      safetyClassification,
+      executionAuthority: false
+    }
+  });
+  return [
+    tool("nexus_general_conversation", "Use Nexus shared conversation, contextual follow-up, clarification, correction, language, and capability explanation without forcing a workflow.", "conversation"),
+    tool("nexus_live_knowledge", "Run Nexus Live Knowledge retrieval for current, source-backed, citation-sensitive, or research questions. Returns truthful credential-blocked/provider-error states when not configured.", "read-only-source"),
+    tool("nexus_weather", "Run Nexus weather and forecast support using configured read-only weather providers or truthful missing-provider/missing-location states.", "read-only-source"),
+    tool("nexus_maps_route", "Run Nexus maps, route, logistics, field visit, or typed-location support without browser geolocation, dispatch, or sharing precise location.", "read-only-or-preparation"),
+    tool("nexus_agriculture", "Run Nexus agriculture, crop, field, farm planning, predictive agriculture, and source-backed farmer support.", "preparation-and-education"),
+    tool("nexus_health_preparation", "Run Nexus health literacy, chronic-care, RPM/RTM, telehealth-prep, pharmacy-prep, and provider-summary support without diagnosis, prescribing, or emergency dispatch.", "regulated-preparation"),
+    tool("nexus_workforce_learning", "Run Nexus learning, literacy, training, jobs, workforce, youth/women opportunity, employer-readiness, and career-path support.", "preparation-and-education"),
+    tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
+    tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
+    tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
+    tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status")
+  ];
+}
+
+function nexusOpenAiNativeStatus(env = process.env) {
+  const enabled = nexusOpenAiNativeEnabled(env);
+  const configured = Boolean(String(env.OPENAI_API_KEY || "").trim());
+  const tools = nexusOpenAiNativeToolSchemas().map(item => ({
+    name: item.name,
+    safetyClassification: item.metadata?.safetyClassification || "controlled-platform-tool",
+    executionAuthority: Boolean(item.metadata?.executionAuthority)
+  }));
+  return {
+    ok: true,
+    enabled,
+    configured,
+    ready: Boolean(enabled && configured),
+    provider: "openai",
+    model: nexusOpenAiNativeModel(env),
+    responsesEndpointConfigured: Boolean(String(env.OPENAI_RESPONSES_URL || env.OPENAI_BASE_URL || "").trim()),
+    missingEnv: configured ? [] : ["OPENAI_API_KEY"],
+    supportedTools: tools,
+    toolGateway: "/api/nexus/openai-native/tool",
+    statusEndpoint: "/api/nexus/openai-native/status",
+    commandPath: "/api/agent/command",
+    realtimePath: "/api/voice/realtime/tool",
+    evidencePath: "/api/nexus/live-knowledge/query",
+    noPermanentKeyInBrowser: true,
+    noSecretValuesReturned: true,
+    noFakeCitations: true,
+    noUngatedExecution: true,
+    buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
+    cacheVersion: AGRINEXUS_PWA_CACHE_VERSION
+  };
+}
+
+function nexusOpenAiNativeToolChoiceHint(command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
+  if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
+  if (/\b(map|route|directions|travel time|field visit|logistics|delivery|nearby|near me)\b/.test(lower)) return "nexus_maps_route";
+  if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|yield|post-harvest|harvest)\b/.test(lower)) return "nexus_agriculture";
+  if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw)\b/.test(lower)) return "nexus_health_preparation";
+  if (/\b(job|workforce|training|learning|literacy|course|career|employer|apprentice|internship)\b/.test(lower)) return "nexus_workforce_learning";
+  if (/\b(marketplace|agritrade|buyer|seller|vendor|price|shipment|cold chain|product|listing)\b/.test(lower)) return "nexus_marketplace_logistics";
+  if (/\b(sms|text|whatsapp|email|message|phone|call|telegram)\b/.test(lower)) return "nexus_communications";
+  if (/\b(open|start|continue|show)\b.*\b(workflow|workspace|mode|panel|dashboard|intake|queue)\b/.test(lower)) return "nexus_workflow";
+  if (/\b(provider|credential|configured|missing env|status|ready|readiness|connector)\b/.test(lower)) return "nexus_provider_readiness";
+  return "nexus_general_conversation";
+}
+
+function normalizeOpenAiFunctionArguments(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (!String(value || "").trim()) return {};
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function extractOpenAiFunctionCalls(payload = {}) {
+  const calls = [];
+  const visit = item => {
+    if (!item || typeof item !== "object") return;
+    if ((item.type === "function_call" || item.type === "tool_call") && item.name) {
+      calls.push({
+        id: item.id || item.call_id || item.tool_call_id || `call_${calls.length + 1}`,
+        call_id: item.call_id || item.id || item.tool_call_id || `call_${calls.length + 1}`,
+        name: item.name,
+        arguments: normalizeOpenAiFunctionArguments(item.arguments)
+      });
+    }
+    if (item.type === "function" && item.name && item.arguments) {
+      calls.push({
+        id: item.id || item.call_id || `call_${calls.length + 1}`,
+        call_id: item.call_id || item.id || `call_${calls.length + 1}`,
+        name: item.name,
+        arguments: normalizeOpenAiFunctionArguments(item.arguments)
+      });
+    }
+    for (const key of ["output", "content", "tool_calls"]) {
+      if (Array.isArray(item[key])) item[key].forEach(visit);
+    }
+  };
+  visit(payload);
+  return calls;
+}
+
+async function callOpenAiNativeResponses(payload, env = process.env) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(env.NEXUS_OPENAI_NATIVE_TIMEOUT_MS || 20000));
+  try {
+    const response = await fetch(nexusOpenAiNativeResponsesEndpoint(env), {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const category = response.status === 401 || response.status === 403
+        ? "provider-authentication"
+        : response.status === 429
+          ? "provider-rate-limited"
+          : response.status >= 500
+            ? "provider-unavailable"
+            : "provider-request-error";
+      const error = new Error(nexusKnowledgeProviderErrorMessage(data, `OpenAI Responses failed: ${response.status}`));
+      error.category = category;
+      error.httpStatus = response.status;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("OpenAI Responses request timed out.");
+      timeoutError.category = "provider-timeout";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function nexusOpenAiNativeSystemPrompt() {
+  return [
+    "You are Nexus, the OpenAI-native intelligence layer for AgriNexus.",
+    "Understand the user's goal, keep natural conversation fluid, select tools only when they are genuinely useful, and never replace the final answer with internal statuses.",
+    "Use the server-provided Nexus tools for weather, current information, maps, agriculture, health preparation, workforce, marketplace, communications, workflows, and provider readiness.",
+    "Do not diagnose, prescribe, change medication, dispatch emergency help, contact providers, send messages, place calls, book appointments, process payments, share location, or claim completed real-world actions unless a Nexus tool result proves an authorized action.",
+    "When provider credentials are missing, state the exact missing environment variable names returned by Nexus and continue with safe general guidance.",
+    "When sources are returned, cite them naturally and do not invent citations.",
+    "Return the complete user-facing Nexus answer as natural speech-ready text."
+  ].join(" ");
+}
+
+async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}) {
+  const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
+  const language = args.language || context.language || user?.language || "en";
+  const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
+  const common = {
+    ok: true,
+    toolName,
+    capability,
+    command,
+    language,
+    providerAttempted: false,
+    providerSucceeded: false,
+    executionAttempted: false,
+    executionVerified: false,
+    noSecretValuesReturned: true,
+    noUngatedExecution: true
+  };
+  if (!command) {
+    return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
+  }
+  if (toolName === "nexus_live_knowledge") {
+    const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+      query: args.query || command,
+      command,
+      domain: args.capability || args.domain || "",
+      mode: "openai-native-agent"
+    }, user, process.env);
+    return {
+      ...common,
+      status: liveKnowledge.status,
+      providerAttempted: Boolean(liveKnowledge.status === "source-backed" || liveKnowledge.status === "provider-error"),
+      providerSucceeded: liveKnowledge.status === "source-backed",
+      response: liveKnowledge.summary || liveKnowledge.answer,
+      citations: liveKnowledge.citations || [],
+      sources: liveKnowledge.sources || [],
+      missingEnvVars: liveKnowledge.missingEnvVars || [],
+      liveKnowledgeResearchPacket: liveKnowledge.liveKnowledgeResearchPacket,
+      evidenceReceipt: liveKnowledge.liveKnowledgeResearchPacket,
+      result: liveKnowledge
+    };
+  }
+  if (toolName === "nexus_provider_readiness") {
+    const production = nexusProductionPublicStatus(process.env);
+    const openAiNative = nexusOpenAiNativeStatus(process.env);
+    return {
+      ...common,
+      status: "completed",
+      response: "Nexus checked provider readiness without exposing secrets. Review the missing environment variable names before enabling live provider execution.",
+      providerReadiness: production.providerLanes || {},
+      openAiNative,
+      missingEnvVars: Array.from(new Set([...(openAiNative.missingEnv || []), ...(production.missingEnv || [])])).slice(0, 20)
+    };
+  }
+  const routed = await runCompanionSafeAgentCommand(db, user, {
+    command,
+    correlationId: context.correlationId,
+    inputMode: "api",
+    outputMode: context.outputMode || "",
+    conversational: false,
+    mode: "openai-native-agent",
+    targetLanguage: language,
+    note: `OpenAI-native Nexus tool gateway dispatched ${toolName}`
+  });
+  const envelope = normalizeNexusResponseEnvelope(routed.result, {
+    correlationId: context.correlationId,
+    route: "/api/nexus/openai-native/tool",
+    command,
+    inputMode: "api",
+    language
+  });
+  return {
+    ...common,
+    status: envelope.status,
+    intent: envelope.intent,
+    response: envelope.response,
+    providerAttempted: Boolean(envelope.provider?.attempted),
+    providerSucceeded: Boolean(envelope.provider?.succeeded),
+    executionAttempted: Boolean(envelope.execution?.attempted),
+    executionVerified: Boolean(envelope.execution?.verified),
+    missingInformation: envelope.missingInformation || [],
+    blockedReason: envelope.blockedReason || null,
+    result: routed.result,
+    envelope
+  };
+}
+
+async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
+  const status = nexusOpenAiNativeStatus(process.env);
+  if (!status.enabled || !status.configured) return null;
+  const command = sanitizePilotText(body.command || body.text || "", 900);
+  if (!command) return null;
+  const correlationId = genesisVoiceCorrelationId(body.correlationId);
+  const language = body.targetLanguage || body.language || user.language || "en";
+  const recentTurns = (db.profile?.agentConversation || []).slice(0, 8).map(turn => ({
+    role: turn.role || "user",
+    text: sanitizePilotText(turn.response || turn.command || turn.text || "", 500)
+  }));
+  const toolHint = nexusOpenAiNativeToolChoiceHint(command);
+  const firstPayload = {
+    model: status.model,
+    input: [
+      { role: "system", content: nexusOpenAiNativeSystemPrompt() },
+      { role: "user", content: JSON.stringify({ command, language, recentTurns, toolHint, context: { inputMode: body.inputMode || "api", outputMode: body.outputMode || "" } }) }
+    ],
+    tools: nexusOpenAiNativeToolSchemas().map(({ metadata, ...tool }) => tool),
+    tool_choice: "auto",
+    max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
+  };
+  try {
+    const first = await callOpenAiNativeResponses(firstPayload, process.env);
+    const calls = extractOpenAiFunctionCalls(first).slice(0, 3);
+    const toolResults = [];
+    let finalPayload = first;
+    if (calls.length) {
+      for (const call of calls) {
+        const result = await executeNexusOpenAiNativeTool(db, user, call.name, {
+          ...call.arguments,
+          command: call.arguments.command || command,
+          language: call.arguments.language || language
+        }, { correlationId, command, language, outputMode: body.outputMode || "" });
+        toolResults.push({ call, result });
+      }
+      const toolOutputs = toolResults.map(item => ({
+        type: "function_call_output",
+        call_id: item.call.call_id,
+        output: JSON.stringify(item.result)
+      }));
+      const secondPayload = {
+        model: status.model,
+        previous_response_id: first.id,
+        input: first.id ? toolOutputs : [
+          { role: "system", content: nexusOpenAiNativeSystemPrompt() },
+          { role: "user", content: JSON.stringify({ command, language, toolResults: toolResults.map(item => item.result) }) }
+        ],
+        max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
+      };
+      finalPayload = await callOpenAiNativeResponses(secondPayload, process.env);
+    }
+    const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
+    const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
+    return ensureSpeakableAgentResult({
+      intent: calls.length ? `openai_native.${calls[0].name}` : "openai_native.conversation",
+      response: finalText,
+      status: "completed",
+      metadata: {
+        redirectSection: "agent",
+        openAiNativeAgent: {
+          active: true,
+          provider: "openai",
+          model: status.model,
+          responsesEndpointConfigured: status.responsesEndpointConfigured,
+          toolHint,
+          toolsCalled: calls.map(call => call.name),
+          toolResultStatuses: toolResults.map(item => item.result?.status || "unknown"),
+          responseId: finalPayload.id || first.id || null,
+          requestAttempted: true,
+          noSecretValuesReturned: true
+        },
+        citations,
+        sourceContext: citations.length ? { citations } : null,
+        noExecutionAuthorized: true,
+        providerHandoffAuthorized: false,
+        fakeCitationsAllowed: false
+      }
+    }, "openai_native.conversation");
+  } catch (error) {
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "openai_native.agent_error",
+      status: "error",
+      detail: error.category || "provider-error",
+      metadata: {
+        errorType: error.category || "provider-error",
+        httpStatus: error.httpStatus || null,
+        requestAttempted: true,
+        noSecretValuesReturned: true
+      },
+      dispatch: false
+    });
+    return ensureSpeakableAgentResult({
+      intent: "openai_native.provider_blocked",
+      response: `OpenAI-native Nexus intelligence could not complete this turn because the provider returned ${error.category || "provider-error"}. Nexus did not fabricate a response or expose secrets.`,
+      status: "provider-error",
+      metadata: {
+        redirectSection: "agent",
+        openAiNativeAgent: {
+          active: true,
+          provider: "openai",
+          model: status.model,
+          requestAttempted: true,
+          errorType: error.category || "provider-error",
+          httpStatus: error.httpStatus || null,
+          noSecretValuesReturned: true
+        },
+        noExecutionAuthorized: true,
+        providerHandoffAuthorized: false,
+        fakeCitationsAllowed: false
+      }
+    }, "openai_native.provider_blocked");
+  }
 }
 
 function deepVoiceIntent(lower) {
@@ -39803,6 +40232,42 @@ async function api(req, res, url) {
     return send(res, 200, nexusKnowledgeProviderStatus(process.env));
   }
 
+  if (url.pathname === "/api/nexus/openai-native/status" && req.method === "GET") {
+    return send(res, 200, nexusOpenAiNativeStatus(process.env), {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/nexus/openai-native/tool" && req.method === "POST") {
+    const toolUser = user || (db.users || []).find(item => item.role === "Standard User") || (db.users || [])[0] || {
+      id: "openai-native-local-tool-user",
+      name: "Nexus local tool user",
+      role: "Standard User",
+      language: "en"
+    };
+    if (!canUse(toolUser, "ai")) return send(res, 403, { error: "Role does not allow OpenAI-native tools" });
+    const body = await readBody(req);
+    const toolName = String(body.name || body.toolName || "nexus_general_conversation").trim();
+    if (!nexusOpenAiNativeToolSchemas().some(tool => tool.name === toolName)) {
+      return send(res, 400, {
+        ok: false,
+        error: "Unsupported OpenAI-native Nexus tool.",
+        supportedTools: nexusOpenAiNativeToolSchemas().map(tool => tool.name),
+        noSecretValuesReturned: true
+      });
+    }
+    const result = await executeNexusOpenAiNativeTool(db, toolUser, toolName, body.arguments || body, {
+      correlationId: body.correlationId,
+      command: body.command || body.arguments?.command || "",
+      language: body.language || body.arguments?.language || toolUser.language || "en",
+      outputMode: body.outputMode || ""
+    });
+    await writeDb(db);
+    return send(res, 200, result, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
   if (url.pathname === "/api/nexus/email/status" && req.method === "GET") {
     return send(res, 200, nexusEmailProviderStatus(process.env));
   }
@@ -46735,6 +47200,62 @@ async function api(req, res, url) {
       route: "/api/agent/command",
       sourceFunction: "api.agent.command"
     });
+    const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
+      ...body,
+      correlationId,
+      inputMode: body.inputMode || "api"
+    });
+    if (openAiNativeResult) {
+      commandRecord(db, user, body.command || body.text || "", openAiNativeResult);
+      const nexusResponse = normalizeNexusResponseEnvelope(openAiNativeResult, {
+        correlationId,
+        route: "/api/agent/command",
+        command: body.command || body.text || "",
+        inputMode: body.inputMode || "api",
+        outputMode: body.outputMode || "",
+        language: body.targetLanguage || body.language || user.language
+      });
+      const genesisResponse = normalizeGenesisCommandResponse(openAiNativeResult, {
+        correlationId,
+        route: "/api/agent/command",
+        command: body.command || body.text || "",
+        inputMode: body.inputMode || "api",
+        outputMode: body.outputMode || "",
+        language: body.targetLanguage || body.language || user.language
+      });
+      updateNexusSessionContext(db, body.command || body.text || "", nexusResponse);
+      safeGenesisVoiceStageEvent(db, {
+        correlationId,
+        stage: "response-normalized",
+        success: Boolean(nexusResponse.response),
+        route: "/api/agent/command",
+        intent: nexusResponse.intent,
+        responseFieldSelected: nexusResponse.diagnostics.responseFieldSelected,
+        responseLength: nexusResponse.diagnostics.responseLength,
+        sanitizedLength: nexusResponse.diagnostics.sanitizedLength,
+        sourceFunction: "runNexusOpenAiNativeAgentCommand"
+      });
+      safeGenesisVoiceStageEvent(db, {
+        correlationId,
+        stage: "command-route-returned",
+        success: true,
+        route: "/api/agent/command",
+        intent: nexusResponse.intent,
+        httpStatus: 200,
+        responseFieldSelected: nexusResponse.diagnostics.responseFieldSelected,
+        responseLength: nexusResponse.diagnostics.responseLength,
+        sanitizedLength: nexusResponse.diagnostics.sanitizedLength,
+        elapsedTimeMs: Date.now() - routeStartedAt,
+        sourceFunction: "api.agent.command.openai_native"
+      });
+      await writeDb(db);
+      const state = publicState(db, user);
+      state.commandResult = openAiNativeResult;
+      state.nexusResponse = nexusResponse;
+      state.genesisResponse = genesisResponse;
+      state.openAiNativeAgent = openAiNativeResult.metadata?.openAiNativeAgent || null;
+      return send(res, 200, state);
+    }
     const { result, companionUnderstanding, companionRouteOutcome } = await runCompanionSafeAgentCommand(db, user, {
       ...body,
       correlationId,
@@ -47158,12 +47679,26 @@ async function api(req, res, url) {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime tools" });
     const body = await readBody(req);
     const toolName = String(body.name || body.toolName || "nexus_capability_router").trim();
+    const openAiNativeToolNames = new Set(nexusOpenAiNativeToolSchemas().map(tool => tool.name));
+    if (openAiNativeToolNames.has(toolName)) {
+      const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
+      const result = await executeNexusOpenAiNativeTool(db, user, toolName, args, {
+        correlationId: body.correlationId,
+        command: args.command || body.command || "",
+        language: args.language || body.language || user.language || "en",
+        outputMode: "voice"
+      });
+      await writeDb(db);
+      return send(res, 200, result, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
     if (toolName !== "nexus_capability_router") {
       return send(res, 400, {
         ok: false,
         error: "Unsupported Nexus Realtime tool.",
         blockedReason: "route-not-found",
-        supportedTools: ["nexus_capability_router"]
+        supportedTools: ["nexus_capability_router", ...Array.from(openAiNativeToolNames)]
       }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });

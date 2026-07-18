@@ -691,6 +691,7 @@ let nexusProductionAdminOperations = null;
 let nexusProductionPrivacySummary = null;
 let nexusProductionRailActionStatus = "";
 let nexusKnowledgeStatus = null;
+let nexusOpenAiNativeStatus = null;
 let nexusKnowledgeTrustedSources = [];
 let nexusKnowledgeLastResult = null;
 let nexusKnowledgeHistory = null;
@@ -1333,8 +1334,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-462";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v407";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-463";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v408";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22619,6 +22620,8 @@ function renderNexusKnowledgeRailPanel() {
   const providerList = Array.isArray(status.supportedLiveKnowledgeProviders) ? status.supportedLiveKnowledgeProviders : [];
   const safeDomains = Array.isArray(status.safeDomainsSupported) ? status.safeDomainsSupported : [];
   const missingEnv = Array.isArray(status.missingEnvVars) ? status.missingEnvVars : Array.isArray(status.missingEnv) ? status.missingEnv : [];
+  const openAiNative = nexusOpenAiNativeStatus || {};
+  const openAiMissing = Array.isArray(openAiNative.missingEnv) ? openAiNative.missingEnv : [];
   const lastTest = status.lastTestResult || null;
   return `
     <section class="nexus-knowledge-rail" data-nexus-knowledge-rail="true" data-testid="nexus-knowledge-rail" aria-label="${escapeHtml(translateText("Nexus live knowledge retrieval"))}">
@@ -22638,6 +22641,11 @@ function renderNexusKnowledgeRailPanel() {
         <span>${escapeHtml(translateText("Providers"))}: ${providerList.map(item => escapeHtml(item.provider)).join(", ") || "tavily, brave, exa, generic"}</span>
         <span>${escapeHtml(translateText("Citation capable"))}: ${escapeHtml(String(Boolean(status.citationCapability || status.citationCapable)))}</span>
         <span>${escapeHtml(translateText("Missing"))}: ${missingEnv.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-openai-native-status" data-no-secret-values="true">
+        <span>${escapeHtml(translateText("OpenAI-native brain"))}: ${escapeHtml(openAiNative.ready ? translateText("configured") : translateText(openAiNative.enabled === false ? "disabled" : "missing configuration"))}</span>
+        <span>${escapeHtml(translateText("Model"))}: ${escapeHtml(openAiNative.model || "gpt-5.4-mini")}</span>
+        <span>${escapeHtml(translateText("Missing"))}: ${openAiMissing.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
       </div>
       ${lastTest ? `
         <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-last-test-result">
@@ -22729,16 +22737,18 @@ async function refreshNexusKnowledgeRail(options = {}) {
         return request("/api/nexus/knowledge/status", { method: "GET" });
       }
     };
-    const [status, sources, emailStatus, communicationsStatus, telehealthStatus, pharmacyStatus, mobileClinicStatus] = await Promise.all([
+    const [status, sources, emailStatus, communicationsStatus, telehealthStatus, pharmacyStatus, mobileClinicStatus, openAiNativeStatus] = await Promise.all([
       requestLiveKnowledgeStatus(),
       request("/api/nexus/knowledge/trusted-sources", { method: "GET" }),
       request("/api/nexus/email/status", { method: "GET" }).catch(() => null),
       request("/api/nexus/communications/status", { method: "GET" }).catch(() => null),
       request("/api/nexus/telehealth/status", { method: "GET" }).catch(() => null),
       request("/api/nexus/pharmacy/status", { method: "GET" }).catch(() => null),
-      request("/api/nexus/mobile-clinic/status", { method: "GET" }).catch(() => null)
+      request("/api/nexus/mobile-clinic/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/openai-native/status", { method: "GET" }).catch(() => null)
     ]);
     nexusKnowledgeStatus = status || null;
+    nexusOpenAiNativeStatus = openAiNativeStatus || null;
     nexusEmailProviderStatus = emailStatus || null;
     nexusCommunicationsProviderStatus = communicationsStatus || null;
     nexusTelehealthProviderStatus = telehealthStatus || null;
