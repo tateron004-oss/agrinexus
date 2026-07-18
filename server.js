@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-466";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v411";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-467";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v412";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -17093,7 +17093,17 @@ function nexusOpenAiNativeToolSchemas() {
           "communications",
           "workflow",
           "provider-readiness",
-          "receipts-history"
+          "receipts-history",
+          "deep-research",
+          "file-document-analysis",
+          "data-code-analysis",
+          "visual-analysis",
+          "memory",
+          "automations",
+          "email",
+          "calendar",
+          "browser-computer-actions",
+          "document-export"
         ],
         description: "The safest Nexus capability lane for this tool call."
       },
@@ -17125,7 +17135,18 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
-    tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status")
+    tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
+    tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
+    tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
+    tool("nexus_data_code_analysis", "Perform controlled calculations, structured-data reasoning, table checks, and code/data analysis using server-side deterministic logic or a configured execution provider.", "controlled-analysis"),
+    tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
+    tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
+    tool("nexus_automation_reminder", "Create, inspect, or prepare reminders, recurring monitoring, scheduled tasks, and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated.", "confirmation-gated-automation"),
+    tool("nexus_email", "Prepare, read, or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts.", "high-risk-confirmation-required"),
+    tool("nexus_calendar", "Search, schedule, change, or cancel calendar events only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts.", "high-risk-confirmation-required"),
+    tool("nexus_browser_computer_action", "Use browser or computer actions only through an authorized connector when no direct API exists. Never performs hidden external execution.", "high-risk-confirmation-required"),
+    tool("nexus_document_export", "Create or prepare documents, reports, tables, presentation outlines, exports, and receipts through Nexus export/document-generation capabilities.", "document-export"),
+    tool("nexus_receipts", "Inspect Nexus receipts, audit evidence, provider confirmations, source evidence, and outcome verification without exposing secrets.", "read-only-history")
   ];
 }
 
@@ -17137,6 +17158,39 @@ function nexusOpenAiNativeStatus(env = process.env) {
     safetyClassification: item.metadata?.safetyClassification || "controlled-platform-tool",
     executionAuthority: Boolean(item.metadata?.executionAuthority)
   }));
+  const toolReadiness = tools.map(tool => {
+    const name = tool.name;
+    const credentialBlocked = {
+      nexus_file_document_analysis: ["NEXUS_FILE_UPLOAD_ENABLED"],
+      nexus_visual_analysis: ["NEXUS_VISION_PROVIDER", "NEXUS_VISION_API_KEY"],
+      nexus_email: nexusEmailProviderStatus(env).missingEnv,
+      nexus_calendar: ["NEXUS_CALENDAR_PROVIDER", "NEXUS_CALENDAR_PROVIDER_ENDPOINT", "NEXUS_CALENDAR_PROVIDER_API_KEY"],
+      nexus_browser_computer_action: ["NEXUS_BROWSER_ACTIONS_ENABLED"]
+    }[name] || [];
+    const localOnly = [
+      "nexus_general_conversation",
+      "nexus_data_code_analysis",
+      "nexus_memory",
+      "nexus_automation_reminder",
+      "nexus_document_export",
+      "nexus_receipts"
+    ].includes(name);
+    const readOnly = [
+      "nexus_live_knowledge",
+      "nexus_deep_research",
+      "nexus_weather",
+      "nexus_maps_route",
+      "nexus_provider_readiness"
+    ].includes(name);
+    return {
+      name,
+      safetyClassification: tool.safetyClassification,
+      state: credentialBlocked.length ? "credential-blocked" : localOnly ? "local-or-confirmation-gated" : readOnly ? "read-only-or-provider-backed" : "routed-through-existing-nexus-capability",
+      missingEnv: credentialBlocked,
+      confirmationRequired: /high-risk|automation|calendar|email|browser/.test(tool.safetyClassification),
+      executionAuthority: false
+    };
+  });
   return {
     ok: true,
     enabled,
@@ -17147,6 +17201,16 @@ function nexusOpenAiNativeStatus(env = process.env) {
     responsesEndpointConfigured: Boolean(String(env.OPENAI_RESPONSES_URL || env.OPENAI_BASE_URL || "").trim()),
     missingEnv: configured ? [] : ["OPENAI_API_KEY"],
     supportedTools: tools,
+    toolReadiness,
+    toolGatewayCompleteness: {
+      schemaVersion: "nexus-openai-native-tool-parity.v1",
+      totalTools: tools.length,
+      gatewayRoutes: ["/api/nexus/openai-native/tool", "/api/voice/realtime/tool", "/api/voice/runtime/tool"],
+      realtimeCompatible: true,
+      microphoneOwnership: "tools-never-own-microphone",
+      finalAnswerOwner: "Realtime or Responses model; tools return structured facts/results",
+      noCannedToolAnswers: true
+    },
     toolGateway: "/api/nexus/openai-native/tool",
     statusEndpoint: "/api/nexus/openai-native/status",
     commandPath: "/api/agent/command",
@@ -17165,6 +17229,16 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
   if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
   if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
+  if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
+  if (/\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";
+  if (/\b(calculate|calculation|compute|analyze data|table|dataset|code|script|formula|statistics)\b/.test(lower)) return "nexus_data_code_analysis";
+  if (/\b(image|photo|picture|camera|visual|scan|document photo|crop photo|equipment photo)\b/.test(lower)) return "nexus_visual_analysis";
+  if (/\b(remember|memory|forget|delete memory|correct memory|export memory|what do you remember|preferences)\b/.test(lower)) return "nexus_memory";
+  if (/\b(remind|reminder|scheduled task|recurring|monitor|notification|notify me|follow up)\b/.test(lower)) return "nexus_automation_reminder";
+  if (/\b(email|inbox|mail)\b/.test(lower)) return "nexus_email";
+  if (/\b(calendar|schedule|reschedule|cancel appointment|meeting|event)\b/.test(lower)) return "nexus_calendar";
+  if (/\b(browser|website|computer|click|fill out|download|web page)\b/.test(lower)) return "nexus_browser_computer_action";
+  if (/\b(export|report|document|presentation|table|receipt|pdf)\b/.test(lower)) return "nexus_document_export";
   if (/\b(map|route|directions|travel time|field visit|logistics|delivery|nearby|near me)\b/.test(lower)) return "nexus_maps_route";
   if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|yield|post-harvest|harvest)\b/.test(lower)) return "nexus_agriculture";
   if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw)\b/.test(lower)) return "nexus_health_preparation";
@@ -17267,6 +17341,206 @@ function nexusOpenAiNativeSystemPrompt() {
   ].join(" ");
 }
 
+function nexusOpenAiNativeToolReceipt(db, toolName = "", command = "", status = "prepared", did = [], didNot = []) {
+  return addNexusOperationsReceipt(db, "openai-native-tool", toolName || "nexus-tool", "openai_native_tool_result", did.length ? did : [
+    `Nexus routed ${toolName || "the requested tool"} through the OpenAI-native tool gateway.`,
+    command ? `Request summary: ${sanitizePilotText(command, 180)}` : "Request summary was not provided."
+  ], didNot.length ? didNot : [
+    "Nexus did not expose secrets, create hidden external actions, or bypass confirmation gates.",
+    "Nexus did not claim provider execution without provider-confirmed evidence."
+  ], status);
+}
+
+function nexusOpenAiNativeBlockedToolResult(db, common = {}, {
+  status = "credential-blocked",
+  response = "Nexus can prepare this safely, but a provider connection is required before live execution.",
+  missingEnvVars = [],
+  requiredAuthorization = [],
+  did = [],
+  didNot = []
+} = {}) {
+  const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, status, did, didNot);
+  return {
+    ...common,
+    status,
+    response,
+    providerAttempted: false,
+    providerSucceeded: false,
+    executionAttempted: false,
+    executionVerified: false,
+    missingEnvVars,
+    requiredAuthorization,
+    receipt,
+    evidenceReceipt: receipt,
+    noSecretValuesReturned: true,
+    noUngatedExecution: true
+  };
+}
+
+function nexusOpenAiNativeCalculate(command = "") {
+  const text = String(command || "");
+  const arithmetic = text.match(/(-?\d+(?:\.\d+)?)\s*([+\-*/xX])\s*(-?\d+(?:\.\d+)?)/);
+  if (!arithmetic) return null;
+  const left = Number(arithmetic[1]);
+  const right = Number(arithmetic[3]);
+  const operator = arithmetic[2].toLowerCase() === "x" ? "*" : arithmetic[2];
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+  if (operator === "/" && right === 0) return { ok: false, error: "division-by-zero" };
+  const value = operator === "+"
+    ? left + right
+    : operator === "-"
+      ? left - right
+      : operator === "*"
+        ? left * right
+        : left / right;
+  return {
+    ok: true,
+    expression: `${left} ${operator} ${right}`,
+    value,
+    method: "deterministic-arithmetic-parser"
+  };
+}
+
+function nexusOpenAiNativeAnalyzeStructuredText(command = "") {
+  const text = sanitizePilotText(command, 1200);
+  const numbers = Array.from(text.matchAll(/-?\d+(?:\.\d+)?/g)).map(match => Number(match[0])).filter(Number.isFinite);
+  const calculation = nexusOpenAiNativeCalculate(text);
+  const summary = {
+    characters: text.length,
+    words: text ? text.split(/\s+/).filter(Boolean).length : 0,
+    numbers,
+    numericCount: numbers.length,
+    min: numbers.length ? Math.min(...numbers) : null,
+    max: numbers.length ? Math.max(...numbers) : null,
+    sum: numbers.length ? numbers.reduce((total, value) => total + value, 0) : null,
+    average: numbers.length ? numbers.reduce((total, value) => total + value, 0) / numbers.length : null,
+    calculation
+  };
+  return summary;
+}
+
+function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
+  ensureNexusPilotState(db);
+  const confirmed = Boolean(args.confirmed || args.confirmation);
+  const title = sanitizePilotText(args.title || args.query || common.command || "Nexus reminder", 160);
+  const when = sanitizePilotText(args.when || args.time || args.schedule || "Schedule detail needed", 120);
+  if (!confirmed) {
+    return nexusOpenAiNativeBlockedToolResult(db, common, {
+      status: "confirmation-required",
+      response: "I can prepare that reminder locally, but I need your explicit confirmation before I create it in Nexus memory. No notification or external calendar event has been scheduled.",
+      missingEnvVars: [],
+      requiredAuthorization: ["explicit-user-confirmation"],
+      did: ["Prepared a local reminder proposal."],
+      didNot: ["Nexus did not schedule a real notification, send a message, write to an external calendar, or contact anyone."]
+    });
+  }
+  const reminder = {
+    id: crypto.randomUUID(),
+    title,
+    time: when,
+    type: sanitizePilotText(args.type || "nexus_reminder", 80),
+    linkedRecordId: sanitizePilotText(args.linkedRecordId || "", 120),
+    notes: sanitizePilotText(args.notes || "Local Nexus reminder only. No SMS, push notification, email, or external calendar action occurred.", 320),
+    createdAt: new Date().toISOString(),
+    createdBy: user?.name || user?.email || "Standard User",
+    localOnly: true,
+    externalNotificationSent: false
+  };
+  db.nexusPilotReminders.unshift(reminder);
+  const audit = addNexusPilotAuditEvent(db, "openai_native_local_reminder_created", {
+    actor: user?.name || user?.email || "Standard User",
+    role: user?.role || "Standard User",
+    relatedRecordId: reminder.id,
+    mode: "reminders",
+    description: "OpenAI-native Nexus created a local reminder after explicit confirmation. No external notification occurred."
+  });
+  const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "local-reminder-created", [
+    "Created a local Nexus reminder after explicit confirmation.",
+    "Recorded an audit event and local receipt."
+  ], [
+    "Nexus did not send SMS, email, push notification, calendar invite, call, or provider message.",
+    "Nexus did not expose secrets or create hidden external actions."
+  ]);
+  return {
+    ...common,
+    status: "local-reminder-created",
+    response: `I created a local Nexus reminder called "${reminder.title}" for "${reminder.time}". I did not send a notification or add it to an external calendar.`,
+    reminder,
+    audit,
+    receipt,
+    evidenceReceipt: receipt,
+    providerAttempted: false,
+    providerSucceeded: false,
+    executionAttempted: true,
+    executionVerified: true,
+    localOnly: true
+  };
+}
+
+function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
+  const store = nexusPersistentMemoryStore(db, process.env);
+  const query = sanitizePilotText(args.query || common.command || "", 240);
+  const wantsCreate = /\b(remember|save|store)\b/i.test(common.command || "");
+  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(common.command || "");
+  const confirmed = Boolean(args.confirmed || args.confirmation);
+  if (wantsCreate || wantsDelete) {
+    if (!confirmed) {
+      return nexusOpenAiNativeBlockedToolResult(db, common, {
+        status: "confirmation-required",
+        response: wantsDelete
+          ? "I can help remove or archive a Nexus memory record, but I need explicit confirmation and the memory to change. I did not alter memory."
+          : "I can store that as Nexus memory, but I need explicit confirmation first. I did not save it yet.",
+        requiredAuthorization: ["explicit-user-confirmation"],
+        did: ["Checked the memory request boundary."],
+        didNot: ["Nexus did not create, delete, export, or share memory."]
+      });
+    }
+    const result = wantsDelete
+      ? store.searchRecords({ query, includeArchived: false })
+      : store.createRecord({
+          type: "preference",
+          title: sanitizePilotText(args.title || "User preference", 120),
+          value: query || sanitizePilotText(common.command, 240),
+          source: "openai-native-tool",
+          consent: true
+        });
+    db.profile.nexusPersistentMemory = result.state || store.snapshot();
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, wantsDelete ? "memory-review-prepared" : "memory-created", [
+      wantsDelete ? "Prepared matching memory records for review." : "Created an authorized local Nexus memory record.",
+      "Kept memory operation inside Nexus persistent-memory controls."
+    ], [
+      "Nexus did not share memory externally or expose private values in diagnostics."
+    ]);
+    return {
+      ...common,
+      status: wantsDelete ? "memory-review-prepared" : "memory-created",
+      response: wantsDelete
+        ? "I found the relevant Nexus memory records for review. Choose the exact record before I archive or delete anything."
+        : "I saved that as authorized local Nexus memory. You can ask me to inspect, correct, export, or delete it later.",
+      memory: result,
+      receipt,
+      evidenceReceipt: receipt,
+      executionAttempted: true,
+      executionVerified: true,
+      localOnly: true
+    };
+  }
+  const result = store.searchRecords({ query, includeArchived: false });
+  return {
+    ...common,
+    status: "completed",
+    response: result.records?.length
+      ? `I found ${result.records.length} Nexus memory record(s) related to that. I kept the lookup local and did not share anything externally.`
+      : "I did not find a matching active Nexus memory record. I can save a preference only after you explicitly confirm.",
+    memory: result,
+    providerAttempted: false,
+    providerSucceeded: false,
+    executionAttempted: false,
+    executionVerified: false,
+    localOnly: true
+  };
+}
+
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}) {
   const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
   const language = args.language || context.language || user?.language || "en";
@@ -17318,6 +17592,177 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       providerReadiness: production.providerLanes || {},
       openAiNative,
       missingEnvVars: Array.from(new Set([...(openAiNative.missingEnv || []), ...(production.missingEnv || [])])).slice(0, 20)
+    };
+  }
+  if (toolName === "nexus_deep_research") {
+    const research = await nexusLiveKnowledgeAllModesQuery(db, {
+      query: args.query || command,
+      command,
+      domain: args.capability || "deep-research",
+      mode: "openai-native-deep-research"
+    }, user, process.env);
+    return {
+      ...common,
+      capability: "deep-research",
+      status: research.status,
+      providerAttempted: Boolean(research.status === "source-backed" || research.status === "provider-error"),
+      providerSucceeded: research.status === "source-backed",
+      response: research.summary || research.answer || "Nexus completed the available research pass.",
+      citations: research.citations || [],
+      sources: research.sources || [],
+      missingEnvVars: research.missingEnvVars || [],
+      evidenceReceipt: research.liveKnowledgeResearchPacket,
+      institutionalEvidenceReceipt: research.liveKnowledgeResearchPacket,
+      result: research
+    };
+  }
+  if (toolName === "nexus_file_document_analysis") {
+    const readiness = nexusUploadReadiness(db, process.env);
+    if (!readiness.uploadEnabled || !args.fileId && !args.documentId && !args.attachmentId) {
+      return nexusOpenAiNativeBlockedToolResult(db, common, {
+        status: readiness.uploadEnabled ? "awaiting-file" : "credential-or-upload-blocked",
+        response: readiness.uploadEnabled
+          ? "I can analyze an uploaded document, but I need the file reference first. I did not invent document contents."
+          : "Document analysis is not active until file upload and document-processing providers are enabled. I can still explain what to upload and what I will check.",
+        missingEnvVars: readiness.uploadEnabled ? [] : ["NEXUS_FILE_UPLOAD_ENABLED"],
+        requiredAuthorization: ["user-supplied-file"],
+        did: ["Checked file and document analysis readiness."],
+        didNot: ["Nexus did not read, upload, or infer contents from a missing file."]
+      });
+    }
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "document-reference-ready", [
+      "Accepted a user-supplied file reference for analysis routing.",
+      "Kept analysis inside the Nexus document safety boundary."
+    ]);
+    return {
+      ...common,
+      capability: "file-document-analysis",
+      status: "document-reference-ready",
+      response: "I received the document reference and can route it for analysis. I will cite only text or data that the configured document reader actually extracts.",
+      uploadReadiness: readiness,
+      documentReference: {
+        fileId: sanitizePilotText(args.fileId || args.documentId || args.attachmentId, 120),
+        declaredType: sanitizePilotText(args.fileType || args.mimeType || "", 80)
+      },
+      receipt,
+      evidenceReceipt: receipt
+    };
+  }
+  if (toolName === "nexus_data_code_analysis") {
+    const analysis = nexusOpenAiNativeAnalyzeStructuredText(args.query || command);
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "analysis-completed", [
+      "Ran deterministic local text, number, and arithmetic analysis.",
+      "Kept code execution disabled unless a configured execution provider is present."
+    ], [
+      "Nexus did not run arbitrary code, download packages, access files, or call external systems."
+    ]);
+    return {
+      ...common,
+      capability: "data-code-analysis",
+      status: "completed",
+      response: analysis.calculation?.ok
+        ? `I calculated ${analysis.calculation.expression} = ${analysis.calculation.value}. I used deterministic local arithmetic and did not run arbitrary code.`
+        : analysis.numericCount
+          ? `I found ${analysis.numericCount} number(s). Sum: ${analysis.sum}; average: ${analysis.average}. I did not run arbitrary code.`
+          : "I can help reason through the calculation or data, but I need numbers, a table, or a configured dataset reference.",
+      analysis,
+      receipt,
+      evidenceReceipt: receipt,
+      executionAttempted: true,
+      executionVerified: true,
+      localOnly: true
+    };
+  }
+  if (toolName === "nexus_visual_analysis") {
+    return nexusOpenAiNativeBlockedToolResult(db, common, {
+      status: "visual-provider-blocked",
+      response: "I can discuss what a photo or image review would check, but live visual analysis requires an uploaded user image and a configured vision provider. I did not inspect camera or image data.",
+      missingEnvVars: ["NEXUS_VISION_PROVIDER", "NEXUS_VISION_API_KEY"],
+      requiredAuthorization: ["user-supplied-image", "explicit-image-analysis-consent"],
+      did: ["Checked visual-analysis readiness."],
+      didNot: ["Nexus did not open the camera, capture an image, diagnose crops, diagnose health conditions, or infer image contents."]
+    });
+  }
+  if (toolName === "nexus_memory") {
+    return nexusOpenAiNativeMemoryTool(db, user, common, args);
+  }
+  if (toolName === "nexus_automation_reminder") {
+    return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
+  }
+  if (toolName === "nexus_email") {
+    const status = nexusEmailProviderStatus(process.env);
+    return nexusOpenAiNativeBlockedToolResult(db, common, {
+      status: status.configured && args.confirmed ? "email-confirmation-ready" : status.configured ? "confirmation-required" : "credential-blocked",
+      response: status.configured
+        ? "Email provider credentials are configured, but I still need verified recipient, consent, and explicit confirmation before sending. I can prepare the draft now."
+        : `Email sending requires configuration first. Missing: ${status.missingEnv.join(", ") || "email provider credentials"}. I can prepare a draft without sending.`,
+      missingEnvVars: status.missingEnv,
+      requiredAuthorization: ["recipient-verification", "consent-if-sensitive", "explicit-send-confirmation"],
+      did: ["Checked email provider readiness and preserved draft-only behavior."],
+      didNot: ["Nexus did not send email, read an inbox, expose credentials, or claim delivery."]
+    });
+  }
+  if (toolName === "nexus_calendar") {
+    return nexusOpenAiNativeBlockedToolResult(db, common, {
+      status: "credential-blocked",
+      response: "Calendar execution is not connected yet. I can prepare the event details, but real search, scheduling, changes, or cancellation require a calendar provider and explicit confirmation.",
+      missingEnvVars: ["NEXUS_CALENDAR_PROVIDER", "NEXUS_CALENDAR_PROVIDER_ENDPOINT", "NEXUS_CALENDAR_PROVIDER_API_KEY"],
+      requiredAuthorization: ["calendar-account-authorization", "explicit-calendar-confirmation"],
+      did: ["Prepared the calendar execution boundary."],
+      didNot: ["Nexus did not create, change, cancel, invite, or sync any external calendar event."]
+    });
+  }
+  if (toolName === "nexus_browser_computer_action") {
+    return nexusOpenAiNativeBlockedToolResult(db, common, {
+      status: "authorization-blocked",
+      response: "Browser or computer actions require an authorized connector session and a confirmed task. I did not click, submit, download, upload, or operate another site.",
+      missingEnvVars: ["NEXUS_BROWSER_ACTIONS_ENABLED"],
+      requiredAuthorization: ["active-authorized-browser-or-computer-connector", "explicit-action-confirmation"],
+      did: ["Checked browser/computer action authorization."],
+      didNot: ["Nexus did not operate the browser, submit forms, download files, upload data, or create hidden external actions."]
+    });
+  }
+  if (toolName === "nexus_document_export") {
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "export-prepared", [
+      "Prepared an export/report outline inside Nexus.",
+      "Attached a receipt showing no external delivery occurred."
+    ], [
+      "Nexus did not email, upload, publish, or send the document externally."
+    ]);
+    return {
+      ...common,
+      capability: "document-export",
+      status: "export-prepared",
+      response: "I prepared the report/export structure locally. Tell me the format you want, such as PDF, Word, table, or presentation, and I can continue inside the configured export path.",
+      exportPlan: {
+        title: sanitizePilotText(args.title || "Nexus report", 120),
+        requestedFormat: sanitizePilotText(args.format || args.fileType || "unspecified", 80),
+        sections: ["summary", "evidence", "next steps", "receipts"]
+      },
+      receipt,
+      evidenceReceipt: receipt,
+      localOnly: true
+    };
+  }
+  if (toolName === "nexus_receipts") {
+    const store = ensureNexusPersistentOperations(db);
+    const receipts = [
+      ...(store.actionReceipts || []).slice(0, 8),
+      ...(db.nexusPilotAuditEvents || []).slice(0, 4)
+    ];
+    return {
+      ...common,
+      capability: "receipts-history",
+      status: "completed",
+      response: receipts.length
+        ? `I found ${receipts.length} recent Nexus receipt or audit item(s). I kept the lookup local and did not expose secrets.`
+        : "I did not find recent Nexus receipts in local history yet.",
+      receipts,
+      providerAttempted: false,
+      providerSucceeded: false,
+      executionAttempted: false,
+      executionVerified: false,
+      noSecretValuesReturned: true
     };
   }
   const routed = await runCompanionSafeAgentCommand(db, user, {

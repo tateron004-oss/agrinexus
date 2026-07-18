@@ -111,6 +111,7 @@
     "qa:nexus-live-knowledge-all-modes": "node scripts/nexus-live-knowledge-all-modes-qa.js",
     "qa:nexus-global-live-knowledge": "node scripts/nexus-global-live-knowledge-qa.js",
     "qa:nexus-openai-native-genesis": "node scripts/nexus-openai-native-genesis-qa.js",
+    "qa:nexus-openai-native-tool-parity": "node scripts/nexus-openai-native-tool-parity-qa.js",
     "qa:nexus-openai-realtime-genesis": "node scripts/nexus-openai-realtime-genesis-qa.js",
     "qa:nexus-openai-realtime-microphone-handoff": "node scripts/nexus-openai-realtime-microphone-handoff-qa.js",
     "qa:nexus-live-knowledge-provider-activation": "node scripts/nexus-live-knowledge-provider-activation-qa.js",
