@@ -148,8 +148,25 @@ function staticAssertions() {
     "loadNexusOpenAiRealtimeAgentModule",
     "/vendor/nexus-openai-realtime-agent.bundle.mjs",
     "/api/voice/realtime/tool",
-    "openai-agents-sdk-session-started"
+    "openai-agents-sdk-session-started",
+    "openai-agents-live-microphone-track-verified",
+    "openai-agents-realtime-verified",
+    "Nexus is keeping the existing listener available",
+    "RealtimeVoiceAdapter"
   ].forEach(token => assert(app.includes(token), `app should include ${token}`));
+
+  const startupMatch = app.match(/async function startOpenAiAgentsRealtimeVoiceSession[\s\S]*?\n}\n\nasync function startRealtimeVoiceSession/);
+  assert(startupMatch, "app should expose the OpenAI Agents Realtime startup function");
+  const startupSource = startupMatch[0];
+  const proofIndex = startupSource.indexOf("normalizeRealtimeMicrophoneProof(controller)");
+  const stopRecognitionIndex = startupSource.indexOf("voiceRecognition.stop()");
+  const stopPermissionIndex = startupSource.indexOf("stopNexusVoicePermissionStream(\"openai-agents-realtime-verified\")");
+  assert(proofIndex > -1, "Realtime startup should verify microphone proof after SDK connect");
+  assert(stopRecognitionIndex > proofIndex, "legacy recognition must not stop before Realtime microphone proof");
+  assert(stopPermissionIndex > proofIndex, "legacy permission stream must not stop before Realtime microphone proof");
+  assert(!startupSource.includes("stopNexusVoicePermissionStream(\"openai-agents-realtime-selected\")"), "Realtime startup must not release the permission stream at selection time");
+  assert(startupSource.includes("legacyListenerPreserved"), "Realtime startup should record whether the legacy listener was preserved during handoff");
+  assert(startupSource.includes("hasLiveTrack"), "Realtime startup should require a live microphone track before listening");
 
   [
     "NEXUS_GENESIS_VOICE_RUNTIME=realtime",
@@ -159,6 +176,10 @@ function staticAssertions() {
   ].forEach(token => assert(envExample.includes(token), `.env.example should include ${token}`));
 
   assert(agentBundle.includes("RealtimeSession"), "bundled Realtime agent should include the official SDK session");
+  assert(agentSource.includes("connectSessionWithMicrophoneProof"), "Realtime agent source should wrap session.connect with microphone proof");
+  assert(agentSource.includes("navigator.mediaDevices") && agentSource.includes("mediaDevices.getUserMedia"), "Realtime agent should instrument getUserMedia during SDK connect");
+  assert(agentSource.includes("microphone_track_live"), "Realtime agent should emit verified live microphone-track events");
+  assert(agentSource.includes("getMicrophoneProof"), "Realtime agent controller should expose microphone proof to the app");
   assert(!agentBundle.includes("OPENAI_API_KEY"), "browser bundle must not include permanent OpenAI key names");
   assert.equal(packageJson.scripts["qa:nexus-openai-realtime-genesis"], "node scripts/nexus-openai-realtime-genesis-qa.js");
   assert.equal(packageJson.scripts["build:nexus-openai-realtime-agent"], "esbuild public/nexus-openai-realtime-agent.js --bundle --format=esm --platform=browser --target=es2020 --outfile=public/vendor/nexus-openai-realtime-agent.bundle.mjs");

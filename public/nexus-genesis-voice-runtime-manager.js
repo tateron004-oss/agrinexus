@@ -650,7 +650,8 @@
           oneOwnerAtATime: true,
           legacyProductionDefault: true,
           elevenLabsCandidateOnly: true,
-          openAiRealtimeDisabled: true
+          openAiRealtimeDisabled: false,
+          openAiRealtimeManagedRuntime: Boolean(adapters.realtime)
         };
       },
       runContinuousConversationHarness(runtimeName = "legacy", turns = 20) {
@@ -981,6 +982,7 @@
     CONVERSATION_WATCHDOGS,
     LegacyBrowserVoiceAdapter: behavior => createAdapter("legacy", behavior),
     ElevenLabsVoiceAdapter: behavior => createAdapter("elevenlabs", behavior),
+    RealtimeVoiceAdapter: behavior => createAdapter("realtime", behavior),
     OpenAIRealtimeAdapter: behavior => createAdapter("realtime", behavior),
     createNexusVoiceRuntimeManager,
     createGenesisConversationSupervisor

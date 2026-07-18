@@ -59,15 +59,15 @@ includes(server, 'edition: "genesis"', "server edition");
 assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "tool registry product identity");
 assert.strictEqual(registry.edition, "genesis", "tool registry edition");
 
-includes(index, "/manifest.webmanifest?v=nexus-behavior-464", "manifest cache marker");
-includes(index, "/styles.css?v=nexus-behavior-464", "stylesheet cache marker");
-includes(index, "/app.js?v=nexus-behavior-464", "app cache marker");
-includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-464"', "app build marker");
-includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v409"', "app PWA cache marker");
-includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-464"', "server build marker");
-includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v409"', "server PWA cache marker");
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v409"', "service worker cache marker");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-464"', "service worker build marker");
+includes(index, "/manifest.webmanifest?v=nexus-behavior-465", "manifest cache marker");
+includes(index, "/styles.css?v=nexus-behavior-465", "stylesheet cache marker");
+includes(index, "/app.js?v=nexus-behavior-465", "app cache marker");
+includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-465"', "app build marker");
+includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v410"', "app PWA cache marker");
+includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-465"', "server build marker");
+includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v410"', "server PWA cache marker");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-v410"', "service worker cache marker");
+includes(sw, 'BUILD_VERSION = "nexus-behavior-465"', "service worker build marker");
 includes(server, 'if (!user && url.pathname !== "/api/config")', "public redacted config route must not trigger guest console 401");
 
 excludes(index, "data-nexus-genesis-orb-entry", "index orb entry");

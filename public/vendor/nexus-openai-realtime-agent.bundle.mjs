@@ -48160,6 +48160,68 @@ function normalizeError(error51) {
     message: String(source.message || nested.message || error51 || "OpenAI Realtime runtime error.").slice(0, 240)
   };
 }
+function microphoneProofForStream(stream) {
+  const tracks = typeof stream?.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+  const liveTrack = tracks.find((track) => track && track.enabled !== false && track.readyState === "live") || null;
+  return {
+    streamActive: Boolean(stream?.active),
+    trackCount: tracks.length,
+    trackState: liveTrack?.readyState || tracks[0]?.readyState || "none",
+    trackEnabled: liveTrack ? liveTrack.enabled !== false : false,
+    trackMuted: liveTrack ? Boolean(liveTrack.muted) : false,
+    hasLiveTrack: Boolean(liveTrack),
+    microphoneTrack: liveTrack
+  };
+}
+async function connectSessionWithMicrophoneProof(session, connectOptions = {}, emit = () => {
+}) {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("Browser microphone capture is unavailable.");
+  const mediaDevices = navigator.mediaDevices;
+  const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
+  let requested = false;
+  let acquiredStream = null;
+  mediaDevices.getUserMedia = async (constraints) => {
+    requested = true;
+    emit("media_stream_requested", { audioRequested: Boolean(constraints?.audio) });
+    try {
+      acquiredStream = await originalGetUserMedia(constraints);
+      const proof2 = microphoneProofForStream(acquiredStream);
+      emit("media_stream_acquired", {
+        streamActive: proof2.streamActive,
+        trackCount: proof2.trackCount,
+        trackState: proof2.trackState,
+        trackEnabled: proof2.trackEnabled,
+        hasLiveTrack: proof2.hasLiveTrack
+      });
+      if (proof2.microphoneTrack) {
+        proof2.microphoneTrack.addEventListener("ended", () => emit("microphone_track_ended", { trackState: proof2.microphoneTrack.readyState }), { once: true });
+        proof2.microphoneTrack.addEventListener("mute", () => emit("microphone_track_muted", { trackState: proof2.microphoneTrack.readyState }));
+        proof2.microphoneTrack.addEventListener("unmute", () => emit("microphone_track_unmuted", { trackState: proof2.microphoneTrack.readyState }));
+      }
+      return acquiredStream;
+    } catch (error51) {
+      const normalized = normalizeError(error51);
+      emit("media_stream_failed", { type: normalized.type, message: normalized.message });
+      throw error51;
+    }
+  };
+  try {
+    await session.connect(connectOptions);
+  } finally {
+    mediaDevices.getUserMedia = originalGetUserMedia;
+  }
+  const proof = microphoneProofForStream(acquiredStream);
+  if (!requested) throw new Error("OpenAI Realtime did not request browser microphone capture.");
+  if (!proof.hasLiveTrack) throw new Error("OpenAI Realtime connected without a live microphone track.");
+  emit("microphone_track_live", {
+    streamActive: proof.streamActive,
+    trackCount: proof.trackCount,
+    trackState: proof.trackState,
+    trackEnabled: proof.trackEnabled,
+    trackMuted: proof.trackMuted
+  });
+  return { stream: acquiredStream, microphoneTrack: proof.microphoneTrack, proof };
+}
 function responseForModel(result = {}) {
   return JSON.stringify({
     ok: Boolean(result.ok !== false),
@@ -48253,15 +48315,24 @@ async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
     emit("transport_event", { type });
   });
   session.on("error", (error51) => emit("error", normalizeError(error51)));
-  await session.connect({
+  const microphone = await connectSessionWithMicrophoneProof(session, {
     apiKey: options.clientSecret,
     model: options.model || "gpt-realtime-2"
-  });
+  }, emit);
   return {
     session,
+    mediaStream: microphone.stream,
+    microphoneTrack: microphone.microphoneTrack,
+    getMicrophoneProof() {
+      return microphoneProofForStream(microphone.stream);
+    },
     close(reason = "closed") {
       emit("closing", { reason });
       session.close();
+      try {
+        microphone.stream?.getTracks?.().forEach((track) => track.stop());
+      } catch {
+      }
     },
     interrupt() {
       session.interrupt();

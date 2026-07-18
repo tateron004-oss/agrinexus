@@ -94,8 +94,8 @@ async function run() {
   assertIncludes(managerSource, "VOICE_RUNTIME_FAILURE_INJECTIONS", "failure injection list");
   assertIncludes(managerSource, "runContinuousConversationHarness", "continuous-turn harness");
   assertIncludes(managerSource, "runFailureInjectionHarness", "failure injection harness");
-  assertIncludes(managerSource, "elevenLabsCandidateOnly: true", "ElevenLabs candidate-only flag");
-  assertIncludes(managerSource, "openAiRealtimeDisabled: true", "OpenAI disabled flag");
+  assertIncludes(managerSource, "openAiRealtimeManagedRuntime", "OpenAI Realtime managed-runtime flag");
+  assertIncludes(managerSource, "realtime: options.realtimeAdapter", "OpenAI Realtime adapter slot");
 
   assertIncludes(serverSource, 'NEXUS_GENESIS_VOICE_RUNTIME || "legacy"', "server legacy default");
   assertIncludes(serverSource, 'NEXUS_GENESIS_CANDIDATE_RUNTIME || "elevenlabs"', "candidate runtime default");
@@ -112,7 +112,7 @@ async function run() {
   assertIncludes(serverSource, "watchdogRecovery: true", "status endpoint watchdog recovery flag");
   assertIncludes(serverSource, "candidateAllowed", "server candidate gate");
   assertIncludes(serverSource, "noSecretValues: true", "secret-free status");
-  assertIncludes(serverSource, 'runtimePolicy.selectedRuntime !== "elevenlabs"', "session route candidate gate");
+  assertIncludes(serverSource, 'selectedRuntime !== "realtime"', "OpenAI Realtime selected-runtime status guard");
   assertNotIncludes(serverSource, 'NEXUS_GENESIS_VOICE_RUNTIME || "elevenlabs"', "legacy must be default runtime");
 
   assertIncludes(appSource, "loadNexusGenesisVoiceRuntimePolicy", "client runtime policy loader");
@@ -133,8 +133,8 @@ async function run() {
   assertIncludes(appSource, "nexusGenesisElevenLabsCandidateAllowed", "client candidate gate");
   assertIncludes(appSource, "if (!candidateAllowed) return false;", "client skips ElevenLabs unless allowlisted");
   assertIncludes(appSource, "legacyBrowserVoiceActiveForNormalUsers", "client legacy policy fallback");
-  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-464", "manager script loaded");
-  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-464"), "manager script must load before app.js");
+  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-465", "manager script loaded");
+  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-465"), "manager script must load before app.js");
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-genesis-safe-voice-runtime-manager"],
