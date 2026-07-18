@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-468";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v413";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-469";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v414";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
@@ -16776,6 +16776,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
     "Ordinary conversation remains conversation. Never open, create, continue, or display a workflow merely because the user speaks.",
+    "Answer greetings, presence checks, emotional support, casual questions, capability questions, and contextual follow-ups directly without a function tool.",
     "Use tools only when a real Nexus capability is needed, such as weather, agriculture, health preparation, workforce, learning, marketplace, logistics, communications, provider readiness, receipts, or workflow preparation.",
     "Never claim an action completed without verified evidence from the Nexus tool result.",
     "High-risk actions require Nexus confirmation gates. Do not send messages, call, schedule, pay, dispatch, refill, diagnose, prescribe, contact providers, share location, or execute marketplace actions by inference.",
@@ -16787,6 +16788,10 @@ function openAiRealtimeInstructions(user, language = "en") {
     "Allow interruption. If the user interrupts, stop the prior response and respond to the new turn.",
     "Repeat, correction, follow-up, and topic-change requests should use recent session context without stale workflow activation."
   ].join(" ");
+}
+
+function nexusRealtimeCallableToolSchemas() {
+  return nexusOpenAiNativeToolSchemas().filter(tool => tool.name !== "nexus_general_conversation");
 }
 
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
@@ -16818,7 +16823,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
     },
     output_modalities: ["audio"],
     instructions: openAiRealtimeInstructions(user, language),
-    tools: nexusOpenAiNativeToolSchemas().map(({ metadata, ...tool }) => tool),
+    tools: nexusRealtimeCallableToolSchemas().map(({ metadata, ...tool }) => tool),
     tool_choice: "auto"
   };
 }
@@ -16892,7 +16897,7 @@ async function openAiRealtimeClientSecret({ user, language = "en" }) {
     transport: "agents-sdk-webrtc",
     runtimeVersion: NEXUS_GENESIS_REALTIME_RUNTIME_VERSION,
     clientConfig: openAiAgentsRealtimeClientConfig(user, language, process.env),
-    toolNames: nexusOpenAiNativeToolSchemas().map(tool => tool.name),
+    toolNames: nexusRealtimeCallableToolSchemas().map(tool => tool.name),
     noPermanentKeyInBrowser: true,
     noSecretValuesReturned: true
   };
@@ -43706,7 +43711,14 @@ async function api(req, res, url) {
     });
   }
 
-  if (!user && url.pathname !== "/api/config") return send(res, 401, { error: "Sign in required" });
+  const boundedGenesisVoiceGuestRoutes = new Set([
+    "/api/voice/realtime/status",
+    "/api/voice/realtime/session",
+    "/api/voice/realtime/tool"
+  ]);
+  if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname)) {
+    return send(res, 401, { error: "Sign in required" });
+  }
 
   if (url.pathname === "/api/state" && req.method === "GET") {
     return send(res, 200, publicState(db, user));
@@ -48240,41 +48252,78 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/status" && req.method === "GET") {
-    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime voice" });
-    return send(res, 200, { realtimeVoice: nexusRealtimeRuntimeStatus(process.env) }, {
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+      language: url.searchParams.get("language") || user?.language || "en",
+      issueGuest: false
+    });
+    return send(res, 200, {
+      realtimeVoice: nexusRealtimeRuntimeStatus(process.env),
+      auth: {
+        authenticated: authContext.authenticated,
+        authorized: authContext.authorized,
+        mechanism: authContext.authMechanism,
+        sessionPresent: authContext.sessionPresent,
+        liveSessionRequiresAuthorization: true
+      },
+      noSecretValues: true
+    }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
 
   if (url.pathname === "/api/voice/realtime/session" && req.method === "POST") {
-    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime voice" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
+    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    const body = await readBody(req);
+    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+      language: body.language || url.searchParams.get("language") || user?.language || "en",
+      issueGuest: true
+    });
+    const baseHeaders = {
+      "cache-control": "no-store, no-cache, must-revalidate, private",
+      ...(authContext.setCookie ? { "set-cookie": authContext.setCookie } : {})
+    };
+    if (!authContext.authenticated) {
+      await writeDb(db);
+      return send(res, 401, {
+        error: "Genesis Realtime voice session authorization required.",
+        category: "application-authentication",
+        providerAttempted: false,
+        authorizationArtifactIssued: false,
+        noSecretValues: true
+      }, baseHeaders);
+    }
+    if (!authContext.authorized) {
+      await writeDb(db);
+      return send(res, 403, {
+        error: "Role does not allow OpenAI Realtime voice.",
+        category: "application-authorization",
+        providerAttempted: false,
+        authorizationArtifactIssued: false,
+        noSecretValues: true
+      }, baseHeaders);
+    }
     const runtimeStatus = nexusRealtimeRuntimeStatus(process.env);
     if (runtimeStatus.runtime === "disabled") {
-      return send(res, 409, { error: "Nexus Genesis voice runtime is disabled.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
+      return send(res, 409, { error: "Nexus Genesis voice runtime is disabled.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, baseHeaders);
     }
     if (runtimeStatus.runtime !== "realtime") {
-      return send(res, 409, { error: "Nexus Genesis OpenAI Realtime is not the selected runtime.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
+      return send(res, 409, { error: "Nexus Genesis OpenAI Realtime is not the selected runtime.", category: "capability-unavailable", realtimeVoice: runtimeStatus }, baseHeaders);
     }
     if (!runtimeStatus.configured) {
-      return send(res, 503, { error: "OpenAI Realtime is missing required server configuration.", category: "provider-not-configured", missingEnv: runtimeStatus.missingEnv, realtimeVoice: runtimeStatus }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
+      return send(res, 503, { error: "OpenAI Realtime is missing required server configuration.", category: "provider-not-configured", missingEnv: runtimeStatus.missingEnv, realtimeVoice: runtimeStatus }, baseHeaders);
     }
     try {
-      const body = await readBody(req);
-      const language = body.language || url.searchParams.get("language") || user.language || "en";
-      const session = await openAiRealtimeClientSecret({ user, language });
-      voiceRecord(db, user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
+      const language = body.language || url.searchParams.get("language") || authContext.user.language || "en";
+      const session = await openAiRealtimeClientSecret({ user: authContext.user, language });
+      voiceRecord(db, authContext.user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
         provider: session.provider,
         model: session.model,
         voice: session.voice,
         transport: session.transport,
-        language
+        language,
+        authMechanism: authContext.authMechanism
       });
       logIntegration(db, {
         providerId: "openai",
@@ -48282,7 +48331,7 @@ async function api(req, res, url) {
         action: "voice.openai_agents_realtime_session_authorized",
         status: "success",
         detail: "OpenAI Agents Realtime client secret issued for Nexus live voice.",
-        metadata: { model: session.model, voice: session.voice, transport: session.transport },
+        metadata: { model: session.model, voice: session.voice, transport: session.transport, authMechanism: authContext.authMechanism },
         dispatch: false
       });
       await writeDb(db);
@@ -48299,17 +48348,16 @@ async function api(req, res, url) {
         clientConfig: session.clientConfig,
         toolEndpoint: "/api/voice/realtime/tool",
         tools: session.toolNames,
+        authMechanism: authContext.authMechanism,
         noPermanentKeyInBrowser: true,
         noSecretValuesReturned: true
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
+      }, baseHeaders);
     } catch (error) {
       const category = error.category || nexusRealtimeFailureCategory(error);
-      voiceRecord(db, user, "openai-agents-realtime", `OpenAI Agents Realtime session failed: ${error.message}`, {
+      voiceRecord(db, authContext.user, "openai-agents-realtime", `OpenAI Agents Realtime session failed: ${error.message}`, {
         provider: "openai-realtime",
         errorCategory: category,
-        language: url.searchParams.get("language") || user.language || "en"
+        language: url.searchParams.get("language") || authContext.user.language || "en"
       });
       logIntegration(db, {
         providerId: "openai",
@@ -48321,9 +48369,12 @@ async function api(req, res, url) {
         dispatch: false
       });
       await writeDb(db);
-      return send(res, 502, { error: "OpenAI Agents Realtime session failed truthfully.", category, realtimeVoice: nexusRealtimeRuntimeStatus(process.env) }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
+      return send(res, 502, {
+        error: "OpenAI Agents Realtime session failed truthfully.",
+        category,
+        realtimeVoice: nexusRealtimeRuntimeStatus(process.env),
+        noSecretValues: true
+      }, baseHeaders);
     }
   }
 
@@ -48411,16 +48462,45 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/tool" && req.method === "POST") {
-    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime tools" });
+    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
+    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
+    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+      language: body.language || body.arguments?.language || user?.language || "en",
+      issueGuest: false
+    });
+    if (!authContext.authenticated) {
+      return send(res, 401, {
+        ok: false,
+        error: "Genesis Realtime tool gateway authorization required.",
+        category: "application-authentication",
+        providerAttempted: false,
+        executionAttempted: false,
+        noSecretValues: true
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
+    if (!authContext.authorized) {
+      return send(res, 403, {
+        ok: false,
+        error: "Role does not allow Nexus Realtime tools.",
+        category: "application-authorization",
+        providerAttempted: false,
+        executionAttempted: false,
+        noSecretValues: true
+      }, {
+        "cache-control": "no-store, no-cache, must-revalidate, private"
+      });
+    }
     const toolName = String(body.name || body.toolName || "nexus_capability_router").trim();
     const openAiNativeToolNames = new Set(nexusOpenAiNativeToolSchemas().map(tool => tool.name));
     if (openAiNativeToolNames.has(toolName)) {
       const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-      const result = await executeNexusOpenAiNativeTool(db, user, toolName, args, {
+      const result = await executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
-        language: args.language || body.language || user.language || "en",
+        language: args.language || body.language || authContext.user.language || "en",
         outputMode: "voice"
       });
       await writeDb(db);
@@ -48432,13 +48512,14 @@ async function api(req, res, url) {
       return send(res, 400, {
         ok: false,
         error: "Unsupported Nexus Realtime tool.",
+        category: "tool-validation",
         blockedReason: "route-not-found",
         supportedTools: ["nexus_capability_router", ...Array.from(openAiNativeToolNames)]
       }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
     }
-    const result = await dispatchNexusRealtimeTool(db, user, body);
+    const result = await dispatchNexusRealtimeTool(db, authContext.user, body);
     await writeDb(db);
     return send(res, 200, result, {
       "cache-control": "no-store, no-cache, must-revalidate, private"

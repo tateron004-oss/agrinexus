@@ -48137,7 +48137,6 @@ var NEXUS_REALTIME_TOOL_PARAMETERS = {
   required: ["command"]
 };
 var NEXUS_REALTIME_TOOL_DEFINITIONS = [
-  ["nexus_general_conversation", "General conversation, contextual follow-up, clarification, correction, language switching, and capability explanation."],
   ["nexus_live_knowledge", "Current or source-backed research using Nexus Live Knowledge and evidence receipts."],
   ["nexus_weather", "Weather and forecast support using configured read-only providers or truthful missing-location/provider states."],
   ["nexus_maps_route", "Maps, typed-location route planning, field visits, logistics, and travel preparation without geolocation or dispatch."],
@@ -48281,7 +48280,7 @@ async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   const agent = new RealtimeAgent({
     name: "Nexus Genesis",
     voice: options.voice || "marin",
-    instructions: options.instructions,
+    instructions: `${options.instructions || ""} General conversation, greetings, presence checks, emotional support, capability questions, casual questions, and contextual follow-ups must be answered directly by the model without a function tool. Call a Nexus tool only for a genuine weather, source retrieval, map, agriculture, health-preparation, workforce, marketplace, communication, workflow, provider-readiness, calculation/data, file, visual, memory, reminder, calendar, export, browser-action, or receipt request.`,
     tools: createNexusRealtimeTools(options)
   });
   const session = new RealtimeSession(agent, {

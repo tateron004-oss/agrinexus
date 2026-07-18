@@ -133,8 +133,8 @@ async function run() {
   assertIncludes(appSource, "nexusGenesisElevenLabsCandidateAllowed", "client candidate gate");
   assertIncludes(appSource, "if (!candidateAllowed) return false;", "client skips ElevenLabs unless allowlisted");
   assertIncludes(appSource, "legacyBrowserVoiceActiveForNormalUsers", "client legacy policy fallback");
-  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-468", "manager script loaded");
-  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-468"), "manager script must load before app.js");
+  assertIncludes(indexSource, "/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-469", "manager script loaded");
+  assert(indexSource.indexOf("/nexus-genesis-voice-runtime-manager.js") < indexSource.indexOf("/app.js?v=nexus-behavior-469"), "manager script must load before app.js");
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-genesis-safe-voice-runtime-manager"],

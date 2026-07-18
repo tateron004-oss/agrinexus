@@ -1336,8 +1336,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-468";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v413";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-469";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v414";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49563,8 +49563,20 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     ok: false,
     status: "failed-truthfully",
     response: "I could not parse the Nexus tool result.",
-    blockedReason: "client-parse-failed"
+    blockedReason: "client-parse-failed",
+    category: "tool-response-parse"
   }));
+  nexusGenesisVoiceDebugLog("openai-agents-tool-http-result", {
+    toolName,
+    correlationId,
+    requestUrl: "/api/voice/realtime/tool",
+    httpStatus: response.status,
+    ok: Boolean(response.ok),
+    category: result.category || result.blockedReason || "",
+    status: result.status || "",
+    providerAttempted: Boolean(result.providerAttempted || result.provider?.attempted),
+    executionAttempted: Boolean(result.executionAttempted || result.execution?.attempted)
+  });
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-completed", {
     toolName,
     correlationId,

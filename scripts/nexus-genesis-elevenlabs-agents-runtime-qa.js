@@ -22,7 +22,7 @@ function notIncludes(source, needle, label) {
 }
 
 [
-  "nexus-behavior-468",
+  "nexus-behavior-469",
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -30,7 +30,7 @@ function notIncludes(source, needle, label) {
   includes(index, marker, `index marker ${marker}`);
 });
 [
-  "agrinexus-pwa-v413"
+  "agrinexus-pwa-v414"
 ].forEach(marker => {
   includes(server, marker, `server marker ${marker}`);
   includes(app, marker, `app marker ${marker}`);
@@ -102,13 +102,17 @@ const sessionRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlab
 const statusRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/status"');
 const toolRouteIndex = server.indexOf('url.pathname === "/api/voice/runtime/tool"');
 const legacyToolRouteIndex = server.indexOf('url.pathname === "/api/voice/elevenlabs/tool"');
-const signInGateIndex = server.indexOf('if (!user && url.pathname !== "/api/config")');
+const signInGateIndex = server.indexOf('if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname))');
 assert(probeRouteIndex !== -1, "authorization probe route should exist");
 assert(sessionRouteIndex !== -1, "ElevenLabs session route should exist");
 assert(statusRouteIndex !== -1, "ElevenLabs status route should exist");
 assert(toolRouteIndex !== -1, "provider-neutral voice runtime tool route should exist");
 assert(legacyToolRouteIndex !== -1, "ElevenLabs tool compatibility route should exist");
 assert(signInGateIndex !== -1, "global sign-in gate should exist");
+includes(server, "const boundedGenesisVoiceGuestRoutes = new Set([", "global sign-in gate bounded voice exception");
+includes(server, '"/api/voice/realtime/status"', "global sign-in gate Realtime status exception");
+includes(server, '"/api/voice/realtime/session"', "global sign-in gate Realtime session exception");
+includes(server, '"/api/voice/realtime/tool"', "global sign-in gate Realtime tool exception");
 assert(probeRouteIndex < signInGateIndex, "authorization probe should be safe readiness before sign-in gate");
 assert(sessionRouteIndex < signInGateIndex, "ElevenLabs session should use shared Genesis voice auth before sign-in gate");
 assert(statusRouteIndex < signInGateIndex, "ElevenLabs status should be safe readiness before sign-in gate");
@@ -407,7 +411,7 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-elevenlabs-agents-runtime",
   runtime: "elevenlabs-inactive-provider-guard",
   realtime: "openai-agents-realtime-default",
-  build: "nexus-behavior-468",
-  cache: "agrinexus-pwa-v413",
+  build: "nexus-behavior-469",
+  cache: "agrinexus-pwa-v414",
   noSecretValues: true
 }, null, 2));

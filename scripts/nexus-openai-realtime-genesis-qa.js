@@ -129,6 +129,9 @@ function staticAssertions() {
     "nexus_workflow",
     "nexus_provider_readiness"
   ].forEach(token => assert(agentSource.includes(token), `Realtime agent source should include ${token}`));
+  assert(!agentSource.includes("[\"nexus_general_conversation\""), "Realtime agent should answer ordinary conversation directly without exposing general conversation as a function tool");
+  assert(server.includes("nexusRealtimeCallableToolSchemas"), "server should expose a filtered Realtime callable tool catalog");
+  assert(server.includes("resolveElevenLabsVoiceAuthContext(req, db, user") && server.includes("authMechanism"), "Realtime routes should reuse the bounded Genesis voice auth context");
 
   [
     "/api/voice/realtime/session",
@@ -201,6 +204,7 @@ async function routeAssertions() {
       const body = JSON.parse(raw || "{}");
       assert.equal(body.model, "gpt-realtime-2", "Realtime session should target gpt-realtime-2 by default");
       assert(Array.isArray(body.tools), "Realtime session should include tool schemas");
+      assert(!body.tools.some(tool => tool.name === "nexus_general_conversation"), "Realtime session should not expose general conversation as a tool");
       assert(body.tools.some(tool => tool.name === "nexus_weather"), "Realtime session should expose Nexus weather tool");
       assert(body.tools.some(tool => tool.name === "nexus_provider_readiness"), "Realtime session should expose provider readiness tool");
       res.writeHead(200, { "content-type": "application/json" });
@@ -272,6 +276,7 @@ async function routeAssertions() {
       assert.equal(session.body.noPermanentKeyInBrowser, true);
       assert.equal(session.body.noSecretValuesReturned, true);
       assert(Array.isArray(session.body.tools) && session.body.tools.includes("nexus_weather"), "session response should list Nexus tools");
+      assert(!session.body.tools.includes("nexus_general_conversation"), "session response should not list general conversation as a Realtime function tool");
       assertNoSecrets(session.body, "Realtime client-secret response");
 
       const tool = await requestJson(`${baseUrl}/api/voice/realtime/tool`, {
@@ -290,10 +295,96 @@ async function routeAssertions() {
       assert.equal(tool.body.noUngatedExecution, true, "Realtime tool results must preserve no-ungated-execution guard");
       assertNoSecrets(tool.body, "Realtime tool response");
     });
+
+    await withNexusServer({
+      OPENAI_API_KEY: "test-openai-secret",
+      OPENAI_REALTIME_CLIENT_SECRETS_URL: `http://127.0.0.1:${openAiPort}/v1/realtime/client_secrets`,
+      OPENAI_REALTIME_MODEL: "gpt-realtime-2",
+      NEXUS_GENESIS_VOICE_RUNTIME: "realtime",
+      NEXUS_OPENAI_NATIVE_ENABLED: "true"
+    }, async baseUrl => {
+      const rejected = await requestJson(`${baseUrl}/api/voice/realtime/session?language=en`, {
+        origin: "https://evil.example",
+        body: { language: "en", transport: "agents-sdk-webrtc" }
+      });
+      assert.equal(rejected.status, 403, "invalid origins must be rejected before guest session bootstrap");
+      assert.equal(rejected.body.category, "application-origin-forbidden");
+
+      const session = await requestJson(`${baseUrl}/api/voice/realtime/session?language=en`, {
+        body: { language: "en", transport: "agents-sdk-webrtc" }
+      });
+      assert.equal(session.status, 200, `bounded Genesis guest Realtime session should authorize: ${session.raw}`);
+      assert.equal(session.body.authMechanism, "bounded_genesis_voice_guest_cookie");
+      assert(String(session.body.clientSecret).startsWith("ek_"), "guest Realtime session should return a short-lived client secret");
+      const guestCookie = (session.setCookie || []).map(item => item.split(";")[0]).join("; ");
+      assert(guestCookie.includes("nexus_genesis_voice_sid="), "Realtime session should issue the bounded Genesis voice guest cookie");
+      assertNoSecrets(session.body, "guest Realtime session response");
+
+      const status = await requestJson(`${baseUrl}/api/voice/realtime/status`, { cookie: guestCookie });
+      assert.equal(status.status, 200);
+      assert.equal(status.body.auth.mechanism, "bounded_genesis_voice_guest_cookie");
+      assert.equal(status.body.auth.sessionPresent, true);
+
+      const calc = await requestJson(`${baseUrl}/api/voice/realtime/tool`, {
+        cookie: guestCookie,
+        body: {
+          name: "nexus_data_code_analysis",
+          correlationId: "qa-realtime-guest-calc",
+          arguments: {
+            command: "Calculate the average of 10, 20, 30, and 40",
+            expression: "average 10 20 30 40",
+            language: "en"
+          }
+        }
+      });
+      assert.equal(calc.status, 200, `guest Realtime local calculation should not require provider credentials: ${calc.raw}`);
+      assert.equal(calc.body.ok, true);
+      assert.equal(calc.body.status, "completed");
+      assert.equal(calc.body.executionVerified, true);
+      assert.equal(calc.body.analysis.average, 25);
+      assertNoSecrets(calc.body, "guest calculation result");
+
+      const weather = await requestJson(`${baseUrl}/api/voice/realtime/tool`, {
+        cookie: guestCookie,
+        body: {
+          name: "nexus_weather",
+          correlationId: "qa-realtime-guest-weather",
+          arguments: {
+            command: "What is the weather in Stockton?",
+            location: "Stockton, California",
+            language: "en"
+          }
+        }
+      });
+      assert.equal(weather.status, 200, `guest Realtime weather should return a tool result or truthful provider state: ${weather.raw}`);
+      assert.equal(weather.body.ok !== false, true);
+      assert.notEqual(weather.body.category, "application-authentication");
+      assertNoSecrets(weather.body, "guest weather result");
+
+      const communication = await requestJson(`${baseUrl}/api/voice/realtime/tool`, {
+        cookie: guestCookie,
+        body: {
+          name: "nexus_communications",
+          correlationId: "qa-realtime-guest-communication",
+          arguments: {
+            command: "Send an SMS to John saying I am running late",
+            channel: "sms",
+            recipient: "John",
+            text: "I am running late.",
+            language: "en"
+          }
+        }
+      });
+      assert.equal(communication.status, 200);
+      assert(["confirmation_required", "blocked", "missing_config", "disabled", "provider-not-configured"].some(token => JSON.stringify(communication.body).includes(token)), "communication should require confirmation or report a specific missing provider");
+      assert.notEqual(communication.body.category, "application-authentication");
+      assert.equal(communication.body.executionVerified, false);
+      assertNoSecrets(communication.body, "guest communication result");
+    });
   } finally {
     await new Promise(resolve => openAiMock.close(resolve));
   }
-  assert.equal(clientSecretRequests, 1, "QA should make exactly one mocked OpenAI client-secret request");
+  assert.equal(clientSecretRequests, 2, "QA should make one admin and one bounded guest mocked OpenAI client-secret request");
 }
 
 async function main() {
