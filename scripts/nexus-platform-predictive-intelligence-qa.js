@@ -204,8 +204,8 @@ domains.forEach(domain => {
   "WhatsApp sent successfully"
 ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe predictive execution claim ${token}`));
 
-includes(serviceWorker, "agrinexus-pwa-v412", "service worker cache bump");
-includes(serviceWorker, "nexus-behavior-467", "service worker build version bump");
+includes(serviceWorker, "agrinexus-pwa-v413", "service worker cache bump");
+includes(serviceWorker, "nexus-behavior-468", "service worker build version bump");
 assert.strictEqual(packageJson.scripts["qa:nexus-platform-predictive-intelligence"], "node scripts/nexus-platform-predictive-intelligence-qa.js", "platform package alias should run platform QA");
 includes(qaSuite, "scripts/nexus-platform-predictive-intelligence-qa.js", "qa-suite should include platform predictive intelligence QA");
 

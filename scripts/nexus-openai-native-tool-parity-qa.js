@@ -117,12 +117,45 @@ async function withNexusServer(env, callback) {
   const baseUrl = `http://127.0.0.1:${port}`;
   try {
     await waitForServer(baseUrl, child);
-    await callback(baseUrl);
+    await callback(baseUrl, { tmpDir, dbPath });
   } finally {
     child.kill();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
   assert(!/test-openai-secret|sk-test|Bearer\s+test/i.test(output), "server logs must not expose secret values");
+}
+
+function withMockProvider(callback) {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      let raw = "";
+      req.on("data", chunk => {
+        raw += chunk;
+      });
+      req.on("end", () => {
+        const parsed = raw ? JSON.parse(raw) : {};
+        const payload = req.url.includes("calendar")
+          ? { id: "mock-calendar-event-1", htmlLink: "https://provider.example/calendar/mock-calendar-event-1", accepted: true }
+          : req.url.includes("browser")
+            ? { outcome: "mock-browser-task-completed", verified: true, evidence: { selector: "#mock", status: "observed" } }
+            : req.url.includes("vision")
+              ? { analysis: "Mock provider saw a user-supplied image reference and returned safe descriptive analysis.", verified: true }
+              : { id: "mock-email-message-1", accepted: true };
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ...payload, receivedKeys: Object.keys(parsed) }));
+      });
+    });
+    server.listen(0, "127.0.0.1", async () => {
+      const baseUrl = `http://127.0.0.1:${server.address().port}`;
+      try {
+        resolve(await callback(baseUrl));
+      } catch (error) {
+        reject(error);
+      } finally {
+        server.close();
+      }
+    });
+  });
 }
 
 function assertNoSecrets(value, label) {
@@ -135,6 +168,15 @@ function staticAssertions() {
   assert(server.includes("tools-never-own-microphone"), "tools must not own microphone");
   assert(server.includes("nexusOpenAiNativeToolReceipt"), "tool results should create evidence receipts");
   assert(server.includes("nexusOpenAiNativeBlockedToolResult"), "credential-blocked tools should share a structured result");
+  assert(server.includes("nexusOpenAiNativeProviderToolResult"), "provider tool results should normalize verified provider outcomes");
+  [
+    "server/providers/emailProvider.js",
+    "server/providers/calendarProvider.js",
+    "server/providers/documentProvider.js",
+    "server/providers/visionProvider.js",
+    "server/providers/browserActionProvider.js",
+    "server/providers/exportProvider.js"
+  ].forEach(relativePath => assert(fs.existsSync(path.join(root, relativePath)), `${relativePath} should exist`));
   assert(app.includes("NexusGenesisRealtimeClientStatus"), "client should expose secret-free Realtime client status");
   assert(app.includes("legacy-transcript-routed-openai-native-fallback"), "Realtime fallback transcripts should route to backend OpenAI-native path");
   assert(app.includes("voice-realtime-unconfirmed-backend-responses"), "Realtime fallback should use the backend Responses path");
@@ -203,8 +245,8 @@ async function runtimeAssertions() {
       }
     });
     assert.equal(documentBlocked.status, 200, "document tool should return structured blocked state");
-    assert.equal(documentBlocked.body.status, "credential-or-upload-blocked");
-    assert.deepEqual(documentBlocked.body.missingEnvVars, ["NEXUS_FILE_UPLOAD_ENABLED"]);
+    assert.equal(documentBlocked.body.status, "disabled");
+    assert.equal(documentBlocked.body.disabled, true);
     assert.equal(documentBlocked.body.executionVerified, false);
     assertNoSecrets(documentBlocked.body, "document blocked tool");
 
@@ -259,6 +301,107 @@ async function runtimeAssertions() {
     assert.equal(realtimeTool.body.status, "completed");
     assert.equal(realtimeTool.body.analysis.calculation.value, 11);
     assertNoSecrets(realtimeTool.body, "Realtime parity tool");
+  });
+
+  await withMockProvider(async mockBaseUrl => {
+    const exportDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-export-provider-"));
+    await withNexusServer({
+      OPENAI_API_KEY: "",
+      NEXUS_OPENAI_NATIVE_ENABLED: "true",
+      NEXUS_FILE_UPLOAD_ENABLED: "true",
+      NEXUS_EMAIL_ENABLED: "true",
+      NEXUS_EMAIL_PROVIDER: "generic",
+      NEXUS_EMAIL_PROVIDER_ENDPOINT: `${mockBaseUrl}/email`,
+      NEXUS_EMAIL_PROVIDER_API_KEY: "test-email-key",
+      NEXUS_EMAIL_FROM: "nexus@example.test",
+      NEXUS_CALENDAR_ENABLED: "true",
+      NEXUS_CALENDAR_PROVIDER: "generic",
+      NEXUS_CALENDAR_PROVIDER_ENDPOINT: `${mockBaseUrl}/calendar`,
+      NEXUS_CALENDAR_PROVIDER_API_KEY: "test-calendar-key",
+      NEXUS_VISION_ENABLED: "true",
+      NEXUS_VISION_PROVIDER: "generic",
+      NEXUS_VISION_PROVIDER_ENDPOINT: `${mockBaseUrl}/vision`,
+      NEXUS_VISION_API_KEY: "test-vision-key",
+      NEXUS_BROWSER_ACTIONS_ENABLED: "true",
+      NEXUS_BROWSER_ACTIONS_ENDPOINT: `${mockBaseUrl}/browser`,
+      NEXUS_BROWSER_ACTIONS_API_KEY: "test-browser-key",
+      NEXUS_DOCUMENT_EXPORT_ENABLED: "true",
+      NEXUS_EXPORT_DIR: exportDir
+    }, async baseUrl => {
+      const login = await requestJson(`${baseUrl}/api/login`, {
+        body: { email: "admin@agrinexus.org", password: "Admin2026!" }
+      });
+      const cookie = (login.setCookie || []).map(item => item.split(";")[0]).join("; ");
+
+      const documentDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_file_document_analysis",
+          arguments: { command: "Analyze this document.", text: "Nexus document content with 42 farmers and 7 clinics." }
+        }
+      });
+      assert.equal(documentDone.body.status, "completed");
+      assert.equal(documentDone.body.executionVerified, true);
+      assert.equal(documentDone.body.providerData.words > 0, true);
+
+      const emailDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_email",
+          arguments: { command: "Email Ron.", to: "ron@example.test", subject: "Nexus test", text: "Provider execution test.", confirmed: true }
+        }
+      });
+      assert.equal(emailDone.body.status, "completed");
+      assert.equal(emailDone.body.executionVerified, true);
+      assert.equal(emailDone.body.providerData.providerMessageId, "mock-email-message-1");
+
+      const calendarDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_calendar",
+          arguments: { command: "Schedule a meeting.", title: "Nexus review", start: "2026-07-19T15:00:00.000Z", confirmed: true }
+        }
+      });
+      assert.equal(calendarDone.body.status, "completed");
+      assert.equal(calendarDone.body.providerData.eventId, "mock-calendar-event-1");
+
+      const visionDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_visual_analysis",
+          arguments: { command: "Review this crop photo.", imageUrl: "https://example.test/crop.jpg" }
+        }
+      });
+      assert.equal(visionDone.body.status, "completed");
+      assert.equal(visionDone.body.providerData.providerVerified, true);
+
+      const browserDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_browser_computer_action",
+          arguments: { command: "Click the approved provider button.", task: "Click approved provider button", url: "https://example.test", confirmed: true }
+        }
+      });
+      assert.equal(browserDone.body.status, "completed");
+      assert.equal(browserDone.body.providerData.providerVerified, true);
+
+      const exportDone = await requestJson(`${baseUrl}/api/nexus/openai-native/tool`, {
+        cookie,
+        body: {
+          name: "nexus_document_export",
+          arguments: { command: "Export this report.", title: "Nexus export", content: "Verified export content", format: "txt", confirmed: true }
+        }
+      });
+      assert.equal(exportDone.body.status, "completed");
+      assert.equal(exportDone.body.providerData.format, "txt");
+      assert(fs.existsSync(path.join(exportDir, exportDone.body.providerData.filename)), "export file should exist in configured export dir");
+
+      [documentDone, emailDone, calendarDone, visionDone, browserDone, exportDone].forEach((result, index) => {
+        assert(result.body.receipt?.receiptId, `provider execution ${index} should include a Nexus receipt`);
+        assertNoSecrets(result.body, `provider execution ${index}`);
+      });
+    });
+    fs.rmSync(exportDir, { recursive: true, force: true });
   });
 }
 

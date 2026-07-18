@@ -28,5 +28,11 @@ module.exports = {
   telehealthBridge: require("./telehealthBridgeProvider"),
   mobileClinicBridge: require("./mobileClinicBridgeProvider"),
   pharmacyBridge: require("./pharmacyBridgeProvider"),
-  patientSupportBridge: require("./patientSupportBridgeProvider")
+  patientSupportBridge: require("./patientSupportBridgeProvider"),
+  email: require("./emailProvider"),
+  calendar: require("./calendarProvider"),
+  documents: require("./documentProvider"),
+  vision: require("./visionProvider"),
+  browserActions: require("./browserActionProvider"),
+  exports: require("./exportProvider")
 };
