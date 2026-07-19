@@ -1336,8 +1336,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-469";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v414";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-470";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v415";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -12152,7 +12152,32 @@ function updateWorkspaceBar(sectionId) {
   if (description) description.textContent = translateText(copy.description);
 }
 
+function nexusRealtimeConversationSurfaceLocked() {
+  return Boolean(realtimeVoiceSession?.active || realtimeVoiceSession?.handoffPending || realtimeVoiceStarting);
+}
+
+function nexusRealtimeSurfaceChangeAllowed(options = {}) {
+  return Boolean(options.explicitUserNavigation || options.allowRealtimeSurfaceChange);
+}
+
 function goSection(sectionId, options = {}) {
+  const activeSectionId = currentSectionId?.() || "dashboard";
+  if (
+    nexusRealtimeConversationSurfaceLocked()
+    && !nexusRealtimeSurfaceChangeAllowed(options)
+    && sectionId !== activeSectionId
+  ) {
+    nexusGenesisVoiceDebugLog("realtime-surface-navigation-blocked", {
+      requestedSection: sectionId || "",
+      activeSection: activeSectionId,
+      reason: options.source || "implicit-navigation"
+    });
+    updateRealtimeControllerState("listening", "realtime-surface-preserved", {
+      requestedSection: sectionId || "",
+      activeSection: activeSectionId
+    });
+    return false;
+  }
   const target = $(`#${sectionId}`);
   if (!target || !target.classList.contains("section")) sectionId = "dashboard";
   if (experienceMode === "user" && sectionId !== "dashboard" && !simpleUserSections[sectionId]) {
@@ -12221,6 +12246,7 @@ function activateSectionFromButton(button, options = {}) {
   goSection(sectionId, {
     instant: true,
     openDefaultAction: false,
+    explicitUserNavigation: true,
     ...options
   });
   const activeSection = $(`#${sectionId}`);
@@ -51630,6 +51656,18 @@ async function executeWorkflowConfigFromVoice(config, response = "") {
 }
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
+  if (nexusRealtimeConversationSurfaceLocked()) {
+    nexusGenesisVoiceDebugLog("realtime-workflow-open-blocked", {
+      workflow: workflow || "",
+      action: action || "",
+      reason: "realtime-conversation-surface-locked"
+    });
+    updateRealtimeControllerState("listening", "realtime-surface-preserved", {
+      workflow: workflow || "",
+      action: action || ""
+    });
+    return false;
+  }
   const config = workflowConfig(workflow, action, { dataset });
   const actionLead = "";
   companionRouteOutcomeMetadata(agentPerformanceState.lastCommand || response || "", {

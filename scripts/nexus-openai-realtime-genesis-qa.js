@@ -132,6 +132,11 @@ function staticAssertions() {
   assert(!agentSource.includes("[\"nexus_general_conversation\""), "Realtime agent should answer ordinary conversation directly without exposing general conversation as a function tool");
   assert(server.includes("nexusRealtimeCallableToolSchemas"), "server should expose a filtered Realtime callable tool catalog");
   assert(server.includes("resolveElevenLabsVoiceAuthContext(req, db, user") && server.includes("authMechanism"), "Realtime routes should reuse the bounded Genesis voice auth context");
+  assert(agentSource.includes("Keep every tool result, provider failure, clarification, and capability answer inside the current voice conversation"), "Realtime agent should keep tool results inside the current conversation surface");
+  assert(app.includes("function nexusRealtimeConversationSurfaceLocked"), "app should expose a Realtime conversation surface lock");
+  assert(app.includes("realtime-surface-navigation-blocked"), "app should block implicit navigation while Realtime owns the conversation surface");
+  assert(app.includes("realtime-workflow-open-blocked"), "app should block legacy workflow openings while Realtime owns the conversation surface");
+  assert(app.includes("explicitUserNavigation"), "explicit user navigation should remain distinguishable from implicit Realtime/tool routing");
 
   [
     "/api/voice/realtime/session",
@@ -170,6 +175,27 @@ function staticAssertions() {
   assert(!startupSource.includes("stopNexusVoicePermissionStream(\"openai-agents-realtime-selected\")"), "Realtime startup must not release the permission stream at selection time");
   assert(startupSource.includes("legacyListenerPreserved"), "Realtime startup should record whether the legacy listener was preserved during handoff");
   assert(startupSource.includes("hasLiveTrack"), "Realtime startup should require a live microphone track before listening");
+
+  const toolClientMatch = app.match(/async function callNexusOpenAiRealtimeTool[\s\S]*?\n}\n\nfunction handleOpenAiAgentsRealtimeEvent/);
+  assert(toolClientMatch, "app should expose the OpenAI Agents Realtime tool client");
+  const toolClientSource = toolClientMatch[0];
+  assert(!/\bgoSection\s*\(/.test(toolClientSource), "Realtime tool client must not navigate away from the orb conversation surface");
+  assert(!/\bopenWorkflowModal\s*\(/.test(toolClientSource), "Realtime tool client must not open workflow modals");
+  assert(!/\bopenWorkflowByVoice\s*\(/.test(toolClientSource), "Realtime tool client must not route tool results through legacy workflow voice handling");
+  assert(toolClientSource.includes('requestUrl: "/api/voice/realtime/tool"'), "Realtime tool client should record the exact same-origin tool gateway URL");
+
+  const goSectionStart = app.indexOf("function goSection(");
+  const goSectionEnd = app.indexOf("function activateSectionFromButton", goSectionStart);
+  assert(goSectionStart > -1 && goSectionEnd > goSectionStart, "app should expose section navigation");
+  const goSectionSource = app.slice(goSectionStart, goSectionEnd);
+  assert(goSectionSource.includes("nexusRealtimeConversationSurfaceLocked()"), "section navigation should honor the active Realtime surface lock");
+  assert(goSectionSource.includes("!nexusRealtimeSurfaceChangeAllowed(options)"), "section navigation should only bypass the lock for explicit navigation");
+
+  const workflowVoiceStart = app.indexOf("function openWorkflowByVoice(");
+  const workflowVoiceEnd = app.indexOf("function isLearningCaptionCommand", workflowVoiceStart);
+  assert(workflowVoiceStart > -1 && workflowVoiceEnd > workflowVoiceStart, "app should expose voice workflow routing");
+  const workflowVoiceSource = app.slice(workflowVoiceStart, workflowVoiceEnd);
+  assert(workflowVoiceSource.includes("nexusRealtimeConversationSurfaceLocked()"), "voice workflow routing should honor the active Realtime surface lock");
 
   [
     "NEXUS_GENESIS_VOICE_RUNTIME=realtime",

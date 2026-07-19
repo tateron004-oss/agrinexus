@@ -48280,7 +48280,7 @@ async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   const agent = new RealtimeAgent({
     name: "Nexus Genesis",
     voice: options.voice || "marin",
-    instructions: `${options.instructions || ""} General conversation, greetings, presence checks, emotional support, capability questions, casual questions, and contextual follow-ups must be answered directly by the model without a function tool. Call a Nexus tool only for a genuine weather, source retrieval, map, agriculture, health-preparation, workforce, marketplace, communication, workflow, provider-readiness, calculation/data, file, visual, memory, reminder, calendar, export, browser-action, or receipt request.`,
+    instructions: `${options.instructions || ""} General conversation, greetings, presence checks, emotional support, capability questions, casual questions, and contextual follow-ups must be answered directly by the model without a function tool. Call a Nexus tool only for a genuine weather, source retrieval, map, agriculture, health-preparation, workforce, marketplace, communication, workflow, provider-readiness, calculation/data, file, visual, memory, reminder, calendar, export, browser-action, or receipt request. Keep every tool result, provider failure, clarification, and capability answer inside the current voice conversation unless the user explicitly asks to navigate. Never open or mention opening AI Help, dashboards, workspaces, plans, or mode panels unless navigation was explicitly requested.`,
     tools: createNexusRealtimeTools(options)
   });
   const session = new RealtimeSession(agent, {
