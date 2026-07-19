@@ -71,7 +71,8 @@ function assertStaticHandoffContract() {
   assert(stopPermissionIndex > proofIndex, "legacy permission stream must not release before live-track proof");
   assert(listeningIndex > proofIndex, "UI must show Listening only after live-track proof");
   assert(startup.includes("legacyListenerPreserved"), "Realtime handoff must record preserved legacy listener state");
-  assert(startup.includes("Nexus is keeping the existing listener available"), "Realtime failure must truthfully preserve/restore listener availability");
+  assert(startup.includes("Nexus voice connection unavailable — retry"), "Realtime failure must truthfully expose retry availability");
+  assert(startup.includes("The microphone and orb remain available."), "Realtime failure must preserve permanent microphone/orb visibility");
   assert(!startup.includes("stopNexusVoicePermissionStream(\"openai-agents-realtime-selected\")"), "selection-time stream release must stay removed");
   assert(!startup.includes("voiceStopRequested = true;\n  if (voiceRecognition)"), "startup must not stop recognition at function entry");
 }

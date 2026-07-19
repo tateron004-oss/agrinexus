@@ -77,11 +77,25 @@ async function connectSessionWithMicrophoneProof(session, connectOptions = {}, e
   if (!navigator.mediaDevices?.getUserMedia) throw new Error("Browser microphone capture is unavailable.");
   const mediaDevices = navigator.mediaDevices;
   const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
+  const preverifiedStream = connectOptions.preverifiedMicrophoneStream || null;
+  const preverifiedProof = preverifiedStream ? microphoneProofForStream(preverifiedStream) : null;
+  if (preverifiedStream && !preverifiedProof.hasLiveTrack) throw new Error("Pre-acquired Nexus microphone stream is not live.");
   let requested = false;
-  let acquiredStream = null;
+  let acquiredStream = preverifiedStream || null;
   mediaDevices.getUserMedia = async constraints => {
     requested = true;
     emit("media_stream_requested", { audioRequested: Boolean(constraints?.audio) });
+    if (preverifiedStream) {
+      emit("media_stream_acquired", {
+        streamActive: preverifiedProof.streamActive,
+        trackCount: preverifiedProof.trackCount,
+        trackState: preverifiedProof.trackState,
+        trackEnabled: preverifiedProof.trackEnabled,
+        hasLiveTrack: preverifiedProof.hasLiveTrack,
+        preverified: true
+      });
+      return preverifiedStream;
+    }
     try {
       acquiredStream = await originalGetUserMedia(constraints);
       const proof = microphoneProofForStream(acquiredStream);
@@ -222,7 +236,8 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
 
   const microphone = await connectSessionWithMicrophoneProof(session, {
     apiKey: options.clientSecret,
-    model: options.model || "gpt-realtime-2"
+    model: options.model || "gpt-realtime-2",
+    preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null
   }, emit);
 
   return {

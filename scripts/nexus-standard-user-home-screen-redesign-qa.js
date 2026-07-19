@@ -319,14 +319,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-472"', "app build version"],
-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-472"', "server build version"],
-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417"', "server cache version"],
-  [sw, 'CACHE_NAME = "agrinexus-pwa-v417"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-472"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-472", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-472", "app script cache bust"]
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"', "app build version"],
+  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"', "app cache version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473"', "server build version"],
+  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"', "server cache version"],
+  [sw, 'CACHE_NAME = "agrinexus-pwa-v418"', "service worker cache"],
+  [sw, 'BUILD_VERSION = "nexus-behavior-473"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-473", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-473", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

@@ -59,8 +59,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-472";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -43398,6 +43398,33 @@ async function api(req, res, url) {
         noSecretValues: true
       },
       removedRuntimes: ["elevenlabs", "legacy-browser-conversation"],
+      noSecretValues: true
+    }, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/nexus/production/voice-diagnostics" && req.method === "GET") {
+    const realtimeStatus = nexusRealtimeRuntimeStatus(process.env);
+    const voiceRuntimePolicy = nexusGenesisVoiceRuntimePolicy(user, process.env);
+    return send(res, 200, {
+      schemaVersion: "nexus.production.voiceDiagnostics.v1",
+      deployedCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || process.env.COMMIT_SHA || "unknown",
+      webBuild: AGRINEXUS_WEB_BUILD_VERSION,
+      pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
+      selectedVoiceRuntime: voiceRuntimePolicy.selectedRuntime,
+      microphoneOwner: "browser-verified-genesis-voice-runtime-manager",
+      serviceWorkerVersion: AGRINEXUS_PWA_CACHE_VERSION,
+      realtimeReadiness: {
+        runtime: realtimeStatus.runtime,
+        ready: Boolean(realtimeStatus.ready),
+        configured: Boolean(realtimeStatus.configured),
+        model: realtimeStatus.model,
+        transport: realtimeStatus.transport,
+        missingEnv: Array.isArray(realtimeStatus.missingEnv) ? realtimeStatus.missingEnv : [],
+        noSecretValues: true
+      },
+      removedRuntimeIdentifiers: ["elevenlabs", "legacy-browser-conversation", "browser-speech-fallback", "candidate-runtime", "rollback-runtime"],
       noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"

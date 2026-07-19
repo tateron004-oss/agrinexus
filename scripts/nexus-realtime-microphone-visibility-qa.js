@@ -7,6 +7,8 @@ const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
+const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
+const realtimeAgent = fs.readFileSync(path.join(root, "public", "nexus-openai-realtime-agent.js"), "utf8");
 
 function between(source, startNeedle, endNeedle) {
   const start = source.indexOf(startNeedle);
@@ -31,15 +33,49 @@ const presenceControls = between(app, "function renderNexusVoiceFirstPresenceCon
 const homeGate = between(app, "function renderNexusGenesisHomeVoiceGate", "function renderNexusTrueCommandComposer");
 const startListening = between(app, "async function startVoiceListening", "async function sendModuleNotification");
 const runtimeManager = between(app, "function initializeNexusGenesisVoiceRuntimeManager", "async function nexusGenesisElevenLabsCandidateAllowed");
+const permanentMic = between(app, "function nexusPermanentMicrophoneElements", "async function refreshChromeVoicePermissionHint");
+const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVoiceSession", "async function startRealtimeVoiceSession");
 
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-472"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-472"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v417"') &&
-      index.includes("/app.js?v=nexus-behavior-472")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v418"') &&
+      index.includes("/app.js?v=nexus-behavior-473")
+  ],
+  [
+    "Static HTML microphone exists before app JavaScript",
+    index.includes('id="nexusPermanentMicrophoneDock"') &&
+      index.includes('id="nexusPermanentMicrophoneBtn"') &&
+      index.includes("Enable microphone") &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-473') &&
+      !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
+  ],
+  [
+    "Permanent microphone CSS keeps the control visible",
+    styles.includes(".nexus-permanent-microphone-dock") &&
+      styles.includes("position: fixed") &&
+      styles.includes("z-index: 2147483000") &&
+      !between(styles, ".nexus-permanent-microphone-dock", ".nexus-permanent-microphone-button").includes("display: none") &&
+      !between(styles, ".nexus-permanent-microphone-button", ".nexus-permanent-microphone-button:focus-visible").includes("visibility: hidden")
+  ],
+  [
+    "Direct click calls getUserMedia and verifies a live track before Realtime",
+    permanentMic.includes("addEventListener(\"click\", handleNexusPermanentMicrophoneClick, true)") &&
+      permanentMic.includes("navigator.mediaDevices.getUserMedia({ audio: true })") &&
+      permanentMic.includes('track.readyState === "live"') &&
+      permanentMic.includes("track.enabled !== false") &&
+      permanentMic.includes("preverifiedMicrophoneStream: stream")
+  ],
+  [
+    "Preverified microphone stream is handed to OpenAI Realtime",
+    realtimeStartup.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
+      realtimeAgent.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
+      realtimeAgent.includes("if (preverifiedStream)") &&
+      realtimeAgent.includes("return preverifiedStream") &&
+      realtimeAgent.includes('throw new Error("Pre-acquired Nexus microphone stream is not live.")')
   ],
   [
     "Realtime microphone UI availability is separated from provider readiness",
@@ -83,8 +119,24 @@ const checks = [
   [
     "Realtime/provider failure is truthful and does not remove mic/orb",
     app.includes("OpenAI Realtime voice did not start:") &&
-      app.includes("Nexus is keeping the existing listener available.") &&
+      app.includes("Nexus voice connection unavailable — retry") &&
+      app.includes("The microphone and orb remain available.") &&
       app.includes("OpenAI Realtime did not connect to a live microphone track.")
+  ],
+  [
+    "Permanent microphone stream is protected from non-explicit cleanup",
+    app.includes("permanent-microphone-stop-skipped") &&
+      app.includes("nexusPermanentMicrophoneOwner") &&
+      app.includes("browser-verified-genesis-voice-runtime-manager")
+  ],
+  [
+    "Production voice diagnostic is non-secret and authoritative",
+    server.includes('/api/nexus/production/voice-diagnostics') &&
+      server.includes("deployedCommit") &&
+      server.includes("selectedVoiceRuntime") &&
+      server.includes("microphoneOwner") &&
+      server.includes("removedRuntimeIdentifiers") &&
+      server.includes("noSecretValues: true")
   ],
   [
     "No obsolete ElevenLabs or direct SDK runtime restored",
@@ -100,6 +152,7 @@ assert.deepEqual(failures, [], `Realtime microphone visibility regressions: ${fa
 
 excludes(app, "Mic unavailable\";", "hard unavailable mic label");
 includes(app, "Microphone control is ready.", "visible microphone ready copy");
+includes(index, 'data-nexus-permanent-microphone-control="true"', "permanent microphone control contract");
 
 console.log("Nexus Realtime microphone visibility QA passed");
 for (const [label] of checks) console.log(`- ${label}`);

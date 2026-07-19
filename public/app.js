@@ -725,6 +725,9 @@ let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let nexusVoicePermissionDeniedThisSession = false;
 let nexusVoicePermissionStream = null;
+let nexusPermanentMicrophoneStream = null;
+let nexusPermanentMicrophoneOwner = "none";
+let nexusPermanentMicrophoneClickBound = false;
 let nexusVoiceAudioFallbackRecorder = null;
 let nexusVoiceAudioFallbackChunks = [];
 let nexusVoiceAudioFallbackTimer = null;
@@ -1336,8 +1339,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-472";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-473";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -38292,9 +38295,11 @@ function renderUserWorkspace() {
     </section>
   `;
   bindNexusStandardUserHomeControls();
+  bindNexusPermanentMicrophoneControl();
   bindNexusPrimaryVoiceControls();
   updateNexusGenesisExperienceDom();
   setTimeout(() => {
+    bindNexusPermanentMicrophoneControl();
     bindNexusPrimaryVoiceControls();
     updateNexusOsUnifiedConversationDom();
     maybeStartGenesisRecognitionAfterGrantedPermission("render-user-workspace").catch(() => {});
@@ -49745,6 +49750,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       voice: sessionPayload.voice || status.voice || "marin",
       instructions: sessionPayload.clientConfig?.instructions || "",
       clientConfig: sessionPayload.clientConfig || {},
+      preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null,
       language: () => languageCode(),
       lastUserCommand: () => nexusOsVoiceRuntimeState.lastFinal || "",
       callNexusTool: callNexusOpenAiRealtimeTool,
@@ -49794,7 +49800,9 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       if (voiceRecognition === legacyRecognitionAtStart || legacyRecognitionAtStart) voiceRecognition = null;
     }
     stopNexusAudioFallbackRecorder("openai-agents-realtime-verified");
-    stopNexusVoicePermissionStream("openai-agents-realtime-verified");
+    if (!options.preverifiedMicrophoneStream || nexusVoicePermissionStream !== options.preverifiedMicrophoneStream) {
+      stopNexusVoicePermissionStream("openai-agents-realtime-verified");
+    }
     realtimeVoiceStarting = false;
     voiceStopRequested = false;
     nexusOsVoiceStartInFlight = false;
@@ -49817,6 +49825,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       microphoneTrackState: micProof.trackState,
       microphoneTrackEnabled: micProof.trackEnabled
     });
+    setNexusPermanentMicrophoneState("connected", "Nexus Realtime voice is connected and listening.");
     refreshMicSupport();
     return true;
   } catch (error) {
@@ -49834,8 +49843,9 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       legacyListenerPreserved: Boolean(voiceRecognition || nexusVoicePermissionStream)
     });
     const outputStatus = $("#globalVoiceOutputStatus");
-    const fallbackMessage = `OpenAI Realtime voice did not start: ${message}. Nexus is keeping the existing listener available.`;
+    const fallbackMessage = `OpenAI Realtime voice did not start: ${message}. Nexus voice connection unavailable — retry.`;
     if (outputStatus) outputStatus.textContent = translateText(fallbackMessage);
+    setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone and orb remain available.");
     updateNexusBehaviorLayer("fallback", fallbackMessage);
     refreshMicSupport();
     return false;
@@ -49865,6 +49875,7 @@ async function startRealtimeVoiceSession(options = {}) {
     const message = `Nexus Realtime voice is temporarily unavailable: ${error.message || "connection failed"}`;
     const outputStatus = $("#globalVoiceOutputStatus");
     if (outputStatus) outputStatus.textContent = translateText(message);
+    setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone control remains visible.");
     updateNexusBehaviorLayer("fallback", message);
     nexusGenesisVoiceDebugLog("session-failed", {
       runtime: "realtime",
@@ -50234,9 +50245,19 @@ window.nexusVoiceAudioPipeline = {
 
 function stopNexusVoicePermissionStream(reason = "stopped") {
   if (!nexusVoicePermissionStream) return;
+  const isPermanentStream = nexusPermanentMicrophoneStream && nexusVoicePermissionStream === nexusPermanentMicrophoneStream;
+  const canStopPermanent = /explicit-stop|user-stop|signed-out|logout|pagehide|beforeunload|left-genesis|security|new-request/i.test(reason);
+  if (isPermanentStream && !canStopPermanent) {
+    recordNexusAudioPipelineEvent("permanent-microphone-stop-skipped", { reason, owner: nexusPermanentMicrophoneOwner });
+    return;
+  }
   try {
     nexusVoicePermissionStream.getTracks().forEach(track => track.stop());
   } catch {}
+  if (isPermanentStream) {
+    nexusPermanentMicrophoneStream = null;
+    nexusPermanentMicrophoneOwner = "none";
+  }
   nexusVoicePermissionStream = null;
   recordNexusAudioPipelineEvent("media-stream-stopped", { reason });
 }
@@ -50450,6 +50471,149 @@ async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-run
     });
     throw error;
   }
+}
+
+function nexusPermanentMicrophoneElements() {
+  return {
+    dock: document.querySelector("#nexusPermanentMicrophoneDock"),
+    button: document.querySelector("[data-nexus-permanent-microphone-control='true']") || document.querySelector("#nexusPermanentMicrophoneBtn"),
+    status: document.querySelector("#nexusPermanentMicrophoneStatus")
+  };
+}
+
+function setNexusPermanentMicrophoneState(state = "ready", message = "Microphone ready to enable.") {
+  if (typeof document === "undefined") return;
+  const { dock, button, status } = nexusPermanentMicrophoneElements();
+  if (dock) {
+    dock.hidden = false;
+    dock.removeAttribute("aria-hidden");
+  }
+  if (button) {
+    button.hidden = false;
+    button.disabled = false;
+    button.dataset.nexusPermanentMicrophoneState = state;
+    if (state === "blocked") button.textContent = "Microphone blocked — view instructions";
+    else if (state === "connected") button.textContent = "Microphone connected";
+    else if (state === "unavailable") button.textContent = "Nexus voice connection unavailable — retry";
+    else if (state === "requesting") button.textContent = "Requesting microphone...";
+    else button.textContent = "Enable microphone";
+  }
+  if (status) {
+    status.hidden = false;
+    status.textContent = translateText(message);
+  }
+}
+
+function verifyNexusPermanentMicrophoneStream(stream) {
+  const tracks = typeof stream?.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+  const liveTrack = tracks.find(track => track && track.readyState === "live" && track.enabled !== false) || null;
+  return {
+    ok: Boolean(stream && liveTrack),
+    stream,
+    track: liveTrack,
+    trackCount: tracks.length,
+    trackState: liveTrack?.readyState || tracks[0]?.readyState || "none",
+    trackEnabled: liveTrack ? liveTrack.enabled !== false : false,
+    streamActive: Boolean(stream?.active)
+  };
+}
+
+async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-html-microphone-button") {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setNexusPermanentMicrophoneState("unavailable", "This browser page cannot request microphone access. Use HTTPS and a browser with microphone support.");
+    throw new Error("getUserMedia unavailable");
+  }
+  setNexusPermanentMicrophoneState("requesting", "Requesting microphone permission...");
+  recordNexusAudioPipelineEvent("permanent-microphone-click", { source });
+  nexusGenesisVoiceDebugLog("permanent-microphone-click", { source });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const proof = verifyNexusPermanentMicrophoneStream(stream);
+    if (!proof.ok) {
+      try {
+        stream?.getTracks?.().forEach(track => track.stop?.());
+      } catch {}
+      setNexusPermanentMicrophoneState("unavailable", "Microphone opened without a live audio track. Check browser or device settings, then retry.");
+      throw new Error("no-live-audio-track");
+    }
+    nexusPermanentMicrophoneStream = stream;
+    nexusVoicePermissionStream = stream;
+    nexusPermanentMicrophoneOwner = "browser-verified-genesis-voice-runtime-manager";
+    nexusVoicePermissionDeniedThisSession = false;
+    recordNexusAudioPipelineEvent("permanent-microphone-live-track", {
+      source,
+      trackCount: proof.trackCount,
+      trackState: proof.trackState,
+      trackEnabled: proof.trackEnabled,
+      owner: nexusPermanentMicrophoneOwner
+    });
+    nexusGenesisVoiceDebugLog("permanent-microphone-live-track", {
+      source,
+      trackCount: proof.trackCount,
+      trackState: proof.trackState,
+      trackEnabled: proof.trackEnabled,
+      owner: nexusPermanentMicrophoneOwner
+    });
+    updateNexusOsVoiceRuntimeState({
+      mode: "microphone-ready",
+      listeningState: "microphone-ready",
+      hearingState: "idle",
+      permissionState: "granted",
+      permissionDisplayText: "granted",
+      microphoneStreamActive: true,
+      microphoneTrackState: "live",
+      runtimeOwner: nexusPermanentMicrophoneOwner
+    }, source);
+    setNexusPermanentMicrophoneState("connected", "Microphone is live. Connecting Nexus Realtime voice...");
+    return { stream, proof };
+  } catch (error) {
+    const denied = /notallowed|permission|denied/i.test(`${error.name || ""} ${error.message || ""}`);
+    nexusVoicePermissionDeniedThisSession = denied;
+    setNexusPermanentMicrophoneState(
+      denied ? "blocked" : "unavailable",
+      denied
+        ? "Microphone permission is blocked. Open browser site settings, allow microphone for this site, then reload and retry."
+        : `Nexus could not open the microphone: ${error.message || "device unavailable"}.`
+    );
+    updateNexusOsVoiceRuntimeState({
+      mode: denied ? "microphone-blocked" : "microphone-unavailable",
+      listeningState: "blocked",
+      hearingState: "idle",
+      permissionState: denied ? "denied" : "unknown",
+      microphoneUnavailable: true,
+      lastError: error.message || "microphone-start-failed"
+    }, source);
+    throw error;
+  }
+}
+
+async function handleNexusPermanentMicrophoneClick(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  event?.stopImmediatePropagation?.();
+  try {
+    const { stream } = await acquirePermanentGenesisMicrophoneFromClick("permanent-html-microphone-button");
+    const result = await startVoiceListening({
+      source: "permanent-html-microphone-button",
+      preverifiedMicrophoneStream: stream
+    });
+    if (!result?.ok && result !== true) {
+      setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone control remains available.");
+    }
+  } catch {
+    // The visible status region already explains the exact browser recovery path.
+  }
+}
+
+function bindNexusPermanentMicrophoneControl() {
+  if (typeof document === "undefined" || nexusPermanentMicrophoneClickBound) return;
+  const { button } = nexusPermanentMicrophoneElements();
+  if (!button) return;
+  nexusPermanentMicrophoneClickBound = true;
+  button.hidden = false;
+  button.disabled = false;
+  button.addEventListener("click", handleNexusPermanentMicrophoneClick, true);
+  setNexusPermanentMicrophoneState("ready", "Microphone ready to enable.");
 }
 
 async function refreshChromeVoicePermissionHint() {
@@ -60727,6 +60891,7 @@ async function boot() {
   loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);
   installNexusAutonomousRuntimePreview();
   captureOriginalText();
+  bindNexusPermanentMicrophoneControl();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
   $("#loginView").classList.remove("hidden");
   $("#password")?.focus();
