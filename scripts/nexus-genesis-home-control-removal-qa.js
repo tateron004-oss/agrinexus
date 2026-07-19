@@ -98,7 +98,7 @@ includesAll(startVoice, [
 includesAll(supervisorStartVoice, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
-  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
 ], "voice supervisor startup path");
 includesAll(acquireStream, [
   "navigator.mediaDevices.getUserMedia",

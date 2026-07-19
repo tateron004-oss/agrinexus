@@ -1336,8 +1336,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-471";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v416";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-472";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -15597,12 +15597,12 @@ function mobilePermissionRecoveryGuide() {
 function nativeAppCapabilityMatrix() {
   const permission = mobilePermissionRecoveryGuide();
   const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-  const voiceReady = Boolean(permission.microphone && (window.SpeechRecognition || window.webkitSpeechRecognition));
+  const voiceReady = Boolean(permission.microphone && ((window.SpeechRecognition || window.webkitSpeechRecognition) || realtimeMicrophoneUiAvailable?.()));
   const providerDepth = providerActionDepthStatus();
   return [
     { id: "install", title: "Installable app shell", ready: standalone || permission.install, detail: standalone ? "AgriNexus is running like an app." : "Install prompt or browser app install is available when supported." },
     { id: "wake", title: "Wake phrase layer", ready: true, detail: "Hey AgriNexus, Nexus, and Agri route into the same command layer." },
-    { id: "microphone", title: "Voice capture", ready: voiceReady, detail: voiceReady ? "Browser speech recognition is available." : "Native app packaging unlocks stronger microphone behavior." },
+    { id: "microphone", title: "Voice capture", ready: voiceReady, detail: voiceReady ? "Secure browser microphone capture is available for Nexus Realtime voice." : "Native app packaging unlocks stronger microphone behavior." },
     { id: "interrupt", title: "Voice interruption", ready: true, detail: "Say stop, pause, wait, or be quiet to interrupt speech." },
     { id: "notifications", title: "Proactive alerts", ready: permission.notifications, detail: permission.notifications ? "Browser alerts can be requested; in-app alerts always work." : "Native push notifications need app packaging." },
     { id: "location", title: "GPS route mode", ready: permission.location, detail: permission.location ? "Location permission can support route and field intelligence." : "Native GPS permission is needed for background route support." },
@@ -32278,11 +32278,14 @@ function bindNexusPrimaryVoiceControls() {
 function renderNexusBrowserVoiceAvailabilityHint() {
   if (typeof window === "undefined") return "";
   const profile = browserVoiceRuntimeProfile();
-  const message = profile.supported
-    ? "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them."
-    : "Voice is not available in this browser. Use a supported browser or adjust microphone permission; Genesis home remains audio-first.";
+  const realtimeMicAvailable = typeof realtimeMicrophoneUiAvailable === "function" && realtimeMicrophoneUiAvailable();
+  const message = realtimeMicAvailable
+    ? "Voice uses the secure browser microphone with OpenAI Realtime. Workflow fields appear only after Nexus opens a workflow."
+    : profile.supported
+      ? "Voice uses browser support. Workflow forms may ask for exact details after Nexus opens them."
+      : "Enable microphone from a secure browser page. If permission is blocked, change site settings and reload Genesis.";
   return `
-    <p class="nexus-browser-voice-fallback" data-nexus-browser-voice-fallback="true" data-browser-voice-supported="${profile.supported ? "true" : "false"}" role="status">
+    <p class="nexus-browser-voice-fallback" data-nexus-browser-voice-fallback="true" data-browser-voice-supported="${profile.supported || realtimeMicAvailable ? "true" : "false"}" role="status">
       ${escapeHtml(translateText(message))}
     </p>
   `;
@@ -32292,25 +32295,28 @@ function renderNexusVoiceFirstPresenceControls() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false };
   const permissionState = nexusOsVoiceRuntimeState.permissionState || "unknown";
   const recognitionActive = Boolean(voiceRecognition || genesisVoiceConversationActive?.());
-  const voiceReady = Boolean((profile.supported || elevenLabsVoiceSupported?.()) && profile.secureEnough !== false);
+  const realtimeMicAvailable = typeof realtimeMicrophoneUiAvailable === "function" && realtimeMicrophoneUiAvailable();
+  const voiceReady = Boolean((profile.supported || realtimeMicAvailable) && profile.secureEnough !== false);
   const enableLabel = recognitionActive
     ? "Stop listening"
-    : nexusMicrophonePermissionCanAttemptStart(permissionState)
+    : permissionState === "denied" || nexusVoicePermissionDeniedThisSession
+      ? "Mic blocked"
+      : nexusMicrophonePermissionCanAttemptStart(permissionState) || realtimeMicAvailable
       ? "Start listening"
       : "Enable voice";
   const enableAction = recognitionActive ? "stop-listening" : "enable-voice";
   const help = permissionState === "denied" || nexusVoicePermissionDeniedThisSession
     ? "Microphone permission is blocked. Change microphone permission in your browser to speak with Nexus."
     : voiceReady
-      ? "Your browser needs permission before I can hear you."
-      : "Voice is unavailable here. Use a supported browser for the Genesis voice front door.";
+      ? "Enable microphone access to start the Realtime conversation. Provider errors will not remove this control."
+      : "Use a secure browser page with microphone access for the Genesis voice front door.";
   const statusText = recognitionActive
     ? "Nexus is listening."
     : voiceFirstMode
       ? "Hands-free Nexus is on while this page stays open."
       : voiceReady
-        ? "Nexus is ready."
-        : "Voice is unavailable in this browser.";
+        ? "Microphone control is ready."
+        : "Enable microphone from a secure browser page.";
   return `
     <div class="nexus-voice-first-presence" data-nexus-voice-first-presence="true" data-nexus-hands-free-active="${voiceFirstMode ? "true" : "false"}" data-nexus-microphone-permission="${escapeHtml(permissionState)}">
       <span class="nexus-voice-first-status" data-nexus-voice-first-status="true" aria-live="polite">${escapeHtml(translateText(statusText))}</span>
@@ -32335,7 +32341,8 @@ function nexusGenesisTruthfulVoiceState() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
   const state = nexusOsVoiceRuntimeState || {};
   const permissionState = normalizeNexusMicrophonePermissionState(state.permissionState || "unknown");
-  const recognitionSupported = Boolean(profile.supported && profile.secureEnough !== false);
+  const realtimeMicAvailable = typeof realtimeMicrophoneUiAvailable === "function" && realtimeMicrophoneUiAvailable();
+  const recognitionSupported = Boolean((profile.supported || realtimeMicAvailable) && profile.secureEnough !== false);
   const activeTrack = Boolean(state.microphoneStreamActive && state.microphoneTrackState !== "stopped");
   const constructed = Boolean(state.recognitionConstructed);
   const startRequested = Boolean(state.recognitionStartRequested);
@@ -32353,7 +32360,7 @@ function nexusGenesisTruthfulVoiceState() {
   const utteranceError = state.utteranceError || state.speechErrorCode || "";
   const errorState = Boolean(state.lastError || state.lastRuntimeError || state.utteranceError || state.mode === "recognition-interrupted" || state.mode === "caption-fallback");
   let statusText = "Microphone permission is required before Nexus can hear.";
-  if (!recognitionSupported) statusText = "Nexus cannot start speech recognition in this browser.";
+  if (!recognitionSupported) statusText = "Nexus cannot access the microphone from this page.";
   else if (permissionState === "denied" || nexusVoicePermissionDeniedThisSession) statusText = "Microphone permission is blocked.";
   else if (errorState && state.mode === "caption-fallback") statusText = "Nexus generated a response, but audio playback did not start.";
   else if (errorState) statusText = "Nexus could not start voice recognition.";
@@ -32402,7 +32409,8 @@ function renderNexusGenesisHomeVoiceGate() {
   const profile = typeof window !== "undefined" ? browserVoiceRuntimeProfile() : { supported: false, secureEnough: false };
   const truthful = nexusGenesisTruthfulVoiceState();
   const permissionState = normalizeNexusMicrophonePermissionState(nexusOsVoiceRuntimeState.permissionState || "unknown");
-  const voiceReady = Boolean(profile.supported && profile.secureEnough !== false);
+  const realtimeMicAvailable = typeof realtimeMicrophoneUiAvailable === "function" && realtimeMicrophoneUiAvailable();
+  const voiceReady = Boolean((profile.supported || realtimeMicAvailable) && profile.secureEnough !== false);
   return `
     <span class="sr-only" data-nexus-genesis-audio-gate="true" data-nexus-genesis-voice-runtime="true" data-nexus-genesis-voice-runtime-version="${escapeHtml(NEXUS_GENESIS_VOICE_RUNTIME_VERSION)}" data-microphone-permission="${escapeHtml(permissionState)}" data-recognition-supported="${voiceReady ? "true" : "false"}" aria-live="polite">${escapeHtml(translateText(truthful.statusText))}</span>
   `;
@@ -48572,6 +48580,11 @@ function realtimeVoiceSupported() {
   return Boolean(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia && secureEnough);
 }
 
+function realtimeMicrophoneUiAvailable() {
+  const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
+  return Boolean(navigator.mediaDevices?.getUserMedia && secureEnough);
+}
+
 function realtimeVoiceEnabled() {
   const status = realtimeVoiceStatusCache?.realtimeVoice;
   return Boolean(status?.runtime === "realtime" && status?.realtimeEnabled !== false);
@@ -48599,7 +48612,8 @@ function shouldBypassLegacyPlannerForRealtimeFallback() {
 }
 
 function realtimeVoiceStatusMessage() {
-  if (!realtimeVoiceSupported()) return "Realtime voice needs HTTPS, localhost, or 127.0.0.1 with microphone permission.";
+  if (!realtimeMicrophoneUiAvailable()) return "Enable microphone from a secure HTTPS, localhost, or 127.0.0.1 page to talk with Nexus.";
+  if (!realtimeVoiceSupported()) return "Realtime voice needs WebRTC support. The microphone control remains available so Nexus can show the exact startup issue.";
   const status = realtimeVoiceStatusCache?.realtimeVoice;
   if (status?.ready) return "Nexus realtime voice is ready.";
   if (status?.runtime === "legacy") return "Nexus legacy voice runtime is selected by server configuration.";
@@ -49900,7 +49914,7 @@ function chromeVoiceStatusMessage() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const streamingStatus = streamingVoiceEnabled() ? " Streaming mode is on." : "";
-  if (realtimeVoiceEnabled() && realtimeVoiceSupported()) return `${realtimeVoiceStatusMessage()} Keep this tab open while Nexus listens through OpenAI Realtime.`;
+  if (realtimeVoiceSupported()) return `${realtimeVoiceStatusMessage()} Keep this tab open while Nexus listens through OpenAI Realtime.`;
   if (!profile.supported) return `${profile.browserName} does not expose browser speech recognition here. Open the app in desktop Chrome, then use Ask AgriNexus typed commands until microphone support is available.`;
   if (!profile.secureEnough) return `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or your local server URL, then allow the microphone.`;
   if (profile.isChrome) return `Chrome voice ready for ${languageName} (${locale}). Click Mic, choose Allow for microphone, and keep this tab open while testing.${streamingStatus}`;
@@ -50033,10 +50047,10 @@ async function maybeStartGenesisRecognitionAfterGrantedPermission(source = "gene
   nexusGenesisVoiceDebugLog("controller-initialized", {
     source,
     secureContext: profile.secureEnough,
-    recognitionSupported: Boolean(profile.supported)
+    recognitionSupported: Boolean(profile.supported || realtimeVoiceSupported?.())
   });
   nexusGenesisVoiceDebugLog("automatic-start-entered", { source, secureContext: profile.secureEnough });
-  const recognitionAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition || (elevenLabsVoiceEnabled() && elevenLabsVoiceSupported()));
+  const recognitionAvailable = Boolean(realtimeVoiceSupported?.() || window.SpeechRecognition || window.webkitSpeechRecognition);
   const skipReason = !profile.secureEnough
     ? "secure-context-required"
     : !recognitionAvailable
@@ -50456,9 +50470,11 @@ async function refreshChromeVoicePermissionHint() {
 
 function refreshMicSupport() {
   const profile = browserVoiceRuntimeProfile();
-  const realtimeReady = realtimeVoiceEnabled() && realtimeVoiceSupported();
+  const realtimeCapable = realtimeVoiceSupported();
+  const realtimeMicAvailable = realtimeMicrophoneUiAvailable();
+  const realtimeReady = realtimeVoiceEnabled() && realtimeCapable;
   const elevenLabsReady = elevenLabsVoiceEnabled() && elevenLabsVoiceSupported();
-  const ready = (profile.supported || elevenLabsReady || realtimeReady) && profile.secureEnough;
+  const ready = (profile.supported || elevenLabsReady || realtimeMicAvailable) && profile.secureEnough;
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const status = $("#globalMicStatus");
@@ -50473,24 +50489,30 @@ function refreshMicSupport() {
       : elevenLabsVoiceActive()
       ? `Nexus ElevenLabs Agents voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
       : realtimeVoiceActive()
-      ? `Nexus Realtime rollback voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
+      ? `Nexus Realtime voice is live in ${voiceLanguageName()} (${voiceLocale()}). Workflow fields appear only after Nexus opens a workflow.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()
-        : `${profile.browserName} microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
+        : realtimeMicAvailable
+          ? `${profile.browserName} microphone control is available for OpenAI Realtime in ${languageName} (${locale}). Click Start listening, then allow browser access.${streamingStatus}`
+          : `${profile.browserName} microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
       : profile.secureEnough
-        ? `${languageName} voice input is not available in ${profile.browserName}. Open desktop Chrome for the best Nexus voice experience.`
+        ? `${languageName} microphone access is not available in ${profile.browserName}. Use a browser with WebRTC microphone support.`
         : `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the secure hosted URL for voice.`;
   }
   ["#globalListenBtn", "#voiceListenBtn", "#jarvisListenBtn", "#workflowListenBtn"].forEach(selector => {
     const button = $(selector);
     if (!button) return;
     button.disabled = !ready;
-    button.title = ready ? realtimeReady ? "Use OpenAI Realtime voice with Nexus Genesis" : profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
+    button.title = ready
+      ? realtimeCapable
+        ? "Enable microphone for OpenAI Realtime Nexus Genesis voice"
+        : profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus"
+      : "Enable microphone from a secure browser page";
     if (!ready) {
-      if (selector === "#globalListenBtn") button.textContent = "Mic unavailable";
-      if (selector === "#voiceListenBtn") button.textContent = "Mic unavailable";
-      if (selector === "#jarvisListenBtn") button.textContent = "Mic unavailable";
+      if (selector === "#globalListenBtn") button.textContent = "Enable microphone";
+      if (selector === "#voiceListenBtn") button.textContent = "Enable microphone";
+      if (selector === "#jarvisListenBtn") button.textContent = "Enable mic";
       return;
     }
     if (voiceDemoQuietMode) {
@@ -57798,13 +57820,13 @@ async function startVoiceListening(options = {}) {
     const policyPayload = await loadNexusGenesisVoiceRuntimePolicy();
     manager = initializeNexusGenesisVoiceRuntimeManager(policyPayload);
   }
-  if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "legacy" });
+  if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime" });
   const supervisor = nexusGenesisConversationSupervisor || window.NexusGenesisConversationSupervisor;
   const result = supervisor
     ? await supervisor.start(options.source || "start-voice-listening")
     : await manager.startSession(options);
   if (!result?.ok && manager.getState().activeRuntime === "legacy") {
-    return startVoiceRuntimeTransport({ ...options, runtimeOnly: "legacy", managedRuntime: true });
+    return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime", managedRuntime: true });
   }
   return result;
 }

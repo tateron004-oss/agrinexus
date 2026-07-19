@@ -64,7 +64,7 @@ const supervisorStartSource = between(app, "async function startVoiceListening",
 includesAll(supervisorStartSource, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
-  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
 ], "supervisor listening lifecycle");
 
 const listeningSource = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "listening lifecycle");
@@ -134,7 +134,7 @@ assert(
   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
-assert(index.includes("/app.js?v=nexus-behavior-471"), "index must bump app.js version so browser voice fixes load");
+assert(index.includes("/app.js?v=nexus-behavior-472"), "index must bump app.js version so browser voice fixes load");
 
 includesAll(acceptanceDoc, [
   "Nexus Genesis Real Browser Voice and Companion Acceptance",

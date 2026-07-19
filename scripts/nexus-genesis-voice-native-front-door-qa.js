@@ -106,7 +106,7 @@ const supervisorStartup = between(app, "async function startVoiceListening", "as
 includesAll(supervisorStartup, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
-  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
 ], "voice supervisor startup");
 
 const startup = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "voice startup");
@@ -141,10 +141,10 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech restart");
 
-includesAll(index, ["/app.js?v=nexus-behavior-471", "/styles.css?v=nexus-behavior-471"], "index cache");
-includesAll(app, ["nexus-behavior-471", "agrinexus-pwa-v416", "nexus-genesis-voice-runtime-v455"], "app cache");
-includesAll(server, ["nexus-behavior-471", "agrinexus-pwa-v416"], "server cache");
-includesAll(sw, ["nexus-behavior-471", "agrinexus-pwa-v416"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-472", "/styles.css?v=nexus-behavior-472"], "index cache");
+includesAll(app, ["nexus-behavior-472", "agrinexus-pwa-v417", "nexus-genesis-voice-runtime-v455"], "app cache");
+includesAll(server, ["nexus-behavior-472", "agrinexus-pwa-v417"], "server cache");
+includesAll(sw, ["nexus-behavior-472", "agrinexus-pwa-v417"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",

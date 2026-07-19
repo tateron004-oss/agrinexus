@@ -51,7 +51,7 @@ includesAll(pipeline, [
 includesAll(supervisorStart, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
-  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
 ], "SpeechRecognition supervisor lock");
 includesAll(recognitionStart, [
   "recognition-handlers-registered",

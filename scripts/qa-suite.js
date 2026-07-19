@@ -27,6 +27,7 @@ const GENESIS_RAIL_SCRIPTS = [
   "scripts/nexus-genesis-realtime-production-migration-qa.js",
   "scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
   "scripts/nexus-openai-realtime-microphone-handoff-qa.js",
+  "scripts/nexus-realtime-microphone-visibility-qa.js",
   "scripts/nexus-openai-native-architecture-consolidation-qa.js",
   "scripts/nexus-genesis-safe-voice-runtime-manager-qa.js",
   "scripts/nexus-genesis-conversation-routing-precedence-qa.js",

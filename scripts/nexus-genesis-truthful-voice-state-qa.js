@@ -42,27 +42,27 @@ const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisCon
 const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-471"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v416"',
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-472"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417"',
   'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v455"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-471",
-  "/styles.css?v=nexus-behavior-471",
-  "/app.js?v=nexus-behavior-471"
+  "/manifest.webmanifest?v=nexus-behavior-472",
+  "/styles.css?v=nexus-behavior-472",
+  "/app.js?v=nexus-behavior-472"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-471"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v416"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-472"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v417"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v416"',
-  'BUILD_VERSION = "nexus-behavior-471"'
+  'CACHE_NAME = "agrinexus-pwa-v417"',
+  'BUILD_VERSION = "nexus-behavior-472"'
 ], "service worker build");
 
 includesAll(truthfulState, [
   "Microphone permission granted. Speech recognition has not started.",
-  "Nexus cannot start speech recognition in this browser.",
+  "Nexus cannot access the microphone from this page.",
   "Nexus is listening.",
   "Nexus detected speech.",
   "Nexus is processing your request.",
@@ -164,7 +164,7 @@ includesAll(microphoneStreamOwner, [
 includesAll(recognitionSupervisor, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
-  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"legacy\", managedRuntime: true })"
+  "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
 ], "recognition supervisor proof");
 
 includesAll(recognitionStart, [

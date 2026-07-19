@@ -86,7 +86,8 @@ includesAll(workspace, [
 const voiceControls = between("function renderNexusVoiceFirstPresenceControls", "function renderNexusTrueCommandComposer", "voice-first controls");
 includesAll(voiceControls, [
   "Enable voice",
-  "Your browser needs permission before I can hear you.",
+  "Enable microphone access to start the Realtime conversation. Provider errors will not remove this control.",
+  "Microphone permission is blocked. Change microphone permission in your browser",
   "Hands-free Nexus",
   "Stop listening",
   "Stop speaking",

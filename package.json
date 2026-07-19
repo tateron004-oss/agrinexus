@@ -114,6 +114,7 @@
     "qa:nexus-openai-native-tool-parity": "node scripts/nexus-openai-native-tool-parity-qa.js",
     "qa:nexus-openai-realtime-genesis": "node scripts/nexus-openai-realtime-genesis-qa.js",
     "qa:nexus-openai-realtime-microphone-handoff": "node scripts/nexus-openai-realtime-microphone-handoff-qa.js",
+    "qa:nexus-realtime-microphone-visibility": "node scripts/nexus-realtime-microphone-visibility-qa.js",
     "qa:nexus-live-knowledge-provider-activation": "node scripts/nexus-live-knowledge-provider-activation-qa.js",
     "qa:nexus-open-domain-institutional-evidence": "node scripts/nexus-open-domain-institutional-evidence-qa.js",
     "qa:nexus-production-layer-activation-integration": "node scripts/nexus-production-layer-activation-integration-qa.js",
