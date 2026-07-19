@@ -32,7 +32,7 @@
     "qa:nexus-system-wide-integrity-hardening": "node scripts/nexus-system-wide-integrity-hardening-qa.js",
     "qa:nexus-genesis-realtime-production-migration": "node scripts/nexus-genesis-realtime-production-migration-qa.js",
     "qa:nexus-genesis-realtime-repeated-turn-lifecycle": "node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
-    "qa:nexus-genesis-elevenlabs-agents-runtime": "node scripts/nexus-genesis-elevenlabs-agents-runtime-qa.js",
+    "qa:nexus-openai-native-architecture-consolidation": "node scripts/nexus-openai-native-architecture-consolidation-qa.js",
     "qa:nexus-genesis-safe-voice-runtime-manager": "node scripts/nexus-genesis-safe-voice-runtime-manager-qa.js",
     "qa:nexus-genesis-conversation-routing-precedence": "node scripts/nexus-genesis-conversation-routing-precedence-qa.js",
     "qa:nexus-genesis-truthful-voice-state": "node scripts/nexus-genesis-truthful-voice-state-qa.js",
@@ -1127,7 +1127,6 @@
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
-    "@elevenlabs/client": "1.15.0",
     "@openai/agents": "^0.13.5",
     "pg": "^8.13.1",
     "zod": "^4.4.3"

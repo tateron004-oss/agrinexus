@@ -74,10 +74,10 @@ assert(app.includes("I will not claim I can hear audio until recognition starts.
 assert(app.includes("Microphone permission may be available, but recognition is not actively listening now."), "permission-granted recognition failure must be truthful");
 assert(app.includes("Genesis keeps the home screen audio-first"), "voice fallback copy must keep Genesis home audio-first");
 
-assert(app.includes("nexus-behavior-470"), "app build identifier must be bumped");
-assert(server.includes("nexus-behavior-470"), "server build identifier must be bumped");
-assert(app.includes("agrinexus-pwa-v415"), "app PWA cache identifier must be bumped");
-assert(server.includes("agrinexus-pwa-v415"), "server PWA cache identifier must be bumped");
+assert(app.includes("nexus-behavior-471"), "app build identifier must be bumped");
+assert(server.includes("nexus-behavior-471"), "server build identifier must be bumped");
+assert(app.includes("agrinexus-pwa-v416"), "app PWA cache identifier must be bumped");
+assert(server.includes("agrinexus-pwa-v416"), "server PWA cache identifier must be bumped");
 const autoStartBlock = app.slice(app.indexOf("async function maybeStartGenesisRecognitionAfterGrantedPermission"), app.indexOf("function nexusVoiceAudioDebugEnabled"));
 assert(autoStartBlock.includes("nexusMicrophonePermissionCanAttemptStart(permission)"), "prompt/granted/browser-managed permission states must be eligible for getUserMedia attempt");
 assert(!autoStartBlock.includes("granted-or-browser-managed"), "auto-start must not compare against legacy display labels");

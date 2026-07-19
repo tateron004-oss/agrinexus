@@ -19,9 +19,9 @@ const requirements = [
   ["Direct SDP browser startup disabled", app.includes("OpenAI Realtime direct SDP startup is disabled") && !app.includes("createDataChannel(\"oai-events\")")],
   ["Bundled Realtime SDK includes WebRTC session", fs.readFileSync(path.join(root, "public", "vendor", "nexus-openai-realtime-agent.bundle.mjs"), "utf8").includes("OpenAIRealtimeWebRTC") && fs.readFileSync(path.join(root, "public", "vendor", "nexus-openai-realtime-agent.bundle.mjs"), "utf8").includes("RealtimeSession")],
   ["Realtime event handling", app.includes("function handleOpenAiAgentsRealtimeEvent") && app.includes("input_audio_buffer.speech_started") && app.includes("audio_stopped")],
-  ["Realtime rollback-only after production failure", server.includes("function genesisRealtimeRollbackEnabled") && server.includes("NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED") && server.includes("OpenAI Realtime is disabled after the production gate failure")],
+  ["Realtime is production default with rollback blocked", server.includes("function genesisRealtimeRollbackEnabled") && server.includes("NEXUS_GENESIS_REALTIME_ROLLBACK_ENABLED") && server.includes("The old direct SDP Realtime rollback route is disabled")],
   ["Supervisor owns voice startup before provider fallback", app.includes("nexusGenesisConversationSupervisor") && app.includes("createGenesisConversationSupervisor") && app.includes("supervisor.start(options.source || \"start-voice-listening\")")],
-  ["ElevenLabs is a managed candidate adapter", app.includes("startElevenLabsVoiceSession({ managedRuntime: true })") && app.includes("factory.ElevenLabsVoiceAdapter")],
+  ["ElevenLabs candidate adapter is disabled", app.includes("elevenLabsAdapter: null") && app.includes("function elevenLabsVoiceEnabled() {\n  return false;")],
   ["Realtime stop path", app.includes("function stopRealtimeVoiceSession") && app.includes("Realtime voice stopped")],
   ["Realtime tool dispatch path", server.includes("/api/voice/realtime/tool") && app.includes("dispatchRealtimeToolCall")],
   ["Realtime status does not expose permanent key", server.includes("noPermanentKeyInBrowser: true") && !app.includes("Authorization: `Bearer ${process.env.OPENAI_API_KEY}`") && !app.includes("process.env.OPENAI_API_KEY")]

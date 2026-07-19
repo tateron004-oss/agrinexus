@@ -103,7 +103,7 @@ function assertLiveStatusAndFallbackContract() {
   assert(server.includes('activeRuntime: "unconfirmed-browser-client"'), "runtime status must not report server policy as live active runtime");
   assert(server.includes("serverSelectedRuntime: voiceRuntimePolicy.selectedRuntime"), "runtime status must expose selected runtime separately from active client state");
   assert(server.includes("realtimeVoice: nexusRealtimeRuntimeStatus(process.env)"), "runtime status must expose OpenAI Realtime provider status separately");
-  assert(server.includes("elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env)"), "runtime status must keep ElevenLabs provider status separate");
+  assert(server.includes('removedRuntimes: ["elevenlabs", "legacy-browser-conversation"]'), "runtime status must report removed competing runtimes instead of active ElevenLabs metadata");
   assert(server.includes("clientRuntime"), "runtime status must include a secret-free client runtime facts block");
   assert(server.includes('connectionState: "not-reported-to-server"'), "server must require browser client proof for live connection state");
 

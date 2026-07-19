@@ -50,22 +50,22 @@ const requirements = [
       handleCoreSource.includes('source: options.source || "voice"')
   ],
   [
-    "ElevenLabs follows server-selected runtime and cannot run beside legacy recognition",
-    elevenLabsEnabledSource.includes('status?.runtime === "elevenlabs"') &&
+    "OpenAI Realtime is the sole active browser voice runtime",
+    elevenLabsEnabledSource.includes("return false;") &&
       startListeningSource.includes("supervisor.start(options.source || \"start-voice-listening\")") &&
-      voiceTransportSource.includes("const elevenLabsStarted = options.runtimeOnly === \"legacy\" ? false : await startElevenLabsVoiceSession") &&
-      appSource.includes('if (status.runtime !== "elevenlabs") return false;') &&
-      appSource.includes("stopNexusAudioFallbackRecorder(\"elevenlabs-selected\")")
+      voiceTransportSource.includes("const started = await startRealtimeVoiceSession") &&
+      appSource.includes("legacyAdapter: null") &&
+      appSource.includes("elevenLabsAdapter: null")
   ],
   [
-    "ElevenLabs UI is voice-first and workflow-scoped",
-    refreshMicSource.includes("Nexus ElevenLabs Agents voice is live") &&
+    "Realtime UI is voice-first and workflow-scoped",
+    refreshMicSource.includes("OpenAI Realtime") &&
       refreshMicSource.includes("Workflow fields appear only after Nexus opens a workflow")
   ],
   [
-    "Realtime server contract remains rollback-only while ElevenLabs exposes gated tool routing",
-    serverSource.includes("OpenAI Realtime is disabled after the production gate failure") &&
-      serverSource.includes("/api/voice/elevenlabs/tool") &&
+    "Realtime server contract owns canonical gated tool routing",
+    serverSource.includes("The old direct SDP Realtime rollback route is disabled") &&
+      serverSource.includes("/api/voice/realtime/tool") &&
       serverSource.includes("nexus_capability_router") &&
       serverSource.includes("Never claim an action completed")
   ],

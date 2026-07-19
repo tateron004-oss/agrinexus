@@ -152,7 +152,7 @@ async function run() {
     "recognition.start",
     "startVoiceRuntimeTransport({ source: \"genesis-controlled-restart\""
   ].forEach(token => assert(!voiceRuntime.includes(token), `voice runtime manager should not be changed into a new runtime patch: ${token}`));
-  assert(appVoiceStartSnippet.includes("isTransportActive: () => Boolean(voiceRecognition || nexusOsVoiceStartInFlight || elevenLabsVoiceActive() || realtimeVoiceActive())"), "existing voice lifecycle ownership check must remain intact");
+  assert(appVoiceStartSnippet.includes("isTransportActive: () => Boolean(realtimeVoiceActive())"), "OpenAI Realtime must be the single active voice lifecycle owner");
 
   assertNoSecretValues({ weatherResult, mapsResult, liveRuntimeStatus }, "activation pass results");
   console.log("Nexus production capability activation pass QA passed.");

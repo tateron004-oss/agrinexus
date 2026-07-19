@@ -59,12 +59,11 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-470";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v415";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-471";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v416";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
-const NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION = "nexus-genesis-elevenlabs-agents-runtime-v11";
-const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["elevenlabs", "realtime", "legacy", "disabled"]);
-const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["legacy", "blocked"]);
+const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
+const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
 const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-mini", "gpt-realtime-2", "gpt-realtime-2.1"]);
 const NEXUS_REALTIME_ALLOWED_VOICES = new Set(["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]);
 const PRODUCT_IDENTITY = Object.freeze({
@@ -16152,17 +16151,16 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
 }
 
 function canonicalGenesisVoiceRuntime(env = process.env) {
-  const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || "legacy").trim().toLowerCase();
-  return NEXUS_GENESIS_VOICE_RUNTIME_VALUES.has(requested) ? requested : "legacy";
+  const requested = String(env.NEXUS_GENESIS_VOICE_RUNTIME || "realtime").trim().toLowerCase();
+  return NEXUS_GENESIS_VOICE_RUNTIME_VALUES.has(requested) ? requested : "realtime";
 }
 
 function canonicalGenesisCandidateRuntime(env = process.env) {
-  const requested = String(env.NEXUS_GENESIS_CANDIDATE_RUNTIME || "elevenlabs").trim().toLowerCase();
-  return NEXUS_GENESIS_VOICE_RUNTIME_VALUES.has(requested) ? requested : "elevenlabs";
+  return canonicalGenesisVoiceRuntime(env);
 }
 
 function genesisVoiceCandidateEnabled(env = process.env) {
-  return String(env.NEXUS_GENESIS_CANDIDATE_ENABLED || "true").trim().toLowerCase() !== "false";
+  return false;
 }
 
 function genesisVoiceAutomaticRollbackEnabled(env = process.env) {
@@ -16170,23 +16168,11 @@ function genesisVoiceAutomaticRollbackEnabled(env = process.env) {
 }
 
 function genesisVoiceCandidateAllowlist(env = process.env) {
-  return String(env.NEXUS_GENESIS_CANDIDATE_ALLOWLIST || "")
-    .split(/[,\s;]+/)
-    .map(value => value.trim().toLowerCase())
-    .filter(Boolean);
+  return [];
 }
 
 function genesisVoiceCandidateAllowed(user = {}, env = process.env) {
-  const allowlist = genesisVoiceCandidateAllowlist(env);
-  if (!allowlist.length) return false;
-  const identifiers = [
-    user?.id,
-    user?.email,
-    user?.username,
-    user?.name,
-    user?.role
-  ].map(value => String(value || "").trim().toLowerCase()).filter(Boolean);
-  return identifiers.some(identifier => allowlist.includes(identifier));
+  return false;
 }
 
 function nexusGenesisVoiceRuntimePolicy(user = {}, env = process.env) {
@@ -16198,29 +16184,28 @@ function nexusGenesisVoiceRuntimePolicy(user = {}, env = process.env) {
     ok: true,
     schemaVersion: "nexus-genesis-voice-runtime-policy.v1",
     activeRuntime: runtime,
-    productionDefaultRuntime: "legacy",
-    selectedRuntime: candidateEnabled && candidateAllowed ? candidateRuntime : runtime,
-    candidateRuntime,
-    candidateEnabled,
-    candidateAllowed,
-    candidateAllowlistConfigured: genesisVoiceCandidateAllowlist(env).length > 0,
-    automaticRollback: genesisVoiceAutomaticRollbackEnabled(env),
+    productionDefaultRuntime: "realtime",
+    selectedRuntime: runtime,
+    candidateRuntime: "",
+    candidateEnabled: false,
+    candidateAllowed: false,
+    candidateAllowlistConfigured: false,
+    automaticRollback: false,
     supportedRuntimes: Array.from(NEXUS_GENESIS_VOICE_RUNTIME_VALUES),
     stableVoiceRuntimeContract: "NexusGenesisVoiceRuntimeManager",
     conversationSupervisor: "NexusGenesisContinuousConversationSupervisor",
     supervisorOwnsConversationLifecycle: true,
     oneOwnerAtATime: true,
     noRuntimeOverlap: true,
-    legacyBrowserVoiceActiveForNormalUsers: runtime === "legacy" && !(candidateEnabled && candidateAllowed),
-    elevenLabsCandidateOnly: candidateRuntime === "elevenlabs",
-    openAiRealtimeDisabled: runtime !== "realtime" && candidateRuntime !== "realtime",
+    legacyBrowserVoiceActiveForNormalUsers: false,
+    elevenLabsCandidateOnly: false,
+    openAiRealtimeDisabled: runtime !== "realtime",
     noSecretValues: true
   };
 }
 
 function canonicalGenesisRealtimeFallback(env = process.env) {
-  const requested = String(env.NEXUS_GENESIS_REALTIME_FALLBACK || "legacy").trim().toLowerCase();
-  return NEXUS_GENESIS_REALTIME_FALLBACK_VALUES.has(requested) ? requested : "legacy";
+  return "blocked";
 }
 
 const NEXUS_GENESIS_ELEVENLABS_FALLBACK_VALUES = new Set(["realtime", "legacy", "blocked"]);
@@ -16339,7 +16324,7 @@ function nexusElevenLabsRuntimeStatus(env = process.env) {
     buildVersion: AGRINEXUS_WEB_BUILD_VERSION,
     cacheVersion: AGRINEXUS_PWA_CACHE_VERSION,
     endpoint: "/api/voice/elevenlabs/session",
-    sdkEndpoint: "/vendor/elevenlabs-client/dist/platform/web/index.js",
+    sdkEndpoint: "",
     toolEndpoint: "/api/voice/runtime/tool",
     compatibilityToolEndpoint: "/api/voice/elevenlabs/tool",
     statusEndpoint: "/api/voice/elevenlabs/status",
@@ -43367,17 +43352,10 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/elevenlabs/status" && req.method === "GET") {
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, { issueGuest: false });
-    return send(res, 200, {
-      elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
-      auth: {
-        authenticated: authContext.authenticated,
-        authorized: authContext.authorized,
-        mechanism: authContext.authMechanism,
-        sessionPresent: authContext.sessionPresent,
-        liveSessionRequiresAuthorization: true
-      },
+    return send(res, 410, {
+      error: "ElevenLabs Genesis runtime has been removed.",
+      category: "runtime-removed",
+      activeRuntime: "realtime",
       noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
@@ -43419,7 +43397,7 @@ async function api(req, res, url) {
         watchdogRecovery: true,
         noSecretValues: true
       },
-      elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
+      removedRuntimes: ["elevenlabs", "legacy-browser-conversation"],
       noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
@@ -43427,286 +43405,35 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/elevenlabs/authorization-probe" && req.method === "POST") {
-    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many ElevenLabs authorization probes" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
-      language: url.searchParams.get("language") || "en",
-      issueGuest: false
-    });
-    return send(res, 200, {
-      ok: true,
-      runtime: "elevenlabs",
-      provider: "elevenlabs",
-      authenticated: authContext.authenticated,
-      authorized: authContext.authorized,
-      authMechanism: authContext.authMechanism,
-      authenticatedBrowserSession: authContext.authenticated,
-      liveSessionRequiresAuthorization: true,
-      liveSessionEndpoint: "/api/voice/elevenlabs/session",
-      configured: runtimeStatus.configured,
-      ready: runtimeStatus.ready,
-      runtimeSelected: runtimeStatus.runtime === "elevenlabs",
-      enabled: runtimeStatus.elevenLabsEnabled,
-      transport: runtimeStatus.transport,
-      connectionType: "webrtc-preferred",
-      missingEnv: runtimeStatus.missingEnv,
-      authorizationArtifactIssued: false,
-      providerRequestAttempted: false,
-      authorizationRequestAttempted: false,
-      artifactType: "",
-      providerStatusCategory: runtimeStatus.ready ? "provider-ready" : "provider-not-configured",
-      noConversationTokenReturned: true,
-      noSignedUrlReturned: true,
-      noSecretValues: true,
-      note: runtimeStatus.ready
-        ? "ElevenLabs is configured. The live session route mints short-lived authorization only for an authorized Genesis browser session."
-        : runtimeStatus.note
+    return send(res, 410, {
+      error: "ElevenLabs Genesis runtime has been removed.",
+      category: "runtime-removed",
+      activeRuntime: "realtime",
+      noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
 
   if (url.pathname === "/api/voice/elevenlabs/session" && req.method === "POST") {
-    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many ElevenLabs session requests" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    const body = await readBody(req);
-    const correlationId = genesisVoiceCorrelationId(body.correlationId);
-    safeGenesisVoiceStageEvent(db, {
-      correlationId,
-      stage: "elevenlabs-session-request-started",
-      success: true,
-      route: "/api/voice/elevenlabs/session",
-      provider: "elevenlabs",
-      sourceFunction: "api.voice.elevenlabs.session"
+    return send(res, 410, {
+      error: "ElevenLabs Genesis runtime has been removed.",
+      category: "runtime-removed",
+      activeRuntime: "realtime",
+      noSecretValues: true
+    }, {
+      "cache-control": "no-store, no-cache, must-revalidate, private"
     });
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
-      language: body.language || url.searchParams.get("language") || user?.language || "en",
-      issueGuest: true
-    });
-    safeGenesisVoiceStageEvent(db, {
-      correlationId,
-      stage: authContext.authenticated ? "auth-context-found" : "auth-context-missing",
-      success: authContext.authenticated,
-      route: "/api/voice/elevenlabs/session",
-      provider: "elevenlabs",
-      authMechanism: authContext.authMechanism,
-      sessionPresent: authContext.sessionPresent,
-      userAuthorized: authContext.authorized,
-      sourceFunction: "resolveElevenLabsVoiceAuthContext"
-    });
-    const baseHeaders = {
-      "cache-control": "no-store, no-cache, must-revalidate, private",
-      ...(authContext.setCookie ? { "set-cookie": authContext.setCookie } : {})
-    };
-    if (!authContext.authenticated) {
-      await writeDb(db);
-      return send(res, 401, {
-        error: "Genesis voice session authorization required.",
-        category: "user-authentication-required",
-        correlationId,
-        providerAttempted: false,
-        authorizationArtifactIssued: false,
-        noSecretValues: true
-      }, baseHeaders);
-    }
-    if (!authContext.authorized) {
-      await writeDb(db);
-      return send(res, 403, {
-        error: "Role does not allow ElevenLabs voice.",
-        category: "user-authorization-forbidden",
-        correlationId,
-        providerAttempted: false,
-        authorizationArtifactIssued: false,
-        noSecretValues: true
-      }, baseHeaders);
-    }
-    const runtimeStatus = nexusElevenLabsRuntimeStatus(process.env);
-    const runtimePolicy = nexusGenesisVoiceRuntimePolicy(user, process.env);
-    if (runtimeStatus.runtime !== "elevenlabs" && runtimePolicy.selectedRuntime !== "elevenlabs") {
-      await writeDb(db);
-      return send(res, 409, {
-        error: "ElevenLabs Agents is not the selected Genesis voice runtime.",
-        category: "capability-unavailable",
-        correlationId,
-        selectedRuntime: runtimePolicy.selectedRuntime,
-        candidateAllowed: runtimePolicy.candidateAllowed,
-        elevenLabsVoice: runtimeStatus
-      }, baseHeaders);
-    }
-    if (!runtimeStatus.ready) {
-      await writeDb(db);
-      return send(res, 503, {
-        error: "ElevenLabs Agents is missing required server configuration.",
-        category: "provider-not-configured",
-        correlationId,
-        missingEnv: runtimeStatus.missingEnv,
-        providerAttempted: false,
-        authorizationArtifactIssued: false,
-        elevenLabsVoice: runtimeStatus
-      }, baseHeaders);
-    }
-    try {
-      safeGenesisVoiceStageEvent(db, {
-        correlationId,
-        stage: "authorization-request-sent",
-        success: true,
-        route: "/api/voice/elevenlabs/session",
-        provider: "elevenlabs",
-        providerAttempted: true,
-        sourceFunction: "createElevenLabsConversationSession"
-      });
-      const session = await createElevenLabsConversationSession({
-        user: authContext.user,
-        language: body.language || url.searchParams.get("language") || authContext.user.language || "en"
-      });
-      safeGenesisVoiceStageEvent(db, {
-        correlationId,
-        stage: "authorization-request-succeeded",
-        success: true,
-        route: "/api/voice/elevenlabs/session",
-        provider: "elevenlabs",
-        httpStatus: 200,
-        artifactType: session.authorizationArtifact,
-        authMechanism: authContext.authMechanism,
-        sourceFunction: "createElevenLabsConversationSession"
-      });
-      voiceRecord(db, authContext.user, "elevenlabs-agents", "ElevenLabs Agents voice session authorized.", {
-        provider: "elevenlabs",
-        language: session.language,
-        runtimeVersion: session.runtimeVersion,
-        transport: session.transport,
-        connectionType: session.connectionType,
-        authorizationArtifact: session.authorizationArtifact,
-        authMechanism: authContext.authMechanism,
-        correlationId
-      });
-      logIntegration(db, {
-        providerId: "elevenlabs",
-        module: "AI Voice",
-        action: "voice.elevenlabs_agents_session_authorized",
-        status: "success",
-        detail: "ElevenLabs Agents official SDK session authorized for Nexus live voice.",
-        metadata: {
-          transport: session.transport,
-          connectionType: session.connectionType,
-          authorizationArtifact: session.authorizationArtifact,
-          runtimeVersion: session.runtimeVersion,
-          authMechanism: authContext.authMechanism,
-          correlationId
-        },
-        dispatch: false
-      });
-      await writeDb(db);
-      return send(res, 200, {
-        ...session,
-        correlationId,
-        authMechanism: authContext.authMechanism,
-        authorizationType: session.authorizationArtifact,
-        noPermanentApiKeyReturned: true
-      }, baseHeaders);
-    } catch (error) {
-      const category = error.category || "provider-unavailable";
-      safeGenesisVoiceStageEvent(db, {
-        correlationId,
-        stage: "authorization-request-failed",
-        success: false,
-        route: "/api/voice/elevenlabs/session",
-        provider: "elevenlabs",
-        httpStatus: error.status || 502,
-        errorCategory: category,
-        authMechanism: authContext.authMechanism,
-        providerAttempted: true,
-        sourceFunction: "createElevenLabsConversationSession"
-      });
-      voiceRecord(db, authContext.user, "elevenlabs-agents", `ElevenLabs Agents voice failed: ${error.message}`, {
-        provider: "elevenlabs",
-        category,
-        runtimeVersion: NEXUS_GENESIS_ELEVENLABS_RUNTIME_VERSION,
-        authMechanism: authContext.authMechanism,
-        correlationId
-      });
-      await writeDb(db);
-      return send(res, error.status || 502, {
-        error: "ElevenLabs Agents authorization failed.",
-        detail: error.message,
-        category,
-        correlationId,
-        providerAttempted: true,
-        authorizationArtifactIssued: false,
-        providerDiagnostics: error.providerDiagnostics || {
-          providerSelected: "elevenlabs",
-          credentialConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
-          clientInitialized: true,
-          requestAttempted: true,
-          authorizationRequestAttempted: true,
-          providerStatusCategory: category,
-          timeout: /timeout|timed out|aborted/i.test(error.message || ""),
-          fallbackEnabled: true,
-          finalResponseRoute: "provider-error",
-          noSecretValues: true
-        },
-        missingEnv: error.missingEnv || [],
-        elevenLabsVoice: nexusElevenLabsRuntimeStatus(process.env),
-        noSecretValues: true
-      }, baseHeaders);
-    }
   }
 
   if ((url.pathname === "/api/voice/runtime/tool" || url.pathname === "/api/voice/elevenlabs/tool") && req.method === "POST") {
-    const isRuntimeGateway = url.pathname === "/api/voice/runtime/tool";
-    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus voice tool requests" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
-      language: url.searchParams.get("language") || user?.language || "en",
-      issueGuest: false
-    });
-    if (!authContext.authenticated) {
-      return send(res, 401, {
-        ok: false,
-        error: "Genesis voice tool gateway authorization required.",
-        category: "user-authentication-required",
-        executionAttempted: false,
-        noSecretValues: true
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    if (!authContext.authorized) {
-      return send(res, 403, {
-        ok: false,
-        error: "Role does not allow Nexus voice tools.",
-        category: "user-authorization-forbidden",
-        executionAttempted: false,
-        noSecretValues: true
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    const body = await readBody(req);
-    const toolName = String(body.name || body.toolName || "nexus_capability_router").trim();
-    if (!NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES.includes(toolName)) {
-      return send(res, 400, {
-        ok: false,
-        error: "Unsupported Nexus voice tool.",
-        blockedReason: "route-not-found",
-        supportedTools: NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    const args = body.arguments && typeof body.arguments === "object" ? body.arguments : {};
-    const result = await dispatchNexusRealtimeTool(db, authContext.user, {
-      ...body,
-      arguments: {
-        ...args,
-        capability: args.capability || nexusElevenLabsToolToCapability(toolName)
-      },
-      route: isRuntimeGateway ? "/api/voice/runtime/tool" : "/api/voice/elevenlabs/tool",
-      note: isRuntimeGateway ? "Nexus provider-neutral voice runtime tool dispatch" : "Nexus ElevenLabs Agents tool dispatch"
-    });
-    await writeDb(db);
-    return send(res, 200, result, {
+    return send(res, 410, {
+      ok: false,
+      error: "Legacy voice tool gateways have been removed. Use /api/voice/realtime/tool.",
+      category: "gateway-removed",
+      canonicalToolEndpoint: "/api/voice/realtime/tool",
+      noSecretValues: true
+    }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
@@ -48165,77 +47892,24 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/elevenlabs/webhook" && req.method === "POST") {
-    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many ElevenLabs webhook requests" });
-    const rawBody = await readRawBody(req, 500_000);
-    const verified = nexusElevenLabsVerifyWebhook(req, rawBody);
-    if (!verified.ok) {
-      return send(res, 401, {
-        ok: false,
-        error: "ElevenLabs webhook verification failed.",
-        category: verified.category,
-        missingEnv: verified.missingEnv || []
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    let body = {};
-    try {
-      body = rawBody ? JSON.parse(rawBody) : {};
-    } catch {
-      return send(res, 400, {
-        ok: false,
-        error: "Invalid ElevenLabs webhook payload.",
-        category: "invalid-json"
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    const toolName = String(body.name || body.toolName || body.tool_name || "nexus_capability_router").trim();
-    if (!NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES.includes(toolName)) {
-      return send(res, 400, {
-        ok: false,
-        error: "Unsupported Nexus ElevenLabs webhook tool.",
-        blockedReason: "route-not-found",
-        supportedTools: NEXUS_GENESIS_ELEVENLABS_TOOL_NAMES
-      }, {
-        "cache-control": "no-store, no-cache, must-revalidate, private"
-      });
-    }
-    const args = body.arguments && typeof body.arguments === "object"
-      ? body.arguments
-      : body.parameters && typeof body.parameters === "object"
-        ? body.parameters
-        : {};
-    const result = await dispatchNexusRealtimeTool(db, user, {
-      name: toolName,
-      correlationId: body.correlationId || body.correlation_id,
-      arguments: {
-        ...args,
-        command: args.command || args.query || args.text || body.command || "",
-        capability: args.capability || nexusElevenLabsToolToCapability(toolName)
-      },
-      route: "/api/voice/elevenlabs/webhook",
-      note: "Nexus ElevenLabs verified webhook dispatch"
-    });
-    await writeDb(db);
-    return send(res, 200, result, {
+    return send(res, 410, {
+      ok: false,
+      error: "ElevenLabs webhooks have been removed from Genesis production.",
+      category: "runtime-removed",
+      activeRuntime: "realtime",
+      canonicalToolEndpoint: "/api/voice/realtime/tool",
+      noSecretValues: true
+    }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
 
   if (url.pathname === "/api/voice/elevenlabs/diagnostics" && req.method === "GET") {
-    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ElevenLabs diagnostics" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed" });
-    const status = nexusElevenLabsRuntimeStatus(process.env);
-    return send(res, 200, {
-      ok: true,
-      runtime: status.runtime,
-      ready: status.ready,
-      configured: status.configured,
-      missingEnv: status.missingEnv,
-      fallback: status.fallback,
-      controller: status.controller,
-      controllerStates: status.controllerStates,
+    return send(res, 410, {
+      ok: false,
+      error: "ElevenLabs diagnostics have been removed from Genesis production.",
+      category: "runtime-removed",
+      activeRuntime: "realtime",
       noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
@@ -48383,7 +48057,7 @@ async function api(req, res, url) {
     const runtimeStatus = nexusRealtimeRuntimeStatus(process.env);
     if (!runtimeStatus.rollbackEnabled) {
       return send(res, 409, {
-        error: "OpenAI Realtime is disabled after the production gate failure. ElevenLabs Agents is the sole active Genesis runtime.",
+        error: "The old direct SDP Realtime rollback route is disabled. Use the OpenAI Agents SDK Realtime session endpoint.",
         category: "capability-unavailable",
         realtimeVoice: runtimeStatus
       }, {
@@ -48807,21 +48481,6 @@ async function api(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  if (url.pathname.startsWith("/vendor/elevenlabs-client/dist/")) {
-    const relativeModulePath = decodeURIComponent(url.pathname.replace("/vendor/elevenlabs-client/dist/", ""));
-    const sdkRoot = path.join(ROOT, "node_modules", "@elevenlabs", "client", "dist");
-    const sdkPath = path.normalize(path.join(sdkRoot, relativeModulePath));
-    if (!sdkPath.startsWith(sdkRoot) || path.extname(sdkPath) !== ".js") return send(res, 403, "Forbidden");
-    return fs.readFile(sdkPath, (err, data) => {
-      if (err) return send(res, 404, "Not found");
-      res.writeHead(200, {
-        "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff"
-      });
-      res.end(data);
-    });
-  }
   if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
     const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
     return fs.readFile(livekitPath, (err, data) => {
