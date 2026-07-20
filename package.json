@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "certify:nexus": "node scripts/certify-nexus.js",
+    "qa:nexus-genesis-experience-confidence-layer": "node scripts/nexus-genesis-experience-confidence-layer-qa.js",
     "start": "node server.js",
     "dev": "node server.js",
     "dev:local": "node -e \"process.env.AGRINEXUS_DB_PATH='tmp-local-db.json'; require('./server.js')\"",
