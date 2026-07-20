@@ -16,6 +16,7 @@ let acceptanceStage = "launch";
 let acceptanceFailureReason = "";
 let acceptanceProgress = { speechStartedCount: 0, responseDoneCount: 0, eventCount: 0 };
 let failureDiagnostics = null;
+let browserDiagnostics = { exceptions: [], console: [], failedRequests: [] };
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -108,6 +109,7 @@ async function main() {
   let cdp;
   let permanentCredentialObserved = false;
   let ephemeralCredentialLogged = false;
+  const browserDiagnostics = { exceptions: [], console: [], failedRequests: [] };
   try {
     acceptanceStage = "cdp-ready";
     await waitFor(async () => {
@@ -118,7 +120,10 @@ async function main() {
     acceptanceStage = "cdp-enable";
     await cdp.send("Page.enable");
     await cdp.send("Runtime.enable");
+    await cdp.send("Network.enable");
     cdp.onEvent(message => {
+      if (message.method === "Runtime.exceptionThrown") { browserDiagnostics.exceptions.push(String(message.params?.exceptionDetails?.text || "exception")); return; }
+      if (message.method === "Network.loadingFailed") { browserDiagnostics.failedRequests.push(String(message.params?.errorText || "network-failure")); return; }
       if (message.method !== "Runtime.consoleAPICalled") return;
       for (const arg of message.params?.args || []) {
         const value = typeof arg.value === "string" ? arg.value : "";
@@ -128,6 +133,8 @@ async function main() {
     });
     await cdp.send("Page.addScriptToEvaluateOnNewDocument", {
       source: `
+        const nexusOriginalAddEventListener = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, listener, options) { if (type === "click" && this.id === "nexusPermanentMicrophoneBtn") this.dataset.nexusMicBound = "true"; return nexusOriginalAddEventListener.call(this, type, listener, options); };
         window.__NEXUS_VOICE_ACCEPTANCE_EVENTS__ = [];
         window.__NEXUS_RESOURCE_TRACKER__ = { streams: new Set(), tracks: new Set(), audioContexts: new Set(), peers: new Set() };
         window.__NEXUS_RESOURCE_COUNTS__ = () => ({
@@ -186,7 +193,7 @@ async function main() {
     assert.equal(login.ok, true, `Login failed with ${login.status}`);
     acceptanceStage = "post-login-reload";
     await cdp.send("Page.navigate", { url: `${baseUrl}/?voiceDebug=1&voiceAcceptance=1` });
-    await waitFor(() => evaluate(cdp, "Boolean(document.querySelector('#nexusPermanentMicrophoneBtn'))"), 15000, "microphone control");
+    await waitFor(() => evaluate(cdp, `Boolean(document.querySelector("#nexusPermanentMicrophoneBtn")?.dataset.nexusMicBound === "true")`), 20000, "bound microphone control");
     acceptanceStage = "mic-click";
     await evaluate(cdp, "document.querySelector('#nexusPermanentMicrophoneBtn').click(); true");
 
@@ -322,7 +329,8 @@ main().catch(error => {
     failureReason: acceptanceFailureReason || "unclassified",
     progress: acceptanceProgress,
     secretValuesReturned: false,
-    diagnostics: failureDiagnostics
+    diagnostics: failureDiagnostics,
+    browserDiagnostics
     }));
     process.exitCode = 1;
   };
