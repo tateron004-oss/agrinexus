@@ -654,7 +654,7 @@
           openAiRealtimeManagedRuntime: Boolean(adapters.realtime)
         };
       },
-      runContinuousConversationHarness(runtimeName = "legacy", turns = 20) {
+      runContinuousConversationHarness(runtimeName = "legacy", turns = 25) {
         const adapter = this.adapter(runtimeName);
         const results = [];
         return adapter.initialize()
@@ -675,7 +675,7 @@
               if (turn === 1) metrics.increment("firstTurnSuccess");
               if (turn === 2) metrics.increment("secondTurnSuccess");
               if (turn === 5) metrics.increment("fiveTurnSuccess");
-              if (turn === 20) metrics.increment("twentyTurnSuccess");
+              if (turn === 20 || turn === 25) metrics.increment("twentyTurnSuccess");
               results.push({ turn, state: adapter.getState(), result, ownsMicrophone: adapter.ownsMicrophone() });
             }
             return {

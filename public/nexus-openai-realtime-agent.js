@@ -195,6 +195,7 @@ function createNexusRealtimeTools(options) {
 export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   if (!options.clientSecret) throw new Error("OpenAI Realtime client secret is required.");
   const language = options.language?.() || "en";
+  const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null;
   const agent = new RealtimeAgent({
     name: "Nexus Genesis",
     voice: options.voice || "marin",
@@ -229,15 +230,19 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   session.on("history_updated", history => emit("history_updated", { turnCount: Array.isArray(history) ? history.length : 0 }));
   session.on("history_added", item => emit("history_added", { type: item?.type || "", role: item?.role || "" }));
   session.on("transport_event", event => {
-    const type = String(event?.type || event?.event?.type || "");
-    emit("transport_event", { type });
+    const transportEvent = event?.event && typeof event.event === "object" ? event.event : event;
+    const type = String(transportEvent?.type || event?.type || "");
+    emit("transport_event", {
+      type,
+      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200)
+    });
   });
   session.on("error", error => emit("error", normalizeError(error)));
 
   const microphone = await connectSessionWithMicrophoneProof(session, {
     apiKey: options.clientSecret,
     model: options.model || "gpt-realtime-2",
-    preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null
+    preverifiedMicrophoneStream
   }, emit);
 
   return {
@@ -247,13 +252,16 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
     getMicrophoneProof() {
       return microphoneProofForStream(microphone.stream);
     },
-    close(reason = "closed") {
+    close(reason = "closed", options = {}) {
       emit("closing", { reason });
       session.close();
-      try {
-        microphone.stream?.getTracks?.().forEach(track => track.stop());
-      } catch {
-        // Browser media stream may already be stopped.
+      const shouldStopMicrophone = options.stopMicrophone === true || (!options.preverifiedMicrophone && !preverifiedMicrophoneStream);
+      if (shouldStopMicrophone) {
+        try {
+          microphone.stream?.getTracks?.().forEach(track => track.stop());
+        } catch {
+          // Browser media stream may already be stopped.
+        }
       }
     },
     interrupt() {

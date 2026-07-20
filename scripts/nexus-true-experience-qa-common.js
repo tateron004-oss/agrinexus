@@ -143,11 +143,11 @@ function assertContextualMission() {
 }
 
 function assertCacheResponsive() {
-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"'), "app build version bumped");
-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"'), "app cache version bumped");
-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473"'), "server build version bumped");
-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"'), "server cache version bumped");
-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v418"'), "service worker cache version bumped");
+  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-474"'), "app build version bumped");
+  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"'), "app cache version bumped");
+  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-474"'), "server build version bumped");
+  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"'), "server cache version bumped");
+  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v419"'), "service worker cache version bumped");
   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");

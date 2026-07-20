@@ -8,6 +8,33 @@
       "role": "Coordinator",
       "country": "DRC",
       "language": "en"
+    },
+    {
+      "id": "u_admin",
+      "name": "Platform Admin",
+      "email": "admin@agrinexus.org",
+      "password": "Admin2026!",
+      "role": "Admin",
+      "country": "Nigeria",
+      "language": "en"
+    },
+    {
+      "id": "u_standard",
+      "name": "Standard User",
+      "email": "user@agrinexus.org",
+      "password": "User2026!",
+      "role": "Standard User",
+      "country": "Nigeria",
+      "language": "en"
+    },
+    {
+      "id": "u_investor",
+      "name": "Investor Viewer",
+      "email": "investor@agrinexus.org",
+      "password": "Investor2026!",
+      "role": "Investor",
+      "country": "Egypt",
+      "language": "ar"
     }
   ],
   "countries": [
@@ -1208,737 +1235,879 @@
     "representativeConnections": 16,
     "integrationEvents": [
       {
-        "id": "06aab18e-5114-4e9c-9302-8787080f28b9",
-        "providerId": "translation",
-        "providerName": "Translation Engine",
-        "module": "AI",
-        "action": "translation.dynamic",
+        "id": "335f5a86-aea7-4d4f-aee5-5adba65100de",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "Translated voice-response content to ar.",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
         "metadata": {
-          "sourceLanguage": "en",
-          "targetLanguage": "ar",
-          "provider": "local-dictionary"
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-22T19:10:44.680Z"
+        "createdAt": "2026-07-19T22:56:58.101Z"
       },
       {
-        "id": "7f5c860a-640c-4875-8f07-481b448165ff",
-        "providerId": "translation",
-        "providerName": "Translation Engine",
-        "module": "AI",
-        "action": "translation.dynamic",
-        "status": "success",
-        "detail": "Translated voice-response content to ar.",
-        "metadata": {
-          "sourceLanguage": "en",
-          "targetLanguage": "ar",
-          "provider": "local-dictionary"
-        },
-        "createdAt": "2026-05-22T19:10:44.673Z"
-      },
-      {
-        "id": "276c5e5c-6d20-4295-8bf4-cb391ca54bcb",
+        "id": "5b1a2bdc-8eaf-48a5-aa58-ab7a8a0c2396",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: Confirmed. I completed the staged workflow.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "328f7dfa-1ec6-46c3-a721-4558b56c9b67",
-          "language": "en"
+          "voiceSessionId": "e509391a-5cce-4ad1-bbc2-889c8fd1b7cc",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-22T02:56:03.735Z"
+        "createdAt": "2026-07-19T22:56:58.100Z"
       },
       {
-        "id": "ec9541aa-2cfe-4f41-b8d1-6ad5275667b7",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTrade",
-        "action": "drone.field_scan",
+        "id": "ecfbf1bd-1b1b-4a09-9cd1-cf3ea9fe9335",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "AN-DRONE-EGYPT-006 drone field intelligence created for Premium Cassava Flour.",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
         "metadata": {
-          "scanId": "3374d3b0-b8b2-4162-8977-cf6c3aa9ff0d",
-          "findingId": "d01d778f-d19c-448b-8b1a-072ca9fc6f12",
-          "productId": "cassava-ng",
-          "countryId": "egypt",
-          "cropHealthScore": 86,
-          "source": "operator"
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-22T02:56:03.634Z"
+        "createdAt": "2026-07-19T22:54:57.380Z"
       },
       {
-        "id": "e8484785-7eee-44d3-9744-dc84d9d85c9c",
+        "id": "27f1e0f5-562c-42be-b9aa-249edeb56619",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: Caption workflow is ready. Say confirm to build captions or cancel to close it.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "92e319b9-696b-4b4c-97f8-3cdfaddc88fc",
-          "language": "en"
+          "voiceSessionId": "035f9a3f-214b-49f3-ad90-ce29578295a9",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-22T02:54:02.501Z"
+        "createdAt": "2026-07-19T22:54:57.379Z"
       },
       {
-        "id": "88a208d6-481d-4028-b98c-0f8dac9b27e1",
+        "id": "2135fbfb-711f-4064-a019-f8fab35bb046",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T22:54:28.769Z"
+      },
+      {
+        "id": "a2e871be-149c-4627-879f-a856b7453467",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: Caption workflow is ready. Say confirm to build captions or cancel to close it.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "f95f1fe5-4333-47b1-89ce-fbad64dff820",
-          "language": "en"
+          "voiceSessionId": "d3e68a0b-cc57-4444-829a-bc7c25b74a12",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-22T02:48:00.385Z"
+        "createdAt": "2026-07-19T22:54:28.769Z"
       },
       {
-        "id": "11d56c1d-7c28-4a5b-b66b-c11b7ae7429f",
+        "id": "02c5e18d-9882-4816-8a2c-41e6a15f3828",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T22:53:06.318Z"
+      },
+      {
+        "id": "da650004-dd6f-4bb1-b6de-7ad88121bfb9",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "29d5d776-294b-480d-8dbc-90cbdead4300",
-          "language": "en"
+          "voiceSessionId": "d4e8843e-bfd5-425d-975a-6ec62ab44316",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:50.319Z"
+        "createdAt": "2026-07-19T22:53:06.318Z"
       },
       {
-        "id": "c347f7c7-e188-4c0b-b50f-535d8adc4d80",
+        "id": "bcafe8b7-2b85-4f17-80e5-53264e204058",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T22:52:37.961Z"
+      },
+      {
+        "id": "07912369-c797-42b7-8a3e-d3746516b9f4",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Voice response prepared: Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "a8f8eccd-9aeb-47c9-8b00-7850addb03e1",
-          "response": "Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling."
+          "voiceSessionId": "a2bba69b-33e9-4fe8-a441-7dfbb0afc407",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:50.288Z"
+        "createdAt": "2026-07-19T22:52:37.960Z"
       },
       {
-        "id": "7897ef1d-1b04-4b29-a736-51efb835b82a",
+        "id": "d7ab6d38-4b66-4fe4-b6ee-a54ab029a402",
         "providerId": "openai",
         "providerName": "OpenAI",
-        "module": "AI",
-        "action": "agent.command",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "conversation.confirmed: Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
         "metadata": {
-          "commandId": "afba2c2a-66fd-4537-a0f0-7cced56ae602",
-          "command": "yes"
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:50.288Z"
+        "createdAt": "2026-07-19T22:51:37.750Z"
       },
       {
-        "id": "567d5401-73d1-4a27-90f3-2957cf6baed6",
-        "providerId": "workforce-hris",
-        "providerName": "HRIS",
-        "module": "Workforce",
-        "action": "application.submitted_by_agent",
-        "status": "success",
-        "detail": "Telehealth Access Assistant application submitted from voice command.",
-        "metadata": {
-          "applicationId": "a193eb05-f867-4c57-a8d1-92ea7febd2ac",
-          "roleId": "telehealth-assistant"
-        },
-        "createdAt": "2026-05-20T16:35:50.262Z"
-      },
-      {
-        "id": "993d989c-fc9a-4e7b-ab04-54fdfcb815e7",
-        "providerId": "voice-stt",
-        "providerName": "Speech-to-Text",
-        "module": "AI",
-        "action": "voice.speech-to-text",
-        "status": "success",
-        "detail": "Voice command transcribed: yes",
-        "metadata": {
-          "voiceSessionId": "78738d50-2334-4fd2-aa64-4cb1a3941e55",
-          "command": "yes"
-        },
-        "createdAt": "2026-05-20T16:35:50.262Z"
-      },
-      {
-        "id": "0b02c11b-f8fb-4805-bf86-fce6e854d664",
+        "id": "d759f301-fb1e-4cc0-9726-39f5ad3aa671",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "13638a88-5788-4b13-b7b8-c1a22412393a",
-          "language": "en"
+          "voiceSessionId": "f9d8f350-2a37-498b-93a4-d56cf5ee9e08",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:49.146Z"
+        "createdAt": "2026-07-19T22:51:37.749Z"
       },
       {
-        "id": "1aefc494-f7f7-4654-ae9f-53a1866594d4",
+        "id": "83105df4-ba3b-4288-a28e-4e3222977302",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T22:50:17.660Z"
+      },
+      {
+        "id": "49ef44d5-386f-4d99-aade-81a1919a79f4",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Voice response prepared: I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "3955244e-615a-46b5-ab07-ec126f31b31a",
-          "response": "I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel."
+          "voiceSessionId": "448c54ac-a0fe-428c-b4a6-d8edc7ed34f1",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:49.082Z"
+        "createdAt": "2026-07-19T22:50:17.660Z"
       },
       {
-        "id": "5eb5bdde-b40b-4105-8951-da62e2ac789e",
+        "id": "205f992e-70f1-4280-ad57-ea0cb0b3dd3c",
         "providerId": "openai",
         "providerName": "OpenAI",
-        "module": "AI",
-        "action": "agent.command",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "conversation.pending_action: I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel.",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
         "metadata": {
-          "commandId": "934a0640-14e8-49a5-8578-e032ee5a8de6",
-          "command": "I want to apply for that job"
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-20T16:35:49.081Z"
+        "createdAt": "2026-07-19T22:48:57.512Z"
       },
       {
-        "id": "86722d3d-6d7d-4f0b-bdb5-2950c804a334",
-        "providerId": "voice-stt",
-        "providerName": "Speech-to-Text",
-        "module": "AI",
-        "action": "voice.speech-to-text",
-        "status": "success",
-        "detail": "Voice command transcribed: I want to apply for that job",
-        "metadata": {
-          "voiceSessionId": "5d3f2807-132f-4892-94de-16fae5d92103",
-          "command": "I want to apply for that job"
-        },
-        "createdAt": "2026-05-20T16:35:49.081Z"
-      },
-      {
-        "id": "82dc87e2-2c3e-4001-9d03-9effd286536d",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AI",
-        "action": "agent.ai.copilot",
-        "status": "success",
-        "detail": "Generated supervised AI recommendation 3cbe8bf5-928f-489b-94a6-c6bd7392d8a2.",
-        "metadata": {
-          "stepId": "5232aa9d-de03-4072-9570-852f86c8be52",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.694Z"
-      },
-      {
-        "id": "066bbe68-b832-43f1-9667-f70ebe1d6020",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AI",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "copilot AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "3cbe8bf5-928f-489b-94a6-c6bd7392d8a2",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-19T21:35:40.694Z"
-      },
-      {
-        "id": "667ca789-b832-4529-857f-265a6e3186dc",
-        "providerId": "maps",
-        "providerName": "OpenStreetMap",
-        "module": "Maps",
-        "action": "agent.map.route_risk",
-        "status": "success",
-        "detail": "Assessed route risk for East Africa Corridor.",
-        "metadata": {
-          "stepId": "6613ad2b-72c9-47d0-9df4-9a34fe217cb9",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.684Z"
-      },
-      {
-        "id": "cfdb47c2-cd73-471e-aa09-bca4b8bd6a6d",
-        "providerId": "maps",
-        "providerName": "OpenStreetMap",
-        "module": "Maps",
-        "action": "agent.map_route_risk",
-        "status": "success",
-        "detail": "Agent assessed East Africa Corridor at Nairobi Hub.",
-        "metadata": {
-          "routeId": "east-africa",
-          "countryId": "kenya"
-        },
-        "createdAt": "2026-05-19T21:35:40.684Z"
-      },
-      {
-        "id": "727799f1-3947-4a4d-8dea-71111e3f7db4",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTech",
-        "action": "agent.drone.intervention_task",
-        "status": "success",
-        "detail": "Assigned AN-FIELD-KENYA-006 for Avocado Export Lot.",
-        "metadata": {
-          "stepId": "e189f515-c59d-47d5-bf47-4f45d9ee54cc",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.684Z"
-      },
-      {
-        "id": "493181d7-eeb6-4153-9498-4e613785a6b2",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTrade",
-        "action": "drone.intervention_task",
-        "status": "success",
-        "detail": "AN-FIELD-KENYA-006 field intervention assigned from drone evidence.",
-        "metadata": {
-          "taskId": "847b1e78-7072-4bbc-ba14-7d36f0e0ad55",
-          "findingId": "96729a94-7797-4aa0-9a90-0bb6c49e153d",
-          "scanId": "7aedf7b5-5ce7-4a2f-9940-16611b572b2e",
-          "countryId": "kenya",
-          "source": "agent"
-        },
-        "createdAt": "2026-05-19T21:35:40.684Z"
-      },
-      {
-        "id": "02646687-7d89-4a6c-b8e3-b038c6e9251f",
-        "providerId": "trade-market",
-        "providerName": "Market Pricing",
-        "module": "AgriTrade",
-        "action": "agent.drone.field_scan",
-        "status": "success",
-        "detail": "Completed AN-DRONE-KENYA-005 for Avocado Export Lot with 87% crop health.",
-        "metadata": {
-          "stepId": "8ab0bdb9-15c5-4f7a-95ba-cfd8cb5bf42c",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.683Z"
-      },
-      {
-        "id": "0c3e75f6-5a78-42b2-b811-8089963fad9a",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTrade",
-        "action": "drone.field_scan",
-        "status": "success",
-        "detail": "AN-DRONE-KENYA-005 drone field intelligence created for Avocado Export Lot.",
-        "metadata": {
-          "scanId": "7aedf7b5-5ce7-4a2f-9940-16611b572b2e",
-          "findingId": "96729a94-7797-4aa0-9a90-0bb6c49e153d",
-          "productId": "avocado-ke",
-          "countryId": "kenya",
-          "cropHealthScore": 87,
-          "source": "agent"
-        },
-        "createdAt": "2026-05-19T21:35:40.683Z"
-      },
-      {
-        "id": "718aceef-ce41-4178-9d98-f06502791338",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTech",
-        "action": "agent.drone.flight_plan",
-        "status": "success",
-        "detail": "Planned AN-FLIGHT-KENYA-006 for Avocado Export Lot with compliance checks ready.",
-        "metadata": {
-          "stepId": "69cd56c7-482d-4dd3-a04b-b6649a532050",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.683Z"
-      },
-      {
-        "id": "eec8ad40-04dd-4dfc-ae07-132d0c002e87",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTrade",
-        "action": "drone.flight_plan",
-        "status": "success",
-        "detail": "AN-FLIGHT-KENYA-006 drone mission planned for Avocado Export Lot.",
-        "metadata": {
-          "missionId": "dcb0c22f-1d60-4f2d-937c-75e97f4ce467",
-          "productId": "avocado-ke",
-          "countryId": "kenya",
-          "source": "agent"
-        },
-        "createdAt": "2026-05-19T21:35:40.683Z"
-      },
-      {
-        "id": "20a4b119-772c-42c2-94fd-fb87f9db6afd",
-        "providerId": "trade-market",
-        "providerName": "Market Pricing",
-        "module": "AgriTrade",
-        "action": "agent.trade.market_review",
-        "status": "success",
-        "detail": "Created AN-ORD-AGENT-022 market review for Avocado Export Lot.",
-        "metadata": {
-          "stepId": "b5de732a-b26d-4252-b761-a69f667916db",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.682Z"
-      },
-      {
-        "id": "cb59ed50-81d8-4745-bfd8-94d8cfe543ce",
-        "providerId": "trade-market",
-        "providerName": "Market Pricing",
-        "module": "AgriTrade",
-        "action": "agent.trade_market_review",
-        "status": "success",
-        "detail": "Agent created market review order AN-ORD-AGENT-022 for Avocado Export Lot.",
-        "metadata": {
-          "orderId": "50f71373-3fc7-4f81-9684-1111007eab63",
-          "productId": "avocado-ke"
-        },
-        "createdAt": "2026-05-19T21:35:40.681Z"
-      },
-      {
-        "id": "20b6941c-2c2b-4773-9185-86d3be2f093b",
-        "providerId": "health-telehealth",
-        "providerName": "Telehealth",
-        "module": "Healthcare",
-        "action": "agent.health.accessibility_review",
-        "status": "success",
-        "detail": "Prepared accessible telehealth support for AN-PAT-NGA-WOW.",
-        "metadata": {
-          "stepId": "86932c99-d47f-4baa-a0ef-a143fc854a93",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.680Z"
-      },
-      {
-        "id": "3e32b93d-fe81-451c-a3aa-cee9c489a115",
-        "providerId": "health-telehealth",
-        "providerName": "Telehealth",
-        "module": "Healthcare",
-        "action": "agent.health_accessibility",
-        "status": "success",
-        "detail": "Agent prepared accessible telehealth support for AN-PAT-NGA-WOW.",
-        "metadata": {
-          "intakeId": "ebdae78b-165f-4245-9037-07ee72dcacfc",
-          "accessibilityId": "42154847-a88d-41d6-95dc-041587f6098d"
-        },
-        "createdAt": "2026-05-19T21:35:40.628Z"
-      },
-      {
-        "id": "abed9134-a6fa-415c-8b2f-7cebc18fc8de",
-        "providerId": "workforce-jobs",
-        "providerName": "Live Job Network",
-        "module": "Workforce",
-        "action": "agent.workforce.match_role",
-        "status": "success",
-        "detail": "Matched candidate to Telehealth Access Assistant.",
-        "metadata": {
-          "stepId": "b90049b3-7067-4d1f-a0b7-cb1404621795",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.627Z"
-      },
-      {
-        "id": "54ea7cd9-8549-41c7-b18d-e590200165ea",
-        "providerId": "workforce-jobs",
-        "providerName": "Live Job Network",
-        "module": "Workforce",
-        "action": "agent.workforce_match",
-        "status": "success",
-        "detail": "Agent matched candidate to Telehealth Access Assistant.",
-        "metadata": {
-          "roleId": "telehealth-assistant",
-          "eligible": true,
-          "applicationId": "a193eb05-f867-4c57-a8d1-92ea7febd2ac",
-          "readiness": {
-            "eligible": true,
-            "missingReadiness": 0,
-            "missingCertificates": []
-          }
-        },
-        "createdAt": "2026-05-19T21:35:40.627Z"
-      },
-      {
-        "id": "7f594e8d-c5df-4981-b47c-9c8071944e59",
-        "providerId": "learning-courses",
-        "providerName": "Course Catalog",
-        "module": "Learning",
-        "action": "agent.learning.start_or_continue",
-        "status": "success",
-        "detail": "Advanced Telehealth Support to 100% and updated readiness.",
-        "metadata": {
-          "stepId": "dd6d948b-431b-494f-ba57-b2be18978259",
-          "attempts": 1,
-          "executedBy": "demo@agrinexus.org"
-        },
-        "createdAt": "2026-05-19T21:35:40.627Z"
-      },
-      {
-        "id": "b5b21878-808e-4b09-8ec5-23ee046bca48",
-        "providerId": "learning-courses",
-        "providerName": "Course Catalog",
-        "module": "Learning",
-        "action": "agent.learning_progress",
-        "status": "success",
-        "detail": "Agent advanced Telehealth Support to 100% for demo@agrinexus.org.",
-        "metadata": {
-          "courseId": "telehealth-support",
-          "enrollmentId": "ae6413b3-2b25-4ba1-9bbe-1fd8028b1ef9",
-          "progress": 100
-        },
-        "createdAt": "2026-05-19T21:35:40.627Z"
-      },
-      {
-        "id": "5887ea22-a58c-4bd3-96cb-81b5c6848818",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AI",
-        "action": "agent.briefing_created",
-        "status": "success",
-        "detail": "Nexus Government Briefing created for government presentation.",
-        "metadata": {
-          "briefingId": "672fef79-cdb9-490b-b4e1-e67420b11b93",
-          "purpose": "government presentation"
-        },
-        "createdAt": "2026-05-19T21:35:38.247Z"
-      },
-      {
-        "id": "3a177b55-c583-472f-ba31-f8904d98363d",
+        "id": "db71e5e3-bace-4aef-af29-ca75fd655f6f",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Voice response prepared: I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "16154abe-2447-42be-aa7e-a318371a1323",
-          "response": "I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness."
+          "voiceSessionId": "82342962-c9e8-4847-923f-e4b83d2ca61f",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-19T21:07:48.128Z"
+        "createdAt": "2026-07-19T22:48:57.511Z"
       },
       {
-        "id": "71706f9a-ec59-4c61-baec-5a5b5dcc137e",
+        "id": "d9002eb1-a030-4b24-a4ba-662c158cd538",
         "providerId": "openai",
         "providerName": "OpenAI",
-        "module": "AI",
-        "action": "agent.command",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "capability-summary: I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness.",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
         "metadata": {
-          "commandId": "aa2c74f8-92c0-4177-af70-e441eb5c5575",
-          "command": "Workforce, I want to apply for that job can you help me"
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-19T21:07:48.128Z"
+        "createdAt": "2026-07-19T22:48:29.492Z"
       },
       {
-        "id": "b014764e-fc17-41aa-8379-24976df62f31",
-        "providerId": "voice-stt",
-        "providerName": "Speech-to-Text",
-        "module": "AI",
-        "action": "voice.speech-to-text",
-        "status": "success",
-        "detail": "Voice command transcribed: Workforce, I want to apply for that job can you help me",
-        "metadata": {
-          "voiceSessionId": "11f30f72-4718-4d7a-ae6f-495f42b75d29",
-          "command": "Workforce, I want to apply for that job can you help me"
-        },
-        "createdAt": "2026-05-19T21:07:48.128Z"
-      },
-      {
-        "id": "4cfff551-c017-4a75-a8da-275b64ebf3d4",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AI",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "command AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "06badfa7-2bdc-43c6-9554-cb4ffcba471f",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-18T17:55:13.894Z"
-      },
-      {
-        "id": "a12ca80c-fece-4767-8910-c69fa5b4bd11",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "Maps",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "route AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "17b6fdec-c95f-4d6a-8354-efd4c0e3f457",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-18T17:53:52.210Z"
-      },
-      {
-        "id": "1d034f54-4a4e-4a27-8684-584e9483ea4d",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AgriTrade",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "trade-advisor AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "2648b137-f3fa-4127-859b-6a30927be14c",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-18T17:53:39.440Z"
-      },
-      {
-        "id": "7f247db5-c07a-4ee9-9b78-4cf962828a21",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "Maps",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "route AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "b1960995-e8e8-4d14-a591-f792c6807eaa",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-18T17:53:28.416Z"
-      },
-      {
-        "id": "af52eff8-ba75-48bc-aad6-c84c0d7fda0a",
-        "providerId": "field-drones",
-        "providerName": "Drone Field Intelligence",
-        "module": "AgriTrade",
-        "action": "drone.flight_plan",
-        "status": "success",
-        "detail": "AN-FLIGHT-KENYA-005 drone mission planned for Premium Cassava Flour.",
-        "metadata": {
-          "missionId": "6fd5c83b-3c71-47e0-b861-752cdcc4d3bb",
-          "productId": "cassava-ng",
-          "countryId": "kenya",
-          "source": "operator"
-        },
-        "createdAt": "2026-05-18T17:52:54.095Z"
-      },
-      {
-        "id": "a6b116dd-292f-48a5-a2ef-01361137cc37",
-        "providerId": "openai",
-        "providerName": "OpenAI",
-        "module": "AgriTrade",
-        "action": "ai.run",
-        "status": "fallback",
-        "detail": "price AI run completed through offline-after-local-ai-error.",
-        "metadata": {
-          "runId": "f2b1e555-ee82-4f57-afff-efcff1242581",
-          "countryId": "kenya",
-          "routeId": "east-africa",
-          "provider": "offline-after-local-ai-error"
-        },
-        "createdAt": "2026-05-18T17:51:53.847Z"
-      },
-      {
-        "id": "a7a47e4b-9c16-4c51-b98c-2ac6d845be00",
-        "providerId": "health-notifications",
-        "providerName": "Health Notifications",
-        "module": "Healthcare",
-        "action": "representative.connected",
-        "status": "success",
-        "detail": "Representative escalation notification recorded.",
-        "metadata": {
-          "intakeId": "ebdae78b-165f-4245-9037-07ee72dcacfc"
-        },
-        "createdAt": "2026-05-18T17:50:15.838Z"
-      },
-      {
-        "id": "f6b5a099-00e9-4831-9f90-5f559f810f85",
-        "providerId": "learning-certificates",
-        "providerName": "Certificate Renderer",
-        "module": "Learning",
-        "action": "learning.accessibility_ready",
-        "status": "success",
-        "detail": "Captioned lesson packet prepared for Telehealth Support.",
-        "metadata": {
-          "accommodationId": "31fc6833-e830-4eb4-878c-e698fb35768f",
-          "courseId": "telehealth-support",
-          "mode": "caption"
-        },
-        "createdAt": "2026-05-18T17:49:31.995Z"
-      },
-      {
-        "id": "1c3e2e18-71e5-4713-8827-640e750b5a2c",
+        "id": "9fa98d06-7e49-4cfa-8602-64ab0a75e5d4",
         "providerId": "voice-tts",
         "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "voice.text-to-speech",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Speech response prepared: Opened learning.",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "metadata": {
-          "voiceSessionId": "1d41cf21-a056-409a-919b-936bd4050917",
-          "language": "en"
+          "voiceSessionId": "5c273af9-5960-4b6f-ae79-41200657af3e",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         },
-        "createdAt": "2026-05-18T17:49:18.392Z"
+        "createdAt": "2026-07-19T22:48:29.491Z"
       },
       {
-        "id": "dc330659-adc1-43ae-ba5c-4dd86562f529",
+        "id": "3ff6ca2d-2909-4578-aa3f-8d26a0dcca5e",
         "providerId": "openai",
         "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "bounded_genesis_voice_guest_cookie"
+        },
+        "createdAt": "2026-07-19T22:05:16.285Z"
+      },
+      {
+        "id": "551b8376-eb99-4310-9b9a-55ecc6831db6",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
         "module": "AI",
-        "action": "wow.ai_orchestration",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "AI recommendations generated across learning, workforce, health, trade, and map intelligence.",
-        "metadata": {},
-        "createdAt": "2026-05-18T17:46:39.335Z"
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "f876cfcb-3cf7-4cd4-8ef9-ac96608d1bf9",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "bounded_genesis_voice_guest_cookie"
+        },
+        "createdAt": "2026-07-19T22:05:16.285Z"
       },
       {
-        "id": "6fcc39bb-c3b4-4c58-b712-5b821b42706c",
-        "providerId": "trade-market",
-        "providerName": "Market Pricing",
-        "module": "AgriTrade",
-        "action": "wow.trade_quality_check",
+        "id": "d9e1ae2b-65e8-45e3-a672-281b51d2759c",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "Nigeria product order advanced with payment and route evidence.",
-        "metadata": {},
-        "createdAt": "2026-05-18T17:46:39.335Z"
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:45:29.131Z"
       },
       {
-        "id": "fdad51ae-df62-4643-ba67-919b712dbf20",
-        "providerId": "health-ehr",
-        "providerName": "EHR/FHIR",
-        "module": "Healthcare",
-        "action": "wow.accessible_care_plan",
+        "id": "7a01b557-17cd-41cd-b25e-870c3fb91e91",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
         "status": "success",
-        "detail": "Accessible care plan synced for clinical review.",
-        "metadata": {},
-        "createdAt": "2026-05-18T17:46:39.334Z"
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "551d8591-c043-4ff6-aa18-04b3d6d5b3cf",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:45:29.130Z"
       },
       {
-        "id": "a59309de-e3e6-43cb-8450-6642326e0a08",
-        "providerId": "health-notifications",
-        "providerName": "Health Notifications",
-        "module": "Healthcare",
-        "action": "wow.caregiver_notified",
+        "id": "199fe6df-86ef-4436-b6d4-641a1f54ae17",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
         "status": "success",
-        "detail": "Caregiver and community aide notification recorded.",
-        "metadata": {},
-        "createdAt": "2026-05-18T17:46:39.334Z"
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:44:55.519Z"
+      },
+      {
+        "id": "ddf937b3-cc58-4868-8b8c-483826a64700",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "155d7d76-88a6-4818-99ed-a48743e8f49c",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:44:55.518Z"
+      },
+      {
+        "id": "47635820-7b0e-445b-8561-b83db1b6b38e",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:44:26.251Z"
+      },
+      {
+        "id": "b89087eb-c44c-481d-bc33-d2f7c9728a85",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "4d211374-316b-40c2-9ffe-54e25b2fce97",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:44:26.251Z"
+      },
+      {
+        "id": "bd4c7726-d126-455a-8511-c29e176bbffc",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:43:57.275Z"
+      },
+      {
+        "id": "aa743039-5691-42c8-bf7a-926cee0c0402",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "ab294ca2-2bff-484b-a8ce-16ceb71459f3",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:43:57.275Z"
+      },
+      {
+        "id": "ec04e8b7-9b22-4a1f-9a6d-64ea2444110a",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:41:54.503Z"
+      },
+      {
+        "id": "fdb5a2d6-e2f2-42fc-899c-8ad6e1e175bf",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "5e027d23-001d-49b9-b65b-fba1f319678c",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:41:54.503Z"
+      },
+      {
+        "id": "b1cc8b16-e841-4502-8515-2f8b01c39ec7",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:41:26.064Z"
+      },
+      {
+        "id": "94fbb7a5-2c7c-4be0-b2d2-05007abbe064",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "e008ba2f-c6a5-4709-a803-17dfcf42bdaf",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:41:26.063Z"
+      },
+      {
+        "id": "775bc033-9cb1-457a-b3a2-a69e78291910",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:40:10.832Z"
+      },
+      {
+        "id": "bac7862e-1198-4c1e-8c43-b00a948e4817",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "831ef45c-96d2-47b8-a3ad-9a9dfc88d23d",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:40:10.832Z"
+      },
+      {
+        "id": "458deb5a-de29-4c30-b41a-04f8be9c19db",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:39:37.332Z"
+      },
+      {
+        "id": "9e2c513b-5a25-4058-87ac-57d9e64458fd",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "1e0732f8-dcc3-4c27-a6cd-d3eb1fbbb6e1",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:39:37.331Z"
+      },
+      {
+        "id": "46232c36-06e8-4203-b2a2-0fabb9c6478a",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:39:08.865Z"
+      },
+      {
+        "id": "6a15317c-408d-4fe6-bf31-a9b4f788f1de",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "f3c55da9-6324-49a7-a55b-829bb9662642",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:39:08.864Z"
+      },
+      {
+        "id": "a9f6a6ae-097d-4e26-a93c-d6747f759aca",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:38:30.595Z"
+      },
+      {
+        "id": "16881f35-fdbf-474e-b91e-017214b5a0a0",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "57dca03a-0ee2-4d14-bede-d9df59b3c64e",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:38:30.595Z"
+      },
+      {
+        "id": "5ffe6b66-de12-415d-ac8e-f9d326375f62",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:36:35.080Z"
+      },
+      {
+        "id": "4addf75a-8ee4-4b91-9f03-fea5494c551d",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "cdb5b8c2-8d5d-495f-9f7b-416b29bdad6b",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:36:35.079Z"
+      },
+      {
+        "id": "df887e28-a2c2-4b8e-8342-f7dd22c4a91c",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:36:11.748Z"
+      },
+      {
+        "id": "d04b3e29-f0cf-456a-a035-fad97bb82f87",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "28239708-e8ea-4e8e-ae25-821d9bdb29ba",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:36:11.747Z"
+      },
+      {
+        "id": "fda26d60-ef69-41e0-9112-532c0fa7fe9c",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:35:49.013Z"
+      },
+      {
+        "id": "f9c93a5c-e293-46c3-8244-c24c8356171d",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "f5eb6c4a-da8e-457c-ba8f-66bb94ce4dce",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:35:49.012Z"
+      },
+      {
+        "id": "8b1692d7-0abc-46b1-9ace-edf224a210ae",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:35:22.374Z"
+      },
+      {
+        "id": "377e6740-a5e0-4a57-bac1-831e47974f1f",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "f4b3d692-9022-4a6c-8eb1-527a4320f383",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:35:22.373Z"
+      },
+      {
+        "id": "055406eb-cd68-46f6-bd42-da477bca7818",
+        "providerId": "openai",
+        "providerName": "OpenAI",
+        "module": "AI Voice",
+        "action": "voice.openai_agents_realtime_session_authorized",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+        "metadata": {
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:34:58.053Z"
+      },
+      {
+        "id": "3b8156fa-c624-4e22-b334-1902c6b762c0",
+        "providerId": "voice-tts",
+        "providerName": "Text-to-Speech",
+        "module": "AI",
+        "action": "voice.openai-agents-realtime",
+        "status": "success",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
+        "metadata": {
+          "voiceSessionId": "e9178b70-4ca9-457c-8f99-dfc12c11139f",
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
+        },
+        "createdAt": "2026-07-19T21:34:58.052Z"
       }
     ],
     "wallet": 5990,
@@ -6279,483 +6448,683 @@
     ],
     "voiceSessions": [
       {
-        "id": "328f7dfa-1ec6-46c3-a721-4558b56c9b67",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Confirmed. I completed the staged workflow.",
+        "id": "e509391a-5cce-4ad1-bbc2-889c8fd1b7cc",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-22T02:56:03.735Z",
+        "createdAt": "2026-07-19T22:56:58.099Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "92e319b9-696b-4b4c-97f8-3cdfaddc88fc",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Caption workflow is ready. Say confirm to build captions or cancel to close it.",
+        "id": "035f9a3f-214b-49f3-ad90-ce29578295a9",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-22T02:54:02.501Z",
+        "createdAt": "2026-07-19T22:54:57.379Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "f95f1fe5-4333-47b1-89ce-fbad64dff820",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Caption workflow is ready. Say confirm to build captions or cancel to close it.",
+        "id": "d3e68a0b-cc57-4444-829a-bc7c25b74a12",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-22T02:48:00.384Z",
+        "createdAt": "2026-07-19T22:54:28.768Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "29d5d776-294b-480d-8dbc-90cbdead4300",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
+        "id": "d4e8843e-bfd5-425d-975a-6ec62ab44316",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:50.319Z",
+        "createdAt": "2026-07-19T22:53:06.318Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "a8f8eccd-9aeb-47c9-8b00-7850addb03e1",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
+        "id": "a2bba69b-33e9-4fe8-a441-7dfbb0afc407",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:50.288Z",
+        "createdAt": "2026-07-19T22:52:37.960Z",
         "metadata": {
-          "response": "Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "78738d50-2334-4fd2-aa64-4cb1a3941e55",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: yes",
+        "id": "f9d8f350-2a37-498b-93a4-d56cf5ee9e08",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:50.262Z",
+        "createdAt": "2026-07-19T22:51:37.749Z",
         "metadata": {
-          "command": "yes"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "13638a88-5788-4b13-b7b8-c1a22412393a",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel.",
+        "id": "448c54ac-a0fe-428c-b4a6-d8edc7ed34f1",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:49.146Z",
+        "createdAt": "2026-07-19T22:50:17.659Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "3955244e-615a-46b5-ab07-ec126f31b31a",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel.",
+        "id": "82342962-c9e8-4847-923f-e4b83d2ca61f",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:49.081Z",
+        "createdAt": "2026-07-19T22:48:57.511Z",
         "metadata": {
-          "response": "I heard you. I can apply for the best matched role in Workforce. Say or type \"yes\" to continue, or \"no\" to cancel."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "5d3f2807-132f-4892-94de-16fae5d92103",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: I want to apply for that job",
+        "id": "5c273af9-5960-4b6f-ae79-41200657af3e",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-20T16:35:49.080Z",
+        "createdAt": "2026-07-19T22:48:29.491Z",
         "metadata": {
-          "command": "I want to apply for that job"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "16154abe-2447-42be-aa7e-a318371a1323",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness.",
+        "id": "f876cfcb-3cf7-4cd4-8ef9-ac96608d1bf9",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
-        "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-19T21:07:48.128Z",
+        "provider": "openai",
+        "createdBy": "genesis-voice-guest@agrinexus.local",
+        "createdAt": "2026-07-19T22:05:16.285Z",
         "metadata": {
-          "response": "I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "bounded_genesis_voice_guest_cookie"
         }
       },
       {
-        "id": "11f30f72-4718-4d7a-ae6f-495f42b75d29",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: Workforce, I want to apply for that job can you help me",
+        "id": "551d8591-c043-4ff6-aa18-04b3d6d5b3cf",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-19T21:07:48.128Z",
+        "createdAt": "2026-07-19T21:45:29.130Z",
         "metadata": {
-          "command": "Workforce, I want to apply for that job can you help me"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "1d41cf21-a056-409a-919b-936bd4050917",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Opened learning.",
+        "id": "155d7d76-88a6-4818-99ed-a48743e8f49c",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:49:18.392Z",
+        "createdAt": "2026-07-19T21:44:55.517Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "f1eeed83-51ef-4f65-996a-0a6cb32abce7",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Voice-first mode is on. Nexus will read responses aloud.",
+        "id": "4d211374-316b-40c2-9ffe-54e25b2fce97",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:44:22.368Z",
+        "createdAt": "2026-07-19T21:44:26.250Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "934d57fa-d3c2-4e49-8645-5941d87a4b61",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Voice-first mode is on. Nexus will read responses aloud.",
+        "id": "ab294ca2-2bff-484b-a8ce-16ceb71459f3",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:44:15.593Z",
+        "createdAt": "2026-07-19T21:43:57.274Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "3ba8baba-bf15-4588-a392-b88a1a02a075",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Prepared accessible telehealth support for AN-PAT-DRC-017.",
+        "id": "5e027d23-001d-49b9-b65b-fba1f319678c",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:58.444Z",
+        "createdAt": "2026-07-19T21:41:54.502Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "1a609093-43ec-4097-af25-8b6787858ffd",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: Prepared accessible telehealth support for AN-PAT-DRC-017.",
+        "id": "e008ba2f-c6a5-4709-a803-17dfcf42bdaf",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:58.305Z",
+        "createdAt": "2026-07-19T21:41:26.062Z",
         "metadata": {
-          "response": "Prepared accessible telehealth support for AN-PAT-DRC-017."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "c2462268-b19e-4a6f-a8cf-f7c02e363dca",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: start telehealth intake",
+        "id": "831ef45c-96d2-47b8-a3ad-9a9dfc88d23d",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:58.303Z",
+        "createdAt": "2026-07-19T21:40:10.832Z",
         "metadata": {
-          "command": "start telehealth intake"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "fba5b34f-0133-4f0d-9da6-45d5a21f3235",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: I heard: a rural Nigeria learner. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "1e0732f8-dcc3-4c27-a6cd-d3eb1fbbb6e1",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:56.646Z",
+        "createdAt": "2026-07-19T21:39:37.330Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "036e10c2-7ee2-4822-8413-a541d7fa41f7",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: I heard: a rural Nigeria learner. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "f3c55da9-6324-49a7-a55b-829bb9662642",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:56.496Z",
+        "createdAt": "2026-07-19T21:39:08.864Z",
         "metadata": {
-          "response": "I heard: a rural Nigeria learner. I created an agent plan with 9 supervised tool steps. It is waiting for approval."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "88182cb6-83ce-447a-b8d3-a36f47cb2373",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: create a plan for a rural Nigeria learner",
+        "id": "57dca03a-0ee2-4d14-bede-d9df59b3c64e",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:56.495Z",
+        "createdAt": "2026-07-19T21:38:30.594Z",
         "metadata": {
-          "command": "create a plan for a rural Nigeria learner"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "30616a6a-77d3-41f0-a695-f6ac7d89a1ce",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Nexus Government Briefing is ready. Summary: AgriNexus is a multilingual AI operating platform that helps rural communities connect training, jobs, telehealth, farmer support, drone intelligence, trade, maps, and provider evidence from one guided command center.",
+        "id": "cdb5b8c2-8d5d-495f-9f7b-416b29bdad6b",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:53.413Z",
+        "createdAt": "2026-07-19T21:36:35.078Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "2ba6317b-6ace-44ed-a15c-d6aa057cae29",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: Nexus Government Briefing is ready. Summary: AgriNexus is a multilingual AI operating platform that helps rural communities connect training, jobs, telehealth, farmer support, drone intelligence, trade, maps, and provider evidence from one guided command center.",
+        "id": "28239708-e8ea-4e8e-ae25-821d9bdb29ba",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:53.254Z",
+        "createdAt": "2026-07-19T21:36:11.746Z",
         "metadata": {
-          "response": "Nexus Government Briefing is ready. Summary: AgriNexus is a multilingual AI operating platform that helps rural communities connect training, jobs, telehealth, farmer support, drone intelligence, trade, maps, and provider evidence from one guided command center."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "61524840-c208-4bb9-8c6f-f75c333fd7b5",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: prepare a government briefing",
+        "id": "f5eb6c4a-da8e-457c-ba8f-66bb94ce4dce",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:53.253Z",
+        "createdAt": "2026-07-19T21:35:49.011Z",
         "metadata": {
-          "command": "prepare a government briefing"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "0532afc8-f48d-4158-8dc8-8205b9505ddd",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "f4b3d692-9022-4a6c-8eb1-527a4320f383",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:49.813Z",
+        "createdAt": "2026-07-19T21:35:22.373Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "dff7b684-e7c2-43a0-ba71-7ba62cd7e68d",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "e9178b70-4ca9-457c-8f99-dfc12c11139f",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:46.302Z",
+        "createdAt": "2026-07-19T21:34:58.051Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "9c43f73a-9bf7-4175-8874-503f915b68b2",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "b30154a0-3110-4978-91d9-fdd34337519d",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:46.166Z",
+        "createdAt": "2026-07-19T21:34:33.286Z",
         "metadata": {
-          "response": "I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "b3128e64-8bd1-419a-a488-e934388a7b73",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: onboard a farmer in Kenya",
+        "id": "dc8f8504-db15-4d2c-9ba2-c6657cfde7cb",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:46.166Z",
+        "createdAt": "2026-07-19T21:34:07.440Z",
         "metadata": {
-          "command": "onboard a farmer in Kenya"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "d9d7f9f1-7f48-469d-bc72-d00f24266592",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Voice-first mode is on. Nexus will read responses aloud.",
+        "id": "8138bd24-cf6f-4296-a99f-e54d2f3c6477",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:43.494Z",
+        "createdAt": "2026-07-19T21:33:43.736Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "9545f62e-c8d3-410f-8070-06ba6b168f52",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Voice input stopped: not-allowed",
+        "id": "ac47c93c-8121-402b-a732-5570ff0cacc2",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:41.406Z",
+        "createdAt": "2026-07-19T21:33:15.357Z",
         "metadata": {
-          "language": "ar"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "a4c98d11-c433-4cc6-99d3-7c4ad7b0f346",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "8b11c931-0937-4f9a-962b-370945c32880",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:18.665Z",
+        "createdAt": "2026-07-19T21:32:30.466Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "ae3b211d-5ecf-47ea-81ec-3a814ff351e3",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval.",
+        "id": "ece459f8-f09c-4df8-800e-4f28c235d4e0",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:18.631Z",
+        "createdAt": "2026-07-19T21:31:05.873Z",
         "metadata": {
-          "response": "I heard: onboard a farmer in Kenya. I created an agent plan with 9 supervised tool steps. It is waiting for approval."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "9cd51074-b939-4198-a584-a8e6654d6a09",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: onboard a farmer in Kenya",
+        "id": "01973495-644d-440a-b550-330411a7dc47",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:18.630Z",
+        "createdAt": "2026-07-19T21:29:27.763Z",
         "metadata": {
-          "command": "onboard a farmer in Kenya"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "ffdd822d-4b4b-453c-8a5a-0519d04a7c74",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "5892e6a0-7440-4238-b873-fb1da9a3fa2a",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:04.405Z",
+        "createdAt": "2026-07-19T21:29:02.612Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "0631e86d-5927-4b8c-bf3e-829fa03425dc",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "e9732c4d-5f9a-4153-97a4-8d759252d262",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:04.379Z",
+        "createdAt": "2026-07-19T21:28:54.556Z",
         "metadata": {
-          "response": "Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "f1541153-129a-4a20-8515-bd86fda41e27",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence",
+        "id": "7effb543-f263-410d-ba31-385ba16a8ac6",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:43:04.372Z",
+        "createdAt": "2026-07-19T21:28:30.569Z",
         "metadata": {
-          "command": "run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "5834970c-dd26-403d-ad88-b37b5ac0482c",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "c1f69245-30cc-47c9-9ea2-821834b77631",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:40:38.768Z",
+        "createdAt": "2026-07-19T21:28:12.114Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "8e30095c-c0c6-4fba-b38f-21877ca28773",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "a524d9ce-8144-4027-8ca9-6d8b9911bc5b",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:40:37.754Z",
+        "createdAt": "2026-07-19T21:27:48.889Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "75d87c27-fba7-4d58-ac08-2b740790649c",
-        "type": "text-to-speech",
-        "detail": "Voice response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "c861f8c3-6619-4618-a386-6dee213f010e",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:40:37.726Z",
+        "createdAt": "2026-07-19T21:27:26.128Z",
         "metadata": {
-          "response": "Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI."
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "113ebd42-617f-474f-9c30-58daa73b2781",
-        "type": "speech-to-text",
-        "detail": "Voice command transcribed: run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence",
+        "id": "db7ebba3-eb7b-420c-87b4-3038a37d575c",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:40:37.720Z",
+        "createdAt": "2026-07-19T21:27:02.455Z",
         "metadata": {
-          "command": "run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       },
       {
-        "id": "5bccb557-4e72-4ab7-8aae-7d55292c3b1b",
-        "type": "text-to-speech",
-        "detail": "Speech response prepared: Agent autonomously executed 9 supervised steps across learning, workforce, health, trade, maps, and AI.",
+        "id": "7f4fab01-afe1-4f0d-a838-7b0a97eb2a79",
+        "type": "openai-agents-realtime",
+        "detail": "OpenAI Agents Realtime voice session authorized.",
         "status": "completed",
-        "provider": "browser",
+        "provider": "openai",
         "createdBy": "demo@agrinexus.org",
-        "createdAt": "2026-05-18T17:40:36.269Z",
+        "createdAt": "2026-07-19T21:25:57.424Z",
         "metadata": {
-          "language": "en"
+          "provider": "openai-realtime",
+          "model": "gpt-realtime-2",
+          "voice": "marin",
+          "transport": "agents-sdk-webrtc",
+          "language": "en",
+          "authMechanism": "agrinexus_sid_cookie"
         }
       }
     ],
@@ -7004,7 +7373,82 @@
       "lastCommand": "yes",
       "lastIntent": "conversation.confirmed",
       "lastResponse": "Done. I submitted the Telehealth Access Assistant application and opened the workforce workspace. Next step: interview support and shift scheduling.",
-      "lastBriefingId": "672fef79-cdb9-490b-b4e1-e67420b11b93"
+      "lastBriefingId": "672fef79-cdb9-490b-b4e1-e67420b11b93",
+      "longTermFacts": [],
+      "preferences": [],
+      "learnedPatterns": [],
+      "retrievals": [],
+      "moduleMemory": {},
+      "userNeeds": {},
+      "advisorHistory": [],
+      "memoryTimeline": [],
+      "safetyBoundaries": [],
+      "reasoningHistory": [],
+      "lastReasoning": null,
+      "reasoningLanguageHistory": [],
+      "lastReasoningLanguageProduction": null,
+      "lastMemorySummary": "",
+      "activeIntake": null,
+      "conversationalIntakes": [],
+      "userModel": {},
+      "activeVoiceMission": null,
+      "voiceMissionHistory": [],
+      "activeClarification": null,
+      "clarificationHistory": [],
+      "activeRecovery": null,
+      "activeSimpleTurn": null,
+      "recoveryHistory": [],
+      "activeGuidedMission": null,
+      "guidedMissionHistory": [],
+      "activeOutcomeLoop": null,
+      "outcomeLoopHistory": [],
+      "conversationSupervisor": {
+        "status": "ready",
+        "lastScore": 0,
+        "lastSummary": "Conversation Supervisor is ready to review Nexus answers before handoff.",
+        "updatedAt": "2026-07-19T07:58:38.200Z"
+      },
+      "conversationSupervisorHistory": [],
+      "reasoningGovernance": {
+        "status": "ready",
+        "lastScore": 0,
+        "lastSummary": "Reasoning Governance is ready to prove Nexus decisions.",
+        "updatedAt": "2026-07-19T07:58:38.200Z"
+      },
+      "reasoningGovernanceHistory": [],
+      "turnCoach": null,
+      "activeJarvisSession": null,
+      "jarvisSessionHistory": [],
+      "conversationQuality": {
+        "turns": 0,
+        "openEndedAnswers": 0,
+        "stagedActions": 0,
+        "confirmedActions": 0,
+        "lastSignal": "ready"
+      },
+      "cloudAgent": {
+        "operatingMode": "controlled-cloud-agent",
+        "lastRunId": null,
+        "lastAuditId": null,
+        "lastSelfCorrectionId": null,
+        "lastSummary": "Cloud autonomy is ready for supervised missions.",
+        "updatedAt": "2026-07-19T07:58:38.200Z"
+      },
+      "collectivePatterns": [],
+      "evolutionBacklog": [],
+      "collectiveIntelligence": {
+        "status": "ready",
+        "lastScore": 0,
+        "lastSummary": "Collective intelligence is ready to learn from platform usage.",
+        "updatedAt": "2026-07-19T07:58:38.200Z"
+      },
+      "frontierBrain": {
+        "status": "ready",
+        "lastScore": 0,
+        "lastSummary": "Frontier Nexus Brain is ready to coordinate the highest operating layer.",
+        "updatedAt": "2026-07-19T07:58:38.200Z"
+      },
+      "pendingContactCall": null
     },
     "telehealthConsents": [],
     "telehealthVitals": [],
@@ -7554,6 +7998,28 @@
         "createdAt": "2026-05-20T16:35:50.288Z"
       }
     ],
-    "agentPendingAction": null
+    "agentPendingAction": null,
+    "farmerLocations": [],
+    "fieldZones": [],
+    "facilityRoutes": [],
+    "routeDisruptions": [],
+    "mapRiskLayers": [],
+    "mapEvidencePackets": [],
+    "locationRoutePackets": [],
+    "aiOrchestrations": [],
+    "videoSessions": [],
+    "phoneContacts": [],
+    "assistantReminders": [],
+    "assistantActionMemory": [],
+    "missionBrainRuns": [],
+    "trustedOsReviews": [],
+    "cloudAgentRuns": [],
+    "cloudAgentQueue": [],
+    "cloudAgentToolTemplates": [],
+    "cloudAgentCorrections": [],
+    "cloudAgentAudit": [],
+    "collectiveIntelligenceRuns": [],
+    "collectiveEvolutionProposals": [],
+    "frontierBrainRuns": []
   }
 }

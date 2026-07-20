@@ -131,7 +131,7 @@ function staticAssertions() {
   ].forEach(token => assert(agentSource.includes(token), `Realtime agent source should include ${token}`));
   assert(!agentSource.includes("[\"nexus_general_conversation\""), "Realtime agent should answer ordinary conversation directly without exposing general conversation as a function tool");
   assert(server.includes("nexusRealtimeCallableToolSchemas"), "server should expose a filtered Realtime callable tool catalog");
-  assert(server.includes("resolveElevenLabsVoiceAuthContext(req, db, user") && server.includes("authMechanism"), "Realtime routes should reuse the bounded Genesis voice auth context");
+  assert(server.includes("resolveGenesisVoiceAuthContext(req, db, user") && server.includes("authMechanism"), "Realtime routes should use the bounded Genesis voice auth context");
   assert(agentSource.includes("Keep every tool result, provider failure, clarification, and capability answer inside the current voice conversation"), "Realtime agent should keep tool results inside the current conversation surface");
   assert(app.includes("function nexusRealtimeConversationSurfaceLocked"), "app should expose a Realtime conversation surface lock");
   assert(app.includes("realtime-surface-navigation-blocked"), "app should block implicit navigation while Realtime owns the conversation surface");
@@ -150,11 +150,15 @@ function staticAssertions() {
     "nexusOpenAiNativeToolSchemas"
   ].forEach(token => assert(server.includes(token), `server should include ${token}`));
 
+  assert(server.includes('".mjs": "application/javascript; charset=utf-8"'), "server must serve Realtime ESM bundles with a JavaScript MIME type");
+  assert(server.includes('ext === ".mjs"'), "Realtime ESM bundles must bypass static caching during local acceptance");
+
   [
     "startOpenAiAgentsRealtimeVoiceSession",
     "requestNexusOpenAiRealtimeSession",
     "loadNexusOpenAiRealtimeAgentModule",
     "/vendor/nexus-openai-realtime-agent.bundle.mjs",
+    "module=nexus-esm-mime-1",
     "/api/voice/realtime/tool",
     "openai-agents-sdk-session-started",
     "openai-agents-live-microphone-track-verified",
@@ -229,11 +233,17 @@ async function routeAssertions() {
       assert.equal(req.url, "/v1/realtime/client_secrets", "Realtime client-secret path should match OpenAI contract");
       assert.equal(req.headers.authorization, "Bearer test-openai-secret", "permanent key should only be sent server-to-server");
       const body = JSON.parse(raw || "{}");
-      assert.equal(body.model, "gpt-realtime-2", "Realtime session should target gpt-realtime-2 by default");
-      assert(Array.isArray(body.tools), "Realtime session should include tool schemas");
-      assert(!body.tools.some(tool => tool.name === "nexus_general_conversation"), "Realtime session should not expose general conversation as a tool");
-      assert(body.tools.some(tool => tool.name === "nexus_weather"), "Realtime session should expose Nexus weather tool");
-      assert(body.tools.some(tool => tool.name === "nexus_provider_readiness"), "Realtime session should expose provider readiness tool");
+      assert.equal(body.session?.type, "realtime", "client-secret request should wrap the Realtime configuration in session");
+      assert.equal(body.session?.model, "gpt-realtime-2", "Realtime session should target gpt-realtime-2 by default");
+      assert.equal(body.session?.audio?.input?.turn_detection?.type, "semantic_vad", "Realtime session should use semantic VAD by default");
+      assert.equal(body.session?.audio?.input?.turn_detection?.threshold, undefined, "semantic VAD must not receive server-VAD-only threshold");
+      assert.equal(body.session?.audio?.input?.turn_detection?.prefix_padding_ms, undefined, "semantic VAD must not receive server-VAD-only padding");
+      assert.equal(body.session?.audio?.input?.turn_detection?.silence_duration_ms, undefined, "semantic VAD must not receive server-VAD-only silence duration");
+      assert(Array.isArray(body.session?.tools), "Realtime session should include tool schemas");
+      assert(body.session.tools.every(tool => tool.strict === undefined), "Realtime client-secret tool schemas must omit unsupported strict fields");
+      assert(!body.session.tools.some(tool => tool.name === "nexus_general_conversation"), "Realtime session should not expose general conversation as a tool");
+      assert(body.session.tools.some(tool => tool.name === "nexus_weather"), "Realtime session should expose Nexus weather tool");
+      assert(body.session.tools.some(tool => tool.name === "nexus_provider_readiness"), "Realtime session should expose provider readiness tool");
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({
         type: "realtime.client_secret",
@@ -248,6 +258,7 @@ async function routeAssertions() {
   try {
     await withNexusServer({
       OPENAI_API_KEY: "",
+      NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
       NEXUS_GENESIS_VOICE_RUNTIME: "realtime",
       NEXUS_OPENAI_NATIVE_ENABLED: "true"
     }, async baseUrl => {

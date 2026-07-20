@@ -67,6 +67,7 @@ async function twilioPost(route, body) {
       PORT: String(port),
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base
     },
     stdio: "ignore",

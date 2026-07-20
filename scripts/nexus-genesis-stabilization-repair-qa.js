@@ -129,7 +129,9 @@ async function mockOpenMeteoWeatherResult() {
   assert(serverSource.includes("I heard you, but I couldn't complete that response. Please try again."), "server must include final no-silence guard");
   assert(appSource.includes("startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"), "microphone auto-start must remain unchanged");
   assert(appSource.includes("navigator.mediaDevices.getUserMedia"), "getUserMedia acquisition must remain present");
-  assert(appSource.includes("voiceRecognition.start()"), "SpeechRecognition start must remain present");
+  assert(appSource.includes("startRealtimeVoiceSession"), "OpenAI Realtime startup must remain present");
+  assert(appSource.includes("openai-realtime-microphone-proof"), "Realtime microphone proof must remain present");
+  assert(!appSource.includes("voiceRecognition = new Recognition()"), "active browser SpeechRecognition construction must remain removed");
   assert(appSource.includes("resumeVoiceListeningAfterSpeech(playbackToken, interruptToken)"), "listening must resume through existing speech completion path");
 
   await mockOpenMeteoWeatherResult();
@@ -142,6 +144,7 @@ async function mockOpenMeteoWeatherResult() {
       PORT: String(port),
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
+      NEXUS_OPENAI_NATIVE_ENABLED: "false",
       NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "",
       NEXUS_WEATHER_PROVIDER_ENABLED: "",
       NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "",

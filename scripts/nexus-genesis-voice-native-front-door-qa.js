@@ -112,20 +112,20 @@ includesAll(supervisorStartup, [
 const startup = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "voice startup");
 const acquire = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
 includesAll(startup, [
-  "voiceRecognition = new Recognition()",
-  "recognition-handlers-registered",
-  "voiceRecognition.start()",
-  "recognition-onstart",
-  "recognition-final-transcript",
-  "scheduleFinalVoiceCommand(finalTranscript",
-  "duplicate-session-prevented"
+  "startRealtimeVoiceSession",
+  "realtimeVoiceActive()",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
+  "legacy-runtime-disabled",
+  "unreachable-voice-runtime-branch"
 ], "voice startup");
+assert(!startup.includes("voiceRecognition = new Recognition()"), "voice startup must not construct browser SpeechRecognition");
+assert(!startup.includes("startElevenLabsVoiceSession"), "voice startup must not start ElevenLabs");
 includesAll(acquire, [
   "navigator.mediaDevices.getUserMedia",
   "liveTrackVerified: true",
   "NoLiveAudioTrackError"
 ], "microphone acquisition");
-assert(!startup.includes("stopNexusVoicePermissionStream(\"web-speech-final\")"), "valid stream must not be stopped when a final transcript arrives");
 
 const finalVoice = between(app, "function processFinalVoiceCommand", "function scheduleFinalVoiceCommand", "final voice processing");
 includesAll(finalVoice, [
@@ -141,10 +141,10 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech restart");
 
-includesAll(index, ["/app.js?v=nexus-behavior-473", "/styles.css?v=nexus-behavior-473"], "index cache");
-includesAll(app, ["nexus-behavior-473", "agrinexus-pwa-v418", "nexus-genesis-voice-runtime-v455"], "app cache");
-includesAll(server, ["nexus-behavior-473", "agrinexus-pwa-v418"], "server cache");
-includesAll(sw, ["nexus-behavior-473", "agrinexus-pwa-v418"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-474", "/styles.css?v=nexus-behavior-474"], "index cache");
+includesAll(app, ["nexus-behavior-474", "agrinexus-pwa-v419", "nexus-genesis-voice-runtime-v455"], "app cache");
+includesAll(server, ["nexus-behavior-474", "agrinexus-pwa-v419"], "server cache");
+includesAll(sw, ["nexus-behavior-474", "agrinexus-pwa-v419"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
@@ -158,8 +158,8 @@ console.log(JSON.stringify({
   verifies: [
     "Genesis orb is non-interactive visual presence",
     "Genesis home renders no app controls",
-    "voice starts automatically from Genesis render",
-    "final transcript reaches command path",
-    "speech completion restarts recognition"
+    "voice starts through OpenAI Realtime only",
+    "Realtime startup keeps the permanent microphone path",
+    "speech completion returns to listening"
   ]
 }, null, 2));

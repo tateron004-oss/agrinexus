@@ -42,7 +42,7 @@ includesAll(app, [
   "setNexusGenesisTrustChainState(\"speaking\"",
   "setNexusGenesisTrustChainState(\"synthesis_failed\"",
   "setNexusGenesisTrustChainState(\"speech_preparing\"",
-  "setNexusGenesisTrustChainState(\"recognition_unavailable\""
+  "setNexusGenesisTrustChainState(\"recognition_failed\""
 ], "browser voice acceptance runtime");
 
 const home = between(app, "function renderNexusTrueHome", "function renderNexusAudioCompanionExperience", "Genesis home");
@@ -70,18 +70,15 @@ includesAll(supervisorStartSource, [
 const listeningSource = between(app, "async function startVoiceRuntimeTransport", "async function startVoiceListening", "listening lifecycle");
 const acquireSource = between(app, "async function acquireNexusMicrophoneStreamForVoice", "async function refreshChromeVoicePermissionHint", "microphone acquisition");
 includesAll(listeningSource, [
-  "browserVoiceRuntimeProfile()",
-  "!profile.secureEnough",
-  "voiceRecognition = new Recognition()",
-  "voiceRecognition.onstart",
-  "voiceRecognition.onerror",
-  "voiceRecognition.onend",
-  "voiceRecognition.onresult",
-  "recordNexusAudioPipelineEvent(\"recognition-handlers-registered\"",
-  "recordNexusAudioPipelineEvent(\"recognition-start-call\"",
-  "scheduleFinalVoiceCommand(finalTranscript",
-  "duplicate-session-prevented"
+  "startRealtimeVoiceSession",
+  "realtimeVoiceActive()",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
+  "legacy-runtime-disabled",
+  "unreachable-voice-runtime-branch"
 ], "listening lifecycle");
+assert(!listeningSource.includes("voiceRecognition = new Recognition()"), "listening lifecycle must not construct browser SpeechRecognition");
+assert(!listeningSource.includes("startElevenLabsVoiceSession"), "listening lifecycle must not start ElevenLabs");
 includesAll(acquireSource, [
   "navigator.mediaDevices.getUserMedia",
   "liveTrackVerified: true",
@@ -134,7 +131,7 @@ assert(
   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
-assert(index.includes("/app.js?v=nexus-behavior-473"), "index must bump app.js version so browser voice fixes load");
+assert(index.includes("/app.js?v=nexus-behavior-474"), "index must bump app.js version so browser voice fixes load");
 
 includesAll(acceptanceDoc, [
   "Nexus Genesis Real Browser Voice and Companion Acceptance",
@@ -153,7 +150,7 @@ console.log(JSON.stringify({
   verifies: [
     "browser voice capability detection exists",
     "Genesis home has no application controls",
-    "automatic startup reaches getUserMedia and recognition",
+    "automatic startup routes through OpenAI Realtime only",
     "speech completion restarts recognition",
     "acceptance record distinguishes synthesis events from audible output"
   ]

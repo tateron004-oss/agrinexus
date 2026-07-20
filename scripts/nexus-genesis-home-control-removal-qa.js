@@ -90,11 +90,15 @@ includesAll(autoStart, [
 assert(!autoStart.includes("granted-or-browser-managed"), "auto-start must not compare against legacy human-readable permission labels");
 
 includesAll(startVoice, [
-  "recognition-handlers-registered",
-  "recognition-start-call",
-  "recognition-onstart",
-  "recognition-restart-requested"
+  "startRealtimeVoiceSession",
+  "realtimeVoiceActive()",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
+  "legacy-runtime-disabled",
+  "unreachable-voice-runtime-branch"
 ], "voice startup path");
+assert(!startVoice.includes("voiceRecognition = new Recognition()"), "voice startup path must not construct browser SpeechRecognition");
+assert(!startVoice.includes("startElevenLabsVoiceSession"), "voice startup path must not start ElevenLabs");
 includesAll(supervisorStartVoice, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
@@ -122,7 +126,7 @@ console.log(JSON.stringify({
     "Genesis home has no text composer or application microphone controls",
     "Genesis debug UI is not rendered",
     "orb remains permanently non-interactive",
-    "Genesis automatically starts the voice path",
-    "speech completion restarts recognition"
+    "Genesis automatically starts the Realtime voice path",
+    "speech completion returns to listening"
   ]
 }, null, 2));

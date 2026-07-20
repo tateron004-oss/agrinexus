@@ -28,10 +28,10 @@ const handleCoreSource = sourceBetween(appSource, "async function handleVoiceCom
 
 const requirements = [
   [
-    "Web Speech final transcript enters debounced Companion-safe command path",
-    voiceTransportSource.includes("voiceRecognition.onresult") &&
-      voiceTransportSource.includes("if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: \"voice\" });") &&
-      scheduleFinalSource.includes("processFinalVoiceCommand(finalCommand, options)")
+    "Realtime/native final transcript enters shared Companion-safe command path",
+    appSource.includes('if (type === "voice.final_transcript")') &&
+      appSource.includes('void handleVoiceCommand(transcript, { source: "native", language, targetLanguage: language });') &&
+      finalCommandSource.includes("handleVoiceCommand(finalCommand, { source: \"voice\", turnToken })")
   ],
   [
     "Voice command turn starts before platform command handling",
@@ -120,8 +120,8 @@ const requirements = [
       stopPlaybackSource.includes("speechSynthesis.cancel()")
   ],
   [
-    "Voice runtime carries locale to native bridge state",
-    voiceTransportSource.includes("updateNativeVoiceBridgeState(\"listening\", { locale: voiceLocale()") &&
+    "Voice runtime carries language metadata to native/Realtime command state",
+    appSource.includes("const language = canonicalLanguageCode(event.language || event.targetLanguage || languageCode()") &&
       appSource.includes("language: languageCode()") &&
       appSource.includes("locale: voiceLocale()")
   ]

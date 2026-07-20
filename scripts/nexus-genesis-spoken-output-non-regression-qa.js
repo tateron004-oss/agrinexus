@@ -52,15 +52,17 @@ includesAll(supervisorStart, [
   "nexusGenesisConversationSupervisor",
   "supervisor.start(options.source || \"start-voice-listening\")",
   "startVoiceRuntimeTransport({ ...options, runtimeOnly: \"realtime\", managedRuntime: true })"
-], "SpeechRecognition supervisor lock");
+], "Realtime supervisor lock");
 includesAll(recognitionStart, [
-  "recognition-handlers-registered",
-  "voiceRecognition.onstart",
-  "recognition-onstart",
-  "voiceRecognition.onresult",
-  "recognition-final-transcript",
-  "voiceRecognition.start()"
-], "SpeechRecognition command-submission lock");
+  "startRealtimeVoiceSession",
+  "realtimeVoiceActive()",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
+  "legacy-runtime-disabled",
+  "unreachable-voice-runtime-branch"
+], "Realtime command-submission lock");
+assert(!recognitionStart.includes("voiceRecognition = new Recognition()"), "active startup must not construct browser SpeechRecognition");
+assert(!recognitionStart.includes("startElevenLabsVoiceSession"), "active startup must not start ElevenLabs");
 includesAll(speechOutput, [
   "sanitizeNexusSpokenResponseText(text)",
   "spokenTextSanitized: true",
@@ -120,6 +122,7 @@ async function jsonCall(route, body) {
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
       VOICE_TTS_PROVIDER: "",
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base
     },
     stdio: "ignore",

@@ -42,22 +42,22 @@ const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisCon
 const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"',
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-474"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"',
   'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v455"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-473",
-  "/styles.css?v=nexus-behavior-473",
-  "/app.js?v=nexus-behavior-473"
+  "/manifest.webmanifest?v=nexus-behavior-474",
+  "/styles.css?v=nexus-behavior-474",
+  "/app.js?v=nexus-behavior-474"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-474"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v418"',
-  'BUILD_VERSION = "nexus-behavior-473"'
+  'CACHE_NAME = "agrinexus-pwa-v419"',
+  'BUILD_VERSION = "nexus-behavior-474"'
 ], "service worker build");
 
 includesAll(truthfulState, [
@@ -104,14 +104,11 @@ includesAll(pipeline, [
   "microphonePermissionRequested: true",
   '"media-stream-granted"',
   "microphoneTrackState: \"live\"",
-  '"recognition-handlers-registered"',
-  '"recognition-start-call"',
-  '"recognition-onstart"',
-  "recognitionOnStartReceived: true",
-  '"recognition-result-event"',
-  "recognitionResultReceived: true",
-  '"recognition-final-transcript"',
-  "recognitionFinalTranscriptReceived: true",
+  '"openai-realtime-session-request"',
+  '"openai-realtime-connected"',
+  '"openai-realtime-microphone-proof"',
+  "realtimeConnected: true",
+  "microphoneTrackState: \"live\"",
   '"agent-command-request"',
   "commandRequestStarted: true",
   '"agent-command-response"',
@@ -168,19 +165,15 @@ includesAll(recognitionSupervisor, [
 ], "recognition supervisor proof");
 
 includesAll(recognitionStart, [
-  "recognition-handlers-registered",
-  "voiceRecognition.onstart",
-  "voiceRecognition.onaudiostart",
-  "voiceRecognition.onsoundstart",
-  "voiceRecognition.onspeechstart",
-  "voiceRecognition.onresult",
-  "voiceRecognition.onerror",
-  "voiceRecognition.onend",
-  "voiceRecognition.start()",
-  "duplicate-session-prevented",
-  "stopNexusAudioFallbackRecorder(\"web-speech-final\")"
-], "recognition startup and live-track proof");
-assert(!recognitionStart.includes("stopNexusVoicePermissionStream(\"web-speech-final\")"), "Genesis must keep the valid media stream alive after final transcript");
+  "startRealtimeVoiceSession",
+  "realtimeVoiceActive()",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
+  "legacy-runtime-disabled",
+  "unreachable-voice-runtime-branch"
+], "Realtime startup and live-track proof");
+assert(!recognitionStart.includes("voiceRecognition = new Recognition()"), "Genesis must not construct browser SpeechRecognition in the active startup path");
+assert(!recognitionStart.includes("startElevenLabsVoiceSession"), "Genesis must not start ElevenLabs in the active startup path");
 
 includesAll(speechSynthesis, [
   "speech-synthesis-request",
@@ -206,9 +199,9 @@ console.log(JSON.stringify({
   suite: "nexus-genesis-truthful-voice-state",
   verifies: [
     "Genesis uses canonical permission state",
-    "getUserMedia and a live audio track are required before recognition",
-    "onstart is required before listening",
+    "getUserMedia and a live audio track are required before Realtime",
+    "Realtime microphone proof is required before listening",
     "debug diagnostics are console-only",
-    "speech completion restarts recognition"
+    "speech completion returns to listening"
   ]
 }, null, 2));

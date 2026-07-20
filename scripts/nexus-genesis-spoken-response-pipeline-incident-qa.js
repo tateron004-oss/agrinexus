@@ -127,7 +127,7 @@ async function runCommand(phrase, index) {
     text: genesisResponse.response,
     language: "en",
     locale: "en-US",
-    forceOpenAi: true
+    forceOpenAi: false
   });
   assert.equal(voiceState.voiceResult?.correlationId, correlationId, `${phrase} TTS should preserve correlation ID`);
   assert.equal(typeof voiceState.voiceResult?.provider, "string", `${phrase} TTS should expose provider`);
@@ -185,7 +185,9 @@ async function runCommand(phrase, index) {
   assert(appSource.includes("function extractGenesisSpeakableResponse"), "client must define one Genesis speakable response extractor");
   assert(appSource.includes("recordGenesisSpokenResponsePipelineEvent"), "client must define safe pipeline event recorder");
   assert(appSource.includes("startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"), "microphone auto-start must remain unchanged");
-  assert(appSource.includes("voiceRecognition.start()"), "SpeechRecognition start must remain present");
+  assert(appSource.includes("startRealtimeVoiceSession"), "OpenAI Realtime start must remain present");
+  assert(appSource.includes("openai-realtime-microphone-proof"), "OpenAI Realtime microphone proof must remain present");
+  assert(!appSource.includes("voiceRecognition = new Recognition()"), "active browser SpeechRecognition construction must remain removed");
   assert(appSource.includes("resumeVoiceListeningAfterSpeech(playbackToken, interruptToken)"), "listening must resume through the existing proven function");
   assert(!appSource.includes("data-genesis-home-composer"), "Genesis home composer must not return");
 
@@ -197,6 +199,7 @@ async function runCommand(phrase, index) {
       PORT: String(port),
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
+      NEXUS_OPENAI_NATIVE_ENABLED: "false",
       VOICE_TTS_PROVIDER: "",
       PUBLIC_BASE_URL: base
     },

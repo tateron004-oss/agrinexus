@@ -48177,11 +48177,25 @@ async function connectSessionWithMicrophoneProof(session, connectOptions = {}, e
   if (!navigator.mediaDevices?.getUserMedia) throw new Error("Browser microphone capture is unavailable.");
   const mediaDevices = navigator.mediaDevices;
   const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
+  const preverifiedStream = connectOptions.preverifiedMicrophoneStream || null;
+  const preverifiedProof = preverifiedStream ? microphoneProofForStream(preverifiedStream) : null;
+  if (preverifiedStream && !preverifiedProof.hasLiveTrack) throw new Error("Pre-acquired Nexus microphone stream is not live.");
   let requested = false;
-  let acquiredStream = null;
+  let acquiredStream = preverifiedStream || null;
   mediaDevices.getUserMedia = async (constraints) => {
     requested = true;
     emit("media_stream_requested", { audioRequested: Boolean(constraints?.audio) });
+    if (preverifiedStream) {
+      emit("media_stream_acquired", {
+        streamActive: preverifiedProof.streamActive,
+        trackCount: preverifiedProof.trackCount,
+        trackState: preverifiedProof.trackState,
+        trackEnabled: preverifiedProof.trackEnabled,
+        hasLiveTrack: preverifiedProof.hasLiveTrack,
+        preverified: true
+      });
+      return preverifiedStream;
+    }
     try {
       acquiredStream = await originalGetUserMedia(constraints);
       const proof2 = microphoneProofForStream(acquiredStream);
@@ -48277,6 +48291,7 @@ function createNexusRealtimeTools(options) {
 async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   if (!options.clientSecret) throw new Error("OpenAI Realtime client secret is required.");
   const language = options.language?.() || "en";
+  const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null;
   const agent = new RealtimeAgent({
     name: "Nexus Genesis",
     voice: options.voice || "marin",
@@ -48310,13 +48325,18 @@ async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   session.on("history_updated", (history) => emit("history_updated", { turnCount: Array.isArray(history) ? history.length : 0 }));
   session.on("history_added", (item) => emit("history_added", { type: item?.type || "", role: item?.role || "" }));
   session.on("transport_event", (event) => {
-    const type = String(event?.type || event?.event?.type || "");
-    emit("transport_event", { type });
+    const transportEvent = event?.event && typeof event.event === "object" ? event.event : event;
+    const type = String(transportEvent?.type || event?.type || "");
+    emit("transport_event", {
+      type,
+      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200)
+    });
   });
   session.on("error", (error51) => emit("error", normalizeError(error51)));
   const microphone = await connectSessionWithMicrophoneProof(session, {
     apiKey: options.clientSecret,
-    model: options.model || "gpt-realtime-2"
+    model: options.model || "gpt-realtime-2",
+    preverifiedMicrophoneStream
   }, emit);
   return {
     session,
@@ -48325,12 +48345,15 @@ async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
     getMicrophoneProof() {
       return microphoneProofForStream(microphone.stream);
     },
-    close(reason = "closed") {
+    close(reason = "closed", options2 = {}) {
       emit("closing", { reason });
       session.close();
-      try {
-        microphone.stream?.getTracks?.().forEach((track) => track.stop());
-      } catch {
+      const shouldStopMicrophone = options2.stopMicrophone === true || !options2.preverifiedMicrophone && !preverifiedMicrophoneStream;
+      if (shouldStopMicrophone) {
+        try {
+          microphone.stream?.getTracks?.().forEach((track) => track.stop());
+        } catch {
+        }
       }
     },
     interrupt() {

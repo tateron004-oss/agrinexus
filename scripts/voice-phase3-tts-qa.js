@@ -63,6 +63,7 @@ async function jsonCall(route, body) {
       PORT: String(port),
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       VOICE_TTS_PROVIDER: "",
       PUBLIC_BASE_URL: base
     },

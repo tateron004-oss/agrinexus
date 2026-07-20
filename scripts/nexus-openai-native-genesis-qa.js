@@ -79,6 +79,7 @@ async function withNexusServer(env, callback) {
     env: {
       ...process.env,
       ...env,
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       PORT: String(port),
       AGRINEXUS_DB_PATH: dbPath,
       REQUIRE_LIVE_SERVICES: "false"

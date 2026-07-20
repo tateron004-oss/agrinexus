@@ -41,7 +41,7 @@ function notIncludes(source, needle, label) {
   "function markRealtimeResponseCompleted",
   "function scheduleRealtimeRecovery",
   "response-cancel-skipped",
-  "no-active-response-to-cancel",
+  "no-active-playback-to-cancel",
   "second-user-speech-detected",
   "second-response-requested",
   "turn-ready-for-next-input",
@@ -50,7 +50,7 @@ function notIncludes(source, needle, label) {
   "controller-cleanup-entered"
 ].forEach(needle => includes(app, needle, `Realtime lifecycle marker ${needle}`));
 
-includes(app, "realtimeVoiceSession?.responseInProgress || realtimeVoiceSession?.activeResponseId", "active-response cancel guard");
+includes(app, "session.responseInProgress || session.activeResponseId", "active-response cancel guard");
 includes(app, "handleOpenAiAgentsRealtimeEvent", "Agents SDK event handler");
 includes(app, "connection_change", "Agents SDK connection state handler");
 includes(app, "legacyListenerPreserved", "legacy listener preserved until Agents SDK owns mic");
@@ -63,7 +63,7 @@ includes(server, "create_response: true", "server VAD repeated response creation
 includes(server, "interrupt_response: true", "server VAD interruption support");
 includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
 
-["nexus-behavior-473", "agrinexus-pwa-v418"].forEach(marker => {
+["nexus-behavior-474", "agrinexus-pwa-v419"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
   includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
@@ -147,7 +147,7 @@ function responseCycle(controller, turn, options = {}) {
 }
 
 const controller = createController();
-for (let turn = 1; turn <= 20; turn += 1) {
+for (let turn = 1; turn <= 25; turn += 1) {
   if (turn === 14) {
     controller.peerConnectionState = "disconnected";
     controller.controllerState = "reconnecting";
@@ -172,7 +172,7 @@ for (let turn = 1; turn <= 20; turn += 1) {
   assertReady(controller, `turn ${turn}`);
 }
 
-assert.strictEqual(controller.turnIndex, 20, "20 turns should complete");
+assert.strictEqual(controller.turnIndex, 25, "25 turns should complete");
 assert.strictEqual(controller.recoveries, 1, "one bounded recovery should be simulated");
 assert(controller.events.includes("realtime-tool-dispatch-started"), "tool call turn should be exercised");
 assert(controller.events.includes("weather-follow-up"), "weather follow-up should be exercised");

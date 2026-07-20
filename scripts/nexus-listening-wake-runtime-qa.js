@@ -56,32 +56,25 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
 ].forEach(token => includes(contractBlock, token, `listening/wake controller token ${token}`));
 
 [
-  "markNexusListeningControllerEvent(\"duplicate-session-prevented\"",
-  "markNexusListeningControllerEvent(\"unsupported-secure-context\"",
   "markNexusListeningControllerEvent(\"typed-fallback\"",
-  "markNexusListeningControllerEvent(\"starting\"",
-  "Object.assign(voiceRecognition, createNexusRecognitionConfig",
-  "markNexusListeningControllerEvent(\"listening\"",
-  "markNexusListeningControllerEvent(permissionBlocked ? \"permission-denied\"",
-  "markNexusListeningControllerEvent(\"stopped\"",
-  "markNexusListeningControllerEvent(\"speech-detected\"",
-  "markNexusListeningControllerEvent(\"partial-transcript\"",
-  "normalizeNexusWakeTranscript(finalTranscript)",
-  "markNexusListeningControllerEvent(\"final-transcript\"",
-  "recordNexusOsConversationTurn(\"user\", finalTranscript",
-  "scheduleFinalVoiceCommand(finalTranscript, { source: \"voice\" })",
-  "markNexusListeningControllerEvent(\"failed\""
+  "nexusOsVoiceStartInFlight = true",
+  "startRealtimeVoiceSession",
+  "legacy-runtime-disabled",
+  "realtime-blocked",
+  "realtime-failed",
+  "OpenAI Realtime did not connect to a live microphone track",
+  "OpenAI Realtime voice could not start"
 ].forEach(token => includes(voiceTransportBlock, token, `voice runtime transport controller wiring ${token}`));
 
 [
-  "recognition.lang = voiceLocale()",
-  "recognition.interimResults = streamingVoiceEnabled() || chromeVoiceRuntimeReady()",
-  "recognition.continuous = voiceFirstMode || streamingVoiceEnabled() || chromeVoiceRuntimeReady()",
-  "recognition.maxAlternatives = chromeVoiceRuntimeReady() ? 5 : streamingVoiceEnabled() ? 5 : 3",
+  "model: sessionPayload.model || status.model || \"gpt-realtime-2\"",
+  "preverifiedMicrophoneStream",
+  "normalizeRealtimeMicrophoneProof(controller)",
+  "recordNexusAudioPipelineEvent(\"openai-realtime-connected\"",
   "permission-denied",
   "microphone-unavailable",
-  "recognition-timeout",
-  "I did not hear speech. I am still listening.",
+  "openai-realtime-not-connected",
+  "openai-realtime-start-failed",
   "Type your request in Ask Nexus"
 ].forEach(token => includes(voiceTransportBlock + startBlock + app, token, `existing recognition safety token ${token}`));
 

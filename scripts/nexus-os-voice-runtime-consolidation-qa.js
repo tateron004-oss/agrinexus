@@ -55,16 +55,19 @@ const surfaceBlock = sectionBetween(app, "function renderNexusOsUnifiedConversat
   "typed-fallback"
 ].forEach(state => includes(stateBlock + startBlock + runtimeBlock, state, `voice fallback state ${state}`));
 
-includes(voiceTransportBlock, "if (nexusOsVoiceStartInFlight && !voiceRecognition && !genesisVoiceConversationActive())", "duplicate recognition start guard");
+includes(voiceTransportBlock, "nexusOsVoiceStartInFlight = true", "Realtime start in-flight marker");
+includes(startBlock, "manager.startSession(options)", "canonical manager owns duplicate start prevention");
 includes(app, "function genesisVoiceConversationActive", "duplicate guard checks all active Genesis voice runtimes");
-includes(voiceTransportBlock, "new Recognition()", "canonical runtime creates one browser recognition instance");
-includes(voiceTransportBlock, "applyChromeVoiceRuntimeDefaults(voiceRecognition)", "language-aware browser recognition defaults");
-includes(app, "recognition.lang = voiceLocale()", "recognition locale follows app language");
+includes(voiceTransportBlock, "startRealtimeVoiceSession", "canonical runtime starts OpenAI Realtime session");
+includes(voiceTransportBlock, "legacy-runtime-disabled", "legacy browser recognition is explicitly blocked");
+assert(!voiceTransportBlock.includes("new Recognition()"), "canonical runtime must not create a browser recognition instance");
+console.log("PASS canonical runtime avoids browser recognition instance");
+includes(app, 'model: sessionPayload.model || status.model || "gpt-realtime-2"', "Realtime model diagnostics remain centralized");
 includes(app, "utterance.lang = voiceLocale()", "speech synthesis locale follows app language");
 includes(app, "utterance.rate = speechRateForLanguage()", "speech synthesis rate follows app language");
 includes(app, "utterance.pitch = speechPitchForLanguage()", "speech synthesis pitch follows app language");
-includes(voiceTransportBlock, "speechConfidence: result[0].confidence", "speech confidence captured when available");
-includes(voiceTransportBlock, 'recordNexusOsConversationTurn("user", finalTranscript', "final voice transcript delivered to unified conversation");
+includes(app, "handleVoiceCommand(transcript", "Realtime/native final transcript reaches shared voice command path");
+includes(app, 'recordNexusOsConversationTurn("user", command, { source', "final command delivered to unified conversation");
 includes(surfaceBlock, "${renderNexusOsVoiceRuntimeStatus()}", "voice status rendered in unified conversation surface");
 
 includes(clickBlock, 'handleNexusOsVoiceControlAction("toggle-listening"', "command center mic uses canonical handler");

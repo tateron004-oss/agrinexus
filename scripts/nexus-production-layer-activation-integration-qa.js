@@ -77,6 +77,8 @@ async function withServer(env, callback) {
     env: {
       ...process.env,
       ...env,
+      NEXUS_OPENAI_NATIVE_ENABLED: "false",
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       PORT: String(port),
       HOST: "127.0.0.1",
       AGRINEXUS_DB_PATH: dbPath,

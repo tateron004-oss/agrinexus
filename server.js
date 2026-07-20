@@ -35,22 +35,16 @@ const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workf
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
+const {
+  isUsableEnvValue,
+  loadLocalEnvFiles
+} = require("./server/local-env-loader.js");
 
-function loadEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return;
-  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const index = trimmed.indexOf("=");
-    if (index === -1) continue;
-    const key = trimmed.slice(0, index).trim();
-    const value = trimmed.slice(index + 1).trim();
-    if (key && process.env[key] === undefined) process.env[key] = value;
-  }
-}
+const APP_ROOT = __dirname;
 
-loadEnvFile(path.join(__dirname, ".env"));
+const NEXUS_LOCAL_ENV_LOAD_REPORT = process.env.NEXUS_DISABLE_LOCAL_ENV_FILES === "true"
+  ? []
+  : loadLocalEnvFiles(APP_ROOT);
 
 const PORT = Number(process.env.PORT || 4173);
 const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_URL);
@@ -59,8 +53,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-474";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -95,8 +89,7 @@ function sendProviderResult(res, result) {
 }
 
 function envValuePresent(env, name) {
-  const value = String(env[name] || "").trim();
-  return Boolean(value && !value.includes("replace-with"));
+  return isUsableEnvValue(env[name]);
 }
 
 function firstPresentEnvValue(env, names) {
@@ -1730,6 +1723,7 @@ const mime = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
@@ -16270,7 +16264,7 @@ function genesisElevenLabsEnabled(env = process.env) {
 }
 
 function genesisRealtimeConfigured(env = process.env) {
-  return Boolean(String(env.OPENAI_API_KEY || "").trim());
+  return isUsableEnvValue(env.OPENAI_API_KEY);
 }
 
 function genesisRealtimeRollbackEnabled(env = process.env) {
@@ -16364,6 +16358,14 @@ function nexusElevenLabsOriginAllowed(req) {
   } catch {
     return false;
   }
+}
+
+function nexusGenesisVoiceOriginAllowed(req) {
+  return nexusElevenLabsOriginAllowed(req);
+}
+
+function resolveGenesisVoiceAuthContext(req, db, user, options = {}) {
+  return resolveElevenLabsVoiceAuthContext(req, db, user, options);
 }
 
 function nexusElevenLabsWebhookSecret(env = process.env) {
@@ -16615,6 +16617,11 @@ function nexusRealtimeFailureCategory(error = {}) {
   return "provider-unavailable";
 }
 
+function nexusSafeRealtimeFailureDetail(category = "provider-unavailable") {
+  const safeCategory = String(category || "provider-unavailable").trim() || "provider-unavailable";
+  return `OpenAI Realtime request failed safely (${safeCategory}).`;
+}
+
 function nexusRealtimeToolSchemas() {
   return [
     {
@@ -16780,6 +16787,22 @@ function nexusRealtimeCallableToolSchemas() {
 }
 
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
+  const turnDetectionType = String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad";
+  const turnDetection = turnDetectionType === "server_vad"
+    ? {
+        type: "server_vad",
+        threshold: Number(env.OPENAI_REALTIME_VAD_THRESHOLD || 0.5),
+        prefix_padding_ms: 300,
+        silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),
+        create_response: true,
+        interrupt_response: true
+      }
+    : {
+        type: "semantic_vad",
+        eagerness: String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto",
+        create_response: true,
+        interrupt_response: true
+      };
   return {
     type: "realtime",
     model: openAiRealtimeModel(env),
@@ -16792,15 +16815,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
           language: String(language || "en").slice(0, 12)
         },
-        turn_detection: {
-          type: String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad",
-          eagerness: String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto",
-          threshold: Number(env.OPENAI_REALTIME_VAD_THRESHOLD || 0.5),
-          prefix_padding_ms: 300,
-          silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),
-          create_response: true,
-          interrupt_response: true
-        }
+        turn_detection: turnDetection
       },
       output: {
         voice: openAiRealtimeVoice(env)
@@ -16808,7 +16823,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
     },
     output_modalities: ["audio"],
     instructions: openAiRealtimeInstructions(user, language),
-    tools: nexusRealtimeCallableToolSchemas().map(({ metadata, ...tool }) => tool),
+    tools: nexusRealtimeCallableToolSchemas().map(({ metadata, strict, ...tool }) => tool),
     tool_choice: "auto"
   };
 }
@@ -16856,7 +16871,7 @@ async function openAiRealtimeClientSecret({ user, language = "en" }) {
       "Content-Type": "application/json",
       "OpenAI-Safety-Identifier": safetyId
     },
-    body: JSON.stringify(session)
+    body: JSON.stringify({ session })
   }, Number(process.env.OPENAI_REALTIME_TIMEOUT_MS || 20000));
   const payload = await response.json().catch(async () => ({ raw: await response.text().catch(() => "") }));
   if (!response.ok) {
@@ -17142,7 +17157,7 @@ function nexusOpenAiNativeToolSchemas() {
 
 function nexusOpenAiNativeStatus(env = process.env) {
   const enabled = nexusOpenAiNativeEnabled(env);
-  const configured = Boolean(String(env.OPENAI_API_KEY || "").trim());
+  const configured = isUsableEnvValue(env.OPENAI_API_KEY);
   const tools = nexusOpenAiNativeToolSchemas().map(item => ({
     name: item.name,
     safetyClassification: item.metadata?.safetyClassification || "controlled-platform-tool",
@@ -47611,6 +47626,8 @@ async function api(req, res, url) {
   if (url.pathname === "/api/agent/command" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
     const body = await readBody(req);
+    const canonicalCommandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language || "en");
+    const canonicalCommandInputMode = body.inputMode || "api";
     const correlationId = genesisVoiceCorrelationId(body.correlationId);
     const routeStartedAt = Date.now();
     safeGenesisVoiceStageEvent(db, {
@@ -47626,6 +47643,12 @@ async function api(req, res, url) {
       inputMode: body.inputMode || "api"
     });
     if (openAiNativeResult) {
+      openAiNativeResult.metadata = {
+        ...(openAiNativeResult.metadata || {}),
+        language: canonicalCommandLanguage,
+        targetLanguage: canonicalCommandLanguage,
+        inputMode: canonicalCommandInputMode
+      };
       commandRecord(db, user, body.command || body.text || "", openAiNativeResult);
       const nexusResponse = normalizeNexusResponseEnvelope(openAiNativeResult, {
         correlationId,
@@ -47681,6 +47704,12 @@ async function api(req, res, url) {
       correlationId,
       inputMode: body.inputMode || "api"
     });
+    result.metadata = {
+      ...(result.metadata || {}),
+      language: canonicalCommandLanguage,
+      targetLanguage: canonicalCommandLanguage,
+      inputMode: canonicalCommandInputMode
+    };
     safeGenesisVoiceStageEvent(db, {
       correlationId,
       stage: "intent-selected",
@@ -47718,6 +47747,9 @@ async function api(req, res, url) {
       companionUnderstanding,
       companionRouteOutcome
     });
+    // Keep the legacy commandResult response aligned with the canonical speakable envelope.
+    // This prevents presentation-only whitespace differences from splitting the authoritative response.
+    result.response = nexusResponse.response;
     updateNexusSessionContext(db, body.command || body.text || "", nexusResponse);
     safeGenesisVoiceStageEvent(db, {
       correlationId,
@@ -47953,8 +47985,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/status" && req.method === "GET") {
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
       language: url.searchParams.get("language") || user?.language || "en",
       issueGuest: false
     });
@@ -47975,9 +48007,9 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/realtime/session" && req.method === "POST") {
     if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+    const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
       language: body.language || url.searchParams.get("language") || user?.language || "en",
       issueGuest: true
     });
@@ -48055,7 +48087,7 @@ async function api(req, res, url) {
       }, baseHeaders);
     } catch (error) {
       const category = error.category || nexusRealtimeFailureCategory(error);
-      voiceRecord(db, authContext.user, "openai-agents-realtime", `OpenAI Agents Realtime session failed: ${error.message}`, {
+      voiceRecord(db, authContext.user, "openai-agents-realtime", nexusSafeRealtimeFailureDetail(category), {
         provider: "openai-realtime",
         errorCategory: category,
         language: url.searchParams.get("language") || authContext.user.language || "en"
@@ -48141,7 +48173,7 @@ async function api(req, res, url) {
       });
     } catch (error) {
       const category = nexusRealtimeFailureCategory(error);
-      voiceRecord(db, user, "realtime-webrtc", `OpenAI Realtime voice failed: ${error.message}`, {
+      voiceRecord(db, user, "realtime-webrtc", nexusSafeRealtimeFailureDetail(category), {
         provider: "openai-realtime-webrtc",
         errorCategory: category,
         language: url.searchParams.get("language") || user.language || "en"
@@ -48164,9 +48196,9 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/realtime/tool" && req.method === "POST") {
     if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
-    if (!nexusElevenLabsOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
-    const authContext = resolveElevenLabsVoiceAuthContext(req, db, user, {
+    const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
       language: body.language || body.arguments?.language || user?.language || "en",
       issueGuest: false
     });
@@ -48525,7 +48557,7 @@ function serveStatic(req, res, url) {
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
     const ext = path.extname(filePath);
-    const cacheControl = ext === ".html" || ext === ".js" || ext === ".css" ? "no-store" : "public, max-age=3600";
+    const cacheControl = ext === ".html" || ext === ".js" || ext === ".mjs" || ext === ".css" ? "no-store" : "public, max-age=3600";
     res.writeHead(200, { "content-type": mime[ext] || "application/octet-stream", "cache-control": cacheControl });
     res.end(data);
   });

@@ -515,13 +515,14 @@ function assertSynchronization(context, label) {
 function assertFallback(context, label) {
   assertIncludes(context.app, [
     "I heard you, but I am unable to speak right now. I will continue in text.",
-    "I cannot access the microphone here.",
-    "I cannot access speech recognition in this browser. Use a supported browser for the Genesis voice front door.",
+    "OpenAI Realtime did not connect to a live microphone track.",
+    "OpenAI Realtime voice could not start.",
+    "Nexus Genesis uses OpenAI Realtime voice only.",
     "Workflow forms available after Nexus opens them",
     "Visible text remains available.",
     "typed-fallback",
     "synthesis_unavailable",
-    "recognition_unavailable"
+    "recognition_failed"
   ], label, "fallback contract");
 }
 

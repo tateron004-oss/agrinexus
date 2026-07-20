@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-473"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v418"') &&
-      index.includes("/app.js?v=nexus-behavior-473")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-474"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-474"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v419"') &&
+      index.includes("/app.js?v=nexus-behavior-474")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-473') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-474') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -72,7 +72,7 @@ const checks = [
   [
     "Preverified microphone stream is handed to OpenAI Realtime",
     realtimeStartup.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
-      realtimeAgent.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
+      realtimeAgent.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null") &&
       realtimeAgent.includes("if (preverifiedStream)") &&
       realtimeAgent.includes("return preverifiedStream") &&
       realtimeAgent.includes('throw new Error("Pre-acquired Nexus microphone stream is not live.")')

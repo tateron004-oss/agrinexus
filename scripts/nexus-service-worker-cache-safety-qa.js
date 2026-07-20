@@ -13,8 +13,8 @@ function includesAll(source, tokens, label) {
 }
 
 includesAll(sw, [
-  'const CACHE_NAME = "agrinexus-pwa-v418"',
-  'const BUILD_VERSION = "nexus-behavior-473"',
+  'const CACHE_NAME = "agrinexus-pwa-v419"',
+  'const BUILD_VERSION = "nexus-behavior-474"',
   "function isCacheableApplicationRequest",
   '["http:", "https:"].includes(url.protocol)',
   "url.origin !== self.location.origin",
@@ -49,8 +49,8 @@ assert(sw.includes(".catch(error =>"), "install cache failures must be handled")
 
 includesAll(app, [
   'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v455"',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-473"',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v418"',
+  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-474"',
+  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419"',
   "console.info(`[Nexus Genesis voice] ${stage}",
   "controller-initialized",
   "automatic-start-entered",
@@ -58,21 +58,14 @@ includesAll(app, [
   "getUserMedia-requested",
   "stream-acquired",
   "live-audio-track-verified",
-  "recognition-constructor-resolved",
-  "recognition-constructed",
-  "recognition-handlers-registered",
-  "recognition-start-requested",
-  "recognition-onstart-received",
-  "onaudiostart",
-  "onsoundstart",
-  "onspeechstart",
-  "onresult",
-  "final-transcript-received",
+  "openai-realtime-session-request",
+  "openai-realtime-connected",
+  "openai-realtime-microphone-proof",
   "command-submitted",
   "response-received",
   "synthesis-started",
   "synthesis-completed",
-  "recognition-restarted"
+  "listening-resumed-after-response"
 ], "Genesis readable voice diagnostics");
 
 assert(!app.includes('console.info("[Nexus Genesis voice]", payload)'), "voice debug must not print collapsed generic Object logs");

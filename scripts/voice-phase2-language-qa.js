@@ -17,6 +17,7 @@ const androidController = read("native-mobile/android/app/src/main/java/com/agri
 const iosRuntime = read("native-mobile/ios/AgriNexus/NexusVoiceRuntime.swift");
 const iosController = read("native-mobile/ios/AgriNexus/NexusWebViewController.swift");
 let cookie = "";
+const testCallSid = `CA-phase2-language-${process.pid}-${Date.now()}`;
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -86,6 +87,7 @@ async function twilioPost(route, body) {
       PORT: String(port),
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
+      NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base
     },
     stdio: "ignore",
@@ -132,13 +134,13 @@ async function twilioPost(route, body) {
     assert.equal(native.json.commandResult.metadata.language, "sw", "native commands should preserve canonical transcript language");
     assert.equal(native.json.commandResult.metadata.targetLanguage, "sw", "native commands should preserve canonical targetLanguage");
 
-    await twilioPost("/api/voice/phone/incoming", { From: "+15555550222", CallSid: "CA-phase2-language" });
-    await twilioPost("/api/voice/phone/gather?step=name", { SpeechResult: "Ron", From: "+15555550222", CallSid: "CA-phase2-language" });
-    const phonePrompt = await twilioPost("/api/voice/phone/gather?step=language", { SpeechResult: "Hausa", From: "+15555550222", CallSid: "CA-phase2-language" });
+    await twilioPost("/api/voice/phone/incoming", { From: "+15555550222", CallSid: testCallSid });
+    await twilioPost("/api/voice/phone/gather?step=name", { SpeechResult: "Ron", From: "+15555550222", CallSid: testCallSid });
+    const phonePrompt = await twilioPost("/api/voice/phone/gather?step=language", { SpeechResult: "Hausa", From: "+15555550222", CallSid: testCallSid });
     assert.match(phonePrompt, /English with Hausa fallback/i, "phone language prompt should describe unsupported language fallback");
-    await twilioPost("/api/voice/phone/gather?step=command", { SpeechResult: "What can you do?", From: "+15555550222", CallSid: "CA-phase2-language" });
+    await twilioPost("/api/voice/phone/gather?step=command", { SpeechResult: "What can you do?", From: "+15555550222", CallSid: testCallSid });
     const state = await jsonCall("/api/state");
-    const phoneSession = state.json.profile.phoneVoiceSessions.find(item => item.key === "CA-phase2-language");
+    const phoneSession = state.json.profile.phoneVoiceSessions.find(item => item.key === testCallSid);
     assert.equal(phoneSession.language, "en", "phone session should persist canonical fallback language");
     assert.equal(state.json.profile.agentCommands[0].metadata.inputMode, "phone", "phone command should preserve inputMode");
     assert.equal(state.json.profile.agentCommands[0].metadata.language, "en", "phone command should carry canonical language metadata");
