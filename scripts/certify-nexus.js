@@ -17,11 +17,12 @@ const stages = [
   { id: 'genesis-experience-confidence', command: 'npm.cmd run qa:nexus-genesis-experience-confidence-layer' },
   { id: 'genesis-production-exact-build', command: 'npm.cmd run qa:nexus-genesis-production-exact-build-smoke' },
   { id: 'genesis-production-browser-lifecycle', command: "$env:NEXUS_LIVE_BASE_URL='https://agrinexus-platform.onrender.com'; $env:NEXUS_LIVE_EXPECTED_TURNS='1'; $env:NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT='0'; npm.cmd run qa:nexus-genesis-live-provider-browser-smoke" },
+  { id: 'genesis-final-runtime-audit', command: 'npm.cmd run qa:nexus-genesis-final-runtime-audit' },
   { id: 'integrated-safe', command: '$env:NEXUS_OPENAI_NATIVE_ENABLED="false"; $env:NEXUS_PRESERVE_EMPTY_ENV="1"; npm.cmd run qa:all-safe' }
 ];
 function hashSource() {
   const hash = crypto.createHash('sha256');
-  const files = ['server.js', 'public/app.js', 'public/sw.js', 'package.json', 'scripts/qa-suite.js', 'scripts/nexus-production-layer-activation-integration-qa.js', 'scripts/nexus-openai-native-genesis-qa.js', 'scripts/nexus-openai-native-tool-parity-qa.js', 'scripts/voice-phase2-language-qa.js', 'scripts/voice-phase3-tts-qa.js', 'scripts/phone-greeting-qa.js', 'scripts/nexus-genesis-experience-confidence-layer-qa.js', 'public/nexus-conversation-workflow-transition-engine.js', 'scripts/nexus-genesis-production-exact-build-smoke.js', 'scripts/nexus-genesis-live-provider-browser-smoke.js'];
+  const files = ['server.js', 'public/app.js', 'public/sw.js', 'package.json', 'scripts/qa-suite.js', 'scripts/nexus-production-layer-activation-integration-qa.js', 'scripts/nexus-openai-native-genesis-qa.js', 'scripts/nexus-openai-native-tool-parity-qa.js', 'scripts/voice-phase2-language-qa.js', 'scripts/voice-phase3-tts-qa.js', 'scripts/phone-greeting-qa.js', 'scripts/nexus-genesis-experience-confidence-layer-qa.js', 'public/nexus-conversation-workflow-transition-engine.js', 'scripts/nexus-genesis-production-exact-build-smoke.js', 'scripts/nexus-genesis-live-provider-browser-smoke.js', 'scripts/nexus-genesis-final-runtime-audit.js'];
   for (const file of files) hash.update(fs.readFileSync(path.join(root, file)));
   return hash.digest('hex');
 }

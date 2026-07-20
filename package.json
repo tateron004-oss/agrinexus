@@ -7,6 +7,7 @@
     "certify:nexus": "node scripts/certify-nexus.js",
     "qa:nexus-genesis-experience-confidence-layer": "node scripts/nexus-genesis-experience-confidence-layer-qa.js",
     "qa:nexus-genesis-production-exact-build-smoke": "node scripts/nexus-genesis-production-exact-build-smoke.js",
+    "qa:nexus-genesis-final-runtime-audit": "node scripts/nexus-genesis-final-runtime-audit.js",
     "start": "node server.js",
     "dev": "node server.js",
     "dev:local": "node -e \"process.env.AGRINEXUS_DB_PATH='tmp-local-db.json'; require('./server.js')\"",
