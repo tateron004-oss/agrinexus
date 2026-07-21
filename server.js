@@ -53,8 +53,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-477";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v422";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-478";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v423";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -48255,8 +48255,9 @@ async function api(req, res, url) {
         language: args.language || body.language || authContext.user.language || "en",
         outputMode: "voice"
       });
+      const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
-      return send(res, 200, result, {
+      return send(res, 200, { ...result, genesisAction }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
     }
@@ -48272,8 +48273,10 @@ async function api(req, res, url) {
       });
     }
     const result = await dispatchNexusRealtimeTool(db, authContext.user, body);
+    const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
+    const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
     await writeDb(db);
-    return send(res, 200, result, {
+    return send(res, 200, { ...result, genesisAction }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }

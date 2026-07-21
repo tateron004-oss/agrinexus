@@ -59,15 +59,15 @@ includes(server, 'edition: "genesis"', "server edition");
 assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "tool registry product identity");
 assert.strictEqual(registry.edition, "genesis", "tool registry edition");
 
-includes(index, "/manifest.webmanifest?v=nexus-behavior-477", "manifest cache marker");
-includes(index, "/styles.css?v=nexus-behavior-477", "stylesheet cache marker");
-includes(index, "/app.js?v=nexus-behavior-477", "app cache marker");
-includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-477"', "app build marker");
-includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v422"', "app PWA cache marker");
-includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-477"', "server build marker");
-includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v422"', "server PWA cache marker");
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v422"', "service worker cache marker");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-477"', "service worker build marker");
+includes(index, "/manifest.webmanifest?v=nexus-behavior-478", "manifest cache marker");
+includes(index, "/styles.css?v=nexus-behavior-478", "stylesheet cache marker");
+includes(index, "/app.js?v=nexus-behavior-478", "app cache marker");
+includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-478"', "app build marker");
+includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v423"', "app PWA cache marker");
+includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-478"', "server build marker");
+includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v423"', "server PWA cache marker");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-v423"', "service worker cache marker");
+includes(sw, 'BUILD_VERSION = "nexus-behavior-478"', "service worker build marker");
 includes(server, 'if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname))', "public redacted config route and bounded voice routes must not trigger guest console 401");
 
 excludes(index, "data-nexus-genesis-orb-entry", "index orb entry");
