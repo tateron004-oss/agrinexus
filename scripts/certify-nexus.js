@@ -28,7 +28,18 @@ function hashSource() {
   return hash.digest('hex');
 }
 function run(stage) {
-  const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', stage.command], { cwd: root, encoding: 'utf8', timeout: 15 * 60 * 1000 });
+  const isWindows = process.platform === 'win32';
+  const executable = isWindows ? 'powershell.exe' : '/bin/bash';
+  let command = stage.command;
+  if (!isWindows) {
+    command = command
+      .replaceAll('npm.cmd', 'npm')
+      .replace(/if\(\$LASTEXITCODE -ne 0\)\{exit 1\};?\s*/g, '')
+      .replace(/\$env:([A-Za-z_][A-Za-z0-9_]*)=(['"])(.*?)\2;?\s*/g, "export $1='$3'; ");
+  }
+  if (!isWindows) command = `set -euo pipefail; ${command}`;
+  const args = isWindows ? ['-NoProfile', '-Command', command] : ['-lc', command];
+  const result = spawnSync(executable, args, { cwd: root, encoding: 'utf8', timeout: 15 * 60 * 1000 });
   return { id: stage.id, ok: result.status === 0, exitCode: result.status, stdoutTail: String(result.stdout || '').slice(-4000), stderrTail: String(result.stderr || '').slice(-4000), completedAt: new Date().toISOString() };
 }
 (async () => {

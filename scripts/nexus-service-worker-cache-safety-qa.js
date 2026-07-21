@@ -13,8 +13,8 @@ function includesAll(source, tokens, label) {
 }
 
 includesAll(sw, [
-  'const CACHE_NAME = "agrinexus-pwa-v420"',
-  'const BUILD_VERSION = "nexus-behavior-475"',
+  'const CACHE_NAME = "agrinexus-pwa-v421"',
+  'const BUILD_VERSION = "nexus-behavior-476"',
   "function isCacheableApplicationRequest",
   '["http:", "https:"].includes(url.protocol)',
   "url.origin !== self.location.origin",
@@ -49,8 +49,8 @@ assert(sw.includes(".catch(error =>"), "install cache failures must be handled")
 
 includesAll(app, [
   'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v455"',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-475"',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v420"',
+  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-476"',
+  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v421"',
   "console.info(`[Nexus Genesis voice] ${stage}",
   "controller-initialized",
   "automatic-start-entered",
@@ -69,6 +69,8 @@ includesAll(app, [
 ], "Genesis readable voice diagnostics");
 
 assert(!app.includes('console.info("[Nexus Genesis voice]", payload)'), "voice debug must not print collapsed generic Object logs");
+assert(app.includes('service-worker-reload-deferred-for-voice'), "service worker activation must defer reload while permanent voice is active");
+assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive'), "cache refresh must preserve a live microphone or connecting Realtime session");
 
 console.log(JSON.stringify({
   ok: true,
@@ -79,6 +81,7 @@ console.log(JSON.stringify({
     "cache failures are handled",
     "same-origin http/https resources still cache",
     "old caches are purged",
+    "service worker activation does not interrupt active Realtime voice",
     "Genesis voice debug events are readable and named"
   ]
 }, null, 2));

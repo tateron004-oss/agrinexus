@@ -8,7 +8,10 @@ const outputDir = path.join(root, "output", "nexus-live-voice-acceptance");
 const fixturePath = path.resolve(process.env.NEXUS_LIVE_FIXTURE || path.join(outputDir, "smoke.wav"));
 const expectedTurns = Number(process.env.NEXUS_LIVE_EXPECTED_TURNS || 1);
 const requiredInterruptions = Number(process.env.NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT || 0);
-const browserPath = process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const browserCandidates = process.platform === "win32"
+  ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
+  : ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/opt/google/chrome/chrome"];
+const browserPath = process.env.CHROME_PATH || browserCandidates.find(candidate => fs.existsSync(candidate)) || browserCandidates[0];
 const baseUrl = process.env.NEXUS_LIVE_BASE_URL || "http://127.0.0.1:4182";
 const cdpPort = Number(process.env.NEXUS_LIVE_CDP_PORT || (9332 + (process.pid % 500)));
 const profilePath = path.join(outputDir, `chrome-smoke-profile-${cdpPort}-${process.pid}`);
@@ -16,7 +19,7 @@ let acceptanceStage = "launch";
 let acceptanceFailureReason = "";
 let acceptanceProgress = { speechStartedCount: 0, responseDoneCount: 0, eventCount: 0 };
 let failureDiagnostics = null;
-let browserDiagnostics = { exceptions: [], console: [], failedRequests: [] };
+let browserDiagnostics = { exceptions: [], console: [], failedRequests: [], responses: [] };
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -91,7 +94,7 @@ async function main() {
   assert(fs.existsSync(fixturePath), "Synthetic microphone fixture is missing");
   fs.rmSync(profilePath, { recursive: true, force: true });
 
-  const browser = spawn(browserPath, [
+  const browserArgs = [
     "--headless=new",
     `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${profilePath}`,
@@ -104,12 +107,16 @@ async function main() {
     "--no-first-run",
     "--no-default-browser-check",
     `${baseUrl}/?voiceDebug=1&voiceAcceptance=1`
-  ], { stdio: "ignore", windowsHide: true });
+  ];
+  const browserProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+  if (browserProxy) browserArgs.unshift(`--proxy-server=${browserProxy}`);
+  if (process.env.NEXUS_LIVE_IGNORE_CERT_ERRORS === "1") browserArgs.unshift("--ignore-certificate-errors");
+  if (process.platform !== "win32") browserArgs.unshift("--no-sandbox", "--disable-dev-shm-usage");
+  const browser = spawn(browserPath, browserArgs, { stdio: "ignore", windowsHide: true });
 
   let cdp;
   let permanentCredentialObserved = false;
   let ephemeralCredentialLogged = false;
-  const browserDiagnostics = { exceptions: [], console: [], failedRequests: [] };
   try {
     acceptanceStage = "cdp-ready";
     await waitFor(async () => {
@@ -124,12 +131,21 @@ async function main() {
     cdp.onEvent(message => {
       if (message.method === "Runtime.exceptionThrown") { browserDiagnostics.exceptions.push(String(message.params?.exceptionDetails?.text || "exception")); return; }
       if (message.method === "Network.loadingFailed") { browserDiagnostics.failedRequests.push(String(message.params?.errorText || "network-failure")); return; }
+      if (message.method === "Network.responseReceived") {
+        const response = message.params?.response || {};
+        const responseUrl = String(response.url || "");
+        if (responseUrl.startsWith(baseUrl)) browserDiagnostics.responses.push({ status: Number(response.status || 0), url: responseUrl.slice(baseUrl.length) || "/" });
+        return;
+      }
       if (message.method !== "Runtime.consoleAPICalled") return;
+      const safeConsoleValues = [];
       for (const arg of message.params?.args || []) {
         const value = typeof arg.value === "string" ? arg.value : "";
         if (/sk-(?:proj-)?[A-Za-z0-9_-]{16,}/.test(value)) permanentCredentialObserved = true;
         if (/ek_[A-Za-z0-9_-]{16,}/.test(value)) ephemeralCredentialLogged = true;
+        if (value && !/sk-(?:proj-)?[A-Za-z0-9_-]{16,}|ek_[A-Za-z0-9_-]{16,}/.test(value)) safeConsoleValues.push(value.slice(0, 500));
       }
+      if (safeConsoleValues.length) browserDiagnostics.console.push({ type: String(message.params?.type || "log"), values: safeConsoleValues });
     });
     await cdp.send("Page.addScriptToEvaluateOnNewDocument", {
       source: `
@@ -284,7 +300,7 @@ async function main() {
           const track = [...(window.__NEXUS_RESOURCE_TRACKER__?.tracks || [])][0];
           let audioLevel = { sampled: false, rms: 0, max: 0 };
           if (track) { try { const context = new AudioContext(); const source = context.createMediaStreamSource(new MediaStream([track])); const analyser = context.createAnalyser(); analyser.fftSize = 1024; source.connect(analyser); const data = new Uint8Array(analyser.fftSize); let max = 0; let sum = 0; let samples = 0; const started = performance.now(); while (performance.now() - started < 900) { analyser.getByteTimeDomainData(data); let local = 0; for (const value of data) { const normalized = (value - 128) / 128; local += normalized * normalized; } const rms = Math.sqrt(local / data.length); sum += rms; max = Math.max(max, rms); samples += 1; await new Promise(resolve => setTimeout(resolve, 50)); } audioLevel = { sampled: true, rms: samples ? sum / samples : 0, max }; await context.close(); } catch (error) { audioLevel = { sampled: false, errorCategory: String(error?.name || 'unknown') }; } }
-          return { realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true }, lifecycle: lifecycle.currentInvariant || null, eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
+          return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true }, lifecycle: lifecycle.currentInvariant || null, eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
         })()`);
       } catch {}
     }
