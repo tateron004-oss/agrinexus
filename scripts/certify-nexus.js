@@ -16,7 +16,7 @@ const stages = [
   { id: 'deterministic-lifecycle-50', command: 'node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js' },
   { id: 'genesis-experience-confidence', command: 'npm.cmd run qa:nexus-genesis-experience-confidence-layer' },
   { id: 'genesis-production-exact-build', command: 'npm.cmd run qa:nexus-genesis-production-exact-build-smoke' },
-  { id: 'genesis-production-browser-lifecycle', command: "$env:NEXUS_LIVE_BASE_URL='https://agrinexus-platform.onrender.com'; $env:NEXUS_LIVE_EXPECTED_TURNS='1'; $env:NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT='0'; npm.cmd run qa:nexus-genesis-live-provider-browser-smoke" },
+  { id: 'genesis-production-browser-lifecycle', command: "$env:NEXUS_LIVE_BASE_URL='https://agrinexus-platform.onrender.com'; $env:NEXUS_LIVE_EXPECTED_TURNS='4'; $env:NEXUS_LIVE_REQUIRE_WORKSPACES='1'; $env:NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT='0'; npm.cmd run qa:nexus-genesis-live-provider-browser-smoke" },
   { id: 'genesis-final-runtime-audit', command: 'npm.cmd run qa:nexus-genesis-final-runtime-audit' },
   { id: 'genesis-voice-workspace-bridge', command: 'npm.cmd run qa:nexus-genesis-voice-workspace-bridge' },
   { id: 'integrated-safe', command: '$env:NEXUS_OPENAI_NATIVE_ENABLED="false"; $env:NEXUS_PRESERVE_EMPTY_ENV="1"; npm.cmd run qa:all-safe' }

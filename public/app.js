@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-476";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v421";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-477";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v422";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -53459,15 +53459,33 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}) {
   if (!section || !canOpenSection(section)) return false;
   if (section === "map") {
     openFullScaleUserMap(result.response || "I opened Nexus Maps. The route details are ready for review.");
-    const fields = { origin: payload.origin, destination: payload.destination };
+    const fields = { origin: payload.origin, destinationAddress: payload.destination };
     Object.entries(fields).forEach(([key, value]) => { if (!value) return; document.querySelectorAll(`[data-maps-field-visit-field="${key}"]`).forEach(input => { input.value = value; input.dispatchEvent(new Event("input", { bubbles: true })); }); });
   } else {
     goSection(section, { instant: true });
     if (experienceMode === "user" && simpleUserSections[section]) renderUserSimpleActiveSection(section);
+    const aliases = {
+      query: ["query", "goal", "jobGoal", "search", "description"],
+      location: ["location", "city", "region"],
+      product: ["product", "crop", "title", "transactionItem"],
+      intakeType: ["intakeType", "careRequest", "reason"],
+      learningGoal: ["learningGoal", "goal", "query", "topic"]
+    };
+    Object.entries(payload).forEach(([key, value]) => {
+      if (!value) return;
+      const names = aliases[key] || [key];
+      const selectors = names.flatMap(name => [`[data-nexus-mode-field="${name}"]`, `[data-nexus-guided-answer="${name}"]`, `[data-learning-bridge-query]`, `[data-marketplace-create-field="${name}"]`]);
+      const field = selectors.map(selector => document.querySelector(selector)).find(Boolean);
+      if (!field) return;
+      field.value = String(value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    });
   }
   document.body.dataset.genesisWorkspace = workspace;
   document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
-  const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
+  const visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+  const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled) || voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
   window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
   return ack.visible;
 }

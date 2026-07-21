@@ -1,16 +1,23 @@
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
 const outputDir = path.join(root, "output", "nexus-live-voice-acceptance");
 const fixturePath = path.resolve(process.env.NEXUS_LIVE_FIXTURE || path.join(outputDir, "smoke.wav"));
 const expectedTurns = Number(process.env.NEXUS_LIVE_EXPECTED_TURNS || 1);
 const requiredInterruptions = Number(process.env.NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT || 0);
+const requireWorkspaces = process.env.NEXUS_LIVE_REQUIRE_WORKSPACES === "1";
+const spokenJourneys = [
+  { workspace: "workforce", words: ["farming", "Nairobi"], command: "Nexus, help me find a farming job in Nairobi." },
+  { workspace: "map", words: ["Nairobi", "Nakuru"], command: "Nexus, show me the best route from Nairobi to Nakuru." },
+  { workspace: "trade", words: ["maize"], command: "Nexus, help me sell maize." },
+  { workspace: "health", words: ["intake"], command: "Nexus, start a healthcare intake." }
+];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
-  : ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/opt/google/chrome/chrome"];
+  : ["/tmp/chromium", "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/opt/google/chrome/chrome"];
 const browserPath = process.env.CHROME_PATH || browserCandidates.find(candidate => fs.existsSync(candidate)) || browserCandidates[0];
 const baseUrl = process.env.NEXUS_LIVE_BASE_URL || "http://127.0.0.1:4182";
 const cdpPort = Number(process.env.NEXUS_LIVE_CDP_PORT || (9332 + (process.pid % 500)));
@@ -20,6 +27,25 @@ let acceptanceFailureReason = "";
 let acceptanceProgress = { speechStartedCount: 0, responseDoneCount: 0, eventCount: 0 };
 let failureDiagnostics = null;
 let browserDiagnostics = { exceptions: [], console: [], failedRequests: [], responses: [] };
+
+function ensureSyntheticFixture() {
+  if (fs.existsSync(fixturePath) || process.env.NEXUS_LIVE_FIXTURE) return;
+  fs.mkdirSync(outputDir, { recursive: true });
+  const parts = [];
+  spokenJourneys.forEach((journey, index) => {
+    const speech = path.join(outputDir, `journey-${index}.wav`);
+    const silence = path.join(outputDir, `silence-${index}.wav`);
+    const spoken = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", `flite=text='${journey.command.replace(/'/g, "")}'`, "-ar", "48000", "-ac", "1", speech], { encoding: "utf8" });
+    assert.equal(spoken.status, 0, `Could not synthesize journey ${index + 1}: ${spoken.stderr}`);
+    const quiet = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "5", silence], { encoding: "utf8" });
+    assert.equal(quiet.status, 0, `Could not synthesize silence ${index + 1}: ${quiet.stderr}`);
+    parts.push(speech, silence);
+  });
+  const concatPath = path.join(outputDir, "fixture-concat.txt");
+  fs.writeFileSync(concatPath, parts.map(file => `file '${file.replace(/'/g, "'\\''")}'`).join("\n"));
+  const joined = spawnSync("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", concatPath, "-c:a", "pcm_s16le", fixturePath], { encoding: "utf8" });
+  assert.equal(joined.status, 0, `Could not assemble synthetic microphone fixture: ${joined.stderr}`);
+}
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -91,6 +117,7 @@ async function pageWebSocket() {
 
 async function main() {
   assert(fs.existsSync(browserPath), "Chrome is required for virtual microphone acceptance");
+  ensureSyntheticFixture();
   assert(fs.existsSync(fixturePath), "Synthetic microphone fixture is missing");
   fs.rmSync(profilePath, { recursive: true, force: true });
 
@@ -152,6 +179,8 @@ async function main() {
         const nexusOriginalAddEventListener = EventTarget.prototype.addEventListener;
         EventTarget.prototype.addEventListener = function(type, listener, options) { if (type === "click" && this.id === "nexusPermanentMicrophoneBtn") this.dataset.nexusMicBound = "true"; return nexusOriginalAddEventListener.call(this, type, listener, options); };
         window.__NEXUS_VOICE_ACCEPTANCE_EVENTS__ = [];
+        window.__NEXUS_WORKSPACE_ACKS__ = [];
+        window.addEventListener('genesis.workspace.acknowledged', event => window.__NEXUS_WORKSPACE_ACKS__.push({ ...event.detail, visibleText: document.body?.innerText || '' }));
         window.__NEXUS_RESOURCE_TRACKER__ = { streams: new Set(), tracks: new Set(), audioContexts: new Set(), peers: new Set() };
         window.__NEXUS_RESOURCE_COUNTS__ = () => ({
           streams: [...window.__NEXUS_RESOURCE_TRACKER__.streams].filter(stream => stream && stream.active !== false).length,
@@ -233,9 +262,17 @@ async function main() {
       const interruptionCount = events.filter(event => event.eventName === 'audio_interrupted').length + types.filter(type => /conversation\.item\.truncated|output_audio_buffer\.cleared/.test(type)).length;
       const responseCancelCount = types.filter(type => /response\.cancel|output_audio_buffer\.cleared|conversation\.item\.truncated/.test(type)).length;
       const lifecycleEvents = window.NexusGenesisVoiceLifecycleDiagnostics?.().events || [];
+      const workspaceAcks = window.__NEXUS_WORKSPACE_ACKS__ || [];
+      const requiredJourneys = ${JSON.stringify(spokenJourneys)};
+      const workspaceResults = requiredJourneys.map(journey => {
+        const ack = workspaceAcks.find(item => item.workspace === journey.workspace && item.opened === true && item.visible === true);
+        const visibleText = ack?.visibleText || '';
+        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => visibleText.toLowerCase().includes(word.toLowerCase())) };
+      });
+      const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -251,7 +288,8 @@ async function main() {
         lifecycleInterruptionCount,
         expectedTurns: ${expectedTurns},
         requiredInterruptions: ${requiredInterruptions},
-        lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null
+        lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null,
+        workspaceResults
       };
     })()`), Math.max(90000, expectedTurns * 18000), "synthetic spoken turn and model response");
 
@@ -280,6 +318,7 @@ async function main() {
       outputTranscriptObserved: evidence.outputTranscriptObserved,
       expectedWordObserved: evidence.expectedWordObserved,
       lifecycleInvariant: evidence.lifecycle?.ok === true,
+      workspaceResults: evidence.workspaceResults,
       browserSecretLoggingDetected: false,
       eventCount: evidence.eventCount
       ,expectedTurns: evidence.expectedTurns,

@@ -53,8 +53,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-476";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v421";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-477";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v422";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17909,8 +17909,21 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const route = /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower);
   if (!(route || workforce || marketplace || health || learning)) return null;
-  const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i); const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
-  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload: route ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || "" } : { query: text }, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
+  const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i);
+  const locationMatch = text.match(/\b(?:in|near|around)\s+([A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*)*)/u);
+  const cropMatch = text.match(/\b(?:sell|selling|buy|buying)\s+(?:some\s+)?([\p{L}'-]+)/iu);
+  const jobMatch = text.match(/\b(?:find|seek|search for)\s+(?:a|an|some)?\s*([^.!?]*?\bjob)\b/i);
+  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
+  const payload = route
+    ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || "" }
+    : workforce
+      ? { query: jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || text, location: locationMatch?.[1]?.trim() || "" }
+      : marketplace
+        ? { query: text, product: cropMatch?.[1]?.trim() || (/\bmaize\b/i.test(text) ? "maize" : "") }
+        : health
+          ? { query: text, intakeType: /\b(healthcare|patient|telehealth)\b/i.exec(text)?.[1]?.toLowerCase() || "healthcare" }
+          : { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text };
+  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
 }
 async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
   const status = nexusOpenAiNativeStatus(process.env);

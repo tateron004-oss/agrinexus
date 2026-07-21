@@ -208,7 +208,7 @@ assert(reminderProposal.options.some(workflow => workflow.workflowId === "daily-
 assert(/no scheduled reminder receipt/i.test(reminderProposal.options.find(workflow => workflow.workflowId === "daily-life.reminder-proposal").receiptBehavior), "reminder proposal does not fake scheduling");
 
 includes(index, "/nexus-conversation-workflow-transition-engine.js", "index script loading");
-includes(index, "/app.js?v=nexus-behavior-476", "app cache version bump");
+includes(index, "/app.js?v=nexus-behavior-477", "app cache version bump");
 includes(app, "nexusConversationWorkflowTransitionState", "app state");
 includes(app, "function handleNexusConversationWorkflowTransitionCommand", "app handler");
 includes(app, "renderNexusConversationWorkflowTransitionCard()", "same-conversation renderer");
