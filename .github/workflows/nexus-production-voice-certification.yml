@@ -1,0 +1,64 @@
+name: Nexus production voice certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "public/**"
+      - "server.js"
+      - "scripts/nexus-genesis-live-provider-browser-smoke.js"
+      - ".github/workflows/nexus-production-voice-certification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-production-voice-certification
+  cancel-in-progress: true
+
+jobs:
+  deployed-voice-to-workspace:
+    name: Real Realtime voice to visible workspaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
+      NEXUS_LIVE_EXPECTED_TURNS: "4"
+      NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
+      NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - name: Check out the deployed source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install synthetic speech support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libflite1
+
+      - name: Verify production release markers
+        run: npm run qa:nexus-genesis-production-exact-build-smoke
+
+      - name: Drive four spoken production workflows
+        run: npm run qa:nexus-genesis-live-provider-browser-smoke
+
+      - name: Publish certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-production-voice-evidence-${{ github.run_id }}
+          path: |
+            output/nexus-live-voice-acceptance/
+            output/nexus-certification/
+          if-no-files-found: warn
+          retention-days: 30
