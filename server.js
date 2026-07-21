@@ -17905,6 +17905,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   };
 }
 
+function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
+  const text = String(command || "").trim(); const lower = text.toLowerCase();
+  const route = /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower);
+  if (!(route || workforce || marketplace || health || learning)) return null;
+  const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i); const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
+  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload: route ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || "" } : { query: text }, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
+}
 async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
   const status = nexusOpenAiNativeStatus(process.env);
   if (!status.enabled || !status.configured) return null;
@@ -17959,13 +17966,13 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     }
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
+    const genesisAction = nexusGenesisWorkspaceAction(command, toolResults);
     return ensureSpeakableAgentResult({
       intent: calls.length ? `openai_native.${calls[0].name}` : "openai_native.conversation",
       response: finalText,
       status: "completed",
       metadata: {
-        redirectSection: "agent",
-        openAiNativeAgent: {
+        redirectSection: genesisAction?.workspace || "agent", genesisAction, openAiNativeAgent: {
           active: true,
           provider: "openai",
           model: status.model,
@@ -18004,8 +18011,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       response: `OpenAI-native Nexus intelligence could not complete this turn because the provider returned ${error.category || "provider-error"}. Nexus did not fabricate a response or expose secrets.`,
       status: "provider-error",
       metadata: {
-        redirectSection: "agent",
-        openAiNativeAgent: {
+        redirectSection: "agent", openAiNativeAgent: {
           active: true,
           provider: "openai",
           model: status.model,

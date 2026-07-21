@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-474";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v419";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-475";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v420";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -53439,6 +53439,26 @@ function resetConversationStateForPriorityIntent(command = "") {
   if (pendingWorkflow && isNewServiceRequestOverWorkflow(command)) clearOpenWorkflowForNewVoiceRequest(command);
 }
 
+function dispatchGenesisWorkspaceAction(action = {}, result = {}) {
+  if (!action || action.type !== "genesis.workspace.open") return false;
+  const workspace = String(action.workspace || "").toLowerCase();
+  const payload = action.payload || {};
+  const section = workspace === "maps" ? "map" : workspace;
+  if (!section || !canOpenSection(section)) return false;
+  if (section === "map") {
+    openFullScaleUserMap(result.response || "I opened Nexus Maps. The route details are ready for review.");
+    const fields = { origin: payload.origin, destination: payload.destination };
+    Object.entries(fields).forEach(([key, value]) => { if (!value) return; document.querySelectorAll(`[data-maps-field-visit-field="${key}"]`).forEach(input => { input.value = value; input.dispatchEvent(new Event("input", { bubbles: true })); }); });
+  } else {
+    goSection(section, { instant: true });
+    if (experienceMode === "user" && simpleUserSections[section]) renderUserSimpleActiveSection(section);
+  }
+  document.body.dataset.genesisWorkspace = workspace;
+  document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
+  const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
+  window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
+  return ack.visible;
+}
 function openAgentResultWorkflow(result = {}, command = "") {
   if (result.metadata?.workflowDeferred) return false;
   const intent = String(result.intent || "");
@@ -56838,6 +56858,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
         return result;
       }
     }
+    if (result.metadata?.genesisAction && dispatchGenesisWorkspaceAction(result.metadata.genesisAction, result)) return result;
     if (openAgentResultWorkflow(result, command)) return result;
     if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
@@ -56966,6 +56987,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
         return result;
       }
     }
+    if (result.metadata?.genesisAction && dispatchGenesisWorkspaceAction(result.metadata.genesisAction, result)) return result;
     if (openAgentResultWorkflow(result, command)) return result;
     if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
