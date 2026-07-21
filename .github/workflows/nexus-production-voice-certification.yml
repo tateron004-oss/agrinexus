@@ -46,6 +46,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg libflite1
 
+      - name: Wait for the exact Render release
+        run: |
+          expected_build=$(node -e "const source=require('fs').readFileSync('server.js','utf8'); const match=source.match(/AGRINEXUS_WEB_BUILD_VERSION = \"([^\"]+)\"/); if (!match) process.exit(1); process.stdout.write(match[1]);")
+          for attempt in $(seq 1 60); do
+            live_build=$(curl --max-time 20 -fsSL "$NEXUS_LIVE_BASE_URL/api/healthz" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk).on('end', () => { try { process.stdout.write(JSON.parse(data).webBuild || '') } catch {} })")
+            if [ "$live_build" = "$expected_build" ]; then
+              echo "Render is serving $live_build"
+              exit 0
+            fi
+            echo "Waiting for Render: expected $expected_build, received ${live_build:-unavailable}"
+            sleep 10
+          done
+          echo "Render did not deploy $expected_build within the certification window"
+          exit 1
+
       - name: Verify production release markers
         run: npm run qa:nexus-genesis-production-exact-build-smoke
 
