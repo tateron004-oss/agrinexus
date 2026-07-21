@@ -265,9 +265,10 @@ async function main() {
       const workspaceAcks = window.__NEXUS_WORKSPACE_ACKS__ || [];
       const requiredJourneys = ${JSON.stringify(spokenJourneys)};
       const workspaceResults = requiredJourneys.map(journey => {
-        const ack = workspaceAcks.find(item => item.workspace === journey.workspace && item.opened === true && item.visible === true);
+        const ack = [...workspaceAcks].reverse().find(item => item.workspace === journey.workspace && item.opened === true && item.visible === true && item.verified === true);
         const visibleText = ack?.visibleText || '';
-        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => visibleText.toLowerCase().includes(word.toLowerCase())) };
+        const visibleValues = JSON.stringify(ack?.populatedValues || {});
+        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => (visibleText + ' ' + visibleValues).toLowerCase().includes(word.toLowerCase())) };
       });
       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
