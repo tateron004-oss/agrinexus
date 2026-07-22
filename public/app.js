@@ -53488,6 +53488,7 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   }
   document.body.dataset.genesisWorkspace = workspace;
   document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
+  if (workspace === "map" && payload.country) document.body.dataset.genesisMapCountry = String(payload.country);
   const visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled) || voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
   if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
