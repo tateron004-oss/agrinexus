@@ -49885,8 +49885,13 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType === "input_audio_buffer.speech_stopped" || eventType === "input_audio_buffer.committed") {
       updateRealtimeControllerState("processing", eventType === "input_audio_buffer.committed" ? "input-audio-committed" : "user-speech-stopped");
     }
-    if (eventType === "conversation.item.input_audio_transcription.completed" && payload.acceptanceText) {
-      void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
+    if (eventType === "conversation.item.input_audio_transcription.completed") {
+      const content = Array.isArray(payload.item?.content) ? payload.item.content : [];
+      const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
+      const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
+      nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
+      if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+      if (!controllerResult?.handled && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");

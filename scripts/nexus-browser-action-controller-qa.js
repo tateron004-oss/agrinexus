@@ -1,0 +1,14 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const source = fs.readFileSync("public/browser-action-controller.js", "utf8");
+const context = { window: {} };
+vm.runInNewContext(source, context);
+const controller = context.window.NexusBrowserActionController;
+const build = text => /open maps/i.test(text) ? { type: "genesis.workspace.open", workspace: "map", operation: "route", payload: { country: "Kenya" } } : null;
+assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "1", sessionId: "s", role: "user", isFinal: true }, build).handled, true);
+assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "1", sessionId: "s", role: "user", isFinal: true }, build).duplicate, true);
+assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "2", sessionId: "s", role: "assistant", isFinal: true }, build).handled, false);
+assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "3", sessionId: "s", role: "user", isFinal: false }, build).handled, false);
+assert.equal(controller.handleFinalUserTranscript({ transcript: "hello", transcriptId: "4", sessionId: "s", role: "user", isFinal: true }, build).handled, false);
+console.log("Nexus browser Action Controller QA passed");
