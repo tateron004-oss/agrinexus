@@ -11,6 +11,18 @@
       "ok": true
     },
     {
+      "name": "map tool always creates action",
+      "ok": true
+    },
+    {
+      "name": "map navigation requires tool",
+      "ok": true
+    },
+    {
+      "name": "verified workspace returned to model",
+      "ok": true
+    },
+    {
       "name": "map route entities",
       "ok": true
     },
@@ -24,6 +36,22 @@
     },
     {
       "name": "health intake entity",
+      "ok": true
+    },
+    {
+      "name": "one authoritative browser bridge",
+      "ok": true
+    },
+    {
+      "name": "raw Realtime path enters bridge",
+      "ok": true
+    },
+    {
+      "name": "SDK Realtime path enters bridge",
+      "ok": true
+    },
+    {
+      "name": "registered workforce launcher",
       "ok": true
     },
     {
@@ -47,11 +75,11 @@
       "ok": true
     },
     {
-      "name": "launcher invocation",
+      "name": "function-window invocation",
       "ok": true
     },
     {
-      "name": "show-me route protected",
+      "name": "matching request id",
       "ok": true
     }
   ],
