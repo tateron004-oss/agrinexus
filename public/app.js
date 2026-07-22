@@ -53446,7 +53446,9 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}) {
   const section = workspace === "maps" ? "map" : workspace;
   if (!section || !canOpenSection(section)) return false;
   if (section === "map") {
-    openFullScaleUserMap(result.response || "I opened Nexus Maps. The route details are ready for review.");
+    const country = payload.country ? africanMapCountryTarget(payload.country) : null;
+    if (country) openCountryMapFromVoice(country, result.response || `I opened Nexus Maps for ${country.name}.`);
+    else openFullScaleUserMap(result.response || "I opened Nexus Maps. The route details are ready for review.");
     const fields = { origin: payload.origin, destination: payload.destination };
     Object.entries(fields).forEach(([key, value]) => { if (!value) return; document.querySelectorAll(`[data-maps-field-visit-field="${key}"]`).forEach(input => { input.value = value; input.dispatchEvent(new Event("input", { bubbles: true })); }); });
   } else {
