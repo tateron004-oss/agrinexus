@@ -53,6 +53,9 @@ function notIncludes(source, needle, label) {
 includes(app, "session.responseInProgress || session.activeResponseId", "active-response cancel guard");
 includes(app, "handleOpenAiAgentsRealtimeEvent", "Agents SDK event handler");
 includes(app, "connection_change", "Agents SDK connection state handler");
+includes(app, "const sdkState = String(session.connectionState || \"\").toLowerCase()", "Agents SDK connection recovery state");
+includes(app, "scheduleRealtimeRecovery(`openai-agents-connection-${connectionStatus}`)", "Agents SDK disconnect recovery trigger");
+includes(app, "if (connectionStatus === \"connected\") realtimeVoiceSession.reconnectAttempted = false", "successful reconnect resets bounded recovery");
 includes(app, "legacyListenerPreserved", "legacy listener preserved until Agents SDK owns mic");
 includes(app, "inactive-realtime-owns-microphone", "fallback recorder inactive after Realtime owns mic");
 includes(app, "voiceRecognition = null", "legacy recognition released when Realtime starts");
@@ -63,12 +66,12 @@ includes(server, "create_response: true", "server VAD repeated response creation
 includes(server, "interrupt_response: true", "server VAD interruption support");
 includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
 
-["nexus-behavior-484", "agrinexus-pwa-v429"].forEach(marker => {
+["nexus-behavior-486", "agrinexus-pwa-v431"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
   includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(app, "nexus-genesis-voice-runtime-v455", "voice runtime marker");
+includes(app, "nexus-genesis-voice-runtime-v456", "voice runtime marker");
 assert.strictEqual(
   pkg.scripts["qa:nexus-genesis-realtime-repeated-turn-lifecycle"],
   "node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
@@ -156,6 +159,13 @@ for (let turn = 1; turn <= 25; turn += 1) {
     controller.peerConnectionState = "connected";
     controller.controllerState = "listening";
   }
+  if (turn === 2) {
+    controller.controllerState = "reconnecting";
+    controller.events.push("openai-agents-connection-disconnected");
+    controller.recoveries += 1;
+    controller.controllerState = "listening";
+    controller.events.push("openai-agents-connection-connected");
+  }
   if (turn === 5) {
     controller.responseInProgress = true;
     controller.activeResponseId = "interrupted-response";
@@ -173,7 +183,7 @@ for (let turn = 1; turn <= 25; turn += 1) {
 }
 
 assert.strictEqual(controller.turnIndex, 25, "25 turns should complete");
-assert.strictEqual(controller.recoveries, 1, "one bounded recovery should be simulated");
+assert.strictEqual(controller.recoveries, 2, "raw peer and active SDK disconnect recovery should be simulated");
 assert(controller.events.includes("realtime-tool-dispatch-started"), "tool call turn should be exercised");
 assert(controller.events.includes("weather-follow-up"), "weather follow-up should be exercised");
 assert(controller.events.includes("language-switch"), "language switch should be exercised");

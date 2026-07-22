@@ -870,7 +870,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v455";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 const NEXUS_OS_VOICE_FALLBACK_STATES = Object.freeze([
   "permission-denied",
@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-484";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v429";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-486";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v431";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49372,8 +49372,16 @@ function scheduleRealtimeRecovery(reason = "connection-state") {
   updateRealtimeControllerState("reconnecting", "bounded-recovery-scheduled", { reason });
   window.setTimeout(() => {
     if (realtimeVoiceSession !== session) return;
-    const state = session.peerConnection?.connectionState || "";
-    if (state !== "failed" && state !== "disconnected") return;
+    const peerState = session.peerConnection?.connectionState || "";
+    const sdkState = String(session.connectionState || "").toLowerCase();
+    const trackState = session.microphoneTrack?.readyState || session.microphoneProof?.trackState || "";
+    const connectionFailed = ["failed", "disconnected", "closed"].includes(peerState)
+      || ["failed", "disconnected", "closed"].includes(sdkState)
+      || trackState === "ended";
+    if (!connectionFailed) {
+      session.reconnectAttempted = false;
+      return;
+    }
     const preservedPermanentStream = nexusPermanentMicrophoneStream && session.stream === nexusPermanentMicrophoneStream
       ? nexusPermanentMicrophoneStream
       : null;
@@ -49799,13 +49807,23 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     toolName: payload.toolName || ""
   });
   if (eventName === "connection_change") {
+    const connectionStatus = String(payload.status || "").toLowerCase();
     if (realtimeVoiceSession) {
-      realtimeVoiceSession.connectionState = payload.status || "";
-      realtimeVoiceSession.lastModelEvent = `connection:${payload.status || ""}`;
+      realtimeVoiceSession.connectionState = connectionStatus;
+      realtimeVoiceSession.lastModelEvent = `connection:${connectionStatus}`;
+      if (connectionStatus === "connected") realtimeVoiceSession.reconnectAttempted = false;
     }
-    updateRealtimeControllerState(payload.status === "connected" ? "connecting" : "authorizing", "openai-agents-connection-change", {
-      connectionState: payload.status || ""
-    });
+    const failedConnection = ["failed", "disconnected", "closed"].includes(connectionStatus);
+    updateRealtimeControllerState(
+      connectionStatus === "connected" ? "listening" : failedConnection ? "reconnecting" : "connecting",
+      "openai-agents-connection-change",
+      {
+        connectionState: connectionStatus
+      }
+    );
+    if (failedConnection) {
+      scheduleRealtimeRecovery(`openai-agents-connection-${connectionStatus}`);
+    }
   }
   if (eventName === "media_stream_requested") {
     updateRealtimeControllerState("connecting", "openai-agents-media-stream-requested", {
@@ -49867,6 +49885,9 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType === "input_audio_buffer.speech_stopped" || eventType === "input_audio_buffer.committed") {
       updateRealtimeControllerState("processing", eventType === "input_audio_buffer.committed" ? "input-audio-committed" : "user-speech-stopped");
     }
+    if (eventType === "conversation.item.input_audio_transcription.completed" && payload.acceptanceText) {
+      void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
+    }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
     }
@@ -49914,6 +49935,73 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
   if (eventName === "error") {
     updateRealtimeControllerState("reconnecting", "openai-agents-sdk-error", { errorType: payload.type || "sdk-error" });
     scheduleRealtimeRecovery(payload.type || "openai-agents-sdk-error");
+  }
+}
+
+let lastGenesisTranscriptWorkspaceExecution = { command: "", at: 0 };
+
+function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
+  const command = String(transcript || "").trim();
+  const lower = command.toLowerCase();
+  if (!command) return null;
+  const explicitOpen = /\b(open|show|display|start|begin|launch|take me to|help me (?:find|sell|record|enter))\b/.test(lower);
+  const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
+  const workforceRequest = explicitOpen && /\b(job|jobs|workforce|employment|career|work search|farming work)\b/.test(lower);
+  const marketplaceRequest = (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower)) && /\b(marketplace|agritrade|buyer|seller|sell|selling|maize|crop)\b/.test(lower);
+  const healthRequest = explicitOpen && /\b(health|healthcare|telehealth|intake|blood pressure|hypertension|diabetes|obesity|clinic|pharmacy)\b/.test(lower);
+  const learningRequest = explicitOpen && /\b(learning|literacy|course|training|lesson)\b/.test(lower);
+  if (!(routeRequest || workforceRequest || marketplaceRequest || healthRequest || learningRequest)) return null;
+
+  const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
+  const country = command.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i)?.[1] || "";
+  const product = command.match(/\b(?:sell|selling|list)\s+(?:some\s+)?([\p{L}'-]+)/iu)?.[1] || (/\bmaize\b/i.test(command) ? "maize" : "");
+  const workspace = routeRequest ? "map" : workforceRequest ? "workforce" : marketplaceRequest ? "trade" : healthRequest ? "health" : "learning";
+  const payload = routeRequest
+    ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", country }
+    : workforceRequest
+      ? { query: command, jobType: /\bfarm(?:ing)?\b/i.test(command) ? "farming" : "", country }
+      : marketplaceRequest
+        ? { query: command, action: /\b(?:sell|selling|list)\b/i.test(command) ? "sell" : "buy", product, country }
+        : healthRequest
+          ? { query: command, intake: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "blood-pressure" : "healthcare", country }
+          : { query: command, learningGoal: command };
+  return {
+    type: "genesis.workspace.open",
+    version: 1,
+    requestId: `voice-transcript-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    source: "openai-realtime-final-transcript",
+    workspace,
+    operation: routeRequest ? "route" : workforceRequest ? "job_search" : marketplaceRequest ? "seller_intake" : healthRequest ? "intake" : "learning_start",
+    payload
+  };
+}
+
+async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
+  const command = String(transcript || "").trim();
+  const normalized = command.toLowerCase().replace(/\s+/g, " ");
+  const now = Date.now();
+  if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
+  const action = genesisWorkspaceActionFromFinalTranscript(command);
+  if (!action) return false;
+  lastGenesisTranscriptWorkspaceExecution = { command: normalized, at: now };
+  try {
+    const result = { genesisAction: action, response: command, source: "openai-realtime-final-transcript" };
+    const acknowledgement = await runAuthoritativeGenesisWorkspaceBridge(result, {
+      correlationId: action.requestId
+    });
+    nexusGenesisVoiceDebugLog("final-transcript-workspace-executed", {
+      requestId: action.requestId,
+      workspace: action.workspace,
+      verified: acknowledgement?.verified === true
+    });
+    return acknowledgement?.verified === true;
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("final-transcript-workspace-failed", {
+      requestId: action.requestId,
+      workspace: action.workspace,
+      error: String(error?.message || "workspace-execution-failed").slice(0, 180)
+    });
+    return false;
   }
 }
 

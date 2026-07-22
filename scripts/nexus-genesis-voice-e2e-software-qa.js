@@ -35,8 +35,8 @@ function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
 
-const build = "nexus-behavior-484";
-const cache = "agrinexus-pwa-v429";
+const build = "nexus-behavior-486";
+const cache = "agrinexus-pwa-v431";
 
 [
   ["app", app],
@@ -50,7 +50,7 @@ includes(index, build, "index build marker");
 
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-484"), "microphone button must exist before app.js executes");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-486"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
 includes(index, "Enable microphone", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
