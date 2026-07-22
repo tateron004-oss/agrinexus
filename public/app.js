@@ -53514,7 +53514,11 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
       location: ["location", "city", "region"],
       product: ["product", "crop", "title", "transactionItem"],
       intakeType: ["intakeType", "careRequest", "reason"],
-      learningGoal: ["learningGoal", "goal", "query", "topic"]
+      learningGoal: ["learningGoal", "goal", "query", "topic"],
+      country: ["country", "destinationCountry", "location"],
+      jobType: ["jobType", "jobGoal", "query"],
+      action: ["action", "transactionAction"],
+      intake: ["intake", "intakeType", "careRequest"]
     };
     const selectors = (aliases[key] || [key]).flatMap(name => [
       `[data-nexus-realtime-field="${key}"]`,
@@ -53525,6 +53529,7 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
     ]);
     if (key === "query" || key === "learningGoal") selectors.push("[data-learning-bridge-query]");
     const expectedValue = String(value).trim().toLowerCase();
+    if (key === "country" && String(document.body.dataset.genesisMapCountry || "").trim().toLowerCase() === expectedValue) return document.body;
     return selectors.map(selector => document.querySelector(selector)).find(field => {
       const actual = String(field?.value || field?.textContent || "").trim().toLowerCase();
       return actual && (actual === expectedValue || actual.includes(expectedValue) || expectedValue.includes(actual));
