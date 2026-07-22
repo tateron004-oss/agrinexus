@@ -53,8 +53,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-480";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v425";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-479";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v424";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17915,7 +17915,7 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const jobMatch = text.match(/\b(?:find|seek|search for)\s+(?:a|an|some)?\s*([^.!?]*?\bjob)\b/i);
   const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
   const payload = route
-    ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || countryMatch?.[1] || "" }
+    ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || "" }
     : workforce
       ? { query: jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || text, location: locationMatch?.[1]?.trim() || "" }
       : marketplace
