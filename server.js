@@ -17915,7 +17915,7 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const jobMatch = text.match(/\b(?:find|seek|search for)\s+(?:a|an|some)?\s*([^.!?]*?\bjob)\b/i);
   const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
   const payload = route
-    ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || "" }
+    ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || countryMatch?.[1] || "" }
     : workforce
       ? { query: jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || text, location: locationMatch?.[1]?.trim() || "" }
       : marketplace
