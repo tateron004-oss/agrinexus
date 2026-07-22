@@ -49572,7 +49572,10 @@ async function dispatchRealtimeToolCall(call = {}) {
       response: "I could not complete that Nexus tool request.",
       blockedReason: "client-parse-failed"
     }));
-    if (result.genesisAction) dispatchGenesisWorkspaceAction(result.genesisAction, result);
+    const genesisAction = result.genesisAction || result.metadata?.genesisAction || result.action || null;
+    if (genesisAction?.type === "genesis.workspace.open") {
+      await dispatchGenesisWorkspaceActionVerified(genesisAction, result);
+    }
     const toolPayload = JSON.stringify(result);
     sendRealtimeDataChannelEvent({
       type: "conversation.item.create",
