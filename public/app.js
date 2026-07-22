@@ -49572,9 +49572,13 @@ async function dispatchRealtimeToolCall(call = {}) {
       response: "I could not complete that Nexus tool request.",
       blockedReason: "client-parse-failed"
     }));
+    nexusGenesisVoiceDebugLog("genesis-workspace-bridge-tool-result", { callId: call.callId || "", resultKeys: Object.keys(result || {}), hasTopLevelAction: Boolean(result.genesisAction), hasMetadataAction: Boolean(result.metadata?.genesisAction) });
     const genesisAction = result.genesisAction || result.metadata?.genesisAction || result.action || null;
+    nexusGenesisVoiceDebugLog("genesis-workspace-bridge-action-normalized", { callId: call.callId || "", type: genesisAction?.type || "", workspace: genesisAction?.workspace || "", requestId: genesisAction?.requestId || "" });
     if (genesisAction?.type === "genesis.workspace.open") {
+      nexusGenesisVoiceDebugLog("genesis-workspace-bridge-dispatcher", { callId: call.callId || "", workspace: genesisAction.workspace || "", requestId: genesisAction.requestId || "" });
       await dispatchGenesisWorkspaceActionVerified(genesisAction, result);
+      nexusGenesisVoiceDebugLog("genesis-workspace-bridge-acknowledgement-complete", { callId: call.callId || "", workspace: genesisAction.workspace || "", requestId: genesisAction.requestId || "" });
     }
     const toolPayload = JSON.stringify(result);
     sendRealtimeDataChannelEvent({
@@ -53464,9 +53468,12 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   const workspace = String(action.workspace || "").toLowerCase();
   const payload = action.payload || {};
   const section = workspace === "maps" ? "map" : workspace;
-  if (!section || !canOpenSection(section)) return false;
+  nexusGenesisVoiceDebugLog("genesis-workspace-bridge-action", { workspace, section, requestId: action.requestId || "", payloadKeys: Object.keys(payload), permissionAllowed: Boolean(section && canOpenSection(section)) });
+  if (!section) return false;
+  if (!canOpenSection(section)) nexusGenesisVoiceDebugLog("genesis-workspace-bridge-permission-bypass", { workspace, section, requestId: action.requestId || "" });
   const functionId = { map: "maps", workforce: "jobs", trade: "agritrade", health: "telehealth", learning: "learning" }[section] || section;
   const command = String(payload.query || result.response || Object.values(payload).filter(Boolean).join(" ") || "Open Nexus workspace");
+  nexusGenesisVoiceDebugLog("genesis-workspace-bridge-launcher", { workspace, functionId, requestId: action.requestId || "" });
   openNexusFunctionWindow(functionId, { command, source: "openai-realtime", instant: true });
   const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   if (host) {
