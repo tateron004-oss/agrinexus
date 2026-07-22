@@ -29,7 +29,7 @@ let failureDiagnostics = null;
 let browserDiagnostics = { exceptions: [], console: [], failedRequests: [], responses: [] };
 
 function ensureSyntheticFixture() {
-  if (fs.existsSync(fixturePath) || process.env.NEXUS_LIVE_FIXTURE) return;
+  if (process.env.NEXUS_LIVE_FIXTURE) return;
   fs.mkdirSync(outputDir, { recursive: true });
   const parts = [];
   spokenJourneys.forEach((journey, index) => {
