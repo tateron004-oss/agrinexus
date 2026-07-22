@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-479";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v424";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-480";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v425";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
