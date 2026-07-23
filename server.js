@@ -17659,7 +17659,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_maps_route") {
     const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
-    const mapOnlyRequest = !routeArgs.origin && !routeArgs.destination && /\b(open|show|display)\b.*\b(map|kenya)\b/i.test(command);
+    const mapOnlyRequest = !routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display)\b.*\b(map|kenya)\b/i.test(command);
     if (mapOnlyRequest) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "local-ready",
