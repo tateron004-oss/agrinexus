@@ -109,7 +109,7 @@ async function main() {
   let cdp;
   let permanentCredentialObserved = false;
   let ephemeralCredentialLogged = false;
-  const browserDiagnostics = { exceptions: [], console: [], failedRequests: [] };
+  const browserDiagnostics = { exceptions: [], console: [], failedRequests: [], sessionRequests: [] };
   try {
     acceptanceStage = "cdp-ready";
     await waitFor(async () => {
@@ -123,7 +123,9 @@ async function main() {
     await cdp.send("Network.enable");
     cdp.onEvent(message => {
       if (message.method === "Runtime.exceptionThrown") { browserDiagnostics.exceptions.push(String(message.params?.exceptionDetails?.text || "exception")); return; }
-      if (message.method === "Network.loadingFailed") { browserDiagnostics.failedRequests.push(String(message.params?.errorText || "network-failure")); return; }
+      if (message.method === "Network.requestWillBeSent" && /\/api\/voice\/realtime\/session/.test(String(message.params?.request?.url || ""))) { browserDiagnostics.sessionRequests.push({ phase: "request", url: message.params.request.url, method: message.params.request.method }); }
+      if (message.method === "Network.responseReceived" && /\/api\/voice\/realtime\/session/.test(String(message.params?.response?.url || ""))) { browserDiagnostics.sessionRequests.push({ phase: "response", url: message.params.response.url, status: message.params.response.status }); }
+      if (message.method === "Network.loadingFailed") { browserDiagnostics.failedRequests.push({ error: String(message.params?.errorText || "network-failure"), requestId: message.params?.requestId || "" }); return; }
       if (message.method !== "Runtime.consoleAPICalled") return;
       for (const arg of message.params?.args || []) {
         const value = typeof arg.value === "string" ? arg.value : "";
@@ -201,7 +203,7 @@ async function main() {
     const connected = await waitFor(() => evaluate(cdp, `(() => {
       const status = window.NexusGenesisRealtimeClientStatus?.() || {};
       return status.activeRuntime === 'realtime' && status.connectionState === 'connected' && status.liveMicrophoneTrack === true ? status : null;
-    })()`), 45000, "live Realtime connection");
+    })()`), Number(process.env.NEXUS_LIVE_REALTIME_TIMEOUT_MS || 120000), "live Realtime connection");
 
     acceptanceStage = "synthetic-turn";
     const evidence = await waitFor(() => evaluate(cdp, `(() => {
