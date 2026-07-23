@@ -1,6 +1,10 @@
 name: Nexus Workspace Playwright Proof
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/nexus-workspace-playwright-proof.yml
   workflow_dispatch:
     inputs:
       base_url:
