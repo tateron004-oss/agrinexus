@@ -19,6 +19,7 @@ tmp-*-db.json
 tmp-*.json
 *.tmp
 reports/
+test-results/
 exports/investor-screenshots/chrome-profile/
 
 # Local generated backups and machine state
