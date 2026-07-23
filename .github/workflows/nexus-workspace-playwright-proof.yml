@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   deployed-workspace-proof:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 20
     env:
       NEXUS_PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
@@ -41,7 +41,7 @@ jobs:
         run: npm install --no-save --no-package-lock @playwright/test@1.61.1
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run deployed four-workspace proof
         run: npx playwright test --config=playwright.workflow.config.js
