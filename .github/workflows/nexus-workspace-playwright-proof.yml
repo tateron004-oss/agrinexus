@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/nexus-workspace-playwright-proof.yml
-      - package.json
+      - tests/playwright/nexus-workspace-action.spec.js
   workflow_dispatch:
     inputs:
       base_url:

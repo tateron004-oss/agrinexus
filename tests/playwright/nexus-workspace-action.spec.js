@@ -77,8 +77,8 @@ async function installBoundaryObserver(page) {
 }
 
 async function login(page) {
-  const email = process.env.NEXUS_PLAYWRIGHT_EMAIL || "demo@agrinexus.org";
-  const password = process.env.NEXUS_PLAYWRIGHT_PASSWORD || "Prototype2026!";
+  const email = process.env.NEXUS_PLAYWRIGHT_EMAIL || "user@agrinexus.org";
+  const password = process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!";
   const result = await page.evaluate(async ({ email, password }) => {
     const response = await fetch("/api/login", {
       method: "POST",
