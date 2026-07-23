@@ -53685,8 +53685,9 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
     if (visibleWorkspace && populatedFields.length === expected.length) break;
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  const microphoneActive = Boolean(nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled));
-  const realtimeConnected = Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected");
+  const sdkMicrophoneProof = normalizeRealtimeMicrophoneProof(realtimeVoiceSession?.sdkController);
+  const microphoneActive = Boolean(sdkMicrophoneProof.hasLiveTrack || nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled));
+  const realtimeConnected = Boolean(realtimeVoiceActive?.() || realtimeVoiceSession?.active === true || window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected");
   const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace);
   const verified = visible && populatedFields.length === expected.length && microphoneActive && realtimeConnected;
   const ack = {
