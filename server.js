@@ -17659,6 +17659,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_maps_route") {
     const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
+    const mapOnlyRequest = !routeArgs.origin && !routeArgs.destination && /\b(open|show|display)\b.*\b(map|kenya)\b/i.test(command);
+    if (mapOnlyRequest) {
+      return nexusOpenAiNativeBlockedToolResult(db, common, {
+        status: "local-ready",
+        response: "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",
+        did: ["Prepared the existing Maps workspace for the requested map."],
+        didNot: ["Nexus did not claim a route, travel time, geolocation, or external navigation."]
+      });
+    }
     const routeResult = await nexusRealProviders.googleMaps.route({
       origin: routeArgs.origin,
       destination: routeArgs.destination,
