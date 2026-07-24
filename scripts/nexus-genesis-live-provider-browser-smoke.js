@@ -245,6 +245,8 @@ async function main() {
       const email = document.querySelector('#email');
       const password = document.querySelector('#password');
       if (!form || !email || !password) return false;
+      if (document.readyState !== 'complete'
+        || typeof window.NexusGenesisRealtimeClientStatus !== 'function') return false;
       const now = Date.now();
       if (!window.__NEXUS_ACCEPTANCE_LOGIN_SUBMITTED_AT__
         || now - window.__NEXUS_ACCEPTANCE_LOGIN_SUBMITTED_AT__ > 5000) {
