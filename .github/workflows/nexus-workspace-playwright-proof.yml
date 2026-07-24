@@ -7,6 +7,7 @@ on:
       - .github/workflows/nexus-workspace-playwright-proof.yml
       - tests/playwright/nexus-workspace-action.spec.js
       - playwright.workflow.config.js
+      - scripts/run-nexus-workspace-proof.js
   workflow_dispatch:
     inputs:
       base_url:
@@ -57,7 +58,7 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run deployed four-workspace proof
-        run: npx playwright test --config=playwright.workflow.config.js
+        run: node scripts/run-nexus-workspace-proof.js
 
       - name: Preserve proof, traces, screenshots, and errors
         if: always()

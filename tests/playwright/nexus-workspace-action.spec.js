@@ -132,6 +132,7 @@ test("four finalized transcripts open and populate existing workspaces exactly o
   });
 
   for (const journey of journeys) {
+    console.log(`NEXUS_WORKSPACE_PROOF_START ${journey.workspace}`);
     const before = await page.evaluate(() => ({
       calls: window.__NEXUS_PLAYWRIGHT_EVIDENCE__.controllerCalls.length,
       acks: window.__NEXUS_PLAYWRIGHT_EVIDENCE__.acknowledgements.length
@@ -206,6 +207,7 @@ test("four finalized transcripts open and populate existing workspaces exactly o
       path: testInfo.outputPath(`${journey.workspace}-verified.png`),
       fullPage: true
     });
+    console.log(`NEXUS_WORKSPACE_PROOF_PASS ${journey.workspace}`);
   }
 
   const evidence = await page.evaluate(() => window.__NEXUS_PLAYWRIGHT_EVIDENCE__);

@@ -5,6 +5,7 @@ const baseURL = process.env.NEXUS_PLAYWRIGHT_BASE_URL
 const wsEndpoint = process.env.NEXUS_PLAYWRIGHT_WS_ENDPOINT || "";
 
 module.exports = defineConfig({
+  globalTimeout: 180_000,
   testDir: "./tests/playwright",
   testMatch: "nexus-workspace-action.spec.js",
   timeout: 120_000,
