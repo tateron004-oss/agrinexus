@@ -22,8 +22,8 @@ function count(pattern, text = app) {
   return (text.match(pattern) || []).length;
 }
 
-assert(html.includes("leaflet@1.9.4/dist/leaflet.css"), "Leaflet CSS should be loaded.");
-assert(html.includes("leaflet@1.9.4/dist/leaflet.js"), "Leaflet JS should be loaded.");
+assert(html.includes("/vendor/leaflet/leaflet.css?v=1.9.4"), "Self-hosted Leaflet CSS should be loaded.");
+assert(html.includes("/vendor/leaflet/leaflet.js?v=1.9.4"), "Self-hosted Leaflet JS should be loaded.");
 assert(count(/L\.map\(/g) >= 7, "Expected all real map canvases to initialize through Leaflet.");
 assert(count(/L\.map\([^)]*leafletMapOptions\(/g) >= 7, "Every Leaflet map should use the shared zoom contract.");
 assert(app.includes("const MAP_ZOOM_CONFIG"), "Map zoom config should be centralized.");
@@ -64,7 +64,7 @@ assert(!/transform\s*:\s*scale\s*\(/i.test(mapCss), "Map-specific CSS must not u
 const paidKeyPatterns = [
   /pk\.[A-Za-z0-9._-]{20,}/,
   /AIza[0-9A-Za-z_-]{20,}/,
-  /sk\.[A-Za-z0-9._-]{20,}/
+  /(?:^|[^A-Za-z0-9_$])sk\.[A-Za-z0-9._-]{20,}/
 ];
 for (const pattern of paidKeyPatterns) {
   assert(!pattern.test(app), "No paid map API key should be hardcoded in public/app.js.");

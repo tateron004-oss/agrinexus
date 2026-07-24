@@ -46321,6 +46321,26 @@ function authoritativeNexusFinalAnswer(...candidates) {
 
 function setVoiceResponse(message, speak = false, options = {}) {
   if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
+  const realtimeOwnsAudibleResponse = Boolean(
+    typeof realtimeVoiceActive === "function"
+    && realtimeVoiceActive()
+    && options.allowCompetingRealtimeSpeech !== true
+  );
+  if (realtimeOwnsAudibleResponse) {
+    // Realtime WebRTC already plays the model response. Keep this path for
+    // captions, presence, and history, but never start a second browser/TTS
+    // voice for the same turn.
+    speak = false;
+    options = { ...options, allowVoiceFirst: false };
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (typeof stopNexusServerTtsPlayback === "function") {
+      stopNexusServerTtsPlayback("openai-realtime-owns-audio");
+    }
+    recordNexusAudioPipelineEvent("competing-speech-suppressed", {
+      canonicalOwner: "openai-realtime-webrtc",
+      suppressedAdapter: "browser-or-server-tts"
+    });
+  }
   if (speak || options.forceHandoff) clearAgentProgressTimers();
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   if (voiceDemoQuietMode && !options.allowDemoQuietSpeech) {
@@ -52578,22 +52598,32 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
     $(`#map .user-inline-workflow`)?.classList.add("hidden");
   }
   renderLiveVoiceSuggestions(["what map features are available", "show satellite imagery", "is location enabled", "help me plan a route"]);
-  setTimeout(() => {
+  const renderVisibleMap = () => {
+    if (!window.L) return false;
     renderMap();
     renderUserRealMap();
     safeInvalidateLeafletMap(map);
     safeInvalidateLeafletMap(userMap);
     const target = $("#userMapCanvas") || $("#mapCanvas") || $("#map");
     target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-  }, 120);
+    return Boolean($("#userMapCanvas")?.classList.contains("leaflet-container") && userMap);
+  };
+  [80, 180, 360, 700].forEach(delay => {
+    setTimeout(() => {
+      if (!$("#userMapCanvas")?.classList.contains("leaflet-container")) renderVisibleMap();
+      else safeInvalidateLeafletMap(userMap);
+    }, delay);
+  });
   recordVoiceEvent("Opened the full map view from voice.", "done");
   updateNexusBehaviorLayer("ready", "Nexus opened the full map view and is ready for route or facility commands.");
-  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  setVoiceResponse(`${actionLead}${response}`.trim(), options.suppressSpeech !== true, {
+    allowVoiceFirst: options.suppressSpeech !== true
+  });
   return true;
 }
 
-function openCountryMapFromVoice(country, response = "") {
-  if (!country) return openFullScaleUserMap(response || "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.");
+function openCountryMapFromVoice(country, response = "", options = {}) {
+  if (!country) return openFullScaleUserMap(response || "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.", options);
   const seededCountry = (data?.countries || []).find(item => item.id === country.id || normalizeSpeechForIntent(item.name) === normalizeSpeechForIntent(country.name));
   voiceMapCountryOverride = { ...(seededCountry || country) };
   if (seededCountry?.id && data?.profile) {
@@ -52602,7 +52632,7 @@ function openCountryMapFromVoice(country, response = "") {
     if (selector && [...selector.options].some(option => option.value === seededCountry.id)) selector.value = seededCountry.id;
   }
   const spoken = response || `I opened the map for ${voiceMapCountryOverride.name}. You can zoom, drag, inspect nearby regions, and add clinic, pharmacy, crop, route, or shipment tracking.`;
-  const opened = openFullScaleUserMap(spoken, { keepCountryOverride: true });
+  const opened = openFullScaleUserMap(spoken, { ...options, keepCountryOverride: true });
   setTimeout(() => {
     if (!userMap || !voiceMapCountryOverride) return;
     userMap.setView([Number(voiceMapCountryOverride.lat), Number(voiceMapCountryOverride.lng)], 6);
@@ -53695,8 +53725,8 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
     ? `I opened the real map centered on ${target.name}${payload.country ? `, ${payload.country}` : ""}.`
     : "I opened the real map. You can zoom, drag, inspect places, and plan a route.";
   const opened = country
-    ? openCountryMapFromVoice(country, response)
-    : openFullScaleUserMap(response);
+    ? openCountryMapFromVoice(country, response, { suppressSpeech: true })
+    : openFullScaleUserMap(response, { suppressSpeech: true });
   if (!opened) return false;
   document.body.dataset.genesisMapSurface = "full-scale-leaflet";
   if (target) {

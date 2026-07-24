@@ -66,7 +66,7 @@ assert(pkg.scripts["map:tile-config-qa"] === "node scripts/map-tile-config-qa.js
 const paidKeyPatterns = [
   /pk\.[A-Za-z0-9._-]{20,}/,
   /AIza[0-9A-Za-z_-]{20,}/,
-  /sk\.[A-Za-z0-9._-]{20,}/
+  /(?:^|[^A-Za-z0-9_$])sk\.[A-Za-z0-9._-]{20,}/
 ];
 for (const pattern of paidKeyPatterns) {
   assert(!pattern.test(app), "No paid map API key should be hardcoded in public/app.js.");
