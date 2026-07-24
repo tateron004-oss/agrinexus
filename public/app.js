@@ -33037,6 +33037,12 @@ function nexusCurrentMissionSnapshot() {
 }
 
 function renderNexusAgenticMissionWorkspace() {
+  if (
+    nexusActiveWorkflowState?.source === "openai-realtime"
+    && (nexusActiveWorkflowState?.id || nexusActiveWorkflowState?.functionId)
+  ) {
+    return renderNexusActiveWorkflowWorkspaceSafe();
+  }
   const mission = nexusCurrentMissionSnapshot();
   const statusOptions = ["draft", "collecting_info", "ready_to_prepare", "local_prepared", "needs_credentials", "needs_consent", "needs_confirmation", "vendor_required", "live_ready", "executed_with_receipt", "blocked_for_safety"];
   return `
