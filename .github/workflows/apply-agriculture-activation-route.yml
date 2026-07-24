@@ -1,14 +1,15 @@
-name: Apply Agriculture activation route repair
+name: Apply Agriculture and Live Knowledge activation repair
 on:
   push:
     paths:
       - ".github/workflows/apply-agriculture-activation-route.yml"
+      - "scripts/apply-agriculture-activation-route.js"
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  apply-agriculture-activation-route:
-    runs-on: self-hosted
+  apply-activation-route-repair:
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -18,17 +19,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Apply reviewed Agriculture activation repair
-        shell: powershell
+      - name: Apply and verify both activation route repairs
         run: node scripts/apply-agriculture-activation-route.js
-      - name: Publish verified runtime
-        shell: powershell
+      - name: Publish verified intact runtime
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/app.js
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw "No runtime repair was produced." }
-          git commit -m "Fix Agriculture voice activation routing"
+          git diff --cached --quiet && { echo "No runtime repair was produced."; exit 1; }
+          git commit -m "Fix Agriculture and Live Knowledge voice activation"
           git push origin HEAD:main
-# Approved retry: Agriculture activation route
