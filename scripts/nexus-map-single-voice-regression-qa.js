@@ -15,6 +15,7 @@ assert(app.includes('openCountryMapFromVoice(country, response, { suppressSpeech
 assert(app.includes('openFullScaleUserMap(response, { suppressSpeech: true })'), "Realtime maps must not start local speech.");
 assert(app.includes("[80, 180, 360, 700].forEach"), "Map rendering must retry while the visible Leaflet surface initializes.");
 assert(app.includes('allowRealtimeSurfaceChange: true,\n    source: "explicit-voice-map-navigation"'), "An explicit spoken map request must be allowed to open the visible map during Realtime.");
+assert(app.includes("return data?.permissions?.[area] !== false;"), "Realtime tool results must not crash workspace permission checks when shared data is temporarily unavailable.");
 assert(fs.existsSync(path.join(root, "public", "vendor", "leaflet", "leaflet.js")), "Local Leaflet JavaScript is missing.");
 assert(fs.existsSync(path.join(root, "public", "vendor", "leaflet", "leaflet.css")), "Local Leaflet CSS is missing.");
 

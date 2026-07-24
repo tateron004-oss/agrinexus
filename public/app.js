@@ -12383,7 +12383,7 @@ function renderEnginePanel(selector, moduleName) {
 }
 
 function can(area) {
-  return data.permissions?.[area] !== false;
+  return data?.permissions?.[area] !== false;
 }
 
 function sectionPermissionArea(sectionId) {
