@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/nexus-workspace-playwright-proof.yml
       - tests/playwright/nexus-workspace-action.spec.js
+      - playwright.workflow.config.js
   workflow_dispatch:
     inputs:
       base_url:
