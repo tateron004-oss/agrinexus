@@ -17,14 +17,9 @@ replaceExactlyOnce(
   "Agriculture/Marketplace precedence repair"
 );
 replaceExactlyOnce(
-  '  const agricultureRequest = explicitOpen && !marketplaceRequest && /\\b(agriculture|agronomy|farm support|crop issue|pest|disease|soil|irrigation)\\b/.test(lower);',
-  '  const agricultureRequest = explicitOpen && !marketplaceRequest && !knowledgeRequest && /\\b(agriculture|agronomy|farm support|crop issue|pest|disease|soil|irrigation)\\b/.test(lower);',
-  "Live Knowledge/Agriculture precedence repair"
-);
-replaceExactlyOnce(
-  '  const offlineRequest = explicitOpen && /\\b(offline|offline queue|low bandwidth|sync status)\\b/.test(lower);\\n  const knowledgeRequest = /\\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|show sources)\\b/.test(lower);',
-  '  const knowledgeRequest = /\\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|show sources)\\b/.test(lower);\\n  const offlineRequest = explicitOpen && /\\b(offline|offline queue|low bandwidth|sync status)\\b/.test(lower);',
-  "Live Knowledge declaration ordering repair"
+  '              : healthRequest ? "health"\\n                : agricultureRequest ? "agriculture"',
+  '              : healthRequest ? "health"\\n                : knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"',
+  "Live Knowledge/Agriculture workspace precedence repair"
 );
 
 fs.writeFileSync(appPath, app);
@@ -41,6 +36,6 @@ const commands = [
   ["git", ["diff", "--check"]]
 ];
 for (const [command, args] of commands) execFileSync(command, args, { cwd: root, stdio: "inherit" });
-if (!app.includes("const agricultureRequest = explicitOpen && !marketplaceRequest && !knowledgeRequest")) {
-  throw new Error("Live Knowledge must retain precedence over Agriculture.");
+if (!app.includes(': knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"')) {
+  throw new Error("Live Knowledge must retain workspace precedence over Agriculture.");
 }
