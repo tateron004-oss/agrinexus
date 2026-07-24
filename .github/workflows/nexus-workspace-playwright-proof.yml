@@ -68,4 +68,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# Post-deployment proof trigger for runtime commit 1d4f8848.
+# Final post-deployment proof trigger for restored runtime commit 33e7fdc7.
