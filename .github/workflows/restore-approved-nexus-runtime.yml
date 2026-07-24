@@ -1,0 +1,39 @@
+name: Restore Approved Nexus Workspace Runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/restore-approved-nexus-runtime.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore-approved-runtime:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore full reviewed files and apply approved repair
+        run: |
+          git checkout 5b7c98df994fc7ced5e45fad06088b2cbe9c49a5 -- public/app.js scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          git apply --check .github/restore-c03638e.patch
+          git apply .github/restore-c03638e.patch
+          git diff --check
+          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
+
+      - name: Publish exact restored runtime
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app.js scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          git commit -m "Restore full Nexus runtime workspace repair"
+          git push origin HEAD:main
