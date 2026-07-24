@@ -46,6 +46,15 @@ jobs:
       - name: Install Chromium and system dependencies
         run: npx playwright install --with-deps chromium
 
+      - name: Run live spoken voice-to-workspace proof
+        env:
+          NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
+          NEXUS_LIVE_EXPECTED_TURNS: "4"
+          NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
+        run: |
+          export CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          node scripts/nexus-genesis-live-provider-browser-smoke.js
+
       - name: Run deployed full activation-matrix proof
         id: proof
         continue-on-error: true
