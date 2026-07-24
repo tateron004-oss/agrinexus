@@ -49988,6 +49988,8 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
   const action = genesisWorkspaceActionFromFinalTranscript(command);
   if (!action) return false;
+  nexusGenesisExperienceActivated = true;
+  nexusTrueExperienceSessionStarted = true;
   lastGenesisTranscriptWorkspaceExecution = { command: normalized, at: now };
   try {
     const result = { genesisAction: action, response: command, source: "openai-realtime-final-transcript" };
