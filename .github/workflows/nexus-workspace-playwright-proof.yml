@@ -67,3 +67,5 @@ jobs:
           path: test-results/nexus-workspace-action/
           if-no-files-found: warn
           retention-days: 30
+
+# Post-deployment proof trigger for runtime commit 1d4f8848.
