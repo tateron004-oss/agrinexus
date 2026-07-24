@@ -1,0 +1,32 @@
+name: Apply Approved Nexus Activation Matrix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-approved-activation-matrix.yml
+      - scripts/apply-approved-activation-matrix.js
+
+permissions:
+  contents: write
+
+jobs:
+  apply-activation-matrix:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply and verify approved activation matrix
+        run: |
+          node scripts/apply-approved-activation-matrix.js && node --check public/app.js && git diff --check && node scripts/nexus-genesis-voice-workspace-bridge-qa.js && node scripts/nexus-browser-action-controller-qa.js && node scripts/nexus-genesis-browser-voice-acceptance-qa.js && node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js && node scripts/nexus-realtime-microphone-visibility-qa.js
+
+      - name: Publish approved activation matrix
+        run: |
+          git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com" && git add public/app.js && git commit -m "Expand Realtime workspace activation matrix" && git push origin HEAD:main

@@ -57,7 +57,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install chromium
 
-      - name: Run deployed four-workspace proof
+      - name: Run deployed full activation-matrix proof
         run: node scripts/run-nexus-workspace-proof.js
 
       - name: Preserve proof, traces, screenshots, and errors

@@ -24,6 +24,60 @@ const journeys = [
     workspace: "health",
     command: "Nexus, open Health and record blood pressure 140 over 90.",
     expected: { intakeType: "blood-pressure", systolic: "140", diastolic: "90" }
+  },
+  {
+    name: "Agriculture",
+    workspace: "agriculture",
+    command: "Nexus, open Agriculture support for a maize crop issue in Kenya.",
+    expected: { country: "Kenya" }
+  },
+  {
+    name: "Telehealth",
+    workspace: "telehealth",
+    command: "Nexus, open Telehealth intake in Kenya.",
+    expected: { country: "Kenya" }
+  },
+  {
+    name: "Mobile Clinic",
+    workspace: "mobile-clinic",
+    command: "Nexus, open Mobile Clinic support in Kenya.",
+    expected: { country: "Kenya" }
+  },
+  {
+    name: "Pharmacy",
+    workspace: "pharmacy",
+    command: "Nexus, open Pharmacy support for medication questions in Kenya.",
+    expected: { country: "Kenya" }
+  },
+  {
+    name: "Learning",
+    workspace: "learning",
+    command: "Nexus, open Learning and start a digital literacy course.",
+    expected: { learningGoal: "Nexus, open Learning and start a digital literacy course." }
+  },
+  {
+    name: "Music and Media",
+    workspace: "media",
+    command: "Nexus, open Music and Media.",
+    expected: { query: "Nexus, open Music and Media." }
+  },
+  {
+    name: "Reminders",
+    workspace: "reminders",
+    command: "Nexus, open Reminders.",
+    expected: { query: "Nexus, open Reminders." }
+  },
+  {
+    name: "Offline Queue",
+    workspace: "offline",
+    command: "Nexus, open the Offline Queue.",
+    expected: { query: "Nexus, open the Offline Queue." }
+  },
+  {
+    name: "Internet and Live Knowledge",
+    workspace: "live-knowledge",
+    command: "Nexus, use the internet to research current climate-smart agriculture information and show sources.",
+    expected: { query: "Nexus, use the internet to research current climate-smart agriculture information and show sources." }
   }
 ];
 
@@ -109,7 +163,7 @@ async function realtimeStatus(page) {
   });
 }
 
-test("four finalized transcripts open and populate existing workspaces exactly once", async ({ page }, testInfo) => {
+test("all finalized transcripts open and populate existing workspaces exactly once", async ({ page }, testInfo) => {
   const consoleErrors = [];
   page.on("console", message => {
     if (message.type() === "error") consoleErrors.push(message.text());
