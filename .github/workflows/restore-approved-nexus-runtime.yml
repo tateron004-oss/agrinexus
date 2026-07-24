@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/restore-approved-nexus-runtime.yml
+      - scripts/apply-approved-genesis-activation-repair.js
 
 permissions:
   contents: write
