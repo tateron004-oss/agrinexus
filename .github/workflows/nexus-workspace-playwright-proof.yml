@@ -27,6 +27,7 @@ jobs:
       NEXUS_PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
       NEXUS_PLAYWRIGHT_EMAIL: ${{ secrets.NEXUS_PLAYWRIGHT_EMAIL }}
       NEXUS_PLAYWRIGHT_PASSWORD: ${{ secrets.NEXUS_PLAYWRIGHT_PASSWORD }}
+      NEXUS_PLAYWRIGHT_HEADED: "true"
     steps:
       - name: Check out exact repository state
         uses: actions/checkout@v4
