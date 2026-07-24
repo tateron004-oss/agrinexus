@@ -49965,16 +49965,20 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
 
   const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
   const country = command.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i)?.[1] || "";
-  const product = command.match(/\b(?:sell|selling|list)\s+(?:some\s+)?([\p{L}'-]+)/iu)?.[1] || (/\bmaize\b/i.test(command) ? "maize" : "");
+  const quantity = command.match(/\b(\d+(?:\.\d+)?)\s*(bags?|tons?|kg|kilograms?|crates?)\b/i);
+  const product = command.match(/\b(?:bags?|tons?|kg|kilograms?|crates?)\s+of\s+([\p{L}'-]+)/iu)?.[1]
+    || command.match(/\b(?:sell|selling|list)\s+(?:some\s+)?(?:\d+(?:\.\d+)?\s*(?:bags?|tons?|kg|kilograms?|crates?)\s+(?:of\s+)?)?([\p{L}'-]+)/iu)?.[1]
+    || (/\bmaize\b/i.test(command) ? "maize" : "");
+  const bloodPressure = command.match(/\b(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})\b/i);
   const workspace = routeRequest ? "map" : workforceRequest ? "workforce" : marketplaceRequest ? "trade" : healthRequest ? "health" : "learning";
   const payload = routeRequest
     ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", country }
     : workforceRequest
       ? { query: command, jobType: /\bfarm(?:ing)?\b/i.test(command) ? "farming" : "", country }
       : marketplaceRequest
-        ? { query: command, action: /\b(?:sell|selling|list)\b/i.test(command) ? "sell" : "buy", product, country }
+        ? { query: command, action: /\b(?:sell|selling|list)\b/i.test(command) ? "sell" : "buy", quantity: quantity?.[1] || "", unit: quantity?.[2] || "", product, country }
         : healthRequest
-          ? { query: command, intake: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "blood-pressure" : "healthcare", country }
+          ? { query: command, intakeType: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "blood-pressure" : "healthcare", systolic: bloodPressure?.[1] || "", diastolic: bloodPressure?.[2] || "", country }
           : { query: command, learningGoal: command };
   return {
     type: "genesis.workspace.open",
