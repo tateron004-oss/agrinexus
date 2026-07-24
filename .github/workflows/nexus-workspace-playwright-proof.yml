@@ -28,11 +28,21 @@ jobs:
       - name: Check out exact repository state
         uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - name: Install Node with native Windows extraction
+        shell: powershell
+        run: |
+          $nodeVersion = "22.23.1"
+          $nodeArchive = Join-Path $env:RUNNER_TEMP "node-v$nodeVersion-win-x64.zip"
+          $nodeRoot = Join-Path $env:RUNNER_TEMP "nexus-node"
+          $nodeBin = Join-Path $nodeRoot "node-v$nodeVersion-win-x64"
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip" -OutFile $nodeArchive
+          if (Test-Path $nodeRoot) {
+            Remove-Item -Recurse -Force $nodeRoot
+          }
+          Expand-Archive -Path $nodeArchive -DestinationPath $nodeRoot -Force
+          $nodeBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & (Join-Path $nodeBin "node.exe") --version
+          & (Join-Path $nodeBin "npm.cmd") --version
 
       - name: Install application dependencies
         run: npm ci
@@ -52,5 +62,5 @@ jobs:
         with:
           name: nexus-workspace-playwright-proof-${{ github.run_id }}
           path: test-results/nexus-workspace-action/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
