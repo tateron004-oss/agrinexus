@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
-      NEXUS_LIVE_EXPECTED_TURNS: "4"
+      NEXUS_LIVE_EXPECTED_TURNS: "13"
       NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
       NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
       CHROME_PATH: /usr/bin/google-chrome
@@ -64,7 +64,7 @@ jobs:
       - name: Verify production release markers
         run: npm run qa:nexus-genesis-production-exact-build-smoke
 
-      - name: Drive four spoken production workflows
+      - name: Drive every spoken production workflow
         run: npm run qa:nexus-genesis-live-provider-browser-smoke
 
       - name: Publish certification evidence
