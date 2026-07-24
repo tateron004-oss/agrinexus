@@ -49960,7 +49960,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const explicitOpen = /\b(open|show|display|start|begin|launch|take me to|help me (?:find|sell|record|enter))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && /\b(job|jobs|workforce|employment|career|work search|farming work)\b/.test(lower);
-  const marketplaceRequest = (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower)) && /\b(marketplace|agritrade|buyer|seller|sell|selling|maize|crop)\b/.test(lower);
+  const marketplaceRequest = /\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\b/.test(lower)
+    && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower));
   const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
   const mobileClinicRequest = explicitOpen && /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower);
   const pharmacyRequest = explicitOpen && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
@@ -49987,7 +49988,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
           : mobileClinicRequest ? "mobile-clinic"
             : pharmacyRequest ? "pharmacy"
               : healthRequest ? "health"
-                : agricultureRequest ? "agriculture"
+                : knowledgeRequest ? "live-knowledge"
+                  : agricultureRequest ? "agriculture"
                   : learningRequest ? "learning"
                     : mediaRequest ? "media"
                       : reminderRequest ? "reminders"
