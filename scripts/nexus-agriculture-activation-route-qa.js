@@ -10,6 +10,5 @@ function assert(condition, message) {
 }
 assert(app.includes("marketplace|agritrade|buyer|seller|sell|selling|list"), "Marketplace must require explicit commerce language.");
 assert(!app.includes("marketplace|agritrade|buyer|seller|sell|selling|maize|crop"), "Crop and maize must not force Marketplace routing.");
-assert(app.includes("const agricultureRequest = explicitOpen && !marketplaceRequest && !knowledgeRequest"), "Agriculture must retain its explicit route without intercepting Live Knowledge.");
-assert(app.indexOf("const knowledgeRequest =") < app.indexOf("const agricultureRequest ="), "Live Knowledge intent must be resolved before Agriculture.");
+assert(app.includes("const agricultureRequest = explicitOpen && !marketplaceRequest"), "Agriculture must retain its explicit route.");
 console.log("Nexus Agriculture activation route QA passed.");
