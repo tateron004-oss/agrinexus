@@ -69,4 +69,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# Final post-deployment proof trigger for mission renderer runtime commit c268540d.
+# Full production activation-matrix proof trigger for runtime commit 589fc308.
