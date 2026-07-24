@@ -49972,6 +49972,46 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
 }
 
 let lastGenesisTranscriptWorkspaceExecution = { command: "", at: 0 };
+let authoritativeGenesisTranscriptRoute = null;
+
+function rememberAuthoritativeGenesisTranscriptRoute(action = {}, command = "") {
+  if (!action || action.type !== "genesis.workspace.open") return null;
+  authoritativeGenesisTranscriptRoute = {
+    action: {
+      ...action,
+      payload: { ...(action.payload || {}) }
+    },
+    command: String(command || "").trim(),
+    at: Date.now()
+  };
+  return authoritativeGenesisTranscriptRoute;
+}
+
+function authoritativeGenesisActionForTurn(action = {}, result = {}) {
+  const route = authoritativeGenesisTranscriptRoute;
+  if (!route || Date.now() - route.at > 15000) return action;
+  if (String(result?.source || "") === "openai-realtime-final-transcript") return action;
+  if (!action || action.type !== "genesis.workspace.open") return action;
+  if (String(action.workspace || "").toLowerCase() === String(route.action.workspace || "").toLowerCase()) {
+    return {
+      ...action,
+      capabilityId: route.action.capabilityId || action.capabilityId,
+      operation: route.action.operation || action.operation,
+      payload: { ...(action.payload || {}), ...(route.action.payload || {}) }
+    };
+  }
+  nexusGenesisVoiceDebugLog("workspace-route-conflict-suppressed", {
+    transcriptWorkspace: route.action.workspace || "",
+    conflictingWorkspace: action.workspace || "",
+    transcript: route.command.slice(0, 180)
+  });
+  return {
+    ...route.action,
+    requestId: action.requestId || route.action.requestId,
+    source: "openai-realtime-final-transcript-route-lock",
+    payload: { ...(action.payload || {}), ...(route.action.payload || {}) }
+  };
+}
 
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
@@ -50063,6 +50103,7 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
   const action = genesisWorkspaceActionFromFinalTranscript(command);
   if (!action) return false;
+  rememberAuthoritativeGenesisTranscriptRoute(action, command);
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;
   lastGenesisTranscriptWorkspaceExecution = { command: normalized, at: now };
@@ -53751,7 +53792,7 @@ async function runAuthoritativeGenesisWorkspaceBridge(result = {}, context = {})
   const genesisAction = result.genesisAction || result.metadata?.genesisAction || result.action || null;
   if (!genesisAction || genesisAction.type !== "genesis.workspace.open") return false;
   const requestId = String(genesisAction.requestId || context.callId || context.correlationId || "");
-  const action = { ...genesisAction, requestId };
+  const action = authoritativeGenesisActionForTurn({ ...genesisAction, requestId }, result);
   if (requestId && genesisWorkspaceBridgeRequests.has(requestId)) {
     return genesisWorkspaceBridgeRequests.get(requestId);
   }
