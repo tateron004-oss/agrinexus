@@ -17,8 +17,8 @@ replaceExactlyOnce(
   "Agriculture/Marketplace precedence repair"
 );
 replaceExactlyOnce(
-  '              : healthRequest ? "health"\\n                : agricultureRequest ? "agriculture"',
-  '              : healthRequest ? "health"\\n                : knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"',
+  '                : agricultureRequest ? "agriculture"',
+  '                : knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"',
   "Live Knowledge/Agriculture workspace precedence repair"
 );
 
