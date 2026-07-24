@@ -24103,7 +24103,7 @@ const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
   "operations-memory",
   "maps", "field-visit", "route-planning", "location-sharing",
   "email", "sms", "whatsapp", "phone-handoff", "telegram", "communications-status",
-  "music", "media", "youtube", "media-handoff",
+  "music", "media", "youtube", "media-handoff", "reminders",
   "offline", "low-bandwidth", "offline-queue", "sync-status", "local-fallback",
   "admin-review", "provider-queue", "vendor-queue", "care-team-queue", "pharmacy-queue", "mobile-clinic-queue", "agronomy-queue", "marketplace-queue", "logistics-queue", "workforce-queue", "case-timeline", "provider-response-inbox",
   "payment", "payment-gate", "booking", "booking-gate", "dispatch", "admin-approval"
@@ -24173,6 +24173,7 @@ const NEXUS_FUNCTION_WINDOW_ROUTE_MAP = Object.freeze({
   music: "media",
   youtube: "media",
   "media-handoff": "media",
+  reminders: "reminders",
   "low-bandwidth": "offline",
   "offline-queue": "offline",
   "sync-status": "offline",
@@ -24205,7 +24206,7 @@ const NEXUS_FUNCTION_WINDOW_LABELS = Object.freeze({
   "live-knowledge": "Live Knowledge Research", internet: "Internet Research", research: "Research", "source-backed-answer": "Source-backed Answer",
   maps: "Route Planning & Field Visit", "field-visit": "Route Planning & Field Visit", "route-planning": "Route Planning & Field Visit", "location-sharing": "Route Planning & Field Visit",
   email: "Communications Center", sms: "Communications Center", whatsapp: "Communications Center", "phone-handoff": "Communications Center", telegram: "Communications Center", "communications-status": "Communications Center",
-  music: "Music & Media", media: "Music & Media", youtube: "Music & Media", "media-handoff": "Music & Media",
+  music: "Music & Media", media: "Music & Media", youtube: "Music & Media", "media-handoff": "Music & Media", reminders: "Reminders",
   offline: "Offline & Low-Bandwidth Support", "low-bandwidth": "Offline & Low-Bandwidth Support", "offline-queue": "Offline & Low-Bandwidth Support", "sync-status": "Offline & Low-Bandwidth Support", "local-fallback": "Offline & Low-Bandwidth Support",
   "admin-review": "Provider & Case Queue", "provider-queue": "Provider & Case Queue", "vendor-queue": "Provider & Case Queue", "care-team-queue": "Provider & Case Queue", "pharmacy-queue": "Provider & Case Queue", "mobile-clinic-queue": "Provider & Case Queue", "agronomy-queue": "Provider & Case Queue", "marketplace-queue": "Provider & Case Queue", "logistics-queue": "Provider & Case Queue", "workforce-queue": "Provider & Case Queue", "case-timeline": "Provider & Case Queue", "provider-response-inbox": "Provider & Case Queue",
   payment: "Payment / Booking / Dispatch Gate", "payment-gate": "Payment / Booking / Dispatch Gate", booking: "Payment / Booking / Dispatch Gate", "booking-gate": "Payment / Booking / Dispatch Gate", dispatch: "Payment / Booking / Dispatch Gate", "admin-approval": "Payment / Booking / Dispatch Gate",
@@ -27685,6 +27686,7 @@ const NEXUS_CAPABILITIES = Object.freeze({
   maps: { id: "maps", title: "Maps / Field Visit", category: "maps", workflowId: "maps", aliases: ["maps", "open maps", "route planning", "farm visit planning", "mobile clinic route planning", "logistics route planning", "location-sharing gate"] },
   communications: { id: "communications", title: "Communications", category: "communications", workflowId: "communications", aliases: ["communications", "email provider status", "send by email", "sms provider status", "send sms", "whatsapp provider status", "send whatsapp", "phone handoff", "telegram handoff"] },
   "music-media": { id: "music-media", title: "Music / Media", category: "media", workflowId: "media", aliases: ["music", "media", "music media", "youtube embed", "external media handoff", "media search"] },
+  reminders: { id: "reminders", title: "Reminders", category: "platform", workflowId: "reminders", aliases: ["reminder", "reminders", "follow up", "follow-up"] },
   offline: { id: "offline", title: "Offline Support", category: "offline", workflowId: "offline", aliases: ["offline", "offline support", "offline queue", "low bandwidth", "sync status", "local fallback"] },
   "admin-review": { id: "admin-review", title: "Admin Review", category: "admin", workflowId: "resource-assistant", action: "review-queue", aliases: ["admin review", "admin queue", "provider response inbox", "case timeline"] },
   "provider-review": { id: "provider-review", title: "Provider Review", category: "admin", workflowId: "provider-support", aliases: ["provider review", "provider queue", "vendor queue", "agronomy queue", "marketplace queue", "logistics queue", "workforce queue"] },
@@ -49959,9 +49961,17 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && /\b(job|jobs|workforce|employment|career|work search|farming work)\b/.test(lower);
   const marketplaceRequest = (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower)) && /\b(marketplace|agritrade|buyer|seller|sell|selling|maize|crop)\b/.test(lower);
-  const healthRequest = explicitOpen && /\b(health|healthcare|telehealth|intake|blood pressure|hypertension|diabetes|obesity|clinic|pharmacy)\b/.test(lower);
+  const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
+  const mobileClinicRequest = explicitOpen && /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower);
+  const pharmacyRequest = explicitOpen && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
+  const healthRequest = explicitOpen && !telehealthRequest && !mobileClinicRequest && !pharmacyRequest && /\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity)\b/.test(lower);
+  const agricultureRequest = explicitOpen && !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop issue|pest|disease|soil|irrigation)\b/.test(lower);
   const learningRequest = explicitOpen && /\b(learning|literacy|course|training|lesson)\b/.test(lower);
-  if (!(routeRequest || workforceRequest || marketplaceRequest || healthRequest || learningRequest)) return null;
+  const mediaRequest = explicitOpen && /\b(music|media|youtube)\b/.test(lower);
+  const reminderRequest = explicitOpen && /\b(reminder|reminders|follow[- ]?up)\b/.test(lower);
+  const offlineRequest = explicitOpen && /\b(offline|offline queue|low bandwidth|sync status)\b/.test(lower);
+  const knowledgeRequest = /\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|show sources)\b/.test(lower);
+  if (!(routeRequest || workforceRequest || marketplaceRequest || telehealthRequest || mobileClinicRequest || pharmacyRequest || healthRequest || agricultureRequest || learningRequest || mediaRequest || reminderRequest || offlineRequest || knowledgeRequest)) return null;
 
   const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
   const country = command.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i)?.[1] || "";
@@ -49970,7 +49980,34 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
     || command.match(/\b(?:sell|selling|list)\s+(?:some\s+)?(?:\d+(?:\.\d+)?\s*(?:bags?|tons?|kg|kilograms?|crates?)\s+(?:of\s+)?)?([\p{L}'-]+)/iu)?.[1]
     || (/\bmaize\b/i.test(command) ? "maize" : "");
   const bloodPressure = command.match(/\b(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})\b/i);
-  const workspace = routeRequest ? "map" : workforceRequest ? "workforce" : marketplaceRequest ? "trade" : healthRequest ? "health" : "learning";
+  const workspace = routeRequest ? "map"
+    : workforceRequest ? "workforce"
+      : marketplaceRequest ? "trade"
+        : telehealthRequest ? "telehealth"
+          : mobileClinicRequest ? "mobile-clinic"
+            : pharmacyRequest ? "pharmacy"
+              : healthRequest ? "health"
+                : agricultureRequest ? "agriculture"
+                  : learningRequest ? "learning"
+                    : mediaRequest ? "media"
+                      : reminderRequest ? "reminders"
+                        : offlineRequest ? "offline"
+                          : "live-knowledge";
+  const capabilityId = {
+    map: "maps",
+    workforce: "workforce",
+    trade: "agritrade",
+    telehealth: "telehealth",
+    "mobile-clinic": "mobile-clinic",
+    pharmacy: "pharmacy",
+    health: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "hypertension" : "virtual-care",
+    agriculture: "agriculture",
+    learning: "learning",
+    media: "music-media",
+    reminders: "reminders",
+    offline: "offline",
+    "live-knowledge": "live-knowledge"
+  }[workspace];
   const payload = routeRequest
     ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", country }
     : workforceRequest
@@ -49979,14 +50016,17 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
         ? { query: command, action: /\b(?:sell|selling|list)\b/i.test(command) ? "sell" : "buy", quantity: quantity?.[1] || "", unit: quantity?.[2] || "", product, country }
         : healthRequest
           ? { query: command, intakeType: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "blood-pressure" : "healthcare", systolic: bloodPressure?.[1] || "", diastolic: bloodPressure?.[2] || "", country }
-          : { query: command, learningGoal: command };
+          : learningRequest
+            ? { query: command, learningGoal: command }
+            : { query: command, country };
   return {
     type: "genesis.workspace.open",
     version: 1,
     requestId: `voice-transcript-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     source: "openai-realtime-final-transcript",
     workspace,
-    operation: routeRequest ? "route" : workforceRequest ? "job_search" : marketplaceRequest ? "seller_intake" : healthRequest ? "intake" : "learning_start",
+    capabilityId,
+    operation: routeRequest ? "route" : workforceRequest ? "job_search" : marketplaceRequest ? "seller_intake" : healthRequest ? "intake" : knowledgeRequest ? "research" : "open",
     payload
   };
 }
@@ -53575,15 +53615,20 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   if (!action || action.type !== "genesis.workspace.open") return false;
   const workspace = String(action.workspace || "").toLowerCase();
   const payload = action.payload || {};
-  const section = workspace === "maps" ? "map" : workspace;
-  if (!section || !canOpenSection(section)) return false;
-  const capabilityId = {
+  const permissionSection = {
+    map: "map", workforce: "workforce", trade: "trade", health: "health",
+    telehealth: "health", "mobile-clinic": "health", pharmacy: "health",
+    agriculture: "trade", learning: "learning", media: "agent",
+    reminders: "agent", offline: "agent", "live-knowledge": "agent"
+  }[workspace];
+  if (!permissionSection || !canOpenSection(permissionSection)) return false;
+  const capabilityId = action.capabilityId || {
     map: "maps",
     workforce: "workforce",
     trade: "agritrade",
     health: /blood[- ]?pressure|hypertension|\bbp\b/i.test(Object.values(payload).join(" ")) ? "hypertension" : "telehealth",
     learning: "learning"
-  }[section] || section;
+  }[workspace] || workspace;
   const command = String(payload.query || result.response || Object.values(payload).filter(Boolean).join(" ") || "Open Nexus workspace");
   nexusGenesisVoiceDebugLog("genesis-workspace-bridge-launcher", { workspace, capabilityId, requestId: action.requestId || "" });
   const opened = openNexusCapability(capabilityId, {
