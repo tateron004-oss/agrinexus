@@ -10,10 +10,19 @@ const expectedTurns = Number(process.env.NEXUS_LIVE_EXPECTED_TURNS || 1);
 const requiredInterruptions = Number(process.env.NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT || 0);
 const requireWorkspaces = process.env.NEXUS_LIVE_REQUIRE_WORKSPACES === "1";
 const spokenJourneys = [
-  { workspace: "workforce", words: ["farming", "Nairobi"], command: "Nexus, help me find a farming job in Nairobi." },
+  { workspace: "agriculture", words: ["maize", "Kenya"], command: "Nexus, open Agriculture support for a maize crop issue in Kenya." },
+  { workspace: "health", words: ["140", "90"], command: "Nexus, open Health and record blood pressure 140 over 90." },
+  { workspace: "telehealth", words: ["Kenya"], command: "Nexus, open Telehealth intake in Kenya." },
+  { workspace: "mobile-clinic", words: ["Kenya"], command: "Nexus, open Mobile Clinic support in Kenya." },
+  { workspace: "pharmacy", words: ["medication", "Kenya"], command: "Nexus, open Pharmacy support for medication questions in Kenya." },
+  { workspace: "learning", words: ["digital literacy"], command: "Nexus, open Learning and start a digital literacy course." },
+  { workspace: "workforce", words: ["farming", "Kenya"], command: "Nexus, open Workforce and search for farming jobs in Kenya." },
+  { workspace: "trade", words: ["50", "maize"], command: "Nexus, open Marketplace and sell 50 bags of maize." },
   { workspace: "map", words: ["Nairobi", "Nakuru"], command: "Nexus, show me the best route from Nairobi to Nakuru." },
-  { workspace: "trade", words: ["maize"], command: "Nexus, help me sell maize." },
-  { workspace: "health", words: ["intake"], command: "Nexus, start a healthcare intake." }
+  { workspace: "media", words: ["Music", "Media"], command: "Nexus, open Music and Media." },
+  { workspace: "reminders", words: ["Reminders"], command: "Nexus, open Reminders." },
+  { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
+  { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
