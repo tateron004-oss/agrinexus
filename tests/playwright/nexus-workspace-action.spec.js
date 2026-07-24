@@ -79,19 +79,16 @@ async function installBoundaryObserver(page) {
 async function login(page) {
   const email = process.env.NEXUS_PLAYWRIGHT_EMAIL || "user@agrinexus.org";
   const password = process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!";
-  const result = await page.evaluate(async ({ email, password }) => {
-    const response = await fetch("/api/login", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    return { ok: response.ok, status: response.status };
-  }, { email, password });
-  expect(result, "Production login must succeed before voice acceptance").toEqual({
-    ok: true,
-    status: 200
-  });
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(password);
+  await Promise.all([
+    page.locator("#loginForm").waitFor({ state: "hidden" }),
+    page.locator("#loginForm").evaluate(form => form.requestSubmit())
+  ]);
+  await expect(
+    page.locator("#nexusPermanentMicrophoneBtn"),
+    "Production UI login must render the authenticated app before voice acceptance"
+  ).toBeEnabled();
 }
 
 async function realtimeStatus(page) {
@@ -118,7 +115,6 @@ test("four finalized transcripts open and populate existing workspaces exactly o
   await installBoundaryObserver(page);
   await page.goto("/?voiceDebug=1&voiceAcceptance=1", { waitUntil: "domcontentloaded" });
   await login(page);
-  await page.reload({ waitUntil: "domcontentloaded" });
 
   const microphone = page.locator("#nexusPermanentMicrophoneBtn");
   await expect(microphone).toBeVisible();
