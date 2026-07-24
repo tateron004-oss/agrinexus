@@ -52633,7 +52633,13 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   $("#workflowModal")?.classList.add("hidden");
   closeUserCaptionPanel();
   document.body.classList.add("user-map-full-open");
-  goSection("map", { instant: true, openDefaultAction: false, keepAssistant: false });
+  goSection("map", {
+    instant: true,
+    openDefaultAction: false,
+    keepAssistant: false,
+    allowRealtimeSurfaceChange: true,
+    source: "explicit-voice-map-navigation"
+  });
   if (experienceMode === "user") {
     renderUserSimpleActiveSection("map");
     $(`#map .user-inline-workflow`)?.classList.add("hidden");
