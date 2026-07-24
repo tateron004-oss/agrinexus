@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/restore-approved-nexus-runtime.yml
-      - scripts/apply-approved-genesis-activation-repair.js
+      - scripts/apply-approved-mission-renderer-repair.js
 
 permissions:
   contents: write
@@ -23,10 +23,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply and verify exact approved activation repair
+      - name: Apply and verify approved mission renderer repair
         run: |
-          node scripts/apply-approved-genesis-activation-repair.js && git diff --check && node scripts/nexus-genesis-voice-workspace-bridge-qa.js && git diff -- public/app.js scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          node scripts/apply-approved-mission-renderer-repair.js && node --check public/app.js && git diff --check && node scripts/nexus-genesis-mission-renderer-workspace-qa.js && node scripts/nexus-genesis-voice-workspace-bridge-qa.js && node scripts/nexus-browser-action-controller-qa.js && node scripts/nexus-genesis-browser-voice-acceptance-qa.js && node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js && node scripts/nexus-realtime-microphone-visibility-qa.js
 
-      - name: Publish exact approved activation repair
+      - name: Publish approved mission renderer repair
         run: |
-          git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com" && git add public/app.js scripts/nexus-genesis-voice-workspace-bridge-qa.js && git commit -m "Apply approved Genesis workspace activation repair" && git push origin HEAD:main
+          git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com" && git add public/app.js && git commit -m "Mount voice function window in mission renderer" && git push origin HEAD:main
