@@ -11,7 +11,7 @@ const journeys = [
     name: "Workforce",
     workspace: "workforce",
     command: "Nexus, open Workforce and search for farming jobs in Kenya.",
-    expected: { jobType: "farming", location: "Kenya" }
+    expected: { jobType: "farming", country: "Kenya" }
   },
   {
     name: "Marketplace",
