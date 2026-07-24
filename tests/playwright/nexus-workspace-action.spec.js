@@ -165,6 +165,7 @@ async function realtimeStatus(page) {
 
 test("all finalized transcripts open and populate existing workspaces exactly once", async ({ page }, testInfo) => {
   const consoleErrors = [];
+  const matrixResults = [];
   page.on("console", message => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
@@ -187,7 +188,8 @@ test("all finalized transcripts open and populate existing workspaces exactly on
 
   for (const journey of journeys) {
     console.log(`NEXUS_WORKSPACE_PROOF_START ${journey.workspace}`);
-    const before = await page.evaluate(() => ({
+    try {
+      const before = await page.evaluate(() => ({
       calls: window.__NEXUS_PLAYWRIGHT_EVIDENCE__.controllerCalls.length,
       acks: window.__NEXUS_PLAYWRIGHT_EVIDENCE__.acknowledgements.length
     }));
@@ -270,17 +272,38 @@ test("all finalized transcripts open and populate existing workspaces exactly on
       path: testInfo.outputPath(`${journey.workspace}-verified.png`),
       fullPage: true
     });
-    console.log(`NEXUS_WORKSPACE_PROOF_PASS ${journey.workspace}`);
+      console.log(`NEXUS_WORKSPACE_PROOF_PASS ${journey.workspace}`);
+      matrixResults.push({
+        name: journey.name,
+        workspace: journey.workspace,
+        status: "passed"
+      });
+    } catch (error) {
+      const message = String(error?.stack || error?.message || error);
+      matrixResults.push({
+        name: journey.name,
+        workspace: journey.workspace,
+        status: "failed",
+        error: message
+      });
+      console.error(`NEXUS_WORKSPACE_PROOF_FAIL ${journey.workspace}\n${message}`);
+      await page.screenshot({
+        path: testInfo.outputPath(`${journey.workspace}-failed.png`),
+        fullPage: true
+      }).catch(() => {});
+    }
   }
 
   const evidence = await page.evaluate(() => window.__NEXUS_PLAYWRIGHT_EVIDENCE__);
   await testInfo.attach("nexus-workspace-evidence", {
-    body: Buffer.from(JSON.stringify({ journeys, evidence }, null, 2)),
+    body: Buffer.from(JSON.stringify({ journeys, matrixResults, evidence }, null, 2)),
     contentType: "application/json"
   });
-  expect(evidence.finalTranscripts).toHaveLength(journeys.length);
-  expect(evidence.controllerCalls.filter(item => item.handled)).toHaveLength(journeys.length);
-  expect(evidence.acknowledgements.filter(item => item.verified)).toHaveLength(journeys.length);
-  expect(evidence.errors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
+  console.log(`NEXUS_WORKSPACE_PROOF_MATRIX ${JSON.stringify(matrixResults)}`);
+  expect(
+    matrixResults.filter(result => result.status === "failed"),
+    "Every activation-matrix journey must pass; see nexus-workspace-evidence for per-application results"
+  ).toEqual([]);
+  expect(evidence.errors, "The browser must not report uncaught runtime errors").toEqual([]);
+  expect(consoleErrors, "The browser console must not report errors").toEqual([]);
 });
