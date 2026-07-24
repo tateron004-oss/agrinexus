@@ -229,15 +229,21 @@ async function main() {
     await cdp.send("Page.navigate", { url: `${baseUrl}/?voiceDebug=1&voiceAcceptance=1` });
     await waitFor(() => evaluate(cdp, "document.readyState === 'complete'"), 15000, "Nexus page load");
     acceptanceStage = "login";
-    const login = await evaluate(cdp, `fetch('/api/login', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {'content-type':'application/json'},
-      body: JSON.stringify({email:'demo@agrinexus.org',password:'Prototype2026!'})
-    }).then(response => ({ok:response.ok,status:response.status}))`);
-    assert.equal(login.ok, true, `Login failed with ${login.status}`);
-    acceptanceStage = "post-login-reload";
-    await cdp.send("Page.navigate", { url: `${baseUrl}/?voiceDebug=1&voiceAcceptance=1` });
+    await evaluate(cdp, `(() => {
+      const email = document.querySelector('#email');
+      const password = document.querySelector('#password');
+      const form = document.querySelector('#loginForm');
+      if (!email || !password || !form) return false;
+      email.value = 'demo@agrinexus.org';
+      password.value = 'Prototype2026!';
+      form.requestSubmit();
+      return true;
+    })()`);
+    await waitFor(() => evaluate(cdp, `Boolean(
+      document.querySelector("#loginForm")?.classList.contains("hidden")
+      || document.querySelector("#loginView")?.classList.contains("hidden")
+    )`), 20000, "authenticated Nexus application");
+    acceptanceStage = "post-login-ready";
     await waitFor(() => evaluate(cdp, `Boolean(document.querySelector("#nexusPermanentMicrophoneBtn")?.dataset.nexusMicBound === "true")`), 20000, "bound microphone control");
     acceptanceStage = "mic-click";
     await evaluate(cdp, "document.querySelector('#nexusPermanentMicrophoneBtn').click(); true");
