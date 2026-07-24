@@ -56,17 +56,17 @@ async function installBoundaryObserver(page) {
       get: () => controller,
       set(value) {
         controller = {
-          actionFor: value.actionFor.bind(value),
-          handleFinalUserTranscript(input) {
-            const result = value.handleFinalUserTranscript(input);
+          actionFor: typeof value.actionFor === "function" ? value.actionFor.bind(value) : undefined,
+          handleFinalUserTranscript(input, actionBuilder) {
+            const result = value.handleFinalUserTranscript(input, actionBuilder);
             evidence.controllerCalls.push({
               at: Date.now(),
               transcript: String(input?.transcript || ""),
               transcriptId: String(input?.transcriptId || ""),
               handled: result?.handled === true,
               duplicate: result?.duplicate === true,
-              workspace: String(result?.action?.workspace || ""),
-              requestId: String(result?.action?.requestId || "")
+              workspace: String(result?.workspace || result?.action?.workspace || ""),
+              requestId: String(result?.requestId || result?.action?.requestId || "")
             });
             return result;
           }
@@ -138,16 +138,25 @@ test("four finalized transcripts open and populate existing workspaces exactly o
       acks: window.__NEXUS_PLAYWRIGHT_EVIDENCE__.acknowledgements.length
     }));
 
-    const execution = await page.evaluate(async command => {
+    const execution = await page.evaluate(async ({ command, workspace }) => {
       window.__NEXUS_PLAYWRIGHT_EVIDENCE__.finalTranscripts.push({
         at: Date.now(),
         role: "user",
         final: true,
         transcript: command
       });
-      const accepted = await window.executeGenesisWorkspaceFromFinalTranscript(command);
-      return { accepted };
-    }, journey.command);
+      const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({
+        transcript: command,
+        transcriptId: `playwright-${workspace}-${Date.now()}`,
+        sessionId: "playwright-deployed-workspace-proof",
+        role: "user",
+        isFinal: true
+      }, transcript => window.genesisWorkspaceActionFromFinalTranscript(transcript));
+      const accepted = controllerResult?.handled === true
+        && await window.executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+      return { accepted, handled: controllerResult?.handled === true };
+    }, { command: journey.command, workspace: journey.workspace });
+    expect(execution.handled, `${journey.name} final transcript must be handled by the Browser Action Controller`).toBe(true);
     expect(execution.accepted, `${journey.name} command must receive verified acknowledgement`).toBe(true);
 
     await expect.poll(async () => page.evaluate(({ before, workspace }) => {
