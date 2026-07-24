@@ -77,6 +77,10 @@ async function installBoundaryObserver(page) {
 }
 
 async function login(page) {
+  await page.waitForFunction(() =>
+    typeof window.NexusGenesisRealtimeClientStatus === "function"
+    && typeof window.executeGenesisWorkspaceFromFinalTranscript === "function"
+  );
   const email = process.env.NEXUS_PLAYWRIGHT_EMAIL || "user@agrinexus.org";
   const password = process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!";
   await page.locator("#email").fill(email);
