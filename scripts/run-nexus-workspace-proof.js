@@ -11,7 +11,8 @@ const child = spawn(command, [
   "--config=playwright.workflow.config.js"
 ], {
   stdio: "inherit",
-  windowsHide: false
+  windowsHide: false,
+  shell: process.platform === "win32"
 });
 
 let settled = false;
