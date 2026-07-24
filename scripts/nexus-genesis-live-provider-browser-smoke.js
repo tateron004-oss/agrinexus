@@ -238,20 +238,23 @@ async function main() {
     await cdp.send("Page.navigate", { url: `${baseUrl}/?voiceDebug=1&voiceAcceptance=1` });
     await waitFor(() => evaluate(cdp, "document.readyState === 'complete'"), 15000, "Nexus page load");
     acceptanceStage = "login";
-    await evaluate(cdp, `(() => {
+    await waitFor(() => evaluate(cdp, `(() => {
+      const app = document.querySelector('#appView');
+      if (app && !app.classList.contains('hidden')) return true;
+      const form = document.querySelector('#loginForm');
       const email = document.querySelector('#email');
       const password = document.querySelector('#password');
-      const form = document.querySelector('#loginForm');
-      if (!email || !password || !form) return false;
-      email.value = 'user@agrinexus.org';
-      password.value = 'User2026!';
-      form.requestSubmit();
-      return true;
-    })()`);
-    await waitFor(() => evaluate(cdp, `Boolean(
-      document.querySelector("#loginForm")?.classList.contains("hidden")
-      || document.querySelector("#loginView")?.classList.contains("hidden")
-    )`), 20000, "authenticated Nexus application");
+      if (!form || !email || !password) return false;
+      const now = Date.now();
+      if (!window.__NEXUS_ACCEPTANCE_LOGIN_SUBMITTED_AT__
+        || now - window.__NEXUS_ACCEPTANCE_LOGIN_SUBMITTED_AT__ > 5000) {
+        window.__NEXUS_ACCEPTANCE_LOGIN_SUBMITTED_AT__ = now;
+        email.value = 'user@agrinexus.org';
+        password.value = 'User2026!';
+        form.requestSubmit();
+      }
+      return false;
+    })()`), 45000, "authenticated Nexus application");
     acceptanceStage = "post-login-ready";
     await waitFor(() => evaluate(cdp, `Boolean(document.querySelector("#nexusPermanentMicrophoneBtn")?.dataset.nexusMicBound === "true")`), 20000, "bound microphone control");
     acceptanceStage = "mic-click";
