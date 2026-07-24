@@ -24,6 +24,7 @@ module.exports = defineConfig({
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     permissions: ["microphone"],
+    serviceWorkers: "block",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
