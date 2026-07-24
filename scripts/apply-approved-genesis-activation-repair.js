@@ -16,11 +16,9 @@ const replacement = [
   "  lastGenesisTranscriptWorkspaceExecution = { command: normalized, at: now };"
 ].join("\n");
 
-if ((app.match(/nexusGenesisExperienceActivated = true;/g) || []).length > 1) {
-  throw new Error("Refusing repair: activation assignment is not unique.");
-}
 if (!app.includes(replacement)) {
-  if (!app.includes(marker)) throw new Error("Refusing repair: approved insertion marker was not found.");
+  const matches = app.split(marker).length - 1;
+  if (matches !== 1) throw new Error(`Refusing repair: expected one approved insertion marker, found ${matches}.`);
   fs.writeFileSync(appPath, app.replace(marker, replacement));
 }
 
