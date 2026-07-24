@@ -11,16 +11,19 @@ function replaceExactlyOnce(oldText, newText, label) {
   app = app.replace(oldText, newText);
 }
 
-replaceExactlyOnce(
-  '  const marketplaceRequest = (explicitOpen || /\\b(?:sell|selling|list)\\b/.test(lower)) && /\\b(marketplace|agritrade|buyer|seller|sell|selling|maize|crop)\\b/.test(lower);',
-  '  const marketplaceRequest = /\\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\\b/.test(lower)\\n    && (explicitOpen || /\\b(?:sell|selling|list)\\b/.test(lower));',
-  "Agriculture/Marketplace precedence repair"
-);
-replaceExactlyOnce(
-  '                : agricultureRequest ? "agriculture"',
-  '                : knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"',
-  "Live Knowledge/Agriculture workspace precedence repair"
-);
+const marketplaceOld = '  const marketplaceRequest = (explicitOpen || /\\b(?:sell|selling|list)\\b/.test(lower)) && /\\b(marketplace|agritrade|buyer|seller|sell|selling|maize|crop)\\b/.test(lower);';
+const marketplaceNew = [
+  '  const marketplaceRequest = /\\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\\b/.test(lower)',
+  '    && (explicitOpen || /\\b(?:sell|selling|list)\\b/.test(lower));'
+].join("\n");
+replaceExactlyOnce(marketplaceOld, marketplaceNew, "Agriculture/Marketplace precedence repair");
+
+const workspaceOld = '                : agricultureRequest ? "agriculture"';
+const workspaceNew = [
+  '                : knowledgeRequest ? "live-knowledge"',
+  '                  : agricultureRequest ? "agriculture"'
+].join("\n");
+replaceExactlyOnce(workspaceOld, workspaceNew, "Live Knowledge/Agriculture workspace precedence repair");
 
 fs.writeFileSync(appPath, app);
 const commands = [
@@ -36,6 +39,4 @@ const commands = [
   ["git", ["diff", "--check"]]
 ];
 for (const [command, args] of commands) execFileSync(command, args, { cwd: root, stdio: "inherit" });
-if (!app.includes(': knowledgeRequest ? "live-knowledge"\\n                  : agricultureRequest ? "agriculture"')) {
-  throw new Error("Live Knowledge must retain workspace precedence over Agriculture.");
-}
+if (!app.includes(workspaceNew)) throw new Error("Live Knowledge must retain workspace precedence over Agriculture.");
