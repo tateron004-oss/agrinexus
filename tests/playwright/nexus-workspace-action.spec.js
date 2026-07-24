@@ -4,8 +4,8 @@ const journeys = [
   {
     name: "Maps",
     workspace: "map",
-    command: "Nexus, open Maps and plan a route from Nairobi to Nakuru.",
-    expected: { origin: "Nairobi", destination: "Nakuru" }
+    command: "Nexus, show me a map of Nairobi, Kenya.",
+    expected: { location: "Nairobi", country: "Kenya" }
   },
   {
     name: "Workforce",
@@ -241,6 +241,13 @@ test("all finalized transcripts open and populate existing workspaces exactly on
         bodyWorkspace: document.body.dataset.genesisWorkspace || "",
         bodyRequestId: document.body.dataset.genesisWorkspaceRequestId || "",
         workspaceVisible: Boolean(host && host.getClientRects().length),
+        mapProof: workspace === "map" ? {
+          fullScaleOpen: document.body.classList.contains("user-map-full-open"),
+          surface: document.body.dataset.genesisMapSurface || "",
+          location: document.body.dataset.genesisMapLocation || "",
+          canvasVisible: Boolean(document.querySelector("#userMapCanvas.leaflet-container")?.getClientRects().length),
+          leafletReady: Boolean(document.querySelector("#userMapCanvas")?._leaflet_id)
+        } : null,
         values,
         acknowledgement: ack,
         expected
@@ -250,6 +257,15 @@ test("all finalized transcripts open and populate existing workspaces exactly on
     expect(proof.bodyWorkspace).toBe(journey.workspace);
     expect(proof.bodyRequestId).toBeTruthy();
     expect(proof.workspaceVisible).toBe(true);
+    if (journey.workspace === "map") {
+      expect(proof.mapProof).toMatchObject({
+        fullScaleOpen: true,
+        surface: "full-scale-leaflet",
+        location: "Nairobi",
+        canvasVisible: true,
+        leafletReady: true
+      });
+    }
     expect(proof.values).toMatchObject(journey.expected);
     expect(proof.acknowledgement).toMatchObject({
       requestId: proof.bodyRequestId,
@@ -259,6 +275,7 @@ test("all finalized transcripts open and populate existing workspaces exactly on
       microphoneActive: true,
       realtimeConnected: true,
       verified: true,
+      ...(journey.workspace === "map" ? { mapRendered: true } : {}),
       error: null
     });
 

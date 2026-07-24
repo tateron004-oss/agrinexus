@@ -49976,6 +49976,9 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
 
   const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
   const country = command.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i)?.[1] || "";
+  const mapLocation = routeRequest && !route
+    ? command.match(/\b(?:map|maps)\s+(?:of|for|showing)\s+(.+?)(?=,?\s+(?:Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b|[.!?]|$)/i)?.[1]?.trim() || ""
+    : "";
   const quantity = command.match(/\b(\d+(?:\.\d+)?)\s*(bags?|tons?|kg|kilograms?|crates?)\b/i);
   const product = command.match(/\b(?:bags?|tons?|kg|kilograms?|crates?)\s+of\s+([\p{L}'-]+)/iu)?.[1]
     || command.match(/\b(?:sell|selling|list)\s+(?:some\s+)?(?:\d+(?:\.\d+)?\s*(?:bags?|tons?|kg|kilograms?|crates?)\s+(?:of\s+)?)?([\p{L}'-]+)/iu)?.[1]
@@ -50011,7 +50014,7 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
     "live-knowledge": "live-knowledge"
   }[workspace];
   const payload = routeRequest
-    ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", country }
+    ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", location: mapLocation, country }
     : workforceRequest
       ? { query: command, jobType: /\bfarm(?:ing)?\b/i.test(command) ? "farming" : "", country }
       : marketplaceRequest
@@ -53633,12 +53636,14 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   }[workspace] || workspace;
   const command = String(payload.query || result.response || Object.values(payload).filter(Boolean).join(" ") || "Open Nexus workspace");
   nexusGenesisVoiceDebugLog("genesis-workspace-bridge-launcher", { workspace, capabilityId, requestId: action.requestId || "" });
-  const opened = openNexusCapability(capabilityId, {
-    command,
-    source: "openai-realtime",
-    sourceSurface: "voice_audio",
-    instant: true
-  });
+  const opened = workspace === "map"
+    ? openGenesisRealtimeMapWorkspace(payload, command)
+    : openNexusCapability(capabilityId, {
+      command,
+      source: "openai-realtime",
+      sourceSurface: "voice_audio",
+      instant: true
+    });
   if (!opened) return false;
   const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   if (host) {
@@ -53664,10 +53669,50 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   document.body.dataset.genesisWorkspace = workspace;
   document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
   if (workspace === "map" && payload.country) document.body.dataset.genesisMapCountry = String(payload.country);
+  if (workspace === "map" && payload.location) document.body.dataset.genesisMapLocation = String(payload.location);
   const visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled) || voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
   if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
   return ack.visible;
+}
+
+function genesisRealtimeMapTarget(payload = {}) {
+  const normalized = normalizeSpeechForIntent(payload.location || payload.destination || payload.origin || "");
+  const targets = {
+    nairobi: { name: "Nairobi", lat: -1.286389, lng: 36.817223, zoom: 12 },
+    niorobi: { name: "Nairobi", lat: -1.286389, lng: 36.817223, zoom: 12 },
+    nakuru: { name: "Nakuru", lat: -0.303099, lng: 36.080025, zoom: 12 },
+    mombasa: { name: "Mombasa", lat: -4.043477, lng: 39.668206, zoom: 12 },
+    kisumu: { name: "Kisumu", lat: -0.091702, lng: 34.767956, zoom: 12 }
+  };
+  return targets[normalized] || null;
+}
+
+function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
+  const country = africanMapCountryTarget(payload.country || command);
+  const target = genesisRealtimeMapTarget(payload);
+  const response = target
+    ? `I opened the real map centered on ${target.name}${payload.country ? `, ${payload.country}` : ""}.`
+    : "I opened the real map. You can zoom, drag, inspect places, and plan a route.";
+  const opened = country
+    ? openCountryMapFromVoice(country, response)
+    : openFullScaleUserMap(response);
+  if (!opened) return false;
+  document.body.dataset.genesisMapSurface = "full-scale-leaflet";
+  if (target) {
+    document.body.dataset.genesisMapLocation = target.name;
+    window.setTimeout(() => {
+      if (!userMap) return;
+      userMap.setView([target.lat, target.lng], target.zoom);
+      userMapLayers.markers?.clearLayers?.();
+      L.marker([target.lat, target.lng])
+        .addTo(userMapLayers.markers)
+        .bindPopup(`<strong>${escapeHtml(target.name)}</strong>`)
+        .openPopup();
+      safeInvalidateLeafletMap(userMap);
+    }, 360);
+  }
+  return true;
 }
 
 const genesisWorkspaceBridgeRequests = new Map();
@@ -53747,7 +53792,12 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
   const sdkMicrophoneProof = normalizeRealtimeMicrophoneProof(realtimeVoiceSession?.sdkController);
   const microphoneActive = Boolean(sdkMicrophoneProof.hasLiveTrack || nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled));
   const realtimeConnected = Boolean(realtimeVoiceActive?.() || realtimeVoiceSession?.active === true || window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected");
-  const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace);
+  const visibleMap = workspace !== "map" || Boolean(
+    document.body.dataset.genesisMapSurface === "full-scale-leaflet"
+    && document.body.classList.contains("user-map-full-open")
+    && document.querySelector("#userMapCanvas.leaflet-container")
+  );
+  const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace && visibleMap);
   const verified = visible && populatedFields.length === expected.length && microphoneActive && realtimeConnected;
   const ack = {
     type: "genesis.workspace.acknowledged",
@@ -53755,6 +53805,7 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
     workspace,
     opened: visible,
     visible,
+    mapRendered: workspace === "map" ? visibleMap : undefined,
     populatedFields,
     populatedValues: Object.fromEntries(expected.filter(([key]) => populatedFields.includes(key))),
     microphoneActive,
