@@ -234,8 +234,8 @@ async function main() {
       const password = document.querySelector('#password');
       const form = document.querySelector('#loginForm');
       if (!email || !password || !form) return false;
-      email.value = 'demo@agrinexus.org';
-      password.value = 'Prototype2026!';
+      email.value = 'user@agrinexus.org';
+      password.value = 'User2026!';
       form.requestSubmit();
       return true;
     })()`);
