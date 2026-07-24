@@ -1,0 +1,32 @@
+name: Apply Nexus Workspace Entity Parser Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-workspace-entity-parser-repair.yml
+      - scripts/apply-workspace-entity-parser-repair.js
+
+permissions:
+  contents: write
+
+jobs:
+  apply-runtime-repair:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply and verify entity parser repair
+        run: |
+          node scripts/apply-workspace-entity-parser-repair.js && node --check public/app.js && git diff --check && node scripts/nexus-genesis-voice-workspace-bridge-qa.js && node scripts/nexus-browser-action-controller-qa.js
+
+      - name: Publish entity parser repair
+        run: |
+          git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com" && git add public/app.js && git commit -m "Preserve workspace entities from voice transcripts" && git push origin HEAD:main
