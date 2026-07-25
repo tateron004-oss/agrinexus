@@ -1,0 +1,77 @@
+name: Repair Nexus build 492 workspace handoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-build-492-workspace-handoff.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Repair shared voice workspace handoff
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const appPath = "public/app.js";
+          let app = fs.readFileSync(appPath, "utf8");
+          const broken = `  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
+    document.body.classList.remove("user-map-full-open");
+    goSection("dashboard", {
+      instant: true,
+      scroll: false,
+      openDefaultAction: false,
+      keepAssistant: false,
+      allowRealtimeSurfaceChange: true,
+      source: "realtime-workspace-transition"
+    });
+    if (experienceMode === "user") renderUserWorkspace();
+  }`;
+          const fixed = `  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
+    document.body.classList.remove("user-map-full-open");
+  }`;
+          if (!app.includes(broken)) throw new Error("Expected build 491 rerender block not found");
+          app = app.replace(broken, fixed);
+          fs.writeFileSync(appPath, app);
+          const roots = ["public", "scripts", "server.js"];
+          const files = [];
+          const walk = p => {
+            const stat = fs.statSync(p);
+            if (stat.isDirectory()) for (const name of fs.readdirSync(p)) walk(path.join(p, name));
+            else if (/\.(js|html|txt)$/.test(p) || p === "server.js") files.push(p);
+          };
+          for (const root of roots) if (fs.existsSync(root)) walk(root);
+          for (const file of files) {
+            let text = fs.readFileSync(file, "utf8");
+            const next = text.replaceAll("nexus-behavior-491", "nexus-behavior-492").replaceAll("agrinexus-pwa-v436", "agrinexus-pwa-v437");
+            if (next !== text) fs.writeFileSync(file, next);
+          }
+          NODE
+      - name: Validate protected runtime
+        run: |
+          node --check server.js
+          node --check public/app.js
+          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+      - name: Publish repaired build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public server.js scripts
+          git commit -m "Restore Nexus voice workspace acknowledgements"
+          git push origin main
