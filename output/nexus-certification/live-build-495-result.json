@@ -1,9 +1,9 @@
 {
   "build": "nexus-behavior-495",
-  "workflowCommit": "b5d60018ed9b3ec76fbba0ed7c6607f060fc4d8f",
-  "outcome": "failure",
-  "recordedAt": "2026-07-25T05:27:36.196Z",
+  "workflowCommit": "9b7bd99fe041eba341f2e7de6ce1ff23702c99b7",
+  "outcome": "success",
+  "recordedAt": "2026-07-25T05:58:25.644Z",
   "diagnosticTail": [
-    "> agrinexus-fullstack@1.0.0 qa:nexus-genesis-live-provider-browser-smoke\n> node scripts/nexus-genesis-live-provider-browser-smoke.js\n\n{\"ok\":false,\"suite\":\"nexus-genesis-live-provider-browser-smoke\",\"errorName\":\"Error\",\"errorMessage\":\"Timed out waiting for Chrome debugging endpoint\",\"errorCategory\":\"timeout\",\"stage\":\"cdp-ready\",\"failureReason\":\"unclassified\",\"progress\":{\"speechStartedCount\":0,\"responseDoneCount\":0,\"eventCount\":0},\"secretValuesReturned\":false,\"diagnostics\":null,\"browserDiagnostics\":{\"exceptions\":[],\"console\":[],\"failedRequests\":[],\"responses\":[]}}"
+    "> agrinexus-fullstack@1.0.0 qa:nexus-genesis-live-provider-browser-smoke\n> node scripts/nexus-genesis-live-provider-browser-smoke.js"
   ]
 }\n
