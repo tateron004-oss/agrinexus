@@ -8,4 +8,6 @@ checks.push(['offline queue phrase activates without transcription-sensitive ope
 checks.push(['non-map voice route closes full map surface',app.includes('workspace !== "map" && document.body.classList.contains("user-map-full-open")')&&!app.includes('source: "realtime-workspace-transition"')]);
 const failed=checks.filter(([,ok])=>!ok); const report={ok:failed.length===0,suite:'nexus-genesis-voice-workspace-bridge-qa',checks:checks.map(([name,ok])=>({name,ok})),failed}; fs.mkdirSync(path.join(root,'output/nexus-certification/voice-workspace-bridge'),{recursive:true}); fs.writeFileSync(path.join(root,'output/nexus-certification/voice-workspace-bridge/report.json'),JSON.stringify(report,null,2)); console.log(JSON.stringify(report)); process.exitCode=report.ok?0:1;
 
+checks.push(['voice action activates visible user workspace',app.includes('setExperienceMode("user", { persist: false, announceChange: false })')&&app.includes('experienceMode !== "user" || !document.body.classList.contains("user-mode")')]);
+
 checks.push(['final transcript entities survive delayed Realtime tool completion',app.includes('Date.now() - route.at > 45000')&&app.includes('payload: { ...(action.payload || {}), ...(route.action.payload || {}) }')]);

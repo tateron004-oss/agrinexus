@@ -169,7 +169,7 @@ check("safe suites include experience polish QA", hasAll(qaSuite, [
 ]));
 
 check("build token bumped with frontend change", hasAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-494"'
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-495"'
 ]));
 
 if (failures) {

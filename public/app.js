@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-494";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v439";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-495";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v440";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -53736,6 +53736,9 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   }[workspace] || workspace;
   const command = String(payload.query || result.response || Object.values(payload).filter(Boolean).join(" ") || "Open Nexus workspace");
   nexusGenesisVoiceDebugLog("genesis-workspace-bridge-launcher", { workspace, capabilityId, requestId: action.requestId || "" });
+  if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
+    setExperienceMode("user", { persist: false, announceChange: false });
+  }
   const opened = workspace === "map"
     ? openGenesisRealtimeMapWorkspace(payload, command)
     : openNexusCapability(capabilityId, {
