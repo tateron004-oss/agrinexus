@@ -46,7 +46,8 @@ function ensureSyntheticFixture() {
     const silence = path.join(outputDir, `silence-${index}.wav`);
     const spoken = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", `flite=text='${journey.command.replace(/'/g, "")}'`, "-ar", "48000", "-ac", "1", speech], { encoding: "utf8" });
     assert.equal(spoken.status, 0, `Could not synthesize journey ${index + 1}: ${spoken.stderr}`);
-    const quiet = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "5", silence], { encoding: "utf8" });
+    const silenceSeconds = ["health", "telehealth", "mobile-clinic"].includes(journey.workspace) ? "12" : "7";
+    const quiet = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", silenceSeconds, silence], { encoding: "utf8" });
     assert.equal(quiet.status, 0, `Could not synthesize silence ${index + 1}: ${quiet.stderr}`);
     parts.push(speech, silence);
   });
