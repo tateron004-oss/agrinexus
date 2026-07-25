@@ -106,4 +106,4 @@ jobs:
         if: always() && steps.voice.outcome != 'success'
         run: exit 1
 
-# Build 495 evidence-rich spoken certification trigger 2026-07-24T22:24:00-07:00.
+# Build 495 fresh-run spoken certification trigger 2026-07-24T22:29:00-07:00.
