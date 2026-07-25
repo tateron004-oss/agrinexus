@@ -1,6 +1,6 @@
 {
   "build": "nexus-behavior-495",
-  "workflowCommit": "1621e7f8b5474cdd67cf99105603242589aa1161",
-  "outcome": "skipped",
-  "recordedAt": "2026-07-25T05:04:16.815Z"
+  "workflowCommit": "7feeec68413bffbbcd44354d06902584b1979e4d",
+  "outcome": "failure",
+  "recordedAt": "2026-07-25T05:21:48.340Z"
 }
