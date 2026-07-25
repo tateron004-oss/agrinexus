@@ -65,7 +65,15 @@ jobs:
         run: npm run qa:nexus-genesis-production-exact-build-smoke
 
       - name: Drive every spoken production workflow
-        run: npm run qa:nexus-genesis-live-provider-browser-smoke
+        run: |
+          set +e
+          npm run qa:nexus-genesis-live-provider-browser-smoke 2>&1 | tee /tmp/nexus-voice-result.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            summary=$(tail -n 1 /tmp/nexus-voice-result.log | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=Nexus voice evidence::$summary"
+          fi
+          exit "$status"
 
       - name: Publish certification evidence
         if: always()
@@ -78,4 +86,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# Build 491 final live certification trigger.
+# Build 491 diagnostic voice certification trigger.
