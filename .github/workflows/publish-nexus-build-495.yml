@@ -1,0 +1,74 @@
+name: Publish Nexus build 495
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-nexus-build-495.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Apply exact build 495 repair
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [
+            Path("public/app.js"), Path("public/index.html"), Path("public/sw.js"), Path("server.js"),
+            *Path("scripts").glob("*.js")
+          ]
+          for path in files:
+            text = path.read_text(encoding="utf-8")
+            text = text.replace("nexus-behavior-494", "nexus-behavior-495")
+            text = text.replace("agrinexus-pwa-v439", "agrinexus-pwa-v440")
+            path.write_text(text, encoding="utf-8")
+          app = Path("public/app.js")
+          text = app.read_text(encoding="utf-8")
+          anchor = '  nexusGenesisVoiceDebugLog("genesis-workspace-bridge-launcher", { workspace, capabilityId, requestId: action.requestId || "" });\n'
+          addition = '  if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {\n    setExperienceMode("user", { persist: false, announceChange: false });\n  }\n'
+          if addition not in text:
+            if anchor not in text:
+              raise SystemExit("dispatcher anchor missing")
+            text = text.replace(anchor, anchor + addition, 1)
+          app.write_text(text, encoding="utf-8")
+          qa = Path("scripts/nexus-genesis-voice-workspace-bridge-qa.js")
+          text = qa.read_text(encoding="utf-8")
+          check = '''checks.push(['voice action activates visible user workspace',app.includes('setExperienceMode("user", { persist: false, announceChange: false })')&&app.includes('experienceMode !== "user" || !document.body.classList.contains("user-mode")')]);\n'''
+          marker = "checks.push(['final transcript entities survive delayed Realtime tool completion'"
+          if check not in text:
+            if marker not in text:
+              raise SystemExit("QA anchor missing")
+            text = text.replace(marker, check + "\n" + marker, 1)
+          qa.write_text(text, encoding="utf-8")
+          PY
+      - name: Run protected voice gates
+        run: |
+          node --check public/app.js
+          node --check server.js
+          git diff --check
+          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          node scripts/nexus-genesis-realtime-production-migration-qa.js
+          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
+          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+      - name: Publish verified repair
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app.js public/index.html public/sw.js server.js scripts
+          git commit -m "Activate visible workspace before Realtime launch"
+          git push origin HEAD:main
