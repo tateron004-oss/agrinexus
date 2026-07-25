@@ -1,4 +1,4 @@
-name: Repair Nexus build 488 source corruption
+name: Release Nexus build 489 voice routing repair
 
 on:
   push:
@@ -16,11 +16,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restore intact sources and apply build 488 repair
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Preserve final Realtime speech metadata
         shell: bash
         run: |
           set -euo pipefail
-          git restore --source=67649435 -- server.js public/app.js public/index.html public/sw.js
           node <<'NODE'
           const fs = require('fs');
           function replace(path, before, after) {
@@ -28,37 +31,74 @@ jobs:
             if (!source.includes(before)) throw new Error(`${path}: expected source text not found`);
             fs.writeFileSync(path, source.replace(before, after));
           }
-          replace('server.js', 'const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-487";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v432";', 'const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-488";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v433";');
-          replace('public/app.js', 'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-487";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v432";', 'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-488";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v433";');
-          replace('public/app.js', '    if (eventType === "conversation.item.input_audio_transcription.completed") {', '    const finalizedUserAudioItem = eventType === "conversation.item.done"\n      && String(payload.item?.role || payload.role || "").toLowerCase() === "user";\n    if (eventType === "conversation.item.input_audio_transcription.completed" || finalizedUserAudioItem) {');
-          for (const path of ['public/index.html', 'public/sw.js']) {
+          replace(
+            'public/nexus-openai-realtime-agent.js',
+            `    const type = String(transportEvent?.type || event?.type || "");
+    emit("transport_event", {
+      type,
+      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200)
+    });`,
+            `    const type = String(transportEvent?.type || event?.type || "");
+    const item = transportEvent?.item && typeof transportEvent.item === "object"
+      ? transportEvent.item
+      : null;
+    emit("transport_event", {
+      type,
+      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200),
+      transcript: safeText(transportEvent?.transcript || "", 1200),
+      transcript_id: String(transportEvent?.transcript_id || ""),
+      item_id: String(transportEvent?.item_id || item?.id || ""),
+      role: String(transportEvent?.role || item?.role || ""),
+      item
+    });`
+          );
+          const releasePaths = [
+            'server.js',
+            'public/app.js',
+            'public/index.html',
+            'public/sw.js',
+            ...fs.readdirSync('scripts').filter(name => name.endsWith('.js')).map(name => `scripts/${name}`)
+          ];
+          for (const path of releasePaths) {
             let source = fs.readFileSync(path, 'utf8');
-            source = source.replaceAll('nexus-behavior-487', 'nexus-behavior-488').replaceAll('agrinexus-pwa-v432', 'agrinexus-pwa-v433');
+            source = source
+              .replaceAll('nexus-behavior-488', 'nexus-behavior-489')
+              .replaceAll('agrinexus-pwa-v433', 'agrinexus-pwa-v434');
             fs.writeFileSync(path, source);
           }
-          for (const path of fs.readdirSync('scripts').filter(name => name.endsWith('.js')).map(name => `scripts/${name}`)) {
-            let source = fs.readFileSync(path, 'utf8');
-            if (!source.includes('nexus-behavior-487') && !source.includes('agrinexus-pwa-v432')) continue;
-            source = source.replaceAll('nexus-behavior-487', 'nexus-behavior-488').replaceAll('agrinexus-pwa-v432', 'agrinexus-pwa-v433');
-            fs.writeFileSync(path, source);
-          }
+          const qaPath = 'scripts/nexus-genesis-voice-workspace-bridge-qa.js';
+          let qa = fs.readFileSync(qaPath, 'utf8');
+          qa = qa.replace(
+            "const server=fs.readFileSync(path.join(root,'server.js'),'utf8'); const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');",
+            "const server=fs.readFileSync(path.join(root,'server.js'),'utf8'); const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8'); const realtimeAgent=fs.readFileSync(path.join(root,'public/nexus-openai-realtime-agent.js'),'utf8');"
+          );
+          qa = qa.replace(
+            "const failed=checks.filter(([,ok])=>!ok);",
+            "checks.push(['Realtime adapter preserves final spoken item',realtimeAgent.includes('item_id: String(transportEvent?.item_id || item?.id || \"\")')&&realtimeAgent.includes('role: String(transportEvent?.role || item?.role || \"\")')&&realtimeAgent.includes('item')]);\nconst failed=checks.filter(([,ok])=>!ok);"
+          );
+          fs.writeFileSync(qaPath, qa);
           NODE
+          npm ci --ignore-scripts
+          npm run build:nexus-openai-realtime-agent
+      - name: Validate protected voice architecture and routing
+        shell: bash
+        run: |
+          set -euo pipefail
           node --check server.js
           node --check public/app.js
-          node scripts/nexus-browser-action-controller-qa.js
           node scripts/nexus-genesis-voice-workspace-bridge-qa.js
-          node scripts/nexus-genesis-browser-voice-acceptance-qa.js
-          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          node scripts/nexus-openai-realtime-genesis-qa.js
+          node scripts/nexus-openai-realtime-microphone-handoff-qa.js
           node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
-          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-genesis-browser-voice-acceptance-qa.js
           node scripts/nexus-service-worker-cache-safety-qa.js
           git diff --check
-      - name: Publish repaired build
+      - name: Publish build 489
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add server.js public/app.js public/index.html public/sw.js scripts
-          git commit -m "Repair corrupted Nexus build 488 sources"
+          git add server.js public/app.js public/index.html public/sw.js public/nexus-openai-realtime-agent.js public/vendor/nexus-openai-realtime-agent.bundle.mjs scripts
+          git commit -m "Preserve final Realtime speech for workspace routing"
           git push origin HEAD:main
