@@ -285,12 +285,16 @@ async function main() {
       const workspaceAcks = window.__NEXUS_WORKSPACE_ACKS__ || [];
       const requiredJourneys = ${JSON.stringify(spokenJourneys)};
       const workspaceResults = requiredJourneys.map(journey => {
-        const ack = [...workspaceAcks].reverse().find(item => item.workspace === journey.workspace && item.opened === true && item.visible === true && item.verified === true);
-        const visibleText = ack?.visibleText || '';
-        const visibleValues = JSON.stringify(ack?.populatedValues || {});
         const normalizeVisibleWords = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-        const normalizedVisible = normalizeVisibleWords(visibleText + ' ' + visibleValues);
-        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => normalizedVisible.includes(normalizeVisibleWords(word))) };
+        const candidates = workspaceAcks.filter(item => item.workspace === journey.workspace && item.opened === true && item.visible === true && item.verified === true);
+        const wordsVisibleForAck = item => {
+          const visibleText = item?.visibleText || '';
+          const visibleValues = JSON.stringify(item?.populatedValues || {});
+          const normalizedVisible = normalizeVisibleWords(visibleText + ' ' + visibleValues);
+          return journey.words.every(word => normalizedVisible.includes(normalizeVisibleWords(word)));
+        };
+        const ack = [...candidates].reverse().find(wordsVisibleForAck) || [...candidates].reverse()[0] || null;
+        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: Boolean(ack && wordsVisibleForAck(ack)) };
       });
       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
