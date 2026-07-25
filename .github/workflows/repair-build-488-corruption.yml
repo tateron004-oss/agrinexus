@@ -1,0 +1,64 @@
+name: Repair Nexus build 488 source corruption
+
+on:
+  push:
+    paths:
+      - .github/workflows/repair-build-488-corruption.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore intact sources and apply build 488 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git restore --source=67649435 -- server.js public/app.js public/index.html public/sw.js
+          node <<'NODE'
+          const fs = require('fs');
+          function replace(path, before, after) {
+            const source = fs.readFileSync(path, 'utf8');
+            if (!source.includes(before)) throw new Error(`${path}: expected source text not found`);
+            fs.writeFileSync(path, source.replace(before, after));
+          }
+          replace('server.js', 'const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-487";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v432";', 'const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-488";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v433";');
+          replace('public/app.js', 'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-487";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v432";', 'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-488";\nconst AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v433";');
+          replace('public/app.js', '    if (eventType === "conversation.item.input_audio_transcription.completed") {', '    const finalizedUserAudioItem = eventType === "conversation.item.done"\n      && String(payload.item?.role || payload.role || "").toLowerCase() === "user";\n    if (eventType === "conversation.item.input_audio_transcription.completed" || finalizedUserAudioItem) {');
+          for (const path of ['public/index.html', 'public/sw.js']) {
+            let source = fs.readFileSync(path, 'utf8');
+            source = source.replaceAll('nexus-behavior-487', 'nexus-behavior-488').replaceAll('agrinexus-pwa-v432', 'agrinexus-pwa-v433');
+            fs.writeFileSync(path, source);
+          }
+          for (const path of fs.readdirSync('scripts').filter(name => name.endsWith('.js')).map(name => `scripts/${name}`)) {
+            let source = fs.readFileSync(path, 'utf8');
+            if (!source.includes('nexus-behavior-487') && !source.includes('agrinexus-pwa-v432')) continue;
+            source = source.replaceAll('nexus-behavior-487', 'nexus-behavior-488').replaceAll('agrinexus-pwa-v432', 'agrinexus-pwa-v433');
+            fs.writeFileSync(path, source);
+          }
+          NODE
+          node --check server.js
+          node --check public/app.js
+          node scripts/nexus-browser-action-controller-qa.js
+          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          node scripts/nexus-genesis-browser-voice-acceptance-qa.js
+          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
+          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+          git diff --check
+      - name: Publish repaired build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server.js public/app.js public/index.html public/sw.js scripts
+          git commit -m "Repair corrupted Nexus build 488 sources"
+          git push origin HEAD:main
