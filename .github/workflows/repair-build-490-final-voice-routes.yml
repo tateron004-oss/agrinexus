@@ -29,19 +29,19 @@ jobs:
           const appPath = "public/app.js";
           let app = fs.readFileSync(appPath, "utf8");
           const mobileOld = '  const mobileClinicRequest = explicitOpen && /\\b(mobile clinic|community health outreach|rural clinic)\\b/.test(lower);';
-          const mobileNew = '  const mobileClinicRequest = /\\b(mobile clinic|community health outreach|rural clinic)\\b/.test(lower)\\n    && (explicitOpen || /\\b(support|access|help|outreach)\\b/.test(lower));';
+          const mobileNew = '  const mobileClinicRequest = /\\b(mobile clinic|community health outreach|rural clinic)\\b/.test(lower)\n    && (explicitOpen || /\\b(support|access|help|outreach)\\b/.test(lower));';
           if (!app.includes(mobileOld)) throw new Error("Mobile Clinic routing seam did not match expected source.");
           app = app.replace(mobileOld, mobileNew);
-          const mapPattern = /  const visibleMap = workspace !== "map" \\|\\| Boolean\\(\\n    document\\.body\\.dataset\\.genesisMapSurface === "full-scale-leaflet"\\n    && document\\.body\\.classList\\.contains\\("user-map-full-open"\\)\\n    && document\\.querySelector\\("#userMapCanvas\\.leaflet-container"\\)\\n  \\);/;
+          const mapPattern = /  const visibleMap = workspace !== "map" \|\| Boolean\(\n    document\.body\.dataset\.genesisMapSurface === "full-scale-leaflet"\n    && document\.body\.classList\.contains\("user-map-full-open"\)\n    && document\.querySelector\("#userMapCanvas\.leaflet-container"\)\n  \);/;
           const mapNew = `  const visibleMap = workspace !== "map" || Boolean(
-    document.body.dataset.genesisMapSurface === "full-scale-leaflet"
-    && document.body.classList.contains("user-map-full-open")
-    && (
-      document.querySelector("#userMapCanvas.leaflet-container")
-      || document.querySelector("#map:not(.hidden) #userMapCanvas")
-      || (location.hash === "#map" && document.querySelector("#map"))
-    )
-  );`;
+            document.body.dataset.genesisMapSurface === "full-scale-leaflet"
+            && document.body.classList.contains("user-map-full-open")
+            && (
+              document.querySelector("#userMapCanvas.leaflet-container")
+              || document.querySelector("#map:not(.hidden) #userMapCanvas")
+              || (location.hash === "#map" && document.querySelector("#map"))
+            )
+          );`;
           if (!mapPattern.test(app)) throw new Error("Map acknowledgement seam did not match expected source.");
           app = app.replace(mapPattern, mapNew);
           fs.writeFileSync(appPath, app);
