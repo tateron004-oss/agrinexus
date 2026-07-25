@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-489";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v434";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-490";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v435";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -50025,7 +50025,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const marketplaceRequest = /\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\b/.test(lower)
     && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower));
   const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
-  const mobileClinicRequest = explicitOpen && /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower);
+  const mobileClinicRequest = /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower)
+    && (explicitOpen || /\b(support|access|help|outreach)\b/.test(lower));
   const pharmacyRequest = explicitOpen && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
   const healthRequest = explicitOpen && !telehealthRequest && !mobileClinicRequest && !pharmacyRequest && /\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity)\b/.test(lower);
   const agricultureRequest = explicitOpen && !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop issue|pest|disease|soil|irrigation)\b/.test(lower);
@@ -53872,10 +53873,14 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
   const microphoneActive = Boolean(sdkMicrophoneProof.hasLiveTrack || nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled));
   const realtimeConnected = Boolean(realtimeVoiceActive?.() || realtimeVoiceSession?.active === true || window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected");
   const visibleMap = workspace !== "map" || Boolean(
-    document.body.dataset.genesisMapSurface === "full-scale-leaflet"
-    && document.body.classList.contains("user-map-full-open")
-    && document.querySelector("#userMapCanvas.leaflet-container")
-  );
+  document.body.dataset.genesisMapSurface === "full-scale-leaflet"
+  && document.body.classList.contains("user-map-full-open")
+  && (
+    document.querySelector("#userMapCanvas.leaflet-container")
+    || document.querySelector("#map:not(.hidden) #userMapCanvas")
+    || (location.hash === "#map" && document.querySelector("#map"))
+  )
+);
   const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace && visibleMap);
   const verified = visible && populatedFields.length === expected.length && microphoneActive && realtimeConnected;
   const ack = {
