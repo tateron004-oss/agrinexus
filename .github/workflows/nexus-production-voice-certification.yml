@@ -7,6 +7,10 @@ on:
     paths:
       - "public/**"
       - "server.js"
+      - "server/**"
+      - "package.json"
+      - "scripts/qa-suite.js"
+      - "scripts/nexus-youtube-data-api-live-provider-qa.js"
       - "scripts/nexus-genesis-live-provider-browser-smoke.js"
       - ".github/workflows/nexus-production-voice-certification.yml"
 
