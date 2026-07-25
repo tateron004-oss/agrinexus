@@ -288,7 +288,9 @@ async function main() {
         const ack = [...workspaceAcks].reverse().find(item => item.workspace === journey.workspace && item.opened === true && item.visible === true && item.verified === true);
         const visibleText = ack?.visibleText || '';
         const visibleValues = JSON.stringify(ack?.populatedValues || {});
-        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => (visibleText + ' ' + visibleValues).toLowerCase().includes(word.toLowerCase())) };
+        const normalizeVisibleWords = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        const normalizedVisible = normalizeVisibleWords(visibleText + ' ' + visibleValues);
+        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => normalizedVisible.includes(normalizeVisibleWords(word))) };
       });
       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;

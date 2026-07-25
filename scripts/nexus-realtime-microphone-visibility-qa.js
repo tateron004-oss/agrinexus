@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-490"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v435"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-490"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v435"') &&
-      index.includes("/app.js?v=nexus-behavior-490")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-491"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v436"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-491"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v436"') &&
+      index.includes("/app.js?v=nexus-behavior-491")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-490') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-491') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [

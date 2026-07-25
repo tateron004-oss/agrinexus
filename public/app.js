@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-490";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v435";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-491";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v436";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -50033,7 +50033,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const learningRequest = explicitOpen && /\b(learning|literacy|course|training|lesson)\b/.test(lower);
   const mediaRequest = explicitOpen && /\b(music|media|youtube)\b/.test(lower);
   const reminderRequest = explicitOpen && /\b(reminder|reminders|follow[- ]?up)\b/.test(lower);
-  const offlineRequest = explicitOpen && /\b(offline|offline queue|low bandwidth|sync status)\b/.test(lower);
+  const offlineRequest = /\b(offline queue|queued offline work)\b/.test(lower)
+    || (explicitOpen && /\b(offline|low bandwidth|sync status)\b/.test(lower));
   const knowledgeRequest = /\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|show sources)\b/.test(lower);
   if (!(routeRequest || workforceRequest || marketplaceRequest || telehealthRequest || mobileClinicRequest || pharmacyRequest || healthRequest || agricultureRequest || learningRequest || mediaRequest || reminderRequest || offlineRequest || knowledgeRequest)) return null;
 
@@ -53707,6 +53708,18 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
     reminders: "agent", offline: "agent", "live-knowledge": "agent"
   }[workspace];
   if (!permissionSection || !canOpenSection(permissionSection)) return false;
+  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
+    document.body.classList.remove("user-map-full-open");
+    goSection("dashboard", {
+      instant: true,
+      scroll: false,
+      openDefaultAction: false,
+      keepAssistant: false,
+      allowRealtimeSurfaceChange: true,
+      source: "realtime-workspace-transition"
+    });
+    if (experienceMode === "user") renderUserWorkspace();
+  }
   const capabilityId = action.capabilityId || {
     map: "maps",
     workforce: "workforce",
