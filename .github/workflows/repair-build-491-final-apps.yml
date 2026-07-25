@@ -56,7 +56,7 @@ jobs:
           }
           fs.writeFileSync(qaPath, qa);
           NODE
-          rg -l 'nexus-behavior-490|agrinexus-pwa-v435' server.js public scripts | xargs sed -i -e 's/nexus-behavior-490/nexus-behavior-491/g' -e 's/agrinexus-pwa-v435/agrinexus-pwa-v436/g'
+          grep -rlE 'nexus-behavior-490|agrinexus-pwa-v435' server.js public scripts | xargs sed -i -e 's/nexus-behavior-490/nexus-behavior-491/g' -e 's/agrinexus-pwa-v435/agrinexus-pwa-v436/g'
       - name: Verify protected voice architecture
         run: |
           npm ci
