@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-491";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v436";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-492";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v437";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -53710,15 +53710,6 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   if (!permissionSection || !canOpenSection(permissionSection)) return false;
   if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
     document.body.classList.remove("user-map-full-open");
-    goSection("dashboard", {
-      instant: true,
-      scroll: false,
-      openDefaultAction: false,
-      keepAssistant: false,
-      allowRealtimeSurfaceChange: true,
-      source: "realtime-workspace-transition"
-    });
-    if (experienceMode === "user") renderUserWorkspace();
   }
   const capabilityId = action.capabilityId || {
     map: "maps",
