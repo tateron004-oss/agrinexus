@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p output/nexus-certification
-          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; fs.writeFileSync("output/nexus-certification/live-build-495-result.json", JSON.stringify({build:"nexus-behavior-495",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString()},null,2)+"\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
+          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync("output/nexus-certification/live-build-495-result.json", JSON.stringify({build:"nexus-behavior-495",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add output/nexus-certification/live-build-495-result.json
@@ -106,4 +106,4 @@ jobs:
         if: always() && steps.voice.outcome != 'success'
         run: exit 1
 
-# Build 495 spoken all-application certification trigger 2026-07-24T22:15:00-07:00.
+# Build 495 evidence-rich spoken certification trigger 2026-07-24T22:24:00-07:00.
