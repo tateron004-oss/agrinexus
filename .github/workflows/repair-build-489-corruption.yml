@@ -1,0 +1,55 @@
+name: Repair Nexus build 489 corruption
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/repair-build-489-corruption.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-nexus-build-489
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Restore complete deployable runtime files
+        run: |
+          git checkout 98a9a50c -- server.js public/app.js public/vendor/nexus-openai-realtime-agent.bundle.mjs
+          node -e "const fs=require('fs'); for (const p of ['server.js','public/app.js']) { let s=fs.readFileSync(p,'utf8'); s=s.replaceAll('nexus-behavior-488','nexus-behavior-489').replaceAll('agrinexus-pwa-v433','agrinexus-pwa-v434'); fs.writeFileSync(p,s); }"
+      - name: Install and rebuild repaired Realtime adapter
+        run: |
+          npm ci --ignore-scripts
+          npm run build:nexus-openai-realtime-agent
+          sed -i 's/[[:space:]]*$//' public/vendor/nexus-openai-realtime-agent.bundle.mjs
+      - name: Verify complete files and protected runtime
+        run: |
+          node --check server.js
+          node --check public/app.js
+          node --check public/vendor/nexus-openai-realtime-agent.bundle.mjs
+          npm run qa:nexus-genesis-voice-workspace-bridge
+          npm run qa:nexus-browser-action-controller
+          npm run qa:nexus-openai-realtime-microphone-handoff
+          npm run qa:nexus-genesis-persistent-voice-lifecycle
+          npm run qa:nexus-service-worker-cache-safety
+          git diff --check
+      - name: Publish repaired build 489
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.js public/app.js public/vendor/nexus-openai-realtime-agent.bundle.mjs
+          git commit -m "Restore deployable Nexus build 489 sources"
+          git push origin HEAD:main
