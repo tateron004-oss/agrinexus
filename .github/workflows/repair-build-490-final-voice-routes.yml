@@ -1,0 +1,90 @@
+name: Repair final Nexus voice routes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-build-490-final-voice-routes.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Apply final Mobile Clinic and map acknowledgement repair
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const appPath = "public/app.js";
+          let app = fs.readFileSync(appPath, "utf8");
+          const mobileOld = '  const mobileClinicRequest = explicitOpen && /\\b(mobile clinic|community health outreach|rural clinic)\\b/.test(lower);';
+          const mobileNew = '  const mobileClinicRequest = /\\b(mobile clinic|community health outreach|rural clinic)\\b/.test(lower)\\n    && (explicitOpen || /\\b(support|access|help|outreach)\\b/.test(lower));';
+          if (!app.includes(mobileOld)) throw new Error("Mobile Clinic routing seam did not match expected source.");
+          app = app.replace(mobileOld, mobileNew);
+          const mapOld = `  const visibleMap = workspace !== "map" || Boolean(
+            document.body.dataset.genesisMapSurface === "full-scale-leaflet"
+            && document.body.classList.contains("user-map-full-open")
+            && document.querySelector("#userMapCanvas.leaflet-container")
+          );`;
+          const mapNew = `  const visibleMap = workspace !== "map" || Boolean(
+            document.body.dataset.genesisMapSurface === "full-scale-leaflet"
+            && document.body.classList.contains("user-map-full-open")
+            && (
+              document.querySelector("#userMapCanvas.leaflet-container")
+              || document.querySelector("#map:not(.hidden) #userMapCanvas")
+              || (location.hash === "#map" && document.querySelector("#map"))
+            )
+          );`;
+          if (!app.includes(mapOld)) throw new Error("Map acknowledgement seam did not match expected source.");
+          app = app.replace(mapOld, mapNew);
+          fs.writeFileSync(appPath, app);
+
+          const qaPath = "scripts/nexus-genesis-voice-workspace-bridge-qa.js";
+          let qa = fs.readFileSync(qaPath, "utf8");
+          qa = qa.replace(
+            "['duplicate transcript execution guarded'",
+            "['mobile clinic support phrase activates workspace',app.includes('&& (explicitOpen || /\\\\b(support|access|help|outreach)\\\\b/.test(lower))')],['duplicate transcript execution guarded'"
+          );
+          qa = qa.replace(
+            "app.includes('#userMapCanvas.leaflet-container')]",
+            "app.includes('#userMapCanvas.leaflet-container')&&app.includes('location.hash === \"#map\"')]"
+          );
+          fs.writeFileSync(qaPath, qa);
+
+          const { execFileSync } = require("child_process");
+          const files = execFileSync("git", ["grep", "-l", "-E", "nexus-behavior-489|agrinexus-pwa-v434"], { encoding: "utf8" })
+            .trim().split("\n").filter(Boolean)
+            .filter(file => !/^\.github\/workflows\/repair-build-/.test(file));
+          for (const file of files) {
+            let source = fs.readFileSync(file, "utf8");
+            source = source.replaceAll("nexus-behavior-489", "nexus-behavior-490")
+              .replaceAll("agrinexus-pwa-v434", "agrinexus-pwa-v435");
+            fs.writeFileSync(file, source);
+          }
+          NODE
+      - name: Verify protected voice and route gates
+        run: |
+          node --check public/app.js
+          node --check server.js
+          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
+          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+          git diff --check
+      - name: Publish build 490
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app.js public/index.html public/sw.js server.js scripts
+          git commit -m "Repair final Nexus voice application routes"
+          git push origin HEAD:main
