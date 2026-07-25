@@ -27,13 +27,33 @@ jobs:
       - name: Preserve final spoken entities through delayed tool completion
         shell: bash
         run: |
-          perl -0pi -e 's/Date\.now\(\) - route\.at > 15000/Date.now() - route.at > 45000/' public/app.js
-          files=$(rg -l 'nexus-behavior-492|agrinexus-pwa-v437' public/app.js public/index.html public/sw.js server.js scripts)
-          perl -pi -e 's/nexus-behavior-492/nexus-behavior-493/g; s/agrinexus-pwa-v437/agrinexus-pwa-v438/g' $files
-          perl -0pi -e 's/app\.includes\('\"'\"'source: "realtime-workspace-transition"'"\"'\"'\)/!app.includes('\"'\"'source: "realtime-workspace-transition"'"\"'\"')/' scripts/nexus-genesis-voice-workspace-bridge-qa.js
-          if ! rg -q 'final transcript entities survive delayed Realtime tool completion' scripts/nexus-genesis-voice-workspace-bridge-qa.js; then
-            perl -0pi -e 's/(checks\.push\(\['"\"'\"'non-map voice route closes full map surface'"\"'\"'.*?\]\);)/$1\nchecks.push(['"\"'\"'final transcript entities survive delayed Realtime tool completion'"\"'\",app.includes('\"'\"'Date.now() - route.at > 45000'"\"'\")&&app.includes('\"'\"'payload: { ...(action.payload || {}), ...(route.action.payload || {}) }'"\"'\")]);/' scripts/nexus-genesis-voice-workspace-bridge-qa.js
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          roots = [Path("public/app.js"), Path("public/index.html"), Path("public/sw.js"), Path("server.js")]
+          roots.extend(Path("scripts").glob("*.js"))
+          for path in roots:
+              text = path.read_text(encoding="utf-8")
+              text = text.replace("nexus-behavior-492", "nexus-behavior-493")
+              text = text.replace("agrinexus-pwa-v437", "agrinexus-pwa-v438")
+              if path == Path("public/app.js"):
+                  old = "Date.now() - route.at > 15000"
+                  assert old in text, "Realtime route expiry seam was not found"
+                  text = text.replace(old, "Date.now() - route.at > 45000", 1)
+              path.write_text(text, encoding="utf-8")
+
+          qa = Path("scripts/nexus-genesis-voice-workspace-bridge-qa.js")
+          text = qa.read_text(encoding="utf-8")
+          old = """app.includes('source: "realtime-workspace-transition"')"""
+          assert old in text, "stale map-transition assertion was not found"
+          text = text.replace(old, """!app.includes('source: "realtime-workspace-transition"')""", 1)
+          marker = "final transcript entities survive delayed Realtime tool completion"
+          if marker not in text:
+              text += """
+checks.push(['final transcript entities survive delayed Realtime tool completion',app.includes('Date.now() - route.at > 45000')&&app.includes('payload: { ...(action.payload || {}), ...(route.action.payload || {}) }')]);
+"""
+          qa.write_text(text, encoding="utf-8")
+          PY
       - name: Validate release integrity
         run: |
           git diff --check
