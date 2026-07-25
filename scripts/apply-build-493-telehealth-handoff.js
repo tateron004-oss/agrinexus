@@ -11,8 +11,8 @@ const files = [
 
 for (const file of files) {
   let source = fs.readFileSync(file, "utf8");
-  source = source.replaceAll("nexus-behavior-492", "nexus-behavior-493");
-  source = source.replaceAll("agrinexus-pwa-v437", "agrinexus-pwa-v438");
+  source = source.replaceAll("nexus-behavior-493", "nexus-behavior-493");
+  source = source.replaceAll("agrinexus-pwa-v438", "agrinexus-pwa-v438");
   if (file === "public/app.js") {
     const old = "Date.now() - route.at > 15000";
     if (!source.includes(old)) throw new Error("Realtime route expiry seam was not found");

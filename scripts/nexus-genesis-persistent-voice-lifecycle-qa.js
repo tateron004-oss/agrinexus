@@ -21,16 +21,16 @@ function notIncludes(source, needle, label) {
   assert(!source.includes(needle), `${label} must not include: ${needle}`);
 }
 
-["nexus-behavior-492", "agrinexus-pwa-v437"].forEach(marker => {
+["nexus-behavior-493", "agrinexus-pwa-v438"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
   includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(index, "nexus-behavior-492", "index behavior marker nexus-behavior-492");
+includes(index, "nexus-behavior-493", "index behavior marker nexus-behavior-493");
 
 includes(index, 'id="nexusPermanentMicrophoneBtn"', "static microphone button");
 includes(index, "Enable microphone", "static microphone initial label");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-492"), "microphone button must appear before app.js");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-493"), "microphone button must appear before app.js");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "static microphone button must not be hidden or disabled");
 
 [
