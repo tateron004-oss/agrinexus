@@ -59,6 +59,27 @@ function normalizeError(error) {
   };
 }
 
+function finalizedUserTranscriptFromHistory(history = []) {
+  if (!Array.isArray(history)) return null;
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const item = history[index];
+    if (!item || item.type !== "message" || String(item.role || "").toLowerCase() !== "user") continue;
+    const content = Array.isArray(item.content) ? item.content : [];
+    const transcript = safeText(
+      content.map(part => part?.transcript || (part?.type === "input_text" ? part?.text : "") || "").join(" "),
+      1200
+    );
+    if (!transcript) continue;
+    return {
+      transcript,
+      itemId: String(item.itemId || item.id || ""),
+      role: "user",
+      status: String(item.status || "")
+    };
+  }
+  return null;
+}
+
 function microphoneProofForStream(stream) {
   const tracks = typeof stream?.getAudioTracks === "function" ? stream.getAudioTracks() : [];
   const liveTrack = tracks.find(track => track && track.enabled !== false && track.readyState === "live") || null;
@@ -227,7 +248,24 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   session.on("agent_end", (_context, _agent, output) => emit("agent_end", { output: safeText(output, 1200) }));
   session.on("agent_tool_start", (_context, _agent, toolRef) => emit("agent_tool_start", { toolName: toolRef?.name || "" }));
   session.on("agent_tool_end", (_context, _agent, toolRef, result) => emit("agent_tool_end", { toolName: toolRef?.name || "", result: safeText(result, 400) }));
-  session.on("history_updated", history => emit("history_updated", { turnCount: Array.isArray(history) ? history.length : 0 }));
+  let lastHistoryTranscriptKey = "";
+  session.on("history_updated", history => {
+    emit("history_updated", { turnCount: Array.isArray(history) ? history.length : 0 });
+    const finalized = finalizedUserTranscriptFromHistory(history);
+    if (!finalized) return;
+    const transcriptKey = `${finalized.itemId}:${finalized.transcript}`;
+    if (transcriptKey === lastHistoryTranscriptKey) return;
+    lastHistoryTranscriptKey = transcriptKey;
+    emit("final_user_transcript", {
+      transcript: finalized.transcript,
+      transcript_id: finalized.itemId,
+      item_id: finalized.itemId,
+      role: finalized.role,
+      status: finalized.status,
+      is_final: true,
+      source: "openai-agents-history"
+    });
+  });
   session.on("history_added", item => emit("history_added", { type: item?.type || "", role: item?.role || "" }));
   session.on("transport_event", event => {
     const transportEvent = event?.event && typeof event.event === "object" ? event.event : event;

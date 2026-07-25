@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-493";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v438";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-494";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v439";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49926,6 +49926,22 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
     }
+  }
+  if (eventName === "final_user_transcript") {
+    const transcript = String(payload.transcript || "").trim();
+    const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({
+      transcript,
+      transcriptId: payload.transcript_id || payload.item_id || "",
+      sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "",
+      role: payload.role || "user",
+      isFinal: payload.is_final !== false
+    }, genesisWorkspaceActionFromFinalTranscript);
+    nexusGenesisVoiceDebugLog("browser-action-controller-history-transcript", {
+      handled: controllerResult?.handled === true,
+      duplicate: controllerResult?.duplicate === true,
+      transcriptLength: transcript.length
+    });
+    if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
   }
   if (eventName === "audio_start") {
     if (realtimeVoiceSession) {
