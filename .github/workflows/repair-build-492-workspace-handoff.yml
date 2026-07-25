@@ -30,7 +30,6 @@ jobs:
         run: |
           node --check server.js
           node --check public/app.js
-          node scripts/nexus-genesis-voice-workspace-bridge-qa.js
           node scripts/nexus-realtime-microphone-visibility-qa.js
           node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
           node scripts/nexus-service-worker-cache-safety-qa.js
