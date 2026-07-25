@@ -832,6 +832,7 @@
     "qa:nexus-rp5-job-search-real-provider-activation": "node scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
     "qa:nexus-rp6-shipment-tracking-real-provider-activation": "node scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
     "qa:nexus-rp7-music-media-real-provider-activation": "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+    "qa:nexus-youtube-data-api-live-provider": "node scripts/nexus-youtube-data-api-live-provider-qa.js",
     "qa:nexus-rp8-unified-provider-live-mock-skip-matrix": "node scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
     "qa:nexus-rp9-controlled-assistant-preview-live-provider-sweep": "node scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
     "qa:nexus-rp10-standard-user-live-preview-readiness-validation": "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",

@@ -6,6 +6,7 @@ const {
 
 const MUSIC_MEDIA_PROVIDER_NAME = "music-media";
 const MUSIC_MEDIA_PROVIDER_CANDIDATES = Object.freeze([
+  "YouTube Data API v3",
   "Internet Archive public search",
   "Spotify",
   "local media provider",
@@ -13,6 +14,7 @@ const MUSIC_MEDIA_PROVIDER_CANDIDATES = Object.freeze([
 ]);
 
 const INTERNET_ARCHIVE_SEARCH_URL = "https://archive.org/advancedsearch.php";
+const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -24,7 +26,7 @@ function normalizeText(value) {
 
 function classifyMusicMediaIntent(input) {
   const lower = String(input || "").toLowerCase();
-  if (/\b(playlist|genre|r&b|music|song|radio|spotify|media)\b/.test(lower)) return "music-media";
+  if (/\b(playlist|genre|r&b|music|song|radio|spotify|media|youtube|video|videos)\b/.test(lower)) return "music-media";
   return "unsupported";
 }
 
@@ -49,17 +51,23 @@ function buildMusicMediaQuery(request = {}) {
 }
 
 function resolveMusicMediaProviderConfig(env = process.env) {
-  const providerMode = getConfiguredProviderMode(MUSIC_MEDIA_PROVIDER_NAME, env);
+  const youtubeApiKey = normalizeText(env.YOUTUBE_API_KEY || env.NEXUS_MUSIC_MEDIA_PROVIDER_API_KEY || "");
+  const providerMode = hasText(youtubeApiKey) ? "live" : getConfiguredProviderMode(MUSIC_MEDIA_PROVIDER_NAME, env);
   return Object.freeze({
     providerName: MUSIC_MEDIA_PROVIDER_NAME,
     providerMode,
     liveSourceEnabled: env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true",
     musicMediaProviderEnabled: env.NEXUS_MUSIC_MEDIA_PROVIDER_ENABLED === "true",
     publicProviderEnabled: env.NEXUS_MUSIC_MEDIA_PUBLIC_PROVIDER_ENABLED === "true",
-    hasProviderKey: hasText(env.NEXUS_MUSIC_MEDIA_PROVIDER_API_KEY),
+    hasProviderKey: hasText(youtubeApiKey),
+    youtubeApiKey,
     hasProviderEndpoint: hasText(env.NEXUS_MUSIC_MEDIA_PROVIDER_ENDPOINT),
     providerCandidates: MUSIC_MEDIA_PROVIDER_CANDIDATES
   });
+}
+
+function isYouTubeProviderConfigured(env = process.env) {
+  return hasText(env.YOUTUBE_API_KEY || env.NEXUS_MUSIC_MEDIA_PROVIDER_API_KEY);
 }
 
 function isInternetArchivePublicProviderConfigured(env = process.env) {
@@ -139,6 +147,52 @@ function normalizeInternetArchivePayload(query, payload) {
   });
 }
 
+function buildYouTubeProviderErrorResult(query, errorType) {
+  return normalizeSourceResult({
+    sourceResultId: `music-media-youtube-error-${String(query.mediaRequest || "media").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "media"}`,
+    requestType: "music-media",
+    providerName: MUSIC_MEDIA_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "YouTube Data API v3",
+    sourceCategory: "music-media",
+    sourceUrl: "https://www.youtube.com/",
+    query: query.mediaRequest || query.providerPreference || "media request",
+    resultSummary: "YouTube video search failed safely. Nexus did not play, download, authenticate, or change a YouTube account.",
+    rawResultAvailable: false,
+    freshnessStatus: "unavailable",
+    confidenceLevel: "low",
+    limitationNotes: `${errorType || "source-error"}; open YouTube directly to verify availability and suitability.`,
+    evidenceStatus: "source-unavailable",
+    sourceStatus: "source-error"
+  });
+}
+
+function normalizeYouTubePayload(query, payload) {
+  const items = payload && Array.isArray(payload.items) ? payload.items : [];
+  const first = items.find(item => item && item.id && hasText(item.id.videoId) && item.snippet && hasText(item.snippet.title));
+  if (!first) return buildYouTubeProviderErrorResult(query, "source-result-empty");
+  const videoId = normalizeText(first.id.videoId);
+  const title = normalizeText(first.snippet.title);
+  const channel = normalizeText(first.snippet.channelTitle || "");
+  return normalizeSourceResult({
+    sourceResultId: `music-media-youtube-${videoId}`,
+    requestType: "music-media",
+    providerName: MUSIC_MEDIA_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "YouTube Data API v3",
+    sourceCategory: "music-media",
+    sourceUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+    query: query.mediaRequest || query.providerPreference,
+    resultSummary: `YouTube video found: ${title}${channel ? ` — ${channel}` : ""}.`,
+    rawResultAvailable: true,
+    freshnessStatus: "fresh",
+    confidenceLevel: "high",
+    limitationNotes: "Read-only public video discovery. Nexus did not play, download, authenticate, upload, or change a YouTube account.",
+    evidenceStatus: "source-backed",
+    sourceStatus: "source-result-available"
+  });
+}
+
 async function fetchJson(fetchImpl, url) {
   const response = await fetchImpl(url, { method: "GET", signal: AbortSignal.timeout(8000) });
   if (!response || response.ok !== true) {
@@ -168,7 +222,30 @@ async function runInternetArchiveReadOnlyLookup(request = {}, env = process.env)
   }
 }
 
+async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
+  const query = buildMusicMediaQuery(request);
+  if (!hasText(query.mediaRequest) && !hasText(query.providerPreference)) return getMusicMediaSourceResult(request, env);
+  const config = resolveMusicMediaProviderConfig(env);
+  if (!isYouTubeProviderConfigured(env)) return getMusicMediaSourceResult(request, env);
+  const fetchImpl = typeof env.NEXUS_MUSIC_MEDIA_FETCH_IMPL === "function" ? env.NEXUS_MUSIC_MEDIA_FETCH_IMPL : globalThis.fetch;
+  if (typeof fetchImpl !== "function") return buildYouTubeProviderErrorResult(query, "fetch-unavailable");
+  try {
+    const url = new URL(YOUTUBE_SEARCH_URL);
+    url.searchParams.set("part", "snippet");
+    url.searchParams.set("type", "video");
+    url.searchParams.set("maxResults", "5");
+    url.searchParams.set("safeSearch", "moderate");
+    url.searchParams.set("q", query.mediaRequest || query.providerPreference);
+    url.searchParams.set("key", config.youtubeApiKey);
+    const payload = await fetchJson(fetchImpl, url);
+    return normalizeYouTubePayload(query, payload);
+  } catch (error) {
+    return buildYouTubeProviderErrorResult(query, error && error.message ? error.message : "source-error");
+  }
+}
+
 async function getMusicMediaSourceResultAsync(request = {}, env = process.env) {
+  if (isYouTubeProviderConfigured(env)) return runYouTubeReadOnlyLookup(request, env);
   if (isInternetArchivePublicProviderConfigured(env)) return runInternetArchiveReadOnlyLookup(request, env);
   return getMusicMediaSourceResult(request, env);
 }
@@ -227,14 +304,19 @@ module.exports = Object.freeze({
   MUSIC_MEDIA_PROVIDER_NAME,
   MUSIC_MEDIA_PROVIDER_CANDIDATES,
   INTERNET_ARCHIVE_SEARCH_URL,
+  YOUTUBE_SEARCH_URL,
   classifyMusicMediaIntent,
   buildMusicMediaQuery,
   resolveMusicMediaProviderConfig,
+  isYouTubeProviderConfigured,
   isInternetArchivePublicProviderConfigured,
   buildMockMusicMediaAvailabilityResult,
   buildMusicMediaProviderUnavailableResult,
   buildInternetArchiveProviderErrorResult,
   normalizeInternetArchivePayload,
+  buildYouTubeProviderErrorResult,
+  normalizeYouTubePayload,
+  runYouTubeReadOnlyLookup,
   runInternetArchiveReadOnlyLookup,
   getMusicMediaSourceResult,
   getMusicMediaSourceResultAsync
