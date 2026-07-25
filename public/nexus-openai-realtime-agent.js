@@ -232,9 +232,17 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   session.on("transport_event", event => {
     const transportEvent = event?.event && typeof event.event === "object" ? event.event : event;
     const type = String(transportEvent?.type || event?.type || "");
+    const item = transportEvent?.item && typeof transportEvent.item === "object"
+      ? transportEvent.item
+      : null;
     emit("transport_event", {
       type,
-      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200)
+      acceptanceText: safeText(transportEvent?.transcript || transportEvent?.delta || transportEvent?.text || "", 1200),
+      transcript: safeText(transportEvent?.transcript || "", 1200),
+      transcript_id: String(transportEvent?.transcript_id || ""),
+      item_id: String(transportEvent?.item_id || item?.id || ""),
+      role: String(transportEvent?.role || item?.role || ""),
+      item
     });
   });
   session.on("error", error => emit("error", normalizeError(error)));
