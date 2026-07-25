@@ -11,7 +11,7 @@ on:
       - ".github/workflows/nexus-production-voice-certification.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: nexus-production-voice-certification
@@ -65,6 +65,8 @@ jobs:
         run: npm run qa:nexus-genesis-production-exact-build-smoke
 
       - name: Drive every spoken production workflow
+        id: voice
+        continue-on-error: true
         run: |
           set +e
           npm run qa:nexus-genesis-live-provider-browser-smoke 2>&1 | tee /tmp/nexus-voice-result.log
@@ -73,7 +75,21 @@ jobs:
             summary=$(tail -n 1 /tmp/nexus-voice-result.log | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
             echo "::error title=Nexus voice evidence::$summary"
           fi
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
+
+      - name: Record concise certification result
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p output/nexus-certification
+          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; fs.writeFileSync("output/nexus-certification/live-build-495-result.json", JSON.stringify({build:"nexus-behavior-495",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString()},null,2)+"\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/nexus-certification/live-build-495-result.json
+          git commit -m "Record Nexus build 495 spoken certification: ${{ steps.voice.outcome }}" || true
+          git pull --rebase origin main
+          git push origin HEAD:main
 
       - name: Publish certification evidence
         if: always()
@@ -86,4 +102,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# Build 494 final spoken all-application certification trigger.
+      - name: Enforce spoken certification outcome
+        if: always() && steps.voice.outcome != 'success'
+        run: exit 1
+
+# Build 495 final spoken all-application certification trigger.
