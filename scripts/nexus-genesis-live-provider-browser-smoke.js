@@ -12,7 +12,7 @@ const requireWorkspaces = process.env.NEXUS_LIVE_REQUIRE_WORKSPACES === "1";
 const spokenJourneys = [
   { workspace: "agriculture", words: ["maize", "Kenya"], command: "Nexus, open Agriculture support for a maize crop issue in Kenya." },
   { workspace: "health", words: ["140", "90"], command: "Nexus, open Health and record blood pressure 140 over 90." },
-  { workspace: "telehealth", words: ["Kenya"], command: "Nexus, open Telehealth intake in Kenya." },
+  { workspace: "telehealth", words: ["Kenya"], command: "Nexus, open tele health intake in Kenya." },
   { workspace: "mobile-clinic", words: ["Kenya"], command: "Nexus, open Mobile Clinic support in Kenya." },
   { workspace: "pharmacy", words: ["medication", "Kenya"], command: "Nexus, open Pharmacy support for medication questions in Kenya." },
   { workspace: "learning", words: ["digital literacy"], command: "Nexus, open Learning and start a digital literacy course." },
