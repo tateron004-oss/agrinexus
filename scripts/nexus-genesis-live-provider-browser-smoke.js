@@ -40,7 +40,10 @@ let browserDiagnostics = { exceptions: [], console: [], failedRequests: [], resp
 function ensureSyntheticFixture() {
   if (process.env.NEXUS_LIVE_FIXTURE) return;
   fs.mkdirSync(outputDir, { recursive: true });
-  const parts = [];
+  const startupSilence = path.join(outputDir, "startup-silence.wav");
+  const startupQuiet = spawnSync("ffmpeg", ["-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "60", startupSilence], { encoding: "utf8" });
+  assert.equal(startupQuiet.status, 0, `Could not synthesize startup silence: ${startupQuiet.stderr}`);
+  const parts = [startupSilence];
   spokenJourneys.forEach((journey, index) => {
     const speech = path.join(outputDir, `journey-${index}.wav`);
     const silence = path.join(outputDir, `silence-${index}.wav`);
@@ -333,7 +336,7 @@ async function main() {
         lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null,
         workspaceResults
       };
-    })()`), Math.max(90000, expectedTurns * 18000), "synthetic spoken turn and model response");
+    })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
 
     acceptanceStage = "cleanup";
     await evaluate(cdp, "stopRealtimeVoiceSession('explicit-stop-live-acceptance'); true");
