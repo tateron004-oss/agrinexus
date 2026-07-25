@@ -1,0 +1,200 @@
+{
+  "suite": "nexus-genesis-production-exact-build-smoke",
+  "base": "https://agrinexus-platform.onrender.com",
+  "productionConfirmation": "verified",
+  "webBuild": "nexus-behavior-495",
+  "pwaCache": "agrinexus-pwa-v440",
+  "health": {
+    "ok": true,
+    "service": "agrinexus",
+    "productIdentity": {
+      "productName": "Nexus Genesis | AgriNexus",
+      "assistantName": "Nexus",
+      "edition": "genesis",
+      "legacyProductName": "AgriNexus"
+    },
+    "release": "2026-06-16-operational-readiness",
+    "webBuild": "nexus-behavior-495",
+    "pwaCache": "agrinexus-pwa-v440",
+    "mode": "production",
+    "port": 10000,
+    "strictLiveMode": false,
+    "checks": {
+      "database": "connected",
+      "ai": "openai",
+      "readiness": "production-ready",
+      "readyCount": 37,
+      "total": 37,
+      "liveGaps": 0
+    },
+    "timestamp": "2026-07-25T23:30:58.845Z"
+  },
+  "configIdentity": {
+    "productName": "Nexus Genesis | AgriNexus",
+    "assistantName": "Nexus",
+    "edition": "genesis",
+    "legacyProductName": "AgriNexus"
+  },
+  "realtime": {
+    "ok": true,
+    "runtime": "realtime",
+    "realtimeEnabled": true,
+    "rollbackOnly": false,
+    "rollbackEnabled": false,
+    "fallback": "blocked",
+    "configured": true,
+    "ready": true,
+    "missingEnv": [],
+    "provider": "openai",
+    "model": "gpt-realtime-2",
+    "voice": "marin",
+    "runtimeVersion": "nexus-genesis-openai-agents-realtime-v3",
+    "buildVersion": "nexus-behavior-495",
+    "cacheVersion": "agrinexus-pwa-v440",
+    "endpoint": "/api/voice/realtime/session",
+    "legacySdpEndpoint": "/api/voice/realtime/call",
+    "toolEndpoint": "/api/voice/realtime/tool",
+    "statusEndpoint": "/api/voice/realtime/status",
+    "transport": "agents-sdk-webrtc",
+    "sdk": "@openai/agents/realtime",
+    "tools": [
+      {
+        "name": "nexus_general_conversation",
+        "safetyClassification": "conversation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_live_knowledge",
+        "safetyClassification": "read-only-source",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_weather",
+        "safetyClassification": "read-only-source",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_maps_route",
+        "safetyClassification": "read-only-or-preparation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_agriculture",
+        "safetyClassification": "preparation-and-education",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_health_preparation",
+        "safetyClassification": "regulated-preparation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_workforce_learning",
+        "safetyClassification": "preparation-and-education",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_marketplace_logistics",
+        "safetyClassification": "commerce-preparation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_communications",
+        "safetyClassification": "high-risk-confirmation-required",
+        "confirmationRequired": "Explicit Nexus confirmation required before send/call execution.",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_workflow",
+        "safetyClassification": "workflow-preparation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_provider_readiness",
+        "safetyClassification": "read-only-provider-status",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_deep_research",
+        "safetyClassification": "read-only-source",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_file_document_analysis",
+        "safetyClassification": "document-analysis",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_data_code_analysis",
+        "safetyClassification": "controlled-analysis",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_visual_analysis",
+        "safetyClassification": "visual-analysis",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_memory",
+        "safetyClassification": "privacy-memory",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_automation_reminder",
+        "safetyClassification": "confirmation-gated-automation",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_email",
+        "safetyClassification": "high-risk-confirmation-required",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_calendar",
+        "safetyClassification": "high-risk-confirmation-required",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_browser_computer_action",
+        "safetyClassification": "high-risk-confirmation-required",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_document_export",
+        "safetyClassification": "document-export",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      },
+      {
+        "name": "nexus_receipts",
+        "safetyClassification": "read-only-history",
+        "confirmationRequired": "Nexus decides based on routed capability",
+        "executionAuthority": false
+      }
+    ],
+    "noPermanentKeyInBrowser": true,
+    "noUserFacingRuntimeSelector": true,
+    "legacyFallbackAvailable": false,
+    "note": "Nexus Genesis OpenAI Agents Realtime is selected, configured, and ready to issue short-lived browser credentials."
+  },
+  "homeStatus": 200
+}
