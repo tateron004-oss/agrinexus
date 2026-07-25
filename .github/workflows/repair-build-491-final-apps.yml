@@ -1,0 +1,78 @@
+name: Repair final Nexus voice applications
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-build-491-final-apps.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Apply final voice application repair
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const appPath = "public/app.js";
+          let app = fs.readFileSync(appPath, "utf8");
+          const offlineOld = '  const offlineRequest = explicitOpen && /\\b(offline|offline queue|low bandwidth|sync status)\\b/.test(lower);';
+          const offlineNew = '  const offlineRequest = /\\b(offline queue|queued offline work)\\b/.test(lower)\n    || (explicitOpen && /\\b(offline|low bandwidth|sync status)\\b/.test(lower));';
+          if (!app.includes(offlineOld) && !app.includes(offlineNew)) throw new Error("Offline route anchor missing");
+          app = app.replace(offlineOld, offlineNew);
+          const transitionAnchor = '  if (!permissionSection || !canOpenSection(permissionSection)) return false;\n  const capabilityId = action.capabilityId || {';
+          const transitionReplacement = '  if (!permissionSection || !canOpenSection(permissionSection)) return false;\n  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {\n    document.body.classList.remove("user-map-full-open");\n    goSection("dashboard", {\n      instant: true,\n      scroll: false,\n      openDefaultAction: false,\n      keepAssistant: false,\n      allowRealtimeSurfaceChange: true,\n      source: "realtime-workspace-transition"\n    });\n    if (experienceMode === "user") renderUserWorkspace();\n  }\n  const capabilityId = action.capabilityId || {';
+          if (!app.includes(transitionAnchor) && !app.includes('source: "realtime-workspace-transition"')) throw new Error("Workspace transition anchor missing");
+          app = app.replace(transitionAnchor, transitionReplacement);
+          fs.writeFileSync(appPath, app);
+
+          const smokePath = "scripts/nexus-genesis-live-provider-browser-smoke.js";
+          let smoke = fs.readFileSync(smokePath, "utf8");
+          const visibleOld = "        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => (visibleText + ' ' + visibleValues).toLowerCase().includes(word.toLowerCase())) };";
+          const visibleNew = "        const normalizeVisibleWords = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();\n        const normalizedVisible = normalizeVisibleWords(visibleText + ' ' + visibleValues);\n        return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: journey.words.every(word => normalizedVisible.includes(normalizeVisibleWords(word))) };";
+          if (!smoke.includes(visibleOld) && !smoke.includes("normalizeVisibleWords")) throw new Error("Visible words anchor missing");
+          smoke = smoke.replace(visibleOld, visibleNew);
+          fs.writeFileSync(smokePath, smoke);
+
+          const qaPath = "scripts/nexus-genesis-voice-workspace-bridge-qa.js";
+          let qa = fs.readFileSync(qaPath, "utf8");
+          const qaAnchor = "checks.push(['Realtime adapter preserves final spoken item',realtimeAgent.includes('item_id: String(transportEvent?.item_id || item?.id || \"\")')&&realtimeAgent.includes('role: String(transportEvent?.role || item?.role || \"\")')&&realtimeAgent.includes('item')]);";
+          const qaExtra = "\nchecks.push(['offline queue phrase activates without transcription-sensitive open verb',app.includes('const offlineRequest = /\\\\b(offline queue|queued offline work)\\\\b/.test(lower)')]);\nchecks.push(['non-map voice route closes full map surface',app.includes('workspace !== \"map\" && document.body.classList.contains(\"user-map-full-open\")')&&app.includes('source: \"realtime-workspace-transition\"')]);";
+          if (!qa.includes("offline queue phrase activates without transcription-sensitive open verb")) {
+            if (!qa.includes(qaAnchor)) throw new Error("Voice bridge QA anchor missing");
+            qa = qa.replace(qaAnchor, qaAnchor + qaExtra);
+          }
+          fs.writeFileSync(qaPath, qa);
+          NODE
+          rg -l 'nexus-behavior-490|agrinexus-pwa-v435' server.js public scripts | xargs sed -i -e 's/nexus-behavior-490/nexus-behavior-491/g' -e 's/agrinexus-pwa-v435/agrinexus-pwa-v436/g'
+      - name: Verify protected voice architecture
+        run: |
+          npm ci
+          node --check public/app.js
+          node --check server.js
+          node --check scripts/nexus-genesis-live-provider-browser-smoke.js
+          npm run qa:nexus-genesis-voice-workspace-bridge
+          npm run qa:nexus-service-worker-cache-safety
+          npm run qa:nexus-genesis-realtime-production-migration
+          npm run qa:nexus-genesis-persistent-voice-lifecycle
+          git diff --check
+      - name: Publish build 491
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public server.js scripts
+          git commit -m "Finish all-app Nexus voice activation"
+          git push origin main
