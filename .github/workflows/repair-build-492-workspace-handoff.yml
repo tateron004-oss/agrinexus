@@ -23,43 +23,9 @@ jobs:
       - run: npm ci
       - name: Repair shared voice workspace handoff
         run: |
-          node <<'NODE'
-          const fs = require("fs");
-          const path = require("path");
-          const appPath = "public/app.js";
-          let app = fs.readFileSync(appPath, "utf8");
-          const broken = `  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
-    document.body.classList.remove("user-map-full-open");
-    goSection("dashboard", {
-      instant: true,
-      scroll: false,
-      openDefaultAction: false,
-      keepAssistant: false,
-      allowRealtimeSurfaceChange: true,
-      source: "realtime-workspace-transition"
-    });
-    if (experienceMode === "user") renderUserWorkspace();
-  }`;
-          const fixed = `  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
-    document.body.classList.remove("user-map-full-open");
-  }`;
-          if (!app.includes(broken)) throw new Error("Expected build 491 rerender block not found");
-          app = app.replace(broken, fixed);
-          fs.writeFileSync(appPath, app);
-          const roots = ["public", "scripts", "server.js"];
-          const files = [];
-          const walk = p => {
-            const stat = fs.statSync(p);
-            if (stat.isDirectory()) for (const name of fs.readdirSync(p)) walk(path.join(p, name));
-            else if (/\.(js|html|txt)$/.test(p) || p === "server.js") files.push(p);
-          };
-          for (const root of roots) if (fs.existsSync(root)) walk(root);
-          for (const file of files) {
-            let text = fs.readFileSync(file, "utf8");
-            const next = text.replaceAll("nexus-behavior-491", "nexus-behavior-492").replaceAll("agrinexus-pwa-v436", "agrinexus-pwa-v437");
-            if (next !== text) fs.writeFileSync(file, next);
-          }
-          NODE
+          node -e 'const fs=require("fs");let s=fs.readFileSync("public/app.js","utf8");const re=/  if \(workspace !== "map" && document\.body\.classList\.contains\("user-map-full-open"\)\) \{[\s\S]*?source: "realtime-workspace-transition"[\s\S]*?\n  \}/;if(!re.test(s))throw new Error("build 491 rerender block missing");s=s.replace(re,`  if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {\n    document.body.classList.remove("user-map-full-open");\n  }`);fs.writeFileSync("public/app.js",s)'
+          find public scripts -type f \( -name "*.js" -o -name "*.html" -o -name "*.txt" \) -print0 | xargs -0 sed -i 's/nexus-behavior-491/nexus-behavior-492/g; s/agrinexus-pwa-v436/agrinexus-pwa-v437/g'
+          sed -i 's/nexus-behavior-491/nexus-behavior-492/g; s/agrinexus-pwa-v436/agrinexus-pwa-v437/g' server.js
       - name: Validate protected runtime
         run: |
           node --check server.js
