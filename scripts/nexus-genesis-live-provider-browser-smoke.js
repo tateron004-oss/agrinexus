@@ -30,12 +30,15 @@ const browserCandidates = process.platform === "win32"
 const browserPath = process.env.CHROME_PATH || browserCandidates.find(candidate => fs.existsSync(candidate)) || browserCandidates[0];
 const baseUrl = process.env.NEXUS_LIVE_BASE_URL || "http://127.0.0.1:4182";
 const cdpPort = Number(process.env.NEXUS_LIVE_CDP_PORT || (9332 + (process.pid % 500)));
-const profilePath = path.join(outputDir, `chrome-smoke-profile-${cdpPort}-${process.pid}`);
 let acceptanceStage = "launch";
 let acceptanceFailureReason = "";
 let acceptanceProgress = { speechStartedCount: 0, responseDoneCount: 0, eventCount: 0 };
 let failureDiagnostics = null;
 let browserDiagnostics = { exceptions: [], console: [], failedRequests: [], responses: [] };
+let activeCdpPort = cdpPort;
+let activeProfilePath = "";
+let browser = null;
+let cdp = null;
 
 function ensureSyntheticFixture() {
   if (process.env.NEXUS_LIVE_FIXTURE) return;
@@ -122,22 +125,77 @@ async function evaluate(cdp, expression) {
 }
 
 async function pageWebSocket() {
-  const targets = await fetch(`http://127.0.0.1:${cdpPort}/json/list`).then(response => response.json());
+  const targets = await fetch(`http://127.0.0.1:${activeCdpPort}/json/list`).then(response => response.json());
   const page = targets.find(target => target.type === "page" && target.webSocketDebuggerUrl);
   if (!page) throw new Error("No browser page target was available.");
   return page.webSocketDebuggerUrl;
+}
+
+async function launchBrowserWithRetry(commonArgs) {
+  const attempts = [];
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    activeCdpPort = cdpPort + attempt - 1;
+    activeProfilePath = path.join(outputDir, `chrome-smoke-profile-${activeCdpPort}-${process.pid}-${attempt}`);
+    fs.rmSync(activeProfilePath, { recursive: true, force: true });
+    const stderrChunks = [];
+    const args = [
+      `--remote-debugging-port=${activeCdpPort}`,
+      `--user-data-dir=${activeProfilePath}`,
+      ...commonArgs
+    ];
+    browser = spawn(browserPath, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
+    browser.stderr.on("data", chunk => {
+      stderrChunks.push(String(chunk));
+      if (stderrChunks.join("").length > 12000) stderrChunks.shift();
+    });
+    let exitState = null;
+    browser.once("exit", (code, signal) => {
+      exitState = { code, signal };
+    });
+    try {
+      const version = await waitFor(async () => {
+        if (exitState) throw new Error(`Chrome exited with code ${exitState.code} and signal ${exitState.signal || "none"}`);
+        const response = await fetch(`http://127.0.0.1:${activeCdpPort}/json/version`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.webSocketDebuggerUrl ? data : null;
+      }, 20000, `Chrome debugging endpoint attempt ${attempt}`);
+      browserDiagnostics.chromeLaunch = {
+        attempt,
+        port: activeCdpPort,
+        browser: String(version.Browser || ""),
+        protocolVersion: String(version["Protocol-Version"] || "")
+      };
+      return browser;
+    } catch (error) {
+      attempts.push({
+        attempt,
+        port: activeCdpPort,
+        exitState,
+        error: String(error.message || error),
+        stderr: stderrChunks.join("").slice(-4000)
+      });
+      try {
+        if (process.platform === "win32" && browser?.pid) {
+          spawnSync("taskkill", ["/pid", String(browser.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+        } else {
+          browser?.kill();
+        }
+      } catch {}
+      await wait(500);
+    }
+  }
+  browserDiagnostics.chromeLaunchAttempts = attempts;
+  throw new Error(`Chrome failed to expose a debugging endpoint after ${attempts.length} attempts`);
 }
 
 async function main() {
   assert(fs.existsSync(browserPath), "Chrome is required for virtual microphone acceptance");
   ensureSyntheticFixture();
   assert(fs.existsSync(fixturePath), "Synthetic microphone fixture is missing");
-  fs.rmSync(profilePath, { recursive: true, force: true });
 
   const browserArgs = [
     "--headless=new",
-    `--remote-debugging-port=${cdpPort}`,
-    `--user-data-dir=${profilePath}`,
     "--use-fake-device-for-media-stream",
     "--use-fake-ui-for-media-stream",
     `--use-file-for-fake-audio-capture=${fixturePath}`,
@@ -152,17 +210,12 @@ async function main() {
   if (browserProxy) browserArgs.unshift(`--proxy-server=${browserProxy}`);
   if (process.env.NEXUS_LIVE_IGNORE_CERT_ERRORS === "1") browserArgs.unshift("--ignore-certificate-errors");
   if (process.platform !== "win32") browserArgs.unshift("--no-sandbox", "--disable-dev-shm-usage");
-  const browser = spawn(browserPath, browserArgs, { stdio: "ignore", windowsHide: true });
 
-  let cdp;
   let permanentCredentialObserved = false;
   let ephemeralCredentialLogged = false;
   try {
     acceptanceStage = "cdp-ready";
-    await waitFor(async () => {
-      const response = await fetch(`http://127.0.0.1:${cdpPort}/json/list`);
-      return response.ok;
-    }, 15000, "Chrome debugging endpoint");
+    await launchBrowserWithRetry(browserArgs);
     cdp = await cdpConnect(await pageWebSocket());
     acceptanceStage = "cdp-enable";
     await cdp.send("Page.enable");
