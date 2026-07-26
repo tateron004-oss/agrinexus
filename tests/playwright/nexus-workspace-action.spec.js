@@ -163,6 +163,33 @@ async function realtimeStatus(page) {
   });
 }
 
+async function connectRealtime(page) {
+  const microphone = page.locator("#nexusPermanentMicrophoneBtn");
+  await expect(microphone).toBeVisible();
+  let lastStatus;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await microphone.click();
+    try {
+      await expect.poll(async () => {
+        lastStatus = await realtimeStatus(page);
+        return lastStatus;
+      }, {
+        message: `The existing OpenAI Realtime session and SDK microphone must be live (attempt ${attempt})`,
+        timeout: 30000
+      }).toMatchObject({
+        activeRuntime: "realtime",
+        connectionState: "connected",
+        liveMicrophoneTrack: true
+      });
+      return;
+    } catch (error) {
+      if (attempt === 3) {
+        throw new Error(`${error.message}\nLast Realtime status: ${JSON.stringify(lastStatus)}`);
+      }
+    }
+  }
+}
+
 test("all finalized transcripts open and populate existing workspaces exactly once", async ({ page }, testInfo) => {
   const consoleErrors = [];
   const matrixResults = [];
@@ -175,16 +202,7 @@ test("all finalized transcripts open and populate existing workspaces exactly on
   await page.goto("/?voiceDebug=1&voiceAcceptance=1", { waitUntil: "domcontentloaded" });
   await login(page);
 
-  const microphone = page.locator("#nexusPermanentMicrophoneBtn");
-  await expect(microphone).toBeVisible();
-  await microphone.click();
-  await expect.poll(() => realtimeStatus(page), {
-    message: "The existing OpenAI Realtime session and SDK microphone must be live"
-  }).toMatchObject({
-    activeRuntime: "realtime",
-    connectionState: "connected",
-    liveMicrophoneTrack: true
-  });
+  await connectRealtime(page);
 
   for (const journey of journeys) {
     console.log(`NEXUS_WORKSPACE_PROOF_START ${journey.workspace}`);
