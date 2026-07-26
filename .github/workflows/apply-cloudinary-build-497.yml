@@ -23,6 +23,7 @@ jobs:
         run: |
           git apply --index --check .github/staging/cloudinary-build-497.patch
           git apply --index .github/staging/cloudinary-build-497.patch
+          git restore --staged --worktree .github/workflows/nexus-production-voice-certification.yml
           git rm .github/staging/cloudinary-build-497.patch
           git rm .github/workflows/apply-cloudinary-build-497.yml
           node --check server.js
@@ -32,17 +33,11 @@ jobs:
           test "$(git hash-object public/app.js)" = "4bcd1b71281b921c0ef93993a8d5506f8e57b052"
           test "$(git hash-object server.js)" = "adcdfdcbd4b71a31868ef696e5261b4b634ee4da"
 
-      - name: Publish repaired runtime
+      - name: Publish verified runtime
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Activate Cloudinary media storage through Nexus voice"
           git push origin HEAD:main
 
-# External Cloudinary release trigger 2026-07-25.
-
-# Pull-request merge trigger.
-
-# Final authenticated release trigger 2026-07-25.
-
-# Merge-generated release trigger 2026-07-25.
+# Publish runtime separately from the certification workflow because GitHub App tokens cannot update workflow files.
