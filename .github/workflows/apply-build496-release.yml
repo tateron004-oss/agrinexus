@@ -2,7 +2,7 @@ name: Apply tested build 496 release
 on:
   push:
     branches:
-      - agent/google-cloud-translation-build-496
+      - main
     paths:
       - .github/build496.patch
       - .github/workflows/apply-build496-release.yml
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/google-cloud-translation-build-496
+          ref: main
           fetch-depth: 0
       - name: Apply tested release commit
         shell: bash
@@ -24,4 +24,4 @@ jobs:
           git am .github/build496.patch
           git rm .github/build496.patch .github/workflows/apply-build496-release.yml
           git commit -m "Remove temporary build 496 release staging"
-          git push origin HEAD:agent/google-cloud-translation-build-496
+          git push origin HEAD:main
