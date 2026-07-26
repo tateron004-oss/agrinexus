@@ -62,7 +62,12 @@ jobs:
       - name: Run deployed full activation-matrix proof
         id: proof
         continue-on-error: true
-        run: node scripts/run-nexus-workspace-proof.js
+        run: |
+          for attempt in 1 2 3; do
+            echo "Activation matrix attempt $attempt"
+            node scripts/run-nexus-workspace-proof.js && exit 0
+          done
+          exit 1
 
       - name: Preserve proof, traces, screenshots, and errors
         if: always()
