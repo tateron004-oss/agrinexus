@@ -36,6 +36,7 @@ const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexu
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
+const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const {
   isUsableEnvValue,
   loadLocalEnvFiles
@@ -54,8 +55,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17031,6 +17032,37 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     sourceFunction: dispatchSource,
     toolName: body.name || body.toolName || "nexus_capability_router"
   });
+  if (/\bcloudinary\b/i.test(command) && /\b(test|certif|verify|upload|save|store)\b/i.test(command)) {
+    const cloudinaryResult = await cloudinaryProvider.uploadCertificationAsset();
+    const response = cloudinaryResult.ok
+      ? `Cloudinary media upload verified. Nexus saved the certification image securely and received provider asset receipt ${cloudinaryResult.asset.publicId}.`
+      : `Cloudinary media upload did not complete. ${cloudinaryResult.error || "The server credential is missing or the provider rejected the request."}`;
+    safeGenesisVoiceStageEvent(db, {
+      correlationId,
+      stage: "tool-call-completed",
+      success: cloudinaryResult.ok,
+      route: dispatchRoute,
+      intent: "cloudinary-media-upload",
+      sourceFunction: "cloudinaryProvider.uploadCertificationAsset",
+      toolName: body.name || body.toolName || "nexus_file_document_analysis"
+    });
+    return {
+      ok: cloudinaryResult.ok,
+      correlationId,
+      capability: "media-storage",
+      status: cloudinaryResult.status,
+      response,
+      providerAttempted: true,
+      providerSucceeded: cloudinaryResult.ok,
+      executionAttempted: true,
+      executionVerified: cloudinaryResult.ok,
+      missingInformation: [],
+      blockedReason: cloudinaryResult.ok ? null : cloudinaryResult.status,
+      cloudinaryProvider: cloudinaryResult.provider,
+      cloudinaryReceipt: cloudinaryResult.receipt || null,
+      cloudinaryAsset: cloudinaryResult.asset || null
+    };
+  }
   const { result } = await runCompanionSafeAgentCommand(db, user, {
     command,
     correlationId,

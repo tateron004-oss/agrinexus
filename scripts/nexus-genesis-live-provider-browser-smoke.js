@@ -24,6 +24,7 @@ const spokenJourneys = [
   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
   { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
+  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, upload and verify the Cloudinary certification image." }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
@@ -248,6 +249,7 @@ async function main() {
         window.__NEXUS_VOICE_ACCEPTANCE_EVENTS__ = [];
         window.__NEXUS_WORKSPACE_ACKS__ = [];
         window.__NEXUS_TRANSLATION_TOOL_RESULTS__ = [];
+        window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ = [];
         const nexusOriginalFetch = window.fetch.bind(window);
         window.fetch = async (...args) => {
           const response = await nexusOriginalFetch(...args);
@@ -256,6 +258,13 @@ async function main() {
             response.clone().json().then(payload => {
               if (payload?.translationProvider) window.__NEXUS_TRANSLATION_TOOL_RESULTS__.push({
                 provider: String(payload.translationProvider),
+                response: String(payload.response || '')
+              });
+              if (payload?.cloudinaryProvider) window.__NEXUS_CLOUDINARY_TOOL_RESULTS__.push({
+                provider: String(payload.cloudinaryProvider),
+                verified: payload?.cloudinaryReceipt?.verified === true,
+                secureDelivery: payload?.cloudinaryReceipt?.secureDelivery === true,
+                publicId: String(payload?.cloudinaryReceipt?.publicId || ''),
                 response: String(payload.response || '')
               });
             }).catch(() => {});
@@ -372,6 +381,8 @@ async function main() {
       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
       const translationResults = window.__NEXUS_TRANSLATION_TOOL_RESULTS__ || [];
       const translationSatisfied = translationResults.some(item => item.provider === 'google-cloud-translation' && item.response.trim());
+      const cloudinaryResults = window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ || [];
+      const cloudinarySatisfied = cloudinaryResults.some(item => item.provider === 'cloudinary' && item.verified && item.secureDelivery && item.publicId && item.response.trim());
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
       window.__NEXUS_ACCEPTANCE_SNAPSHOT__ = {
@@ -387,10 +398,12 @@ async function main() {
         workspacesSatisfied,
         translationSatisfied,
         translationResults,
+        cloudinarySatisfied,
+        cloudinaryResults,
         workspaceAckCount: workspaceAcks.length,
         workspaceResults
       };
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -409,6 +422,7 @@ async function main() {
         lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null,
         workspaceResults,
         translationResults
+        ,cloudinaryResults
       };
     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
 

@@ -834,6 +834,7 @@
     "qa:nexus-rp7-music-media-real-provider-activation": "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
     "qa:nexus-youtube-data-api-live-provider": "node scripts/nexus-youtube-data-api-live-provider-qa.js",
     "qa:nexus-google-cloud-translation-provider": "node scripts/nexus-google-cloud-translation-provider-qa.js",
+    "qa:nexus-cloudinary-provider": "node scripts/nexus-cloudinary-provider-qa.js",
     "qa:nexus-rp8-unified-provider-live-mock-skip-matrix": "node scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
     "qa:nexus-rp9-controlled-assistant-preview-live-provider-sweep": "node scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
     "qa:nexus-rp10-standard-user-live-preview-readiness-validation": "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
