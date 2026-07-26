@@ -52,7 +52,7 @@ jobs:
 
       - name: Certify all spoken production workflows
         env:
-          NEXUS_LIVE_EXPECTED_TURNS: "16"
+          NEXUS_LIVE_EXPECTED_TURNS: "18"
           NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
           NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
         run: |
