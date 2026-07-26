@@ -1,0 +1,9 @@
+{
+  "build": "nexus-behavior-497",
+  "workflowCommit": "1dda2fcd0463aa62aac310ec7c44db7e10b5a0fd",
+  "outcome": "success",
+  "recordedAt": "2026-07-26T03:16:32.331Z",
+  "diagnosticTail": [
+    "> agrinexus-fullstack@1.0.0 qa:nexus-genesis-live-provider-browser-smoke\n> node scripts/nexus-genesis-live-provider-browser-smoke.js"
+  ]
+}\n
