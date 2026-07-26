@@ -19,24 +19,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-        "commitHash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191666590"
+        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/7931e1d32e9763604bcfa62f6f16824e4070ed84",
+        "commitHash": "7931e1d32e9763604bcfa62f6f16824e4070ed84",
+        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191912669"
       },
       "gitCommit": {
-        "shortHash": "e1cd61c",
-        "hash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-        "subject": "Retry Realtime startup in Build 500 matrix",
-        "body": "Retry Realtime startup in Build 500 matrix",
+        "shortHash": "7931e1d",
+        "hash": "7931e1d32e9763604bcfa62f6f16824e4070ed84",
+        "subject": "Run activation matrix before spoken resource cleanup",
+        "body": "Run activation matrix before spoken resource cleanup",
         "author": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785048477000
+          "time": 1785048986000
         },
         "committer": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785048477000
+          "time": 1785048986000
         },
         "branch": "main"
       },
@@ -50,24 +50,24 @@
         "retries": 0,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-            "commitHash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191666590"
+            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/7931e1d32e9763604bcfa62f6f16824e4070ed84",
+            "commitHash": "7931e1d32e9763604bcfa62f6f16824e4070ed84",
+            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191912669"
           },
           "gitCommit": {
-            "shortHash": "e1cd61c",
-            "hash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
-            "subject": "Retry Realtime startup in Build 500 matrix",
-            "body": "Retry Realtime startup in Build 500 matrix",
+            "shortHash": "7931e1d",
+            "hash": "7931e1d32e9763604bcfa62f6f16824e4070ed84",
+            "subject": "Run activation matrix before spoken resource cleanup",
+            "body": "Run activation matrix before spoken resource cleanup",
             "author": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785048477000
+              "time": 1785048986000
             },
             "committer": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785048477000
+              "time": 1785048986000
             },
             "branch": "main"
           },
@@ -131,7 +131,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "failed",
-                  "duration": 97282,
+                  "duration": 97509,
                   "error": {
                     "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\nThe existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate\nLast Realtime status: {\"activeRuntime\":\"unconfirmed\",\"connectionState\":\"closed\",\"liveMicrophoneTrack\":false,\"controllerState\":\"\",\"microphoneLabel\":\"Enable microphone\"}",
                     "stack": "Error: The existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\nThe existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate\nLast Realtime status: {\"activeRuntime\":\"unconfirmed\",\"connectionState\":\"closed\",\"liveMicrophoneTrack\":false,\"controllerState\":\"\",\"microphoneLabel\":\"Enable microphone\"}\n    at connectRealtime (/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:187:15)\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:205:3",
@@ -155,7 +155,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-26T06:53:26.600Z",
+                  "startTime": "2026-07-26T07:00:41.411Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -199,8 +199,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-26T06:53:26.129Z",
-    "duration": 101467.428,
+    "startTime": "2026-07-26T07:00:40.927Z",
+    "duration": 101750.861,
     "expected": 0,
     "skipped": 0,
     "unexpected": 1,
