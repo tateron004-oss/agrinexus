@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-503";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v448";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-504";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v449";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -51100,6 +51100,7 @@ function setNexusPermanentMicrophoneState(state = "ready", message = "Microphone
     button.disabled = false;
     button.dataset.nexusPermanentMicrophoneState = state;
     if (state === "blocked") button.textContent = "Microphone blocked — view instructions";
+    else if (state === "no-device") button.textContent = "No microphone device detected";
     else if (state === "connected") button.textContent = "Microphone connected";
     else if (state === "unavailable") button.textContent = "Nexus voice connection unavailable — retry";
     else if (state === "requesting") button.textContent = "Requesting microphone...";
@@ -51125,6 +51126,13 @@ function verifyNexusPermanentMicrophoneStream(stream) {
     trackMuted,
     streamActive: Boolean(stream?.active)
   };
+}
+
+function classifyNexusMicrophoneStartError(error) {
+  const errorText = `${error?.name || ""} ${error?.message || ""}`;
+  if (/notallowed|permission|denied|securityerror/i.test(errorText)) return "blocked";
+  if (/notfound|devicesnotfound|requested device not found|no microphone device/i.test(errorText)) return "no-device";
+  return "unavailable";
 }
 
 async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-html-microphone-button") {
@@ -51179,20 +51187,25 @@ async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-ht
     setNexusPermanentMicrophoneState("connected", "Microphone is live. Connecting Nexus Realtime voice...");
     return { stream, proof };
   } catch (error) {
-    const denied = /notallowed|permission|denied/i.test(`${error.name || ""} ${error.message || ""}`);
+    const failureState = classifyNexusMicrophoneStartError(error);
+    const denied = failureState === "blocked";
+    const noDevice = failureState === "no-device";
     nexusVoicePermissionDeniedThisSession = denied;
     setNexusPermanentMicrophoneState(
-      denied ? "blocked" : "unavailable",
+      failureState,
       denied
         ? "Microphone permission is blocked. Open browser site settings, allow microphone for this site, then reload and retry."
+        : noDevice
+          ? "This browser session has no microphone device. Connect or enable a microphone, then reload and retry. Nexus Realtime is available; the browser supplied no audio device."
         : `Nexus could not open the microphone: ${error.message || "device unavailable"}.`
     );
     updateNexusOsVoiceRuntimeState({
-      mode: denied ? "microphone-blocked" : "microphone-unavailable",
+      mode: denied ? "microphone-blocked" : noDevice ? "microphone-device-missing" : "microphone-unavailable",
       listeningState: "blocked",
       hearingState: "idle",
-      permissionState: denied ? "denied" : "unknown",
+      permissionState: denied ? "denied" : noDevice ? "unsupported" : "unknown",
       microphoneUnavailable: true,
+      microphoneDeviceMissing: noDevice,
       lastError: error.message || "microphone-start-failed"
     }, source);
     throw error;

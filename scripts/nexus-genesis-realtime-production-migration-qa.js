@@ -168,8 +168,8 @@ const scenarios = [
 ];
 
 const requirements = [
-  ["Build markers bumped", server.includes("nexus-behavior-503") && app.includes("nexus-behavior-503") && sw.includes("nexus-behavior-503") && index.includes("nexus-behavior-503")],
-  ["PWA markers bumped", server.includes("agrinexus-pwa-v448") && app.includes("agrinexus-pwa-v448") && sw.includes("agrinexus-pwa-v448")],
+  ["Build markers bumped", server.includes("nexus-behavior-504") && app.includes("nexus-behavior-504") && sw.includes("nexus-behavior-504") && index.includes("nexus-behavior-504")],
+  ["PWA markers bumped", server.includes("agrinexus-pwa-v449") && app.includes("agrinexus-pwa-v449") && sw.includes("agrinexus-pwa-v449")],
   ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v456")],
   ["Realtime runtime version exists", server.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION") && app.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION")],
   ["Server runtime values", server.includes('const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"])')],

@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-503"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v448"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-503"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v448"') &&
-      index.includes("/app.js?v=nexus-behavior-503")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-504"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v449"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-504"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v449"') &&
+      index.includes("/app.js?v=nexus-behavior-504")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-503') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-504') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -68,6 +68,14 @@ const checks = [
       permanentMic.includes('track.readyState === "live"') &&
       permanentMic.includes("track.enabled !== false") &&
       permanentMic.includes("preverifiedMicrophoneStream: stream")
+  ],
+  [
+    "Missing browser microphone hardware is not mislabeled as a Realtime connection failure",
+    permanentMic.includes("function classifyNexusMicrophoneStartError") &&
+      permanentMic.includes('"no-device"') &&
+      permanentMic.includes("No microphone device detected") &&
+      permanentMic.includes("Nexus Realtime is available; the browser supplied no audio device.") &&
+      permanentMic.includes("microphoneDeviceMissing: noDevice")
   ],
   [
     "Direct click retries one transient Realtime startup without reacquiring or abandoning the live microphone",

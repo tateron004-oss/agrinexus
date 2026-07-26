@@ -21,12 +21,12 @@ assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Ne
 assert.match(app, /youtubePlayerCommand\("stopVideo"\)/, "Stop voice control must reach YouTube");
 assert.match(app, /setVoiceResponse\("YouTube music stopped\. Nexus is still listening\."/,
   "Stopping music must preserve Nexus listening");
-assert.match(server, /nexus-behavior-503/);
-assert.match(app, /nexus-behavior-503/);
-assert.match(html, /nexus-behavior-503/);
-assert.match(sw, /nexus-behavior-503/);
-assert.match(server, /agrinexus-pwa-v448/);
-assert.match(app, /agrinexus-pwa-v448/);
-assert.match(sw, /agrinexus-pwa-v448/);
+assert.match(server, /nexus-behavior-504/);
+assert.match(app, /nexus-behavior-504/);
+assert.match(html, /nexus-behavior-504/);
+assert.match(sw, /nexus-behavior-504/);
+assert.match(server, /agrinexus-pwa-v449/);
+assert.match(app, /agrinexus-pwa-v449/);
+assert.match(sw, /agrinexus-pwa-v449/);
 
 console.log("[nexus-youtube-music-playback-qa] passed");
