@@ -1,6 +1,7 @@
 name: Apply Nexus Cloudinary build 497
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
