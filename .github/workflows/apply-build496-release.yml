@@ -1,0 +1,27 @@
+name: Apply tested build 496 release
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/build496.patch
+      - .github/workflows/apply-build496-release.yml
+permissions:
+  contents: write
+jobs:
+  apply-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply tested release commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git am .github/build496.patch
+          git rm .github/build496.patch .github/workflows/apply-build496-release.yml
+          git commit -m "Remove temporary build 496 release staging"
+          git push origin HEAD:main
