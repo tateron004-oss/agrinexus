@@ -26,6 +26,8 @@ const spokenJourneys = [
   { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
   ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, upload and verify the Cloudinary certification image." }
   ,{ workspace: null, words: [], twilioProvider: "twilio", command: "Nexus, send a production test SMS to my owner test recipient. I explicitly confirm this test send." }
+  ,{ workspace: null, words: [], callStage: true, command: "Nexus call owner test recipient" }
+  ,{ workspace: null, words: [], twilioCallProvider: "twilio", command: "Yes" }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
@@ -252,6 +254,7 @@ async function main() {
         window.__NEXUS_TRANSLATION_TOOL_RESULTS__ = [];
         window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ = [];
         window.__NEXUS_TWILIO_TOOL_RESULTS__ = [];
+        window.__NEXUS_TWILIO_CALL_RESULTS__ = [];
         const nexusOriginalFetch = window.fetch.bind(window);
         window.fetch = async (...args) => {
           const response = await nexusOriginalFetch(...args);
@@ -275,6 +278,15 @@ async function main() {
                 succeeded: payload.providerSucceeded === true,
                 verified: payload.executionVerified === true,
                 sid: String(payload?.providerData?.sid || ''),
+                response: String(payload.response || '')
+              });
+              if (payload?.provider === 'twilio' && payload?.providerAction === 'call.start') window.__NEXUS_TWILIO_CALL_RESULTS__.push({
+                provider: String(payload.provider),
+                action: String(payload.providerAction),
+                succeeded: payload.providerSucceeded === true,
+                verified: payload.executionVerified === true,
+                sid: String(payload?.providerData?.sid || ''),
+                status: String(payload?.providerData?.status || ''),
                 response: String(payload.response || '')
               });
             }).catch(() => {});
@@ -395,6 +407,8 @@ async function main() {
       const cloudinarySatisfied = cloudinaryResults.some(item => item.provider === 'cloudinary' && item.verified && item.secureDelivery && item.publicId && item.response.trim());
       const twilioResults = window.__NEXUS_TWILIO_TOOL_RESULTS__ || [];
       const twilioSatisfied = twilioResults.some(item => item.provider === 'twilio' && item.action === 'sms.send' && item.succeeded && item.verified && /^SM[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
+      const twilioCallResults = window.__NEXUS_TWILIO_CALL_RESULTS__ || [];
+      const twilioCallSatisfied = twilioCallResults.some(item => item.provider === 'twilio' && item.action === 'call.start' && item.succeeded && item.verified && /^CA[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
       window.__NEXUS_ACCEPTANCE_SNAPSHOT__ = {
@@ -414,10 +428,12 @@ async function main() {
         cloudinaryResults,
         twilioSatisfied,
         twilioResults,
+        twilioCallSatisfied,
+        twilioCallResults,
         workspaceAckCount: workspaceAcks.length,
         workspaceResults
       };
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioSatisfied || !twilioCallSatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -438,6 +454,7 @@ async function main() {
         translationResults
         ,cloudinaryResults
         ,twilioResults
+        ,twilioCallResults
       };
     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
 
@@ -468,6 +485,7 @@ async function main() {
       lifecycleInvariant: evidence.lifecycle?.ok === true,
       workspaceResults: evidence.workspaceResults,
       translationResults: evidence.translationResults,
+      twilioCallResults: evidence.twilioCallResults,
       browserSecretLoggingDetected: false,
       eventCount: evidence.eventCount
       ,expectedTurns: evidence.expectedTurns,
