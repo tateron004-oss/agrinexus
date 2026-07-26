@@ -92,18 +92,25 @@ jobs:
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
 
+      - name: Require complete structured voice evidence
+        id: voice_evidence
+        if: always() && steps.voice.outcome == 'success'
+        run: |
+          node -e 'const {readAndValidateEvidence}=require("./scripts/nexus-live-voice-evidence"); readAndValidateEvidence("output/nexus-live-voice-acceptance/live-provider-browser-evidence.json", Number(process.env.NEXUS_LIVE_EXPECTED_TURNS));'
+
       - name: Record concise certification result
         if: always()
         shell: bash
         run: |
           mkdir -p output/nexus-certification
-          node -e 'const fs=require("fs"); const [build,sha,release,markers,contracts,voice]=process.argv.slice(1); const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\r?\n/).filter(Boolean).slice(-20); const stages={release,releaseMarkers:markers,executionContracts:contracts,voice}; const outcome=Object.values(stages).every(value=>value==="success")?"success":"failure"; fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`,JSON.stringify({build:build||"unknown",workflowCommit:sha,outcome,stages,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\n")' \
+          node -e 'const fs=require("fs"); const [build,sha,release,markers,contracts,voice,evidence]=process.argv.slice(1); const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\r?\n/).filter(Boolean).slice(-20); const stages={release,releaseMarkers:markers,executionContracts:contracts,voice,voiceEvidence:evidence}; const outcome=Object.values(stages).every(value=>value==="success")?"success":"failure"; fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`,JSON.stringify({build:build||"unknown",workflowCommit:sha,outcome,stages,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\n")' \
             "${{ steps.release.outputs.expected_build }}" \
             "${{ github.sha }}" \
             "${{ steps.release.outcome }}" \
             "${{ steps.release_markers.outcome }}" \
             "${{ steps.execution_contracts.outcome }}" \
-            "${{ steps.voice.outcome }}"
+            "${{ steps.voice.outcome }}" \
+            "${{ steps.voice_evidence.outcome }}"
 
       - name: Publish certification evidence
         if: always()
@@ -113,11 +120,11 @@ jobs:
           path: |
             output/nexus-live-voice-acceptance/
             output/nexus-certification/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
       - name: Enforce spoken certification outcome
-        if: always() && steps.voice.outcome != 'success'
+        if: always() && (steps.voice.outcome != 'success' || steps.voice_evidence.outcome != 'success')
         run: exit 1
 
 # Build metadata is resolved from server.js so certification cannot drift from the release.
