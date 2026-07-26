@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
-      NEXUS_LIVE_EXPECTED_TURNS: "15"
+      NEXUS_LIVE_EXPECTED_TURNS: "16"
       NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
       NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
       CHROME_PATH: /usr/bin/google-chrome
@@ -89,11 +89,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p output/nexus-certification
-          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-497",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
+          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-498",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add output/nexus-certification
-          git commit -m "Record Nexus build 497 spoken certification: ${{ steps.voice.outcome }}" || true
+          git commit -m "Record Nexus build 498 spoken certification: ${{ steps.voice.outcome }}" || true
           git pull --rebase origin main
           git push origin HEAD:main
 
