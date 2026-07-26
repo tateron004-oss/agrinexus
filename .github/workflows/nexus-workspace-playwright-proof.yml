@@ -5,9 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/nexus-workspace-playwright-proof.yml
-      - tests/playwright/nexus-workspace-action.spec.js
-      - playwright.workflow.config.js
-      - scripts/run-nexus-workspace-proof.js
+      - scripts/nexus-genesis-live-provider-browser-smoke.js
   workflow_dispatch:
     inputs:
       base_url:
@@ -16,17 +14,18 @@ on:
         default: https://agrinexus-platform.onrender.com
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: nexus-workspace-production-certification
+  cancel-in-progress: true
 
 jobs:
   deployed-workspace-proof:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      NEXUS_PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
-      NEXUS_PLAYWRIGHT_EMAIL: ${{ secrets.NEXUS_PLAYWRIGHT_EMAIL }}
-      NEXUS_PLAYWRIGHT_PASSWORD: ${{ secrets.NEXUS_PLAYWRIGHT_PASSWORD }}
-      NEXUS_PLAYWRIGHT_HEADED: "false"
+      NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
     steps:
       - name: Check out exact repository state
         uses: actions/checkout@v4
@@ -40,63 +39,22 @@ jobs:
       - name: Install application dependencies
         run: npm ci
 
-      - name: Install Playwright without changing the application lockfile
-        run: npm install --no-save --no-package-lock @playwright/test@1.61.1
-
-      - name: Install Chromium and system dependencies
-        run: npx playwright install --with-deps chromium
-
-      - name: Install full FFmpeg speech synthesizer
-        run: sudo apt-get install -y ffmpeg
-
-      - name: Run deployed full activation-matrix proof
-        id: proof
-        continue-on-error: true
+      - name: Install Playwright Chromium
         run: |
-          for attempt in 1 2 3; do
-            echo "Activation matrix attempt $attempt"
-            node scripts/run-nexus-workspace-proof.js && exit 0
-          done
-          exit 1
+          npm install --no-save --no-package-lock @playwright/test@1.61.1
+          npx playwright install --with-deps chromium
 
-      - name: Run live spoken voice-to-workspace proof
-        continue-on-error: true
+      - name: Install synthetic speech support
+        run: sudo apt-get install -y ffmpeg libflite1
+
+      - name: Verify Build 500 production markers
+        run: npm run qa:nexus-genesis-production-exact-build-smoke
+
+      - name: Certify all spoken production workflows
         env:
-          NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
-          NEXUS_LIVE_EXPECTED_TURNS: "4"
+          NEXUS_LIVE_EXPECTED_TURNS: "16"
           NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
+          NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
         run: |
           export CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
-          node scripts/nexus-genesis-live-provider-browser-smoke.js
-
-      - name: Preserve proof, traces, screenshots, and errors
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nexus-workspace-playwright-proof-${{ github.run_id }}
-          path: test-results/nexus-workspace-action/
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Publish machine-readable production proof
-        if: always()
-        env:
-          PROOF_OUTCOME: ${{ steps.proof.outcome }}
-        run: |
-          mkdir -p output/nexus-certification/deployed-workspace-proof
-          if [ -f test-results/nexus-workspace-action/results.json ]; then
-            cp test-results/nexus-workspace-action/results.json output/nexus-certification/deployed-workspace-proof/results.json
-          else
-            printf '{"proofOutcome":"%s","error":"Playwright results were not produced"}\n' "$PROOF_OUTCOME" > output/nexus-certification/deployed-workspace-proof/results.json
-          fi
-          printf '{"runId":"%s","commit":"%s","proofOutcome":"%s","baseUrl":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$PROOF_OUTCOME" "$NEXUS_PLAYWRIGHT_BASE_URL" > output/nexus-certification/deployed-workspace-proof/run.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add output/nexus-certification/deployed-workspace-proof/results.json output/nexus-certification/deployed-workspace-proof/run.json
-          git commit -m "Record deployed activation proof" || exit 0
-          git pull --rebase origin main
-          git push origin HEAD:main
-
-      - name: Enforce activation proof result
-        if: steps.proof.outcome != 'success'
-        run: exit 1
+          npm run qa:nexus-genesis-live-provider-browser-smoke
