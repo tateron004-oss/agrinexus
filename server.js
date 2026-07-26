@@ -55,8 +55,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-500";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v445";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-501";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v446";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -8283,8 +8283,13 @@ async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbo
     From: process.env.TWILIO_PHONE_NUMBER,
     To: recipient,
     Url: twimlUrl,
-    Method: "POST"
+    Method: "POST",
+    StatusCallback: `${base}/api/voice/phone/call-status`,
+    StatusCallbackMethod: "POST"
   });
+  for (const event of ["initiated", "ringing", "answered", "completed"]) {
+    form.append("StatusCallbackEvent", event);
+  }
   try {
     const response = await fetchWithTimeout(
       `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(process.env.TWILIO_ACCOUNT_SID)}/Calls.json`,
@@ -8315,6 +8320,74 @@ async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbo
   } catch (error) {
     return { attempted: true, ok: false, status: "provider-error", error: error.message, to: recipient, context };
   }
+}
+
+function twilioWebhookUrl(req, url) {
+  const configuredBase = String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
+  if (configuredBase) return `${configuredBase}${url.pathname}${url.search || ""}`;
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
+  const forwardedHost = String(req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim();
+  return `${forwardedProto}://${forwardedHost}${url.pathname}${url.search || ""}`;
+}
+
+function validTwilioWebhookSignature(req, url, body = {}) {
+  const authToken = String(process.env.TWILIO_AUTH_TOKEN || "");
+  const supplied = String(req.headers["x-twilio-signature"] || "");
+  if (!authToken || !supplied) return false;
+  const parameters = Object.keys(body)
+    .sort()
+    .map(key => `${key}${Array.isArray(body[key]) ? body[key].join("") : String(body[key] ?? "")}`)
+    .join("");
+  const expected = crypto
+    .createHmac("sha1", authToken)
+    .update(`${twilioWebhookUrl(req, url)}${parameters}`)
+    .digest("base64");
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length
+    && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+function recordTwilioCallStatus(db, body = {}) {
+  ensureAiProfile(db.profile);
+  const callSid = String(body.CallSid || body.callSid || "").trim();
+  const callStatus = String(body.CallStatus || body.callStatus || "").trim().toLowerCase();
+  const allowedStatuses = new Set(["queued", "initiated", "ringing", "in-progress", "completed", "busy", "failed", "no-answer", "canceled"]);
+  if (!/^CA[0-9A-Za-z]{8,}$/.test(callSid) || !allowedStatuses.has(callStatus)) return null;
+  const receipt = {
+    id: crypto.randomUUID(),
+    provider: "twilio",
+    callSid,
+    callStatus,
+    direction: String(body.Direction || "").slice(0, 40),
+    from: redactPhoneNumber(body.From || ""),
+    to: redactPhoneNumber(body.To || ""),
+    durationSeconds: Number(body.CallDuration || 0) || 0,
+    errorCode: String(body.ErrorCode || "").slice(0, 40),
+    receivedAt: new Date().toISOString()
+  };
+  db.profile.twilioCallStatusReceipts = db.profile.twilioCallStatusReceipts || [];
+  db.profile.twilioCallStatusReceipts.unshift(receipt);
+  db.profile.twilioCallStatusReceipts = db.profile.twilioCallStatusReceipts.slice(0, 100);
+  const call = (db.profile.outboundCalls || []).find(item => item.delivery?.sid === callSid);
+  if (call) {
+    call.status = callStatus;
+    call.updatedAt = receipt.receivedAt;
+    call.delivery.callStatus = callStatus;
+    call.delivery.statusReceiptId = receipt.id;
+    call.delivery.completed = callStatus === "completed";
+    call.delivery.answered = ["in-progress", "completed"].includes(callStatus);
+  }
+  logIntegration(db, {
+    providerId: "phone-voice",
+    module: "AI",
+    action: "phone.twilio_status_callback",
+    status: ["failed", "busy", "no-answer", "canceled"].includes(callStatus) ? "provider-failed" : "success",
+    detail: `Twilio call ${callSid.slice(-8)} status: ${callStatus}.`,
+    metadata: { receiptId: receipt.id, callId: call?.id || "", callSid, callStatus },
+    dispatch: false
+  });
+  return { receipt, call };
 }
 
 async function probeUrl(url, options = {}) {
@@ -25742,7 +25815,80 @@ async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
   };
 }
 
+function spotifyMusicControlIntent(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (!/\b(music|song|songs|playlist|playback)\b/.test(lower)) return "";
+  if (/\b(pause|hold|stop|end|turn off)\b/.test(lower)) return "pause";
+  if (/\b(resume|continue|restart|start again)\b/.test(lower)) return "resume";
+  return "";
+}
+
+async function executeSpotifyMusicControl(db, user, text) {
+  ensureMusicProfile(db.profile);
+  const action = spotifyMusicControlIntent(text);
+  if (!action) return null;
+  const token = await spotifyAccessTokenForUser(db, user).catch(() => null);
+  if (!token?.accessToken) {
+    return {
+      ok: false,
+      provider: "spotify",
+      action,
+      status: "needs-spotify-user-auth",
+      response: `Spotify is not connected for ${action} control yet. Connect Spotify, then try again.`
+    };
+  }
+  try {
+    await spotifyApi("/me/player/" + (action === "pause" ? "pause" : "play"), { method: "PUT" }, token.accessToken);
+    logIntegration(db, {
+      providerId: "music-playback",
+      module: "Agent AI",
+      action: `music.spotify_${action}`,
+      status: "success",
+      detail: `Spotify playback ${action} command completed.`,
+      metadata: { action, tokenSource: token.source },
+      dispatch: false
+    });
+    return {
+      ok: true,
+      provider: "spotify",
+      action,
+      status: action === "pause" ? "playback-paused" : "playback-resumed",
+      response: action === "pause" ? "Spotify music is paused." : "Spotify music is playing again."
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      provider: "spotify",
+      action,
+      status: error.statusCode === 404 ? "no-active-spotify-device" : "spotify-control-failed",
+      response: error.statusCode === 404
+        ? "Spotify is connected, but no active Spotify device is available."
+        : `Spotify could not ${action} playback: ${error.message}`
+    };
+  }
+}
+
 async function musicProviderCommandResponse(db, user, text, options = {}) {
+  const control = await executeSpotifyMusicControl(db, user, text);
+  if (control) {
+    ensureAiProfile(db.profile);
+    db.profile.agentMemory.lastStatus = "utility.music_control";
+    db.profile.agentMemory.lastSummary = control.response;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "utility.music_control",
+      response: control.response,
+      status: control.ok ? "completed" : control.status,
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        utilityAssistant: true,
+        kind: "music-control",
+        music: control,
+        suggestedReplies: control.action === "pause" ? ["resume music", "play Kenyan music"] : ["pause music", "stop music"]
+      }
+    };
+  }
   const playback = await executeSpotifyMusicPlayback(db, user, text, options);
   if (!playback) return null;
   const fallback = musicAssistantIntent(text);
@@ -25798,7 +25944,7 @@ function utilityAssistantKind(text, lower) {
   if (/\b(can you hear|hear me|understand|listen|talk|speak|communicate|english bad|bad english|broken english|not good english|wrong english|grandma talks|farmer talks)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
-  if (musicAssistantIntent(text)) return "music";
+  if (spotifyMusicControlIntent(text) || musicAssistantIntent(text)) return "music";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
   if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
   if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return "route-delay";
@@ -43574,6 +43720,26 @@ async function api(req, res, url) {
       noSecretValues: true
     }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
+    });
+  }
+
+  if (url.pathname === "/api/voice/phone/call-status" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const result = recordTwilioCallStatus(db, body);
+    if (!result) {
+      return send(res, 400, { ok: false, error: "Invalid Twilio call status payload", noSecretValues: true });
+    }
+    await writeDb(db);
+    return send(res, 200, {
+      ok: true,
+      provider: "twilio",
+      receiptId: result.receipt.id,
+      callStatus: result.receipt.callStatus,
+      matchedOutboundCall: Boolean(result.call),
+      noSecretValues: true
     });
   }
 

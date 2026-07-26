@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-500";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v445";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-501";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v446";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10229,15 +10229,26 @@ function handleLocalMusicControlCommand(command = "") {
 
 async function runMusicAssistantCommand(command = "", options = {}) {
   const turnToken = options.turnToken || null;
-  if (handleLocalMusicControlCommand(command)) return true;
+  const control = localMusicControlIntent(command);
+  const localPlaybackActive = Boolean(
+    nexusLocalMusicPlayback.context
+    && nexusLocalMusicPlayback.state !== "idle"
+    && nexusLocalMusicPlayback.state !== "stopped"
+  );
+  if (control && localPlaybackActive) return handleLocalMusicControlCommand(command);
   const intent = musicAssistantIntent(command);
-  if (!intent) return false;
+  if (!intent && !control) return false;
   updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is checking the connected music provider.");
   renderLiveVoiceSuggestions(["what time is it", "weather in Nairobi", "open learning", "Nexus stop"]);
-  const result = await runUtilityAgentCommand(command, intent.response, null, { turnToken });
+  const result = await runUtilityAgentCommand(
+    command,
+    intent?.response || "I am checking the connected music provider.",
+    null,
+    { turnToken }
+  );
   if (ignoreStaleNexusTurn(turnToken, "music answer")) return true;
   const music = result?.metadata?.music;
-  if (music && music.status !== "playback-started") {
+  if (!control && music && music.status !== "playback-started") {
     const played = await playNexusMusicTestAudio(intent.query);
     if (!played) setVoiceResponse("I understood the music request, but the browser did not allow local demo playback yet. Try again from a button or typed command.", true);
   }
@@ -54108,13 +54119,6 @@ function nexusPhase17StandardUserSafeAnswer(command = "") {
       suggestions: ["prepare provider contact", "start intake", "find clinic support"]
     };
   }
-  if (/\b(play music from kenya|play kenyan music|kenya music|kenya-inspired music)\b/.test(lower)) {
-    return {
-      response: "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local browser-generated audio, and I'm not opening an outside music service.",
-      suggestions: ["stop music", "open learning", "what can you do"],
-      localMusic: true
-    };
-  }
   return null;
 }
 
@@ -54642,7 +54646,7 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
   if (intent.type === "tool") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
-    if (intent.tool === "music-control") return handleLocalMusicControlCommand(command);
+    if (intent.tool === "music-control") return runMusicAssistantCommand(command, { turnToken });
     if (intent.tool === "music") return runMusicAssistantCommand(command, { turnToken });
     if (intent.tool === "dynamic") return runDynamicVoiceTool(command);
     if (intent.tool === "intelligence") return handleNexusIntelligenceRouter(command);
@@ -57775,21 +57779,6 @@ async function runGlobalCommand() {
   if (typedGlobalVoiceOff || isExplicitNexusVoiceOffCommand(command) || isNexusVoiceOffCommand(command)) {
     disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
     renderTypedGlobalVoiceControlConfirmation("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
-    return;
-  }
-  if (/\b(play music from kenya|play kenyan music|kenya music|kenya-inspired music)\b/.test(`${rawLowerCommand} ${lowerCommand}`)) {
-    const kenyaMusicResponse = "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local browser-generated audio, and I'm not opening an outside music service.";
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    renderLiveVoiceSuggestions(["stop music", "open learning", "what can you do"]);
-    updateNexusBehaviorLayer("answering", "Nexus started a local browser-generated Kenya-inspired rhythm without opening an outside service.");
-    setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
-    setTimeout(() => {
-      setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
-    }, 150);
-    void playNexusMusicTestAudio("Kenya-inspired demo rhythm").finally(() => {
-      setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
-    });
     return;
   }
   if (handleNexusStandardUserSafeTypedCommand(command)) return;
