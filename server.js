@@ -56,8 +56,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-503";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v448";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -7907,7 +7907,8 @@ function extractCallIntentTarget(command = "") {
     { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
     { pattern: /^(buyer|comprador|acheteur|mnunuzi|مشتري|المشتري)$/i, label: "buyer", relationship: "buyer or trade contact" },
     { pattern: /^(recruiter|employer|reclutador|employeur|mwajiri)$/i, label: "recruiter", relationship: "workforce contact" },
-    { pattern: /^(emergency contact|emergency)$/i, label: "emergency contact", relationship: "emergency contact" }
+    { pattern: /^(emergency contact|emergency)$/i, label: "emergency contact", relationship: "emergency contact" },
+    { pattern: /^(owner test recipient|test recipient)$/i, label: "owner test recipient", relationship: "verified owner test recipient" }
   ];
   const role = roleMap.find(item => item.pattern.test(lowerName));
   if (role) return { type: "role", rawName, displayName: role.label, relationship: role.relationship };
@@ -8021,7 +8022,7 @@ function callIntentResolution(db, parsed = {}) {
   const matches = callContactCandidates(db, target);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
-    if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
+    if (!callable && !["provider", "buyer", "owner test recipient"].includes(target.displayName)) return { status: "missing-number", matches };
     return {
       status: "resolved",
       matches: [{
@@ -16848,6 +16849,8 @@ function openAiRealtimeInstructions(user, language = "en") {
     "Ordinary conversation remains conversation. Never open, create, continue, or display a workflow merely because the user speaks.",
     "Answer greetings, presence checks, emotional support, casual questions, capability questions, and contextual follow-ups directly without a function tool.",
     "Use tools only when a real Nexus capability is needed, such as weather, maps, agriculture, health preparation, workforce, learning, marketplace, logistics, communications, provider readiness, receipts, or workflow preparation.",
+    "When the user asks to call or phone someone, you must call nexus_communications with the complete spoken request so Nexus can resolve the recipient and stage the confirmation gate.",
+    "When Nexus has a pending call and the user explicitly says yes, confirm, or do it, you must call nexus_communications with that exact confirmation. Never treat a spoken confirmation as ordinary conversation, and never claim a call started unless the tool result verifies liveCallPlaced.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code. Use the provider-backed translation returned by Nexus.",
     "When the user explicitly asks to open, show, display, or use Maps or requests a route or directions, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app. Nexus opens its own browser Maps workspace; an unavailable external route provider does not prevent that workspace from opening.",
     "Never claim an action completed without verified evidence from the Nexus tool result.",
@@ -17149,6 +17152,18 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     route: dispatchRoute,
     command
   });
+  const callMetadata = result?.metadata?.provider === "twilio" && result?.metadata?.executionConfirmed === true
+    ? {
+        provider: "twilio",
+        providerAction: "call.start",
+        providerSucceeded: result.metadata.liveCallPlaced === true,
+        executionVerified: result.metadata.liveCallPlaced === true && /^CA[A-Za-z0-9]+$/.test(String(result.metadata.providerCallSid || "")),
+        providerData: {
+          sid: String(result.metadata.providerCallSid || ""),
+          status: String(result.metadata.deliveryStatus || result.metadata.callStatus || "")
+        }
+      }
+    : {};
   updateNexusSessionContext(db, command, envelope);
   safeGenesisVoiceStageEvent(db, {
     correlationId,
@@ -17171,7 +17186,8 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     executionVerified: Boolean(envelope.execution?.verified),
     missingInformation: envelope.missingInformation || [],
     blockedReason: envelope.blockedReason || null,
-    translationProvider: result?.metadata?.translation?.provider || null
+    translationProvider: result?.metadata?.translation?.provider || null,
+    ...callMetadata
   };
 }
 
@@ -23974,6 +23990,7 @@ async function executePendingAgentAction(db, user, pending) {
         callStatus: call.status,
         callId: call.id,
         callNumber: call.callNumber,
+        providerCallSid: call.delivery?.sid || "",
         redactedTo: redactPhoneNumber(call.to),
         deliveryStatus: call.delivery?.status || call.status,
         missing: call.delivery?.missing || []
