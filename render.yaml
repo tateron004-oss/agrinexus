@@ -230,6 +230,8 @@ services:
         sync: false
       - key: PHONE_PROVIDER
         value: twilio
+      - key: NEXUS_CALLS_ENABLED
+        value: "true"
       - key: PUBLIC_BASE_URL
         value: https://agrinexus-platform.onrender.com
       - key: TWILIO_ACCOUNT_SID
@@ -243,6 +245,8 @@ services:
       - key: TWILIO_WHATSAPP_FROM
         sync: false
       - key: TWILIO_MESSAGING_SERVICE_SID
+        sync: false
+      - key: OWNER_TEST_RECIPIENT_NUMBER
         sync: false
       - key: TRANSLATION_PROVIDER
         value: webhook
