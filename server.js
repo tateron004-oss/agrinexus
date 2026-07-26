@@ -55,8 +55,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-498";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v443";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17537,6 +17537,13 @@ function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
   };
 }
 
+function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = process.env) {
+  const explicitlyRequested = args.ownerTestRecipient === true
+    || /\b(?:my|the|our)\s+(?:approved\s+)?owner(?:'s)?\s+test\s+(?:recipient|number|phone)\b/i.test(String(command || ""));
+  if (!explicitlyRequested) return "";
+  return sanitizePilotText(firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]), 120);
+}
+
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
   ensureNexusPilotState(db);
   const confirmed = Boolean(args.confirmed || args.confirmation);
@@ -17833,14 +17840,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_communications") {
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
+    const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
+    const recipient = contact.to || ownerTestRecipient;
     const channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
     const providerResult = channel === "whatsapp"
-      ? await nexusRealProviders.twilio.sendWhatsapp({ to: contact.to, message: contact.message, confirmed: args.confirmed }, process.env)
+      ? await nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env)
       : channel === "call"
-        ? await nexusRealProviders.twilio.startCall({ to: contact.to, message: contact.message, confirmed: args.confirmed }, process.env)
+        ? await nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env)
         : channel === "email"
           ? await nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env)
-          : await nexusRealProviders.twilio.sendSms({ to: contact.to, message: contact.message, confirmed: args.confirmed }, process.env);
+          : await nexusRealProviders.twilio.sendSms({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env);
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
   }
   if (toolName === "nexus_calendar") {

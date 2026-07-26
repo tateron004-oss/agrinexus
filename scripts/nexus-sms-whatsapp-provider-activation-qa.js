@@ -104,6 +104,9 @@ assert(server.includes("communications_provider_status_answered"), "Ask Nexus sh
 assert(server.includes("noFakeSmsClaim") && server.includes("noFakeWhatsappClaim"), "Ask Nexus should avoid fake send claims");
 assert(server.includes("nexusEmailProviderStatus") && app.includes("renderNexusEmailProviderStatusCard"), "existing email provider lane should remain intact");
 assert(server.includes("nexusLiveKnowledgeAllModesQuery") && app.includes("renderNexusKnowledgeRailPanel"), "existing Live Knowledge lane should remain intact");
+assert(server.includes("nexusOpenAiNativeOwnerTestRecipient"), "Realtime communications should resolve the private owner test recipient only when explicitly requested");
+assert(server.includes("OWNER_TEST_RECIPIENT_NUMBER") && server.includes("ownerTestRecipient === true"), "owner test recipient routing should remain explicit and server-only");
+assert(server.includes("const recipient = contact.to || ownerTestRecipient"), "Realtime communications should prefer a spoken recipient and safely fall back to the explicitly requested owner test recipient");
 
 [
   "TWILIO_AUTH_TOKEN: ",
