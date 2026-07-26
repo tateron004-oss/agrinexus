@@ -58,3 +58,7 @@ jobs:
         run: |
           export CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
           npm run qa:nexus-genesis-live-provider-browser-smoke
+
+      - name: Require complete structured voice evidence
+        run: |
+          node -e 'const {readAndValidateEvidence}=require("./scripts/nexus-live-voice-evidence"); readAndValidateEvidence("output/nexus-live-voice-acceptance/live-provider-browser-evidence.json", Number(process.env.NEXUS_LIVE_EXPECTED_TURNS));'
