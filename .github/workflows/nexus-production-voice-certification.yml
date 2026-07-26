@@ -11,6 +11,7 @@ on:
       - "package.json"
       - "scripts/qa-suite.js"
       - "scripts/nexus-youtube-data-api-live-provider-qa.js"
+      - "scripts/nexus-google-cloud-translation-provider-qa.js"
       - "scripts/nexus-genesis-live-provider-browser-smoke.js"
       - ".github/workflows/nexus-production-voice-certification.yml"
 
@@ -28,7 +29,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
-      NEXUS_LIVE_EXPECTED_TURNS: "13"
+      NEXUS_LIVE_EXPECTED_TURNS: "14"
       NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
       NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
       CHROME_PATH: /usr/bin/google-chrome
@@ -87,11 +88,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p output/nexus-certification
-          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-495",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
+          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-496",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add output/nexus-certification
-          git commit -m "Record Nexus build 495 spoken certification: ${{ steps.voice.outcome }}" || true
+          git commit -m "Record Nexus build 496 spoken certification: ${{ steps.voice.outcome }}" || true
           git pull --rebase origin main
           git push origin HEAD:main
 
@@ -110,4 +111,4 @@ jobs:
         if: always() && steps.voice.outcome != 'success'
         run: exit 1
 
-# Build 495 fresh-run spoken certification trigger 2026-07-24T22:29:00-07:00.
+# Build 496 Google Cloud Translation spoken certification trigger 2026-07-25.

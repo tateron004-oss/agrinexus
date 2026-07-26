@@ -22,7 +22,8 @@ const spokenJourneys = [
   { workspace: "media", words: ["YouTube video found", "maize"], command: "Nexus, use YouTube to show me how to plant maize." },
   { workspace: "reminders", words: ["Reminders"], command: "Nexus, open Reminders." },
   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
-  { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." }
+  { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
+  { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
@@ -246,6 +247,21 @@ async function main() {
         EventTarget.prototype.addEventListener = function(type, listener, options) { if (type === "click" && this.id === "nexusPermanentMicrophoneBtn") this.dataset.nexusMicBound = "true"; return nexusOriginalAddEventListener.call(this, type, listener, options); };
         window.__NEXUS_VOICE_ACCEPTANCE_EVENTS__ = [];
         window.__NEXUS_WORKSPACE_ACKS__ = [];
+        window.__NEXUS_TRANSLATION_TOOL_RESULTS__ = [];
+        const nexusOriginalFetch = window.fetch.bind(window);
+        window.fetch = async (...args) => {
+          const response = await nexusOriginalFetch(...args);
+          const requestUrl = String(args[0]?.url || args[0] || '');
+          if (requestUrl.includes('/api/voice/realtime/tool')) {
+            response.clone().json().then(payload => {
+              if (payload?.translationProvider) window.__NEXUS_TRANSLATION_TOOL_RESULTS__.push({
+                provider: String(payload.translationProvider),
+                response: String(payload.response || '')
+              });
+            }).catch(() => {});
+          }
+          return response;
+        };
         window.addEventListener('genesis.workspace.acknowledged', event => window.__NEXUS_WORKSPACE_ACKS__.push({ ...event.detail, visibleText: document.body?.innerText || '' }));
         window.__NEXUS_RESOURCE_TRACKER__ = { streams: new Set(), tracks: new Set(), audioContexts: new Set(), peers: new Set() };
         window.__NEXUS_RESOURCE_COUNTS__ = () => ({
@@ -341,7 +357,7 @@ async function main() {
       const lifecycleEvents = window.NexusGenesisVoiceLifecycleDiagnostics?.().events || [];
       const workspaceAcks = window.__NEXUS_WORKSPACE_ACKS__ || [];
       const requiredJourneys = ${JSON.stringify(spokenJourneys)};
-      const workspaceResults = requiredJourneys.map(journey => {
+      const workspaceResults = requiredJourneys.filter(journey => journey.workspace).map(journey => {
         const normalizeVisibleWords = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
         const candidates = workspaceAcks.filter(item => item.workspace === journey.workspace && item.opened === true && item.visible === true && item.verified === true);
         const wordsVisibleForAck = item => {
@@ -354,6 +370,8 @@ async function main() {
         return { workspace: journey.workspace, acknowledged: Boolean(ack), requestId: ack?.requestId || '', populatedFields: ack?.populatedFields || [], microphoneActive: ack?.microphoneActive === true, realtimeConnected: ack?.realtimeConnected === true, wordsVisible: Boolean(ack && wordsVisibleForAck(ack)) };
       });
       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
+      const translationResults = window.__NEXUS_TRANSLATION_TOOL_RESULTS__ || [];
+      const translationSatisfied = translationResults.some(item => item.provider === 'google-cloud-translation' && item.response.trim());
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
       window.__NEXUS_ACCEPTANCE_SNAPSHOT__ = {
@@ -367,10 +385,12 @@ async function main() {
         lifecycleInterruptionCount,
         interruptionSatisfied,
         workspacesSatisfied,
+        translationSatisfied,
+        translationResults,
         workspaceAckCount: workspaceAcks.length,
         workspaceResults
       };
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -387,7 +407,8 @@ async function main() {
         expectedTurns: ${expectedTurns},
         requiredInterruptions: ${requiredInterruptions},
         lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null,
-        workspaceResults
+        workspaceResults,
+        translationResults
       };
     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
 
@@ -417,6 +438,7 @@ async function main() {
       expectedWordObserved: evidence.expectedWordObserved,
       lifecycleInvariant: evidence.lifecycle?.ok === true,
       workspaceResults: evidence.workspaceResults,
+      translationResults: evidence.translationResults,
       browserSecretLoggingDetected: false,
       eventCount: evidence.eventCount
       ,expectedTurns: evidence.expectedTurns,
