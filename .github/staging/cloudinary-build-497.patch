@@ -1,0 +1,1003 @@
+diff --git a/.github/workflows/nexus-production-voice-certification.yml b/.github/workflows/nexus-production-voice-certification.yml
+index 5617b99..497a82c 100644
+--- a/.github/workflows/nexus-production-voice-certification.yml
++++ b/.github/workflows/nexus-production-voice-certification.yml
+@@ -12,6 +12,7 @@ on:
+       - "scripts/qa-suite.js"
+       - "scripts/nexus-youtube-data-api-live-provider-qa.js"
+       - "scripts/nexus-google-cloud-translation-provider-qa.js"
++      - "scripts/nexus-cloudinary-provider-qa.js"
+       - "scripts/nexus-genesis-live-provider-browser-smoke.js"
+       - ".github/workflows/nexus-production-voice-certification.yml"
+ 
+@@ -29,7 +30,7 @@ jobs:
+     timeout-minutes: 20
+     env:
+       NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
+-      NEXUS_LIVE_EXPECTED_TURNS: "14"
++      NEXUS_LIVE_EXPECTED_TURNS: "15"
+       NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
+       NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
+       CHROME_PATH: /usr/bin/google-chrome
+@@ -88,11 +89,11 @@ jobs:
+         shell: bash
+         run: |
+           mkdir -p output/nexus-certification
+-          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-496",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
++          node -e 'const fs=require("fs"); const status=process.argv[1]; const sha=process.argv[2]; const p="/tmp/nexus-voice-result.log"; const log=fs.existsSync(p)?fs.readFileSync(p,"utf8"):""; const tail=log.trim().split(/\\r?\\n/).filter(Boolean).slice(-20); fs.writeFileSync(`output/nexus-certification/live-${sha}-result.json`, JSON.stringify({build:"nexus-behavior-497",workflowCommit:sha,outcome:status,recordedAt:new Date().toISOString(),diagnosticTail:tail},null,2)+"\\n")' "${{ steps.voice.outcome }}" "${{ github.sha }}"
+           git config user.name "github-actions[bot]"
+           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+           git add output/nexus-certification
+-          git commit -m "Record Nexus build 496 spoken certification: ${{ steps.voice.outcome }}" || true
++          git commit -m "Record Nexus build 497 spoken certification: ${{ steps.voice.outcome }}" || true
+           git pull --rebase origin main
+           git push origin HEAD:main
+ 
+@@ -111,4 +112,4 @@ jobs:
+         if: always() && steps.voice.outcome != 'success'
+         run: exit 1
+ 
+-# Build 496 Google Cloud Translation spoken certification trigger 2026-07-25.
++# Build 497 Google Cloud Translation spoken certification trigger 2026-07-25.
+diff --git a/package.json b/package.json
+index d0f120e..63d8dda 100644
+--- a/package.json
++++ b/package.json
+@@ -834,6 +834,7 @@
+     "qa:nexus-rp7-music-media-real-provider-activation": "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+     "qa:nexus-youtube-data-api-live-provider": "node scripts/nexus-youtube-data-api-live-provider-qa.js",
+     "qa:nexus-google-cloud-translation-provider": "node scripts/nexus-google-cloud-translation-provider-qa.js",
++    "qa:nexus-cloudinary-provider": "node scripts/nexus-cloudinary-provider-qa.js",
+     "qa:nexus-rp8-unified-provider-live-mock-skip-matrix": "node scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
+     "qa:nexus-rp9-controlled-assistant-preview-live-provider-sweep": "node scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+     "qa:nexus-rp10-standard-user-live-preview-readiness-validation": "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
+diff --git a/public/app.js b/public/app.js
+index 4ef3ce2..4bcd1b7 100644
+--- a/public/app.js
++++ b/public/app.js
+@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
+ });
+ const assistantFullName = "AgriNexus";
+ const assistantShortName = "Nexus";
+-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-496";
+-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441";
++const AGRINEXUS_BUILD_VERSION = "nexus-behavior-497";
++const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442";
+ const VOICE_RESTART_DELAY_MS = 320;
+ const VOICE_UI_FOCUS_DELAY_MS = 80;
+ const VOICE_ATTENTION_DELAY_MS = 900;
+diff --git a/public/index.html b/public/index.html
+index 9f02fad..ffe3dcf 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -9,11 +9,11 @@
+   <meta name="mobile-web-app-capable" content="yes">
+   <meta name="apple-mobile-web-app-title" content="Nexus Genesis | AgriNexus">
+   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+-  <link rel="manifest" href="/manifest.webmanifest?v=nexus-behavior-496">
++  <link rel="manifest" href="/manifest.webmanifest?v=nexus-behavior-497">
+   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
+   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
+   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css?v=1.9.4">
+-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-496">
++  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-497">
+   <script type="importmap">
+     {
+       "imports": {
+@@ -2227,9 +2227,9 @@
+   <script src="/nexus-genesis-conversational-mode-orchestrator.js?v=nexus-genesis-conversational-mode-orchestrator-2"></script>
+   <script src="/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1"></script>
+   <script src="/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1"></script>
+-  <script src="/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-496"></script>
++  <script src="/nexus-genesis-voice-runtime-manager.js?v=nexus-behavior-497"></script>
+   <script src="/browser-action-controller.js?v=nexus-action-controller-1"></script>
+-  <script src="/app.js?v=nexus-behavior-496"></script>
++  <script src="/app.js?v=nexus-behavior-497"></script>
+   <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
+ </body>
+ </html>
+diff --git a/public/sw.js b/public/sw.js
+index 138aaa5..54d559f 100644
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -1,5 +1,5 @@
+-const CACHE_NAME = "agrinexus-pwa-v441";
+-const BUILD_VERSION = "nexus-behavior-496";
++const CACHE_NAME = "agrinexus-pwa-v442";
++const BUILD_VERSION = "nexus-behavior-497";
+ const APP_SHELL = [
+   "/",
+   "/index.html",
+diff --git a/scripts/nexus-cloudinary-provider-qa.js b/scripts/nexus-cloudinary-provider-qa.js
+new file mode 100644
+index 0000000..50582b1
+--- /dev/null
++++ b/scripts/nexus-cloudinary-provider-qa.js
+@@ -0,0 +1,56 @@
++"use strict";
++
++const assert = require("assert");
++const provider = require("../server/cloudinary-provider.js");
++
++async function main() {
++  const env = { CLOUDINARY_URL: "cloudinary://test-key:test-secret@nexus-test" };
++  assert.equal(provider.isConfigured(env), true);
++  assert.equal(provider.isConfigured({}), false);
++  assert.deepEqual(provider.parseCloudinaryUrl(env), {
++    apiKey: "test-key",
++    apiSecret: "test-secret",
++    cloudName: "nexus-test"
++  });
++
++  let request = null;
++  const result = await provider.uploadCertificationAsset({
++    env,
++    fetchImpl: async (url, options) => {
++      request = { url, options };
++      return {
++        ok: true,
++        status: 200,
++        json: async () => ({
++          asset_id: "asset-123",
++          public_id: "agrinexus/system-certification/nexus-genesis-voice-provider",
++          resource_type: "image",
++          format: "svg",
++          bytes: 512,
++          width: 640,
++          height: 360,
++          secure_url: "https://res.cloudinary.com/nexus-test/image/upload/v1/nexus.svg",
++          version: 1
++        })
++      };
++    }
++  });
++
++  assert.equal(request.url, "https://api.cloudinary.com/v1_1/nexus-test/image/upload");
++  assert.equal(request.options.method, "POST");
++  assert.equal(request.options.body.get("api_key"), "test-key");
++  assert(request.options.body.get("signature"));
++  assert.equal(request.options.body.get("folder"), "agrinexus/system-certification");
++  assert.equal(result.ok, true);
++  assert.equal(result.provider, "cloudinary");
++  assert.equal(result.receipt.verified, true);
++  assert.equal(result.receipt.secureDelivery, true);
++  assert(!JSON.stringify(result).includes("test-secret"));
++
++  console.log("[nexus-cloudinary-provider-qa] passed");
++}
++
++main().catch(error => {
++  console.error(error);
++  process.exitCode = 1;
++});
+diff --git a/scripts/nexus-companion-voice-activation-flow-qa.js b/scripts/nexus-companion-voice-activation-flow-qa.js
+index 5d2eb13..5fe5063 100644
+--- a/scripts/nexus-companion-voice-activation-flow-qa.js
++++ b/scripts/nexus-companion-voice-activation-flow-qa.js
+@@ -31,7 +31,7 @@ assert(!app.includes("Nexus is blocked from executing externally."), "raw blocke
+ assert(app.includes("I can help here, but live external actions need a connected service."), "friendly external-action limitation must be present");
+ assert(index.includes('<meta name="mobile-web-app-capable" content="yes">'), "index should include modern mobile-web-app-capable metadata to avoid browser warning");
+ assert(!index.includes('name="apple-mobile-web-app-capable"'), "index should avoid deprecated apple-mobile-web-app-capable warning");
+-assert(index.includes("/manifest.webmanifest?v=nexus-behavior-496"), "index should version the manifest link to avoid stale manifest warnings");
++assert(index.includes("/manifest.webmanifest?v=nexus-behavior-497"), "index should version the manifest link to avoid stale manifest warnings");
+ assert(manifest.includes('"enctype": "application/x-www-form-urlencoded"'), "manifest share target should specify enctype to avoid browser warning");
+ 
+ includesAll(app, [
+diff --git a/scripts/nexus-conversation-workflow-transition-engine-qa.js b/scripts/nexus-conversation-workflow-transition-engine-qa.js
+index 76c9bd8..a19c9cd 100644
+--- a/scripts/nexus-conversation-workflow-transition-engine-qa.js
++++ b/scripts/nexus-conversation-workflow-transition-engine-qa.js
+@@ -208,7 +208,7 @@ assert(reminderProposal.options.some(workflow => workflow.workflowId === "daily-
+ assert(/no scheduled reminder receipt/i.test(reminderProposal.options.find(workflow => workflow.workflowId === "daily-life.reminder-proposal").receiptBehavior), "reminder proposal does not fake scheduling");
+ 
+ includes(index, "/nexus-conversation-workflow-transition-engine.js", "index script loading");
+-includes(index, "/app.js?v=nexus-behavior-496", "app cache version bump");
++includes(index, "/app.js?v=nexus-behavior-497", "app cache version bump");
+ includes(app, "nexusConversationWorkflowTransitionState", "app state");
+ includes(app, "function handleNexusConversationWorkflowTransitionCommand", "app handler");
+ includes(app, "renderNexusConversationWorkflowTransitionCard()", "same-conversation renderer");
+diff --git a/scripts/nexus-endgame-production-platform-qa.js b/scripts/nexus-endgame-production-platform-qa.js
+index 402affc..11ef120 100644
+--- a/scripts/nexus-endgame-production-platform-qa.js
++++ b/scripts/nexus-endgame-production-platform-qa.js
+@@ -226,9 +226,9 @@ check("multilingual status avoids full certification claim", hasAll(server, [
+   "noFullCertificationClaim"
+ ]));
+ 
+-check("service worker/cache bumped", server.includes("nexus-behavior-496")
+-  && app.includes("nexus-behavior-496")
+-  && sw.includes("agrinexus-pwa-v441"));
++check("service worker/cache bumped", server.includes("nexus-behavior-497")
++  && app.includes("nexus-behavior-497")
++  && sw.includes("agrinexus-pwa-v442"));
+ 
+ check("package alias exists", pkg.scripts["qa:nexus-endgame-production-platform"] === "node scripts/nexus-endgame-production-platform-qa.js");
+ check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-endgame-production-platform-qa.js"));
+diff --git a/scripts/nexus-experience-polish-layer-qa.js b/scripts/nexus-experience-polish-layer-qa.js
+index fe0d6b1..42e091c 100644
+--- a/scripts/nexus-experience-polish-layer-qa.js
++++ b/scripts/nexus-experience-polish-layer-qa.js
+@@ -169,7 +169,7 @@ check("safe suites include experience polish QA", hasAll(qaSuite, [
+ ]));
+ 
+ check("build token bumped with frontend change", hasAll(app, [
+-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"'
++  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"'
+ ]));
+ 
+ if (failures) {
+diff --git a/scripts/nexus-genesis-browser-voice-acceptance-qa.js b/scripts/nexus-genesis-browser-voice-acceptance-qa.js
+index 3dc56f2..b3a38ef 100644
+--- a/scripts/nexus-genesis-browser-voice-acceptance-qa.js
++++ b/scripts/nexus-genesis-browser-voice-acceptance-qa.js
+@@ -131,7 +131,7 @@ assert(
+   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
+   "voice/all-safe suite must include browser voice acceptance QA"
+ );
+-assert(index.includes("/app.js?v=nexus-behavior-496"), "index must bump app.js version so browser voice fixes load");
++assert(index.includes("/app.js?v=nexus-behavior-497"), "index must bump app.js version so browser voice fixes load");
+ 
+ includesAll(acceptanceDoc, [
+   "Nexus Genesis Real Browser Voice and Companion Acceptance",
+diff --git a/scripts/nexus-genesis-live-provider-browser-smoke.js b/scripts/nexus-genesis-live-provider-browser-smoke.js
+index ec704b0..b4de41c 100644
+--- a/scripts/nexus-genesis-live-provider-browser-smoke.js
++++ b/scripts/nexus-genesis-live-provider-browser-smoke.js
+@@ -24,6 +24,7 @@ const spokenJourneys = [
+   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
+   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
+   { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
++  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, upload and verify the Cloudinary certification image." }
+ ];
+ const browserCandidates = process.platform === "win32"
+   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
+@@ -248,6 +249,7 @@ async function main() {
+         window.__NEXUS_VOICE_ACCEPTANCE_EVENTS__ = [];
+         window.__NEXUS_WORKSPACE_ACKS__ = [];
+         window.__NEXUS_TRANSLATION_TOOL_RESULTS__ = [];
++        window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ = [];
+         const nexusOriginalFetch = window.fetch.bind(window);
+         window.fetch = async (...args) => {
+           const response = await nexusOriginalFetch(...args);
+@@ -258,6 +260,13 @@ async function main() {
+                 provider: String(payload.translationProvider),
+                 response: String(payload.response || '')
+               });
++              if (payload?.cloudinaryProvider) window.__NEXUS_CLOUDINARY_TOOL_RESULTS__.push({
++                provider: String(payload.cloudinaryProvider),
++                verified: payload?.cloudinaryReceipt?.verified === true,
++                secureDelivery: payload?.cloudinaryReceipt?.secureDelivery === true,
++                publicId: String(payload?.cloudinaryReceipt?.publicId || ''),
++                response: String(payload.response || '')
++              });
+             }).catch(() => {});
+           }
+           return response;
+@@ -372,6 +381,8 @@ async function main() {
+       const workspacesSatisfied = !${requireWorkspaces} || workspaceResults.every(item => item.acknowledged && item.requestId && item.populatedFields.length && item.microphoneActive && item.realtimeConnected && item.wordsVisible);
+       const translationResults = window.__NEXUS_TRANSLATION_TOOL_RESULTS__ || [];
+       const translationSatisfied = translationResults.some(item => item.provider === 'google-cloud-translation' && item.response.trim());
++      const cloudinaryResults = window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ || [];
++      const cloudinarySatisfied = cloudinaryResults.some(item => item.provider === 'cloudinary' && item.verified && item.secureDelivery && item.publicId && item.response.trim());
+       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
+       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
+       window.__NEXUS_ACCEPTANCE_SNAPSHOT__ = {
+@@ -387,10 +398,12 @@ async function main() {
+         workspacesSatisfied,
+         translationSatisfied,
+         translationResults,
++        cloudinarySatisfied,
++        cloudinaryResults,
+         workspaceAckCount: workspaceAcks.length,
+         workspaceResults
+       };
+-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied) return null;
++      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied) return null;
+       return {
+         speechStarted,
+         responseDone,
+@@ -409,6 +422,7 @@ async function main() {
+         lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.().currentInvariant || null,
+         workspaceResults,
+         translationResults
++        ,cloudinaryResults
+       };
+     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
+ 
+diff --git a/scripts/nexus-genesis-persistent-voice-lifecycle-qa.js b/scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
+index 0f6788a..04a3275 100644
+--- a/scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
++++ b/scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
+@@ -21,16 +21,16 @@ function notIncludes(source, needle, label) {
+   assert(!source.includes(needle), `${label} must not include: ${needle}`);
+ }
+ 
+-["nexus-behavior-496", "agrinexus-pwa-v441"].forEach(marker => {
++["nexus-behavior-497", "agrinexus-pwa-v442"].forEach(marker => {
+   includes(app, marker, `app marker ${marker}`);
+   includes(server, marker, `server marker ${marker}`);
+   includes(sw, marker, `service worker marker ${marker}`);
+ });
+-includes(index, "nexus-behavior-496", "index behavior marker nexus-behavior-496");
++includes(index, "nexus-behavior-497", "index behavior marker nexus-behavior-497");
+ 
+ includes(index, 'id="nexusPermanentMicrophoneBtn"', "static microphone button");
+ includes(index, "Enable microphone", "static microphone initial label");
+-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-496"), "microphone button must appear before app.js");
++assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-497"), "microphone button must appear before app.js");
+ assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "static microphone button must not be hidden or disabled");
+ 
+ [
+diff --git a/scripts/nexus-genesis-realtime-production-migration-qa.js b/scripts/nexus-genesis-realtime-production-migration-qa.js
+index d75366b..4ae3457 100644
+--- a/scripts/nexus-genesis-realtime-production-migration-qa.js
++++ b/scripts/nexus-genesis-realtime-production-migration-qa.js
+@@ -168,8 +168,8 @@ const scenarios = [
+ ];
+ 
+ const requirements = [
+-  ["Build markers bumped", server.includes("nexus-behavior-496") && app.includes("nexus-behavior-496") && sw.includes("nexus-behavior-496") && index.includes("nexus-behavior-496")],
+-  ["PWA markers bumped", server.includes("agrinexus-pwa-v441") && app.includes("agrinexus-pwa-v441") && sw.includes("agrinexus-pwa-v441")],
++  ["Build markers bumped", server.includes("nexus-behavior-497") && app.includes("nexus-behavior-497") && sw.includes("nexus-behavior-497") && index.includes("nexus-behavior-497")],
++  ["PWA markers bumped", server.includes("agrinexus-pwa-v442") && app.includes("agrinexus-pwa-v442") && sw.includes("agrinexus-pwa-v442")],
+   ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v456")],
+   ["Realtime runtime version exists", server.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION") && app.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION")],
+   ["Server runtime values", server.includes('const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"])')],
+diff --git a/scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js b/scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+index f40f6d8..86159e5 100644
+--- a/scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
++++ b/scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+@@ -66,7 +66,7 @@ includes(server, "create_response: true", "server VAD repeated response creation
+ includes(server, "interrupt_response: true", "server VAD interruption support");
+ includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
+ 
+-["nexus-behavior-496", "agrinexus-pwa-v441"].forEach(marker => {
++["nexus-behavior-497", "agrinexus-pwa-v442"].forEach(marker => {
+   includes(app, marker, `app marker ${marker}`);
+   includes(server, marker, `server marker ${marker}`);
+   includes(sw, marker, `service worker marker ${marker}`);
+diff --git a/scripts/nexus-genesis-truthful-voice-state-qa.js b/scripts/nexus-genesis-truthful-voice-state-qa.js
+index 09179a7..840ef4f 100644
+--- a/scripts/nexus-genesis-truthful-voice-state-qa.js
++++ b/scripts/nexus-genesis-truthful-voice-state-qa.js
+@@ -42,22 +42,22 @@ const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisCon
+ const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
+ 
+ includesAll(app, [
+-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"',
+-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"',
++  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"',
++  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"',
+   'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456"'
+ ], "app build");
+ includesAll(index, [
+-  "/manifest.webmanifest?v=nexus-behavior-496",
+-  "/styles.css?v=nexus-behavior-496",
+-  "/app.js?v=nexus-behavior-496"
++  "/manifest.webmanifest?v=nexus-behavior-497",
++  "/styles.css?v=nexus-behavior-497",
++  "/app.js?v=nexus-behavior-497"
+ ], "index build");
+ includesAll(server, [
+-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496"',
+-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"'
++  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497"',
++  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"'
+ ], "server build");
+ includesAll(sw, [
+-  'CACHE_NAME = "agrinexus-pwa-v441"',
+-  'BUILD_VERSION = "nexus-behavior-496"'
++  'CACHE_NAME = "agrinexus-pwa-v442"',
++  'BUILD_VERSION = "nexus-behavior-497"'
+ ], "service worker build");
+ 
+ includesAll(truthfulState, [
+diff --git a/scripts/nexus-genesis-visible-product-acceptance-qa.js b/scripts/nexus-genesis-visible-product-acceptance-qa.js
+index 8f5cac7..27ca696 100644
+--- a/scripts/nexus-genesis-visible-product-acceptance-qa.js
++++ b/scripts/nexus-genesis-visible-product-acceptance-qa.js
+@@ -59,15 +59,15 @@ includes(server, 'edition: "genesis"', "server edition");
+ assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "tool registry product identity");
+ assert.strictEqual(registry.edition, "genesis", "tool registry edition");
+ 
+-includes(index, "/manifest.webmanifest?v=nexus-behavior-496", "manifest cache marker");
+-includes(index, "/styles.css?v=nexus-behavior-496", "stylesheet cache marker");
+-includes(index, "/app.js?v=nexus-behavior-496", "app cache marker");
+-includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"', "app build marker");
+-includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"', "app PWA cache marker");
+-includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496"', "server build marker");
+-includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"', "server PWA cache marker");
+-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v441"', "service worker cache marker");
+-includes(sw, 'BUILD_VERSION = "nexus-behavior-496"', "service worker build marker");
++includes(index, "/manifest.webmanifest?v=nexus-behavior-497", "manifest cache marker");
++includes(index, "/styles.css?v=nexus-behavior-497", "stylesheet cache marker");
++includes(index, "/app.js?v=nexus-behavior-497", "app cache marker");
++includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"', "app build marker");
++includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"', "app PWA cache marker");
++includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497"', "server build marker");
++includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"', "server PWA cache marker");
++includes(sw, 'CACHE_NAME = "agrinexus-pwa-v442"', "service worker cache marker");
++includes(sw, 'BUILD_VERSION = "nexus-behavior-497"', "service worker build marker");
+ includes(server, 'if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname))', "public redacted config route and bounded voice routes must not trigger guest console 401");
+ 
+ excludes(index, "data-nexus-genesis-orb-entry", "index orb entry");
+diff --git a/scripts/nexus-genesis-voice-e2e-software-qa.js b/scripts/nexus-genesis-voice-e2e-software-qa.js
+index 840f136..5884180 100644
+--- a/scripts/nexus-genesis-voice-e2e-software-qa.js
++++ b/scripts/nexus-genesis-voice-e2e-software-qa.js
+@@ -35,8 +35,8 @@ function countMatches(source, regex) {
+   return Array.from(source.matchAll(regex)).length;
+ }
+ 
+-const build = "nexus-behavior-496";
+-const cache = "agrinexus-pwa-v441";
++const build = "nexus-behavior-497";
++const cache = "agrinexus-pwa-v442";
+ 
+ [
+   ["app", app],
+@@ -50,7 +50,7 @@ includes(index, build, "index build marker");
+ 
+ assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
+ assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
+-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-496"), "microphone button must exist before app.js executes");
++assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-497"), "microphone button must exist before app.js executes");
+ assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
+ includes(index, "Enable microphone", "initial microphone label");
+ includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
+diff --git a/scripts/nexus-genesis-voice-native-front-door-qa.js b/scripts/nexus-genesis-voice-native-front-door-qa.js
+index ddb81ef..05f53b7 100644
+--- a/scripts/nexus-genesis-voice-native-front-door-qa.js
++++ b/scripts/nexus-genesis-voice-native-front-door-qa.js
+@@ -141,10 +141,10 @@ includesAll(speechResume, [
+   "recognition-restart-requested"
+ ], "speech restart");
+ 
+-includesAll(index, ["/app.js?v=nexus-behavior-496", "/styles.css?v=nexus-behavior-496"], "index cache");
+-includesAll(app, ["nexus-behavior-496", "agrinexus-pwa-v441", "nexus-genesis-voice-runtime-v456"], "app cache");
+-includesAll(server, ["nexus-behavior-496", "agrinexus-pwa-v441"], "server cache");
+-includesAll(sw, ["nexus-behavior-496", "agrinexus-pwa-v441"], "service worker cache");
++includesAll(index, ["/app.js?v=nexus-behavior-497", "/styles.css?v=nexus-behavior-497"], "index cache");
++includesAll(app, ["nexus-behavior-497", "agrinexus-pwa-v442", "nexus-genesis-voice-runtime-v456"], "app cache");
++includesAll(server, ["nexus-behavior-497", "agrinexus-pwa-v442"], "server cache");
++includesAll(sw, ["nexus-behavior-497", "agrinexus-pwa-v442"], "service worker cache");
+ 
+ assert(
+   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
+diff --git a/scripts/nexus-internet-resource-assistant-platform-qa.js b/scripts/nexus-internet-resource-assistant-platform-qa.js
+index eab5133..3f9b537 100644
+--- a/scripts/nexus-internet-resource-assistant-platform-qa.js
++++ b/scripts/nexus-internet-resource-assistant-platform-qa.js
+@@ -224,9 +224,9 @@ check("Standard User first screen remains conversation-first and uncluttered", h
+   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
+ ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
+ 
+-check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-496", "agrinexus-pwa-v441"])
+-  && hasAll(app, ["nexus-behavior-496", "agrinexus-pwa-v441"])
+-  && hasAll(sw, ["nexus-behavior-496", "agrinexus-pwa-v441"]));
++check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-497", "agrinexus-pwa-v442"])
++  && hasAll(app, ["nexus-behavior-497", "agrinexus-pwa-v442"])
++  && hasAll(sw, ["nexus-behavior-497", "agrinexus-pwa-v442"]));
+ 
+ check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
+ check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));
+diff --git a/scripts/nexus-internet-resource-provider-pathway-qa.js b/scripts/nexus-internet-resource-provider-pathway-qa.js
+index b1a0226..3323836 100644
+--- a/scripts/nexus-internet-resource-provider-pathway-qa.js
++++ b/scripts/nexus-internet-resource-provider-pathway-qa.js
+@@ -143,7 +143,7 @@ check("standard user first screen remains icon-first", [
+ 
+ check("false live claims remain blocked", !/\b(Nexus|we|I)\s+(sent|called|processed|dispatched|fulfilled|connected you to a live provider|completed payment|placed a call)\b/i.test(app + server));
+ 
+-check("service worker/cache bumped", server.includes("nexus-behavior-496") && app.includes("nexus-behavior-496") && sw.includes("agrinexus-pwa-v441"));
++check("service worker/cache bumped", server.includes("nexus-behavior-497") && app.includes("nexus-behavior-497") && sw.includes("agrinexus-pwa-v442"));
+ check("package alias exists", pkg.scripts["qa:nexus-internet-resource-provider-pathway"] === "node scripts/nexus-internet-resource-provider-pathway-qa.js");
+ check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-provider-pathway-qa.js"));
+ 
+diff --git a/scripts/nexus-layered-internet-intelligence-qa.js b/scripts/nexus-layered-internet-intelligence-qa.js
+index 1be93a5..f85f0f9 100644
+--- a/scripts/nexus-layered-internet-intelligence-qa.js
++++ b/scripts/nexus-layered-internet-intelligence-qa.js
+@@ -161,15 +161,15 @@ includes(app, "No citations are shown because live retrieval is not configured",
+ ].forEach(token => includes(css, token, `layered css ${token}`));
+ 
+ [
+-  "nexus-behavior-496",
+-  "agrinexus-pwa-v441"
++  "nexus-behavior-497",
++  "agrinexus-pwa-v442"
+ ].forEach(token => {
+   includes(app, token, `app build ${token}`);
+   includes(server, token, `server build ${token}`);
+   includes(sw, token, `service worker build ${token}`);
+ });
+-includes(index, "/styles.css?v=nexus-behavior-496", "stylesheet cache bust");
+-includes(index, "/app.js?v=nexus-behavior-496", "app cache bust");
++includes(index, "/styles.css?v=nexus-behavior-497", "stylesheet cache bust");
++includes(index, "/app.js?v=nexus-behavior-497", "app cache bust");
+ 
+ assert.strictEqual(
+   packageJson.scripts["qa:nexus-layered-internet-intelligence"],
+diff --git a/scripts/nexus-live-knowledge-retrieval-qa.js b/scripts/nexus-live-knowledge-retrieval-qa.js
+index c77755c..2ef9a68 100644
+--- a/scripts/nexus-live-knowledge-retrieval-qa.js
++++ b/scripts/nexus-live-knowledge-retrieval-qa.js
+@@ -207,15 +207,15 @@ const setupDoc = read("docs/NEXUS_LIVE_KNOWLEDGE_PROVIDER_CONFIGURATION.md");
+ ].forEach(token => excludes(setupDoc, token, `setup documentation secret pattern ${token}`));
+ 
+ [
+-  "nexus-behavior-496",
+-  "agrinexus-pwa-v441"
++  "nexus-behavior-497",
++  "agrinexus-pwa-v442"
+ ].forEach(token => {
+   includes(app, token, `app build ${token}`);
+   includes(server, token, `server build ${token}`);
+   includes(sw, token, `service worker build ${token}`);
+ });
+-includes(index, "/styles.css?v=nexus-behavior-496", "stylesheet cache bust");
+-includes(index, "/app.js?v=nexus-behavior-496", "app cache bust");
++includes(index, "/styles.css?v=nexus-behavior-497", "stylesheet cache bust");
++includes(index, "/app.js?v=nexus-behavior-497", "app cache bust");
+ 
+ assert.strictEqual(
+   packageJson.scripts["qa:nexus-live-knowledge-retrieval"],
+diff --git a/scripts/nexus-panel-tab-click-repair-qa.js b/scripts/nexus-panel-tab-click-repair-qa.js
+index 24c7663..ddaaa21 100644
+--- a/scripts/nexus-panel-tab-click-repair-qa.js
++++ b/scripts/nexus-panel-tab-click-repair-qa.js
+@@ -137,16 +137,16 @@ formButtonMatches.forEach(buttonHtml => {
+ });
+ 
+ [
+-  ["nexus-behavior-496", "app build version", "server build version"],
+-  ["agrinexus-pwa-v441", "app cache version", "server cache version"]
++  ["nexus-behavior-497", "app build version", "server build version"],
++  ["agrinexus-pwa-v442", "app cache version", "server cache version"]
+ ].forEach(([version, appLabel, serverLabel]) => {
+   includes(app, version, `${appLabel} ${version}`);
+   includes(server, version, `${serverLabel} ${version}`);
+ });
+-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v441"', "service worker cache bump");
+-includes(sw, 'BUILD_VERSION = "nexus-behavior-496"', "service worker build bump");
+-includes(index, "/styles.css?v=nexus-behavior-496", "stylesheet cache bust");
+-includes(index, "/app.js?v=nexus-behavior-496", "app cache bust");
++includes(sw, 'CACHE_NAME = "agrinexus-pwa-v442"', "service worker cache bump");
++includes(sw, 'BUILD_VERSION = "nexus-behavior-497"', "service worker build bump");
++includes(index, "/styles.css?v=nexus-behavior-497", "stylesheet cache bust");
++includes(index, "/app.js?v=nexus-behavior-497", "app cache bust");
+ 
+ [
+   "live emergency response enabled",
+diff --git a/scripts/nexus-platform-predictive-intelligence-qa.js b/scripts/nexus-platform-predictive-intelligence-qa.js
+index c8b9b6d..c8d6cff 100644
+--- a/scripts/nexus-platform-predictive-intelligence-qa.js
++++ b/scripts/nexus-platform-predictive-intelligence-qa.js
+@@ -204,8 +204,8 @@ domains.forEach(domain => {
+   "WhatsApp sent successfully"
+ ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe predictive execution claim ${token}`));
+ 
+-includes(serviceWorker, "agrinexus-pwa-v441", "service worker cache bump");
+-includes(serviceWorker, "nexus-behavior-496", "service worker build version bump");
++includes(serviceWorker, "agrinexus-pwa-v442", "service worker cache bump");
++includes(serviceWorker, "nexus-behavior-497", "service worker build version bump");
+ assert.strictEqual(packageJson.scripts["qa:nexus-platform-predictive-intelligence"], "node scripts/nexus-platform-predictive-intelligence-qa.js", "platform package alias should run platform QA");
+ includes(qaSuite, "scripts/nexus-platform-predictive-intelligence-qa.js", "qa-suite should include platform predictive intelligence QA");
+ 
+diff --git a/scripts/nexus-production-audio-pipeline-qa.js b/scripts/nexus-production-audio-pipeline-qa.js
+index 9df8a50..f3a12e8 100644
+--- a/scripts/nexus-production-audio-pipeline-qa.js
++++ b/scripts/nexus-production-audio-pipeline-qa.js
+@@ -74,10 +74,10 @@ assert(app.includes("I will not claim I can hear audio until recognition starts.
+ assert(app.includes("Microphone permission may be available, but recognition is not actively listening now."), "permission-granted recognition failure must be truthful");
+ assert(app.includes("Genesis keeps the home screen audio-first"), "voice fallback copy must keep Genesis home audio-first");
+ 
+-assert(app.includes("nexus-behavior-496"), "app build identifier must be bumped");
+-assert(server.includes("nexus-behavior-496"), "server build identifier must be bumped");
+-assert(app.includes("agrinexus-pwa-v441"), "app PWA cache identifier must be bumped");
+-assert(server.includes("agrinexus-pwa-v441"), "server PWA cache identifier must be bumped");
++assert(app.includes("nexus-behavior-497"), "app build identifier must be bumped");
++assert(server.includes("nexus-behavior-497"), "server build identifier must be bumped");
++assert(app.includes("agrinexus-pwa-v442"), "app PWA cache identifier must be bumped");
++assert(server.includes("agrinexus-pwa-v442"), "server PWA cache identifier must be bumped");
+ const autoStartBlock = app.slice(app.indexOf("async function maybeStartGenesisRecognitionAfterGrantedPermission"), app.indexOf("function nexusVoiceAudioDebugEnabled"));
+ assert(autoStartBlock.includes("nexusMicrophonePermissionCanAttemptStart(permission)"), "prompt/granted/browser-managed permission states must be eligible for getUserMedia attempt");
+ assert(!autoStartBlock.includes("granted-or-browser-managed"), "auto-start must not compare against legacy display labels");
+diff --git a/scripts/nexus-production-platform-rails-qa.js b/scripts/nexus-production-platform-rails-qa.js
+index 477127f..1996887 100644
+--- a/scripts/nexus-production-platform-rails-qa.js
++++ b/scripts/nexus-production-platform-rails-qa.js
+@@ -137,8 +137,8 @@ function excludes(source, token, label) {
+ ].forEach(token => includes(css, token, `production rail CSS ${token}`));
+ 
+ [
+-  "nexus-behavior-496",
+-  "agrinexus-pwa-v441"
++  "nexus-behavior-497",
++  "agrinexus-pwa-v442"
+ ].forEach(token => {
+   includes(app, token, `app build ${token}`);
+   includes(server, token, `server build ${token}`);
+diff --git a/scripts/nexus-realtime-microphone-visibility-qa.js b/scripts/nexus-realtime-microphone-visibility-qa.js
+index a1feff1..c759aa2 100644
+--- a/scripts/nexus-realtime-microphone-visibility-qa.js
++++ b/scripts/nexus-realtime-microphone-visibility-qa.js
+@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
+ const checks = [
+   [
+     "Build and cache advanced",
+-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"') &&
+-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"') &&
+-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496"') &&
+-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v441"') &&
+-      index.includes("/app.js?v=nexus-behavior-496")
++    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"') &&
++      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"') &&
++      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497"') &&
++      sw.includes('const CACHE_NAME = "agrinexus-pwa-v442"') &&
++      index.includes("/app.js?v=nexus-behavior-497")
+   ],
+   [
+     "Static HTML microphone exists before app JavaScript",
+     index.includes('id="nexusPermanentMicrophoneDock"') &&
+       index.includes('id="nexusPermanentMicrophoneBtn"') &&
+       index.includes("Enable microphone") &&
+-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-496') &&
++      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-497') &&
+       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
+   ],
+   [
+diff --git a/scripts/nexus-service-worker-cache-safety-qa.js b/scripts/nexus-service-worker-cache-safety-qa.js
+index 5259337..4ecbf74 100644
+--- a/scripts/nexus-service-worker-cache-safety-qa.js
++++ b/scripts/nexus-service-worker-cache-safety-qa.js
+@@ -13,8 +13,8 @@ function includesAll(source, tokens, label) {
+ }
+ 
+ includesAll(sw, [
+-  'const CACHE_NAME = "agrinexus-pwa-v441"',
+-  'const BUILD_VERSION = "nexus-behavior-496"',
++  'const CACHE_NAME = "agrinexus-pwa-v442"',
++  'const BUILD_VERSION = "nexus-behavior-497"',
+   "function isCacheableApplicationRequest",
+   '["http:", "https:"].includes(url.protocol)',
+   "url.origin !== self.location.origin",
+@@ -49,8 +49,8 @@ assert(sw.includes(".catch(error =>"), "install cache failures must be handled")
+ 
+ includesAll(app, [
+   'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456"',
+-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"',
+-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"',
++  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"',
++  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"',
+   "console.info(`[Nexus Genesis voice] ${stage}",
+   "controller-initialized",
+   "automatic-start-entered",
+diff --git a/scripts/nexus-standard-user-home-screen-redesign-qa.js b/scripts/nexus-standard-user-home-screen-redesign-qa.js
+index 4bcacb5..4725a99 100644
+--- a/scripts/nexus-standard-user-home-screen-redesign-qa.js
++++ b/scripts/nexus-standard-user-home-screen-redesign-qa.js
+@@ -319,14 +319,14 @@ function excludes(source, token, label) {
+ ].forEach(token => excludes(app, token, "Standard User home screen"));
+ 
+ [
+-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"', "app build version"],
+-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"', "app cache version"],
+-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496"', "server build version"],
+-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"', "server cache version"],
+-  [sw, 'CACHE_NAME = "agrinexus-pwa-v441"', "service worker cache"],
+-  [sw, 'BUILD_VERSION = "nexus-behavior-496"', "service worker build"],
+-  [index, "/styles.css?v=nexus-behavior-496", "stylesheet cache bust"],
+-  [index, "/app.js?v=nexus-behavior-496", "app script cache bust"]
++  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"', "app build version"],
++  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"', "app cache version"],
++  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497"', "server build version"],
++  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"', "server cache version"],
++  [sw, 'CACHE_NAME = "agrinexus-pwa-v442"', "service worker cache"],
++  [sw, 'BUILD_VERSION = "nexus-behavior-497"', "service worker build"],
++  [index, "/styles.css?v=nexus-behavior-497", "stylesheet cache bust"],
++  [index, "/app.js?v=nexus-behavior-497", "app script cache bust"]
+ ].forEach(([source, token, label]) => includes(source, token, label));
+ 
+ assert.strictEqual(
+diff --git a/scripts/nexus-system-wide-integrity-hardening-qa.js b/scripts/nexus-system-wide-integrity-hardening-qa.js
+index 09ce710..3c91b8b 100644
+--- a/scripts/nexus-system-wide-integrity-hardening-qa.js
++++ b/scripts/nexus-system-wide-integrity-hardening-qa.js
+@@ -277,19 +277,19 @@ function assertEnvelope(envelope, label, correlationId) {
+   ].forEach(token => assert(serverSource.includes(token), `server missing ${token}`));
+   FAILURE_CATEGORIES.forEach(category => assert(serverSource.includes(category), `failure taxonomy missing ${category}`));
+   [
+-    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-496\"",
+-    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v441\"",
++    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-497\"",
++    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v442\"",
+     "const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = \"nexus-genesis-voice-runtime-v456\"",
+     "payload?.nexusResponse || payload?.genesisResponse"
+   ].forEach(token => assert(appSource.includes(token), `app missing ${token}`));
+   [
+-    "const CACHE_NAME = \"agrinexus-pwa-v441\"",
+-    "const BUILD_VERSION = \"nexus-behavior-496\""
++    "const CACHE_NAME = \"agrinexus-pwa-v442\"",
++    "const BUILD_VERSION = \"nexus-behavior-497\""
+   ].forEach(token => assert(swSource.includes(token), `service worker missing ${token}`));
+   [
+-    "/app.js?v=nexus-behavior-496",
+-    "/styles.css?v=nexus-behavior-496",
+-    "/manifest.webmanifest?v=nexus-behavior-496"
++    "/app.js?v=nexus-behavior-497",
++    "/styles.css?v=nexus-behavior-497",
++    "/manifest.webmanifest?v=nexus-behavior-497"
+   ].forEach(token => assert(indexSource.includes(token), `index missing ${token}`));
+   assert(appSource.includes("startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"), "Genesis mic auto-start must remain intact");
+   assert(appSource.includes("startRealtimeVoiceSession"), "OpenAI Realtime start must remain intact");
+diff --git a/scripts/nexus-true-experience-qa-common.js b/scripts/nexus-true-experience-qa-common.js
+index e2ff430..1ec8a4e 100644
+--- a/scripts/nexus-true-experience-qa-common.js
++++ b/scripts/nexus-true-experience-qa-common.js
+@@ -143,11 +143,11 @@ function assertContextualMission() {
+ }
+ 
+ function assertCacheResponsive() {
+-  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-496"'), "app build version bumped");
+-  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"'), "app cache version bumped");
+-  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496"'), "server build version bumped");
+-  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441"'), "server cache version bumped");
+-  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v441"'), "service worker cache version bumped");
++  assert(app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-497"'), "app build version bumped");
++  assert(app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"'), "app cache version bumped");
++  assert(server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497"'), "server build version bumped");
++  assert(server.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442"'), "server cache version bumped");
++  assert(sw.includes('const CACHE_NAME = "agrinexus-pwa-v442"'), "service worker cache version bumped");
+   assert(styles.includes("@media (max-width: 520px)"), "small mobile viewport styles exist");
+   assert(styles.includes("@media (max-height: 640px) and (min-width: 700px)"), "short desktop viewport styles exist");
+   assert(styles.includes("overflow-x: hidden"), "horizontal overflow is guarded");
+diff --git a/scripts/nexus-world-demonstration-release-qa.js b/scripts/nexus-world-demonstration-release-qa.js
+index 365fc0d..de08fba 100644
+--- a/scripts/nexus-world-demonstration-release-qa.js
++++ b/scripts/nexus-world-demonstration-release-qa.js
+@@ -113,21 +113,21 @@ const submitRouting = between(app, "function routeNexusCommandCenterCommunicatio
+ assert(submitRouting.indexOf("handleNexusVoiceTroubleshootingCommand(command, { source })") < submitRouting.indexOf("advanceNexusOsMissionForCommand(command, { source });"), "voice status commands must run before mission planning");
+ 
+ includesAll(index, [
+-  "/manifest.webmanifest?v=nexus-behavior-496",
+-  "/styles.css?v=nexus-behavior-496",
+-  "/app.js?v=nexus-behavior-496"
++  "/manifest.webmanifest?v=nexus-behavior-497",
++  "/styles.css?v=nexus-behavior-497",
++  "/app.js?v=nexus-behavior-497"
+ ], "index cache bust");
+ includesAll(app, [
+-  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-496\";",
+-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v441\";"
++  "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-497\";",
++  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v442\";"
+ ], "app cache bust");
+ includesAll(sw, [
+-  "const CACHE_NAME = \"agrinexus-pwa-v441\";",
+-  "const BUILD_VERSION = \"nexus-behavior-496\";"
++  "const CACHE_NAME = \"agrinexus-pwa-v442\";",
++  "const BUILD_VERSION = \"nexus-behavior-497\";"
+ ], "service worker cache bust");
+ includesAll(server, [
+-  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-496\";",
+-  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v441\";"
++  "const AGRINEXUS_WEB_BUILD_VERSION = \"nexus-behavior-497\";",
++  "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v442\";"
+ ], "server cache bust");
+ 
+ assert.strictEqual(
+diff --git a/scripts/qa-suite.js b/scripts/qa-suite.js
+index e8d2118..39a4d68 100644
+--- a/scripts/qa-suite.js
++++ b/scripts/qa-suite.js
+@@ -771,6 +771,7 @@ const suites = {
+     "scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+     "scripts/nexus-youtube-data-api-live-provider-qa.js",
+     "scripts/nexus-google-cloud-translation-provider-qa.js",
++    "scripts/nexus-cloudinary-provider-qa.js",
+     "scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
+     "scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+     "scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
+@@ -1620,6 +1621,7 @@ suites["all-safe"] = unique([
+   "scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+   "scripts/nexus-youtube-data-api-live-provider-qa.js",
+   "scripts/nexus-google-cloud-translation-provider-qa.js",
++  "scripts/nexus-cloudinary-provider-qa.js",
+   "scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
+   "scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+   "scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
+diff --git a/server.js b/server.js
+index bda0a0c..adcdfdc 100644
+--- a/server.js
++++ b/server.js
+@@ -36,6 +36,7 @@ const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexu
+ const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
+ const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
+ const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
++const cloudinaryProvider = require("./server/cloudinary-provider.js");
+ const {
+   isUsableEnvValue,
+   loadLocalEnvFiles
+@@ -54,8 +55,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+ const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
+ const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
+ const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
+-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-496";
+-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v441";
++const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-497";
++const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v442";
+ const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
+ const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
+ const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
+@@ -17031,6 +17032,37 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
+     sourceFunction: dispatchSource,
+     toolName: body.name || body.toolName || "nexus_capability_router"
+   });
++  if (/\bcloudinary\b/i.test(command) && /\b(test|certif|verify|upload|save|store)\b/i.test(command)) {
++    const cloudinaryResult = await cloudinaryProvider.uploadCertificationAsset();
++    const response = cloudinaryResult.ok
++      ? `Cloudinary media upload verified. Nexus saved the certification image securely and received provider asset receipt ${cloudinaryResult.asset.publicId}.`
++      : `Cloudinary media upload did not complete. ${cloudinaryResult.error || "The server credential is missing or the provider rejected the request."}`;
++    safeGenesisVoiceStageEvent(db, {
++      correlationId,
++      stage: "tool-call-completed",
++      success: cloudinaryResult.ok,
++      route: dispatchRoute,
++      intent: "cloudinary-media-upload",
++      sourceFunction: "cloudinaryProvider.uploadCertificationAsset",
++      toolName: body.name || body.toolName || "nexus_file_document_analysis"
++    });
++    return {
++      ok: cloudinaryResult.ok,
++      correlationId,
++      capability: "media-storage",
++      status: cloudinaryResult.status,
++      response,
++      providerAttempted: true,
++      providerSucceeded: cloudinaryResult.ok,
++      executionAttempted: true,
++      executionVerified: cloudinaryResult.ok,
++      missingInformation: [],
++      blockedReason: cloudinaryResult.ok ? null : cloudinaryResult.status,
++      cloudinaryProvider: cloudinaryResult.provider,
++      cloudinaryReceipt: cloudinaryResult.receipt || null,
++      cloudinaryAsset: cloudinaryResult.asset || null
++    };
++  }
+   const { result } = await runCompanionSafeAgentCommand(db, user, {
+     command,
+     correlationId,
+diff --git a/server/cloudinary-provider.js b/server/cloudinary-provider.js
+new file mode 100644
+index 0000000..09bb87d
+--- /dev/null
++++ b/server/cloudinary-provider.js
+@@ -0,0 +1,127 @@
++"use strict";
++
++const crypto = require("crypto");
++
++function parseCloudinaryUrl(env = process.env) {
++  const raw = String(env.CLOUDINARY_URL || "").trim();
++  if (!raw) return null;
++  let parsed;
++  try {
++    parsed = new URL(raw);
++  } catch {
++    return null;
++  }
++  if (parsed.protocol !== "cloudinary:" || !parsed.username || !parsed.password || !parsed.hostname) return null;
++  return {
++    apiKey: decodeURIComponent(parsed.username),
++    apiSecret: decodeURIComponent(parsed.password),
++    cloudName: parsed.hostname
++  };
++}
++
++function isConfigured(env = process.env) {
++  return Boolean(parseCloudinaryUrl(env));
++}
++
++function signatureFor(parameters, apiSecret) {
++  const canonical = Object.entries(parameters)
++    .filter(([, value]) => value !== undefined && value !== null && value !== "")
++    .sort(([left], [right]) => left.localeCompare(right))
++    .map(([key, value]) => `${key}=${value}`)
++    .join("&");
++  return crypto.createHash("sha1").update(`${canonical}${apiSecret}`).digest("hex");
++}
++
++function certificationSvg() {
++  return Buffer.from(
++    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">' +
++      '<rect width="640" height="360" fill="#071b26"/>' +
++      '<circle cx="115" cy="180" r="65" fill="#36d399"/>' +
++      '<path d="M115 215c-7-54 4-101 34-139-3 62-13 106-34 139Z" fill="#ecfdf5"/>' +
++      '<text x="210" y="165" fill="#ecfdf5" font-family="Arial,sans-serif" font-size="38" font-weight="700">Nexus Genesis</text>' +
++      '<text x="210" y="215" fill="#9ee6cd" font-family="Arial,sans-serif" font-size="24">Cloudinary voice certification</text>' +
++    "</svg>",
++    "utf8"
++  );
++}
++
++async function uploadCertificationAsset({ fetchImpl = global.fetch, env = process.env } = {}) {
++  const credentials = parseCloudinaryUrl(env);
++  if (!credentials) {
++    return {
++      ok: false,
++      provider: "cloudinary",
++      status: "credential-blocked",
++      missingEnv: ["CLOUDINARY_URL"]
++    };
++  }
++  const timestamp = Math.floor(Date.now() / 1000);
++  const signedParameters = {
++    folder: "agrinexus/system-certification",
++    invalidate: "true",
++    overwrite: "true",
++    public_id: "nexus-genesis-voice-provider",
++    timestamp
++  };
++  const form = new FormData();
++  form.set("file", new Blob([certificationSvg()], { type: "image/svg+xml" }), "nexus-genesis-cloudinary-certification.svg");
++  Object.entries(signedParameters).forEach(([key, value]) => form.set(key, String(value)));
++  form.set("api_key", credentials.apiKey);
++  form.set("signature", signatureFor(signedParameters, credentials.apiSecret));
++
++  let response;
++  try {
++    response = await fetchImpl(
++      `https://api.cloudinary.com/v1_1/${encodeURIComponent(credentials.cloudName)}/image/upload`,
++      { method: "POST", body: form }
++    );
++  } catch (error) {
++    return {
++      ok: false,
++      provider: "cloudinary",
++      status: "provider-unreachable",
++      error: String(error?.message || "Cloudinary request failed.").slice(0, 240)
++    };
++  }
++  const payload = await response.json().catch(() => ({}));
++  if (!response.ok || !payload.secure_url || !payload.public_id || !payload.asset_id) {
++    return {
++      ok: false,
++      provider: "cloudinary",
++      status: "provider-error",
++      httpStatus: response.status,
++      error: String(payload?.error?.message || "Cloudinary did not return an asset receipt.").slice(0, 240)
++    };
++  }
++  return {
++    ok: true,
++    provider: "cloudinary",
++    status: "uploaded-and-verified",
++    asset: {
++      assetId: payload.asset_id,
++      publicId: payload.public_id,
++      resourceType: payload.resource_type,
++      format: payload.format,
++      bytes: payload.bytes,
++      width: payload.width,
++      height: payload.height,
++      secureUrl: payload.secure_url,
++      version: payload.version
++    },
++    receipt: {
++      provider: "cloudinary",
++      action: "media-upload",
++      verified: true,
++      publicId: payload.public_id,
++      assetId: payload.asset_id,
++      secureDelivery: String(payload.secure_url).startsWith("https://")
++    }
++  };
++}
++
++module.exports = {
++  isConfigured,
++  parseCloudinaryUrl,
++  signatureFor,
++  uploadCertificationAsset
++};
