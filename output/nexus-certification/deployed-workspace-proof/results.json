@@ -19,24 +19,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/b47518b2961ccc2c39f6eec63496ff0d4e989143",
-        "commitHash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
-        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191555940"
+        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+        "commitHash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191666590"
       },
       "gitCommit": {
-        "shortHash": "b47518b",
-        "hash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
-        "subject": "Retry Build 500 activation matrix startup",
-        "body": "Retry Build 500 activation matrix startup",
+        "shortHash": "e1cd61c",
+        "hash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+        "subject": "Retry Realtime startup in Build 500 matrix",
+        "body": "Retry Realtime startup in Build 500 matrix",
         "author": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785048249000
+          "time": 1785048477000
         },
         "committer": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785048249000
+          "time": 1785048477000
         },
         "branch": "main"
       },
@@ -50,24 +50,24 @@
         "retries": 0,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/b47518b2961ccc2c39f6eec63496ff0d4e989143",
-            "commitHash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
-            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191555940"
+            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+            "commitHash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191666590"
           },
           "gitCommit": {
-            "shortHash": "b47518b",
-            "hash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
-            "subject": "Retry Build 500 activation matrix startup",
-            "body": "Retry Build 500 activation matrix startup",
+            "shortHash": "e1cd61c",
+            "hash": "e1cd61c4066b2e0f22e3c455f5fdc2569c60a556",
+            "subject": "Retry Realtime startup in Build 500 matrix",
+            "body": "Retry Realtime startup in Build 500 matrix",
             "author": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785048249000
+              "time": 1785048477000
             },
             "committer": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785048249000
+              "time": 1785048477000
             },
             "branch": "main"
           },
@@ -131,31 +131,31 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "failed",
-                  "duration": 13701,
+                  "duration": 97282,
                   "error": {
-                    "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live\n\nThe existing OpenAI Realtime session and SDK microphone must be live\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate",
-                    "stack": "Error: The existing OpenAI Realtime session and SDK microphone must be live\n\nThe existing OpenAI Realtime session and SDK microphone must be live\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:183:6",
+                    "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\nThe existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate\nLast Realtime status: {\"activeRuntime\":\"unconfirmed\",\"connectionState\":\"closed\",\"liveMicrophoneTrack\":false,\"controllerState\":\"\",\"microphoneLabel\":\"Enable microphone\"}",
+                    "stack": "Error: The existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\nThe existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate\nLast Realtime status: {\"activeRuntime\":\"unconfirmed\",\"connectionState\":\"closed\",\"liveMicrophoneTrack\":false,\"controllerState\":\"\",\"microphoneLabel\":\"Enable microphone\"}\n    at connectRealtime (/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:187:15)\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:205:3",
                     "location": {
                       "file": "/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js",
-                      "column": 6,
-                      "line": 183
+                      "column": 15,
+                      "line": 187
                     },
-                    "snippet": "\u001b[0m \u001b[90m 181 |\u001b[39m   \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(() \u001b[33m=>\u001b[39m realtimeStatus(page)\u001b[33m,\u001b[39m {\n \u001b[90m 182 |\u001b[39m     message\u001b[33m:\u001b[39m \u001b[32m\"The existing OpenAI Realtime session and SDK microphone must be live\"\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 183 |\u001b[39m   })\u001b[33m.\u001b[39mtoMatchObject({\n \u001b[90m     |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 184 |\u001b[39m     activeRuntime\u001b[33m:\u001b[39m \u001b[32m\"realtime\"\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 185 |\u001b[39m     connectionState\u001b[33m:\u001b[39m \u001b[32m\"connected\"\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 186 |\u001b[39m     liveMicrophoneTrack\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m\u001b[0m"
+                    "snippet": "\u001b[0m \u001b[90m 185 |\u001b[39m     } \u001b[36mcatch\u001b[39m (error) {\n \u001b[90m 186 |\u001b[39m       \u001b[36mif\u001b[39m (attempt \u001b[33m===\u001b[39m \u001b[35m3\u001b[39m) {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 187 |\u001b[39m         \u001b[36mthrow\u001b[39m \u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`${error.message}\\nLast Realtime status: ${JSON.stringify(lastStatus)}`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 188 |\u001b[39m       }\n \u001b[90m 189 |\u001b[39m     }\n \u001b[90m 190 |\u001b[39m   }\u001b[0m"
                   },
                   "errors": [
                     {
                       "location": {
                         "file": "/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js",
-                        "column": 6,
-                        "line": 183
+                        "column": 15,
+                        "line": 187
                       },
-                      "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live\n\nThe existing OpenAI Realtime session and SDK microphone must be live\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate\n\n  181 |   await expect.poll(() => realtimeStatus(page), {\n  182 |     message: \"The existing OpenAI Realtime session and SDK microphone must be live\"\n> 183 |   }).toMatchObject({\n      |      ^\n  184 |     activeRuntime: \"realtime\",\n  185 |     connectionState: \"connected\",\n  186 |     liveMicrophoneTrack: true\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:183:6"
+                      "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\nThe existing OpenAI Realtime session and SDK microphone must be live (attempt 3)\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate\nLast Realtime status: {\"activeRuntime\":\"unconfirmed\",\"connectionState\":\"closed\",\"liveMicrophoneTrack\":false,\"controllerState\":\"\",\"microphoneLabel\":\"Enable microphone\"}\n\n  185 |     } catch (error) {\n  186 |       if (attempt === 3) {\n> 187 |         throw new Error(`${error.message}\\nLast Realtime status: ${JSON.stringify(lastStatus)}`);\n      |               ^\n  188 |       }\n  189 |     }\n  190 |   }\n    at connectRealtime (/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:187:15)\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:205:3"
                     }
                   ],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-26T06:46:41.833Z",
+                  "startTime": "2026-07-26T06:53:26.600Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -181,8 +181,8 @@
                   ],
                   "errorLocation": {
                     "file": "/home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js",
-                    "column": 6,
-                    "line": 183
+                    "column": 15,
+                    "line": 187
                   }
                 }
               ],
@@ -191,7 +191,7 @@
           ],
           "id": "3910e620a842480d4fbf-b0241a38e452f0fc0e77",
           "file": "nexus-workspace-action.spec.js",
-          "line": 166,
+          "line": 193,
           "column": 1
         }
       ]
@@ -199,8 +199,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-26T06:46:41.347Z",
-    "duration": 15007.257,
+    "startTime": "2026-07-26T06:53:26.129Z",
+    "duration": 101467.428,
     "expected": 0,
     "skipped": 0,
     "unexpected": 1,
