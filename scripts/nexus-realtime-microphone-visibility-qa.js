@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-499"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v444"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-499"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v444"') &&
-      index.includes("/app.js?v=nexus-behavior-499")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-500"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v445"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-500"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v445"') &&
+      index.includes("/app.js?v=nexus-behavior-500")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-499') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-500') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -68,6 +68,13 @@ const checks = [
       permanentMic.includes('track.readyState === "live"') &&
       permanentMic.includes("track.enabled !== false") &&
       permanentMic.includes("preverifiedMicrophoneStream: stream")
+  ],
+  [
+    "Direct click retries one transient Realtime startup without reacquiring or abandoning the live microphone",
+    permanentMic.includes("permanent-html-microphone-button-bounded-retry") &&
+      permanentMic.includes("verifyNexusPermanentMicrophoneStream(stream).ok") &&
+      permanentMic.includes("Microphone is live. Reconnecting Nexus voice...") &&
+      permanentMic.includes("Microphone is available. Click Enable microphone to reconnect Nexus voice.")
   ],
   [
     "Preverified microphone stream is handed to OpenAI Realtime",

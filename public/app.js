@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-499";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v444";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-500";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v445";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -51095,12 +51095,20 @@ async function handleNexusPermanentMicrophoneClick(event) {
   });
   try {
     const { stream } = await acquirePermanentGenesisMicrophoneFromClick("permanent-html-microphone-button");
-    const result = await startVoiceListening({
+    let result = await startVoiceListening({
       source: "permanent-html-microphone-button",
       preverifiedMicrophoneStream: stream
     });
+    if (!result?.ok && result !== true && verifyNexusPermanentMicrophoneStream(stream).ok) {
+      setNexusPermanentMicrophoneState("requesting", "Microphone is live. Reconnecting Nexus voice...");
+      await new Promise(resolve => window.setTimeout(resolve, 450));
+      result = await startVoiceListening({
+        source: "permanent-html-microphone-button-bounded-retry",
+        preverifiedMicrophoneStream: stream
+      });
+    }
     if (!result?.ok && result !== true) {
-      setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone control remains available.");
+      setNexusPermanentMicrophoneState("ready", "Microphone is available. Click Enable microphone to reconnect Nexus voice.");
     } else {
       assertNexusVoiceLifecycleInvariant("realtime-start-after-permanent-click");
     }

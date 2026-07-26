@@ -141,10 +141,10 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech restart");
 
-includesAll(index, ["/app.js?v=nexus-behavior-499", "/styles.css?v=nexus-behavior-499"], "index cache");
-includesAll(app, ["nexus-behavior-499", "agrinexus-pwa-v444", "nexus-genesis-voice-runtime-v456"], "app cache");
-includesAll(server, ["nexus-behavior-499", "agrinexus-pwa-v444"], "server cache");
-includesAll(sw, ["nexus-behavior-499", "agrinexus-pwa-v444"], "service worker cache");
+includesAll(index, ["/app.js?v=nexus-behavior-500", "/styles.css?v=nexus-behavior-500"], "index cache");
+includesAll(app, ["nexus-behavior-500", "agrinexus-pwa-v445", "nexus-genesis-voice-runtime-v456"], "app cache");
+includesAll(server, ["nexus-behavior-500", "agrinexus-pwa-v445"], "server cache");
+includesAll(sw, ["nexus-behavior-500", "agrinexus-pwa-v445"], "service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
