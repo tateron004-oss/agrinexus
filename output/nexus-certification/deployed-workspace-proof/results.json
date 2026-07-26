@@ -19,24 +19,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-        "commitHash": "42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191420772"
+        "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/b47518b2961ccc2c39f6eec63496ff0d4e989143",
+        "commitHash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
+        "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191555940"
       },
       "gitCommit": {
-        "shortHash": "42a3b8b",
-        "hash": "42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-        "subject": "Run Build 500 activation matrix independently",
-        "body": "Run Build 500 activation matrix independently",
+        "shortHash": "b47518b",
+        "hash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
+        "subject": "Retry Build 500 activation matrix startup",
+        "body": "Retry Build 500 activation matrix startup",
         "author": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785047964000
+          "time": 1785048249000
         },
         "committer": {
           "name": "tateron004-oss",
           "email": "tateron004@gmail.com",
-          "time": 1785047964000
+          "time": 1785048249000
         },
         "branch": "main"
       },
@@ -50,24 +50,24 @@
         "retries": 0,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-            "commitHash": "42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191420772"
+            "commitHref": "https://github.com/tateron004-oss/agrinexus/commit/b47518b2961ccc2c39f6eec63496ff0d4e989143",
+            "commitHash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
+            "buildHref": "https://github.com/tateron004-oss/agrinexus/actions/runs/30191555940"
           },
           "gitCommit": {
-            "shortHash": "42a3b8b",
-            "hash": "42a3b8be06fd78ab7f9f97fe76f969f67ca5ebe9",
-            "subject": "Run Build 500 activation matrix independently",
-            "body": "Run Build 500 activation matrix independently",
+            "shortHash": "b47518b",
+            "hash": "b47518b2961ccc2c39f6eec63496ff0d4e989143",
+            "subject": "Retry Build 500 activation matrix startup",
+            "body": "Retry Build 500 activation matrix startup",
             "author": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785047964000
+              "time": 1785048249000
             },
             "committer": {
               "name": "tateron004-oss",
               "email": "tateron004@gmail.com",
-              "time": 1785047964000
+              "time": 1785048249000
             },
             "branch": "main"
           },
@@ -131,7 +131,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "failed",
-                  "duration": 13854,
+                  "duration": 13701,
                   "error": {
                     "message": "Error: The existing OpenAI Realtime session and SDK microphone must be live\n\nThe existing OpenAI Realtime session and SDK microphone must be live\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate",
                     "stack": "Error: The existing OpenAI Realtime session and SDK microphone must be live\n\nThe existing OpenAI Realtime session and SDK microphone must be live\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatchObject\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[2m  Object {\u001b[22m\n\u001b[32m-   \"activeRuntime\": \"realtime\",\u001b[39m\n\u001b[32m-   \"connectionState\": \"connected\",\u001b[39m\n\u001b[32m-   \"liveMicrophoneTrack\": true,\u001b[39m\n\u001b[31m+   \"activeRuntime\": \"unconfirmed\",\u001b[39m\n\u001b[31m+   \"connectionState\": \"closed\",\u001b[39m\n\u001b[31m+   \"liveMicrophoneTrack\": false,\u001b[39m\n\u001b[2m  }\u001b[22m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate\n    at /home/runner/work/agrinexus/agrinexus/tests/playwright/nexus-workspace-action.spec.js:183:6",
@@ -155,7 +155,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-26T06:41:31.656Z",
+                  "startTime": "2026-07-26T06:46:41.833Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -199,8 +199,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-26T06:41:31.067Z",
-    "duration": 15238.215,
+    "startTime": "2026-07-26T06:46:41.347Z",
+    "duration": 15007.257,
     "expected": 0,
     "skipped": 0,
     "unexpected": 1,
