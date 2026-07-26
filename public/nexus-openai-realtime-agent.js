@@ -1,4 +1,4 @@
-import { RealtimeAgent, RealtimeSession, tool } from "@openai/agents/realtime";
+import { OpenAIRealtimeWebRTC, RealtimeAgent, RealtimeSession, tool } from "@openai/agents/realtime";
 
 const NEXUS_REALTIME_TOOL_PARAMETERS = {
   type: "object",
@@ -96,56 +96,24 @@ function microphoneProofForStream(stream) {
 
 async function connectSessionWithMicrophoneProof(session, connectOptions = {}, emit = () => {}) {
   if (!navigator.mediaDevices?.getUserMedia) throw new Error("Browser microphone capture is unavailable.");
-  const mediaDevices = navigator.mediaDevices;
-  const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
   const preverifiedStream = connectOptions.preverifiedMicrophoneStream || null;
   const preverifiedProof = preverifiedStream ? microphoneProofForStream(preverifiedStream) : null;
   if (preverifiedStream && !preverifiedProof.hasLiveTrack) throw new Error("Pre-acquired Nexus microphone stream is not live.");
-  let requested = false;
-  let acquiredStream = preverifiedStream || null;
-  mediaDevices.getUserMedia = async constraints => {
-    requested = true;
-    emit("media_stream_requested", { audioRequested: Boolean(constraints?.audio) });
-    if (preverifiedStream) {
-      emit("media_stream_acquired", {
-        streamActive: preverifiedProof.streamActive,
-        trackCount: preverifiedProof.trackCount,
-        trackState: preverifiedProof.trackState,
-        trackEnabled: preverifiedProof.trackEnabled,
-        hasLiveTrack: preverifiedProof.hasLiveTrack,
-        preverified: true
-      });
-      return preverifiedStream;
-    }
-    try {
-      acquiredStream = await originalGetUserMedia(constraints);
-      const proof = microphoneProofForStream(acquiredStream);
-      emit("media_stream_acquired", {
-        streamActive: proof.streamActive,
-        trackCount: proof.trackCount,
-        trackState: proof.trackState,
-        trackEnabled: proof.trackEnabled,
-        hasLiveTrack: proof.hasLiveTrack
-      });
-      if (proof.microphoneTrack) {
-        proof.microphoneTrack.addEventListener("ended", () => emit("microphone_track_ended", { trackState: proof.microphoneTrack.readyState }), { once: true });
-        proof.microphoneTrack.addEventListener("mute", () => emit("microphone_track_muted", { trackState: proof.microphoneTrack.readyState }));
-        proof.microphoneTrack.addEventListener("unmute", () => emit("microphone_track_unmuted", { trackState: proof.microphoneTrack.readyState }));
-      }
-      return acquiredStream;
-    } catch (error) {
-      const normalized = normalizeError(error);
-      emit("media_stream_failed", { type: normalized.type, message: normalized.message });
-      throw error;
-    }
-  };
-  try {
-    await session.connect(connectOptions);
-  } finally {
-    mediaDevices.getUserMedia = originalGetUserMedia;
-  }
-  const proof = microphoneProofForStream(acquiredStream);
-  if (!requested) throw new Error("OpenAI Realtime did not request browser microphone capture.");
+  if (!preverifiedStream) throw new Error("Nexus Realtime requires the preverified microphone stream owned by the voice runtime manager.");
+  emit("media_stream_requested", { audioRequested: true, preverified: true });
+  emit("media_stream_acquired", {
+    streamActive: preverifiedProof.streamActive,
+    trackCount: preverifiedProof.trackCount,
+    trackState: preverifiedProof.trackState,
+    trackEnabled: preverifiedProof.trackEnabled,
+    hasLiveTrack: preverifiedProof.hasLiveTrack,
+    preverified: true
+  });
+  await session.connect({
+    apiKey: connectOptions.apiKey,
+    model: connectOptions.model
+  });
+  const proof = microphoneProofForStream(preverifiedStream);
   if (!proof.hasLiveTrack) throw new Error("OpenAI Realtime connected without a live microphone track.");
   emit("microphone_track_live", {
     streamActive: proof.streamActive,
@@ -154,7 +122,7 @@ async function connectSessionWithMicrophoneProof(session, connectOptions = {}, e
     trackEnabled: proof.trackEnabled,
     trackMuted: proof.trackMuted
   });
-  return { stream: acquiredStream, microphoneTrack: proof.microphoneTrack, proof };
+  return { stream: preverifiedStream, microphoneTrack: proof.microphoneTrack, proof };
 }
 
 function responseForModel(result = {}) {
@@ -223,8 +191,14 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
     instructions: `${options.instructions || ""} General conversation, greetings, presence checks, emotional support, capability questions, casual questions, and contextual follow-ups must be answered directly by the model without a function tool. Call a Nexus tool only for a genuine weather, source retrieval, map, agriculture, health-preparation, workforce, marketplace, communication, workflow, provider-readiness, calculation/data, file, visual, memory, reminder, calendar, export, browser-action, or receipt request. Keep every tool result, provider failure, clarification, and capability answer inside the current voice conversation unless the user explicitly asks to navigate. Never open or mention opening AI Help, dashboards, workspaces, plans, or mode panels unless navigation was explicitly requested.`,
     tools: createNexusRealtimeTools(options)
   });
+  if (!preverifiedMicrophoneStream) {
+    throw new Error("Nexus Realtime requires one preverified microphone stream.");
+  }
+  const transport = new OpenAIRealtimeWebRTC({
+    mediaStream: preverifiedMicrophoneStream
+  });
   const session = new RealtimeSession(agent, {
-    transport: "webrtc",
+    transport,
     model: options.model || "gpt-realtime-2",
     config: options.clientConfig || {},
     context: {

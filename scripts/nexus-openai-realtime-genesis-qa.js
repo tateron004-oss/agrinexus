@@ -211,7 +211,8 @@ function staticAssertions() {
 
   assert(agentBundle.includes("RealtimeSession"), "bundled Realtime agent should include the official SDK session");
   assert(agentSource.includes("connectSessionWithMicrophoneProof"), "Realtime agent source should wrap session.connect with microphone proof");
-  assert(agentSource.includes("navigator.mediaDevices") && agentSource.includes("mediaDevices.getUserMedia"), "Realtime agent should instrument getUserMedia during SDK connect");
+  assert(agentSource.includes("OpenAIRealtimeWebRTC") && agentSource.includes("mediaStream: preverifiedMicrophoneStream"), "Realtime agent should inject the verified microphone stream through the official SDK transport");
+  assert(!agentSource.includes("mediaDevices.getUserMedia ="), "Realtime agent must not replace the browser's global getUserMedia function");
   assert(agentSource.includes("microphone_track_live"), "Realtime agent should emit verified live microphone-track events");
   assert(agentSource.includes("getMicrophoneProof"), "Realtime agent controller should expose microphone proof to the app");
   assert(!agentBundle.includes("OPENAI_API_KEY"), "browser bundle must not include permanent OpenAI key names");

@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-498"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v443"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-498"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v443"') &&
-      index.includes("/app.js?v=nexus-behavior-498")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-499"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v444"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-499"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v444"') &&
+      index.includes("/app.js?v=nexus-behavior-499")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-498') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-499') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -73,8 +73,10 @@ const checks = [
     "Preverified microphone stream is handed to OpenAI Realtime",
     realtimeStartup.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
       realtimeAgent.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null") &&
-      realtimeAgent.includes("if (preverifiedStream)") &&
-      realtimeAgent.includes("return preverifiedStream") &&
+      realtimeAgent.includes("new OpenAIRealtimeWebRTC({") &&
+      realtimeAgent.includes("mediaStream: preverifiedMicrophoneStream") &&
+      realtimeAgent.includes("stream: preverifiedStream") &&
+      !realtimeAgent.includes("mediaDevices.getUserMedia =") &&
       realtimeAgent.includes('throw new Error("Pre-acquired Nexus microphone stream is not live.")')
   ],
   [

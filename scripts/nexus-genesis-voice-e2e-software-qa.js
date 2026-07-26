@@ -35,8 +35,8 @@ function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
 
-const build = "nexus-behavior-498";
-const cache = "agrinexus-pwa-v443";
+const build = "nexus-behavior-499";
+const cache = "agrinexus-pwa-v444";
 
 [
   ["app", app],
@@ -50,7 +50,7 @@ includes(index, build, "index build marker");
 
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-498"), "microphone button must exist before app.js executes");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-499"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
 includes(index, "Enable microphone", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
@@ -121,10 +121,10 @@ includes(responseCompletion, "assertNexusVoiceLifecycleInvariant(\"listening-res
 
 const agentConnect = section(agent, "async function connectSessionWithMicrophoneProof", "function responseForModel", "Realtime agent microphone proof");
 includes(agentConnect, "preverifiedMicrophoneStream", "adapter accepts caller-owned stream");
-includes(agentConnect, "return preverifiedStream", "adapter reuses caller-owned stream");
-includes(agentConnect, "mediaDevices.getUserMedia = async constraints", "adapter instruments SDK media acquisition");
-includes(agentConnect, "mediaDevices.getUserMedia = originalGetUserMedia", "adapter restores getUserMedia");
-includes(agentConnect, "OpenAI Realtime did not request browser microphone capture", "missing microphone request fault");
+includes(agentConnect, "stream: preverifiedStream", "adapter reuses caller-owned stream");
+includes(agent, "mediaStream: preverifiedMicrophoneStream", "adapter injects the caller-owned stream through the official SDK transport");
+notIncludes(agentConnect, "mediaDevices.getUserMedia =", "adapter must not replace global media acquisition");
+includes(agentConnect, "requires the preverified microphone stream", "missing microphone stream fault");
 includes(agentConnect, "OpenAI Realtime connected without a live microphone track", "missing live-track fault");
 
 const agentClose = section(agent, "close(reason = \"closed\", options = {})", "interrupt()", "Realtime adapter close");

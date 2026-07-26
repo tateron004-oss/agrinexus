@@ -81,14 +81,16 @@ function assertSdkMicrophoneProofContract() {
   [
     "connectSessionWithMicrophoneProof",
     "navigator.mediaDevices",
-    "mediaDevices.getUserMedia",
+    "OpenAIRealtimeWebRTC",
+    "mediaStream: preverifiedMicrophoneStream",
     "await session.connect",
     "microphoneProofForStream",
-    "OpenAI Realtime did not request browser microphone capture",
+    "Nexus Realtime requires the preverified microphone stream",
     "OpenAI Realtime connected without a live microphone track",
     "microphone_track_live",
     "getMicrophoneProof"
   ].forEach(token => assert(agentSource.includes(token), `Realtime agent source should include ${token}`));
+  assert(!agentSource.includes("mediaDevices.getUserMedia ="), "Realtime must not replace the browser's global getUserMedia function");
 }
 
 function assertManagerContract() {
