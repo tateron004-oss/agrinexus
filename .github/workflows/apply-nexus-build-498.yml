@@ -1,0 +1,31 @@
+name: Apply Nexus build 498
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/releases/nexus-build-498.patch"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply verified build 498 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check .github/releases/nexus-build-498.patch
+          git apply .github/releases/nexus-build-498.patch
+          node --check server.js
+          node --check public/app.js
+          node scripts/nexus-sms-whatsapp-provider-activation-qa.js
+          rm .github/releases/nexus-build-498.patch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add Twilio owner voice certification"
+          git push origin HEAD:main
