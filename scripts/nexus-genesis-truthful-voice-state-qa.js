@@ -42,22 +42,22 @@ const speechSynthesis = sectionBetween(app, "function runNexusSpeechSynthesisCon
 const speechResume = sectionBetween(app, "function resumeVoiceListeningAfterSpeech", "function stopVoicePlayback", "speech restart");
 
 includesAll(app, [
-  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-502"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447"',
+  'AGRINEXUS_BUILD_VERSION = "nexus-behavior-503"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v448"',
   'NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456"'
 ], "app build");
 includesAll(index, [
-  "/manifest.webmanifest?v=nexus-behavior-502",
-  "/styles.css?v=nexus-behavior-502",
-  "/app.js?v=nexus-behavior-502"
+  "/manifest.webmanifest?v=nexus-behavior-503",
+  "/styles.css?v=nexus-behavior-503",
+  "/app.js?v=nexus-behavior-503"
 ], "index build");
 includesAll(server, [
-  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502"',
-  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447"'
+  'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-503"',
+  'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v448"'
 ], "server build");
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v447"',
-  'BUILD_VERSION = "nexus-behavior-502"'
+  'CACHE_NAME = "agrinexus-pwa-v448"',
+  'BUILD_VERSION = "nexus-behavior-503"'
 ], "service worker build");
 
 includesAll(truthfulState, [
