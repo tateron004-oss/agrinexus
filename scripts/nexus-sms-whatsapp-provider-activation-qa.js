@@ -92,6 +92,10 @@ function excludes(source, token, label) {
 ].forEach(token => includes(server, token, `safe communications body ${token}`));
 
 assert(twilioProvider.includes("NEXUS_SMS_ENABLED") && twilioProvider.includes("NEXUS_MESSAGES_ENABLED"), "Twilio provider should support both NEXUS_SMS_ENABLED and legacy NEXUS_MESSAGES_ENABLED");
+assert(twilioProvider.includes("TWILIO_API_KEY_SID") && twilioProvider.includes("TWILIO_API_KEY_SECRET"), "Twilio provider should support production API key authentication");
+assert(twilioProvider.includes('authentication: "api-key"') && twilioProvider.includes('authentication: "auth-token"'), "Twilio provider should prefer API keys while preserving legacy auth-token compatibility");
+assert(twilioProvider.includes("credentials.username") && twilioProvider.includes("credentials.password"), "Twilio Basic auth should use the selected server-side credential pair");
+assert(!twilioProvider.includes('${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}'), "Twilio requests should not be hard-wired to the master auth token");
 assert(server.includes("body.confirmed !== true") && server.includes("body.consent !== true"), "send route helper should block without confirmation and sensitive consent");
 assert(server.includes("\"virtual-care\""), "virtual-care must remain a sensitive communications consent domain");
 assert(server.includes("This is not an emergency alert"), "healthcare-sensitive communications should use short notification language");

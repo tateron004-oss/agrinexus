@@ -15,8 +15,29 @@ const {
 const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
 const TWILIO_FROM_ENV_NAMES = ["TWILIO_FROM_NUMBER", "TWILIO_PHONE_NUMBER", "TWILIO_NUMBER"];
 
+function twilioCredentials(env = process.env) {
+  const accountSid = clean(env.TWILIO_ACCOUNT_SID);
+  const apiKeySid = clean(env.TWILIO_API_KEY_SID);
+  const apiKeySecret = clean(env.TWILIO_API_KEY_SECRET);
+  const authToken = clean(env.TWILIO_AUTH_TOKEN);
+
+  if (accountSid && apiKeySid && apiKeySecret) {
+    return { accountSid, username: apiKeySid, password: apiKeySecret, authentication: "api-key" };
+  }
+  if (accountSid && authToken) {
+    return { accountSid, username: accountSid, password: authToken, authentication: "auth-token" };
+  }
+  return null;
+}
+
 function twilioConfigured(env = process.env) {
-  return missingEnv(["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"], env);
+  if (twilioCredentials(env)) return [];
+  const missing = missingEnv(["TWILIO_ACCOUNT_SID"], env);
+  const apiKeyPartiallyConfigured = clean(env.TWILIO_API_KEY_SID) || clean(env.TWILIO_API_KEY_SECRET);
+  if (apiKeyPartiallyConfigured) {
+    return [...missing, ...missingEnv(["TWILIO_API_KEY_SID", "TWILIO_API_KEY_SECRET"], env)];
+  }
+  return [...missing, "TWILIO_API_KEY_SID", "TWILIO_API_KEY_SECRET"];
 }
 
 function firstConfiguredEnv(names = [], env = process.env) {
@@ -57,8 +78,10 @@ function status(env = process.env) {
 }
 
 async function twilioPost(path, params, env = process.env) {
-  const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
-  const response = await fetch(`${TWILIO_BASE}/Accounts/${env.TWILIO_ACCOUNT_SID}${path}`, {
+  const credentials = twilioCredentials(env);
+  if (!credentials) throw new Error("Twilio credentials are not configured.");
+  const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64");
+  const response = await fetch(`${TWILIO_BASE}/Accounts/${credentials.accountSid}${path}`, {
     method: "POST",
     headers: {
       authorization: `Basic ${auth}`,
