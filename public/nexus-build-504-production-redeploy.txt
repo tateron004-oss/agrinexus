@@ -1,0 +1,5 @@
+Nexus Build 504 production redeploy trigger.
+
+Reason: production was verified serving nexus-behavior-503 after Build 504 reached GitHub main.
+Expected live markers: nexus-behavior-504 and agrinexus-pwa-v449.
+No application runtime logic is changed by this marker.
