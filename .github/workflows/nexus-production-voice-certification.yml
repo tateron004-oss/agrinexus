@@ -27,7 +27,7 @@ jobs:
   deployed-voice-to-workspace:
     name: Real Realtime voice to visible workspaces
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
       NEXUS_LIVE_EXPECTED_TURNS: "16"
@@ -55,7 +55,7 @@ jobs:
       - name: Wait for the exact Render release
         run: |
           expected_build=$(node -e "const source=require('fs').readFileSync('server.js','utf8'); const match=source.match(/AGRINEXUS_WEB_BUILD_VERSION = \"([^\"]+)\"/); if (!match) process.exit(1); process.stdout.write(match[1]);")
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 180); do
             live_build=$(curl --max-time 20 -fsSL "$NEXUS_LIVE_BASE_URL/api/healthz" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk).on('end', () => { try { process.stdout.write(JSON.parse(data).webBuild || '') } catch {} })")
             if [ "$live_build" = "$expected_build" ]; then
               echo "Render is serving $live_build"
@@ -93,7 +93,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add output/nexus-certification
-          git commit -m "Record Nexus build 498 spoken certification: ${{ steps.voice.outcome }}" || true
+          git commit -m "Record Nexus build 499 spoken certification: ${{ steps.voice.outcome }}" || true
           git pull --rebase origin main
           git push origin HEAD:main
 
@@ -112,4 +112,4 @@ jobs:
         if: always() && steps.voice.outcome != 'success'
         run: exit 1
 
-# Build 497 Cloudinary spoken certification trigger 2026-07-25.
+# Build 499 Realtime microphone transport certification trigger 2026-07-25.
