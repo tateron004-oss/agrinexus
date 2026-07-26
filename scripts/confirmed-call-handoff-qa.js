@@ -155,6 +155,16 @@ function assertStagedOnly(state, label) {
     assert.equal(twilioConfirmed.commandResult?.metadata?.liveCallPlaced, false, "missing Twilio config should not place a live call");
     assert.equal(twilioConfirmed.profile?.outboundCalls?.[0]?.status, "needs-twilio-call-config", "Twilio missing config should remain safe");
 
+    const ownerCallCountBefore = twilioConfirmed.profile?.outboundCalls?.length || 0;
+    const ownerRecipient = await command("call owner test recipient");
+    assert.equal(ownerRecipient.commandResult?.status, "needs-confirmation", "owner test recipient call should stage for confirmation");
+    assert.equal(ownerRecipient.commandResult?.metadata?.executionDeferred, true, "owner test recipient call should defer execution");
+    assert.equal(ownerRecipient.profile?.outboundCalls?.length || 0, ownerCallCountBefore, "owner test recipient first utterance must not create another Twilio call");
+    assert.equal(ownerRecipient.commandResult?.metadata?.target?.displayName, "owner test recipient", "owner test recipient alias should resolve without exposing its configured number");
+    const ownerConfirmed = await command("yes");
+    assert.equal(ownerConfirmed.commandResult?.metadata?.provider, "twilio", "owner test recipient confirmation should use Twilio");
+    assert.equal(ownerConfirmed.commandResult?.metadata?.executionConfirmed, true, "owner test recipient call should execute only after spoken confirmation");
+
     console.log("Confirmed call handoff QA passed");
   } finally {
     server.kill();
