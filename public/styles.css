@@ -22,6 +22,64 @@
   --nexus-muted: #adc5dc;
 }
 
+.nexus-youtube-player {
+  position: fixed;
+  z-index: 10040;
+  right: 1rem;
+  bottom: 6.5rem;
+  width: min(34rem, calc(100vw - 2rem));
+  padding: 0.8rem;
+  border: 1px solid rgba(118, 225, 255, 0.35);
+  border-radius: 1rem;
+  background: rgba(8, 22, 34, 0.97);
+  box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.45);
+  color: #f7fbff;
+}
+
+.nexus-youtube-player-head,
+.nexus-youtube-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.nexus-youtube-player-head div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.nexus-youtube-player-head span {
+  color: #9bdff1;
+  font-size: 0.8rem;
+}
+
+.nexus-youtube-frame-wrap {
+  aspect-ratio: 16 / 9;
+  margin: 0.7rem 0;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: #000;
+}
+
+.nexus-youtube-frame-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.nexus-youtube-controls button {
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .nexus-youtube-player {
+    right: 0.5rem;
+    bottom: 5.5rem;
+    width: calc(100vw - 1rem);
+  }
+}
+
 .nexus-permanent-microphone-dock {
   position: fixed;
   right: max(16px, env(safe-area-inset-right));
