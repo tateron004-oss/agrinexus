@@ -2,8 +2,8 @@
   "suite": "nexus-genesis-production-exact-build-smoke",
   "base": "https://agrinexus-platform.onrender.com",
   "productionConfirmation": "verified",
-  "webBuild": "nexus-behavior-499",
-  "pwaCache": "agrinexus-pwa-v444",
+  "webBuild": "nexus-behavior-500",
+  "pwaCache": "agrinexus-pwa-v445",
   "health": {
     "ok": true,
     "service": "agrinexus",
@@ -14,8 +14,8 @@
       "legacyProductName": "AgriNexus"
     },
     "release": "2026-06-16-operational-readiness",
-    "webBuild": "nexus-behavior-499",
-    "pwaCache": "agrinexus-pwa-v444",
+    "webBuild": "nexus-behavior-500",
+    "pwaCache": "agrinexus-pwa-v445",
     "mode": "production",
     "port": 10000,
     "strictLiveMode": false,
@@ -27,7 +27,7 @@
       "total": 37,
       "liveGaps": 0
     },
-    "timestamp": "2026-07-26T05:17:23.913Z"
+    "timestamp": "2026-07-26T06:23:34.458Z"
   },
   "configIdentity": {
     "productName": "Nexus Genesis | AgriNexus",
@@ -49,8 +49,8 @@
     "model": "gpt-realtime-2",
     "voice": "marin",
     "runtimeVersion": "nexus-genesis-openai-agents-realtime-v3",
-    "buildVersion": "nexus-behavior-499",
-    "cacheVersion": "agrinexus-pwa-v444",
+    "buildVersion": "nexus-behavior-500",
+    "cacheVersion": "agrinexus-pwa-v445",
     "endpoint": "/api/voice/realtime/session",
     "legacySdpEndpoint": "/api/voice/realtime/call",
     "toolEndpoint": "/api/voice/realtime/tool",
