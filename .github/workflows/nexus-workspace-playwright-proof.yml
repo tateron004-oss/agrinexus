@@ -71,3 +71,5 @@ jobs:
           path: output/nexus-live-voice-acceptance/
           if-no-files-found: error
           retention-days: 30
+
+# Build 505 serialized certification trigger.
