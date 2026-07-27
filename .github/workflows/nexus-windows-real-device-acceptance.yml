@@ -90,3 +90,4 @@ jobs:
 # desktop session, never installed as a Windows service.
 
 # Fresh certification trigger: 2026-07-27 real-device rerun from corrected main.
+# Fresh certification trigger: 2026-07-27 authenticated-handoff rerun.
