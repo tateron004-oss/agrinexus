@@ -23,16 +23,18 @@ assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Ne
 assert.match(app, /youtubePlayerCommand\("stopVideo"\)/, "Stop voice control must reach YouTube");
 assert.match(app, /setVoiceResponse\("YouTube music stopped\. Nexus is still listening\."/,
   "Stopping music must preserve Nexus listening");
-assert.match(app, /toolName === "nexus_music_media"[\s\S]*playNexusYouTubeMusic/,
-  "Realtime YouTube tool results must open the visible provider-backed player");
-assert.match(app, /youtubeReceipt = \{[\s\S]*visible: true/,
-  "Visible YouTube playback must retain a verification receipt");
-assert.match(server, /nexus-behavior-509/);
-assert.match(app, /nexus-behavior-509/);
-assert.match(html, /nexus-behavior-509/);
-assert.match(sw, /nexus-behavior-509/);
-assert.match(server, /agrinexus-pwa-v454/);
-assert.match(app, /agrinexus-pwa-v454/);
-assert.match(sw, /agrinexus-pwa-v454/);
+assert.match(server, /lane === "youtube"[\s\S]*getMusicMediaSourceResultAsync[\s\S]*transaction\.receipt = \{[\s\S]*visible: true/,
+  "Realtime YouTube must execute once inside the authoritative server transaction");
+assert.match(app, /transaction\.lane === "youtube"[\s\S]*showNexusYouTubePlayer/,
+  "The authoritative YouTube receipt must open the visible provider-backed player");
+assert.match(app, /data-nexus-provider-transaction-receipt/,
+  "Visible YouTube playback must render the same provider transaction receipt");
+assert.match(server, /nexus-behavior-510/);
+assert.match(app, /nexus-behavior-510/);
+assert.match(html, /nexus-behavior-510/);
+assert.match(sw, /nexus-behavior-510/);
+assert.match(server, /agrinexus-pwa-v455/);
+assert.match(app, /agrinexus-pwa-v455/);
+assert.match(sw, /agrinexus-pwa-v455/);
 
 console.log("[nexus-youtube-music-playback-qa] passed");

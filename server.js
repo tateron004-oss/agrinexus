@@ -56,8 +56,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-509";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v454";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-510";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v455";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17726,9 +17726,212 @@ function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
 
 function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = process.env) {
   const explicitlyRequested = args.ownerTestRecipient === true
-    || /\b(?:my|the|our)\s+(?:approved\s+)?owner(?:'s)?\s+test\s+(?:recipient|number|phone)\b/i.test(String(command || ""));
+    || /\b(?:my|the|our)\s+(?:(?:approved|configured)\s+)*owner(?:'s)?\s+test\s+(?:recipient|number|phone)\b/i.test(String(command || ""));
   if (!explicitlyRequested) return "";
   return sanitizePilotText(firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]), 120);
+}
+
+function ensureNexusProviderTransactions(db) {
+  if (!Array.isArray(db.nexusProviderTransactions)) db.nexusProviderTransactions = [];
+  return db.nexusProviderTransactions;
+}
+
+function nexusProviderTransactionLane(toolName = "", command = "") {
+  const text = String(command || "").toLowerCase();
+  if (toolName === "nexus_music_media" && /\b(youtube|music|song|playlist|video)\b/.test(text)) return "youtube";
+  if (toolName === "nexus_translation" && /\b(translate|translation)\b/.test(text)) return "translation";
+  if (toolName === "nexus_file_document_analysis" && /\bcloudinary\b/.test(text)) return "cloudinary";
+  if (toolName === "nexus_communications" && /\b(call|phone|dial|twilio)\b/.test(text)) return "twilio-call";
+  return "";
+}
+
+function nexusProviderTransactionId(user, lane = "", command = "") {
+  const identity = String(user?.id || user?.email || "standard-user").toLowerCase();
+  const normalized = String(command || "").toLowerCase().replace(/\b(yes|explicitly|confirm|confirmed|now|do it)\b/g, " ").replace(/\s+/g, " ").trim();
+  return `ptx_${crypto.createHash("sha256").update(`${identity}:${lane}:${normalized}`).digest("hex").slice(0, 24)}`;
+}
+
+function nexusTranslationRequest(command = "", args = {}) {
+  const text = String(command || "");
+  const targetMatch = text.match(/\b(?:into|to|in)\s+(Swahili|Kiswahili|French|Spanish|Arabic|Portuguese|English)\b/i);
+  const languageNames = { swahili: "sw", kiswahili: "sw", french: "fr", spanish: "es", arabic: "ar", portuguese: "pt", english: "en" };
+  const targetLanguage = String(args.targetLanguage || languageNames[String(targetMatch?.[1] || "").toLowerCase()] || args.language || "en").toLowerCase();
+  const sourceText = sanitizePilotText(
+    args.text
+      || text.match(/\btranslate\s+(.+?)\s+(?:into|to|in)\s+(?:Swahili|Kiswahili|French|Spanish|Arabic|Portuguese|English)\b/i)?.[1]
+      || text.replace(/^.*?\btranslate\b/i, "").trim(),
+    700
+  );
+  return { sourceText, targetLanguage, sourceLanguage: String(args.sourceLanguage || "en").toLowerCase() };
+}
+
+function nexusProviderTransactionEnvelope(transaction) {
+  const receipt = transaction.receipt || {};
+  return {
+    ok: transaction.ok === true,
+    transactionId: transaction.id,
+    providerTransaction: {
+      id: transaction.id,
+      lane: transaction.lane,
+      state: transaction.state,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt
+    },
+    status: transaction.status,
+    response: transaction.response,
+    provider: transaction.provider,
+    providerAction: transaction.action,
+    providerAttempted: transaction.providerAttempted === true,
+    providerSucceeded: transaction.providerSucceeded === true,
+    executionAttempted: transaction.executionAttempted === true,
+    executionVerified: transaction.executionVerified === true,
+    requiresConfirmation: transaction.requiresConfirmation === true,
+    blockedReason: transaction.blockedReason || null,
+    providerData: transaction.providerData || {},
+    evidenceReceipt: receipt,
+    providerReceipt: receipt,
+    translationProvider: transaction.lane === "translation" ? transaction.provider : null,
+    translationReceipt: transaction.lane === "translation" ? receipt : null,
+    youtubeProvider: transaction.lane === "youtube" ? transaction.provider : null,
+    youtubeReceipt: transaction.lane === "youtube" ? receipt : null,
+    cloudinaryProvider: transaction.lane === "cloudinary" ? transaction.provider : null,
+    cloudinaryReceipt: transaction.lane === "cloudinary" ? receipt : null,
+    cloudinaryAsset: transaction.lane === "cloudinary" ? transaction.providerData : null,
+    noSecretValuesReturned: true,
+    noUngatedExecution: true
+  };
+}
+
+async function executeNexusProviderTransaction(db, user, toolName = "", args = {}, context = {}) {
+  const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
+  const lane = nexusProviderTransactionLane(toolName, command);
+  if (!lane) return null;
+  const transactions = ensureNexusProviderTransactions(db);
+  const confirmed = args.confirmed === true || /\b(explicitly\s+confirm|confirm(?:ed)?|yes.*(?:call|twilio)|do it)\b/i.test(command);
+  let transaction = null;
+
+  if (lane === "twilio-call" && confirmed) {
+    const requestedId = sanitizePilotText(args.transactionId || args.confirmationTransactionId || "", 100);
+    transaction = transactions.find(item => item.id === requestedId && item.lane === lane)
+      || transactions.find(item => item.lane === lane && item.userId === user?.id && item.state === "awaiting-confirmation");
+  } else {
+    const transactionId = nexusProviderTransactionId(user, lane, command);
+    transaction = transactions.find(item => item.id === transactionId);
+  }
+  if (transaction?.state === "completed" || transaction?.state === "failed") return nexusProviderTransactionEnvelope(transaction);
+  if (transaction?.state === "executing") {
+    for (let attempt = 0; attempt < 120 && transaction.state === "executing"; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    if (transaction.state === "executing") {
+      return {
+        ...nexusProviderTransactionEnvelope(transaction),
+        ok: false,
+        status: "provider-timeout",
+        response: "The existing provider transaction is still running. Nexus did not execute it again.",
+        blockedReason: "transaction-in-progress"
+      };
+    }
+    return nexusProviderTransactionEnvelope(transaction);
+  }
+
+  if (!transaction) {
+    transaction = {
+      id: nexusProviderTransactionId(user, lane, command),
+      lane,
+      userId: user?.id || "",
+      command,
+      arguments: {},
+      state: "created",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    transactions.unshift(transaction);
+    if (transactions.length > 100) transactions.length = 100;
+  }
+
+  if (lane === "twilio-call" && !confirmed) {
+    const contact = nexusOpenAiNativeExtractContactArgs(command, args);
+    const recipient = contact.to || nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
+    transaction.arguments = { to: recipient, message: contact.message || command, channel: "call" };
+    transaction.state = "awaiting-confirmation";
+    transaction.status = "confirmation_required";
+    transaction.ok = false;
+    transaction.provider = "twilio";
+    transaction.action = "call.start";
+    transaction.response = recipient
+      ? "The Twilio call is staged for the configured owner test recipient. Say yes and explicitly confirm this call to execute the same stored transaction."
+      : "The Twilio call cannot be staged because the configured owner test recipient is missing.";
+    transaction.requiresConfirmation = true;
+    transaction.blockedReason = recipient ? "confirmation-required" : "recipient-required";
+    transaction.updatedAt = new Date().toISOString();
+    transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: "call.start", state: transaction.state, targetStored: Boolean(recipient), verified: false };
+    return nexusProviderTransactionEnvelope(transaction);
+  }
+
+  try {
+    transaction.state = "executing";
+    transaction.updatedAt = new Date().toISOString();
+    if (lane === "youtube") {
+      const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({ mediaRequest: command }, process.env);
+      const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+      if (!match || source.sourceStatus !== "source-result-available") throw new Error(source.resultSummary || "YouTube did not return a playable result");
+      const title = String(source.resultSummary || "").replace(/^YouTube video found:\s*/i, "").replace(/\s+—\s+.*$/, "").trim() || command;
+      transaction.provider = "youtube";
+      transaction.action = "media.search-and-play";
+      transaction.providerData = { videoId: match[1], title, query: command };
+      transaction.response = `Now playing through YouTube: ${title}. The requested result is visible in Music and Media.`;
+      transaction.receipt = { transactionId: transaction.id, provider: "youtube", action: transaction.action, videoId: match[1], title, visible: true, verified: true };
+    } else if (lane === "translation") {
+      const request = nexusTranslationRequest(command, args);
+      const translated = await translateDynamicContent(db, user, { text: request.sourceText, targetLanguage: request.targetLanguage, sourceLanguage: request.sourceLanguage, context: "voice-provider-transaction" });
+      transaction.provider = translated.provider;
+      transaction.action = "translation.translate";
+      transaction.providerData = translated;
+      transaction.response = translated.translatedText;
+      transaction.receipt = { transactionId: transaction.id, provider: translated.provider, action: transaction.action, sourceLanguage: translated.sourceLanguage, targetLanguage: translated.targetLanguage, translatedText: translated.translatedText, verified: Boolean(translated.translatedText) };
+    } else if (lane === "cloudinary") {
+      const uploaded = await cloudinaryProvider.uploadCertificationAsset();
+      if (!uploaded.ok) throw new Error(uploaded.error || uploaded.status || "Cloudinary upload failed");
+      transaction.provider = "cloudinary";
+      transaction.action = "media.upload";
+      transaction.providerData = uploaded.asset || {};
+      transaction.response = `Cloudinary media upload verified. Provider asset receipt ${uploaded.asset?.publicId || "received"}.`;
+      transaction.receipt = { transactionId: transaction.id, ...(uploaded.receipt || {}), provider: "cloudinary", action: transaction.action, publicId: uploaded.receipt?.publicId || uploaded.asset?.publicId || "", verified: true, secureDelivery: uploaded.receipt?.secureDelivery === true };
+    } else {
+      if (!transaction.arguments?.to) throw new Error("Call target is required");
+      const called = await nexusRealProviders.twilio.startCall({ to: transaction.arguments.to, message: transaction.arguments.message, confirmed: true }, process.env);
+      const body = called?.body || called || {};
+      if (!body.ok) throw new Error(body.message || body.status || "Twilio call failed");
+      transaction.provider = "twilio";
+      transaction.action = "call.start";
+      transaction.providerData = body.data || {};
+      transaction.response = body.message || "Twilio call started.";
+      transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: transaction.action, sid: String(body.data?.sid || ""), status: String(body.data?.status || body.status || ""), verified: /^CA[A-Za-z0-9]+$/.test(String(body.data?.sid || "")) };
+    }
+    transaction.ok = true;
+    transaction.status = "completed";
+    transaction.state = "completed";
+    transaction.providerAttempted = true;
+    transaction.providerSucceeded = true;
+    transaction.executionAttempted = true;
+    transaction.executionVerified = transaction.receipt?.verified === true;
+    transaction.requiresConfirmation = false;
+    transaction.blockedReason = null;
+  } catch (error) {
+    transaction.ok = false;
+    transaction.status = "provider-error";
+    transaction.state = "failed";
+    transaction.response = String(error?.message || "Provider transaction failed.");
+    transaction.providerAttempted = true;
+    transaction.providerSucceeded = false;
+    transaction.executionAttempted = true;
+    transaction.executionVerified = false;
+    transaction.blockedReason = "provider-error";
+    transaction.receipt = { transactionId: transaction.id, provider: transaction.provider || lane, action: transaction.action || lane, verified: false, errorCategory: "provider-error" };
+  }
+  transaction.updatedAt = new Date().toISOString();
+  return nexusProviderTransactionEnvelope(transaction);
 }
 
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
@@ -17873,6 +18076,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (!command) {
     return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
   }
+  const providerTransaction = await executeNexusProviderTransaction(db, user, toolName, args, context);
+  if (providerTransaction) return { ...common, ...providerTransaction };
   if (toolName === "nexus_weather") {
     const location = sanitizePilotText(args.location || args.city || args.query || command, 180);
     const result = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
@@ -18156,8 +18361,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
 function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const toolNames = toolResults.map(item => String(item?.call?.name || ""));
-  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") || /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower);
-  if (!(route || workforce || marketplace || health || learning)) return null;
+  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") || /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower); const media = toolNames.includes("nexus_music_media") || /\b(youtube|music|song|playlist|video)\b/.test(lower);
+  if (!(route || workforce || marketplace || health || learning || media)) return null;
   const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i);
   const locationMatch = text.match(/\b(?:in|near|around)\s+([A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*)*)/u);
   const cropMatch = text.match(/\b(?:sell|selling|buy|buying)\s+(?:some\s+)?([\p{L}'-]+)/iu);
@@ -18165,7 +18370,7 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const countryMatch = text.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i);
   const country = countryMatch?.[1] || locationMatch?.[1]?.trim() || "";
   const jobType = /\bfarming\b/i.test(text) ? "farming" : (jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || "");
-  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
+  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : learning ? "learning" : "media";
   const payload = route
     ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || country, country }
     : workforce
@@ -18174,8 +18379,10 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
         ? { query: text, action: /\bsell(?:ing)?\b/i.test(text) ? "sell" : "buy", product: cropMatch?.[1]?.trim() || (/\bmaize\b/i.test(text) ? "maize" : ""), country }
         : health
           ? { query: text, intake: /blood[- ]?pressure|hypertension/i.test(text) ? "blood-pressure" : "healthcare", intakeType: /\b(healthcare|patient|telehealth)\b/i.exec(text)?.[1]?.toLowerCase() || "healthcare", country }
-          : { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text };
-  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
+          : learning
+            ? { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text }
+            : { query: text, provider: "YouTube", result: "Now playing through YouTube" };
+  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : learning ? "learning_start" : "media_playback", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
 }
 async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
   const status = nexusOpenAiNativeStatus(process.env);

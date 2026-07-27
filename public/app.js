@@ -1344,8 +1344,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-509";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v454";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-510";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v455";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49878,6 +49878,48 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
 }
 
 const nexusRealtimeToolExecutions = new Map();
+let nexusPendingProviderTransactionId = "";
+
+function nexusProviderTransactionIdForCommand(toolName = "", command = "") {
+  if (toolName === "nexus_communications" && /\b(confirm|confirmed|yes|do it)\b/i.test(command) && nexusPendingProviderTransactionId) {
+    return nexusPendingProviderTransactionId;
+  }
+  const normalized = `${toolName}:${String(command || "").toLowerCase().replace(/\s+/g, " ").trim()}`;
+  let hash = 2166136261;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash ^= normalized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `browser_ptx_${(hash >>> 0).toString(16)}`;
+}
+
+function renderNexusProviderTransactionReceipt(result = {}) {
+  const transaction = result.providerTransaction;
+  const receipt = result.providerReceipt || result.evidenceReceipt;
+  if (!transaction?.id || !receipt) return false;
+  if (transaction.lane === "youtube" && result.providerData?.videoId) {
+    showNexusYouTubePlayer({
+      ok: true,
+      provider: "youtube",
+      status: "playback-ready",
+      query: result.providerData.query || result.command || "",
+      videoId: result.providerData.videoId,
+      title: result.providerData.title || receipt.title || "YouTube result"
+    });
+  }
+  const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]') || document.querySelector("#agent");
+  if (!host) return false;
+  host.querySelector(`[data-nexus-provider-transaction-receipt="${transaction.id}"]`)?.remove();
+  const panel = document.createElement("section");
+  panel.dataset.nexusProviderTransactionReceipt = transaction.id;
+  panel.dataset.providerLane = transaction.lane || "";
+  panel.dataset.providerVerified = String(result.executionVerified === true);
+  panel.setAttribute("aria-live", "polite");
+  panel.innerHTML = `<strong>${escapeHtml(translateText("Provider receipt"))}</strong><p>${escapeHtml(String(result.response || "Provider transaction completed."))}</p><small>${escapeHtml(String(result.provider || transaction.lane || "Nexus"))} · ${escapeHtml(String(result.status || transaction.state || ""))} · ${escapeHtml(transaction.id)}</small>`;
+  host.prepend(panel);
+  window.dispatchEvent(new CustomEvent("nexus.provider.transaction.receipt", { detail: { transaction, receipt, response: result.response || "" } }));
+  return true;
+}
 
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
@@ -49901,6 +49943,7 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
 
 async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
+  const transactionId = nexusProviderTransactionIdForCommand(toolName, command);
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -49918,7 +49961,9 @@ async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
       arguments: {
         ...args,
         command,
-        language: args.language || languageCode()
+        language: args.language || languageCode(),
+        transactionId,
+        confirmationTransactionId: nexusPendingProviderTransactionId
       },
       language: args.language || languageCode()
     })
@@ -49930,43 +49975,16 @@ async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
     blockedReason: "client-parse-failed",
     category: "tool-response-parse"
   }));
-  if (toolName === "nexus_music_media" && /\byoutube\b/i.test(command)) {
-    try {
-      const youtube = await playNexusYouTubeMusic(command, { announce: false });
-      result.ok = true;
-      result.status = "completed";
-      result.response = `YouTube video found: ${youtube.title || youtube.query}. The result is visible and playing in Music and Media.`;
-      result.providerAttempted = true;
-      result.providerSucceeded = true;
-      result.executionAttempted = true;
-      result.executionVerified = true;
-      result.youtubeProvider = "youtube";
-      result.youtubeReceipt = {
-        videoId: String(youtube.videoId || ""),
-        title: String(youtube.title || ""),
-        visible: true
-      };
-    } catch (error) {
-      result.ok = false;
-      result.status = "provider-error";
-      result.response = `YouTube did not return a playable result. ${String(error?.message || error || "")}`.trim();
-      result.providerAttempted = true;
-      result.providerSucceeded = false;
-      result.executionAttempted = true;
-      result.executionVerified = false;
-      result.blockedReason = "youtube-provider-error";
-    }
+  if (result.providerTransaction?.lane === "twilio-call" && result.providerTransaction?.state === "awaiting-confirmation") {
+    nexusPendingProviderTransactionId = result.providerTransaction.id;
+  }
+  if (result.providerTransaction?.lane === "twilio-call" && result.providerTransaction?.state === "completed") {
+    nexusPendingProviderTransactionId = "";
   }
   await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
+  renderNexusProviderTransactionReceipt(result);
   if (result.genesisAcknowledgement?.verified === true) {
-    const workspaceName = String(result.genesisAcknowledgement.workspace || result.genesisAction?.workspace || "Nexus");
-    const providerNote = result.blockedReason || result.category || result.status || "";
-    result.workspaceProviderNote = providerNote;
-    result.ok = true;
-    result.status = "completed";
-    result.response = `The visible ${workspaceName} workspace opened and contains your request.`;
-    result.blockedReason = null;
-    result.executionVerified = true;
+    result.workspaceVerified = true;
   }
   nexusGenesisVoiceDebugLog("openai-agents-tool-http-result", {
     toolName,
