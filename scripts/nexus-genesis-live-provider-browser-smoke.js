@@ -518,6 +518,22 @@ async function main() {
           return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true }, lifecycle: lifecycle.currentInvariant || null, acceptanceSnapshot: window.__NEXUS_ACCEPTANCE_SNAPSHOT__ || null, workspaceAcks: window.__NEXUS_WORKSPACE_ACKS__ || [], eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
         })()`);
       } catch {}
+      const capturedFailure = {
+        ok: false,
+        suite: "nexus-genesis-live-provider-browser-smoke",
+        stage: acceptanceStage,
+        failureReason: acceptanceFailureReason || "unclassified",
+        progress: acceptanceProgress,
+        diagnostics: failureDiagnostics,
+        browserDiagnostics,
+        secretValuesReturned: false
+      };
+      fs.mkdirSync(outputDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(outputDir, "live-provider-browser-failure.json"),
+        `${JSON.stringify(capturedFailure, null, 2)}\n`
+      );
+      console.error(JSON.stringify(capturedFailure));
     }
     try {
       cdp?.close();

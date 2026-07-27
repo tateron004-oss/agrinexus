@@ -66,10 +66,12 @@ assert(browserHarness.includes("readAndValidateEvidence(evidencePath, expectedTu
 assert(browserHarness.includes("return finish();"));
 assert(browserHarness.includes("preliminary: true"));
 assert(browserHarness.includes("live-provider-browser-failure.json"));
+assert(browserHarness.includes("diagnostics: failureDiagnostics"));
 assert(productionWorkflow.includes("Require complete structured voice evidence"));
 assert(productionWorkflow.includes("steps.voice_evidence.outcome != 'success'"));
 assert(productionWorkflow.includes("if-no-files-found: error"));
 assert(workspaceWorkflow.includes("Require complete structured voice evidence"));
+assert(workspaceWorkflow.includes("Publish workspace voice evidence"));
 assert(productionWorkflow.includes("group: nexus-production-realtime-owner"));
 assert(workspaceWorkflow.includes("group: nexus-production-realtime-owner"));
 assert(productionWorkflow.includes("cancel-in-progress: false"));
