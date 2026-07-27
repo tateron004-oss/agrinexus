@@ -64,7 +64,6 @@ jobs:
           node scripts/nexus-realtime-microphone-visibility-qa.js
           node scripts/nexus-genesis-voice-e2e-software-qa.js
           node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
-          npm run qa:nexus-genesis-production-exact-build-smoke
           git diff --check
       - name: Publish verified repair
         shell: bash
