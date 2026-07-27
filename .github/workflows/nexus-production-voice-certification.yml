@@ -16,6 +16,10 @@ on:
       - "scripts/nexus-music-call-production-execution-qa.js"
       - "scripts/nexus-genesis-live-provider-browser-smoke.js"
       - ".github/workflows/nexus-production-voice-certification.yml"
+      - ".github/workflows/nexus-windows-real-device-acceptance.yml"
+      - "scripts/nexus-windows-real-device-acceptance-qa.js"
+      - "scripts/nexus-windows-real-device-preflight.ps1"
+      - "tests/playwright/nexus-windows-real-device-acceptance.spec.js"
 
 permissions:
   contents: read
