@@ -56,7 +56,7 @@ jobs:
       - name: Wait for the exact Render release
         id: release
         run: |
-          expected_build=$(node -e "const source=require('fs').readFileSync('server.js','utf8'); const match=source.match(/AGRINEXUS_WEB_BUILD_VERSION = \"([^\"]+)\"/); if (!match) process.exit(1); process.stdout.write(match[1]);")
+          expected_build=$(node -e "const source=require('fs').readFileSync('server.js','utf8'); const match=source.match(/AGRINEXUS_WEB_BUILD_VERSION\s*=\s*['\"]([^'\"]+)['\"]/); if (!match) process.exit(1); process.stdout.write(match[1]);")
           echo "expected_build=$expected_build" >> "$GITHUB_OUTPUT"
           for attempt in $(seq 1 180); do
             live_build=$(curl --max-time 20 -fsSL "$NEXUS_LIVE_BASE_URL/api/healthz" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk).on('end', () => { try { process.stdout.write(JSON.parse(data).webBuild || '') } catch {} })")
