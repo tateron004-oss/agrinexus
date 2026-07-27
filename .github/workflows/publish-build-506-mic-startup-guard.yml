@@ -1,0 +1,85 @@
+name: Publish Nexus Build 506
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-build-506-mic-startup-guard.yml
+permissions:
+  contents: write
+concurrency:
+  group: publish-nexus-build-506
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply exact Build 506 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git grep -Il -e 'nexus-behavior-505' -e 'agrinexus-pwa-v450' | xargs sed -i -e 's/nexus-behavior-505/nexus-behavior-506/g' -e 's/agrinexus-pwa-v450/agrinexus-pwa-v451/g'
+          python3 - <<'PY'
+          from pathlib import Path
+          app_path = Path("public/app.js")
+          app = app_path.read_text()
+          replacements = [
+            (
+              'let nexusOsVoiceStartInFlight = false;\nlet nexusGenesisPermissionGrantedAutoStartInFlight = false;',
+              'let nexusOsVoiceStartInFlight = false;\nlet nexusPermanentMicrophoneStartInFlight = false;\nlet nexusGenesisPermissionGrantedAutoStartInFlight = false;'
+            ),
+            (
+              'const realtimeStartupInFlight = Boolean(realtimeVoiceStarting || nexusOsVoiceStartInFlight);',
+              'const realtimeStartupInFlight = Boolean(\n          realtimeVoiceStarting\n          || nexusOsVoiceStartInFlight\n          || nexusPermanentMicrophoneStartInFlight\n        );'
+            ),
+            (
+              '  event?.stopImmediatePropagation?.();\n  recordNexusVoiceLifecycleEvent("permanent-microphone-user-click", {',
+              '  event?.stopImmediatePropagation?.();\n  nexusPermanentMicrophoneStartInFlight = true;\n  recordNexusVoiceLifecycleEvent("permanent-microphone-user-click", {'
+            ),
+            (
+              '  } catch {\n    // The visible status region already explains the exact browser recovery path.\n  }\n}\n\nfunction bindNexusPermanentMicrophoneControl()',
+              '  } catch {\n    // The visible status region already explains the exact browser recovery path.\n  } finally {\n    nexusPermanentMicrophoneStartInFlight = false;\n  }\n}\n\nfunction bindNexusPermanentMicrophoneControl()'
+            )
+          ]
+          for old, new in replacements:
+            if app.count(old) != 1:
+              raise SystemExit(f"Expected exactly one app marker, found {app.count(old)}: {old[:80]}")
+            app = app.replace(old, new)
+          app_path.write_text(app)
+
+          qa_path = Path("scripts/nexus-service-worker-cache-safety-qa.js")
+          qa = qa_path.read_text()
+          old = """assert(app.includes('realtimeVoiceStarting || nexusOsVoiceStartInFlight'), "cache refresh must recognize Realtime startup before the session object is active");
+          assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight'), "cache refresh must preserve a live microphone or in-flight Realtime session");"""
+          new = """assert(app.includes('realtimeVoiceStarting') && app.includes('|| nexusOsVoiceStartInFlight'), "cache refresh must recognize Realtime startup before the session object is active");
+          assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight'), "cache refresh must preserve a live microphone or in-flight Realtime session");
+          assert(app.includes('let nexusPermanentMicrophoneStartInFlight = false;'), "permanent microphone startup must have a synchronous reload guard");
+          assert(app.includes('nexusPermanentMicrophoneStartInFlight = true;'), "permanent microphone click must set the reload guard before awaiting device access");
+          assert(app.includes('|| nexusPermanentMicrophoneStartInFlight'), "service worker reload must defer during permanent microphone acquisition");
+          assert(app.includes('nexusPermanentMicrophoneStartInFlight = false;'), "permanent microphone reload guard must clear after startup finishes");"""
+          if qa.count(old) != 1:
+            raise SystemExit(f"Expected exactly one QA marker, found {qa.count(old)}")
+          qa_path.write_text(qa.replace(old, new))
+          PY
+      - name: Verify Build 506
+        run: |
+          node --check public/app.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-genesis-voice-e2e-software-qa.js
+          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          git diff --check
+      - name: Publish verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "nexus-build-publisher"
+          git config user.email "actions@users.noreply.github.com"
+          git add public server.js scripts
+          git commit -m "Prevent microphone startup reload race"
+          git push origin HEAD:main
