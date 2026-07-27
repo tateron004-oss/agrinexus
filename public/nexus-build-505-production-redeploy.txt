@@ -1,5 +1,5 @@
-Nexus Build 505 production deployment trigger.
-
-Reason: service-worker activation could reload the page during Realtime microphone startup.
-Expected live markers: nexus-behavior-509 and agrinexus-pwa-v454.
-Runtime change: defer service-worker reload while Realtime authorization or microphone startup is in flight.
+Nexus Build 511 production deployment trigger
+Source commit: 15e497989776a664b0aa57495bd7bb8b1ac8589a
+Runtime: nexus-behavior-511
+PWA cache: agrinexus-pwa-v456
+Certification: complete 18-command production voice run with one approved Twilio test call
