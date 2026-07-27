@@ -565,5 +565,5 @@ main().catch(error => {
     }));
     process.exitCode = 1;
   };
-  finish();
+  return finish();
 });
