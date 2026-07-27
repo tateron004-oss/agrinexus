@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-workspace-production-certification
-  cancel-in-progress: true
+  group: nexus-production-realtime-owner
+  cancel-in-progress: false
 
 jobs:
   deployed-workspace-proof:
