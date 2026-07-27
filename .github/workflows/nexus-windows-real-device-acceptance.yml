@@ -91,3 +91,4 @@ jobs:
 
 # Fresh certification trigger: 2026-07-27 real-device rerun from corrected main.
 # Fresh certification trigger: 2026-07-27 authenticated-handoff rerun.
+# Fresh certification trigger: 2026-07-27 restart-safe signed authentication deployment.
