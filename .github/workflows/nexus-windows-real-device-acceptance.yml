@@ -88,3 +88,5 @@ jobs:
 # It automatically follows every successful production voice certification.
 # The runner must be started with run.cmd in an interactive signed-in Windows
 # desktop session, never installed as a Windows service.
+
+# Fresh certification trigger: 2026-07-27 real-device rerun from corrected main.
