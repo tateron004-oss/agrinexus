@@ -1,0 +1,4 @@
+Nexus Genesis end-user release
+Runtime: nexus-behavior-502
+Certified baseline: 3f765e8e2ee2d34561296eee271bde3035a06a07
+Release commit lineage: f9e4cf9fe388d15c175ad72406bc7c6259781bd3
