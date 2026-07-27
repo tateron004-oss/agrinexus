@@ -515,7 +515,7 @@ async function main() {
           const track = [...(window.__NEXUS_RESOURCE_TRACKER__?.tracks || [])][0];
           let audioLevel = { sampled: false, rms: 0, max: 0 };
           if (track) { try { const context = new AudioContext(); const source = context.createMediaStreamSource(new MediaStream([track])); const analyser = context.createAnalyser(); analyser.fftSize = 1024; source.connect(analyser); const data = new Uint8Array(analyser.fftSize); let max = 0; let sum = 0; let samples = 0; const started = performance.now(); while (performance.now() - started < 900) { analyser.getByteTimeDomainData(data); let local = 0; for (const value of data) { const normalized = (value - 128) / 128; local += normalized * normalized; } const rms = Math.sqrt(local / data.length); sum += rms; max = Math.max(max, rms); samples += 1; await new Promise(resolve => setTimeout(resolve, 50)); } audioLevel = { sampled: true, rms: samples ? sum / samples : 0, max }; await context.close(); } catch (error) { audioLevel = { sampled: false, errorCategory: String(error?.name || 'unknown') }; } }
-          return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true }, lifecycle: lifecycle.currentInvariant || null, acceptanceSnapshot: window.__NEXUS_ACCEPTANCE_SNAPSHOT__ || null, workspaceAcks: window.__NEXUS_WORKSPACE_ACKS__ || [], eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
+          return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, lastClientStatus: window.NexusGenesisRealtimeLastClientStatus || null, outputStatus: document.querySelector('#globalVoiceOutputStatus')?.textContent?.trim() || '', permanentMicrophoneStatus: document.querySelector('[data-nexus-permanent-microphone-status]')?.textContent?.trim() || '' }, lifecycle: lifecycle.currentInvariant || null, acceptanceSnapshot: window.__NEXUS_ACCEPTANCE_SNAPSHOT__ || null, workspaceAcks: window.__NEXUS_WORKSPACE_ACKS__ || [], eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
         })()`);
       } catch {}
       const capturedFailure = {
@@ -573,7 +573,7 @@ main().catch(error => {
         const types = events.map(event => event.type).filter(Boolean);
         const track = [...(window.__NEXUS_RESOURCE_TRACKER__?.tracks || [])][0];
         return {
-          realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, activeResponseId: Boolean(status.activeResponseId) },
+          realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, activeResponseId: Boolean(status.activeResponseId), lastClientStatus: window.NexusGenesisRealtimeLastClientStatus || null, outputStatus: document.querySelector('#globalVoiceOutputStatus')?.textContent?.trim() || '', permanentMicrophoneStatus: document.querySelector('[data-nexus-permanent-microphone-status]')?.textContent?.trim() || '' },
           lifecycle: { currentInvariant: lifecycle.currentInvariant || null, current: lifecycle.current || null },
           transportEventTypes: types.slice(-40),
           eventCount: events.length,
@@ -583,19 +583,24 @@ main().catch(error => {
         };
       })()`);
     } catch {}
-    console.error(JSON.stringify({
-    ok: false,
-    suite: "nexus-genesis-live-provider-browser-smoke",
-    errorName: error.name || "Error",
-    errorMessage: String(error.message || ""),
-    errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
-    stage: acceptanceStage,
-    failureReason: acceptanceFailureReason || "unclassified",
-    progress: acceptanceProgress,
-    secretValuesReturned: false,
-    diagnostics: failureDiagnostics,
-    browserDiagnostics
-    }));
+    const finalFailureEvidence = {
+      ok: false,
+      suite: "nexus-genesis-live-provider-browser-smoke",
+      errorName: error.name || "Error",
+      errorMessage: String(error.message || ""),
+      errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
+      stage: acceptanceStage,
+      failureReason: acceptanceFailureReason || "unclassified",
+      progress: acceptanceProgress,
+      secretValuesReturned: false,
+      diagnostics: diagnostics || failureDiagnostics,
+      browserDiagnostics
+    };
+    fs.writeFileSync(
+      path.join(outputDir, "live-provider-browser-failure.json"),
+      `${JSON.stringify(finalFailureEvidence, null, 2)}\n`
+    );
+    console.error(JSON.stringify(finalFailureEvidence));
     process.exitCode = 1;
   };
   return finish();
