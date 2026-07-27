@@ -848,6 +848,7 @@ let nexusVoiceSession = JSON.parse(localStorage.getItem("agrinexusVoiceSession")
 };
 let nexusVoicePreferencePendingConsent = JSON.parse(localStorage.getItem("nexusVoicePreferencePendingConsent") || "null");
 let nexusOsVoiceStartInFlight = false;
+let nexusPermanentMicrophoneStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartLastAttemptAt = 0;
 let nexusGenesisVoiceSessionActive = false;
@@ -1343,8 +1344,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-505";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v450";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-506";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v451";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9435,7 +9436,11 @@ function registerWebApp() {
         const realtimeConnectingOrActive = ["authorizing", "connecting", "connected", "listening"].includes(
           String(realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "")
         );
-        const realtimeStartupInFlight = Boolean(realtimeVoiceStarting || nexusOsVoiceStartInFlight);
+        const realtimeStartupInFlight = Boolean(
+          realtimeVoiceStarting
+          || nexusOsVoiceStartInFlight
+          || nexusPermanentMicrophoneStartInFlight
+        );
         if (permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight) {
           nexusGenesisVoiceLog("service-worker-reload-deferred-for-voice", {
             permanentMicrophoneActive,
@@ -51220,6 +51225,7 @@ async function handleNexusPermanentMicrophoneClick(event) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   event?.stopImmediatePropagation?.();
+  nexusPermanentMicrophoneStartInFlight = true;
   recordNexusVoiceLifecycleEvent("permanent-microphone-user-click", {
     managerState: realtimeVoiceSession?.controllerState || "pre-acquisition",
     microphoneOwner: nexusPermanentMicrophoneOwner
@@ -51245,6 +51251,8 @@ async function handleNexusPermanentMicrophoneClick(event) {
     }
   } catch {
     // The visible status region already explains the exact browser recovery path.
+  } finally {
+    nexusPermanentMicrophoneStartInFlight = false;
   }
 }
 

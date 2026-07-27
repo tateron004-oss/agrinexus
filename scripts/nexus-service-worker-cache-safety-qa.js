@@ -13,8 +13,8 @@ function includesAll(source, tokens, label) {
 }
 
 includesAll(sw, [
-  'const CACHE_NAME = "agrinexus-pwa-v450"',
-  'const BUILD_VERSION = "nexus-behavior-505"',
+  'const CACHE_NAME = "agrinexus-pwa-v451"',
+  'const BUILD_VERSION = "nexus-behavior-506"',
   "function isCacheableApplicationRequest",
   '["http:", "https:"].includes(url.protocol)',
   "url.origin !== self.location.origin",
@@ -49,8 +49,8 @@ assert(sw.includes(".catch(error =>"), "install cache failures must be handled")
 
 includesAll(app, [
   'const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456"',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-505"',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v450"',
+  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-506"',
+  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v451"',
   "console.info(`[Nexus Genesis voice] ${stage}",
   "controller-initialized",
   "automatic-start-entered",
@@ -71,8 +71,12 @@ includesAll(app, [
 assert(!app.includes('console.info("[Nexus Genesis voice]", payload)'), "voice debug must not print collapsed generic Object logs");
 assert(app.includes('service-worker-reload-deferred-for-voice'), "service worker activation must defer reload while permanent voice is active");
 assert(app.includes('realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState'), "cache refresh must recognize the Realtime authorizing controller state");
-assert(app.includes('realtimeVoiceStarting || nexusOsVoiceStartInFlight'), "cache refresh must recognize Realtime startup before the session object is active");
+assert(app.includes('realtimeVoiceStarting') && app.includes('|| nexusOsVoiceStartInFlight'), "cache refresh must recognize Realtime startup before the session object is active");
 assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight'), "cache refresh must preserve a live microphone or in-flight Realtime session");
+assert(app.includes('let nexusPermanentMicrophoneStartInFlight = false;'), "permanent microphone startup must have a synchronous reload guard");
+assert(app.includes('nexusPermanentMicrophoneStartInFlight = true;'), "permanent microphone click must set the reload guard before awaiting device access");
+assert(app.includes('|| nexusPermanentMicrophoneStartInFlight'), "service worker reload must defer during permanent microphone acquisition");
+assert(app.includes('nexusPermanentMicrophoneStartInFlight = false;'), "permanent microphone reload guard must clear after startup finishes");
 
 console.log(JSON.stringify({
   ok: true,
