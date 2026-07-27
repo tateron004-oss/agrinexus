@@ -32,16 +32,13 @@ function signatureFor(parameters, apiSecret) {
   return crypto.createHash("sha1").update(`${canonical}${apiSecret}`).digest("hex");
 }
 
-function certificationSvg() {
+function certificationPng() {
+  // A deterministic valid PNG avoids Cloudinary accounts that intentionally
+  // reject SVG delivery. The asset proves the authenticated upload/receipt
+  // path; it does not need dynamic user content.
   return Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">' +
-      '<rect width="640" height="360" fill="#071b26"/>' +
-      '<circle cx="115" cy="180" r="65" fill="#36d399"/>' +
-      '<path d="M115 215c-7-54 4-101 34-139-3 62-13 106-34 139Z" fill="#ecfdf5"/>' +
-      '<text x="210" y="165" fill="#ecfdf5" font-family="Arial,sans-serif" font-size="38" font-weight="700">Nexus Genesis</text>' +
-      '<text x="210" y="215" fill="#9ee6cd" font-family="Arial,sans-serif" font-size="24">Cloudinary voice certification</text>' +
-    "</svg>",
-    "utf8"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64"
   );
 }
 
@@ -58,13 +55,11 @@ async function uploadCertificationAsset({ fetchImpl = global.fetch, env = proces
   const timestamp = Math.floor(Date.now() / 1000);
   const signedParameters = {
     folder: "agrinexus/system-certification",
-    invalidate: "true",
-    overwrite: "true",
     public_id: "nexus-genesis-voice-provider",
     timestamp
   };
   const form = new FormData();
-  form.set("file", new Blob([certificationSvg()], { type: "image/svg+xml" }), "nexus-genesis-cloudinary-certification.svg");
+  form.set("file", new Blob([certificationPng()], { type: "image/png" }), "nexus-genesis-cloudinary-certification.png");
   Object.entries(signedParameters).forEach(([key, value]) => form.set(key, String(value)));
   form.set("api_key", credentials.apiKey);
   form.set("signature", signatureFor(signedParameters, credentials.apiSecret));

@@ -56,8 +56,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-510";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v455";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-511";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v456";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -17852,20 +17852,22 @@ async function executeNexusProviderTransaction(db, user, toolName = "", args = {
 
   if (lane === "twilio-call" && !confirmed) {
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
-    const recipient = contact.to || nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
+    const configuredOwnerRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
+    const recipient = configuredOwnerRecipient || contact.to;
+    const validRecipient = /^\+?[0-9][0-9\s().-]{6,}$/.test(String(recipient || ""));
     transaction.arguments = { to: recipient, message: contact.message || command, channel: "call" };
-    transaction.state = "awaiting-confirmation";
-    transaction.status = "confirmation_required";
+    transaction.state = validRecipient ? "awaiting-confirmation" : "failed";
+    transaction.status = validRecipient ? "confirmation_required" : "invalid-recipient";
     transaction.ok = false;
     transaction.provider = "twilio";
     transaction.action = "call.start";
-    transaction.response = recipient
+    transaction.response = validRecipient
       ? "The Twilio call is staged for the configured owner test recipient. Say yes and explicitly confirm this call to execute the same stored transaction."
-      : "The Twilio call cannot be staged because the configured owner test recipient is missing.";
-    transaction.requiresConfirmation = true;
-    transaction.blockedReason = recipient ? "confirmation-required" : "recipient-required";
+      : "The Twilio call cannot be staged because the configured owner test recipient is missing or invalid.";
+    transaction.requiresConfirmation = validRecipient;
+    transaction.blockedReason = validRecipient ? "confirmation-required" : "recipient-required";
     transaction.updatedAt = new Date().toISOString();
-    transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: "call.start", state: transaction.state, targetStored: Boolean(recipient), verified: false };
+    transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: "call.start", state: transaction.state, targetStored: validRecipient, verified: false };
     return nexusProviderTransactionEnvelope(transaction);
   }
 
@@ -17891,10 +17893,10 @@ async function executeNexusProviderTransaction(db, user, toolName = "", args = {
       transaction.response = translated.translatedText;
       transaction.receipt = { transactionId: transaction.id, provider: translated.provider, action: transaction.action, sourceLanguage: translated.sourceLanguage, targetLanguage: translated.targetLanguage, translatedText: translated.translatedText, verified: Boolean(translated.translatedText) };
     } else if (lane === "cloudinary") {
-      const uploaded = await cloudinaryProvider.uploadCertificationAsset();
-      if (!uploaded.ok) throw new Error(uploaded.error || uploaded.status || "Cloudinary upload failed");
       transaction.provider = "cloudinary";
       transaction.action = "media.upload";
+      const uploaded = await cloudinaryProvider.uploadCertificationAsset();
+      if (!uploaded.ok) throw new Error(uploaded.error || uploaded.status || "Cloudinary upload failed");
       transaction.providerData = uploaded.asset || {};
       transaction.response = `Cloudinary media upload verified. Provider asset receipt ${uploaded.asset?.publicId || "received"}.`;
       transaction.receipt = { transactionId: transaction.id, ...(uploaded.receipt || {}), provider: "cloudinary", action: transaction.action, publicId: uploaded.receipt?.publicId || uploaded.asset?.publicId || "", verified: true, secureDelivery: uploaded.receipt?.secureDelivery === true };

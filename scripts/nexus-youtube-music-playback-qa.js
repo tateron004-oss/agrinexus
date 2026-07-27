@@ -29,12 +29,12 @@ assert.match(app, /transaction\.lane === "youtube"[\s\S]*showNexusYouTubePlayer/
   "The authoritative YouTube receipt must open the visible provider-backed player");
 assert.match(app, /data-nexus-provider-transaction-receipt/,
   "Visible YouTube playback must render the same provider transaction receipt");
-assert.match(server, /nexus-behavior-510/);
-assert.match(app, /nexus-behavior-510/);
-assert.match(html, /nexus-behavior-510/);
-assert.match(sw, /nexus-behavior-510/);
-assert.match(server, /agrinexus-pwa-v455/);
-assert.match(app, /agrinexus-pwa-v455/);
-assert.match(sw, /agrinexus-pwa-v455/);
+assert.match(server, /nexus-behavior-511/);
+assert.match(app, /nexus-behavior-511/);
+assert.match(html, /nexus-behavior-511/);
+assert.match(sw, /nexus-behavior-511/);
+assert.match(server, /agrinexus-pwa-v456/);
+assert.match(app, /agrinexus-pwa-v456/);
+assert.match(sw, /agrinexus-pwa-v456/);
 
 console.log("[nexus-youtube-music-playback-qa] passed");

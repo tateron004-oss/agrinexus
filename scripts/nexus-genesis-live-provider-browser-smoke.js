@@ -25,7 +25,7 @@ const spokenJourneys = [
   { workspace: "workforce", words: ["farming", "Kenya"], command: "Nexus, open Workforce and search for farming jobs in Kenya." },
   { workspace: "trade", words: ["50", "maize"], command: "Nexus, open Marketplace and sell 50 bags of maize." },
   { workspace: "map", words: ["Nairobi", "Nakuru"], command: "Nexus, show me the best route from Nairobi to Nakuru." },
-  { workspace: "media", words: ["Now playing through YouTube", "Kenyan"], command: "Nexus, play Kenyan music through YouTube and show the result in Music and Media." },
+  { workspace: "media", words: ["Now playing through YouTube", "Kenya"], command: "Nexus, play music from Kenya through YouTube and show the result in Music and Media." },
   { workspace: "reminders", words: ["Reminders"], command: "Nexus, open Reminders." },
   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
