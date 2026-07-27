@@ -62,3 +62,12 @@ jobs:
       - name: Require complete structured voice evidence
         run: |
           node -e 'const {readAndValidateEvidence}=require("./scripts/nexus-live-voice-evidence"); readAndValidateEvidence("output/nexus-live-voice-acceptance/live-provider-browser-evidence.json", Number(process.env.NEXUS_LIVE_EXPECTED_TURNS));'
+
+      - name: Publish workspace voice evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-workspace-voice-evidence-${{ github.run_id }}
+          path: output/nexus-live-voice-acceptance/
+          if-no-files-found: error
+          retention-days: 30
