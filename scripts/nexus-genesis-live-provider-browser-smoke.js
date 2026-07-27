@@ -531,7 +531,7 @@ async function main() {
 
 main().catch(error => {
   process.exitCode = 1;
-  console.error(JSON.stringify({
+  const preliminaryEvidence = {
     ok: false,
     suite: "nexus-genesis-live-provider-browser-smoke",
     errorName: error.name || "Error",
@@ -540,7 +540,13 @@ main().catch(error => {
     stage: acceptanceStage,
     failureReason: acceptanceFailureReason || "unclassified",
     preliminary: true
-  }));
+  };
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(outputDir, "live-provider-browser-failure.json"),
+    `${JSON.stringify(preliminaryEvidence, null, 2)}\n`
+  );
+  console.error(JSON.stringify(preliminaryEvidence));
   const finish = async () => {
     let diagnostics = null;
     try {
