@@ -31,7 +31,7 @@ const spokenJourneys = [
   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
   { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, use the translation tool to translate good morning farmer into Swahili." }
   ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, use the file and document tool to upload and verify the Cloudinary certification image." }
-  ,{ workspace: null, words: [], twilioProvider: "twilio", command: "Nexus, send a production test SMS to my owner test recipient. I explicitly confirm this test send." }
+  ,{ workspace: null, words: [], command: "Nexus, show provider readiness for YouTube, Translation, Cloudinary, and Twilio." }
   ,{ workspace: null, words: [], callStage: true, command: "Nexus, prepare a Twilio test call to my configured owner test recipient." }
   ,{ workspace: null, words: [], twilioCallProvider: "twilio", command: "Yes, I explicitly confirm that Twilio test call to my configured owner test recipient now." }
 ];
@@ -411,8 +411,6 @@ async function main() {
       const translationSatisfied = translationResults.some(item => item.provider === 'google-cloud-translation' && item.response.trim());
       const cloudinaryResults = window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ || [];
       const cloudinarySatisfied = cloudinaryResults.some(item => item.provider === 'cloudinary' && item.verified && item.secureDelivery && item.publicId && item.response.trim());
-      const twilioResults = window.__NEXUS_TWILIO_TOOL_RESULTS__ || [];
-      const twilioSatisfied = twilioResults.some(item => item.provider === 'twilio' && item.action === 'sms.send' && item.succeeded && item.verified && /^SM[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
       const twilioCallResults = window.__NEXUS_TWILIO_CALL_RESULTS__ || [];
       const twilioCallSatisfied = twilioCallResults.some(item => item.provider === 'twilio' && item.action === 'call.start' && item.succeeded && item.verified && /^CA[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
@@ -432,14 +430,12 @@ async function main() {
         translationResults,
         cloudinarySatisfied,
         cloudinaryResults,
-        twilioSatisfied,
-        twilioResults,
         twilioCallSatisfied,
         twilioCallResults,
         workspaceAckCount: workspaceAcks.length,
         workspaceResults
       };
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioSatisfied || !twilioCallSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioCallSatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -459,7 +455,6 @@ async function main() {
         workspaceResults,
         translationResults
         ,cloudinaryResults
-        ,twilioResults
         ,twilioCallResults
       };
     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");

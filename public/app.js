@@ -49877,7 +49877,29 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
   return payload;
 }
 
+const nexusRealtimeToolExecutions = new Map();
+
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
+  const command = String(args.command || args.query || "").trim();
+  const key = `${String(toolName || "nexus_general_conversation")}:${command.toLowerCase().replace(/\s+/g, " ")}`;
+  const prior = nexusRealtimeToolExecutions.get(key);
+  if (prior && Date.now() - prior.at < 45000) return prior.promise;
+  const promise = executeNexusOpenAiRealtimeTool(toolName, args);
+  nexusRealtimeToolExecutions.set(key, { at: Date.now(), promise });
+  const scheduleCleanup = () => {
+    setTimeout(() => {
+      if (nexusRealtimeToolExecutions.get(key)?.promise === promise) nexusRealtimeToolExecutions.delete(key);
+    }, 45000);
+  };
+  promise.then(scheduleCleanup, scheduleCleanup);
+  if (nexusRealtimeToolExecutions.size > 32) {
+    const oldest = nexusRealtimeToolExecutions.keys().next().value;
+    nexusRealtimeToolExecutions.delete(oldest);
+  }
+  return promise;
+}
+
+async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
@@ -50070,8 +50092,14 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
-      if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
-      if (!controllerResult?.handled && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
+      if (controllerResult?.handled) {
+        void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+        void executeGenesisProviderFromFinalTranscript(controllerResult.originalTranscript);
+      }
+      if (!controllerResult?.handled && payload.acceptanceText) {
+        void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
+        void executeGenesisProviderFromFinalTranscript(payload.acceptanceText);
+      }
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
@@ -50091,7 +50119,10 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       duplicate: controllerResult?.duplicate === true,
       transcriptLength: transcript.length
     });
-    if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+    if (controllerResult?.handled) {
+      void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+      void executeGenesisProviderFromFinalTranscript(controllerResult.originalTranscript);
+    }
   }
   if (eventName === "audio_start") {
     if (realtimeVoiceSession) {
@@ -50140,7 +50171,58 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
 }
 
 let lastGenesisTranscriptWorkspaceExecution = { command: "", at: 0 };
+const genesisTranscriptProviderExecutions = new Map();
 let authoritativeGenesisTranscriptRoute = null;
+
+function genesisProviderToolFromFinalTranscript(transcript = "") {
+  const command = String(transcript || "").trim();
+  const lower = command.toLowerCase();
+  if (!command) return "";
+  if (/\b(youtube|music|song|playlist|video)\b/.test(lower)
+    && /\b(play|open|show|find|search)\b/.test(lower)) return "nexus_music_media";
+  if (/\b(translate|translation)\b/.test(lower)
+    && /\b(swahili|french|spanish|arabic|portuguese|english)\b/.test(lower)) return "nexus_translation";
+  if (/\bcloudinary\b/.test(lower)
+    && /\b(test|certif|verify|upload|save|store)\b/.test(lower)) return "nexus_file_document_analysis";
+  if (/\b(call|phone|dial|ring)\b/.test(lower)
+    && (/\b(owner test recipient|configured owner test recipient)\b/.test(lower)
+      || /\b(twilio test call)\b/.test(lower))) return "nexus_communications";
+  return "";
+}
+
+async function executeGenesisProviderFromFinalTranscript(transcript = "") {
+  const command = String(transcript || "").trim();
+  const toolName = genesisProviderToolFromFinalTranscript(command);
+  if (!toolName) return false;
+  const key = `${toolName}:${command.toLowerCase().replace(/\s+/g, " ")}`;
+  const prior = genesisTranscriptProviderExecutions.get(key);
+  if (prior && Date.now() - prior.at < 45000) return prior.promise;
+  const promise = callNexusOpenAiRealtimeTool(toolName, {
+    command,
+    language: languageCode(),
+    confirmed: toolName === "nexus_communications" && /\b(yes|confirm|confirmed|explicitly confirm|do it)\b/i.test(command)
+  }).then(result => {
+    nexusGenesisVoiceDebugLog("final-transcript-provider-executed", {
+      toolName,
+      status: String(result?.status || ""),
+      providerSucceeded: result?.providerSucceeded === true,
+      executionVerified: result?.executionVerified === true
+    });
+    return result?.ok === true;
+  }).catch(error => {
+    nexusGenesisVoiceDebugLog("final-transcript-provider-failed", {
+      toolName,
+      error: String(error?.message || "provider-execution-failed").slice(0, 180)
+    });
+    return false;
+  });
+  genesisTranscriptProviderExecutions.set(key, { at: Date.now(), promise });
+  if (genesisTranscriptProviderExecutions.size > 24) {
+    const oldest = genesisTranscriptProviderExecutions.keys().next().value;
+    genesisTranscriptProviderExecutions.delete(oldest);
+  }
+  return promise;
+}
 
 function rememberAuthoritativeGenesisTranscriptRoute(action = {}, command = "") {
   if (!action || action.type !== "genesis.workspace.open") return null;
