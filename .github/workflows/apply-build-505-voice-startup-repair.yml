@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=$(rg -l 'nexus-behavior-504|agrinexus-pwa-v449' --glob '!output/**' --glob '!node_modules/**')
+          files=$(git grep -l -E 'nexus-behavior-504|agrinexus-pwa-v449' -- ':!output/**' ':!node_modules/**')
           perl -pi -e 's/nexus-behavior-504/nexus-behavior-505/g; s/agrinexus-pwa-v449/agrinexus-pwa-v450/g; s/Build 504/Build 505/g; s/build 504/build 505/g' $files
           python3 - <<'PY'
           from pathlib import Path
@@ -94,7 +94,7 @@ jobs:
             node "$file"
           done
           git diff --check
-          if rg -n 'nexus-behavior-504|agrinexus-pwa-v449' --glob '!output/**' --glob '!node_modules/**'; then
+          if git grep -n -E 'nexus-behavior-504|agrinexus-pwa-v449' -- ':!output/**' ':!node_modules/**'; then
             echo "Stale Build 504 markers remain"
             exit 1
           fi
