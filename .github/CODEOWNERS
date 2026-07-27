@@ -1,0 +1,15 @@
+# Nexus protected production foundation — Ron Tate must review changes.
+/server.js @tateron004-oss
+/public/app.js @tateron004-oss
+/public/index.html @tateron004-oss
+/public/styles.css @tateron004-oss
+/public/sw.js @tateron004-oss
+/public/nexus-genesis-voice-runtime-manager.js @tateron004-oss
+/public/nexus-openai-realtime-agent.js @tateron004-oss
+/public/vendor/nexus-openai-realtime-agent.bundle.mjs @tateron004-oss
+/scripts/certify-nexus.js @tateron004-oss
+/scripts/qa-suite.js @tateron004-oss
+/.github/nexus-protected-foundation.json @tateron004-oss
+/.github/workflows/nexus-protected-foundation.yml @tateron004-oss
+/AGENTS.md @tateron004-oss
+

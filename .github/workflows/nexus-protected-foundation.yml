@@ -1,0 +1,47 @@
+name: Nexus Protected Foundation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-protected-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  immutable-foundation:
+    name: Protected foundation integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Verify golden Nexus foundation
+        run: node scripts/nexus-protected-foundation-guard.js
+
+      - name: Confirm protected paths are not changed in pull request
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          protected_pattern='^(server\.js|public/(app\.js|index\.html|styles\.css|sw\.js|nexus-genesis-voice-runtime-manager\.js|nexus-openai-realtime-agent\.js|vendor/nexus-openai-realtime-agent\.bundle\.mjs)|scripts/(certify-nexus\.js|qa-suite\.js))$'
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          violations="$(printf '%s\n' "$changed" | grep -E "$protected_pattern" || true)"
+          if [[ -n "$violations" ]]; then
+            echo "Protected Nexus paths changed:"
+            printf '%s\n' "$violations"
+            exit 1
+          fi
