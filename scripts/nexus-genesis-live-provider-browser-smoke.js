@@ -530,6 +530,17 @@ async function main() {
 }
 
 main().catch(error => {
+  process.exitCode = 1;
+  console.error(JSON.stringify({
+    ok: false,
+    suite: "nexus-genesis-live-provider-browser-smoke",
+    errorName: error.name || "Error",
+    errorMessage: String(error.message || ""),
+    errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
+    stage: acceptanceStage,
+    failureReason: acceptanceFailureReason || "unclassified",
+    preliminary: true
+  }));
   const finish = async () => {
     let diagnostics = null;
     try {
