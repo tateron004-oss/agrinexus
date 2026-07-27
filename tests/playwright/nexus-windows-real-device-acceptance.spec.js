@@ -91,11 +91,9 @@ async function login(page) {
   await page.waitForFunction(() => typeof window.NexusGenesisRealtimeClientStatus === "function");
   await page.locator("#email").fill(process.env.NEXUS_PLAYWRIGHT_EMAIL || "user@agrinexus.org");
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
-  await Promise.all([
-    page.locator("#loginForm").waitFor({ state: "hidden" }),
-    page.locator("#loginForm").evaluate(form => form.requestSubmit())
-  ]);
-  // A hidden form is not sufficient: production may navigate back to sign-in.
+  // Exercise the same trusted click path as an end user. Programmatic
+  // requestSubmit() does not activate production's login transition reliably.
+  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
   // Require the authenticated application shell before opening any media stream.
   await expect(
     page.locator("#nexusPermanentMicrophoneBtn"),
