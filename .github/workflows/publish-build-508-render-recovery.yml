@@ -78,14 +78,14 @@ jobs:
           npm run qa:nexus-service-worker-cache-safety
           test "$(wc -l < server.js)" -gt 48000
           test "$(wc -l < public/app.js)" -gt 61000
-          git diff --check
+          git checkout -- package-lock.json public/vendor/nexus-openai-realtime-agent.bundle.mjs
+          git diff --check -- server.js public/app.js
 
       - name: Publish recovery and remove publisher
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -- package-lock.json public/vendor/nexus-openai-realtime-agent.bundle.mjs
           git rm .github/workflows/publish-build-508-render-recovery.yml
           git add server.js public/app.js
           git commit -m "Repair corrupted Build 508 deployment sources"
