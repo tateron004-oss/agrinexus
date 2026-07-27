@@ -128,3 +128,5 @@ jobs:
         run: exit 1
 
 # Build metadata is resolved from server.js so certification cannot drift from the release.
+
+# Build 505 serialized certification trigger.
