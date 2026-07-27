@@ -91,14 +91,57 @@ async function login(page) {
   await page.waitForFunction(() => typeof window.NexusGenesisRealtimeClientStatus === "function");
   await page.locator("#email").fill(process.env.NEXUS_PLAYWRIGHT_EMAIL || "user@agrinexus.org");
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
-  await page.locator("#loginForm").evaluate(form => form.requestSubmit());
-  await expect(page.locator("#loginForm")).toBeHidden();
-  // Login may reload the production shell after the form first becomes hidden.
-  // Wait for that navigation to settle before opening a physical media stream.
-  await page.waitForTimeout(1500);
-  await page.waitForLoadState("domcontentloaded");
+  await Promise.all([
+    page.locator("#loginForm").waitFor({ state: "hidden" }),
+    page.locator("#loginForm").evaluate(form => form.requestSubmit())
+  ]);
+  // A hidden form is not sufficient: production may navigate back to sign-in.
+  // Require the authenticated application shell before opening any media stream.
+  await expect(
+    page.locator("#nexusPermanentMicrophoneBtn"),
+    "Production login must render the authenticated Nexus application"
+  ).toBeVisible({ timeout: 30000 });
+  await expect(page.locator("#nexusPermanentMicrophoneBtn")).toBeEnabled();
   await page.waitForFunction(() => document.readyState === "complete"
     && typeof window.NexusGenesisRealtimeClientStatus === "function");
+}
+
+async function realtimeStatus(page) {
+  return page.evaluate(() => {
+    const status = window.NexusGenesisRealtimeClientStatus?.() || {};
+    return {
+      activeRuntime: String(status.activeRuntime || ""),
+      connectionState: String(status.connectionState || ""),
+      liveMicrophoneTrack: status.liveMicrophoneTrack === true
+    };
+  });
+}
+
+async function connectRealtime(page) {
+  const microphone = page.locator("#nexusPermanentMicrophoneBtn");
+  let lastStatus;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await microphone.click();
+    try {
+      await expect.poll(async () => {
+        lastStatus = await realtimeStatus(page);
+        return lastStatus;
+      }, {
+        timeout: 45000,
+        message: `Physical microphone must establish OpenAI Realtime (attempt ${attempt})`
+      }).toEqual({
+        activeRuntime: "realtime",
+        connectionState: "connected",
+        liveMicrophoneTrack: true
+      });
+      return;
+    } catch (error) {
+      if (attempt === 3) {
+        throw new Error(`${error.message}\nLast Realtime status: ${JSON.stringify(lastStatus)}`);
+      }
+      await page.waitForTimeout(1000);
+    }
+  }
 }
 
 test.use({
@@ -165,19 +208,7 @@ test("physical Windows microphone certifies the protected production release", a
   const energy = await energyProbe;
   expect(energy, "The physical microphone must capture audible acoustic energy from the Windows speaker").toBeGreaterThan(3);
 
-  await page.locator("#nexusPermanentMicrophoneBtn").click();
-  await expect.poll(() => page.evaluate(() => {
-    const status = window.NexusGenesisRealtimeClientStatus?.() || {};
-    return {
-      activeRuntime: String(status.activeRuntime || ""),
-      connectionState: String(status.connectionState || ""),
-      liveMicrophoneTrack: status.liveMicrophoneTrack === true
-    };
-  }), { timeout: 45000 }).toEqual({
-    activeRuntime: "realtime",
-    connectionState: "connected",
-    liveMicrophoneTrack: true
-  });
+  await connectRealtime(page);
 
   const turns = [];
   for (let index = 0; index < journeys.length; index += 1) {
