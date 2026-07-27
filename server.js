@@ -1874,10 +1874,50 @@ function parseCookies(req) {
   }));
 }
 
+function durableAuthSecret(env = process.env) {
+  return String(env.SESSION_SECRET || "").trim();
+}
+
+function issueDurableAuthToken(userId, now = Date.now(), env = process.env) {
+  const secret = durableAuthSecret(env);
+  if (!secret || !userId) return "";
+  const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
+  const payload = Buffer.from(JSON.stringify({
+    userId: String(userId),
+    issuedAt: now,
+    expiresAt: now + ttlMs
+  })).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function verifyDurableAuthToken(token, now = Date.now(), env = process.env) {
+  const secret = durableAuthSecret(env);
+  const [payload = "", suppliedSignature = ""] = String(token || "").split(".");
+  if (!secret || !payload || !suppliedSignature) return null;
+  const expectedSignature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const suppliedBuffer = Buffer.from(suppliedSignature);
+  if (expectedBuffer.length !== suppliedBuffer.length
+    || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) return null;
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!session.userId
+      || Number(session.issuedAt || 0) > now + 60_000
+      || Number(session.expiresAt || 0) <= now) return null;
+    return session;
+  } catch {
+    return null;
+  }
+}
+
 function currentUser(req, db) {
-  const sid = parseCookies(req).agrinexus_sid;
+  const cookies = parseCookies(req);
+  const sid = cookies.agrinexus_sid;
   const userId = sid && sessions.get(sid);
-  return db.users.find(user => user.id === userId) || null;
+  const durableSession = userId ? null : verifyDurableAuthToken(cookies.agrinexus_auth);
+  const resolvedUserId = userId || durableSession?.userId;
+  return db.users.find(user => user.id === resolvedUserId) || null;
 }
 
 function secureCookieAttribute(req) {
@@ -43392,13 +43432,29 @@ async function api(req, res, url) {
     if (usersChanged) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     sessions.set(sid, found.id);
-    return send(res, 200, publicState(db, found), { "set-cookie": `agrinexus_sid=${sid}; HttpOnly; SameSite=Lax; Path=/` });
+    const durableToken = issueDurableAuthToken(found.id);
+    const cookies = [
+      setCookieHeader("agrinexus_sid", sid, {
+        maxAge: 43_200,
+        secure: secureCookieAttribute(req)
+      }),
+      ...(durableToken ? [setCookieHeader("agrinexus_auth", durableToken, {
+        maxAge: 43_200,
+        secure: secureCookieAttribute(req)
+      })] : [])
+    ];
+    return send(res, 200, publicState(db, found), { "set-cookie": cookies });
   }
 
   if (url.pathname === "/api/logout" && req.method === "POST") {
     const sid = parseCookies(req).agrinexus_sid;
     if (sid) sessions.delete(sid);
-    return send(res, 200, { ok: true }, { "set-cookie": "agrinexus_sid=; Max-Age=0; Path=/" });
+    return send(res, 200, { ok: true }, {
+      "set-cookie": [
+        `agrinexus_sid=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`,
+        `agrinexus_auth=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`
+      ]
+    });
   }
 
   if (url.pathname === "/api/auth/password-reset" && req.method === "POST") {
