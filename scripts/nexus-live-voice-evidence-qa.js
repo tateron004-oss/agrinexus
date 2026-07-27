@@ -63,6 +63,7 @@ const workspaceWorkflow = fs.readFileSync(path.join(__dirname, "..", ".github", 
 
 assert(browserHarness.includes("writeEvidenceAtomic(evidencePath, finalEvidence)"));
 assert(browserHarness.includes("readAndValidateEvidence(evidencePath, expectedTurns)"));
+assert(browserHarness.includes("return finish();"));
 assert(productionWorkflow.includes("Require complete structured voice evidence"));
 assert(productionWorkflow.includes("steps.voice_evidence.outcome != 'success'"));
 assert(productionWorkflow.includes("if-no-files-found: error"));
