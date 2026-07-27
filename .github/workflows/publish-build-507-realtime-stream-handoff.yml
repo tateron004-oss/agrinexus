@@ -1,0 +1,77 @@
+name: Publish Nexus Build 507
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-build-507-realtime-stream-handoff.yml
+permissions:
+  contents: write
+concurrency:
+  group: publish-nexus-build-507
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply exact Build 507 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git grep -Il -e 'nexus-behavior-506' -e 'agrinexus-pwa-v451' -- ':!.github/workflows/publish-build-507-realtime-stream-handoff.yml' | xargs sed -i -e 's/nexus-behavior-506/nexus-behavior-507/g' -e 's/agrinexus-pwa-v451/agrinexus-pwa-v452/g'
+          python3 - <<'PY'
+          from pathlib import Path
+          app_path = Path("public/app.js")
+          app = app_path.read_text()
+          replacements = [
+            (
+              '    startSession: () => startRealtimeVoiceSession({ managedRuntime: true }),',
+              '    startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true }),'
+            ),
+            (
+              '  const result = supervisor\n    ? await supervisor.start(options.source || "start-voice-listening")\n    : await manager.startSession(options);',
+              '  const result = options.preverifiedMicrophoneStream\n    ? await manager.startSession(options)\n    : supervisor\n      ? await supervisor.start(options.source || "start-voice-listening")\n      : await manager.startSession(options);'
+            )
+          ]
+          for old, new in replacements:
+            if app.count(old) != 1:
+              raise SystemExit(f"Expected exactly one app marker, found {app.count(old)}: {old[:100]}")
+            app = app.replace(old, new)
+          app_path.write_text(app)
+
+          qa_path = Path("scripts/nexus-genesis-voice-e2e-software-qa.js")
+          qa = qa_path.read_text()
+          anchor = 'assert(app.includes("preverifiedMicrophoneStream"), "voice runtime must preserve the preverified microphone stream");'
+          additions = '''assert(app.includes("startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true })"), "Realtime manager adapter must forward the preverified microphone stream");
+          assert(app.includes("options.preverifiedMicrophoneStream\\n    ? await manager.startSession(options)"), "permanent microphone startup must bypass the supervisor path that accepts only a source label");'''
+          if additions not in qa:
+            if anchor in qa:
+              qa = qa.replace(anchor, anchor + "\n" + additions)
+            else:
+              qa += "\n" + additions + "\n"
+          qa_path.write_text(qa)
+          PY
+          git rm .github/workflows/publish-build-507-realtime-stream-handoff.yml
+      - name: Verify Build 507
+        run: |
+          node --check public/app.js
+          node scripts/nexus-service-worker-cache-safety-qa.js
+          node scripts/nexus-realtime-microphone-visibility-qa.js
+          node scripts/nexus-genesis-voice-e2e-software-qa.js
+          node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js
+          npm run qa:nexus-genesis-production-exact-build-smoke
+          git diff --check
+      - name: Publish verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "nexus-build-publisher"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Forward permanent microphone stream to Realtime"
+          git push origin HEAD:main
