@@ -35,8 +35,8 @@ function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
 
-const build = "nexus-behavior-506";
-const cache = "agrinexus-pwa-v451";
+const build = "nexus-behavior-507";
+const cache = "agrinexus-pwa-v452";
 
 [
   ["app", app],
@@ -50,7 +50,7 @@ includes(index, build, "index build marker");
 
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-506"), "microphone button must exist before app.js executes");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-507"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
 includes(index, "Enable microphone", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
@@ -321,3 +321,6 @@ console.log(JSON.stringify({
   cleanRestartVerified: true,
   decision: "pre-key software-controlled Genesis voice lifecycle gates pass without using a real provider key"
 }, null, 2));
+
+assert(app.includes("startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true })"), "Realtime manager adapter must forward the preverified microphone stream");
+assert(app.includes("options.preverifiedMicrophoneStream\n    ? await manager.startSession(options)"), "permanent microphone startup must bypass the supervisor path that accepts only a source label");

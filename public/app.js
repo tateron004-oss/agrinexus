@@ -1344,8 +1344,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-506";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v451";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-507";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v452";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -48848,7 +48848,7 @@ function initializeNexusGenesisVoiceRuntimeManager(policyPayload = {}) {
   const realtimeAdapter = factory.RealtimeVoiceAdapter({
     lock,
     sessionContext,
-    startSession: () => startRealtimeVoiceSession({ managedRuntime: true }),
+    startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true }),
     stopSession: reason => stopRealtimeVoiceSession(reason || "manager-realtime-stop"),
     startListening: () => Boolean(realtimeVoiceActive() && realtimeMicrophoneProofIsLive(realtimeVoiceSession?.sdkController)),
     stopListening: () => realtimeVoiceSession?.sdkController?.mute?.(true),
@@ -58395,9 +58395,11 @@ async function startVoiceListening(options = {}) {
   }
   if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime" });
   const supervisor = nexusGenesisConversationSupervisor || window.NexusGenesisConversationSupervisor;
-  const result = supervisor
-    ? await supervisor.start(options.source || "start-voice-listening")
-    : await manager.startSession(options);
+  const result = options.preverifiedMicrophoneStream
+    ? await manager.startSession(options)
+    : supervisor
+      ? await supervisor.start(options.source || "start-voice-listening")
+      : await manager.startSession(options);
   if (!result?.ok && manager.getState().activeRuntime === "legacy") {
     return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime", managedRuntime: true });
   }
