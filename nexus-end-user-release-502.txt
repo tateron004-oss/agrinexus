@@ -1,0 +1,5 @@
+Nexus Genesis end-user release
+Certified source baseline: 3f765e8e2ee2d34561296eee271bde3035a06a07
+Runtime: nexus-behavior-502
+Purpose: redeploy the intact certified source after Build 512 was rejected with empty runtime files.
+Date: 2026-07-27
