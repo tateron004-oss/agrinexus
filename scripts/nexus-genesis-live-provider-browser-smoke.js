@@ -2,9 +2,15 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
+const {
+  SUITE,
+  writeEvidenceAtomic,
+  readAndValidateEvidence
+} = require("./nexus-live-voice-evidence");
 
 const root = path.resolve(__dirname, "..");
 const outputDir = path.join(root, "output", "nexus-live-voice-acceptance");
+const evidencePath = path.join(outputDir, "live-provider-browser-evidence.json");
 const fixturePath = path.resolve(process.env.NEXUS_LIVE_FIXTURE || path.join(outputDir, "smoke.wav"));
 const expectedTurns = Number(process.env.NEXUS_LIVE_EXPECTED_TURNS || 1);
 const requiredInterruptions = Number(process.env.NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT || 0);
@@ -471,9 +477,9 @@ async function main() {
     else if (ephemeralCredentialLogged) acceptanceFailureReason = "ephemeral-credential-console-observed";
     assert.equal(acceptanceFailureReason, "", acceptanceFailureReason);
 
-    console.log(JSON.stringify({
+    const finalEvidence = {
       ok: true,
-      suite: "nexus-genesis-live-provider-browser-smoke",
+      suite: SUITE,
       virtualMicrophone: true,
       realRealtimeConnected: true,
       liveMicrophoneTrack: true,
@@ -495,7 +501,10 @@ async function main() {
       responseCancelCount: evidence.responseCancelCount
       ,lifecycleInterruptionCount: evidence.lifecycleInterruptionCount
       ,resources
-    }));
+    };
+    writeEvidenceAtomic(evidencePath, finalEvidence);
+    readAndValidateEvidence(evidencePath, expectedTurns);
+    console.log(JSON.stringify(finalEvidence));
   } finally {
     if (acceptanceStage !== "cleanup" && cdp) {
       try {
