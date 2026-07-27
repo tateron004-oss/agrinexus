@@ -39,7 +39,9 @@ jobs:
           npm run auth:login-api-smoke
           npm run auth:login-gate-qa
           node scripts/nexus-protected-foundation-guard.js
-          node scripts/qa-suite.js all-safe
+          node scripts/nexus-live-voice-evidence-qa.js
+          node scripts/nexus-music-call-production-execution-qa.js
+          node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js
       - name: Publish verified atomic repair
         shell: bash
         run: |
