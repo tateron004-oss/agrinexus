@@ -93,6 +93,12 @@ async function login(page) {
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
   await page.locator("#loginForm").evaluate(form => form.requestSubmit());
   await expect(page.locator("#loginForm")).toBeHidden();
+  // Login may reload the production shell after the form first becomes hidden.
+  // Wait for that navigation to settle before opening a physical media stream.
+  await page.waitForTimeout(1500);
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForFunction(() => document.readyState === "complete"
+    && typeof window.NexusGenesisRealtimeClientStatus === "function");
 }
 
 test.use({
