@@ -42,7 +42,6 @@
     "qa:nexus-genesis-persistent-voice-lifecycle": "node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js",
     "qa:nexus-genesis-voice-e2e-software": "node scripts/nexus-genesis-voice-e2e-software-qa.js",
     "qa:nexus-genesis-live-provider-browser-smoke": "node scripts/nexus-genesis-live-provider-browser-smoke.js",
-    "qa:nexus-live-voice-evidence": "node scripts/nexus-live-voice-evidence-qa.js",
     "qa:nexus-sanitize-realtime-audit-records": "node scripts/nexus-sanitize-realtime-audit-records.js",
     "qa:nexus-local-env-loader": "node scripts/nexus-local-env-loader-qa.js",
     "qa:nexus-openai-native-architecture-consolidation": "node scripts/nexus-openai-native-architecture-consolidation-qa.js",

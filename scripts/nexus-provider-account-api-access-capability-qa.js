@@ -28,7 +28,6 @@ function extractFunction(source, name) {
 }
 
 const providerStatusBody = extractFunction(server, "providerAccountApiAccessStatus");
-const liveExecutionStatusBody = extractFunction(server, "providerAccountLiveExecutionStatus");
 const accountPanelBody = app.slice(
   app.indexOf("function a100ProviderAccountApiAccessPanel()"),
   app.indexOf("function a100ChronicCareQuickActions")
@@ -52,8 +51,7 @@ const bindStaticBody = extractFunction(app, "bindStatic");
   "const providerAccountApiAccess = providerAccountApiAccessStatus()",
   "providerAccountApiAccess,",
   "Provider Accounts & API Access",
-  "Simulation available",
-  "Live confirmed execution available",
+  "Simulation only",
   "Account not connected",
   "API credential missing",
   "Provider review required",
@@ -121,14 +119,9 @@ const bindStaticBody = extractFunction(app, "bindStatic");
   "REPORTING_WEBHOOK_URL="
 ].forEach(term => assert(envExample.includes(term), `.env.example should include placeholder ${term}`));
 
-assert(liveExecutionStatusBody.includes("nexusGlobalCommunicationsChannelStatus"), "communications execution status should use the same live provider gate as the executable route.");
-assert(liveExecutionStatusBody.includes("\"voice-phone-provider\": \"phone\""), "phone account status should map to the live Twilio call lane.");
-assert(liveExecutionStatusBody.includes("\"sms-provider\": \"sms\""), "SMS account status should map to the live Twilio messaging lane.");
-assert(liveExecutionStatusBody.includes("\"whatsapp-messaging\": \"whatsapp\""), "WhatsApp account status should map to the live Twilio messaging lane.");
-assert(providerStatusBody.includes("NEXUS_REAL_PROVIDER_EXECUTION_ENABLED"), "non-communications providers should preserve the global explicit execution gate.");
+assert(providerStatusBody.includes("NEXUS_REAL_PROVIDER_EXECUTION_ENABLED"), "real execution should require a global explicit env flag.");
 assert(providerStatusBody.includes("NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED"), "connected status should require an explicit connection env flag.");
-assert(providerStatusBody.includes("realExecutionEnabled ? liveStatus.statusLabel : \"Real execution disabled\""), "provider status should report the live capability state rather than a blanket disabled label.");
-assert(providerStatusBody.includes("items.some(item => item.realExecutionEnabled)"), "default posture should become capability-aware when any live provider lane is active.");
+assert(providerStatusBody.includes("realExecutionEnabled ? \"Real execution enabled\" : \"Real execution disabled\""), "real execution should default to disabled status.");
 assert(providerStatusBody.includes("secretValuesExposed: false"), "registry items should mark no secret exposure.");
 assert(providerStatusBody.includes("noExternalApiCall: true"), "registry items should mark no external API call.");
 assert(providerStatusBody.includes("noExecutionAuthorized: true"), "registry items should mark no execution authority.");

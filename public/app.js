@@ -848,7 +848,6 @@ let nexusVoiceSession = JSON.parse(localStorage.getItem("agrinexusVoiceSession")
 };
 let nexusVoicePreferencePendingConsent = JSON.parse(localStorage.getItem("nexusVoicePreferencePendingConsent") || "null");
 let nexusOsVoiceStartInFlight = false;
-let nexusPermanentMicrophoneStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartInFlight = false;
 let nexusGenesisPermissionGrantedAutoStartLastAttemptAt = 0;
 let nexusGenesisVoiceSessionActive = false;
@@ -871,7 +870,7 @@ let nexusOsVoiceRuntimeState = JSON.parse(localStorage.getItem("nexusOsVoiceRunt
   privacy: "Genesis automatically requests browser microphone access for the active voice session. Nexus submits only finalized recognized speech.",
   updatedAt: new Date().toISOString()
 };
-const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v457";
+const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = "nexus-genesis-voice-runtime-v456";
 const NEXUS_MIC_PERMISSION_STATES = Object.freeze(["unknown", "prompt", "granted", "denied", "unsupported", "browser-managed"]);
 const NEXUS_OS_VOICE_FALLBACK_STATES = Object.freeze([
   "permission-denied",
@@ -1344,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-511";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v456";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-502";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9433,19 +9432,11 @@ function registerWebApp() {
           nexusPermanentMicrophoneStream?.active
           && nexusPermanentMicrophoneStream.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled)
         );
-        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected", "listening"].includes(
-          String(realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "")
-        );
-        const realtimeStartupInFlight = Boolean(
-          realtimeVoiceStarting
-          || nexusOsVoiceStartInFlight
-          || nexusPermanentMicrophoneStartInFlight
-        );
-        if (permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight) {
+        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected"].includes(String(realtimeVoiceSession?.connectionState || ""));
+        if (permanentMicrophoneActive || realtimeConnectingOrActive) {
           nexusGenesisVoiceLog("service-worker-reload-deferred-for-voice", {
             permanentMicrophoneActive,
-            realtimeStartupInFlight,
-            realtimeState: realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "microphone-ready"
+            realtimeState: realtimeVoiceSession?.connectionState || "microphone-ready"
           });
           return;
         }
@@ -9726,8 +9717,7 @@ function africanMapCountryTarget(command = "") {
 }
 
 function activeRoute() {
-  const routes = Array.isArray(data?.routes) ? data.routes : [];
-  return routes.find(route => route.id === data?.profile?.activeRouteId) || routes[0] || null;
+  return data.routes.find(route => route.id === data.profile.activeRouteId) || data.routes[0];
 }
 
 function money(value) {
@@ -43960,8 +43950,7 @@ function workflowConfig(workflow, action, element) {
         body: {
           module: moduleName,
           purpose: "AgriNexus outbound support call",
-          message: "This is AgriNexus calling. You can speak after the greeting and the AI assistant will help route the next step.",
-          confirmed: true
+          message: "This is AgriNexus calling. You can speak after the greeting and the AI assistant will help route the next step."
         },
         success: "Outbound call workflow processed",
         record: "Phone call request, Twilio delivery status, voice session, and provider audit evidence",
@@ -48849,7 +48838,7 @@ function initializeNexusGenesisVoiceRuntimeManager(policyPayload = {}) {
   const realtimeAdapter = factory.RealtimeVoiceAdapter({
     lock,
     sessionContext,
-    startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true }),
+    startSession: () => startRealtimeVoiceSession({ managedRuntime: true }),
     stopSession: reason => stopRealtimeVoiceSession(reason || "manager-realtime-stop"),
     startListening: () => Boolean(realtimeVoiceActive() && realtimeMicrophoneProofIsLive(realtimeVoiceSession?.sdkController)),
     stopListening: () => realtimeVoiceSession?.sdkController?.mute?.(true),
@@ -49878,73 +49867,8 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
   return payload;
 }
 
-const nexusRealtimeToolExecutions = new Map();
-let nexusPendingProviderTransactionId = "";
-
-function nexusProviderTransactionIdForCommand(toolName = "", command = "") {
-  if (toolName === "nexus_communications" && /\b(confirm|confirmed|yes|do it)\b/i.test(command) && nexusPendingProviderTransactionId) {
-    return nexusPendingProviderTransactionId;
-  }
-  const normalized = `${toolName}:${String(command || "").toLowerCase().replace(/\s+/g, " ").trim()}`;
-  let hash = 2166136261;
-  for (let index = 0; index < normalized.length; index += 1) {
-    hash ^= normalized.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `browser_ptx_${(hash >>> 0).toString(16)}`;
-}
-
-function renderNexusProviderTransactionReceipt(result = {}) {
-  const transaction = result.providerTransaction;
-  const receipt = result.providerReceipt || result.evidenceReceipt;
-  if (!transaction?.id || !receipt) return false;
-  if (transaction.lane === "youtube" && result.providerData?.videoId) {
-    showNexusYouTubePlayer({
-      ok: true,
-      provider: "youtube",
-      status: "playback-ready",
-      query: result.providerData.query || result.command || "",
-      videoId: result.providerData.videoId,
-      title: result.providerData.title || receipt.title || "YouTube result"
-    });
-  }
-  const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]') || document.querySelector("#agent");
-  if (!host) return false;
-  host.querySelector(`[data-nexus-provider-transaction-receipt="${transaction.id}"]`)?.remove();
-  const panel = document.createElement("section");
-  panel.dataset.nexusProviderTransactionReceipt = transaction.id;
-  panel.dataset.providerLane = transaction.lane || "";
-  panel.dataset.providerVerified = String(result.executionVerified === true);
-  panel.setAttribute("aria-live", "polite");
-  panel.innerHTML = `<strong>${escapeHtml(translateText("Provider receipt"))}</strong><p>${escapeHtml(String(result.response || "Provider transaction completed."))}</p><small>${escapeHtml(String(result.provider || transaction.lane || "Nexus"))} · ${escapeHtml(String(result.status || transaction.state || ""))} · ${escapeHtml(transaction.id)}</small>`;
-  host.prepend(panel);
-  window.dispatchEvent(new CustomEvent("nexus.provider.transaction.receipt", { detail: { transaction, receipt, response: result.response || "" } }));
-  return true;
-}
-
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
-  const key = `${String(toolName || "nexus_general_conversation")}:${command.toLowerCase().replace(/\s+/g, " ")}`;
-  const prior = nexusRealtimeToolExecutions.get(key);
-  if (prior && Date.now() - prior.at < 45000) return prior.promise;
-  const promise = executeNexusOpenAiRealtimeTool(toolName, args);
-  nexusRealtimeToolExecutions.set(key, { at: Date.now(), promise });
-  const scheduleCleanup = () => {
-    setTimeout(() => {
-      if (nexusRealtimeToolExecutions.get(key)?.promise === promise) nexusRealtimeToolExecutions.delete(key);
-    }, 45000);
-  };
-  promise.then(scheduleCleanup, scheduleCleanup);
-  if (nexusRealtimeToolExecutions.size > 32) {
-    const oldest = nexusRealtimeToolExecutions.keys().next().value;
-    nexusRealtimeToolExecutions.delete(oldest);
-  }
-  return promise;
-}
-
-async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
-  const command = String(args.command || args.query || "").trim();
-  const transactionId = nexusProviderTransactionIdForCommand(toolName, command);
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -49962,9 +49886,7 @@ async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
       arguments: {
         ...args,
         command,
-        language: args.language || languageCode(),
-        transactionId,
-        confirmationTransactionId: nexusPendingProviderTransactionId
+        language: args.language || languageCode()
       },
       language: args.language || languageCode()
     })
@@ -49976,16 +49898,16 @@ async function executeNexusOpenAiRealtimeTool(toolName, args = {}) {
     blockedReason: "client-parse-failed",
     category: "tool-response-parse"
   }));
-  if (result.providerTransaction?.lane === "twilio-call" && result.providerTransaction?.state === "awaiting-confirmation") {
-    nexusPendingProviderTransactionId = result.providerTransaction.id;
-  }
-  if (result.providerTransaction?.lane === "twilio-call" && result.providerTransaction?.state === "completed") {
-    nexusPendingProviderTransactionId = "";
-  }
   await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
-  renderNexusProviderTransactionReceipt(result);
   if (result.genesisAcknowledgement?.verified === true) {
-    result.workspaceVerified = true;
+    const workspaceName = String(result.genesisAcknowledgement.workspace || result.genesisAction?.workspace || "Nexus");
+    const providerNote = result.blockedReason || result.category || result.status || "";
+    result.workspaceProviderNote = providerNote;
+    result.ok = true;
+    result.status = "completed";
+    result.response = `The visible ${workspaceName} workspace opened and contains your request.`;
+    result.blockedReason = null;
+    result.executionVerified = true;
   }
   nexusGenesisVoiceDebugLog("openai-agents-tool-http-result", {
     toolName,
@@ -50111,14 +50033,8 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
-      if (controllerResult?.handled) {
-        void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
-        void executeGenesisProviderFromFinalTranscript(controllerResult.originalTranscript);
-      }
-      if (!controllerResult?.handled && payload.acceptanceText) {
-        void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
-        void executeGenesisProviderFromFinalTranscript(payload.acceptanceText);
-      }
+      if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
+      if (!controllerResult?.handled && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
@@ -50138,10 +50054,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       duplicate: controllerResult?.duplicate === true,
       transcriptLength: transcript.length
     });
-    if (controllerResult?.handled) {
-      void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
-      void executeGenesisProviderFromFinalTranscript(controllerResult.originalTranscript);
-    }
+    if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
   }
   if (eventName === "audio_start") {
     if (realtimeVoiceSession) {
@@ -50190,58 +50103,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
 }
 
 let lastGenesisTranscriptWorkspaceExecution = { command: "", at: 0 };
-const genesisTranscriptProviderExecutions = new Map();
 let authoritativeGenesisTranscriptRoute = null;
-
-function genesisProviderToolFromFinalTranscript(transcript = "") {
-  const command = String(transcript || "").trim();
-  const lower = command.toLowerCase();
-  if (!command) return "";
-  if (/\b(youtube|music|song|playlist|video)\b/.test(lower)
-    && /\b(play|open|show|find|search)\b/.test(lower)) return "nexus_music_media";
-  if (/\b(translate|translation)\b/.test(lower)
-    && /\b(swahili|french|spanish|arabic|portuguese|english)\b/.test(lower)) return "nexus_translation";
-  if (/\bcloudinary\b/.test(lower)
-    && /\b(test|certif|verify|upload|save|store)\b/.test(lower)) return "nexus_file_document_analysis";
-  if (/\b(call|phone|dial|ring)\b/.test(lower)
-    && (/\b(owner test recipient|configured owner test recipient)\b/.test(lower)
-      || /\b(twilio test call)\b/.test(lower))) return "nexus_communications";
-  return "";
-}
-
-async function executeGenesisProviderFromFinalTranscript(transcript = "") {
-  const command = String(transcript || "").trim();
-  const toolName = genesisProviderToolFromFinalTranscript(command);
-  if (!toolName) return false;
-  const key = `${toolName}:${command.toLowerCase().replace(/\s+/g, " ")}`;
-  const prior = genesisTranscriptProviderExecutions.get(key);
-  if (prior && Date.now() - prior.at < 45000) return prior.promise;
-  const promise = callNexusOpenAiRealtimeTool(toolName, {
-    command,
-    language: languageCode(),
-    confirmed: toolName === "nexus_communications" && /\b(yes|confirm|confirmed|explicitly confirm|do it)\b/i.test(command)
-  }).then(result => {
-    nexusGenesisVoiceDebugLog("final-transcript-provider-executed", {
-      toolName,
-      status: String(result?.status || ""),
-      providerSucceeded: result?.providerSucceeded === true,
-      executionVerified: result?.executionVerified === true
-    });
-    return result?.ok === true;
-  }).catch(error => {
-    nexusGenesisVoiceDebugLog("final-transcript-provider-failed", {
-      toolName,
-      error: String(error?.message || "provider-execution-failed").slice(0, 180)
-    });
-    return false;
-  });
-  genesisTranscriptProviderExecutions.set(key, { at: Date.now(), promise });
-  if (genesisTranscriptProviderExecutions.size > 24) {
-    const oldest = genesisTranscriptProviderExecutions.keys().next().value;
-    genesisTranscriptProviderExecutions.delete(oldest);
-  }
-  return promise;
-}
 
 function rememberAuthoritativeGenesisTranscriptRoute(action = {}, command = "") {
   if (!action || action.type !== "genesis.workspace.open") return null;
@@ -50401,14 +50263,6 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
 
 async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) {
   const sessionId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream
-  || nexusPermanentMicrophoneStream
-  || nexusVoicePermissionStream
-  || null;
-const preverifiedMicrophoneProof = verifyNexusPermanentMicrophoneStream(preverifiedMicrophoneStream);
-if (!preverifiedMicrophoneProof.ok) {
-  throw new Error("Nexus Realtime requires one live preverified microphone stream.");
-}
   if (!nexusRealtimeConversationIdentity) {
     nexusRealtimeConversationIdentity = `rt-conversation-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -50477,7 +50331,7 @@ if (!preverifiedMicrophoneProof.ok) {
       voice: sessionPayload.voice || status.voice || "marin",
       instructions: sessionPayload.clientConfig?.instructions || "",
       clientConfig: sessionPayload.clientConfig || {},
-      preverifiedMicrophoneStream,
+      preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null,
       language: () => languageCode(),
       lastUserCommand: () => nexusOsVoiceRuntimeState.lastFinal || "",
       callNexusTool: callNexusOpenAiRealtimeTool,
@@ -50548,7 +50402,7 @@ if (!preverifiedMicrophoneProof.ok) {
       if (voiceRecognition === legacyRecognitionAtStart || legacyRecognitionAtStart) voiceRecognition = null;
     }
     stopNexusAudioFallbackRecorder("openai-agents-realtime-verified");
-    if (!preverifiedMicrophoneStream || nexusVoicePermissionStream !== preverifiedMicrophoneStream) {
+    if (!options.preverifiedMicrophoneStream || nexusVoicePermissionStream !== options.preverifiedMicrophoneStream) {
       stopNexusVoicePermissionStream("openai-agents-realtime-verified");
     }
     realtimeVoiceStarting = false;
@@ -51245,7 +51099,6 @@ function setNexusPermanentMicrophoneState(state = "ready", message = "Microphone
     button.disabled = false;
     button.dataset.nexusPermanentMicrophoneState = state;
     if (state === "blocked") button.textContent = "Microphone blocked — view instructions";
-    else if (state === "no-device") button.textContent = "No microphone device detected";
     else if (state === "connected") button.textContent = "Microphone connected";
     else if (state === "unavailable") button.textContent = "Nexus voice connection unavailable — retry";
     else if (state === "requesting") button.textContent = "Requesting microphone...";
@@ -51271,13 +51124,6 @@ function verifyNexusPermanentMicrophoneStream(stream) {
     trackMuted,
     streamActive: Boolean(stream?.active)
   };
-}
-
-function classifyNexusMicrophoneStartError(error) {
-  const errorText = `${error?.name || ""} ${error?.message || ""}`;
-  if (/notallowed|permission|denied|securityerror/i.test(errorText)) return "blocked";
-  if (/notfound|devicesnotfound|requested device not found|no microphone device/i.test(errorText)) return "no-device";
-  return "unavailable";
 }
 
 async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-html-microphone-button") {
@@ -51332,25 +51178,20 @@ async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-ht
     setNexusPermanentMicrophoneState("connected", "Microphone is live. Connecting Nexus Realtime voice...");
     return { stream, proof };
   } catch (error) {
-    const failureState = classifyNexusMicrophoneStartError(error);
-    const denied = failureState === "blocked";
-    const noDevice = failureState === "no-device";
+    const denied = /notallowed|permission|denied/i.test(`${error.name || ""} ${error.message || ""}`);
     nexusVoicePermissionDeniedThisSession = denied;
     setNexusPermanentMicrophoneState(
-      failureState,
+      denied ? "blocked" : "unavailable",
       denied
         ? "Microphone permission is blocked. Open browser site settings, allow microphone for this site, then reload and retry."
-        : noDevice
-          ? "This browser session has no microphone device. Connect or enable a microphone, then reload and retry. Nexus Realtime is available; the browser supplied no audio device."
         : `Nexus could not open the microphone: ${error.message || "device unavailable"}.`
     );
     updateNexusOsVoiceRuntimeState({
-      mode: denied ? "microphone-blocked" : noDevice ? "microphone-device-missing" : "microphone-unavailable",
+      mode: denied ? "microphone-blocked" : "microphone-unavailable",
       listeningState: "blocked",
       hearingState: "idle",
-      permissionState: denied ? "denied" : noDevice ? "unsupported" : "unknown",
+      permissionState: denied ? "denied" : "unknown",
       microphoneUnavailable: true,
-      microphoneDeviceMissing: noDevice,
       lastError: error.message || "microphone-start-failed"
     }, source);
     throw error;
@@ -51361,7 +51202,6 @@ async function handleNexusPermanentMicrophoneClick(event) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   event?.stopImmediatePropagation?.();
-  nexusPermanentMicrophoneStartInFlight = true;
   recordNexusVoiceLifecycleEvent("permanent-microphone-user-click", {
     managerState: realtimeVoiceSession?.controllerState || "pre-acquisition",
     microphoneOwner: nexusPermanentMicrophoneOwner
@@ -51387,8 +51227,6 @@ async function handleNexusPermanentMicrophoneClick(event) {
     }
   } catch {
     // The visible status region already explains the exact browser recovery path.
-  } finally {
-    nexusPermanentMicrophoneStartInFlight = false;
   }
 }
 
@@ -54136,10 +53974,6 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
   if (!dispatchGenesisWorkspaceAction(action, result, { suppressAcknowledgement: true })) {
     throw new Error(`Nexus card launcher failed for ${workspace} (${requestId}).`);
   }
-  // Provider results must be present before the acknowledgement snapshot is
-  // emitted. Certification and assistive technology observe this exact visible
-  // state; rendering after the acknowledgement loses the canonical receipt.
-  renderNexusProviderTransactionReceipt(result);
 
   const findPopulatedField = (key, value) => {
     const aliases = {
@@ -58535,11 +58369,9 @@ async function startVoiceListening(options = {}) {
   }
   if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime" });
   const supervisor = nexusGenesisConversationSupervisor || window.NexusGenesisConversationSupervisor;
-  const result = options.preverifiedMicrophoneStream
-    ? await manager.startSession(options)
-    : supervisor
-      ? await supervisor.start(options.source || "start-voice-listening")
-      : await manager.startSession(options);
+  const result = supervisor
+    ? await supervisor.start(options.source || "start-voice-listening")
+    : await manager.startSession(options);
   if (!result?.ok && manager.getState().activeRuntime === "legacy") {
     return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime", managedRuntime: true });
   }

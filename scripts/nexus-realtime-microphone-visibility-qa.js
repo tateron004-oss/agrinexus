@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-511"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v456"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-511"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v456"') &&
-      index.includes("/app.js?v=nexus-behavior-511")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-502"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v447"') &&
+      index.includes("/app.js?v=nexus-behavior-502")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-511') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-502') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -70,14 +70,6 @@ const checks = [
       permanentMic.includes("preverifiedMicrophoneStream: stream")
   ],
   [
-    "Missing browser microphone hardware is not mislabeled as a Realtime connection failure",
-    permanentMic.includes("function classifyNexusMicrophoneStartError") &&
-      permanentMic.includes('"no-device"') &&
-      permanentMic.includes("No microphone device detected") &&
-      permanentMic.includes("Nexus Realtime is available; the browser supplied no audio device.") &&
-      permanentMic.includes("microphoneDeviceMissing: noDevice")
-  ],
-  [
     "Direct click retries one transient Realtime startup without reacquiring or abandoning the live microphone",
     permanentMic.includes("permanent-html-microphone-button-bounded-retry") &&
       permanentMic.includes("verifyNexusPermanentMicrophoneStream(stream).ok") &&
@@ -86,9 +78,7 @@ const checks = [
   ],
   [
     "Preverified microphone stream is handed to OpenAI Realtime",
-    realtimeStartup.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream") &&
-      realtimeStartup.includes("|| nexusPermanentMicrophoneStream") &&
-      realtimeStartup.includes("preverifiedMicrophoneStream,") &&
+    realtimeStartup.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
       realtimeAgent.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null") &&
       realtimeAgent.includes("new OpenAIRealtimeWebRTC({") &&
       realtimeAgent.includes("mediaStream: preverifiedMicrophoneStream") &&

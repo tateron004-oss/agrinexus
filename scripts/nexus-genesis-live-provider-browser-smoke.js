@@ -2,15 +2,9 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
-const {
-  SUITE,
-  writeEvidenceAtomic,
-  readAndValidateEvidence
-} = require("./nexus-live-voice-evidence");
 
 const root = path.resolve(__dirname, "..");
 const outputDir = path.join(root, "output", "nexus-live-voice-acceptance");
-const evidencePath = path.join(outputDir, "live-provider-browser-evidence.json");
 const fixturePath = path.resolve(process.env.NEXUS_LIVE_FIXTURE || path.join(outputDir, "smoke.wav"));
 const expectedTurns = Number(process.env.NEXUS_LIVE_EXPECTED_TURNS || 1);
 const requiredInterruptions = Number(process.env.NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT || 0);
@@ -25,15 +19,13 @@ const spokenJourneys = [
   { workspace: "workforce", words: ["farming", "Kenya"], command: "Nexus, open Workforce and search for farming jobs in Kenya." },
   { workspace: "trade", words: ["50", "maize"], command: "Nexus, open Marketplace and sell 50 bags of maize." },
   { workspace: "map", words: ["Nairobi", "Nakuru"], command: "Nexus, show me the best route from Nairobi to Nakuru." },
-  { workspace: "media", words: ["Now playing through YouTube", "Kenya"], command: "Nexus, play music from Kenya through YouTube and show the result in Music and Media." },
+  { workspace: "media", words: ["YouTube video found", "maize"], command: "Nexus, use YouTube to show me how to plant maize." },
   { workspace: "reminders", words: ["Reminders"], command: "Nexus, open Reminders." },
   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
-  { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, use the translation tool to translate good morning farmer into Swahili." }
-  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, use the file and document tool to upload and verify the Cloudinary certification image." }
-  ,{ workspace: null, words: [], command: "Nexus, show provider readiness for YouTube, Translation, Cloudinary, and Twilio." }
-  ,{ workspace: null, words: [], callStage: true, command: "Nexus, prepare a Twilio test call to my configured owner test recipient." }
-  ,{ workspace: null, words: [], twilioCallProvider: "twilio", command: "Yes, I explicitly confirm that Twilio test call to my configured owner test recipient now." }
+  { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
+  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, upload and verify the Cloudinary certification image." }
+  ,{ workspace: null, words: [], twilioProvider: "twilio", command: "Nexus, send a production test SMS to my owner test recipient. I explicitly confirm this test send." }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]
@@ -260,7 +252,6 @@ async function main() {
         window.__NEXUS_TRANSLATION_TOOL_RESULTS__ = [];
         window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ = [];
         window.__NEXUS_TWILIO_TOOL_RESULTS__ = [];
-        window.__NEXUS_TWILIO_CALL_RESULTS__ = [];
         const nexusOriginalFetch = window.fetch.bind(window);
         window.fetch = async (...args) => {
           const response = await nexusOriginalFetch(...args);
@@ -284,15 +275,6 @@ async function main() {
                 succeeded: payload.providerSucceeded === true,
                 verified: payload.executionVerified === true,
                 sid: String(payload?.providerData?.sid || ''),
-                response: String(payload.response || '')
-              });
-              if (payload?.provider === 'twilio' && payload?.providerAction === 'call.start') window.__NEXUS_TWILIO_CALL_RESULTS__.push({
-                provider: String(payload.provider),
-                action: String(payload.providerAction),
-                succeeded: payload.providerSucceeded === true,
-                verified: payload.executionVerified === true,
-                sid: String(payload?.providerData?.sid || ''),
-                status: String(payload?.providerData?.status || ''),
                 response: String(payload.response || '')
               });
             }).catch(() => {});
@@ -411,8 +393,8 @@ async function main() {
       const translationSatisfied = translationResults.some(item => item.provider === 'google-cloud-translation' && item.response.trim());
       const cloudinaryResults = window.__NEXUS_CLOUDINARY_TOOL_RESULTS__ || [];
       const cloudinarySatisfied = cloudinaryResults.some(item => item.provider === 'cloudinary' && item.verified && item.secureDelivery && item.publicId && item.response.trim());
-      const twilioCallResults = window.__NEXUS_TWILIO_CALL_RESULTS__ || [];
-      const twilioCallSatisfied = twilioCallResults.some(item => item.provider === 'twilio' && item.action === 'call.start' && item.succeeded && item.verified && /^CA[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
+      const twilioResults = window.__NEXUS_TWILIO_TOOL_RESULTS__ || [];
+      const twilioSatisfied = twilioResults.some(item => item.provider === 'twilio' && item.action === 'sms.send' && item.succeeded && item.verified && /^SM[A-Za-z0-9]+$/.test(item.sid) && item.response.trim());
       const lifecycleInterruptionCount = lifecycleEvents.filter(event => /interrupt|cancel-requested/.test(String(event.eventName || ''))).length;
       const interruptionSatisfied = interruptionCount + lifecycleInterruptionCount >= ${requiredInterruptions};
       window.__NEXUS_ACCEPTANCE_SNAPSHOT__ = {
@@ -430,12 +412,12 @@ async function main() {
         translationResults,
         cloudinarySatisfied,
         cloudinaryResults,
-        twilioCallSatisfied,
-        twilioCallResults,
+        twilioSatisfied,
+        twilioResults,
         workspaceAckCount: workspaceAcks.length,
         workspaceResults
       };
-      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioCallSatisfied) return null;
+      if (!speechStarted || !responseDone || !modelAudio || !interruptionSatisfied || !workspacesSatisfied || !translationSatisfied || !cloudinarySatisfied || !twilioSatisfied) return null;
       return {
         speechStarted,
         responseDone,
@@ -455,7 +437,7 @@ async function main() {
         workspaceResults,
         translationResults
         ,cloudinaryResults
-        ,twilioCallResults
+        ,twilioResults
       };
     })()`), Math.max(180000, expectedTurns * 30000), "synthetic spoken turn and model response");
 
@@ -472,9 +454,9 @@ async function main() {
     else if (ephemeralCredentialLogged) acceptanceFailureReason = "ephemeral-credential-console-observed";
     assert.equal(acceptanceFailureReason, "", acceptanceFailureReason);
 
-    const finalEvidence = {
+    console.log(JSON.stringify({
       ok: true,
-      suite: SUITE,
+      suite: "nexus-genesis-live-provider-browser-smoke",
       virtualMicrophone: true,
       realRealtimeConnected: true,
       liveMicrophoneTrack: true,
@@ -486,7 +468,6 @@ async function main() {
       lifecycleInvariant: evidence.lifecycle?.ok === true,
       workspaceResults: evidence.workspaceResults,
       translationResults: evidence.translationResults,
-      twilioCallResults: evidence.twilioCallResults,
       browserSecretLoggingDetected: false,
       eventCount: evidence.eventCount
       ,expectedTurns: evidence.expectedTurns,
@@ -496,10 +477,7 @@ async function main() {
       responseCancelCount: evidence.responseCancelCount
       ,lifecycleInterruptionCount: evidence.lifecycleInterruptionCount
       ,resources
-    };
-    writeEvidenceAtomic(evidencePath, finalEvidence);
-    readAndValidateEvidence(evidencePath, expectedTurns);
-    console.log(JSON.stringify(finalEvidence));
+    }));
   } finally {
     if (acceptanceStage !== "cleanup" && cdp) {
       try {
@@ -510,25 +488,9 @@ async function main() {
           const track = [...(window.__NEXUS_RESOURCE_TRACKER__?.tracks || [])][0];
           let audioLevel = { sampled: false, rms: 0, max: 0 };
           if (track) { try { const context = new AudioContext(); const source = context.createMediaStreamSource(new MediaStream([track])); const analyser = context.createAnalyser(); analyser.fftSize = 1024; source.connect(analyser); const data = new Uint8Array(analyser.fftSize); let max = 0; let sum = 0; let samples = 0; const started = performance.now(); while (performance.now() - started < 900) { analyser.getByteTimeDomainData(data); let local = 0; for (const value of data) { const normalized = (value - 128) / 128; local += normalized * normalized; } const rms = Math.sqrt(local / data.length); sum += rms; max = Math.max(max, rms); samples += 1; await new Promise(resolve => setTimeout(resolve, 50)); } audioLevel = { sampled: true, rms: samples ? sum / samples : 0, max }; await context.close(); } catch (error) { audioLevel = { sampled: false, errorCategory: String(error?.name || 'unknown') }; } }
-          return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, lastClientStatus: window.NexusGenesisRealtimeLastClientStatus || null, outputStatus: document.querySelector('#globalVoiceOutputStatus')?.textContent?.trim() || '', permanentMicrophoneStatus: document.querySelector('[data-nexus-permanent-microphone-status]')?.textContent?.trim() || '' }, lifecycle: lifecycle.currentInvariant || null, acceptanceSnapshot: window.__NEXUS_ACCEPTANCE_SNAPSHOT__ || null, workspaceAcks: window.__NEXUS_WORKSPACE_ACKS__ || [], eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
+          return { page: { url: location.href, title: document.title, readyState: document.readyState }, realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true }, lifecycle: lifecycle.currentInvariant || null, acceptanceSnapshot: window.__NEXUS_ACCEPTANCE_SNAPSHOT__ || null, workspaceAcks: window.__NEXUS_WORKSPACE_ACKS__ || [], eventCount: events.length, transportEventTypes: events.map(event => event.type).filter(Boolean).slice(-40), inputTrackState: track?.readyState || null, audioLevel, audioContextStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.audioContexts || [])].map(context => context.state), peerConnectionStates: [...(window.__NEXUS_RESOURCE_TRACKER__?.peers || [])].map(peer => ({ connectionState: peer.connectionState, iceGatheringState: peer.iceGatheringState, iceConnectionState: peer.iceConnectionState, signalingState: peer.signalingState })) };
         })()`);
       } catch {}
-      const capturedFailure = {
-        ok: false,
-        suite: "nexus-genesis-live-provider-browser-smoke",
-        stage: acceptanceStage,
-        failureReason: acceptanceFailureReason || "unclassified",
-        progress: acceptanceProgress,
-        diagnostics: failureDiagnostics,
-        browserDiagnostics,
-        secretValuesReturned: false
-      };
-      fs.mkdirSync(outputDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(outputDir, "live-provider-browser-failure.json"),
-        `${JSON.stringify(capturedFailure, null, 2)}\n`
-      );
-      console.error(JSON.stringify(capturedFailure));
     }
     try {
       cdp?.close();
@@ -541,23 +503,6 @@ async function main() {
 }
 
 main().catch(error => {
-  process.exitCode = 1;
-  const preliminaryEvidence = {
-    ok: false,
-    suite: "nexus-genesis-live-provider-browser-smoke",
-    errorName: error.name || "Error",
-    errorMessage: String(error.message || ""),
-    errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
-    stage: acceptanceStage,
-    failureReason: acceptanceFailureReason || "unclassified",
-    preliminary: true
-  };
-  fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(outputDir, "live-provider-browser-failure.json"),
-    `${JSON.stringify(preliminaryEvidence, null, 2)}\n`
-  );
-  console.error(JSON.stringify(preliminaryEvidence));
   const finish = async () => {
     let diagnostics = null;
     try {
@@ -568,7 +513,7 @@ main().catch(error => {
         const types = events.map(event => event.type).filter(Boolean);
         const track = [...(window.__NEXUS_RESOURCE_TRACKER__?.tracks || [])][0];
         return {
-          realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, activeResponseId: Boolean(status.activeResponseId), lastClientStatus: window.NexusGenesisRealtimeLastClientStatus || null, outputStatus: document.querySelector('#globalVoiceOutputStatus')?.textContent?.trim() || '', permanentMicrophoneStatus: document.querySelector('[data-nexus-permanent-microphone-status]')?.textContent?.trim() || '' },
+          realtime: { connectionState: status.connectionState || null, activeRuntime: status.activeRuntime || null, liveMicrophoneTrack: status.liveMicrophoneTrack === true, responseInProgress: status.responseInProgress === true, activeResponseId: Boolean(status.activeResponseId) },
           lifecycle: { currentInvariant: lifecycle.currentInvariant || null, current: lifecycle.current || null },
           transportEventTypes: types.slice(-40),
           eventCount: events.length,
@@ -578,25 +523,20 @@ main().catch(error => {
         };
       })()`);
     } catch {}
-    const finalFailureEvidence = {
-      ok: false,
-      suite: "nexus-genesis-live-provider-browser-smoke",
-      errorName: error.name || "Error",
-      errorMessage: String(error.message || ""),
-      errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
-      stage: acceptanceStage,
-      failureReason: acceptanceFailureReason || "unclassified",
-      progress: acceptanceProgress,
-      secretValuesReturned: false,
-      diagnostics: diagnostics || failureDiagnostics,
-      browserDiagnostics
-    };
-    fs.writeFileSync(
-      path.join(outputDir, "live-provider-browser-failure.json"),
-      `${JSON.stringify(finalFailureEvidence, null, 2)}\n`
-    );
-    console.error(JSON.stringify(finalFailureEvidence));
+    console.error(JSON.stringify({
+    ok: false,
+    suite: "nexus-genesis-live-provider-browser-smoke",
+    errorName: error.name || "Error",
+    errorMessage: String(error.message || ""),
+    errorCategory: /timed out/i.test(error.message || "") ? "timeout" : "acceptance-failure",
+    stage: acceptanceStage,
+    failureReason: acceptanceFailureReason || "unclassified",
+    progress: acceptanceProgress,
+    secretValuesReturned: false,
+    diagnostics: failureDiagnostics,
+    browserDiagnostics
+    }));
     process.exitCode = 1;
   };
-  return finish();
+  finish();
 });

@@ -95,7 +95,7 @@ function assertSdkMicrophoneProofContract() {
 
 function assertManagerContract() {
   assert(app.includes("const realtimeAdapter = factory.RealtimeVoiceAdapter"), "app should wire a real Realtime adapter into the existing manager");
-  assert(app.includes("startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true })"), "Realtime adapter should forward session options through the existing runtime manager contract");
+  assert(app.includes("startRealtimeVoiceSession({ managedRuntime: true })"), "Realtime adapter should start through the existing runtime manager contract");
   assert(manager.includes("RealtimeVoiceAdapter: behavior => createAdapter(\"realtime\", behavior)"), "manager factory should export the Realtime adapter alias used by the app");
   assert(manager.includes("realtime: options.realtimeAdapter"), "manager should accept an injected Realtime adapter");
   assert(manager.includes("openAiRealtimeManagedRuntime"), "manager state should advertise managed Realtime ownership");

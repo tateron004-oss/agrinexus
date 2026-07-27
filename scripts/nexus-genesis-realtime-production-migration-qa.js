@@ -168,9 +168,9 @@ const scenarios = [
 ];
 
 const requirements = [
-  ["Build markers bumped", server.includes("nexus-behavior-511") && app.includes("nexus-behavior-511") && sw.includes("nexus-behavior-511") && index.includes("nexus-behavior-511")],
-  ["PWA markers bumped", server.includes("agrinexus-pwa-v456") && app.includes("agrinexus-pwa-v456") && sw.includes("agrinexus-pwa-v456")],
-  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v457")],
+  ["Build markers bumped", server.includes("nexus-behavior-502") && app.includes("nexus-behavior-502") && sw.includes("nexus-behavior-502") && index.includes("nexus-behavior-502")],
+  ["PWA markers bumped", server.includes("agrinexus-pwa-v447") && app.includes("agrinexus-pwa-v447") && sw.includes("agrinexus-pwa-v447")],
+  ["Genesis runtime marker bumped", app.includes("nexus-genesis-voice-runtime-v456")],
   ["Realtime runtime version exists", server.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION") && app.includes("NEXUS_GENESIS_REALTIME_RUNTIME_VERSION")],
   ["Server runtime values", server.includes('const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"])')],
   ["Realtime is default runtime", server.includes('env.NEXUS_GENESIS_VOICE_RUNTIME || "realtime"') && server.includes("nexusGenesisVoiceRuntimePolicy")],

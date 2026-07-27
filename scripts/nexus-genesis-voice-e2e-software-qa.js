@@ -35,8 +35,8 @@ function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
 
-const build = "nexus-behavior-511";
-const cache = "agrinexus-pwa-v456";
+const build = "nexus-behavior-502";
+const cache = "agrinexus-pwa-v447";
 
 [
   ["app", app],
@@ -50,7 +50,7 @@ includes(index, build, "index build marker");
 
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-511"), "microphone button must exist before app.js executes");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-502"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
 includes(index, "Enable microphone", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
@@ -97,9 +97,7 @@ const realtimeStart = section(app, "async function startOpenAiAgentsRealtimeVoic
 includes(realtimeStart, "nexusRealtimeConversationIdentity", "stable conversation identity");
 includes(realtimeStart, "conversationIdentity", "session stores conversation identity");
 includes(realtimeStart, "turnIndex: Number(options.turnIndex || 0)", "turn count is restored across recovery");
-includes(realtimeStart, "const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream", "explicit preverified stream is resolved");
-includes(realtimeStart, "|| nexusPermanentMicrophoneStream", "permanent manager-owned stream is retained at the SDK boundary");
-includes(realtimeStart, "preverifiedMicrophoneStream,", "resolved preverified stream reaches SDK adapter");
+includes(realtimeStart, "preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null", "preverified stream reaches SDK adapter");
 includes(realtimeStart, "normalizeRealtimeMicrophoneProof(controller)", "post-connect mic proof");
 includes(realtimeStart, "voiceRecognition.stop()", "legacy recognition stopped only after Realtime mic proof");
 includes(realtimeStart, "stopNexusAudioFallbackRecorder(\"openai-agents-realtime-verified\")", "fallback recorder stopped after Realtime ownership");
@@ -323,6 +321,3 @@ console.log(JSON.stringify({
   cleanRestartVerified: true,
   decision: "pre-key software-controlled Genesis voice lifecycle gates pass without using a real provider key"
 }, null, 2));
-
-assert(app.includes("startSession: (sessionOptions = {}) => startRealtimeVoiceSession({ ...sessionOptions, managedRuntime: true })"), "Realtime manager adapter must forward the preverified microphone stream");
-assert(app.includes("options.preverifiedMicrophoneStream\n    ? await manager.startSession(options)"), "permanent microphone startup must bypass the supervisor path that accepts only a source label");

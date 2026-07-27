@@ -1,2 +1,0 @@
-Nexus persistent authentication repair deployment trigger.
-Source commit: f8ba1f1

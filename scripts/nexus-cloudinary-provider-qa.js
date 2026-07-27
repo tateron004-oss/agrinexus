@@ -41,10 +41,6 @@ async function main() {
   assert.equal(request.options.body.get("api_key"), "test-key");
   assert(request.options.body.get("signature"));
   assert.equal(request.options.body.get("folder"), "agrinexus/system-certification");
-  assert.equal(request.options.body.get("file").type, "image/png");
-  assert.equal(request.options.body.get("file").name, "nexus-genesis-cloudinary-certification.png");
-  assert.equal(request.options.body.has("invalidate"), false);
-  assert.equal(request.options.body.has("overwrite"), false);
   assert.equal(result.ok, true);
   assert.equal(result.provider, "cloudinary");
   assert.equal(result.receipt.verified, true);

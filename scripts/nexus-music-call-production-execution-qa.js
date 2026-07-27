@@ -88,10 +88,6 @@ function twilioSignature(route, body) {
       PUBLIC_BASE_URL: base,
       AGRINEXUS_DB_PATH: tempDb,
       TWILIO_AUTH_TOKEN: authToken,
-      TWILIO_ACCOUNT_SID: "AC1234567890abcdef",
-      TWILIO_PHONE_NUMBER: "+15555550100",
-      OWNER_TEST_RECIPIENT_NUMBER: "+15555550101",
-      NEXUS_CALLS_ENABLED: "true",
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1"
     },
@@ -134,20 +130,6 @@ function twilioSignature(route, body) {
       body: { email: "admin@agrinexus.org", password: "Admin2026!" }
     });
     assert.equal(login.response.status, 200, "QA login must succeed");
-    const stagedCall = await jsonRequest("/api/voice/realtime/tool", {
-      method: "POST",
-      body: {
-        name: "nexus_communications",
-        arguments: {
-          command: "Nexus, prepare a Twilio test call to my configured owner test recipient."
-        }
-      }
-    });
-    assert.equal(stagedCall.response.status, 200, "Realtime Twilio staging must be reachable");
-    assert.equal(stagedCall.payload.status, "confirmation_required", "Configured owner call must stage for confirmation");
-    assert.equal(stagedCall.payload.providerTransaction?.state, "awaiting-confirmation");
-    assert.equal(stagedCall.payload.providerReceipt?.targetStored, true, "The private configured number must be stored instead of the spoken alias");
-    assert.equal(stagedCall.payload.providerReceipt?.verified, false, "Staging must not execute the call");
     const state = await jsonRequest("/api/state");
     const receipts = state.payload.profile.twilioCallStatusReceipts || [];
     assert.equal(receipts[0].callSid, body.CallSid, "Call status receipt must persist");

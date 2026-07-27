@@ -56,8 +56,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-511";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v456";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -1874,50 +1874,10 @@ function parseCookies(req) {
   }));
 }
 
-function durableAuthSecret(env = process.env) {
-  return String(env.SESSION_SECRET || "").trim();
-}
-
-function issueDurableAuthToken(userId, now = Date.now(), env = process.env) {
-  const secret = durableAuthSecret(env);
-  if (!secret || !userId) return "";
-  const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
-  const payload = Buffer.from(JSON.stringify({
-    userId: String(userId),
-    issuedAt: now,
-    expiresAt: now + ttlMs
-  })).toString("base64url");
-  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-  return `${payload}.${signature}`;
-}
-
-function verifyDurableAuthToken(token, now = Date.now(), env = process.env) {
-  const secret = durableAuthSecret(env);
-  const [payload = "", suppliedSignature = ""] = String(token || "").split(".");
-  if (!secret || !payload || !suppliedSignature) return null;
-  const expectedSignature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-  const expectedBuffer = Buffer.from(expectedSignature);
-  const suppliedBuffer = Buffer.from(suppliedSignature);
-  if (expectedBuffer.length !== suppliedBuffer.length
-    || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) return null;
-  try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (!session.userId
-      || Number(session.issuedAt || 0) > now + 60_000
-      || Number(session.expiresAt || 0) <= now) return null;
-    return session;
-  } catch {
-    return null;
-  }
-}
-
 function currentUser(req, db) {
-  const cookies = parseCookies(req);
-  const sid = cookies.agrinexus_sid;
+  const sid = parseCookies(req).agrinexus_sid;
   const userId = sid && sessions.get(sid);
-  const durableSession = userId ? null : verifyDurableAuthToken(cookies.agrinexus_auth);
-  const resolvedUserId = userId || durableSession?.userId;
-  return db.users.find(user => user.id === resolvedUserId) || null;
+  return db.users.find(user => user.id === userId) || null;
 }
 
 function secureCookieAttribute(req) {
@@ -6032,55 +5992,19 @@ function envGroupConfigured(group = [], env = process.env) {
   return group.filter(Boolean).every(name => Boolean(env[name]));
 }
 
-function providerAccountLiveExecutionStatus(item = {}, env = process.env) {
-  const channelByAccountId = {
-    "voice-phone-provider": "phone",
-    "sms-provider": "sms",
-    "whatsapp-messaging": "whatsapp"
-  };
-  const channel = channelByAccountId[item.id];
-  if (channel) {
-    const status = nexusGlobalCommunicationsChannelStatus(channel, env);
-    return {
-      configured: status.configured,
-      connected: status.canExecuteNow,
-      realExecutionEnabled: status.canExecuteNow,
-      statusLabel: status.canExecuteNow ? "Live confirmed execution available" : status.status,
-      unavailableReason: status.canExecuteNow
-        ? ""
-        : status.flagEnabled
-          ? "Provider credentials or sender configuration are incomplete."
-          : `${status.flagName}=true is required before confirmed execution.`,
-      requiresConfirmation: true
-    };
-  }
-  const globallyEnabled = env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED === "true";
-  const accountEnabled = env[`NEXUS_${String(item.id || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
-  return {
-    configured: null,
-    connected: null,
-    realExecutionEnabled: globallyEnabled && accountEnabled,
-    statusLabel: globallyEnabled && accountEnabled ? "Real execution enabled" : "Real execution disabled",
-    unavailableReason: "",
-    requiresConfirmation: true
-  };
-}
-
 function providerAccountApiAccessStatus(env = process.env) {
   const globalExecutionEnabled = env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED === "true";
   const items = PROVIDER_ACCOUNT_API_ACCESS_REGISTRY.map(item => {
-    const liveStatus = providerAccountLiveExecutionStatus(item, env);
-    const configured = liveStatus.configured ?? (item.configuredWhenAnyPresent || []).some(group => envGroupConfigured(group, env));
-    const connected = Boolean(liveStatus.connected ?? (configured && env.NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED === "true"));
-    const legacyExecutionEnabled = connected && globalExecutionEnabled && env[`NEXUS_${item.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
-    const realExecutionEnabled = Boolean(liveStatus.realExecutionEnabled || legacyExecutionEnabled);
+    const configured = (item.configuredWhenAnyPresent || []).some(group => envGroupConfigured(group, env));
+    const connected = configured && env.NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED === "true";
+    const realExecutionEnabled = connected && globalExecutionEnabled && env[`NEXUS_${item.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
     const missingCredential = item.apiKeyOrTokenRequired && !configured;
     const statuses = [
-      realExecutionEnabled ? liveStatus.statusLabel : "Real execution disabled",
+      realExecutionEnabled ? "Real execution enabled" : "Real execution disabled",
       connected ? "Account connected" : "Account not connected",
       configured ? "Credential configured" : "API credential missing",
       item.businessVerificationRequired ? "Provider review required" : "Provider review optional",
-      realExecutionEnabled ? "Explicit confirmation required" : "Simulation available"
+      "Simulation only"
     ];
     return {
       id: item.id,
@@ -6099,21 +6023,16 @@ function providerAccountApiAccessStatus(env = process.env) {
       simulationAvailable: true,
       realExecutionEnabled,
       safeNextSetupStep: configured
-        ? realExecutionEnabled
-          ? "Use the live provider through its explicit confirmation and audit gates."
-          : "Complete provider review, callback validation, consent, audit, and final execution gate before enabling real actions."
+        ? "Complete provider review, callback validation, consent, audit, and final execution gate before enabling real actions."
         : `Configure a provider account and set required environment placeholders such as ${item.environmentVariablesRequired.slice(0, 3).join(", ")}.`,
       unavailableReason: realExecutionEnabled
         ? ""
-        : liveStatus.unavailableReason
-        ? liveStatus.unavailableReason
         : missingCredential
         ? "API credential missing"
         : connected
         ? "Real execution disabled"
         : "Account not connected",
       statuses,
-      requiresConfirmation: liveStatus.requiresConfirmation,
       secretValuesExposed: false,
       noExternalApiCall: true,
       noExecutionAuthorized: true
@@ -6123,9 +6042,7 @@ function providerAccountApiAccessStatus(env = process.env) {
     id: "provider-account-api-access",
     title: "Provider Accounts & API Access",
     generatedAt: new Date().toISOString(),
-    defaultPosture: items.some(item => item.realExecutionEnabled)
-      ? "Live provider capabilities are enabled only where configured; recipient, consent, confirmation, provider receipt, and audit gates remain required."
-      : "Provider capabilities remain simulation-only until their credentials and explicit execution gates are enabled.",
+    defaultPosture: "Simulation only. Account/API status is visible, but real execution is disabled.",
     noSecretsExposed: true,
     noExternalApiCalls: true,
     noExecutionAuthorized: true,
@@ -6232,8 +6149,7 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
     const matchingProviders = item.providerIds.map(id => providerById.get(id)).filter(Boolean);
     const configured = Boolean(account.configured || matchingProviders.some(provider => !["needs-credentials", "not-configured", "missing"].includes(String(provider.status || "").toLowerCase())));
     const connected = Boolean(account.connected || matchingProviders.some(provider => connectedStatuses.has(String(provider.status || "").toLowerCase())));
-    const realExecutionEnabled = Boolean(account.realExecutionEnabled);
-    const realExecutionDisabled = !realExecutionEnabled;
+    const realExecutionDisabled = !Boolean(account.realExecutionEnabled);
     return {
       id: item.id,
       label: item.label,
@@ -6245,21 +6161,18 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
       simulationSupported: true,
       confirmationRequired: item.confirmationRequired,
       permissionRequired: item.permissionRequired,
-      realExecutionEnabled,
       realExecutionDisabled,
       actionQueueCompatible: true,
-      unavailableReason: realExecutionEnabled ? "" : connected ? "Real execution disabled until final gate, audit, consent, and provider approval are active." : "Provider account or credential is not connected.",
+      unavailableReason: connected ? "Real execution disabled until final gate, audit, consent, and provider approval are active." : "Provider account or credential is not connected.",
       safeNextStep: connected
-        ? realExecutionEnabled
-          ? "Use the live provider through explicit permission, confirmation, provider receipt, and audit."
-          : "Review permission, final confirmation, audit, and provider policy before enabling any real handoff."
+        ? "Review permission, final confirmation, audit, and provider policy before enabling any real handoff."
         : "Connect the provider account/API credential and validate webhook/callback policy before real use.",
       statusLabels: [
         connected ? "connected" : configured ? "configured-not-connected" : "not configured",
-        realExecutionEnabled ? "live provider execution available" : "simulation supported",
+        "simulation supported",
         item.permissionRequired ? "permission required" : "permission not required",
         item.confirmationRequired ? "confirmation required" : "confirmation not required",
-        realExecutionEnabled ? "provider receipt required" : "real execution disabled"
+        "real execution disabled"
       ],
       secretValuesExposed: false,
       noExternalApiCall: true,
@@ -6269,9 +6182,7 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
   return {
     id: "production-provider-readiness",
     title: "Production Provider Readiness",
-    defaultPosture: items.some(item => item.realExecutionEnabled)
-      ? "Configured provider lanes can execute after their permission, consent, confirmation, receipt, and audit gates pass; unavailable lanes remain safely disabled."
-      : "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
+    defaultPosture: "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
     noSecretsExposed: true,
     noExternalApiCalls: true,
     noExecutionAuthorized: true,
@@ -6280,7 +6191,6 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
       configured: items.filter(item => item.configured).length,
       connected: items.filter(item => item.connected).length,
       simulationSupported: items.filter(item => item.simulationSupported).length,
-      realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
       realExecutionDisabled: items.filter(item => item.realExecutionDisabled).length
     },
     items
@@ -7997,8 +7907,7 @@ function extractCallIntentTarget(command = "") {
     { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
     { pattern: /^(buyer|comprador|acheteur|mnunuzi|مشتري|المشتري)$/i, label: "buyer", relationship: "buyer or trade contact" },
     { pattern: /^(recruiter|employer|reclutador|employeur|mwajiri)$/i, label: "recruiter", relationship: "workforce contact" },
-    { pattern: /^(emergency contact|emergency)$/i, label: "emergency contact", relationship: "emergency contact" },
-    { pattern: /^(owner test recipient|test recipient)$/i, label: "owner test recipient", relationship: "verified owner test recipient" }
+    { pattern: /^(emergency contact|emergency)$/i, label: "emergency contact", relationship: "emergency contact" }
   ];
   const role = roleMap.find(item => item.pattern.test(lowerName));
   if (role) return { type: "role", rawName, displayName: role.label, relationship: role.relationship };
@@ -8112,7 +8021,7 @@ function callIntentResolution(db, parsed = {}) {
   const matches = callContactCandidates(db, target);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
-    if (!callable && !["provider", "buyer", "owner test recipient"].includes(target.displayName)) return { status: "missing-number", matches };
+    if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
     return {
       status: "resolved",
       matches: [{
@@ -8273,12 +8182,6 @@ function outboundCallRecipientForPurpose(purpose = "", body = {}) {
   const lower = String(purpose || "").toLowerCase();
   const direct = normalizePhoneNumber(body.to || body.phone || body.recipientPhone || body.callbackNumber);
   if (direct) return direct;
-  const ownerRecipientRequested = body.ownerTestRecipient === true
-    || /^(?:the\s+)?owner test recipient$/i.test(String(body.contactName || body.targetLabel || "").trim())
-    || /\bowner test recipient\b/i.test(String(purpose || ""));
-  if (ownerRecipientRequested) {
-    return normalizePhoneNumber(firstPresentEnvValue(process.env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]));
-  }
   if (/(buyer|seller|trade|crop|order|delivery)/.test(lower)) {
     return normalizePhoneNumber(process.env.TRADE_BUYER_PHONE || process.env.BUYER_PHONE || process.env.DEMO_CALL_TO);
   }
@@ -16945,11 +16848,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "Ordinary conversation remains conversation. Never open, create, continue, or display a workflow merely because the user speaks.",
     "Answer greetings, presence checks, emotional support, casual questions, capability questions, and contextual follow-ups directly without a function tool.",
     "Use tools only when a real Nexus capability is needed, such as weather, maps, agriculture, health preparation, workforce, learning, marketplace, logistics, communications, provider readiness, receipts, or workflow preparation.",
-    "When the user asks to call or phone someone, you must call nexus_communications with the complete spoken request so Nexus can resolve the recipient and stage the confirmation gate.",
-    "When Nexus has a pending call and the user explicitly says yes, confirm, or do it, you must call nexus_communications with that exact confirmation. Never treat a spoken confirmation as ordinary conversation, and never claim a call started unless the tool result verifies liveCallPlaced.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code. Use the provider-backed translation returned by Nexus.",
-    "When the user asks to find, show, open, or play music or a video through YouTube, you must call nexus_music_media with the complete request. Nexus will show the real provider result in its Music and Media workspace.",
-    "When the user explicitly asks to upload, store, test, certify, or verify an image with Cloudinary, you must call nexus_file_document_analysis with the complete request so Nexus can return the provider receipt.",
     "When the user explicitly asks to open, show, display, or use Maps or requests a route or directions, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app. Nexus opens its own browser Maps workspace; an unavailable external route provider does not prevent that workspace from opening.",
     "Never claim an action completed without verified evidence from the Nexus tool result.",
     "High-risk actions require Nexus confirmation gates. Do not send messages, call, schedule, pay, dispatch, refill, diagnose, prescribe, contact providers, share location, or execute marketplace actions by inference.",
@@ -17250,18 +17149,6 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     route: dispatchRoute,
     command
   });
-  const callMetadata = result?.metadata?.provider === "twilio" && result?.metadata?.executionConfirmed === true
-    ? {
-        provider: "twilio",
-        providerAction: "call.start",
-        providerSucceeded: result.metadata.liveCallPlaced === true,
-        executionVerified: result.metadata.liveCallPlaced === true && /^CA[A-Za-z0-9]+$/.test(String(result.metadata.providerCallSid || "")),
-        providerData: {
-          sid: String(result.metadata.providerCallSid || ""),
-          status: String(result.metadata.deliveryStatus || result.metadata.callStatus || "")
-        }
-      }
-    : {};
   updateNexusSessionContext(db, command, envelope);
   safeGenesisVoiceStageEvent(db, {
     correlationId,
@@ -17284,8 +17171,7 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     executionVerified: Boolean(envelope.execution?.verified),
     missingInformation: envelope.missingInformation || [],
     blockedReason: envelope.blockedReason || null,
-    translationProvider: result?.metadata?.translation?.provider || null,
-    ...callMetadata
+    translationProvider: result?.metadata?.translation?.provider || null
   };
 }
 
@@ -17358,7 +17244,6 @@ function nexusOpenAiNativeToolSchemas() {
   return [
     tool("nexus_general_conversation", "Use Nexus shared conversation, contextual follow-up, clarification, correction, language, and capability explanation without forcing a workflow.", "conversation"),
     tool("nexus_translation", "Translate user-requested text or change language through the configured Nexus translation provider. Pass the requested target language in the language argument.", "read-only-provider"),
-    tool("nexus_music_media", "Search YouTube for user-requested music or video and show the real provider result in the Nexus Music and Media workspace. Pass the complete request in command.", "read-only-media-provider"),
     tool("nexus_live_knowledge", "Run Nexus Live Knowledge retrieval for current, source-backed, citation-sensitive, or research questions. Returns truthful credential-blocked/provider-error states when not configured.", "read-only-source"),
     tool("nexus_weather", "Run Nexus weather and forecast support using configured read-only weather providers or truthful missing-provider/missing-location states.", "read-only-source"),
     tool("nexus_maps_route", "Run Nexus maps, route, logistics, field visit, or typed-location support without browser geolocation, dispatch, or sharing precise location.", "read-only-or-preparation"),
@@ -17475,7 +17360,6 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
   if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
-  if (/\b(youtube|music|song|playlist|video)\b/.test(lower)) return "nexus_music_media";
   if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
   if (/\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";
@@ -17726,214 +17610,9 @@ function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
 
 function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = process.env) {
   const explicitlyRequested = args.ownerTestRecipient === true
-    || /\b(?:my|the|our)\s+(?:(?:approved|configured)\s+)*owner(?:'s)?\s+test\s+(?:recipient|number|phone)\b/i.test(String(command || ""));
+    || /\b(?:my|the|our)\s+(?:approved\s+)?owner(?:'s)?\s+test\s+(?:recipient|number|phone)\b/i.test(String(command || ""));
   if (!explicitlyRequested) return "";
   return sanitizePilotText(firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]), 120);
-}
-
-function ensureNexusProviderTransactions(db) {
-  if (!Array.isArray(db.nexusProviderTransactions)) db.nexusProviderTransactions = [];
-  return db.nexusProviderTransactions;
-}
-
-function nexusProviderTransactionLane(toolName = "", command = "") {
-  const text = String(command || "").toLowerCase();
-  if (toolName === "nexus_music_media" && /\b(youtube|music|song|playlist|video)\b/.test(text)) return "youtube";
-  if (toolName === "nexus_translation" && /\b(translate|translation)\b/.test(text)) return "translation";
-  if (toolName === "nexus_file_document_analysis" && /\bcloudinary\b/.test(text)) return "cloudinary";
-  if (toolName === "nexus_communications" && /\b(call|phone|dial|twilio)\b/.test(text)) return "twilio-call";
-  return "";
-}
-
-function nexusProviderTransactionId(user, lane = "", command = "") {
-  const identity = String(user?.id || user?.email || "standard-user").toLowerCase();
-  const normalized = String(command || "").toLowerCase().replace(/\b(yes|explicitly|confirm|confirmed|now|do it)\b/g, " ").replace(/\s+/g, " ").trim();
-  return `ptx_${crypto.createHash("sha256").update(`${identity}:${lane}:${normalized}`).digest("hex").slice(0, 24)}`;
-}
-
-function nexusTranslationRequest(command = "", args = {}) {
-  const text = String(command || "");
-  const targetMatch = text.match(/\b(?:into|to|in)\s+(Swahili|Kiswahili|French|Spanish|Arabic|Portuguese|English)\b/i);
-  const languageNames = { swahili: "sw", kiswahili: "sw", french: "fr", spanish: "es", arabic: "ar", portuguese: "pt", english: "en" };
-  const targetLanguage = String(args.targetLanguage || languageNames[String(targetMatch?.[1] || "").toLowerCase()] || args.language || "en").toLowerCase();
-  const sourceText = sanitizePilotText(
-    args.text
-      || text.match(/\btranslate\s+(.+?)\s+(?:into|to|in)\s+(?:Swahili|Kiswahili|French|Spanish|Arabic|Portuguese|English)\b/i)?.[1]
-      || text.replace(/^.*?\btranslate\b/i, "").trim(),
-    700
-  );
-  return { sourceText, targetLanguage, sourceLanguage: String(args.sourceLanguage || "en").toLowerCase() };
-}
-
-function nexusProviderTransactionEnvelope(transaction) {
-  const receipt = transaction.receipt || {};
-  return {
-    ok: transaction.ok === true,
-    transactionId: transaction.id,
-    providerTransaction: {
-      id: transaction.id,
-      lane: transaction.lane,
-      state: transaction.state,
-      createdAt: transaction.createdAt,
-      updatedAt: transaction.updatedAt
-    },
-    status: transaction.status,
-    response: transaction.response,
-    provider: transaction.provider,
-    providerAction: transaction.action,
-    providerAttempted: transaction.providerAttempted === true,
-    providerSucceeded: transaction.providerSucceeded === true,
-    executionAttempted: transaction.executionAttempted === true,
-    executionVerified: transaction.executionVerified === true,
-    requiresConfirmation: transaction.requiresConfirmation === true,
-    blockedReason: transaction.blockedReason || null,
-    providerData: transaction.providerData || {},
-    evidenceReceipt: receipt,
-    providerReceipt: receipt,
-    translationProvider: transaction.lane === "translation" ? transaction.provider : null,
-    translationReceipt: transaction.lane === "translation" ? receipt : null,
-    youtubeProvider: transaction.lane === "youtube" ? transaction.provider : null,
-    youtubeReceipt: transaction.lane === "youtube" ? receipt : null,
-    cloudinaryProvider: transaction.lane === "cloudinary" ? transaction.provider : null,
-    cloudinaryReceipt: transaction.lane === "cloudinary" ? receipt : null,
-    cloudinaryAsset: transaction.lane === "cloudinary" ? transaction.providerData : null,
-    noSecretValuesReturned: true,
-    noUngatedExecution: true
-  };
-}
-
-async function executeNexusProviderTransaction(db, user, toolName = "", args = {}, context = {}) {
-  const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
-  const lane = nexusProviderTransactionLane(toolName, command);
-  if (!lane) return null;
-  const transactions = ensureNexusProviderTransactions(db);
-  const confirmed = args.confirmed === true || /\b(explicitly\s+confirm|confirm(?:ed)?|yes.*(?:call|twilio)|do it)\b/i.test(command);
-  let transaction = null;
-
-  if (lane === "twilio-call" && confirmed) {
-    const requestedId = sanitizePilotText(args.transactionId || args.confirmationTransactionId || "", 100);
-    transaction = transactions.find(item => item.id === requestedId && item.lane === lane)
-      || transactions.find(item => item.lane === lane && item.userId === user?.id && item.state === "awaiting-confirmation");
-  } else {
-    const transactionId = nexusProviderTransactionId(user, lane, command);
-    transaction = transactions.find(item => item.id === transactionId);
-  }
-  if (transaction?.state === "completed" || transaction?.state === "failed") return nexusProviderTransactionEnvelope(transaction);
-  if (transaction?.state === "executing") {
-    for (let attempt = 0; attempt < 120 && transaction.state === "executing"; attempt += 1) {
-      await new Promise(resolve => setTimeout(resolve, 250));
-    }
-    if (transaction.state === "executing") {
-      return {
-        ...nexusProviderTransactionEnvelope(transaction),
-        ok: false,
-        status: "provider-timeout",
-        response: "The existing provider transaction is still running. Nexus did not execute it again.",
-        blockedReason: "transaction-in-progress"
-      };
-    }
-    return nexusProviderTransactionEnvelope(transaction);
-  }
-
-  if (!transaction) {
-    transaction = {
-      id: nexusProviderTransactionId(user, lane, command),
-      lane,
-      userId: user?.id || "",
-      command,
-      arguments: {},
-      state: "created",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    transactions.unshift(transaction);
-    if (transactions.length > 100) transactions.length = 100;
-  }
-
-  if (lane === "twilio-call" && !confirmed) {
-    const contact = nexusOpenAiNativeExtractContactArgs(command, args);
-    const configuredOwnerRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
-    const recipient = configuredOwnerRecipient || contact.to;
-    const validRecipient = /^\+?[0-9][0-9\s().-]{6,}$/.test(String(recipient || ""));
-    transaction.arguments = { to: recipient, message: contact.message || command, channel: "call" };
-    transaction.state = validRecipient ? "awaiting-confirmation" : "failed";
-    transaction.status = validRecipient ? "confirmation_required" : "invalid-recipient";
-    transaction.ok = false;
-    transaction.provider = "twilio";
-    transaction.action = "call.start";
-    transaction.response = validRecipient
-      ? "The Twilio call is staged for the configured owner test recipient. Say yes and explicitly confirm this call to execute the same stored transaction."
-      : "The Twilio call cannot be staged because the configured owner test recipient is missing or invalid.";
-    transaction.requiresConfirmation = validRecipient;
-    transaction.blockedReason = validRecipient ? "confirmation-required" : "recipient-required";
-    transaction.updatedAt = new Date().toISOString();
-    transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: "call.start", state: transaction.state, targetStored: validRecipient, verified: false };
-    return nexusProviderTransactionEnvelope(transaction);
-  }
-
-  try {
-    transaction.state = "executing";
-    transaction.updatedAt = new Date().toISOString();
-    if (lane === "youtube") {
-      const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({ mediaRequest: command }, process.env);
-      const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
-      if (!match || source.sourceStatus !== "source-result-available") throw new Error(source.resultSummary || "YouTube did not return a playable result");
-      const title = String(source.resultSummary || "").replace(/^YouTube video found:\s*/i, "").replace(/\s+—\s+.*$/, "").trim() || command;
-      transaction.provider = "youtube";
-      transaction.action = "media.search-and-play";
-      transaction.providerData = { videoId: match[1], title, query: command };
-      transaction.response = `Now playing through YouTube: ${title}. The requested result is visible in Music and Media.`;
-      transaction.receipt = { transactionId: transaction.id, provider: "youtube", action: transaction.action, videoId: match[1], title, visible: true, verified: true };
-    } else if (lane === "translation") {
-      const request = nexusTranslationRequest(command, args);
-      const translated = await translateDynamicContent(db, user, { text: request.sourceText, targetLanguage: request.targetLanguage, sourceLanguage: request.sourceLanguage, context: "voice-provider-transaction" });
-      transaction.provider = translated.provider;
-      transaction.action = "translation.translate";
-      transaction.providerData = translated;
-      transaction.response = translated.translatedText;
-      transaction.receipt = { transactionId: transaction.id, provider: translated.provider, action: transaction.action, sourceLanguage: translated.sourceLanguage, targetLanguage: translated.targetLanguage, translatedText: translated.translatedText, verified: Boolean(translated.translatedText) };
-    } else if (lane === "cloudinary") {
-      transaction.provider = "cloudinary";
-      transaction.action = "media.upload";
-      const uploaded = await cloudinaryProvider.uploadCertificationAsset();
-      if (!uploaded.ok) throw new Error(uploaded.error || uploaded.status || "Cloudinary upload failed");
-      transaction.providerData = uploaded.asset || {};
-      transaction.response = `Cloudinary media upload verified. Provider asset receipt ${uploaded.asset?.publicId || "received"}.`;
-      transaction.receipt = { transactionId: transaction.id, ...(uploaded.receipt || {}), provider: "cloudinary", action: transaction.action, publicId: uploaded.receipt?.publicId || uploaded.asset?.publicId || "", verified: true, secureDelivery: uploaded.receipt?.secureDelivery === true };
-    } else {
-      if (!transaction.arguments?.to) throw new Error("Call target is required");
-      const called = await nexusRealProviders.twilio.startCall({ to: transaction.arguments.to, message: transaction.arguments.message, confirmed: true }, process.env);
-      const body = called?.body || called || {};
-      if (!body.ok) throw new Error(body.message || body.status || "Twilio call failed");
-      transaction.provider = "twilio";
-      transaction.action = "call.start";
-      transaction.providerData = body.data || {};
-      transaction.response = body.message || "Twilio call started.";
-      transaction.receipt = { transactionId: transaction.id, provider: "twilio", action: transaction.action, sid: String(body.data?.sid || ""), status: String(body.data?.status || body.status || ""), verified: /^CA[A-Za-z0-9]+$/.test(String(body.data?.sid || "")) };
-    }
-    transaction.ok = true;
-    transaction.status = "completed";
-    transaction.state = "completed";
-    transaction.providerAttempted = true;
-    transaction.providerSucceeded = true;
-    transaction.executionAttempted = true;
-    transaction.executionVerified = transaction.receipt?.verified === true;
-    transaction.requiresConfirmation = false;
-    transaction.blockedReason = null;
-  } catch (error) {
-    transaction.ok = false;
-    transaction.status = "provider-error";
-    transaction.state = "failed";
-    transaction.response = String(error?.message || "Provider transaction failed.");
-    transaction.providerAttempted = true;
-    transaction.providerSucceeded = false;
-    transaction.executionAttempted = true;
-    transaction.executionVerified = false;
-    transaction.blockedReason = "provider-error";
-    transaction.receipt = { transactionId: transaction.id, provider: transaction.provider || lane, action: transaction.action || lane, verified: false, errorCategory: "provider-error" };
-  }
-  transaction.updatedAt = new Date().toISOString();
-  return nexusProviderTransactionEnvelope(transaction);
 }
 
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
@@ -18078,8 +17757,6 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (!command) {
     return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
   }
-  const providerTransaction = await executeNexusProviderTransaction(db, user, toolName, args, context);
-  if (providerTransaction) return { ...common, ...providerTransaction };
   if (toolName === "nexus_weather") {
     const location = sanitizePilotText(args.location || args.city || args.query || command, 180);
     const result = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
@@ -18363,8 +18040,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
 function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const toolNames = toolResults.map(item => String(item?.call?.name || ""));
-  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") || /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower); const media = toolNames.includes("nexus_music_media") || /\b(youtube|music|song|playlist|video)\b/.test(lower);
-  if (!(route || workforce || marketplace || health || learning || media)) return null;
+  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") || /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower);
+  if (!(route || workforce || marketplace || health || learning)) return null;
   const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i);
   const locationMatch = text.match(/\b(?:in|near|around)\s+([A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*)*)/u);
   const cropMatch = text.match(/\b(?:sell|selling|buy|buying)\s+(?:some\s+)?([\p{L}'-]+)/iu);
@@ -18372,7 +18049,7 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const countryMatch = text.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i);
   const country = countryMatch?.[1] || locationMatch?.[1]?.trim() || "";
   const jobType = /\bfarming\b/i.test(text) ? "farming" : (jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || "");
-  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : learning ? "learning" : "media";
+  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
   const payload = route
     ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || country, country }
     : workforce
@@ -18381,10 +18058,8 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
         ? { query: text, action: /\bsell(?:ing)?\b/i.test(text) ? "sell" : "buy", product: cropMatch?.[1]?.trim() || (/\bmaize\b/i.test(text) ? "maize" : ""), country }
         : health
           ? { query: text, intake: /blood[- ]?pressure|hypertension/i.test(text) ? "blood-pressure" : "healthcare", intakeType: /\b(healthcare|patient|telehealth)\b/i.exec(text)?.[1]?.toLowerCase() || "healthcare", country }
-          : learning
-            ? { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text }
-            : { query: text, provider: "YouTube", result: "Now playing through YouTube" };
-  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : learning ? "learning_start" : "media_playback", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
+          : { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text };
+  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
 }
 async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
   const status = nexusOpenAiNativeStatus(process.env);
@@ -24277,8 +23952,7 @@ async function executePendingAgentAction(db, user, pending) {
       purpose: pending.purpose || `call ${targetLabel}`,
       to: pending.to || pending.recipientPhone,
       recipientPhone: pending.recipientPhone || pending.to,
-      contactName: pending.contactName || targetLabel,
-      ownerTestRecipient: target.displayName === "owner test recipient"
+      contactName: pending.contactName || targetLabel
     });
     return {
       intent: "phone.outbound_call_requested",
@@ -24300,7 +23974,6 @@ async function executePendingAgentAction(db, user, pending) {
         callStatus: call.status,
         callId: call.id,
         callNumber: call.callNumber,
-        providerCallSid: call.delivery?.sid || "",
         redactedTo: redactPhoneNumber(call.to),
         deliveryStatus: call.delivery?.status || call.status,
         missing: call.delivery?.missing || []
@@ -43641,29 +43314,13 @@ async function api(req, res, url) {
     if (usersChanged) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     sessions.set(sid, found.id);
-    const durableToken = issueDurableAuthToken(found.id);
-    const cookies = [
-      setCookieHeader("agrinexus_sid", sid, {
-        maxAge: 43_200,
-        secure: secureCookieAttribute(req)
-      }),
-      ...(durableToken ? [setCookieHeader("agrinexus_auth", durableToken, {
-        maxAge: 43_200,
-        secure: secureCookieAttribute(req)
-      })] : [])
-    ];
-    return send(res, 200, publicState(db, found), { "set-cookie": cookies });
+    return send(res, 200, publicState(db, found), { "set-cookie": `agrinexus_sid=${sid}; HttpOnly; SameSite=Lax; Path=/` });
   }
 
   if (url.pathname === "/api/logout" && req.method === "POST") {
     const sid = parseCookies(req).agrinexus_sid;
     if (sid) sessions.delete(sid);
-    return send(res, 200, { ok: true }, {
-      "set-cookie": [
-        `agrinexus_sid=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`,
-        `agrinexus_auth=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`
-      ]
-    });
+    return send(res, 200, { ok: true }, { "set-cookie": "agrinexus_sid=; Max-Age=0; Path=/" });
   }
 
   if (url.pathname === "/api/auth/password-reset" && req.method === "POST") {
@@ -49049,15 +48706,6 @@ async function api(req, res, url) {
   if (url.pathname === "/api/voice/phone/outbound-call" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow outbound calls" });
     const body = await readBody(req);
-    if (body.confirmed !== true) {
-      return send(res, 409, {
-        ok: false,
-        status: "confirmation-required",
-        requiresConfirmation: true,
-        noCallPlaced: true,
-        error: "Explicit confirmation is required before an outbound call."
-      });
-    }
     const record = await createOutboundCallWorkflow(db, user, body);
     await writeDb(db);
     const state = publicState(db, user);

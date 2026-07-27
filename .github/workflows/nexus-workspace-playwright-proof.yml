@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-production-realtime-owner
-  cancel-in-progress: false
+  group: nexus-workspace-production-certification
+  cancel-in-progress: true
 
 jobs:
   deployed-workspace-proof:
@@ -52,24 +52,9 @@ jobs:
 
       - name: Certify all spoken production workflows
         env:
-          NEXUS_LIVE_EXPECTED_TURNS: "18"
+          NEXUS_LIVE_EXPECTED_TURNS: "16"
           NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
           NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
         run: |
           export CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
           npm run qa:nexus-genesis-live-provider-browser-smoke
-
-      - name: Require complete structured voice evidence
-        run: |
-          node -e 'const {readAndValidateEvidence}=require("./scripts/nexus-live-voice-evidence"); readAndValidateEvidence("output/nexus-live-voice-acceptance/live-provider-browser-evidence.json", Number(process.env.NEXUS_LIVE_EXPECTED_TURNS));'
-
-      - name: Publish workspace voice evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nexus-workspace-voice-evidence-${{ github.run_id }}
-          path: output/nexus-live-voice-acceptance/
-          if-no-files-found: error
-          retention-days: 30
-
-# Build 505 serialized certification trigger.

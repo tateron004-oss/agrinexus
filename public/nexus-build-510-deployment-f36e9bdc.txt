@@ -1,3 +1,0 @@
-Nexus Build 510 production deployment trigger.
-Source commit: f36e9bdcba09e8d069cb103a31edca10cb763884
-Expected markers: nexus-behavior-510 / agrinexus-pwa-v455
