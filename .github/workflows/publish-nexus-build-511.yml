@@ -53,3 +53,5 @@ jobs:
           git rm ".github/workflows/publish-nexus-build-511.yml"
           git commit -m "Finish provider voice certification pipeline"
           git push origin HEAD:main
+
+# registration trigger
