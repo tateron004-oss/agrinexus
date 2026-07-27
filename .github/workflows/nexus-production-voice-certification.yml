@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: nexus-production-realtime-owner
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deployed-voice-to-workspace:
