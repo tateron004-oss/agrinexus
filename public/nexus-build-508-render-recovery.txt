@@ -1,0 +1,4 @@
+Nexus Build 508 Render recovery
+Recovered intact server.js and public/app.js after the corrupted Build 508 publisher rewrite.
+Expected production markers: nexus-behavior-508 / agrinexus-pwa-v453
+Recovery validation: npm install, npm start, syntax, Realtime microphone handoff, microphone visibility, 25-turn lifecycle, and service-worker safety passed.
