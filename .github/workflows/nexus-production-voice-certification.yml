@@ -21,8 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-production-voice-certification
-  cancel-in-progress: true
+  group: nexus-production-realtime-owner
+  cancel-in-progress: false
 
 jobs:
   deployed-voice-to-workspace:
