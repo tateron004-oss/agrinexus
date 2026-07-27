@@ -80,7 +80,6 @@ jobs:
 
       - name: Drive every spoken production workflow
         id: voice
-        continue-on-error: true
         run: |
           set +e
           npm run qa:nexus-genesis-live-provider-browser-smoke 2>&1 | tee /tmp/nexus-voice-result.log
@@ -94,7 +93,7 @@ jobs:
 
       - name: Require complete structured voice evidence
         id: voice_evidence
-        if: always() && steps.voice.outcome == 'success'
+        if: always()
         run: |
           node -e 'const {readAndValidateEvidence}=require("./scripts/nexus-live-voice-evidence"); readAndValidateEvidence("output/nexus-live-voice-acceptance/live-provider-browser-evidence.json", Number(process.env.NEXUS_LIVE_EXPECTED_TURNS));'
 
