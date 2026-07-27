@@ -1,0 +1,5 @@
+Nexus Build 505 production deployment trigger.
+
+Reason: service-worker activation could reload the page during Realtime microphone startup.
+Expected live markers: nexus-behavior-505 and agrinexus-pwa-v450.
+Runtime change: defer service-worker reload while Realtime authorization or microphone startup is in flight.

@@ -1343,8 +1343,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-504";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v449";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-505";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v450";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9432,11 +9432,15 @@ function registerWebApp() {
           nexusPermanentMicrophoneStream?.active
           && nexusPermanentMicrophoneStream.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled)
         );
-        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected"].includes(String(realtimeVoiceSession?.connectionState || ""));
-        if (permanentMicrophoneActive || realtimeConnectingOrActive) {
+        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected", "listening"].includes(
+          String(realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "")
+        );
+        const realtimeStartupInFlight = Boolean(realtimeVoiceStarting || nexusOsVoiceStartInFlight);
+        if (permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight) {
           nexusGenesisVoiceLog("service-worker-reload-deferred-for-voice", {
             permanentMicrophoneActive,
-            realtimeState: realtimeVoiceSession?.connectionState || "microphone-ready"
+            realtimeStartupInFlight,
+            realtimeState: realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "microphone-ready"
           });
           return;
         }
