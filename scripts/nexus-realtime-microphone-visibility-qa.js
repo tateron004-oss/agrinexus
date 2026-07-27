@@ -39,18 +39,18 @@ const realtimeStartup = between(app, "async function startOpenAiAgentsRealtimeVo
 const checks = [
   [
     "Build and cache advanced",
-    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-507"') &&
-      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v452"') &&
-      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-507"') &&
-      sw.includes('const CACHE_NAME = "agrinexus-pwa-v452"') &&
-      index.includes("/app.js?v=nexus-behavior-507")
+    app.includes('const AGRINEXUS_BUILD_VERSION = "nexus-behavior-508"') &&
+      app.includes('const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v453"') &&
+      server.includes('const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-508"') &&
+      sw.includes('const CACHE_NAME = "agrinexus-pwa-v453"') &&
+      index.includes("/app.js?v=nexus-behavior-508")
   ],
   [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
       index.includes("Enable microphone") &&
-      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-507') &&
+      index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=nexus-behavior-508') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
   [
@@ -86,7 +86,9 @@ const checks = [
   ],
   [
     "Preverified microphone stream is handed to OpenAI Realtime",
-    realtimeStartup.includes("preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null") &&
+    realtimeStartup.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream") &&
+      realtimeStartup.includes("|| nexusPermanentMicrophoneStream") &&
+      realtimeStartup.includes("preverifiedMicrophoneStream,") &&
       realtimeAgent.includes("const preverifiedMicrophoneStream = options.preverifiedMicrophoneStream || null") &&
       realtimeAgent.includes("new OpenAIRealtimeWebRTC({") &&
       realtimeAgent.includes("mediaStream: preverifiedMicrophoneStream") &&
