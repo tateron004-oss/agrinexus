@@ -93,7 +93,10 @@ async function login(page) {
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
   // Exercise the same trusted click path as an end user. Programmatic
   // requestSubmit() does not activate production's login transition reliably.
-  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+    page.getByRole("button", { name: "Enter platform", exact: true }).click()
+  ]);
   // Require the authenticated application shell before opening any media stream.
   await expect(
     page.locator("#nexusPermanentMicrophoneBtn"),
