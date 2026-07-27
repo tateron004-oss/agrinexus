@@ -1,0 +1,110 @@
+name: Apply Build 505 voice startup repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-build-505-voice-startup-repair.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-build-505-voice-startup-repair
+  cancel-in-progress: false
+
+jobs:
+  apply-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Apply exact Build 505 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=$(rg -l 'nexus-behavior-504|agrinexus-pwa-v449' --glob '!output/**' --glob '!node_modules/**')
+          perl -pi -e 's/nexus-behavior-504/nexus-behavior-505/g; s/agrinexus-pwa-v449/agrinexus-pwa-v450/g; s/Build 504/Build 505/g; s/build 504/build 505/g' $files
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app_path = Path("public/app.js")
+          app = app_path.read_text()
+          old = "\n".join([
+              '        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected"].includes(String(realtimeVoiceSession?.connectionState || ""));',
+              '        if (permanentMicrophoneActive || realtimeConnectingOrActive) {',
+              '          nexusGenesisVoiceLog("service-worker-reload-deferred-for-voice", {',
+              '            permanentMicrophoneActive,',
+              '            realtimeState: realtimeVoiceSession?.connectionState || "microphone-ready"',
+              '          });'
+          ])
+          new = "\n".join([
+              '        const realtimeConnectingOrActive = ["authorizing", "connecting", "connected", "listening"].includes(',
+              '          String(realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "")',
+              '        );',
+              '        const realtimeStartupInFlight = Boolean(realtimeVoiceStarting || nexusOsVoiceStartInFlight);',
+              '        if (permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight) {',
+              '          nexusGenesisVoiceLog("service-worker-reload-deferred-for-voice", {',
+              '            permanentMicrophoneActive,',
+              '            realtimeStartupInFlight,',
+              '            realtimeState: realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState || "microphone-ready"',
+              '          });'
+          ])
+          if old not in app:
+              raise SystemExit("Expected service-worker voice guard was not found")
+          app_path.write_text(app.replace(old, new, 1))
+
+          qa_path = Path("scripts/nexus-service-worker-cache-safety-qa.js")
+          qa = qa_path.read_text()
+          old_qa = '''assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive'), "cache refresh must preserve a live microphone or connecting Realtime session");'''
+          new_qa = "\n".join([
+              '''assert(app.includes('realtimeVoiceSession?.connectionState || realtimeVoiceSession?.controllerState'), "cache refresh must recognize the Realtime authorizing controller state");''',
+              '''assert(app.includes('realtimeVoiceStarting || nexusOsVoiceStartInFlight'), "cache refresh must recognize Realtime startup before the session object is active");''',
+              '''assert(app.includes('permanentMicrophoneActive || realtimeConnectingOrActive || realtimeStartupInFlight'), "cache refresh must preserve a live microphone or in-flight Realtime session");'''
+          ])
+          if old_qa not in qa:
+              raise SystemExit("Expected service-worker QA assertion was not found")
+          qa_path.write_text(qa.replace(old_qa, new_qa, 1))
+
+          old_marker = Path("public/nexus-build-504-production-redeploy.txt")
+          if old_marker.exists():
+              old_marker.unlink()
+          Path("public/nexus-build-505-production-redeploy.txt").write_text(
+              "Nexus Build 505 production deployment trigger.\n\n"
+              "Reason: service-worker activation could reload the page during Realtime microphone startup.\n"
+              "Expected live markers: nexus-behavior-505 and agrinexus-pwa-v450.\n"
+              "Runtime change: defer service-worker reload while Realtime authorization or microphone startup is in flight.\n"
+          )
+          PY
+
+      - name: Run Build 505 coupled certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check public/app.js
+          node --check server.js
+          for file in $(git diff --name-only -- 'scripts/*qa.js'); do
+            node "$file"
+          done
+          git diff --check
+          if rg -n 'nexus-behavior-504|agrinexus-pwa-v449' --glob '!output/**' --glob '!node_modules/**'; then
+            echo "Stale Build 504 markers remain"
+            exit 1
+          fi
+
+      - name: Publish verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "nexus-release-bot"
+          git config user.email "nexus-release-bot@users.noreply.github.com"
+          git add public server.js scripts
+          git commit -m "Fix Build 505 Realtime startup reload race"
+          git push origin HEAD:main
