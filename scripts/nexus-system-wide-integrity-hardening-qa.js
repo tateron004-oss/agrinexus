@@ -277,19 +277,19 @@ function assertEnvelope(envelope, label, correlationId) {
   ].forEach(token => assert(serverSource.includes(token), `server missing ${token}`));
   FAILURE_CATEGORIES.forEach(category => assert(serverSource.includes(category), `failure taxonomy missing ${category}`));
   [
-    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-508\"",
-    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v453\"",
+    "const AGRINEXUS_BUILD_VERSION = \"nexus-behavior-509\"",
+    "const AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-v454\"",
     "const NEXUS_GENESIS_VOICE_RUNTIME_VERSION = \"nexus-genesis-voice-runtime-v456\"",
     "payload?.nexusResponse || payload?.genesisResponse"
   ].forEach(token => assert(appSource.includes(token), `app missing ${token}`));
   [
-    "const CACHE_NAME = \"agrinexus-pwa-v453\"",
-    "const BUILD_VERSION = \"nexus-behavior-508\""
+    "const CACHE_NAME = \"agrinexus-pwa-v454\"",
+    "const BUILD_VERSION = \"nexus-behavior-509\""
   ].forEach(token => assert(swSource.includes(token), `service worker missing ${token}`));
   [
-    "/app.js?v=nexus-behavior-508",
-    "/styles.css?v=nexus-behavior-508",
-    "/manifest.webmanifest?v=nexus-behavior-508"
+    "/app.js?v=nexus-behavior-509",
+    "/styles.css?v=nexus-behavior-509",
+    "/manifest.webmanifest?v=nexus-behavior-509"
   ].forEach(token => assert(indexSource.includes(token), `index missing ${token}`));
   assert(appSource.includes("startVoiceListening({ source: \"genesis-home-permission-granted-auto-start\" })"), "Genesis mic auto-start must remain intact");
   assert(appSource.includes("startRealtimeVoiceSession"), "OpenAI Realtime start must remain intact");

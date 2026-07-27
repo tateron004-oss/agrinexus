@@ -25,15 +25,15 @@ const spokenJourneys = [
   { workspace: "workforce", words: ["farming", "Kenya"], command: "Nexus, open Workforce and search for farming jobs in Kenya." },
   { workspace: "trade", words: ["50", "maize"], command: "Nexus, open Marketplace and sell 50 bags of maize." },
   { workspace: "map", words: ["Nairobi", "Nakuru"], command: "Nexus, show me the best route from Nairobi to Nakuru." },
-  { workspace: "media", words: ["YouTube video found", "maize"], command: "Nexus, use YouTube to show me how to plant maize." },
+  { workspace: "media", words: ["Now playing through YouTube", "Kenyan"], command: "Nexus, play Kenyan music through YouTube and show the result in Music and Media." },
   { workspace: "reminders", words: ["Reminders"], command: "Nexus, open Reminders." },
   { workspace: "offline", words: ["Offline", "Queue"], command: "Nexus, open the Offline Queue." },
   { workspace: "live-knowledge", words: ["climate-smart", "sources"], command: "Nexus, use the internet to research current climate-smart agriculture information and show sources." },
-  { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, change language to Swahili and tell me good morning farmer." }
-  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, upload and verify the Cloudinary certification image." }
+  { workspace: null, words: [], provider: "google-cloud-translation", command: "Nexus, use the translation tool to translate good morning farmer into Swahili." }
+  ,{ workspace: null, words: [], cloudinaryProvider: "cloudinary", command: "Nexus, use the file and document tool to upload and verify the Cloudinary certification image." }
   ,{ workspace: null, words: [], twilioProvider: "twilio", command: "Nexus, send a production test SMS to my owner test recipient. I explicitly confirm this test send." }
-  ,{ workspace: null, words: [], callStage: true, command: "Nexus call owner test recipient" }
-  ,{ workspace: null, words: [], twilioCallProvider: "twilio", command: "Yes" }
+  ,{ workspace: null, words: [], callStage: true, command: "Nexus, prepare a Twilio test call to my configured owner test recipient." }
+  ,{ workspace: null, words: [], twilioCallProvider: "twilio", command: "Yes, I explicitly confirm that Twilio test call to my configured owner test recipient now." }
 ];
 const browserCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"]

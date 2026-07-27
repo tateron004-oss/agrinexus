@@ -1344,8 +1344,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-508";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v453";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-509";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v454";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -49908,6 +49908,33 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     blockedReason: "client-parse-failed",
     category: "tool-response-parse"
   }));
+  if (toolName === "nexus_music_media" && /\byoutube\b/i.test(command)) {
+    try {
+      const youtube = await playNexusYouTubeMusic(command, { announce: false });
+      result.ok = true;
+      result.status = "completed";
+      result.response = `YouTube video found: ${youtube.title || youtube.query}. The result is visible and playing in Music and Media.`;
+      result.providerAttempted = true;
+      result.providerSucceeded = true;
+      result.executionAttempted = true;
+      result.executionVerified = true;
+      result.youtubeProvider = "youtube";
+      result.youtubeReceipt = {
+        videoId: String(youtube.videoId || ""),
+        title: String(youtube.title || ""),
+        visible: true
+      };
+    } catch (error) {
+      result.ok = false;
+      result.status = "provider-error";
+      result.response = `YouTube did not return a playable result. ${String(error?.message || error || "")}`.trim();
+      result.providerAttempted = true;
+      result.providerSucceeded = false;
+      result.executionAttempted = true;
+      result.executionVerified = false;
+      result.blockedReason = "youtube-provider-error";
+    }
+  }
   await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
   if (result.genesisAcknowledgement?.verified === true) {
     const workspaceName = String(result.genesisAcknowledgement.workspace || result.genesisAction?.workspace || "Nexus");

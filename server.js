@@ -56,8 +56,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-508";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v453";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-509";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v454";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -16908,6 +16908,8 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to call or phone someone, you must call nexus_communications with the complete spoken request so Nexus can resolve the recipient and stage the confirmation gate.",
     "When Nexus has a pending call and the user explicitly says yes, confirm, or do it, you must call nexus_communications with that exact confirmation. Never treat a spoken confirmation as ordinary conversation, and never claim a call started unless the tool result verifies liveCallPlaced.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code. Use the provider-backed translation returned by Nexus.",
+    "When the user asks to find, show, open, or play music or a video through YouTube, you must call nexus_music_media with the complete request. Nexus will show the real provider result in its Music and Media workspace.",
+    "When the user explicitly asks to upload, store, test, certify, or verify an image with Cloudinary, you must call nexus_file_document_analysis with the complete request so Nexus can return the provider receipt.",
     "When the user explicitly asks to open, show, display, or use Maps or requests a route or directions, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app. Nexus opens its own browser Maps workspace; an unavailable external route provider does not prevent that workspace from opening.",
     "Never claim an action completed without verified evidence from the Nexus tool result.",
     "High-risk actions require Nexus confirmation gates. Do not send messages, call, schedule, pay, dispatch, refill, diagnose, prescribe, contact providers, share location, or execute marketplace actions by inference.",
@@ -17316,6 +17318,7 @@ function nexusOpenAiNativeToolSchemas() {
   return [
     tool("nexus_general_conversation", "Use Nexus shared conversation, contextual follow-up, clarification, correction, language, and capability explanation without forcing a workflow.", "conversation"),
     tool("nexus_translation", "Translate user-requested text or change language through the configured Nexus translation provider. Pass the requested target language in the language argument.", "read-only-provider"),
+    tool("nexus_music_media", "Search YouTube for user-requested music or video and show the real provider result in the Nexus Music and Media workspace. Pass the complete request in command.", "read-only-media-provider"),
     tool("nexus_live_knowledge", "Run Nexus Live Knowledge retrieval for current, source-backed, citation-sensitive, or research questions. Returns truthful credential-blocked/provider-error states when not configured.", "read-only-source"),
     tool("nexus_weather", "Run Nexus weather and forecast support using configured read-only weather providers or truthful missing-provider/missing-location states.", "read-only-source"),
     tool("nexus_maps_route", "Run Nexus maps, route, logistics, field visit, or typed-location support without browser geolocation, dispatch, or sharing precise location.", "read-only-or-preparation"),
@@ -17432,6 +17435,7 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
   if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
+  if (/\b(youtube|music|song|playlist|video)\b/.test(lower)) return "nexus_music_media";
   if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
   if (/\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";

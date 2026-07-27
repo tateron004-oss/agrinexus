@@ -11,6 +11,8 @@ const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 assert.match(server, /nexusMusicMediaSourceProvider\.getMusicMediaSourceResultAsync/, "YouTube search must use the server-side provider so the API key never enters the browser");
 assert.match(server, /\/api\/music\/youtube\/search/, "YouTube music search endpoint must exist");
 assert.match(server, /source\.sourceUrl.*match/, "Only a returned YouTube video ID may be embedded");
+assert.match(server, /tool\("nexus_music_media"/, "Realtime must expose a dedicated music and media provider tool");
+assert.match(server, /must call nexus_music_media/, "Realtime instructions must route spoken YouTube requests to the provider tool");
 const browserPlaybackBlock = app.slice(app.indexOf("const nexusYouTubePlayback"), app.indexOf("function clearNexusLocalMusicTimers"));
 assert.doesNotMatch(browserPlaybackBlock, /YOUTUBE_API_KEY/, "YouTube playback code must not receive the server-side API key");
 assert.match(app, /youtube-nocookie\.com\/embed/, "Music must play in the privacy-enhanced YouTube embed");
@@ -21,12 +23,16 @@ assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Ne
 assert.match(app, /youtubePlayerCommand\("stopVideo"\)/, "Stop voice control must reach YouTube");
 assert.match(app, /setVoiceResponse\("YouTube music stopped\. Nexus is still listening\."/,
   "Stopping music must preserve Nexus listening");
-assert.match(server, /nexus-behavior-508/);
-assert.match(app, /nexus-behavior-508/);
-assert.match(html, /nexus-behavior-508/);
-assert.match(sw, /nexus-behavior-508/);
-assert.match(server, /agrinexus-pwa-v453/);
-assert.match(app, /agrinexus-pwa-v453/);
-assert.match(sw, /agrinexus-pwa-v453/);
+assert.match(app, /toolName === "nexus_music_media"[\s\S]*playNexusYouTubeMusic/,
+  "Realtime YouTube tool results must open the visible provider-backed player");
+assert.match(app, /youtubeReceipt = \{[\s\S]*visible: true/,
+  "Visible YouTube playback must retain a verification receipt");
+assert.match(server, /nexus-behavior-509/);
+assert.match(app, /nexus-behavior-509/);
+assert.match(html, /nexus-behavior-509/);
+assert.match(sw, /nexus-behavior-509/);
+assert.match(server, /agrinexus-pwa-v454/);
+assert.match(app, /agrinexus-pwa-v454/);
+assert.match(sw, /agrinexus-pwa-v454/);
 
 console.log("[nexus-youtube-music-playback-qa] passed");
