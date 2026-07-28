@@ -43,6 +43,7 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPENAI_REALTIME_API_KEY || secrets.NEXUS_OPENAI_API_KEY }}
       NEXUS_CLEAN_BASE_URL: http://127.0.0.1:4317
+      NEXUS_CLEAN_CERTIFICATION: "true"
     steps:
       - uses: actions/checkout@v4
         with:

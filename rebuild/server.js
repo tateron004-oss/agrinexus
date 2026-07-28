@@ -44,9 +44,10 @@ const server = http.createServer(async (request, response) => {
   response.setHeader("content-type", contentTypes[path.extname(file)] || "application/octet-stream");
   if (requested === "index.html") {
     const issued = authority.issue({ userId: "windows-certification", roles: ["standard-user"] });
+    const certification = process.env.NEXUS_CLEAN_CERTIFICATION === "true";
     const html = fs.readFileSync(file, "utf8").replace(
       "<script>window.NEXUS_CLEAN_CONFIG = window.NEXUS_CLEAN_CONFIG || {};</script>",
-      `<script>window.NEXUS_CLEAN_CONFIG = Object.freeze({sessionToken:${JSON.stringify(issued.token)}});</script>`
+      `<script>window.NEXUS_CLEAN_CONFIG = Object.freeze({sessionToken:${JSON.stringify(issued.token)},certification:${certification}});</script>`
     );
     response.end(html);
     return;

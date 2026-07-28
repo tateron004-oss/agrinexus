@@ -1,6 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
@@ -38,6 +39,60 @@ function speak(text) {
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(stderr || `speech exited ${code}`)));
   });
+}
+
+function synthesizePcm(text) {
+  const wavPath = path.join(os.tmpdir(), `nexus-command-${process.pid}-${Date.now()}.wav`);
+  const encodedText = Buffer.from(text, "utf16le").toString("base64");
+  const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
+  const script = [
+    "Add-Type -AssemblyName System.Speech",
+    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedText}'))`,
+    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
+    "$f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(24000,16,1)",
+    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
+    "$v.Rate=-1",
+    "$v.SetOutputToWaveFile($p,$f)",
+    "$v.Speak($t)",
+    "$v.Dispose()"
+  ].join(";");
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("exit", (code) => {
+      if (code !== 0) return reject(new Error(stderr || `speech synthesis exited ${code}`));
+      try {
+        const wav = fs.readFileSync(wavPath);
+        resolve(readWaveData(wav));
+      } catch (error) {
+        reject(error);
+      } finally {
+        fs.rmSync(wavPath, { force: true });
+      }
+    });
+  });
+}
+
+function readWaveData(wav) {
+  for (let offset = 12; offset + 8 <= wav.length;) {
+    const id = wav.toString("ascii", offset, offset + 4);
+    const size = wav.readUInt32LE(offset + 4);
+    if (id === "data") return wav.subarray(offset + 8, offset + 8 + size);
+    offset += 8 + size + (size % 2);
+  }
+  throw new Error("Synthesized WAV contains no PCM data.");
+}
+
+async function injectSpokenCommand(page, text) {
+  const pcm = await synthesizePcm(text);
+  const chunks = [];
+  for (let offset = 0; offset < pcm.length; offset += 16384) {
+    chunks.push(pcm.subarray(offset, offset + 16384).toString("base64"));
+  }
+  await page.evaluate((audioChunks) => {
+    window.NexusCleanRuntime.certificationAudio.send(audioChunks);
+  }, chunks);
 }
 
 test.use({
@@ -107,11 +162,12 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await page.locator("#nexus-audio").evaluate((audio) => {
       audio.muted = true;
     });
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
 
     for (const [workspace, command] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await speak(command);
+      await injectSpokenCommand(page, command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
@@ -121,6 +177,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
       driverEvidence.turns.push({ workspace, command, passed: true });
     }
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
     expect(driverEvidence.turns).toHaveLength(13);

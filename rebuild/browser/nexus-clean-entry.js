@@ -162,6 +162,33 @@ function boot() {
     start: () => runtime.start({ sessionToken, userGesture: true }),
     stop: (reason) => runtime.stop(reason),
     route: (command) => runtime.route(command),
+    certificationAudio: config.certification ? Object.freeze({
+      begin() {
+        const track = microphone.stream?.getAudioTracks?.()[0];
+        if (!track || track.readyState !== "live") throw new Error("Physical microphone is not live.");
+        track.enabled = false;
+        realtime.send({
+          type: "session.update",
+          session: {
+            type: "realtime",
+            audio: { input: { turn_detection: null } }
+          }
+        });
+      },
+      send(chunks) {
+        realtime.send({ type: "input_audio_buffer.clear" });
+        for (const audio of chunks) {
+          realtime.send({ type: "input_audio_buffer.append", audio });
+        }
+        realtime.send({ type: "input_audio_buffer.commit" });
+        realtime.send({ type: "response.create" });
+      },
+      end() {
+        const track = microphone.stream?.getAudioTracks?.()[0];
+        if (track && track.readyState === "live") track.enabled = true;
+        runtime.configureSession();
+      }
+    }) : null,
     snapshot: () => Object.freeze({ state: machine.snapshot(), receipts: [...receipts] })
   });
 }
