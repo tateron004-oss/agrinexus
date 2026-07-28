@@ -227,7 +227,9 @@ class NexusBrowserRuntime {
         workspace: resolution.workspace,
         acknowledgementId: acknowledgement.id || null,
         evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-        evidenceStatus: acknowledgement.evidenceStatus || null
+        evidenceStatus: acknowledgement.evidenceStatus || null,
+        evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+        evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
       });
     }
     if (callId) {

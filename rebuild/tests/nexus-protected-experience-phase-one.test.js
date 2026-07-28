@@ -34,6 +34,8 @@ assert.match(instructions, /natural British woman/);
 assert.match(instructions, /Hello Ron, how can I help\?/);
 assert.match(instructions, /English, Spanish, French, Swahili, Arabic, or Portuguese|language code sw/);
 assert.match(instructions, /Never claim/);
+assert.match(instructions, /clickable web links/);
+assert.match(instructions, /never say that you cannot display links or websites/);
 
 const sent = [];
 const receipts = [];

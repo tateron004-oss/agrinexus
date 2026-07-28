@@ -466,7 +466,7 @@
         ["learning", /\b(learn|lesson|course|literacy|training)\b/i],
         ["music", /\b(play|music|song|songs)\b/i],
         ["offline", /\b(offline|sync|queue)\b/i],
-        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|show (me )?(the )?(source|sources|reference|references|evidence)|cite|citation)\b/i]
+        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|(show|display) (me )?(the )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
       ]);
       function routeCommand(command, connectionState) {
         if (connectionState !== "connected") {
@@ -529,6 +529,9 @@
           "For every Nexus application request, call route_nexus_command exactly once with the user's complete command.",
           "Application requests include asking to help, open, start, record, find, search, plan, play, sell, show, or remind through a Nexus capability.",
           "Do not answer an application request conversationally before calling route_nexus_command.",
+          "You can display real maps, approved-source evidence, clickable web links, and resource websites inside the Nexus visual workspace.",
+          "When the user asks to show a source, reference, link, website, resource, proof, or other visual result, call route_nexus_command with the complete request; never say that you cannot display links or websites.",
+          "For a follow-up such as show me the link, show the reference, or open the source, use the active visible research receipt instead of starting an unrelated search.",
           "After a visible workspace receipt, speak a brief truthful confirmation.",
           "Never claim that an external action completed without a verified receipt.",
           "Health guidance must preserve consent, safety, and emergency escalation."
@@ -789,7 +792,9 @@
               workspace: resolution.workspace,
               acknowledgementId: acknowledgement.id || null,
               evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-              evidenceStatus: acknowledgement.evidenceStatus || null
+              evidenceStatus: acknowledgement.evidenceStatus || null,
+              evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+              evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
             });
           }
           if (callId) {
@@ -861,7 +866,9 @@
               evidenceReceiptId: event.detail.evidenceReceiptId || null,
               evidenceStatus: event.detail.evidenceStatus || null,
               evidenceSummary: event.detail.evidenceSummary || null,
-              evidenceClaims: event.detail.evidenceClaims || []
+              evidenceClaims: event.detail.evidenceClaims || [],
+              evidenceSourceCount: event.detail.evidenceSourceCount || 0,
+              evidenceLinksVisible: event.detail.evidenceLinksVisible === true
             });
           }
           windowObject.addEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
@@ -976,6 +983,17 @@
           "'": "&#39;"
         })[character]);
       }
+      function safeExternalUrl(value) {
+        try {
+          const url = new URL(String(value || ""));
+          return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+        } catch {
+          return "";
+        }
+      }
+      function isEvidenceDisplayFollowUp(command) {
+        return /\b(show (me )?(the )?(source|sources|reference|references|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|where did (you|that) (get|come) from)\b/i.test(String(command || ""));
+      }
       function musicSearchFromCommand(command) {
         return String(command || "Kenyan music").replace(/\b(nexus|please|play|open|music|media|song|songs)\b/gi, " ").replace(/\s+/g, " ").trim() || "Kenyan music";
       }
@@ -1024,12 +1042,17 @@
       </section>
       <aside class="evidence-sources" aria-label="Approved sources">
         <h2>Approved sources</h2>
-        ${sources.map((source) => `<article class="evidence-source">
+        ${sources.map((source) => {
+          const sourceUrl = safeExternalUrl(source.url);
+          return `<article class="evidence-source">
           <strong>[${escapeMarkup(source.id)}] ${escapeMarkup(source.title)}</strong>
           <span>${escapeMarkup(source.organization)}</span>
-          <a href="${escapeMarkup(source.url)}" target="_blank" rel="noopener noreferrer">Open source</a>
+          ${sourceUrl ? `<a class="evidence-source-link" href="${escapeMarkup(sourceUrl)}" target="_blank" rel="noopener noreferrer">
+                <span>Open website</span><small>${escapeMarkup(sourceUrl)}</small>
+              </a>` : '<span class="evidence-limited">Verified website address unavailable</span>'}
           <small>Published: ${escapeMarkup(source.publishedAt || "date not provided")} \xB7 Retrieved: ${escapeMarkup(source.retrievedAt)}</small>
-        </article>`).join("")}
+        </article>`;
+        }).join("")}
       </aside>
     </div>
     <form class="evidence-follow-up">
@@ -1078,11 +1101,18 @@
       }
       var nexusLeafletMap = null;
       var nexusLeafletLayers = [];
+      var nexusMapRequestGeneration = 0;
       async function resolveVisibleMap({ command, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
+        const requestGeneration = ++nexusMapRequestGeneration;
         const canvas = documentObject.getElementById("nexus-map-canvas");
         const summary = documentObject.getElementById("nexus-map-summary");
         const link = documentObject.getElementById("nexus-map-link");
         if (!canvas || !summary || !link || !leaflet) throw new Error("The interactive map renderer is unavailable.");
+        if (nexusLeafletMap) {
+          nexusLeafletLayers.forEach((layer) => nexusLeafletMap.removeLayer(layer));
+          nexusLeafletLayers = [];
+        }
+        link.removeAttribute?.("href");
         summary.textContent = "Nexus is locating the requested place and preparing the visible map\u2026";
         const response = await fetchImpl("/api/maps/resolve", {
           method: "POST",
@@ -1090,6 +1120,11 @@
           body: JSON.stringify({ command })
         });
         const result = await response.json();
+        if (requestGeneration !== nexusMapRequestGeneration) {
+          const error = new Error("A newer map request replaced this lookup.");
+          error.code = "NEXUS_MAP_REQUEST_SUPERSEDED";
+          throw error;
+        }
         if (!response.ok) throw new Error(result.message || "Nexus could not display the requested map.");
         if (!nexusLeafletMap) {
           nexusLeafletMap = leaflet.map(canvas).setView([0, 20], 3);
@@ -1098,8 +1133,6 @@
             maxZoom: 19
           }).addTo(nexusLeafletMap);
         }
-        nexusLeafletLayers.forEach((layer) => nexusLeafletMap.removeLayer(layer));
-        nexusLeafletLayers = [];
         if (result.type === "route") {
           const latLngs = result.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
           const line = leaflet.polyline(latLngs, { color: "#39d7ff", weight: 6, opacity: 0.9 }).addTo(nexusLeafletMap);
@@ -1227,6 +1260,7 @@
         const workspaceVoiceStatus = document.getElementById("nexus-workspace-voice-status");
         const config = window.NEXUS_CLEAN_CONFIG || {};
         const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
+        let activeEvidenceReceipt = null;
         if (!sessionToken) {
           status.textContent = "Sign in to speak with Nexus";
           orb.disabled = true;
@@ -1246,18 +1280,28 @@
               mapResult = await resolveVisibleMap({ command: detail.command, sessionToken });
             } catch (error) {
               visualSuccess = false;
-              const summary = document.getElementById("nexus-map-summary");
-              if (summary) summary.textContent = error.message;
+              if (error.code !== "NEXUS_MAP_REQUEST_SUPERSEDED") {
+                const summary = document.getElementById("nexus-map-summary");
+                if (summary) summary.textContent = error.message;
+              }
             }
           }
           if (detail.workspace === "live-knowledge") {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
             try {
-              evidence = await researchEvidence({
-                question: detail.command,
-                sessionToken,
-                surface: evidenceSurface
-              });
+              if (activeEvidenceReceipt && isEvidenceDisplayFollowUp(detail.command)) {
+                renderEvidenceWorkspace({ receipt: activeEvidenceReceipt, surface: evidenceSurface });
+                evidence = activeEvidenceReceipt;
+              } else {
+                evidence = await researchEvidence({
+                  question: detail.command,
+                  sessionToken,
+                  surface: evidenceSurface
+                });
+                if (evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0) {
+                  activeEvidenceReceipt = evidence;
+                }
+              }
             } catch (error) {
               if (evidenceSurface) {
                 evidenceSurface.hidden = false;
@@ -1279,7 +1323,11 @@
                 evidenceReceiptId: evidence && evidence.id || null,
                 evidenceStatus: evidence && evidence.status || null,
                 evidenceSummary: evidence && evidence.summary || null,
-                evidenceClaims: evidence && evidence.claims || []
+                evidenceClaims: evidence && evidence.claims || [],
+                evidenceSourceCount: evidence && Array.isArray(evidence.sources) ? evidence.sources.length : 0,
+                evidenceLinksVisible: Boolean(
+                  evidence && Array.isArray(evidence.sources) && evidence.sources.some((source) => Boolean(safeExternalUrl(source.url)))
+                )
               })
             }));
           });
@@ -1488,6 +1536,8 @@
         renderEvidenceWorkspace,
         researchEvidence,
         resolveVisibleMap,
+        safeExternalUrl,
+        isEvidenceDisplayFollowUp,
         statusFromReceipt
       };
     }

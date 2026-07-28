@@ -14,7 +14,11 @@ const {
 } = require("../nexus-core/approved-evidence-service");
 const { EvidenceReceiptStore } = require("../nexus-core/evidence-receipt-store");
 const { routeCommand } = require("../nexus-core/router");
-const { renderEvidenceWorkspace } = require("../browser/nexus-clean-entry");
+const {
+  isEvidenceDisplayFollowUp,
+  renderEvidenceWorkspace,
+  safeExternalUrl
+} = require("../browser/nexus-clean-entry");
 
 async function main() {
   assert.equal(classifyEvidenceDomain("What guideline applies to hypertension?").key, "clinical");
@@ -24,6 +28,13 @@ async function main() {
   assert.equal(isApprovedSource("https://www.who.int/news/item", classifyEvidenceDomain("clinical guideline")), true);
   assert.equal(isApprovedSource("https://random-blog.example/claim", classifyEvidenceDomain("clinical guideline")), false);
   assert.equal(routeCommand("Show me the references", "connected").workspace, "live-knowledge");
+  assert.equal(routeCommand("Show me the link", "connected").workspace, "live-knowledge");
+  assert.equal(routeCommand("Open the website", "connected").workspace, "live-knowledge");
+  assert.equal(routeCommand("Display the resources", "connected").workspace, "live-knowledge");
+  assert.equal(isEvidenceDisplayFollowUp("Show me the link"), true);
+  assert.equal(isEvidenceDisplayFollowUp("Research youth unemployment in Kenya"), false);
+  assert.equal(safeExternalUrl("https://www.who.int/guidance"), "https://www.who.int/guidance");
+  assert.equal(safeExternalUrl("javascript:alert(1)"), "");
 
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-evidence-"));
   const receiptPath = path.join(temporaryDirectory, "receipts.jsonl");
@@ -82,7 +93,8 @@ async function main() {
   assert.equal(evidenceSurface.hidden, false);
   assert.match(evidenceSurface.innerHTML, /Verified across approved sources/);
   assert.match(evidenceSurface.innerHTML, /\[S1\]/);
-  assert.match(evidenceSurface.innerHTML, /Open source/);
+  assert.match(evidenceSurface.innerHTML, /Open website/);
+  assert.match(evidenceSurface.innerHTML, /https:\/\/www\.who\.int\/publications\/hypertension-guidance/);
   assert.match(evidenceSurface.innerHTML, /Research follow-up/);
   assert.match(evidenceSurface.innerHTML, new RegExp(receipt.id));
 
