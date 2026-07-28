@@ -41,27 +41,32 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 35
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      NEXUS_CLEAN_SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPENAI_REALTIME_API_KEY || secrets.NEXUS_OPENAI_API_KEY }}
       NEXUS_CLEAN_BASE_URL: http://127.0.0.1:4317
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Verify interactive physical audio
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: ./scripts/nexus-windows-real-device-preflight.ps1
       - name: Install certification driver
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.25.8
       - name: Build clean browser
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node rebuild/scripts/build-browser.js
       - name: Start clean Genesis server
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           if (-not $env:OPENAI_API_KEY) { throw "OPENAI_API_KEY secret is required." }
-          if (-not $env:NEXUS_CLEAN_SESSION_SECRET) { throw "SESSION_SECRET secret is required." }
+          $secretBytes = New-Object byte[] 48
+          [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($secretBytes)
+          $env:NEXUS_CLEAN_SESSION_SECRET = [Convert]::ToBase64String($secretBytes)
+          Add-Content -Path $env:GITHUB_ENV -Value "NEXUS_CLEAN_SESSION_SECRET=$env:NEXUS_CLEAN_SESSION_SECRET"
           $process = Start-Process node -ArgumentList "rebuild/server.js" -PassThru -RedirectStandardOutput "clean-server.log" -RedirectStandardError "clean-server-error.log"
           $process.Id | Set-Content "clean-server.pid"
           for ($i = 0; $i -lt 30; $i++) {
@@ -73,16 +78,18 @@ jobs:
           }
           throw "Clean Genesis server did not become healthy."
       - name: Certify physical voice and 13 commands
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
       - name: Stop clean Genesis server
         if: always()
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           if (Test-Path "clean-server.pid") {
             Stop-Process -Id (Get-Content "clean-server.pid") -Force -ErrorAction SilentlyContinue
           }
       - name: Reverify protected foundation
         if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node scripts/nexus-protected-foundation-guard.js
       - name: Publish clean certification evidence
         if: always()
