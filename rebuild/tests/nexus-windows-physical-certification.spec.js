@@ -49,6 +49,33 @@ test.use({
 test("new Genesis build passes physical voice and every command", async ({ page, context }) => {
   test.setTimeout(25 * 60 * 1000);
   fs.mkdirSync(OUTPUT, { recursive: true });
+  const driverEvidence = {
+    startedAt: new Date().toISOString(),
+    console: [],
+    failedRequests: [],
+    httpFailures: [],
+    turns: [],
+    failure: null
+  };
+  page.on("console", (message) => {
+    driverEvidence.console.push({ type: message.type(), text: message.text() });
+  });
+  page.on("requestfailed", (request) => {
+    driverEvidence.failedRequests.push({
+      method: request.method(),
+      url: request.url(),
+      failure: request.failure()?.errorText || "unknown"
+    });
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      driverEvidence.httpFailures.push({
+        method: response.request().method(),
+        url: response.url(),
+        status: response.status()
+      });
+    }
+  });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
     window.__cleanEvidence = { receipts: [], errors: [] };
@@ -56,43 +83,71 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     window.addEventListener("error", (event) => window.__cleanEvidence.errors.push(String(event.message)));
     window.addEventListener("unhandledrejection", (event) => window.__cleanEvidence.errors.push(String(event.reason)));
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.locator("#nexus-orb").click();
-  await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
-  await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
-    timeout: 60000
-  }).toBe("connected");
-  await expect.poll(() => page.evaluate(() => {
-    const receipts = window.__cleanEvidence.receipts;
-    return receipts.some((item) => item.type === "audio.remote-attached");
-  }), { timeout: 60000 }).toBe(true);
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.locator("#nexus-orb").click();
+    await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
+    await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
+      timeout: 60000
+    }).toBe("connected");
+    await expect.poll(() => page.evaluate(() => {
+      const receipts = window.__cleanEvidence.receipts;
+      return receipts.some((item) => item.type === "audio.remote-attached");
+    }), { timeout: 60000 }).toBe(true);
 
-  await speak("Nexus, say physical voice calibration complete.");
-  await expect.poll(() => page.evaluate(() => {
-    const receipts = window.__cleanEvidence.receipts;
-    return receipts.some((item) => item.type === "conversation.return-to-listening");
-  }), { timeout: 60000 }).toBe(true);
+    await speak("Nexus, say physical voice calibration complete.");
+    await expect.poll(() => page.evaluate(() => {
+      const receipts = window.__cleanEvidence.receipts;
+      return receipts.some((item) => item.type === "conversation.return-to-listening");
+    }), { timeout: 60000 }).toBe(true);
 
-  const turns = [];
-  for (const [workspace, command] of commands) {
-    const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
-    await speak(command);
-    await expect.poll(() => page.evaluate(({ before, workspace }) => {
-      return window.__cleanEvidence.receipts.slice(before)
-        .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
-    }, { before, workspace }), { timeout: 60000 }).toBe(true);
-    await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
-    await expect(page.locator("#nexus-workspace")).toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
-    turns.push({ workspace, command, passed: true });
+    for (const [workspace, command] of commands) {
+      const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+      await speak(command);
+      await expect.poll(() => page.evaluate(({ before, workspace }) => {
+        return window.__cleanEvidence.receipts.slice(before)
+          .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+      }, { before, workspace }), { timeout: 60000 }).toBe(true);
+      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
+      await expect(page.locator("#nexus-workspace")).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      driverEvidence.turns.push({ workspace, command, passed: true });
+    }
+    const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
+    expect(browserErrors).toEqual([]);
+    expect(driverEvidence.turns).toHaveLength(13);
+  } catch (error) {
+    driverEvidence.failure = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    };
+    throw error;
+  } finally {
+    driverEvidence.finishedAt = new Date().toISOString();
+    driverEvidence.page = await page.evaluate(() => ({
+      url: location.href,
+      status: document.getElementById("nexus-status")?.textContent || null,
+      microphonePermission: null,
+      snapshot: window.NexusCleanRuntime?.snapshot?.() || null,
+      browserErrors: window.__cleanEvidence?.errors || []
+    })).catch((error) => ({ unavailable: error.message }));
+    if (driverEvidence.page && !driverEvidence.page.unavailable) {
+      driverEvidence.page.microphonePermission = await page.evaluate(async () => {
+        try {
+          return (await navigator.permissions.query({ name: "microphone" })).state;
+        } catch (error) {
+          return `unavailable:${error.message}`;
+        }
+      });
+    }
+    fs.writeFileSync(
+      path.join(OUTPUT, "certification.json"),
+      `${JSON.stringify(driverEvidence, null, 2)}\n`
+    );
+    await page.screenshot({
+      path: path.join(OUTPUT, driverEvidence.failure ? "failure.png" : "final.png"),
+      fullPage: true
+    }).catch(() => {});
   }
-  const evidence = await page.evaluate((turns) => ({
-    turns,
-    snapshot: window.NexusCleanRuntime.snapshot(),
-    browserErrors: window.__cleanEvidence.errors
-  }), turns);
-  fs.writeFileSync(path.join(OUTPUT, "certification.json"), `${JSON.stringify(evidence, null, 2)}\n`);
-  await page.screenshot({ path: path.join(OUTPUT, "final.png"), fullPage: true });
-  expect(evidence.browserErrors).toEqual([]);
-  expect(turns).toHaveLength(13);
 });
