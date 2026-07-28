@@ -375,3 +375,14 @@ audio { display: none; }
   .orb[aria-pressed="true"] { animation: none; }
   .workspace-orb { animation: none; }
 }
+.map-surface #nexus-map-canvas {
+  width: 100%;
+  min-height: min(68vh, 720px);
+  border-radius: 18px;
+  background: #101a22;
+}
+
+.map-summary {
+  margin: .75rem 0;
+  color: #dcecff;
+}

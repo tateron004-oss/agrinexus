@@ -1076,12 +1076,66 @@
         }
         return result;
       }
+      var nexusLeafletMap = null;
+      var nexusLeafletLayers = [];
+      async function resolveVisibleMap({ command, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
+        const canvas = documentObject.getElementById("nexus-map-canvas");
+        const summary = documentObject.getElementById("nexus-map-summary");
+        const link = documentObject.getElementById("nexus-map-link");
+        if (!canvas || !summary || !link || !leaflet) throw new Error("The interactive map renderer is unavailable.");
+        summary.textContent = "Nexus is locating the requested place and preparing the visible map\u2026";
+        const response = await fetchImpl("/api/maps/resolve", {
+          method: "POST",
+          headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
+          body: JSON.stringify({ command })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || "Nexus could not display the requested map.");
+        if (!nexusLeafletMap) {
+          nexusLeafletMap = leaflet.map(canvas).setView([0, 20], 3);
+          leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 19
+          }).addTo(nexusLeafletMap);
+        }
+        nexusLeafletLayers.forEach((layer) => nexusLeafletMap.removeLayer(layer));
+        nexusLeafletLayers = [];
+        if (result.type === "route") {
+          const latLngs = result.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+          const line = leaflet.polyline(latLngs, { color: "#39d7ff", weight: 6, opacity: 0.9 }).addTo(nexusLeafletMap);
+          const start = leaflet.marker([result.origin.lat, result.origin.lon]).bindPopup(result.origin.label).addTo(nexusLeafletMap);
+          const end = leaflet.marker([result.destination.lat, result.destination.lon]).bindPopup(result.destination.label).addTo(nexusLeafletMap);
+          nexusLeafletLayers.push(line, start, end);
+          nexusLeafletMap.fitBounds(line.getBounds(), { padding: [36, 36] });
+          const distanceKm = Math.round(Number(result.distanceMeters || 0) / 1e3).toLocaleString();
+          const hours = (Number(result.durationSeconds || 0) / 3600).toFixed(1);
+          summary.textContent = `Visible driving route: ${result.origin.label} \u2192 ${result.destination.label} \xB7 ${distanceKm} km \xB7 about ${hours} hours`;
+          link.href = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${result.origin.lat}%2C${result.origin.lon}%3B${result.destination.lat}%2C${result.destination.lon}`;
+        } else {
+          const location = result.location;
+          const marker = leaflet.marker([location.lat, location.lon]).bindPopup(location.label).addTo(nexusLeafletMap);
+          nexusLeafletLayers.push(marker);
+          if (location.boundingBox.length === 4) {
+            nexusLeafletMap.fitBounds([
+              [location.boundingBox[0], location.boundingBox[2]],
+              [location.boundingBox[1], location.boundingBox[3]]
+            ]);
+          } else {
+            nexusLeafletMap.setView([location.lat, location.lon], 8);
+          }
+          marker.openPopup();
+          summary.textContent = `Visible map centered on ${location.label}`;
+          link.href = `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lon}#map=8/${location.lat}/${location.lon}`;
+        }
+        setTimeout(() => nexusLeafletMap.invalidateSize(), 0);
+        return result;
+      }
       function renderWorkspace({ workspace, command, documentObject = document }) {
         const host = documentObject.getElementById("nexus-workspace");
         const title = documentObject.getElementById("nexus-workspace-title");
         const commandText = documentObject.getElementById("nexus-workspace-command");
         const mapSurface = documentObject.getElementById("nexus-map-surface");
-        const mapFrame = documentObject.getElementById("nexus-map-frame");
+        const mapCanvas = documentObject.getElementById("nexus-map-canvas");
         const mapLink = documentObject.getElementById("nexus-map-link");
         const appSurface = documentObject.getElementById("nexus-app-surface");
         const evidenceSurface = documentObject.getElementById("nexus-evidence-surface");
@@ -1103,17 +1157,14 @@
           evidenceSurface.innerHTML = "";
         }
         if (musicSurface) musicSurface.hidden = workspace !== "music";
-        if (workspace === "maps" && mapFrame && mapLink) {
-          mapFrame.src = "https://www.openstreetmap.org/export/embed.html?bbox=33.5%2C-5.2%2C42.2%2C5.5&layer=mapnik";
-          mapLink.href = /\bkenya\b/i.test(command || "") ? "https://www.openstreetmap.org/search?query=Kenya" : `https://www.openstreetmap.org/search?query=${encodeURIComponent(command || "Kenya")}`;
-        }
+        if (workspace === "maps" && mapLink) mapLink.removeAttribute?.("href");
         if (workspace === "music" && musicFrame && musicLink) {
           const query = musicSearchFromCommand(command);
           const encodedQuery = encodeURIComponent(query);
           musicFrame.src = musicPlaybackUrl(command);
           musicLink.href = `https://www.youtube.com/results?search_query=${encodedQuery}`;
         }
-        const rendered = workspace === "maps" ? Boolean(mapFrame && mapFrame.src) : workspace === "music" ? Boolean(musicFrame && musicFrame.src) : workspace === "live-knowledge" ? Boolean(evidenceSurface) : renderAppSurface({ workspace, command, appSurface });
+        const rendered = workspace === "maps" ? Boolean(mapCanvas) : workspace === "music" ? Boolean(musicFrame && musicFrame.src) : workspace === "live-knowledge" ? Boolean(evidenceSurface) : renderAppSurface({ workspace, command, appSurface });
         host.dataset.populated = rendered ? "true" : "false";
         return rendered;
       }
@@ -1188,6 +1239,17 @@
           if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
           document.body.classList.add("nexus-workspace-open");
           let evidence = null;
+          let mapResult = null;
+          let visualSuccess = true;
+          if (detail.workspace === "maps") {
+            try {
+              mapResult = await resolveVisibleMap({ command: detail.command, sessionToken });
+            } catch (error) {
+              visualSuccess = false;
+              const summary = document.getElementById("nexus-map-summary");
+              if (summary) summary.textContent = error.message;
+            }
+          }
           if (detail.workspace === "live-knowledge") {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
             try {
@@ -1203,6 +1265,7 @@
               }
               evidence = { status: "provider-error", summary: "Approved evidence retrieval failed.", claims: [] };
             }
+            visualSuccess = Boolean(evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0);
           }
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
@@ -1210,8 +1273,9 @@
                 requestId: detail.requestId,
                 acknowledgementId: `visible-${detail.requestId}`,
                 workspace: detail.workspace,
-                visible: !workspace.hidden && workspace.dataset.populated === "true",
-                populated: workspace.dataset.populated === "true",
+                visible: visualSuccess && !workspace.hidden && workspace.dataset.populated === "true",
+                populated: visualSuccess && workspace.dataset.populated === "true",
+                mapStatus: mapResult && mapResult.status || null,
                 evidenceReceiptId: evidence && evidence.id || null,
                 evidenceStatus: evidence && evidence.status || null,
                 evidenceSummary: evidence && evidence.summary || null,
@@ -1423,6 +1487,7 @@
         renderWorkspace,
         renderEvidenceWorkspace,
         researchEvidence,
+        resolveVisibleMap,
         statusFromReceipt
       };
     }

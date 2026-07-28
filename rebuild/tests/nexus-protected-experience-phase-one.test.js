@@ -92,7 +92,7 @@ const mapElements = {
   "nexus-workspace-title": element(),
   "nexus-workspace-command": element(),
   "nexus-map-surface": element(),
-  "nexus-map-frame": element(),
+  "nexus-map-canvas": element(),
   "nexus-map-link": element(),
   "nexus-app-surface": { ...element(), innerHTML: "" },
   "nexus-evidence-surface": { ...element(), innerHTML: "" },
@@ -109,8 +109,7 @@ assert.equal(mapElements["nexus-workspace"].hidden, false);
 assert.equal(mapElements["nexus-workspace"].dataset.workspace, "maps");
 assert.equal(mapElements["nexus-workspace-title"].textContent, "Maps / Field Visit");
 assert.equal(mapElements["nexus-map-surface"].hidden, false);
-assert.match(mapElements["nexus-map-frame"].src, /openstreetmap\.org\/export\/embed/);
-assert.match(mapElements["nexus-map-link"].href, /query=Kenya/);
+assert.equal(mapElements["nexus-map-canvas"].hidden, true);
 
 const commands = [
   ["agriculture", "Help me diagnose my maize crop"],

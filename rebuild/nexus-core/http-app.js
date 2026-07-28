@@ -1,6 +1,6 @@
 "use strict";
 
-function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = null, sessionAuthority = null, onReceipt = () => {} } = {}) {
+function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = null, mapProvider = null, sessionAuthority = null, onReceipt = () => {} } = {}) {
   if (!voiceSessionService || typeof voiceSessionService.issue !== "function") {
     throw new Error("A voice session service is required.");
   }
@@ -56,6 +56,24 @@ function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = nu
         onReceipt(receipt("evidence.research-failed", { message: error.message }));
         return json(response, unauthorized ? 401 : 422, {
           error: unauthorized ? "unauthorized" : "evidence-research-failed",
+          message: unauthorized ? "A valid signed-in Nexus session is required." : error.message
+        });
+      }
+    }
+    if (request.method === "POST" && url.pathname === "/api/maps/resolve") {
+      if (!mapProvider || !sessionAuthority) {
+        return json(response, 503, { error: "maps-unavailable", message: "Live map retrieval is not configured." });
+      }
+      try {
+        sessionAuthority.verify(readBearer(request.headers.authorization));
+        const body = await readJson(request);
+        const result = await mapProvider(body.command);
+        onReceipt(receipt("map.visible-result-ready", { type: result.type, status: result.status }));
+        return json(response, 200, result);
+      } catch (error) {
+        const unauthorized = /Bearer|token|signature|expired|session contract/i.test(error.message);
+        return json(response, unauthorized ? 401 : 422, {
+          error: unauthorized ? "unauthorized" : "map-resolution-failed",
           message: unauthorized ? "A valid signed-in Nexus session is required." : error.message
         });
       }

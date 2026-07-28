@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#04070d">
   <title>Nexus Genesis</title>
   <link rel="stylesheet" href="./nexus-clean.css">
+  <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
 </head>
 <body>
   <main class="genesis" aria-label="Nexus Genesis">
@@ -48,7 +49,8 @@
         <h1 id="nexus-workspace-title"></h1>
         <p id="nexus-workspace-command"></p>
         <div id="nexus-map-surface" class="map-surface" hidden>
-          <iframe id="nexus-map-frame" title="Map displayed by Nexus" loading="eager" referrerpolicy="no-referrer"></iframe>
+          <div id="nexus-map-canvas" role="img" aria-label="Map displayed by Nexus"></div>
+          <p id="nexus-map-summary" class="map-summary" aria-live="polite"></p>
           <a id="nexus-map-link" target="_blank" rel="noopener noreferrer">Open full map</a>
         </div>
         <div id="nexus-app-surface" class="app-surface" hidden></div>
@@ -67,6 +69,7 @@
     <audio id="nexus-audio" autoplay></audio>
   </main>
   <script>window.NEXUS_CLEAN_CONFIG = window.NEXUS_CLEAN_CONFIG || {};</script>
+  <script src="./vendor/leaflet/leaflet.js"></script>
   <script src="./nexus-clean.bundle.js" defer></script>
 </body>
 </html>
