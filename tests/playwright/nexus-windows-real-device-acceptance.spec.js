@@ -93,29 +93,29 @@ async function login(page) {
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
   // Exercise the same trusted click path as an end user. Programmatic
   // requestSubmit() does not activate production's login transition reliably.
-  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
-  // Login is an in-page render transition, not a navigation. Prove both the
-  // visible shell and the authenticated API state before opening any media stream.
-  await expect(page.locator("#loginView")).toBeHidden({ timeout: 30000 });
-  await expect(page.locator("#appView")).toBeVisible({ timeout: 30000 });
-  const authenticatedUser = await page.evaluate(async () => {
-    const response = await fetch("/api/state", {
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Accept: "application/json" }
-    });
-    const payload = await response.json().catch(() => ({}));
-    return {
-      ok: response.ok,
-      id: String(payload?.user?.id || ""),
-      email: String(payload?.user?.email || "")
-    };
-  });
-  expect(authenticatedUser).toEqual({
-    ok: true,
+  const [loginResponse] = await Promise.all([
+    page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/login" && response.request().method() === "POST";
+    }),
+    page.getByRole("button", { name: "Enter platform", exact: true }).click()
+  ]);
+  const loginPayload = await loginResponse.json();
+  expect(loginResponse.status()).toBe(200);
+  expect({
+    id: String(loginPayload?.user?.id || ""),
+    email: String(loginPayload?.user?.email || "")
+  }).toEqual({
     id: "u_standard",
     email: "user@agrinexus.org"
   });
+  // Login is an in-page render transition, not a navigation. Prove both the
+  // visible shell and both authentication cookies before opening any media stream.
+  await expect(page.locator("#loginView")).toBeHidden({ timeout: 30000 });
+  await expect(page.locator("#appView")).toBeVisible({ timeout: 30000 });
+  const authCookieNames = (await page.context().cookies(BASE_URL)).map(cookie => cookie.name);
+  expect(authCookieNames).toContain("agrinexus_sid");
+  expect(authCookieNames).toContain("agrinexus_auth");
   // Require the authenticated application shell before opening any media stream.
   await expect(
     page.locator("#nexusPermanentMicrophoneBtn"),
