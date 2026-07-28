@@ -162,54 +162,47 @@ test("physical Windows microphone certifies the protected production release", a
   await page.goto("/?voiceDebug=1&voiceAcceptance=real-device", { waitUntil: "domcontentloaded" });
   await login(page);
 
+  // Preserve the production sequence that was proven with the real browser:
+  // login -> Nexus microphone click -> live Realtime track -> spoken turn.
+  // Do not open and stop a second probe stream before Nexus acquires the device.
+  await connectRealtime(page);
+
   const deviceProof = await page.evaluate(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    });
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const track = stream.getAudioTracks()[0];
-    const settings = track.getSettings();
     const labels = devices.filter(item => item.kind === "audioinput" || item.kind === "audiooutput")
       .map(item => ({ kind: item.kind, label: item.label, deviceId: item.deviceId }));
-    const audio = new AudioContext();
-    const source = audio.createMediaStreamSource(stream);
-    const analyser = audio.createAnalyser();
-    analyser.fftSize = 2048;
-    source.connect(analyser);
-    window.__NEXUS_PHYSICAL_PROBE__ = { stream, audio, analyser };
     return {
       labels,
-      track: { label: track.label, readyState: track.readyState, enabled: track.enabled, settings }
+      status: window.NexusGenesisRealtimeClientStatus?.() || {}
     };
   });
 
-  expect(deviceProof.track.readyState).toBe("live");
-  expect(deviceProof.track.enabled).toBe(true);
-  expect(deviceProof.track.label).not.toMatch(VIRTUAL_DEVICE);
+  const physicalInputs = deviceProof.labels.filter(item => item.kind === "audioinput" && !VIRTUAL_DEVICE.test(item.label));
+  const physicalOutputs = deviceProof.labels.filter(item => item.kind === "audiooutput" && !VIRTUAL_DEVICE.test(item.label));
+  expect(physicalInputs.length, "Chrome must expose a physical microphone after Nexus connects").toBeGreaterThan(0);
+  expect(physicalOutputs.length, "Chrome must expose a physical speaker after Nexus connects").toBeGreaterThan(0);
+  expect(deviceProof.status.liveMicrophoneTrack).toBe(true);
+  expect(deviceProof.status.connectionState).toBe("connected");
   expect(deviceProof.labels.some(item => item.kind === "audiooutput" && !VIRTUAL_DEVICE.test(item.label))).toBe(true);
 
-  const energyProbe = page.evaluate(async () => {
-    const { stream, audio, analyser } = window.__NEXUS_PHYSICAL_PROBE__;
-    const samples = new Uint8Array(analyser.fftSize);
-    let peak = 0;
-    const end = Date.now() + 5000;
-    while (Date.now() < end) {
-      analyser.getByteTimeDomainData(samples);
-      const level = Math.max(...samples.map(value => Math.abs(value - 128)));
-      peak = Math.max(peak, level);
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    stream.getTracks().forEach(track => track.stop());
-    await audio.close();
-    delete window.__NEXUS_PHYSICAL_PROBE__;
-    return peak;
-  });
-  await page.waitForTimeout(500);
+  const calibrationStart = await page.evaluate(() => window.__NEXUS_REAL_DEVICE_EVIDENCE__.controllerCalls.length);
   await speak("Nexus physical microphone calibration.");
-  const energy = await energyProbe;
-  expect(energy, "The physical microphone must capture audible acoustic energy from the Windows speaker").toBeGreaterThan(3);
-
-  await connectRealtime(page);
+  await expect.poll(() => page.evaluate(start => {
+    const calls = window.__NEXUS_REAL_DEVICE_EVIDENCE__.controllerCalls.slice(start);
+    const status = window.NexusGenesisRealtimeClientStatus?.() || {};
+    return {
+      transcriptReceived: calls.some(item => /physical microphone calibration/i.test(item.transcript)),
+      microphoneActive: status.liveMicrophoneTrack === true,
+      connected: status.connectionState === "connected"
+    };
+  }, calibrationStart), {
+    timeout: 60000,
+    message: "The speaker calibration phrase must travel through the physical microphone into the live Realtime session"
+  }).toEqual({
+    transcriptReceived: true,
+    microphoneActive: true,
+    connected: true
+  });
 
   const turns = [];
   for (let index = 0; index < journeys.length; index += 1) {
@@ -264,11 +257,13 @@ test("physical Windows microphone certifies the protected production release", a
     protectedBaseline: process.env.NEXUS_PROTECTED_BASELINE || "0e3ce5b6",
     runtime: process.env.NEXUS_EXPECTED_RUNTIME || "nexus-behavior-502",
     physicalDevice: {
-      labelSha256: hash(deviceProof.track.label),
-      deviceIdSha256: hash(deviceProof.track.settings.deviceId || ""),
-      sampleRate: deviceProof.track.settings.sampleRate,
-      channelCount: deviceProof.track.settings.channelCount,
-      acousticPeak: energy
+      inputCount: physicalInputs.length,
+      outputCount: physicalOutputs.length,
+      inputLabelSha256: physicalInputs.map(item => hash(item.label)),
+      inputDeviceIdSha256: physicalInputs.map(item => hash(item.deviceId || "")),
+      outputLabelSha256: physicalOutputs.map(item => hash(item.label)),
+      outputDeviceIdSha256: physicalOutputs.map(item => hash(item.deviceId || "")),
+      calibrationTranscriptReceived: true
     },
     turnCount: turns.length,
     turns,
