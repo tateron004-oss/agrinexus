@@ -101,8 +101,16 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       return receipts.some((item) => item.type === "conversation.return-to-listening");
     }), { timeout: 60000 }).toBe(true);
 
+    // The audible calibration above proves the remote audio path. Silence Nexus
+    // during command injection so its own speaker output cannot feed back into
+    // the physical microphone and overwrite the command under test.
+    await page.locator("#nexus-audio").evaluate((audio) => {
+      audio.muted = true;
+    });
+
     for (const [workspace, command] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+      await page.waitForTimeout(500);
       await speak(command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
         return window.__cleanEvidence.receipts.slice(before)
