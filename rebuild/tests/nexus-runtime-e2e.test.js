@@ -78,6 +78,7 @@ async function main() {
 
   await runtime.start({ sessionToken: issued.token, userGesture: true });
   assert.equal(sent[0].type, "session.update");
+  assert.deepEqual(sent[0].session.output_modalities, ["audio"]);
   assert.equal(sent[0].session.audio.input.turn_detection.interrupt_response, true);
   assert.equal(sent[0].session.tools[0].name, "route_nexus_command");
 
@@ -126,9 +127,19 @@ async function main() {
   assert.ok(sent.some((event) => event.type === "response.create"));
 
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_started" });
+  await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_stopped" });
+  await new Promise((resolve) => setTimeout(resolve, 1250));
+  assert.ok(sent.some((event) => event.type === "response.create"));
+  await runtime.handleRealtimeEvent({ type: "response.created" });
+  await runtime.handleRealtimeEvent({ type: "response.output_audio.delta" });
   await runtime.handleRealtimeEvent({ type: "response.output_audio.done" });
+  await runtime.handleRealtimeEvent({ type: "error", error: { code: "voice_test", message: "test error" } });
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.barge-in"));
+  assert.ok(receipts.some((receipt) => receipt.type === "conversation.processing"));
+  assert.ok(receipts.some((receipt) => receipt.type === "conversation.response-requested"));
+  assert.ok(receipts.some((receipt) => receipt.type === "conversation.speaking"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
+  assert.ok(receipts.some((receipt) => receipt.type === "realtime.error"));
   assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
 
   eventSubscriber({
