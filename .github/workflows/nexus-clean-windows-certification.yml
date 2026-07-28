@@ -1,0 +1,99 @@
+name: Nexus clean Windows certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - rebuild/nexus-genesis-clean-foundation
+    paths:
+      - "rebuild/**"
+      - ".github/workflows/nexus-clean-windows-certification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-clean-windows-certification
+  cancel-in-progress: false
+
+jobs:
+  clean-foundation:
+    name: Clean foundation gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run isolated clean suites
+        run: |
+          node rebuild/tests/nexus-core.test.js
+          node rebuild/tests/nexus-voice-foundation.test.js
+          node rebuild/tests/nexus-runtime-e2e.test.js
+          node rebuild/tests/nexus-http-e2e.test.js
+          node rebuild/tests/nexus-browser-shell.test.js
+          node scripts/nexus-protected-foundation-guard.js
+
+  physical-voice:
+    name: New Genesis physical voice and commands
+    needs: clean-foundation
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 35
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NEXUS_CLEAN_SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      NEXUS_CLEAN_BASE_URL: http://127.0.0.1:4317
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify interactive physical audio
+        shell: powershell
+        run: ./scripts/nexus-windows-real-device-preflight.ps1
+      - name: Install certification driver
+        shell: powershell
+        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.25.8
+      - name: Build clean browser
+        run: node rebuild/scripts/build-browser.js
+      - name: Start clean Genesis server
+        shell: powershell
+        run: |
+          if (-not $env:OPENAI_API_KEY) { throw "OPENAI_API_KEY secret is required." }
+          if (-not $env:NEXUS_CLEAN_SESSION_SECRET) { throw "SESSION_SECRET secret is required." }
+          $process = Start-Process node -ArgumentList "rebuild/server.js" -PassThru -RedirectStandardOutput "clean-server.log" -RedirectStandardError "clean-server-error.log"
+          $process.Id | Set-Content "clean-server.pid"
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 2
+              if ($health.ok) { exit 0 }
+            } catch {}
+            Start-Sleep -Seconds 1
+          }
+          throw "Clean Genesis server did not become healthy."
+      - name: Certify physical voice and 13 commands
+        run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+      - name: Stop clean Genesis server
+        if: always()
+        shell: powershell
+        run: |
+          if (Test-Path "clean-server.pid") {
+            Stop-Process -Id (Get-Content "clean-server.pid") -Force -ErrorAction SilentlyContinue
+          }
+      - name: Reverify protected foundation
+        if: always()
+        run: node scripts/nexus-protected-foundation-guard.js
+      - name: Publish clean certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-clean-windows-certification-${{ github.run_id }}
+          path: |
+            output/nexus-clean-windows-certification/
+            output/nexus-windows-real-device/
+            test-results/
+            clean-server.log
+            clean-server-error.log
+          if-no-files-found: warn
+          retention-days: 90

@@ -14,8 +14,13 @@
       <span class="orb-core" aria-hidden="true"></span>
     </button>
     <p id="nexus-status" class="status" role="status" aria-live="polite">Speak</p>
+    <section id="nexus-workspace" class="workspace" aria-live="polite" hidden>
+      <h1 id="nexus-workspace-title"></h1>
+      <p id="nexus-workspace-command"></p>
+    </section>
     <audio id="nexus-audio" autoplay></audio>
   </main>
+  <script>window.NEXUS_CLEAN_CONFIG = window.NEXUS_CLEAN_CONFIG || {};</script>
   <script src="./nexus-clean.bundle.js" defer></script>
 </body>
 </html>

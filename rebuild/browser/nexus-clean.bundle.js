@@ -744,6 +744,27 @@
           orb.disabled = true;
           return;
         }
+        window.addEventListener("nexus.clean.workspace.open", (event) => {
+          const detail = event.detail || {};
+          const workspace = document.getElementById("nexus-workspace");
+          const title = document.getElementById("nexus-workspace-title");
+          const command = document.getElementById("nexus-workspace-command");
+          if (!workspace || !title || !command || !detail.requestId || !detail.workspace) return;
+          title.textContent = detail.workspace.replace(/(^|-)([a-z])/g, (_, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`);
+          command.textContent = detail.command || "";
+          workspace.dataset.workspace = detail.workspace;
+          workspace.hidden = false;
+          requestAnimationFrame(() => {
+            window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+              detail: Object.freeze({
+                requestId: detail.requestId,
+                acknowledgementId: `visible-${detail.requestId}`,
+                workspace: detail.workspace,
+                visible: !workspace.hidden
+              })
+            }));
+          });
+        });
         const receipts = [];
         const onReceipt = (receipt) => {
           receipts.push(receipt);
