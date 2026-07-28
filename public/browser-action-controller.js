@@ -3,6 +3,8 @@
   const replayWindowMs = 10000;
   const providerCardSeen = new Map();
   const providerCardReplayWindowMs = 2500;
+  const pilotEvidenceStorageKey = "nexus.pilot-evidence.v1";
+  const pilotConsentStorageKey = "nexus.pilot-evidence-consent.v1";
   function text(value) { return String(value || "").trim(); }
   function html(value) {
     return text(value).replace(/[&<>"']/g, character => ({
@@ -19,6 +21,209 @@
     const visual = /\b(show|display|open|create|prepare|make|list|write|give me|build)\b/.test(value);
     const questions = /\b(question|questions|checklist|card|document|report|summary|what (?:do|should|can) i ask)\b/.test(value);
     return provider && visual && questions;
+  }
+  function pilotEvidenceRequest(command = "") {
+    const value = text(command).toLowerCase();
+    return /\b(open|show|display|create|prepare|generate|view)\b/.test(value)
+      && /\b(pilot evidence|pilot dashboard|governance dashboard|implementation report|learning brief|scale[- ]?up (?:plan|options|scenarios)|pilot report)\b/.test(value);
+  }
+  function pilotConsentState() {
+    try {
+      const state = JSON.parse(global.localStorage?.getItem(pilotConsentStorageKey) || "null");
+      return state?.granted === true ? state : { granted: false, scope: "none" };
+    } catch {
+      return { granted: false, scope: "none" };
+    }
+  }
+  function setPilotEvidenceConsent(granted, options = {}) {
+    const state = {
+      schemaVersion: "nexus.pilot-evidence-consent.v1",
+      granted: granted === true,
+      scope: granted === true ? "minimum-deidentified-pilot-metadata" : "none",
+      researchReuseAllowed: options.researchReuseAllowed === true && granted === true,
+      changedAt: new Date().toISOString()
+    };
+    try {
+      global.localStorage?.setItem(pilotConsentStorageKey, JSON.stringify(state));
+      return state;
+    } catch {
+      return { ...state, stored: false };
+    }
+  }
+  function readPilotEvidence() {
+    try {
+      const value = JSON.parse(global.localStorage?.getItem(pilotEvidenceStorageKey) || "[]");
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  }
+  function recordPilotEvidence(input = {}) {
+    if (pilotConsentState().granted !== true) return { recorded: false, reason: "consent-required" };
+    const allowedTopics = new Set(["agriculture", "health", "pharmacy", "telehealth", "workforce", "marketplace", "maps", "learning", "music", "reminders", "offline", "general"]);
+    const allowedOutcomes = new Set(["completed", "partial", "failed", "abandoned"]);
+    const allowedPathways = new Set(["voice", "typed", "provider-card", "workspace", "offline", "unknown"]);
+    const allowedRecovery = new Set(["none", "recovered", "not-recovered"]);
+    const allowedDurationBands = new Set(["under-2-min", "2-5-min", "5-10-min", "over-10-min", "unknown"]);
+    const entry = {
+      schemaVersion: "nexus.pilot-evidence-event.v1",
+      eventId: `pilot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      recordedAt: new Date().toISOString(),
+      topic: allowedTopics.has(input.topic) ? input.topic : "general",
+      outcome: allowedOutcomes.has(input.outcome) ? input.outcome : "completed",
+      pathway: allowedPathways.has(input.pathway) ? input.pathway : "unknown",
+      recovery: allowedRecovery.has(input.recovery) ? input.recovery : "none",
+      durationBand: allowedDurationBands.has(input.durationBand) ? input.durationBand : "unknown",
+      language: text(input.language).replace(/[^a-zA-Z-]/g, "").slice(0, 12) || "unknown",
+      county: text(input.county).replace(/[^a-zA-Z -]/g, "").slice(0, 40) || "not-provided",
+      feedback: ["helpful", "partly-helpful", "not-helpful", "not-provided"].includes(input.feedback) ? input.feedback : "not-provided",
+      majorFailure: input.majorFailure === true
+    };
+    try {
+      global.localStorage?.setItem(pilotEvidenceStorageKey, JSON.stringify([...readPilotEvidence(), entry].slice(-500)));
+      return { recorded: true, entry };
+    } catch {
+      return { recorded: false, reason: "storage-unavailable" };
+    }
+  }
+  function pilotTopicFromWorkspace(workspace = "") {
+    const value = text(workspace).toLowerCase();
+    if (/pharmacy|medicine/.test(value)) return "pharmacy";
+    if (/telehealth|intake/.test(value)) return "telehealth";
+    if (/health|chronic|clinic/.test(value)) return "health";
+    if (/agriculture|crop|farm/.test(value)) return "agriculture";
+    if (/workforce|job/.test(value)) return "workforce";
+    if (/market|trade/.test(value)) return "marketplace";
+    if (/map|field|route/.test(value)) return "maps";
+    if (/learn|literacy/.test(value)) return "learning";
+    if (/music|media/.test(value)) return "music";
+    if (/reminder/.test(value)) return "reminders";
+    if (/offline/.test(value)) return "offline";
+    return "general";
+  }
+  function pilotEvidenceSummary(records = readPilotEvidence()) {
+    const total = records.length;
+    const completed = records.filter(item => item.outcome === "completed").length;
+    const metadataComplete = records.filter(item => item.topic && item.durationBand !== "unknown" && item.outcome && item.pathway).length;
+    const majorFailures = records.filter(item => item.majorFailure === true).length;
+    const recovered = records.filter(item => item.recovery === "recovered").length;
+    const feedbackProvided = records.filter(item => item.feedback !== "not-provided");
+    const helpful = feedbackProvided.filter(item => item.feedback === "helpful").length;
+    return {
+      total, completed,
+      completionRate: total ? Math.round((completed / total) * 100) : 0,
+      metadataRate: total ? Math.round((metadataComplete / total) * 100) : 0,
+      majorFailures, recovered,
+      helpfulRate: feedbackProvided.length ? Math.round((helpful / feedbackProvided.length) * 100) : 0,
+      feedbackCount: feedbackProvided.length
+    };
+  }
+  function pilotReportText(records = readPilotEvidence()) {
+    const summary = pilotEvidenceSummary(records);
+    return [
+      "Nexus Pilot Evidence and Governance Report",
+      `Generated: ${new Date().toLocaleString()}`, "",
+      `Sessions recorded with consent: ${summary.total}`,
+      `Completed sessions: ${summary.completed} (${summary.completionRate}%)`,
+      `Minimum metadata complete: ${summary.metadataRate}%`,
+      `Major failures: ${summary.majorFailures}`,
+      `Recovered sessions: ${summary.recovered}`,
+      `Helpful feedback: ${summary.helpfulRate}% (${summary.feedbackCount} responses)`, "",
+      "Governance boundaries",
+      "- Minimum de-identified metadata only; no transcript, symptom, medicine, reading, name, phone, or provider-card content is included.",
+      "- Research reuse requires separate explicit approval.",
+      "- Nexus provides education, navigation, and communication support; qualified healthcare professionals make clinical decisions.", "",
+      "Scale-up scenarios",
+      "1. Deepen one-county coverage: strengthen training, devices, connectivity, clinical partners, and local-language support.",
+      "2. Expand to a neighboring county: reuse the proven model after partner, privacy, source, and workforce readiness review.",
+      "3. Multi-county hub: shared governance and reporting with county-level access controls and independent outcome review.", "",
+      "Human approvals still required",
+      "- Approved consent language, retention period, access roles, source register, clinical boundaries, Kenyan legal review, and any required ethical review."
+    ].join("\n");
+  }
+  function downloadPilotReport(records = readPilotEvidence()) {
+    if (typeof document === "undefined" || typeof Blob === "undefined") return false;
+    const url = URL.createObjectURL(new Blob([pilotReportText(records)], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `nexus-pilot-learning-brief-${new Date().toISOString().slice(0, 10)}.txt`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  }
+  function ensurePilotEvidenceStyles() {
+    if (typeof document === "undefined" || document.getElementById("nexus-pilot-evidence-styles")) return;
+    const style = document.createElement("style");
+    style.id = "nexus-pilot-evidence-styles";
+    style.textContent = `
+      .nexus-pilot-evidence-shell{position:fixed;inset:0;z-index:2147482999;background:rgba(3,13,24,.9);display:grid;place-items:center;padding:18px;font-family:Inter,system-ui,sans-serif;color:#102033}
+      .nexus-pilot-evidence{width:min(1080px,100%);max-height:94vh;overflow:auto;background:#f7fbfc;border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.48)}
+      .nexus-pilot-evidence header{position:sticky;top:0;z-index:2;background:#073b4c;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;gap:16px}.nexus-pilot-evidence h1{margin:0;font-size:clamp(1.55rem,4vw,2.3rem)}
+      .nexus-pilot-close{width:48px;height:48px;border:0;border-radius:50%;background:#fff;color:#073b4c;font-size:2rem}.nexus-pilot-body{padding:22px}
+      .nexus-pilot-consent{padding:16px;border:3px solid #f4a261;border-radius:16px;background:#fff7ed}.nexus-pilot-consent[data-granted="true"]{border-color:#06a77d;background:#effcf7}
+      .nexus-pilot-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.nexus-pilot-actions button{border:0;border-radius:11px;background:#07566b;color:#fff;padding:12px 15px;font-weight:800}.nexus-pilot-actions button[data-pilot-action="withdraw"]{background:#8d1b1b}
+      .nexus-pilot-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.nexus-pilot-metric{padding:16px;border:2px solid #c7dce3;border-radius:15px;background:#fff}.nexus-pilot-metric strong{display:block;font-size:1.8rem;color:#07566b}.nexus-pilot-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.nexus-pilot-panel{background:#fff;border:2px solid #d6e2e8;border-radius:16px;padding:16px}.nexus-pilot-panel h2{margin-top:0}.nexus-pilot-panel li{margin-bottom:8px}
+      .nexus-pilot-boundary{margin-top:16px;padding:14px;border-left:6px solid #d62828;background:#fff1f1;font-weight:750}
+      @media(max-width:760px){.nexus-pilot-evidence-shell{padding:0}.nexus-pilot-evidence{height:100%;max-height:none;border-radius:0}.nexus-pilot-metrics,.nexus-pilot-grid{grid-template-columns:1fr 1fr}}
+      @media(max-width:480px){.nexus-pilot-metrics,.nexus-pilot-grid{grid-template-columns:1fr}}
+      @media print{body>*:not(.nexus-pilot-evidence-shell){display:none!important}.nexus-pilot-evidence-shell{position:static;background:#fff;padding:0}.nexus-pilot-evidence{width:100%;max-height:none;box-shadow:none}.nexus-pilot-close,.nexus-pilot-actions{display:none!important}.nexus-pilot-evidence header{position:static}}
+    `;
+    document.head.appendChild(style);
+  }
+  function openPilotEvidenceDashboard(options = {}) {
+    if (typeof document === "undefined" || !document.body) return { opened: false, reason: "document-unavailable" };
+    ensurePilotEvidenceStyles();
+    document.querySelector("[data-nexus-pilot-evidence-shell]")?.remove();
+    const records = readPilotEvidence();
+    const summary = pilotEvidenceSummary(records);
+    const consent = pilotConsentState();
+    const shell = document.createElement("div");
+    shell.className = "nexus-pilot-evidence-shell";
+    shell.dataset.nexusPilotEvidenceShell = "true";
+    shell.setAttribute("role", "dialog");
+    shell.setAttribute("aria-modal", "true");
+    shell.innerHTML = `
+      <article class="nexus-pilot-evidence">
+        <header><div><h1>📊 Pilot Evidence &amp; Governance</h1><p>Visual proof from permitted, de-identified pilot metadata</p></div><button class="nexus-pilot-close" data-pilot-action="close" aria-label="Close pilot dashboard">×</button></header>
+        <div class="nexus-pilot-body">
+          <section class="nexus-pilot-consent" data-granted="${consent.granted}">
+            <strong>${consent.granted ? "✅ Minimum pilot measurement is on" : "🔒 Pilot measurement is off"}</strong>
+            <p>${consent.granted ? "Only the approved minimum metadata is stored on this device. Research reuse is not automatically allowed." : "Nothing is recorded until a person explicitly agrees. Care and Nexus access do not depend on consent."}</p>
+            <div class="nexus-pilot-actions"><button data-pilot-action="grant">I agree to minimum measurement</button><button data-pilot-action="withdraw">Withdraw consent</button></div>
+          </section>
+          <section class="nexus-pilot-metrics">
+            <div class="nexus-pilot-metric"><strong>${summary.total}</strong><span>Permitted sessions</span></div>
+            <div class="nexus-pilot-metric"><strong>${summary.completionRate}%</strong><span>Completed</span></div>
+            <div class="nexus-pilot-metric"><strong>${summary.metadataRate}%</strong><span>Metadata complete</span></div>
+            <div class="nexus-pilot-metric"><strong>${summary.helpfulRate}%</strong><span>Helpful feedback</span></div>
+          </section>
+          <div class="nexus-pilot-grid">
+            <section class="nexus-pilot-panel"><h2>🛡️ Privacy controls</h2><ul><li>No transcripts or conversation text</li><li>No names, phone numbers, symptoms, medicines, readings, or provider-card contents</li><li>Separate consent required for research reuse</li><li>Local records capped at 500 events</li></ul></section>
+            <section class="nexus-pilot-panel"><h2>🧭 Performance</h2><ul><li>Major failures: ${summary.majorFailures}</li><li>Recovered sessions: ${summary.recovered}</li><li>Feedback responses: ${summary.feedbackCount}</li><li>Targets: 80–90% completion; 70% metadata completeness</li></ul></section>
+            <section class="nexus-pilot-panel"><h2>📚 Source register</h2><ul><li>Source owner and publication</li><li>Jurisdiction and review date</li><li>Clinical or program approval status</li><li>Freshness and permitted-use status</li></ul><p>Only formally approved sources may be marked approved.</p></section>
+            <section class="nexus-pilot-panel"><h2>🌍 Scale-up options</h2><ol><li>Deepen one-county coverage</li><li>Expand to one neighboring county</li><li>Create a governed multi-county hub</li></ol><p>Each option requires staffing, devices, connectivity, training, partners, privacy review, and cost estimates.</p></section>
+          </div>
+          <div class="nexus-pilot-actions"><button data-pilot-action="feedback-helpful">👍 Mark latest session helpful</button><button data-pilot-action="feedback-partly">➖ Partly helpful</button><button data-pilot-action="feedback-not">👎 Not helpful</button><button data-pilot-action="download">⬇ Download learning brief</button><button data-pilot-action="print">🖨 Print / Save PDF</button></div>
+          <div class="nexus-pilot-boundary">Nexus does not approve consent language, research, clinical policy, data retention, Kenyan legal compliance, or ethical review. Those decisions remain with authorized human organizations and reviewers.</div>
+        </div>
+      </article>`;
+    shell.addEventListener("click", event => {
+      const action = event.target?.closest?.("[data-pilot-action]")?.dataset?.pilotAction;
+      if (!action) return;
+      if (action === "close") shell.remove();
+      if (action === "grant") { setPilotEvidenceConsent(true); openPilotEvidenceDashboard({ source: "consent-granted" }); }
+      if (action === "withdraw") { setPilotEvidenceConsent(false); openPilotEvidenceDashboard({ source: "consent-withdrawn" }); }
+      if (action === "download") downloadPilotReport();
+      if (action === "print") global.print?.();
+      if (action?.startsWith("feedback-")) {
+        const feedback = action === "feedback-helpful" ? "helpful" : action === "feedback-partly" ? "partly-helpful" : "not-helpful";
+        recordPilotEvidence({ topic: "general", outcome: "completed", pathway: "workspace", feedback, language: document.documentElement.lang || "unknown" });
+        openPilotEvidenceDashboard({ source: "feedback" });
+      }
+    });
+    document.body.appendChild(shell);
+    global.dispatchEvent?.(new global.CustomEvent("nexus.pilot-evidence.opened", { detail: { source: options.source || "command", recordCount: records.length } }));
+    return { opened: true, summary, consent };
   }
   function providerAudience(command = "") {
     return /\b(pharmacist|pharmacy|medicine|medication|prescription|refill)\b/i.test(command)
@@ -173,6 +378,13 @@
       medicationChanged: false
     };
     saveProviderCardOffline(card);
+    recordPilotEvidence({
+      topic: audience === "pharmacist" ? "pharmacy" : "health",
+      outcome: "completed",
+      pathway: "provider-card",
+      language: card.language,
+      durationBand: "unknown"
+    });
     const shell = document.createElement("div");
     shell.className = "nexus-rural-provider-card-shell";
     shell.dataset.nexusRuralProviderCardShell = "true";
@@ -236,14 +448,29 @@
     document.addEventListener("click", event => {
       const command = commandFromTypedSurface(event);
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command" }), 0);
+      if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command" }), 0);
     }, true);
     document.addEventListener("keydown", event => {
       if (event.key !== "Enter" || event.shiftKey) return;
       const input = event.target?.closest?.("#nexusCommandCenterInput");
       const command = text(input?.value);
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command-enter" }), 0);
+      if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command-enter" }), 0);
     }, true);
   }
+  global.addEventListener?.("genesis.workspace.acknowledged", event => {
+    const detail = event?.detail || {};
+    const completed = detail.opened === true && detail.visible !== false;
+    recordPilotEvidence({
+      topic: pilotTopicFromWorkspace(detail.workspace),
+      outcome: completed ? "completed" : "failed",
+      pathway: "workspace",
+      recovery: completed ? "none" : "not-recovered",
+      durationBand: "under-2-min",
+      language: document?.documentElement?.lang || "unknown",
+      majorFailure: !completed
+    });
+  });
   function handleFinalUserTranscript(input = {}, actionBuilder) {
     const transcript = text(input.transcript);
     const role = text(input.role || "user").toLowerCase();
@@ -256,14 +483,23 @@
     const providerCard = providerQuestionRequest(transcript)
       ? openRuralProviderCard(transcript, { source: "voice-final-transcript" })
       : null;
+    const pilotDashboard = pilotEvidenceRequest(transcript)
+      ? openPilotEvidenceDashboard({ source: "voice-final-transcript" })
+      : null;
     const action = typeof actionBuilder === "function" ? actionBuilder(transcript) : null;
-    if (!action && !providerCard?.opened) return { handled: false };
+    if (!action && !providerCard?.opened && !pilotDashboard?.opened) return { handled: false };
     seen.set(sessionId + ":" + transcriptId, now);
-    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, transcriptId, sessionId, originalTranscript: transcript };
+    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, transcriptId, sessionId, originalTranscript: transcript };
   }
   global.NexusBrowserActionController = Object.freeze({
     handleFinalUserTranscript,
     isRuralProviderCardRequest: providerQuestionRequest,
-    openRuralProviderCard
+    openRuralProviderCard,
+    isPilotEvidenceRequest: pilotEvidenceRequest,
+    openPilotEvidenceDashboard,
+    setPilotEvidenceConsent,
+    recordPilotEvidence,
+    getPilotEvidenceSummary: pilotEvidenceSummary,
+    getPilotReportText: pilotReportText
   });
 })(window);
