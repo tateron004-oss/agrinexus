@@ -35,6 +35,7 @@ class NexusBrowserRuntime {
     this.unsubscribe = null;
     this.sessionToken = null;
     this.recovery = null;
+    this.responseFallbackTimer = null;
   }
 
   async start({ sessionToken, userGesture = false } = {}) {
@@ -87,6 +88,7 @@ class NexusBrowserRuntime {
       type: "session.update",
       session: {
         type: "realtime",
+        output_modalities: ["audio"],
         instructions: this.instructions,
         audio: {
           input: {
@@ -145,10 +147,40 @@ class NexusBrowserRuntime {
       this.receipt("transcript.final", { transcript: event.transcript || "" });
     }
     if (event.type === "input_audio_buffer.speech_started") {
+      this.clearResponseFallback();
       this.receipt("conversation.barge-in");
     }
+    if (event.type === "input_audio_buffer.speech_stopped") {
+      this.receipt("conversation.processing");
+      this.clearResponseFallback();
+      this.responseFallbackTimer = setTimeout(() => {
+        this.responseFallbackTimer = null;
+        try {
+          this.realtime.send({ type: "response.create" });
+          this.receipt("conversation.response-requested", { reason: "vad-fallback" });
+        } catch (error) {
+          this.receipt("runtime.event-failed", { name: error.name, message: error.message });
+        }
+      }, 1200);
+    }
+    if (event.type === "response.created") {
+      this.clearResponseFallback();
+      this.receipt("conversation.response-started");
+    }
+    if (event.type === "response.output_audio.delta" || event.type === "response.audio.delta") {
+      this.receipt("conversation.speaking");
+    }
     if (event.type === "response.output_audio.done" || event.type === "response.audio.done") {
+      this.clearResponseFallback();
       this.receipt("conversation.return-to-listening");
+    }
+    if (event.type === "error") {
+      this.clearResponseFallback();
+      const detail = event.error || {};
+      this.receipt("realtime.error", {
+        code: detail.code || "unknown",
+        message: detail.message || "Realtime voice request failed."
+      });
     }
     return null;
   }
@@ -185,7 +217,13 @@ class NexusBrowserRuntime {
     return result;
   }
 
+  clearResponseFallback() {
+    if (this.responseFallbackTimer) clearTimeout(this.responseFallbackTimer);
+    this.responseFallbackTimer = null;
+  }
+
   stop(reason = "user-stop") {
+    this.clearResponseFallback();
     this.foundation.stop(reason);
     if (this.unsubscribe) this.unsubscribe();
     this.unsubscribe = null;
