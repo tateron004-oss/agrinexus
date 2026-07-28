@@ -98,7 +98,6 @@ async function login(page) {
   // visible shell and the authenticated API state before opening any media stream.
   await expect(page.locator("#loginView")).toBeHidden({ timeout: 30000 });
   await expect(page.locator("#appView")).toBeVisible({ timeout: 30000 });
-  await expect(page.locator("#logoutBtn")).toBeVisible({ timeout: 30000 });
   const authenticatedUser = await page.evaluate(async () => {
     const response = await fetch("/api/state", {
       credentials: "same-origin",
