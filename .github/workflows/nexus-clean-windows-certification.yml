@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: nexus-clean-windows-certification
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   clean-foundation:
@@ -59,39 +59,33 @@ jobs:
       - name: Build clean browser
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node rebuild/scripts/build-browser.js
-      - name: Run clean server and certify physical voice and 13 commands
+      - name: Start clean Genesis server
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           if (-not $env:OPENAI_API_KEY) { throw "OPENAI_API_KEY secret is required." }
           $secretBytes = New-Object byte[] 48
           [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($secretBytes)
           $env:NEXUS_CLEAN_SESSION_SECRET = [Convert]::ToBase64String($secretBytes)
+          Add-Content -Path $env:GITHUB_ENV -Value "NEXUS_CLEAN_SESSION_SECRET=$env:NEXUS_CLEAN_SESSION_SECRET"
           $process = Start-Process node -ArgumentList "rebuild/server.js" -PassThru -RedirectStandardOutput "clean-server.log" -RedirectStandardError "clean-server-error.log"
           $process.Id | Set-Content "clean-server.pid"
-          try {
-            $healthy = $false
-            for ($i = 0; $i -lt 30; $i++) {
-              if ($process.HasExited) {
-                throw "Clean Genesis server exited before certification."
-              }
-              try {
-                $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 2
-                if ($health.ok) {
-                  $healthy = $true
-                  break
-                }
-              } catch {}
-              Start-Sleep -Seconds 1
-            }
-            if (-not $healthy) { throw "Clean Genesis server did not become healthy." }
-            $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 2
-            if (-not $health.ok) { throw "Clean Genesis server health check failed immediately before Chrome launch." }
-            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
-            if ($LASTEXITCODE -ne 0) { throw "Physical certification failed with exit code $LASTEXITCODE." }
-          } finally {
-            if ($process -and -not $process.HasExited) {
-              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-            }
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 2
+              if ($health.ok) { exit 0 }
+            } catch {}
+            Start-Sleep -Seconds 1
+          }
+          throw "Clean Genesis server did not become healthy."
+      - name: Certify physical voice and 13 commands
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+      - name: Stop clean Genesis server
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          if (Test-Path "clean-server.pid") {
+            Stop-Process -Id (Get-Content "clean-server.pid") -Force -ErrorAction SilentlyContinue
           }
       - name: Reverify protected foundation
         if: always()
