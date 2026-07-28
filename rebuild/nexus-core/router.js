@@ -13,7 +13,7 @@ const ROUTES = Object.freeze([
   ["learning", /\b(learn|lesson|course|literacy|training)\b/i],
   ["music", /\b(play|music|song|songs)\b/i],
   ["offline", /\b(offline|sync|queue)\b/i],
-  ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge)\b/i]
+  ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|show (me )?(the )?(source|sources|reference|references|evidence)|cite|citation)\b/i]
 ]);
 
 function routeCommand(command, connectionState) {

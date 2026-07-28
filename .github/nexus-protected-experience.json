@@ -174,6 +174,13 @@
       "status": "pending"
     },
     {
+      "id": "approved-source-evidence",
+      "title": "Cross-domain Approved Source Evidence System",
+      "acceptance": "Nexus classifies each research question, retrieves only domain-approved sources, cross-checks at least two independent organizations, cites every material finding, opens a populated Evidence workspace, preserves an inspectable research receipt, and grounds follow-up questions in that receipt.",
+      "evidence": ["automated", "provider-smoke", "physical-browser", "receipt-reload"],
+      "status": "pending"
+    },
+    {
       "id": "protected-runtime-and-workspaces",
       "title": "Certified runtime and all 13 workspaces",
       "acceptance": "The protected foundation, voice transport, microphone behavior, intelligence, six languages, safety routing, and the exact 13-workspace matrix remain intact.",

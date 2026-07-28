@@ -33,9 +33,32 @@ async function main() {
     sessionAuthority: authority,
     createRealtimeSession: (input) => provider.createSession(input)
   });
+  const evidenceReceipts = new Map();
+  const evidenceService = {
+    async research({ question, parentReceiptId, userId }) {
+      const value = {
+        id: "evr_http_1",
+        question,
+        parentReceiptId,
+        userId,
+        domain: "government",
+        status: "cross-source-verified",
+        verified: true,
+        claims: [{ text: "Verified finding", citations: ["S1"] }],
+        sources: [{ id: "S1", url: "https://knbs.or.ke/" }]
+      };
+      evidenceReceipts.set(value.id, value);
+      return value;
+    },
+    getReceipt(id) {
+      return evidenceReceipts.get(id) || null;
+    }
+  };
   const receipts = [];
   const server = http.createServer(createNexusCleanHttpHandler({
     voiceSessionService: service,
+    evidenceService,
+    sessionAuthority: authority,
     onReceipt: (value) => receipts.push(value)
   }));
   server.listen(0, "127.0.0.1");
@@ -70,6 +93,33 @@ async function main() {
     assert.equal(providerBody.session.type, "realtime");
     assert.equal(providerBody.session.model, "gpt-realtime");
     assert.ok(receipts.some((value) => value.type === "voice-session.issued"));
+
+    const deniedEvidence = await fetch(`${baseUrl}/api/evidence/research`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question: "What is Kenya's government status?" })
+    });
+    assert.equal(deniedEvidence.status, 401);
+
+    const evidenceResponse = await fetch(`${baseUrl}/api/evidence/research`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${issued.token}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ question: "What is Kenya's government status?" })
+    });
+    assert.equal(evidenceResponse.status, 201);
+    const evidence = await evidenceResponse.json();
+    assert.equal(evidence.id, "evr_http_1");
+    assert.equal(evidence.status, "cross-source-verified");
+    assert.ok(receipts.some((value) => value.type === "evidence.research-completed"));
+
+    const receiptResponse = await fetch(`${baseUrl}/api/evidence/receipts/${evidence.id}`, {
+      headers: { authorization: `Bearer ${issued.token}` }
+    });
+    assert.equal(receiptResponse.status, 200);
+    assert.equal((await receiptResponse.json()).question, "What is Kenya's government status?");
 
     console.log("Nexus clean HTTP session end-to-end: PASS");
   } finally {

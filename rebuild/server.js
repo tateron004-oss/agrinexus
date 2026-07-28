@@ -7,6 +7,8 @@ const { NexusSessionAuthority } = require("./nexus-core/session-authority");
 const { NexusVoiceSessionService } = require("./nexus-core/voice-session-service");
 const { NexusOpenAIRealtimeProvider } = require("./nexus-core/openai-provider");
 const { createNexusCleanHttpHandler } = require("./nexus-core/http-app");
+const { ApprovedEvidenceService, createTavilyEvidenceProvider } = require("./nexus-core/approved-evidence-service");
+const { EvidenceReceiptStore } = require("./nexus-core/evidence-receipt-store");
 
 const root = path.resolve(__dirname, "browser");
 const port = Number(process.env.NEXUS_CLEAN_PORT || 4317);
@@ -20,7 +22,15 @@ const service = new NexusVoiceSessionService({
   sessionAuthority: authority,
   createRealtimeSession: (context) => provider.createSession(context)
 });
-const api = createNexusCleanHttpHandler({ voiceSessionService: service });
+const evidenceService = new ApprovedEvidenceService({
+  searchProvider: createTavilyEvidenceProvider(),
+  receiptStore: new EvidenceReceiptStore()
+});
+const api = createNexusCleanHttpHandler({
+  voiceSessionService: service,
+  evidenceService,
+  sessionAuthority: authority
+});
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -30,7 +40,7 @@ const contentTypes = {
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || "nexus.local"}`);
-  if (url.pathname === "/health" || url.pathname === "/api/voice/session") {
+  if (url.pathname === "/health" || url.pathname === "/api/voice/session" || url.pathname.startsWith("/api/evidence/")) {
     return api(request, response);
   }
   const requested = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");

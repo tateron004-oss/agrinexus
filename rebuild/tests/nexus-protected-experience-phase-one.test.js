@@ -95,6 +95,7 @@ const mapElements = {
   "nexus-map-frame": element(),
   "nexus-map-link": element(),
   "nexus-app-surface": { ...element(), innerHTML: "" },
+  "nexus-evidence-surface": { ...element(), innerHTML: "" },
   "nexus-music-surface": element(),
   "nexus-music-frame": element(),
   "nexus-music-link": element()
@@ -133,9 +134,13 @@ for (const [workspace, command] of commands) {
   assert.equal(mapElements["nexus-workspace"].dataset.workspace, workspace);
   assert.equal(mapElements["nexus-workspace"].dataset.populated, "true");
   const visibleCommand = command.replace(/'/g, "&#39;");
-  assert.match(mapElements["nexus-app-surface"].innerHTML, new RegExp(visibleCommand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(mapElements["nexus-app-surface"].innerHTML, /<input/);
-  assert.match(mapElements["nexus-app-surface"].innerHTML, /<button/);
+  if (workspace !== "live-knowledge") {
+    assert.match(mapElements["nexus-app-surface"].innerHTML, new RegExp(visibleCommand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(mapElements["nexus-app-surface"].innerHTML, /<input/);
+    assert.match(mapElements["nexus-app-surface"].innerHTML, /<button/);
+  } else {
+    assert.equal(mapElements["nexus-evidence-surface"].hidden, true);
+  }
 }
 assert.equal(renderWorkspace({
   workspace: "music",

@@ -99,7 +99,7 @@ class NexusBrowserRuntime {
         tools: [{
           type: "function",
           name: "route_nexus_command",
-          description: "Open and populate the correct Nexus application for the user's command.",
+          description: "Open and populate the correct Nexus application for the user's command. Use Live Knowledge for current facts, approved sources, references, citations, and evidence.",
           parameters: {
             type: "object",
             properties: { command: { type: "string" } },
@@ -225,7 +225,9 @@ class NexusBrowserRuntime {
       result = Object.freeze({ ...resolution, acknowledgement });
       this.receipt("workspace.visible", {
         workspace: resolution.workspace,
-        acknowledgementId: acknowledgement.id || null
+        acknowledgementId: acknowledgement.id || null,
+        evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+        evidenceStatus: acknowledgement.evidenceStatus || null
       });
     }
     if (callId) {

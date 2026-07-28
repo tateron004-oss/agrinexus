@@ -21,7 +21,8 @@ const expectedRequirements = [
   "automatic-language", "spoken-confirmation", "visible-populated-workspaces",
   "correction-navigation", "provider-truth", "consequential-consent",
   "accessibility-controls", "low-bandwidth-offline", "performance-recovery",
-  "safe-preferences", "production-receipts", "protected-runtime-and-workspaces"
+  "safe-preferences", "production-receipts", "approved-source-evidence",
+  "protected-runtime-and-workspaces"
 ];
 
 function fail(message) {
@@ -71,6 +72,7 @@ run("scripts/nexus-protected-foundation-guard.js");
 run("rebuild/tests/nexus-browser-shell.test.js");
 run("rebuild/tests/nexus-voice-foundation.test.js");
 run("rebuild/tests/nexus-runtime-e2e.test.js");
+run("rebuild/tests/nexus-approved-source-evidence.test.js");
 
 const pending = manifest.requirements.filter(({ status }) => status !== "certified");
 if (releaseMode && pending.length) {
