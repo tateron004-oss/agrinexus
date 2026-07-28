@@ -63,6 +63,14 @@ class NexusConnectionMachine {
     });
   }
 
+  beginRecovery(ownerId, reason = "connection-interrupted") {
+    this.assertOwner(ownerId);
+    return this.transition("recovering", reason, {
+      ownerId,
+      sessionId: this.sessionId
+    });
+  }
+
   fail(code, message) {
     const receipt = this.transition("failed", code || "connection-failed", {
       message: message || "Unknown connection failure",

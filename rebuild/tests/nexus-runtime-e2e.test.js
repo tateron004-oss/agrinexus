@@ -36,6 +36,16 @@ async function main() {
         }
       };
     },
+    recoverCalls: 0,
+    async recover() {
+      this.recoverCalls += 1;
+      return {
+        connection: {
+          sessionId: "rt-ron-recovered",
+          peer: { addEventListener: (type, callback) => { peerListeners[type] = callback; } }
+        }
+      };
+    },
     stopReason: null,
     stop(reason) { this.stopReason = reason; }
   };
@@ -116,6 +126,14 @@ async function main() {
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.barge-in"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
   assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
+
+  eventSubscriber({
+    type: "realtime.connection-state",
+    detail: { state: "disconnected" }
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(foundation.recoverCalls, 1);
+  assert.ok(receipts.some((receipt) => receipt.type === "runtime.recovered"));
 
   runtime.stop("test-complete");
   assert.equal(foundation.stopReason, "test-complete");

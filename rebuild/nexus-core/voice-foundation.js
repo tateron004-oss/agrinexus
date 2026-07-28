@@ -32,6 +32,32 @@ class NexusVoiceFoundation {
     }
   }
 
+  async recover({ sessionToken, reason = "connection-interrupted" } = {}) {
+    this.sessionAuthority.verify(sessionToken);
+    const track = this.microphone.liveTrack();
+    if (!track || !this.microphone.stream) {
+      throw new Error("Voice recovery requires the existing live Nexus microphone track.");
+    }
+    this.machine.beginRecovery(this.ownerId, reason);
+    this.realtime.close(reason);
+    try {
+      this.machine.requestSession(this.ownerId);
+      const connection = await this.realtime.connect({
+        stream: this.microphone.stream,
+        track,
+        sessionToken,
+        onSessionIssued: (sessionId) => this.machine.connecting(this.ownerId, sessionId)
+      });
+      this.machine.connected(this.ownerId);
+      return Object.freeze({ connection, state: this.machine.snapshot() });
+    } catch (error) {
+      this.machine.fail(error.name || "voice-recovery-failed", error.message);
+      this.microphone.release("recovery-failed");
+      this.realtime.close("recovery-failed");
+      throw error;
+    }
+  }
+
   stop(reason = "user-stop") {
     this.realtime.close(reason);
     this.microphone.release(reason);

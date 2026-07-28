@@ -101,10 +101,14 @@ async function main() {
   });
   await assert.rejects(() => microphone.acquire(), /user gesture/);
 
-  const peer = new PeerFake();
+  const peers = [];
   const realtimeEvents = [];
   const realtime = new NexusRealtimeConnector({
-    createPeerConnection: () => peer,
+    createPeerConnection: () => {
+      const peer = new PeerFake();
+      peers.push(peer);
+      return peer;
+    },
     fetchSession: async ({ sessionToken }) => {
       assert.equal(authority.verify(sessionToken).userId, "ron");
       return { clientSecret: "ek_test_redacted", sessionId: "realtime-clean-1" };
@@ -128,6 +132,7 @@ async function main() {
   assert.equal(started.state.state, "connected");
   assert.equal(started.connection.sessionId, "realtime-clean-1");
   assert.equal(mediaRequests, 1);
+  const peer = peers[0];
   assert.equal(peer.tracks[0].track.id, "physical-track-1");
   assert.equal(peer.remoteDescription.sdp, "clean-answer");
   assert.ok(receipts.some((receipt) => receipt.type === "microphone.acquired"));
@@ -137,6 +142,16 @@ async function main() {
 
   realtime.send({ type: "response.create" });
   assert.deepEqual(JSON.parse(peer.channel.sent[0]), { type: "response.create" });
+
+  const recovered = await foundation.recover({
+    sessionToken: issued.token,
+    reason: "test-interruption"
+  });
+  assert.equal(recovered.state.state, "connected");
+  assert.equal(mediaRequests, 1);
+  assert.equal(audio.track.readyState, "live");
+  assert.equal(peers.length, 2);
+  assert.ok(recovered.state.receipts.some((receipt) => receipt.to === "recovering"));
 
   foundation.stop();
   assert.equal(machine.snapshot().state, "closed");

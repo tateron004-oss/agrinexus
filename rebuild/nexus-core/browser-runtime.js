@@ -31,11 +31,17 @@ class NexusBrowserRuntime {
     this.instructions = instructions;
     this.started = false;
     this.unsubscribe = null;
+    this.sessionToken = null;
+    this.recovery = null;
   }
 
   async start({ sessionToken, userGesture = false } = {}) {
     if (typeof this.realtime.subscribe === "function" && !this.unsubscribe) {
       this.unsubscribe = this.realtime.subscribe((receipt) => {
+        if (receipt.type === "realtime.connection-state" && ["disconnected", "failed"].includes(receipt.detail.state)) {
+          this.recover(receipt.detail.state).catch(() => {});
+          return;
+        }
         if (receipt.type !== "realtime.data-message") return;
         Promise.resolve(this.handleRealtimeEvent(receipt.detail.data)).catch((error) => {
           this.receipt("runtime.event-failed", { name: error.name, message: error.message });
@@ -43,11 +49,33 @@ class NexusBrowserRuntime {
       });
     }
     const started = await this.foundation.start({ sessionToken, userGesture });
+    this.sessionToken = sessionToken;
     this.attachRemoteAudio(started.connection.peer);
     this.configureSession();
     this.started = true;
     this.receipt("runtime.ready", { sessionId: started.connection.sessionId });
     return started;
+  }
+
+  async recover(reason) {
+    if (this.recovery || !this.started) return this.recovery;
+    this.receipt("runtime.recovering", { reason });
+    this.recovery = this.foundation.recover({
+      sessionToken: this.sessionToken,
+      reason
+    }).then((result) => {
+      this.attachRemoteAudio(result.connection.peer);
+      this.configureSession();
+      this.receipt("runtime.recovered", { sessionId: result.connection.sessionId });
+      return result;
+    }).catch((error) => {
+      this.started = false;
+      this.receipt("runtime.recovery-failed", { name: error.name, message: error.message });
+      throw error;
+    }).finally(() => {
+      this.recovery = null;
+    });
+    return this.recovery;
   }
 
   configureSession() {
@@ -155,6 +183,7 @@ class NexusBrowserRuntime {
     if (this.unsubscribe) this.unsubscribe();
     this.unsubscribe = null;
     this.audioElement.srcObject = null;
+    this.sessionToken = null;
     this.started = false;
     this.receipt("runtime.closed", { reason });
   }
