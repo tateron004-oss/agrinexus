@@ -30693,7 +30693,7 @@ function nexusPresenceUserName() {
 }
 
 function isNexusPresenceWakePhrase(input = "") {
-  const normalized = String(input || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  const normalized = String(input || "").trim().toLowerCase().replace(/[.,!?;:]+$/g, "");
   return /^(nexus|hello nexus|hey nexus)$/.test(normalized);
 }
 
@@ -31057,7 +31057,8 @@ function handleNexusPresenceWakePhrase(command = "", options = {}) {
     allowHandoff: false,
     command,
     source: options.source || "nexus-conversational-presence",
-    skipPresenceUpdate: true
+    skipPresenceUpdate: true,
+    turnToken: options.turnToken
   });
   return true;
 }
@@ -50267,6 +50268,24 @@ function normalizeNexusWakeTranscript(command = "") {
   };
 }
 
+function isNexusWakeOnlyGreetingTranscript(command = "") {
+  return ["hello nexus", "hey nexus", "nexus"].includes(normalizedWakeText(command));
+}
+
+function handleNexusWakeOnlyFinalTranscript(command = "", options = {}) {
+  if (!isNexusWakeOnlyGreetingTranscript(command)) return false;
+  if (voiceConversationPaused) {
+    leaveNexusConversationPause("Nexus heard you. I am listening again.");
+  }
+  const turnToken = beginNexusVoiceTurn(command);
+  return handleNexusPresenceWakePhrase(command, {
+    ...options,
+    speak: true,
+    turnToken,
+    source: options.source || "voice-wake-only-greeting"
+  });
+}
+
 async function chromeMicrophonePermissionState() {
   if (!navigator.permissions?.query) return "unknown";
   try {
@@ -57575,6 +57594,9 @@ function processFinalVoiceCommand(command = "", options = {}) {
   }
   setCommandInputs(finalCommand);
   const localizedCommand = normalizeLocalizedVoiceCommand(finalCommand);
+  if (handleNexusWakeOnlyFinalTranscript(localizedCommand, {
+    source: options.source || "voice-wake-only-greeting"
+  })) return;
   const cleanedCommand = cleanWakeCommand(localizedCommand);
   const stopRedirect = postStopRedirectCommand(cleanedCommand || localizedCommand || finalCommand);
   if (voiceConversationPaused) {

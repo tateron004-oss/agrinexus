@@ -205,6 +205,7 @@
     "qa:nexus-domain-tone-safety-adapters": "node scripts/nexus-domain-tone-safety-adapters-qa.js",
     "qa:nexus-speech-synthesis-controller": "node scripts/nexus-speech-synthesis-controller-qa.js",
     "qa:nexus-listening-wake-runtime": "node scripts/nexus-listening-wake-runtime-qa.js",
+    "qa:nexus-wake-only-greeting-regression": "node scripts/nexus-wake-only-greeting-regression-qa.js",
     "qa:nexus-presence-synchronization": "node scripts/nexus-presence-synchronization-qa.js",
     "qa:nexus-voice-preferences-accessibility": "node scripts/nexus-voice-preferences-accessibility-qa.js",
     "qa:nexus-presence-enforcement": "node scripts/nexus-presence-enforcement-qa.js",
