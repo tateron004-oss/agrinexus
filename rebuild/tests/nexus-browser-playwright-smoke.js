@@ -123,6 +123,45 @@ async function main() {
     assert.equal(proof.pressed, "true");
     assert.equal(proof.snapshot.state.state, "connected");
     assert.ok(proof.snapshot.receipts.some((receipt) => receipt.type === "audio.remote-attached"));
+
+    const commands = [
+      ["agriculture", "Help me diagnose my maize crop"],
+      ["health", "Record my blood pressure"],
+      ["telehealth", "Start a telehealth intake"],
+      ["mobile-clinic", "Find a mobile clinic visit"],
+      ["pharmacy", "Open pharmacy support"],
+      ["learning", "Find a literacy course"],
+      ["workforce", "Search farming jobs in Kenya"],
+      ["marketplace", "Sell 50 bags of maize"],
+      ["maps", "Show me a map of Kenya"],
+      ["music", "Play Kenyan soul music"],
+      ["reminders", "Remind me to take my medicine"],
+      ["offline", "Show my offline queue"],
+      ["live-knowledge", "Search the internet for today's Kenya weather"]
+    ];
+    for (const [workspace, command] of commands) {
+      const result = await page.evaluate((spokenCommand) =>
+        window.NexusCleanRuntime.route(spokenCommand), command);
+      assert.equal(result.workspace, workspace);
+      assert.equal(result.acknowledgement.visible, true);
+      await page.waitForFunction((expectedWorkspace) => {
+        const host = document.querySelector("#nexus-workspace");
+        return host && !host.hidden
+          && host.dataset.workspace === expectedWorkspace
+          && host.dataset.populated === "true";
+      }, workspace);
+    }
+    assert.ok(await page.locator("#nexus-map-frame").getAttribute("src"));
+    const musicSource = await page.locator("#nexus-music-frame").getAttribute("src");
+    assert.match(musicSource, /youtube-nocookie\.com\/embed/);
+    assert.match(musicSource, /autoplay=1/);
+    assert.doesNotMatch(musicSource, /listType=search/);
+    assert.equal(await page.locator("#nexus-preferences").getAttribute("open"), null);
+    const visibleReceipts = await page.evaluate(() =>
+      window.NexusCleanRuntime.snapshot().receipts
+        .filter((receipt) => receipt.type === "workspace.visible")
+        .map((receipt) => receipt.detail.workspace));
+    assert.deepEqual(visibleReceipts.slice(-13), commands.map(([workspace]) => workspace));
     console.log("Nexus clean browser Playwright smoke: PASS");
   } finally {
     await browser.close();

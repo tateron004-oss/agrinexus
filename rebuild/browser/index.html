@@ -18,7 +18,9 @@
     </button>
     <p id="nexus-status" class="status" role="status" aria-live="polite">Tap the microphone to start</p>
     <p id="nexus-caption" class="caption" aria-live="polite" hidden></p>
-    <fieldset id="nexus-controls" class="controls" aria-label="Nexus voice preferences">
+    <details id="nexus-preferences" class="preferences">
+      <summary aria-label="Open voice preferences" title="Voice preferences"><span aria-hidden="true">⚙</span></summary>
+      <fieldset id="nexus-controls" class="controls" aria-label="Nexus voice preferences">
       <legend>Voice preferences</legend>
       <label>
         <input id="nexus-captions" type="checkbox" checked>
@@ -32,10 +34,25 @@
         <input id="nexus-volume" type="range" min="0" max="100" value="100">
       </label>
       <button id="nexus-replay" type="button" disabled>Replay response</button>
-    </fieldset>
+      </fieldset>
+    </details>
     <section id="nexus-workspace" class="workspace" aria-live="polite" hidden>
       <h1 id="nexus-workspace-title"></h1>
       <p id="nexus-workspace-command"></p>
+      <div id="nexus-map-surface" class="map-surface" hidden>
+        <iframe id="nexus-map-frame" title="Map displayed by Nexus" loading="eager" referrerpolicy="no-referrer"></iframe>
+        <a id="nexus-map-link" target="_blank" rel="noopener noreferrer">Open full map</a>
+      </div>
+      <div id="nexus-app-surface" class="app-surface" hidden></div>
+      <div id="nexus-music-surface" class="music-surface" hidden>
+        <iframe
+          id="nexus-music-frame"
+          title="Music played by Nexus"
+          loading="eager"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <a id="nexus-music-link" target="_blank" rel="noopener noreferrer">Open music player</a>
+      </div>
     </section>
     <audio id="nexus-audio" autoplay></audio>
   </main>

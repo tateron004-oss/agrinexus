@@ -10,7 +10,7 @@
 body {
   min-height: 100vh;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 50% 45%, rgba(0, 174, 255, .13), transparent 32rem),
     #04070d;
@@ -22,6 +22,7 @@ body {
   place-content: center;
   justify-items: center;
   gap: 1.5rem;
+  padding: 2rem 0;
 }
 
 .greeting {
@@ -94,6 +95,28 @@ body {
   font-size: 1rem;
 }
 
+.preferences {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 5;
+}
+
+.preferences > summary {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid rgba(111, 222, 255, .28);
+  border-radius: 50%;
+  background: rgba(8, 22, 34, .72);
+  color: #b9d7e8;
+  cursor: pointer;
+  list-style: none;
+}
+.preferences > summary::-webkit-details-marker { display: none; }
+.preferences > summary:focus-visible { outline: .15rem solid #fff; outline-offset: .2rem; }
+
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -101,6 +124,9 @@ body {
   justify-content: center;
   gap: .75rem 1rem;
   width: min(44rem, calc(100vw - 2rem));
+  position: absolute;
+  top: 3.25rem;
+  right: 0;
   margin: 0;
   padding: .75rem 1rem;
   border: 1px solid rgba(111, 222, 255, .28);
@@ -153,6 +179,76 @@ body {
   margin: 0;
   color: #b9dce7;
 }
+
+.map-surface {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+.map-surface[hidden] { display: none; }
+.map-surface iframe {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid rgba(111, 222, 255, .35);
+  border-radius: 12px;
+  background: #dce8e8;
+}
+.map-surface a { color: #7fe7ff; justify-self: end; }
+
+.app-surface,
+.music-surface {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.app-surface[hidden],
+.music-surface[hidden] { display: none; }
+.app-heading {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+}
+.app-heading div { display: grid; gap: .2rem; }
+.app-heading span:not(.app-icon),
+.app-request span { color: #8fb9c9; font-size: .82rem; }
+.app-icon { font-size: 2rem; }
+.app-request {
+  display: grid;
+  gap: .25rem;
+  padding: .8rem;
+  border-radius: .8rem;
+  background: rgba(0, 126, 255, .08);
+}
+.app-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: .75rem;
+}
+.app-fields label { display: grid; gap: .35rem; color: #b9dce7; font-size: .82rem; }
+.app-fields input {
+  width: 100%;
+  border: 1px solid rgba(111, 222, 255, .28);
+  border-radius: .65rem;
+  padding: .65rem;
+  background: rgba(2, 12, 22, .82);
+  color: #f6fbff;
+}
+.app-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.app-actions button {
+  border: 1px solid rgba(111, 222, 255, .45);
+  border-radius: .65rem;
+  padding: .6rem .85rem;
+  background: rgba(0, 126, 255, .18);
+  color: #f6fbff;
+}
+.music-surface iframe {
+  width: 100%;
+  min-height: 315px;
+  border: 1px solid rgba(111, 222, 255, .35);
+  border-radius: 12px;
+  background: #000;
+}
+.music-surface a { color: #7fe7ff; justify-self: end; }
 
 audio { display: none; }
 

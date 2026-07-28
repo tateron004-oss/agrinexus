@@ -866,6 +866,157 @@
         };
         return labels[receipt.type] || null;
       }
+      var WORKSPACE_VIEWS = Object.freeze({
+        agriculture: {
+          title: "Agriculture Help",
+          icon: "\u{1F331}",
+          status: "Crop support ready",
+          fields: ["Crop or livestock", "Location", "What are you seeing?"],
+          actions: ["Analyze concern", "Save field note"]
+        },
+        health: {
+          title: "Health & Chronic Care",
+          icon: "\u{1FA7A}",
+          status: "Private health workspace ready",
+          fields: ["Blood pressure or reading", "When measured", "Symptoms or notes"],
+          actions: ["Record reading", "Prepare care summary"]
+        },
+        telehealth: {
+          title: "Telehealth Intake",
+          icon: "\u{1F9D1}\u{1F3FE}\u200D\u2695\uFE0F",
+          status: "Intake preparation ready",
+          fields: ["Reason for visit", "Preferred date", "Care provider"],
+          actions: ["Begin intake", "Review consent"]
+        },
+        "mobile-clinic": {
+          title: "Mobile Clinic",
+          icon: "\u{1F690}",
+          status: "Clinic access search ready",
+          fields: ["Location", "Care needed", "Travel distance"],
+          actions: ["Find clinic options", "Prepare visit"]
+        },
+        pharmacy: {
+          title: "Pharmacy Support",
+          icon: "\u{1F48A}",
+          status: "Medication support ready",
+          fields: ["Medication", "Request type", "Pharmacy or location"],
+          actions: ["Review request", "Prepare pharmacy contact"]
+        },
+        learning: {
+          title: "Learning & Literacy",
+          icon: "\u{1F393}",
+          status: "Learning search ready",
+          fields: ["Topic or skill", "Learning level", "Language"],
+          actions: ["Find learning options", "Start a lesson"]
+        },
+        workforce: {
+          title: "Jobs & Workforce",
+          icon: "\u{1F4BC}",
+          status: "Job search ready",
+          fields: ["Job or skill", "Location", "Work preference"],
+          actions: ["Search opportunities", "Prepare application"]
+        },
+        marketplace: {
+          title: "AgriTrade Marketplace",
+          icon: "\u{1F6D2}",
+          status: "Marketplace workspace ready",
+          fields: ["Product", "Quantity", "Location"],
+          actions: ["Prepare listing", "Review marketplace options"]
+        },
+        reminders: {
+          title: "Reminders",
+          icon: "\u{1F514}",
+          status: "Reminder setup ready",
+          fields: ["Reminder", "Date and time", "Repeat"],
+          actions: ["Create reminder", "View reminders"]
+        },
+        offline: {
+          title: "Offline Queue",
+          icon: "\u{1F4F6}",
+          status: "Offline recovery ready",
+          fields: ["Queued request", "Connection status", "Sync priority"],
+          actions: ["Sync available work", "Review queue"]
+        },
+        "live-knowledge": {
+          title: "Live Knowledge / Internet",
+          icon: "\u{1F310}",
+          status: "Current-information search ready",
+          fields: ["Question", "Location or topic", "Source preference"],
+          actions: ["Search current sources", "Review citations"]
+        }
+      });
+      function escapeMarkup(value) {
+        return String(value || "").replace(/[&<>"']/g, (character) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[character]);
+      }
+      function musicSearchFromCommand(command) {
+        return String(command || "Kenyan music").replace(/\b(nexus|please|play|open|music|media|song|songs)\b/gi, " ").replace(/\s+/g, " ").trim() || "Kenyan music";
+      }
+      function musicPlaybackUrl(command) {
+        if (/\b(soul|r&b|rnb)\b/i.test(command || "")) {
+          return "https://www.youtube-nocookie.com/embed/LtKUrFy6G8g?autoplay=1&playsinline=1";
+        }
+        return "https://www.youtube-nocookie.com/embed/videoseries?list=PLPSRLBd93oYDPspJRjwRbsz0BC0dn9Mhc&autoplay=1&playsinline=1";
+      }
+      function renderAppSurface({ workspace, command, appSurface }) {
+        const view = WORKSPACE_VIEWS[workspace];
+        if (!view || !appSurface) return false;
+        const safeCommand = escapeMarkup(command);
+        appSurface.innerHTML = `
+    <div class="app-heading"><span class="app-icon" aria-hidden="true">${view.icon}</span>
+      <div><strong>${view.title}</strong><span>${view.status}</span></div>
+    </div>
+    <div class="app-request"><span>Voice request</span><strong>${safeCommand}</strong></div>
+    <div class="app-fields">${view.fields.map(
+          (field, index) => `<label>${field}<input type="text" value="${index === 0 ? safeCommand : ""}" aria-label="${field}"></label>`
+        ).join("")}</div>
+    <div class="app-actions">${view.actions.map(
+          (action) => `<button type="button">${action}</button>`
+        ).join("")}</div>`;
+        appSurface.hidden = false;
+        return true;
+      }
+      function renderWorkspace({ workspace, command, documentObject = document }) {
+        const host = documentObject.getElementById("nexus-workspace");
+        const title = documentObject.getElementById("nexus-workspace-title");
+        const commandText = documentObject.getElementById("nexus-workspace-command");
+        const mapSurface = documentObject.getElementById("nexus-map-surface");
+        const mapFrame = documentObject.getElementById("nexus-map-frame");
+        const mapLink = documentObject.getElementById("nexus-map-link");
+        const appSurface = documentObject.getElementById("nexus-app-surface");
+        const musicSurface = documentObject.getElementById("nexus-music-surface");
+        const musicFrame = documentObject.getElementById("nexus-music-frame");
+        const musicLink = documentObject.getElementById("nexus-music-link");
+        if (!host || !title || !commandText) return false;
+        title.textContent = workspace === "maps" ? "Maps / Field Visit" : workspace === "music" ? "Music / Media" : WORKSPACE_VIEWS[workspace]?.title || workspace;
+        commandText.textContent = command || "";
+        host.dataset.workspace = workspace;
+        host.hidden = false;
+        if (mapSurface) mapSurface.hidden = workspace !== "maps";
+        if (appSurface) {
+          appSurface.hidden = true;
+          appSurface.innerHTML = "";
+        }
+        if (musicSurface) musicSurface.hidden = workspace !== "music";
+        if (workspace === "maps" && mapFrame && mapLink) {
+          mapFrame.src = "https://www.openstreetmap.org/export/embed.html?bbox=33.5%2C-5.2%2C42.2%2C5.5&layer=mapnik";
+          mapLink.href = /\bkenya\b/i.test(command || "") ? "https://www.openstreetmap.org/search?query=Kenya" : `https://www.openstreetmap.org/search?query=${encodeURIComponent(command || "Kenya")}`;
+        }
+        if (workspace === "music" && musicFrame && musicLink) {
+          const query = musicSearchFromCommand(command);
+          const encodedQuery = encodeURIComponent(query);
+          musicFrame.src = musicPlaybackUrl(command);
+          musicLink.href = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+        }
+        const rendered = workspace === "maps" ? Boolean(mapFrame && mapFrame.src) : workspace === "music" ? Boolean(musicFrame && musicFrame.src) : renderAppSurface({ workspace, command, appSurface });
+        host.dataset.populated = rendered ? "true" : "false";
+        return rendered;
+      }
       function createRemoteAudioUnlock({ windowObject = window, audioElement } = {}) {
         const AudioContextConstructor = windowObject.AudioContext || windowObject.webkitAudioContext;
         let context = null;
@@ -931,20 +1082,16 @@
         window.addEventListener("nexus.clean.workspace.open", (event) => {
           const detail = event.detail || {};
           const workspace = document.getElementById("nexus-workspace");
-          const title = document.getElementById("nexus-workspace-title");
-          const command = document.getElementById("nexus-workspace-command");
-          if (!workspace || !title || !command || !detail.requestId || !detail.workspace) return;
-          title.textContent = detail.workspace.replace(/(^|-)([a-z])/g, (_, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`);
-          command.textContent = detail.command || "";
-          workspace.dataset.workspace = detail.workspace;
-          workspace.hidden = false;
+          if (!workspace || !detail.requestId || !detail.workspace) return;
+          if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
               detail: Object.freeze({
                 requestId: detail.requestId,
                 acknowledgementId: `visible-${detail.requestId}`,
                 workspace: detail.workspace,
-                visible: !workspace.hidden
+                visible: !workspace.hidden && workspace.dataset.populated === "true",
+                populated: workspace.dataset.populated === "true"
               })
             }));
           });
@@ -1127,7 +1274,7 @@
           boot();
         }
       }
-      module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, statusFromReceipt };
+      module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, renderWorkspace, statusFromReceipt };
     }
   });
   require_nexus_clean_entry();
