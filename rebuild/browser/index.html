@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#04070d">
+  <title>Nexus Genesis</title>
+  <link rel="stylesheet" href="./nexus-clean.css">
+</head>
+<body>
+  <main class="genesis" aria-label="Nexus Genesis">
+    <p id="nexus-greeting" class="greeting">Hello Ron, how can I help?</p>
+    <button id="nexus-orb" class="orb" type="button" aria-label="Speak to Nexus" aria-pressed="false">
+      <span class="orb-core" aria-hidden="true"></span>
+    </button>
+    <p id="nexus-status" class="status" role="status" aria-live="polite">Speak</p>
+    <audio id="nexus-audio" autoplay></audio>
+  </main>
+  <script src="./nexus-clean.bundle.js" defer></script>
+</body>
+</html>

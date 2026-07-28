@@ -104,6 +104,11 @@ class NexusRealtimeConnector {
     this.channel.addEventListener("open", () => this.event("realtime.data-open"));
     this.channel.addEventListener("message", (event) => this.event("realtime.data-message", { data: event.data }));
     this.channel.addEventListener("close", () => this.event("realtime.data-closed"));
+    this.peer.addEventListener("track", (event) => {
+      this.event("realtime.remote-track", {
+        stream: event.streams && event.streams[0] ? event.streams[0] : null
+      });
+    });
   }
 
   send(event) {

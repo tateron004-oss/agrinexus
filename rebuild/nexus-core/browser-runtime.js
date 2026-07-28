@@ -42,6 +42,10 @@ class NexusBrowserRuntime {
           this.recover(receipt.detail.state).catch(() => {});
           return;
         }
+        if (receipt.type === "realtime.remote-track") {
+          this.attachRemoteStream(receipt.detail.stream);
+          return;
+        }
         if (receipt.type !== "realtime.data-message") return;
         Promise.resolve(this.handleRealtimeEvent(receipt.detail.data)).catch((error) => {
           this.receipt("runtime.event-failed", { name: error.name, message: error.message });
@@ -50,7 +54,6 @@ class NexusBrowserRuntime {
     }
     const started = await this.foundation.start({ sessionToken, userGesture });
     this.sessionToken = sessionToken;
-    this.attachRemoteAudio(started.connection.peer);
     this.configureSession();
     this.started = true;
     this.receipt("runtime.ready", { sessionId: started.connection.sessionId });
@@ -64,7 +67,6 @@ class NexusBrowserRuntime {
       sessionToken: this.sessionToken,
       reason
     }).then((result) => {
-      this.attachRemoteAudio(result.connection.peer);
       this.configureSession();
       this.receipt("runtime.recovered", { sessionId: result.connection.sessionId });
       return result;
@@ -112,18 +114,21 @@ class NexusBrowserRuntime {
 
   attachRemoteAudio(peer) {
     peer.addEventListener("track", (event) => {
-      const stream = event.streams && event.streams[0];
-      if (!stream) {
-        this.receipt("audio.remote-failed", { reason: "missing-stream" });
-        return;
-      }
-      this.audioElement.srcObject = stream;
-      const playback = typeof this.audioElement.play === "function" ? this.audioElement.play() : null;
-      if (playback && typeof playback.catch === "function") {
-        playback.catch((error) => this.receipt("audio.playback-failed", { message: error.message }));
-      }
-      this.receipt("audio.remote-attached");
+      this.attachRemoteStream(event.streams && event.streams[0]);
     });
+  }
+
+  attachRemoteStream(stream) {
+    if (!stream) {
+      this.receipt("audio.remote-failed", { reason: "missing-stream" });
+      return;
+    }
+    this.audioElement.srcObject = stream;
+    const playback = typeof this.audioElement.play === "function" ? this.audioElement.play() : null;
+    if (playback && typeof playback.catch === "function") {
+      playback.catch((error) => this.receipt("audio.playback-failed", { message: error.message }));
+    }
+    this.receipt("audio.remote-attached");
   }
 
   async handleRealtimeEvent(rawEvent) {

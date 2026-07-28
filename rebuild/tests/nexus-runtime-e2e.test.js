@@ -81,7 +81,10 @@ async function main() {
   assert.equal(sent[0].session.tools[0].name, "route_nexus_command");
 
   const remoteStream = { id: "remote-audio-1" };
-  peerListeners.track({ streams: [remoteStream] });
+  eventSubscriber({
+    type: "realtime.remote-track",
+    detail: { stream: remoteStream }
+  });
   assert.equal(audioElement.srcObject, remoteStream);
   assert.equal(audioElement.plays, 1);
 

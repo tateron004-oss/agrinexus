@@ -43,5 +43,9 @@ node rebuild/tests/nexus-voice-foundation.test.js
 - `openai-provider.js`: server-only OpenAI Realtime client-secret provider.
 - `http-app.js`: standalone authenticated health and voice-session HTTP boundary.
 
+The deployable browser shell lives in `rebuild/browser`. Build its isolated bundle
+with `node rebuild/scripts/build-browser.js`; it does not load the legacy browser
+runtime.
+
 These modules are dependency-injected so browser, server, and provider boundaries can
 be certified independently before the clean runtime is allowed to replace production.
