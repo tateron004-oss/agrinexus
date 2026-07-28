@@ -1,0 +1,184 @@
+{
+  "schema": "nexus.protected-experience.v1",
+  "owner": "Ron Tate",
+  "product": "Nexus Genesis",
+  "policy": {
+    "failClosed": true,
+    "releaseRequiresAllRequirementsCertified": true,
+    "certificationMustTargetExactReleaseCommit": true,
+    "protectedFoundationManifest": ".github/nexus-protected-foundation.json",
+    "runtimeBranch": "rebuild/nexus-genesis-clean-foundation"
+  },
+  "languages": [
+    "en",
+    "es",
+    "fr",
+    "sw",
+    "ar",
+    "pt"
+  ],
+  "workspaces": [
+    "agriculture",
+    "health",
+    "telehealth",
+    "mobile-clinic",
+    "pharmacy",
+    "learning",
+    "workforce",
+    "marketplace",
+    "maps",
+    "music",
+    "reminders",
+    "offline",
+    "live-knowledge"
+  ],
+  "consequentialActions": [
+    "calls",
+    "messages",
+    "healthcare-sharing",
+    "purchases",
+    "provider-requests"
+  ],
+  "requirements": [
+    {
+      "id": "voice-identity",
+      "title": "British female Nexus voice",
+      "acceptance": "A user-selected warm British female Nexus voice preserves consistent pace, pronunciation, and volume; a fallback voice may not silently replace her identity.",
+      "evidence": ["automated", "physical-browser", "audible-review"],
+      "status": "pending"
+    },
+    {
+      "id": "personalized-greeting",
+      "title": "Personalized greeting",
+      "acceptance": "The signed-in Ron experience says exactly “Hello Ron, how can I help?” without exposing Nexus before authentication.",
+      "evidence": ["automated", "browser"],
+      "status": "certified"
+    },
+    {
+      "id": "wake-phrases",
+      "title": "Wake phrase recognition",
+      "acceptance": "Nexus recognizes “Nexus,” “Hello Nexus,” and “Hey Nexus” through spoken audio.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "pending"
+    },
+    {
+      "id": "conversation-cycle",
+      "title": "Listening, thinking, speaking cycle",
+      "acceptance": "Every successful turn visibly and truthfully follows Listening → Thinking → Speaking → Listening.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "pending"
+    },
+    {
+      "id": "continuous-conversation",
+      "title": "Continuous conversation",
+      "acceptance": "After the initial user gesture, Nexus completes multiple turns and resumes listening without another microphone tap.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "certified"
+    },
+    {
+      "id": "barge-in",
+      "title": "Natural interruption",
+      "acceptance": "User speech interrupts Nexus output and the same session continues without duplicate turns.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "certified"
+    },
+    {
+      "id": "single-voice",
+      "title": "Single audio owner",
+      "acceptance": "Exactly one Nexus voice is audible with no echo, overlapping playback path, or duplicate response.",
+      "evidence": ["automated", "physical-browser", "audible-review"],
+      "status": "pending"
+    },
+    {
+      "id": "conversation-memory",
+      "title": "Conversation memory",
+      "acceptance": "Names, goals, location, language, and active tasks remain available across turns under the approved privacy and forgetting policy.",
+      "evidence": ["automated", "browser"],
+      "status": "pending"
+    },
+    {
+      "id": "automatic-language",
+      "title": "Automatic multilingual switching",
+      "acceptance": "Nexus detects and switches among English, Spanish, French, Swahili, Arabic, and Portuguese without losing the active task.",
+      "evidence": ["automated", "physical-browser", "audible-review"],
+      "status": "pending"
+    },
+    {
+      "id": "spoken-confirmation",
+      "title": "Spoken completion confirmation",
+      "acceptance": "Nexus speaks a truthful confirmation only after a workspace is visible or an action has a verified completion receipt.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "certified"
+    },
+    {
+      "id": "visible-populated-workspaces",
+      "title": "Visible populated workspaces",
+      "acceptance": "Each of the 13 routes opens the correct visible workspace with command-specific content and a visible acknowledgement.",
+      "evidence": ["automated", "physical-browser", "workspace-matrix"],
+      "status": "certified"
+    },
+    {
+      "id": "correction-navigation",
+      "title": "Correction and navigation commands",
+      "acceptance": "Commands including “No, open Maps” and “Go back” correct the active route without restarting voice.",
+      "evidence": ["automated", "physical-browser"],
+      "status": "pending"
+    },
+    {
+      "id": "provider-truth",
+      "title": "Honest provider status",
+      "acceptance": "Nexus distinguishes available, unavailable, queued, prepared, and completed provider states and never fabricates execution.",
+      "evidence": ["automated", "provider-smoke"],
+      "status": "pending"
+    },
+    {
+      "id": "consequential-consent",
+      "title": "Consent for consequential actions",
+      "acceptance": "Calls, messages, healthcare sharing, purchases, and provider requests require clear user consent before execution.",
+      "evidence": ["automated", "browser", "provider-smoke"],
+      "status": "pending"
+    },
+    {
+      "id": "accessibility-controls",
+      "title": "Accessible voice controls",
+      "acceptance": "The experience provides a visible microphone, readable text, captions, replay, volume, and slower-speech controls with keyboard and screen-reader support.",
+      "evidence": ["automated", "browser", "accessibility-audit"],
+      "status": "pending"
+    },
+    {
+      "id": "low-bandwidth-offline",
+      "title": "Low-bandwidth and Offline Queue recovery",
+      "acceptance": "Interrupted or low-bandwidth work is recoverable, queueable when safe, and clearly represented in Offline Queue.",
+      "evidence": ["automated", "network-emulation", "browser"],
+      "status": "pending"
+    },
+    {
+      "id": "performance-recovery",
+      "title": "Responsive and recoverable runtime",
+      "acceptance": "Response latency stays within the certified budget, network interruptions reconnect, and errors recover gracefully without losing microphone ownership.",
+      "evidence": ["automated", "physical-browser", "network-emulation"],
+      "status": "pending"
+    },
+    {
+      "id": "safe-preferences",
+      "title": "User-selectable preferences",
+      "acceptance": "Voice, pace, volume, captions, language, and accessibility preferences are user-selectable without modifying the certified runtime foundation.",
+      "evidence": ["automated", "browser"],
+      "status": "pending"
+    },
+    {
+      "id": "production-receipts",
+      "title": "Production execution receipts",
+      "acceptance": "Calls, reminders, searches, routes, provider requests, and every executed action produce provider-backed, inspectable receipts.",
+      "evidence": ["automated", "provider-smoke", "production"],
+      "status": "pending"
+    },
+    {
+      "id": "protected-runtime-and-workspaces",
+      "title": "Certified runtime and all 13 workspaces",
+      "acceptance": "The protected foundation, voice transport, microphone behavior, intelligence, six languages, safety routing, and the exact 13-workspace matrix remain intact.",
+      "evidence": ["automated", "physical-browser", "workspace-matrix"],
+      "status": "certified"
+    }
+  ]
+}
