@@ -150,6 +150,12 @@ async function main() {
           && host.dataset.workspace === expectedWorkspace
           && host.dataset.populated === "true";
       }, workspace);
+      assert.equal(await page.locator("#nexus-workspace").evaluate((element) => {
+        const style = getComputedStyle(element);
+        return style.position === "fixed"
+          && style.inset === "0px"
+          && element.clientWidth === document.documentElement.clientWidth;
+      }), true);
     }
     assert.ok(await page.locator("#nexus-map-frame").getAttribute("src"));
     const musicSource = await page.locator("#nexus-music-frame").getAttribute("src");
@@ -157,6 +163,8 @@ async function main() {
     assert.match(musicSource, /autoplay=1/);
     assert.doesNotMatch(musicSource, /listType=search/);
     assert.equal(await page.locator("#nexus-preferences").getAttribute("open"), null);
+    await page.locator("#nexus-workspace-close").click();
+    assert.equal(await page.locator("#nexus-workspace").isHidden(), true);
     const visibleReceipts = await page.evaluate(() =>
       window.NexusCleanRuntime.snapshot().receipts
         .filter((receipt) => receipt.type === "workspace.visible")

@@ -278,6 +278,8 @@ function boot() {
   const slowSpeechControl = document.getElementById("nexus-slow-speech");
   const volumeControl = document.getElementById("nexus-volume");
   const replayControl = document.getElementById("nexus-replay");
+  const workspaceClose = document.getElementById("nexus-workspace-close");
+  const workspaceVoiceStatus = document.getElementById("nexus-workspace-voice-status");
   const config = window.NEXUS_CLEAN_CONFIG || {};
   const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
   if (!sessionToken) {
@@ -290,6 +292,7 @@ function boot() {
     const workspace = document.getElementById("nexus-workspace");
     if (!workspace || !detail.requestId || !detail.workspace) return;
     if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
+    document.body.classList.add("nexus-workspace-open");
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
         detail: Object.freeze({
@@ -302,6 +305,14 @@ function boot() {
       }));
     });
   });
+  if (workspaceClose) {
+    workspaceClose.addEventListener("click", () => {
+      const workspace = document.getElementById("nexus-workspace");
+      if (workspace) workspace.hidden = true;
+      document.body.classList.remove("nexus-workspace-open");
+      orb.focus();
+    });
+  }
 
   const receipts = [];
   let preferences = DEFAULT_EXPERIENCE_PREFERENCES;
@@ -320,6 +331,17 @@ function boot() {
   caption.hidden = !preferences.captions;
   const onReceipt = (receipt) => {
     receipts.push(receipt);
+    const workspaceStatusLabels = {
+      "conversation.listening": "Nexus is listening in the background",
+      "conversation.response-started": "Nexus is thinking…",
+      "conversation.audio-started": "Nexus is speaking…",
+      "conversation.response-finished": "Nexus is listening in the background",
+      "workspace.visible": "Nexus is listening in the background",
+      "realtime.error": "Nexus voice needs attention"
+    };
+    if (workspaceVoiceStatus && workspaceStatusLabels[receipt.type]) {
+      workspaceVoiceStatus.textContent = workspaceStatusLabels[receipt.type];
+    }
     if (receipt.type === "realtime.remote-track") {
       const attached = remoteAudio.attach(receipt.detail && receipt.detail.stream);
       if (attached) {
