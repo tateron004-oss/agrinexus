@@ -93,10 +93,30 @@ async function login(page) {
   await page.locator("#password").fill(process.env.NEXUS_PLAYWRIGHT_PASSWORD || "User2026!");
   // Exercise the same trusted click path as an end user. Programmatic
   // requestSubmit() does not activate production's login transition reliably.
-  await Promise.all([
-    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-    page.getByRole("button", { name: "Enter platform", exact: true }).click()
-  ]);
+  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  // Login is an in-page render transition, not a navigation. Prove both the
+  // visible shell and the authenticated API state before opening any media stream.
+  await expect(page.locator("#loginView")).toBeHidden({ timeout: 30000 });
+  await expect(page.locator("#appView")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator("#logoutBtn")).toBeVisible({ timeout: 30000 });
+  const authenticatedUser = await page.evaluate(async () => {
+    const response = await fetch("/api/state", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    const payload = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      id: String(payload?.user?.id || ""),
+      email: String(payload?.user?.email || "")
+    };
+  });
+  expect(authenticatedUser).toEqual({
+    ok: true,
+    id: "u_standard",
+    email: "user@agrinexus.org"
+  });
   // Require the authenticated application shell before opening any media stream.
   await expect(
     page.locator("#nexusPermanentMicrophoneBtn"),
