@@ -631,7 +631,7 @@
           if (event.type === "input_audio_buffer.speech_started") {
             this.receipt("conversation.barge-in");
           }
-          if (event.type === "response.audio.done") {
+          if (event.type === "response.output_audio.done" || event.type === "response.audio.done") {
             this.receipt("conversation.return-to-listening");
           }
           return null;
@@ -796,7 +796,10 @@
               },
               body: offerSdp
             });
-            if (!response.ok) throw new Error(`Realtime SDP exchange failed (${response.status}).`);
+            if (!response.ok) {
+              const detail = String(await response.text()).slice(0, 500);
+              throw new Error(`Realtime SDP exchange failed (${response.status}): ${detail || "no response detail"}`);
+            }
             return response.text();
           },
           onEvent: onReceipt
