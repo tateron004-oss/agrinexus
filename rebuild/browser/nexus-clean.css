@@ -44,6 +44,7 @@ body {
     0 0 2rem rgba(0, 174, 255, .45),
     0 0 7rem rgba(0, 102, 255, .22),
     inset 0 0 2rem rgba(255, 255, 255, .28);
+  position: relative;
   transition: transform .2s ease, filter .2s ease;
 }
 
@@ -58,6 +59,23 @@ body {
   border-radius: inherit;
   border: 1px solid rgba(255, 255, 255, .5);
   background: radial-gradient(circle, rgba(255, 255, 255, .75), rgba(0, 174, 255, .08) 55%);
+}
+
+.orb-microphone {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: clamp(3.5rem, 8vw, 5.25rem);
+  height: clamp(3.5rem, 8vw, 5.25rem);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  color: #ffffff;
+  filter: drop-shadow(0 0 .8rem rgba(0, 20, 48, .9));
+  pointer-events: none;
+}
+
+.orb[aria-pressed="true"] .orb-microphone {
+  color: #b9f4ff;
+  filter: drop-shadow(0 0 1.1rem rgba(0, 229, 255, .95));
 }
 
 .status {
