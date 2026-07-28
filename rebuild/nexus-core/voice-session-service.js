@@ -20,8 +20,16 @@ class NexusVoiceSessionService {
       model: this.model,
       userId: session.userId
     });
-    const clientSecret = realtime && (realtime.client_secret?.value || realtime.clientSecret);
-    const sessionId = realtime && (realtime.id || realtime.sessionId);
+    const clientSecret = realtime && (
+      realtime.value
+      || realtime.client_secret?.value
+      || realtime.clientSecret
+    );
+    const sessionId = realtime && (
+      realtime.session?.id
+      || realtime.id
+      || realtime.sessionId
+    );
     if (!clientSecret || !sessionId) {
       throw new Error("Realtime provider returned an invalid session.");
     }
@@ -29,7 +37,10 @@ class NexusVoiceSessionService {
       schema: "nexus.voice.session.v1",
       sessionId,
       clientSecret,
-      expiresAt: realtime.client_secret?.expires_at || realtime.expiresAt || null
+      expiresAt: realtime.expires_at
+        || realtime.client_secret?.expires_at
+        || realtime.expiresAt
+        || null
     });
   }
 }

@@ -14,8 +14,9 @@ async function main() {
   const service = new NexusVoiceSessionService({
     sessionAuthority: authority,
     createRealtimeSession: async ({ model, userId }) => ({
-      id: `rt-${userId}`,
-      client_secret: { value: "ek_clean_test", expires_at: 9999999999 },
+      value: "ek_clean_test",
+      expires_at: 9999999999,
+      session: { id: `rt-${userId}` },
       model
     })
   });

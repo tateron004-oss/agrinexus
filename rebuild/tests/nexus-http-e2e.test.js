@@ -17,7 +17,11 @@ async function main() {
       return {
         ok: true,
         async json() {
-          return { id: "rt-http-1", client_secret: { value: "ek_http", expires_at: 9999999999 } };
+          return {
+            value: "ek_http",
+            expires_at: 9999999999,
+            session: { id: "rt-http-1" }
+          };
         }
       };
     }
