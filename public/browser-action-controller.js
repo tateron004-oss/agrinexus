@@ -27,6 +27,109 @@
     return /\b(open|show|display|create|prepare|generate|view)\b/.test(value)
       && /\b(pilot evidence|pilot dashboard|governance dashboard|implementation report|learning brief|scale[- ]?up (?:plan|options|scenarios)|pilot report)\b/.test(value);
   }
+  function weatherRequest(command = "") {
+    const value = text(command).toLowerCase();
+    return /\b(weather|forecast|temperature|rain|raining|heat|hali ya hewa|clima|meteo|météo)\b/.test(value);
+  }
+  function weatherLocation(command = "") {
+    const value = text(command)
+      .replace(/^\s*(?:hello|hey|good\s+(?:morning|afternoon|evening))?\s*nexus[\s,.:;-]*/i, "")
+      .replace(/[?.!]+$/g, "")
+      .trim();
+    const patterns = [
+      /\b(?:weather|forecast|temperature)\s+(?:today\s+)?(?:in|for|at|near)\s+(.+)$/i,
+      /\b(?:show|check|tell me|get|open|display)\s+(?:me\s+)?(?:today(?:'s)?\s+)?(?:weather|forecast|temperature)\s+(?:in|for|at|near)\s+(.+)$/i,
+      /\b(?:what(?:'s| is)\s+)?(?:the\s+)?weather\s+(?:like\s+)?(?:today\s+)?(?:in|for|at|near)\s+(.+)$/i,
+      /\b(?:in|for|at|near)\s+(.+?)\s+(?:weather|forecast|temperature)\b/i
+    ];
+    for (const pattern of patterns) {
+      const match = value.match(pattern);
+      if (match?.[1]) return match[1].replace(/\b(?:today|right now|now)\b/gi, "").replace(/\s+/g, " ").trim();
+    }
+    const knownKenyaLocation = value.match(/\b(Nairobi|Mombasa|Kisumu|Nakuru|Nyeri|Eldoret|Meru|Machakos|Kakamega|Kisii|Malindi|Lamu|Kenya)\b/i);
+    return knownKenyaLocation?.[1] || "";
+  }
+  function weatherCodeLabel(code) {
+    const value = Number(code);
+    if (value === 0) return { icon: "☀️", label: "Clear sky" };
+    if ([1, 2, 3].includes(value)) return { icon: "🌤️", label: value === 3 ? "Overcast" : "Partly cloudy" };
+    if ([45, 48].includes(value)) return { icon: "🌫️", label: "Fog" };
+    if ([51, 53, 55, 56, 57].includes(value)) return { icon: "🌦️", label: "Drizzle" };
+    if ([61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return { icon: "🌧️", label: "Rain" };
+    if ([71, 73, 75, 77, 85, 86].includes(value)) return { icon: "🌨️", label: "Snow" };
+    if ([95, 96, 99].includes(value)) return { icon: "⛈️", label: "Thunderstorm" };
+    return { icon: "🌍", label: "Current conditions" };
+  }
+  function ensureWeatherStyles() {
+    if (typeof document === "undefined" || document.getElementById("nexus-live-weather-styles")) return;
+    const style = document.createElement("style");
+    style.id = "nexus-live-weather-styles";
+    style.textContent = `
+      .nexus-live-weather-shell{position:fixed;inset:0;z-index:2147482998;background:rgba(2,12,24,.88);display:grid;place-items:center;padding:18px;font-family:Inter,system-ui,sans-serif;color:#102033}
+      .nexus-live-weather-card{width:min(820px,100%);max-height:94vh;overflow:auto;background:linear-gradient(145deg,#eefbff,#fff);border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.48)}
+      .nexus-live-weather-card header{background:#07566b;color:#fff;padding:22px 24px;display:flex;justify-content:space-between;gap:16px}.nexus-live-weather-card h1{margin:0;font-size:clamp(1.6rem,5vw,2.6rem)}
+      .nexus-live-weather-close{width:48px;height:48px;border:0;border-radius:50%;background:#fff;color:#07566b;font-size:2rem}.nexus-live-weather-body{padding:24px}
+      .nexus-live-weather-current{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;padding:22px;border:3px solid #8ed4e6;border-radius:20px;background:#fff}.nexus-live-weather-icon{font-size:4.5rem}.nexus-live-weather-temp{font-size:clamp(2.4rem,8vw,4.2rem);font-weight:900;color:#07566b}.nexus-live-weather-condition{font-size:1.3rem;font-weight:800}
+      .nexus-live-weather-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.nexus-live-weather-metric{padding:15px;border:2px solid #c7dce3;border-radius:14px;background:#fff}.nexus-live-weather-metric strong{display:block;color:#07566b}
+      .nexus-live-weather-source{padding:15px;border-left:6px solid #06a77d;background:#effcf7}.nexus-live-weather-source a{color:#064f64;font-weight:850}.nexus-live-weather-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.nexus-live-weather-actions button,.nexus-live-weather-actions a{border:0;border-radius:11px;background:#07566b;color:#fff;padding:12px 15px;font-weight:800;text-decoration:none}
+      .nexus-live-weather-error{padding:18px;border:3px solid #d62828;border-radius:16px;background:#fff3f3;font-weight:750}
+      @media(max-width:560px){.nexus-live-weather-shell{padding:0}.nexus-live-weather-card{height:100%;max-height:none;border-radius:0}.nexus-live-weather-grid{grid-template-columns:1fr}.nexus-live-weather-current{grid-template-columns:1fr;text-align:center}}
+    `;
+    document.head.appendChild(style);
+  }
+  function weatherCardShell(title = "Live Weather") {
+    ensureWeatherStyles();
+    document.querySelector("[data-nexus-live-weather-shell]")?.remove();
+    const shell = document.createElement("div");
+    shell.className = "nexus-live-weather-shell";
+    shell.dataset.nexusLiveWeatherShell = "true";
+    shell.setAttribute("role", "dialog");
+    shell.setAttribute("aria-modal", "true");
+    shell.innerHTML = `<article class="nexus-live-weather-card"><header><div><h1>🌦️ ${html(title)}</h1><p>Verified public weather information</p></div><button class="nexus-live-weather-close" data-weather-action="close" aria-label="Close weather card">×</button></header><div class="nexus-live-weather-body"><p>Loading current conditions…</p></div></article>`;
+    shell.addEventListener("click", event => {
+      if (event.target?.closest?.("[data-weather-action]")?.dataset?.weatherAction === "close") shell.remove();
+    });
+    document.body.appendChild(shell);
+    return shell;
+  }
+  async function openLiveWeatherCard(command = "", options = {}) {
+    if (typeof document === "undefined" || !document.body || typeof global.fetch !== "function") return { opened: false, reason: "browser-unavailable" };
+    const location = weatherLocation(command);
+    const shell = weatherCardShell(location ? `Weather in ${location}` : "Weather");
+    const body = shell.querySelector(".nexus-live-weather-body");
+    if (!location) {
+      body.innerHTML = `<div class="nexus-live-weather-error">📍 Please name a city or country. Try: “Nexus, show today’s weather in Nairobi.”</div>`;
+      return { opened: true, needsLocation: true };
+    }
+    try {
+      const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`;
+      const geocodeResponse = await global.fetch(geocodeUrl);
+      if (!geocodeResponse.ok) throw new Error(`location service returned ${geocodeResponse.status}`);
+      const place = (await geocodeResponse.json())?.results?.[0];
+      if (!place) throw new Error(`no matching location was found for ${location}`);
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(place.latitude)}&longitude=${encodeURIComponent(place.longitude)}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto`;
+      const weatherResponse = await global.fetch(weatherUrl);
+      if (!weatherResponse.ok) throw new Error(`weather service returned ${weatherResponse.status}`);
+      const weather = await weatherResponse.json();
+      const current = weather.current || {};
+      const daily = weather.daily || {};
+      const condition = weatherCodeLabel(current.weather_code);
+      const placeLabel = [place.name, place.admin1, place.country].filter(Boolean).join(", ");
+      const verifiedAt = new Date().toLocaleString();
+      body.innerHTML = `
+        <section class="nexus-live-weather-current"><div class="nexus-live-weather-icon">${condition.icon}</div><div><div class="nexus-live-weather-temp">${html(current.temperature_2m)}${html(weather.current_units?.temperature_2m || "°C")}</div><div class="nexus-live-weather-condition">${html(condition.label)} — ${html(placeLabel)}</div><div>Feels like ${html(current.apparent_temperature)}${html(weather.current_units?.apparent_temperature || "°C")}</div></div></section>
+        <section class="nexus-live-weather-grid"><div class="nexus-live-weather-metric"><strong>💧 Rain now</strong>${html(current.precipitation)} ${html(weather.current_units?.precipitation || "mm")}</div><div class="nexus-live-weather-metric"><strong>🌬️ Wind</strong>${html(current.wind_speed_10m)} ${html(weather.current_units?.wind_speed_10m || "km/h")}</div><div class="nexus-live-weather-metric"><strong>☔ Rain chance today</strong>${html(daily.precipitation_probability_max?.[0])}%</div><div class="nexus-live-weather-metric"><strong>⬆️ High</strong>${html(daily.temperature_2m_max?.[0])}${html(weather.daily_units?.temperature_2m_max || "°C")}</div><div class="nexus-live-weather-metric"><strong>⬇️ Low</strong>${html(daily.temperature_2m_min?.[0])}${html(weather.daily_units?.temperature_2m_min || "°C")}</div><div class="nexus-live-weather-metric"><strong>🕒 Updated</strong>${html(current.time || verifiedAt)}</div></section>
+        <section class="nexus-live-weather-source"><strong>Source and verification</strong><p>Current conditions supplied by Open‑Meteo using its public geocoding and forecast services. Retrieved ${html(verifiedAt)}. No API key or personal location was used.</p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open the weather source ↗</a></section>
+        <div class="nexus-live-weather-actions"><a href="${html(weatherUrl)}" target="_blank" rel="noopener noreferrer">View exact weather data ↗</a><button data-weather-action="close">Close and keep listening</button></div>`;
+      recordPilotEvidence({ topic: "general", outcome: "completed", pathway: options.source === "voice-final-transcript" ? "voice" : "typed", durationBand: "under-2-min", language: document.documentElement.lang || "unknown" });
+      global.dispatchEvent?.(new global.CustomEvent("nexus.weather.opened", { detail: { location: placeLabel, source: "Open-Meteo", visible: true } }));
+      return { opened: true, location: placeLabel, source: "Open-Meteo", weather };
+    } catch (error) {
+      body.innerHTML = `<div class="nexus-live-weather-error">⚠️ Nexus could not reach the verified weather service for ${html(location)} right now. Please check the connection and try again. No weather details were invented.<br><small>${html(error?.message || "weather source unavailable")}</small></div><div class="nexus-live-weather-actions"><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open the weather source ↗</a><button data-weather-action="close">Close</button></div>`;
+      recordPilotEvidence({ topic: "general", outcome: "failed", pathway: options.source === "voice-final-transcript" ? "voice" : "typed", recovery: "not-recovered", durationBand: "under-2-min", language: document.documentElement.lang || "unknown", majorFailure: true });
+      return { opened: true, failed: true, reason: error?.message || "weather-source-unavailable" };
+    }
+  }
   function pilotConsentState() {
     try {
       const state = JSON.parse(global.localStorage?.getItem(pilotConsentStorageKey) || "null");
@@ -449,6 +552,7 @@
       const command = commandFromTypedSurface(event);
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command" }), 0);
+      if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command" }), 0);
     }, true);
     document.addEventListener("keydown", event => {
       if (event.key !== "Enter" || event.shiftKey) return;
@@ -456,6 +560,7 @@
       const command = text(input?.value);
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command-enter" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command-enter" }), 0);
+      if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command-enter" }), 0);
     }, true);
   }
   global.addEventListener?.("genesis.workspace.acknowledged", event => {
@@ -486,10 +591,12 @@
     const pilotDashboard = pilotEvidenceRequest(transcript)
       ? openPilotEvidenceDashboard({ source: "voice-final-transcript" })
       : null;
+    const weatherCardRequested = weatherRequest(transcript);
+    if (weatherCardRequested) void openLiveWeatherCard(transcript, { source: "voice-final-transcript" });
     const action = typeof actionBuilder === "function" ? actionBuilder(transcript) : null;
-    if (!action && !providerCard?.opened && !pilotDashboard?.opened) return { handled: false };
+    if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested) return { handled: false };
     seen.set(sessionId + ":" + transcriptId, now);
-    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, transcriptId, sessionId, originalTranscript: transcript };
+    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, weatherCardRequested, transcriptId, sessionId, originalTranscript: transcript };
   }
   global.NexusBrowserActionController = Object.freeze({
     handleFinalUserTranscript,
@@ -497,6 +604,9 @@
     openRuralProviderCard,
     isPilotEvidenceRequest: pilotEvidenceRequest,
     openPilotEvidenceDashboard,
+    isWeatherRequest: weatherRequest,
+    getWeatherLocation: weatherLocation,
+    openLiveWeatherCard,
     setPilotEvidenceConsent,
     recordPilotEvidence,
     getPilotEvidenceSummary: pilotEvidenceSummary,
