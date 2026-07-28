@@ -40,6 +40,8 @@ node rebuild/tests/nexus-voice-foundation.test.js
 - `voice-foundation.js`: the ordered authenticated voice startup and shutdown boundary.
 - `voice-session-service.js`: authenticated short-lived Realtime credential issuance.
 - `browser-runtime.js`: remote audio, Realtime configuration, command routing, and visible receipts.
+- `openai-provider.js`: server-only OpenAI Realtime client-secret provider.
+- `http-app.js`: standalone authenticated health and voice-session HTTP boundary.
 
 These modules are dependency-injected so browser, server, and provider boundaries can
 be certified independently before the clean runtime is allowed to replace production.
