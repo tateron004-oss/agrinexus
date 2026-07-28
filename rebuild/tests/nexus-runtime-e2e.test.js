@@ -79,6 +79,11 @@ async function main() {
   await runtime.start({ sessionToken: issued.token, userGesture: true });
   assert.equal(sent[0].type, "session.update");
   assert.deepEqual(sent[0].session.output_modalities, ["audio"]);
+  assert.equal(sent[0].session.audio.input.turn_detection.type, "server_vad");
+  assert.equal(sent[0].session.audio.input.turn_detection.threshold, 0.5);
+  assert.equal(sent[0].session.audio.input.turn_detection.prefix_padding_ms, 300);
+  assert.equal(sent[0].session.audio.input.turn_detection.silence_duration_ms, 350);
+  assert.equal(sent[0].session.audio.input.turn_detection.create_response, true);
   assert.equal(sent[0].session.audio.input.turn_detection.interrupt_response, true);
   assert.equal(sent[0].session.tools[0].name, "route_nexus_command");
 
@@ -128,7 +133,7 @@ async function main() {
 
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_started" });
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_stopped" });
-  await new Promise((resolve) => setTimeout(resolve, 1250));
+  await new Promise((resolve) => setTimeout(resolve, 700));
   assert.ok(sent.some((event) => event.type === "response.create"));
   await runtime.handleRealtimeEvent({ type: "response.created" });
   await runtime.handleRealtimeEvent({ type: "response.output_audio.delta" });
@@ -141,6 +146,12 @@ async function main() {
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
   assert.ok(receipts.some((receipt) => receipt.type === "realtime.error"));
   assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
+
+  const responseCreateCount = sent.filter((event) => event.type === "response.create").length;
+  await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_stopped" });
+  await runtime.handleRealtimeEvent({ type: "response.created" });
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  assert.equal(sent.filter((event) => event.type === "response.create").length, responseCreateCount);
 
   eventSubscriber({
     type: "realtime.connection-state",

@@ -7,6 +7,7 @@ const {
   detectWakePhrase,
   normalizeExperiencePreferences
 } = require("./experience-profile");
+const { NEXUS_VOICE_LATENCY_PROFILE } = require("./latency-profile");
 
 const DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
 
@@ -91,11 +92,7 @@ class NexusBrowserRuntime {
         instructions: this.instructions,
         audio: {
           input: {
-            turn_detection: {
-              type: "server_vad",
-              create_response: true,
-              interrupt_response: true
-            }
+            turn_detection: NEXUS_VOICE_LATENCY_PROFILE.turnDetection
           },
           output: { voice: this.preferences.voice }
         },
@@ -189,7 +186,7 @@ class NexusBrowserRuntime {
         } catch (error) {
           this.receipt("runtime.event-failed", { name: error.name, message: error.message });
         }
-      }, 1200);
+      }, NEXUS_VOICE_LATENCY_PROFILE.responseFallbackMs);
     }
     if (event.type === "response.created") {
       this.clearResponseFallback();

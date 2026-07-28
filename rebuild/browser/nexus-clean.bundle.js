@@ -549,6 +549,25 @@
     }
   });
 
+  // rebuild/nexus-core/latency-profile.js
+  var require_latency_profile = __commonJS({
+    "rebuild/nexus-core/latency-profile.js"(exports, module) {
+      "use strict";
+      var NEXUS_VOICE_LATENCY_PROFILE = Object.freeze({
+        turnDetection: Object.freeze({
+          type: "server_vad",
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 350,
+          create_response: true,
+          interrupt_response: true
+        }),
+        responseFallbackMs: 650
+      });
+      module.exports = { NEXUS_VOICE_LATENCY_PROFILE };
+    }
+  });
+
   // rebuild/nexus-core/browser-runtime.js
   var require_browser_runtime = __commonJS({
     "rebuild/nexus-core/browser-runtime.js"(exports, module) {
@@ -560,6 +579,7 @@
         detectWakePhrase,
         normalizeExperiencePreferences
       } = require_experience_profile();
+      var { NEXUS_VOICE_LATENCY_PROFILE } = require_latency_profile();
       var DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
       var NexusBrowserRuntime = class {
         constructor({
@@ -641,11 +661,7 @@
               instructions: this.instructions,
               audio: {
                 input: {
-                  turn_detection: {
-                    type: "server_vad",
-                    create_response: true,
-                    interrupt_response: true
-                  }
+                  turn_detection: NEXUS_VOICE_LATENCY_PROFILE.turnDetection
                 },
                 output: { voice: this.preferences.voice }
               },
@@ -733,7 +749,7 @@
               } catch (error) {
                 this.receipt("runtime.event-failed", { name: error.name, message: error.message });
               }
-            }, 1200);
+            }, NEXUS_VOICE_LATENCY_PROFILE.responseFallbackMs);
           }
           if (event.type === "response.created") {
             this.clearResponseFallback();
