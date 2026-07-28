@@ -489,20 +489,78 @@
     }
   });
 
+  // rebuild/nexus-core/experience-profile.js
+  var require_experience_profile = __commonJS({
+    "rebuild/nexus-core/experience-profile.js"(exports, module) {
+      "use strict";
+      var SUPPORTED_LANGUAGES = Object.freeze(["en", "es", "fr", "sw", "ar", "pt"]);
+      var WAKE_PHRASES = Object.freeze(["nexus", "hello nexus", "hey nexus"]);
+      var DEFAULT_EXPERIENCE_PREFERENCES = Object.freeze({
+        voice: "marin",
+        voiceIdentity: "british-female",
+        pace: "natural",
+        volume: 1,
+        captions: true,
+        language: "auto"
+      });
+      function normalizeExperiencePreferences(value = {}) {
+        const pace = value.pace === "slow" ? "slow" : "natural";
+        const language = value.language === "auto" || SUPPORTED_LANGUAGES.includes(value.language) ? value.language : "auto";
+        const volume = Number.isFinite(Number(value.volume)) ? Math.min(1, Math.max(0, Number(value.volume))) : DEFAULT_EXPERIENCE_PREFERENCES.volume;
+        return Object.freeze({
+          ...DEFAULT_EXPERIENCE_PREFERENCES,
+          pace,
+          volume,
+          captions: value.captions !== false,
+          language
+        });
+      }
+      function createPresenceInstructions(preferences = DEFAULT_EXPERIENCE_PREFERENCES) {
+        const resolved = normalizeExperiencePreferences(preferences);
+        const pace = resolved.pace === "slow" ? "Speak deliberately and about fifteen percent slower than normal." : "Speak at a calm, natural pace.";
+        const language = resolved.language === "auto" ? "Automatically answer in the user's current language: English, Spanish, French, Swahili, Arabic, or Portuguese, while preserving the active task." : `Answer in the user's selected language code ${resolved.language} while preserving the active task.`;
+        return [
+          "You are Nexus Genesis, a warm, capable voice-first assistant.",
+          "Your voice identity is a natural British woman: warm, calm, professional, and consistent.",
+          pace,
+          language,
+          "Recognize Nexus, Hello Nexus, and Hey Nexus as direct wake phrases and respond naturally.",
+          "Greet the signed-in user with exactly: Hello Ron, how can I help?",
+          "For every Nexus application request, call route_nexus_command exactly once with the user's complete command.",
+          "Application requests include asking to help, open, start, record, find, search, plan, play, sell, show, or remind through a Nexus capability.",
+          "Do not answer an application request conversationally before calling route_nexus_command.",
+          "After a visible workspace receipt, speak a brief truthful confirmation.",
+          "Never claim that an external action completed without a verified receipt.",
+          "Health guidance must preserve consent, safety, and emergency escalation."
+        ].join(" ");
+      }
+      function detectWakePhrase(transcript) {
+        const normalized = String(transcript || "").trim().toLowerCase();
+        return WAKE_PHRASES.find((phrase) => normalized === phrase || new RegExp(`^${phrase.replace(" ", "\\s+")}(?:[\\s,.!?;:]|$)`).test(normalized)) || null;
+      }
+      module.exports = {
+        DEFAULT_EXPERIENCE_PREFERENCES,
+        SUPPORTED_LANGUAGES,
+        WAKE_PHRASES,
+        normalizeExperiencePreferences,
+        createPresenceInstructions,
+        detectWakePhrase
+      };
+    }
+  });
+
   // rebuild/nexus-core/browser-runtime.js
   var require_browser_runtime = __commonJS({
     "rebuild/nexus-core/browser-runtime.js"(exports, module) {
       "use strict";
       var { routeCommand } = require_router();
-      var DEFAULT_INSTRUCTIONS = [
-        "You are Nexus Genesis, a warm, capable voice-first assistant.",
-        "Greet the signed-in user naturally and respond concisely.",
-        "For every Nexus application request, call route_nexus_command exactly once with the user's complete command.",
-        "Application requests include asking to help, open, start, record, find, search, plan, play, sell, show, or remind through a Nexus capability.",
-        "Do not answer an application request conversationally before calling route_nexus_command.",
-        "Never claim that an external action completed without a verified receipt.",
-        "Health guidance must preserve consent, safety, and emergency escalation."
-      ].join(" ");
+      var {
+        DEFAULT_EXPERIENCE_PREFERENCES,
+        createPresenceInstructions,
+        detectWakePhrase,
+        normalizeExperiencePreferences
+      } = require_experience_profile();
+      var DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
       var NexusBrowserRuntime = class {
         constructor({
           foundation,
@@ -523,6 +581,7 @@
           this.openWorkspace = openWorkspace;
           this.onReceipt = onReceipt;
           this.instructions = instructions;
+          this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
           this.started = false;
           this.unsubscribe = null;
           this.sessionToken = null;
@@ -588,7 +647,7 @@
                     interrupt_response: true
                   }
                 },
-                output: { voice: "marin" }
+                output: { voice: this.preferences.voice }
               },
               tools: [{
                 type: "function",
@@ -604,6 +663,30 @@
             }
           });
           this.receipt("runtime.session-configured");
+        }
+        updateExperiencePreferences(value = {}) {
+          this.preferences = normalizeExperiencePreferences({ ...this.preferences, ...value });
+          this.instructions = createPresenceInstructions(this.preferences);
+          if (this.started) this.configureSession();
+          this.receipt("experience.preferences-updated", {
+            pace: this.preferences.pace,
+            volume: this.preferences.volume,
+            captions: this.preferences.captions,
+            language: this.preferences.language,
+            voiceIdentity: this.preferences.voiceIdentity
+          });
+          return this.preferences;
+        }
+        replayLastResponse() {
+          if (!this.started) throw new Error("Start Nexus before replaying a response.");
+          this.realtime.send({
+            type: "response.create",
+            response: {
+              output_modalities: ["audio"],
+              instructions: "Repeat your immediately previous answer once, without adding new information."
+            }
+          });
+          this.receipt("conversation.replay-requested");
         }
         attachRemoteAudio(peer) {
           peer.addEventListener("track", (event) => {
@@ -630,7 +713,10 @@
             return this.route(args.command, event.call_id);
           }
           if (event.type === "conversation.item.input_audio_transcription.completed") {
-            this.receipt("transcript.final", { transcript: event.transcript || "" });
+            const transcript = event.transcript || "";
+            this.receipt("transcript.final", { transcript });
+            const wakePhrase = detectWakePhrase(transcript);
+            if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
           }
           if (event.type === "input_audio_buffer.speech_started") {
             this.clearResponseFallback();
@@ -736,6 +822,10 @@
       var { NexusRealtimeConnector } = require_realtime_connector();
       var { NexusVoiceFoundation } = require_voice_foundation();
       var { NexusBrowserRuntime } = require_browser_runtime();
+      var {
+        DEFAULT_EXPERIENCE_PREFERENCES,
+        normalizeExperiencePreferences
+      } = require_experience_profile();
       function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
         return ({ workspace, command }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
@@ -780,6 +870,8 @@
         const AudioContextConstructor = windowObject.AudioContext || windowObject.webkitAudioContext;
         let context = null;
         let source = null;
+        let gain = null;
+        let volume = 1;
         return Object.freeze({
           unlock() {
             audioElement.autoplay = true;
@@ -788,15 +880,26 @@
             audioElement.setAttribute("playsinline", "");
             if (!AudioContextConstructor) return null;
             if (!context) context = new AudioContextConstructor();
+            if (!gain && typeof context.createGain === "function") {
+              gain = context.createGain();
+              gain.gain.value = volume;
+              gain.connect(context.destination);
+            }
             return context.state === "suspended" ? context.resume() : Promise.resolve();
           },
           attach(stream) {
             if (!stream || !context || typeof context.createMediaStreamSource !== "function") return false;
             if (source && typeof source.disconnect === "function") source.disconnect();
             source = context.createMediaStreamSource(stream);
-            source.connect(context.destination);
+            source.connect(gain || context.destination);
             audioElement.muted = true;
             return true;
+          },
+          setVolume(value) {
+            volume = Math.min(1, Math.max(0, Number(value)));
+            audioElement.volume = volume;
+            if (gain) gain.gain.value = volume;
+            return volume;
           },
           close() {
             if (source && typeof source.disconnect === "function") source.disconnect();
@@ -804,6 +907,7 @@
             if (context && typeof context.close === "function") context.close().catch(() => {
             });
             context = null;
+            gain = null;
             audioElement.muted = false;
           }
         });
@@ -812,6 +916,11 @@
         const orb = document.getElementById("nexus-orb");
         const status = document.getElementById("nexus-status");
         const audio = document.getElementById("nexus-audio");
+        const caption = document.getElementById("nexus-caption");
+        const captionsControl = document.getElementById("nexus-captions");
+        const slowSpeechControl = document.getElementById("nexus-slow-speech");
+        const volumeControl = document.getElementById("nexus-volume");
+        const replayControl = document.getElementById("nexus-replay");
         const config = window.NEXUS_CLEAN_CONFIG || {};
         const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
         if (!sessionToken) {
@@ -841,7 +950,20 @@
           });
         });
         const receipts = [];
+        let preferences = DEFAULT_EXPERIENCE_PREFERENCES;
+        try {
+          preferences = normalizeExperiencePreferences(JSON.parse(
+            localStorage.getItem("nexus.genesis.preferences") || "{}"
+          ));
+        } catch {
+          preferences = DEFAULT_EXPERIENCE_PREFERENCES;
+        }
+        captionsControl.checked = preferences.captions;
+        slowSpeechControl.checked = preferences.pace === "slow";
+        volumeControl.value = String(Math.round(preferences.volume * 100));
         const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
+        remoteAudio.setVolume(preferences.volume);
+        caption.hidden = !preferences.captions;
         const onReceipt = (receipt) => {
           receipts.push(receipt);
           if (receipt.type === "realtime.remote-track") {
@@ -856,7 +978,15 @@
             }
           }
           const label = statusFromReceipt(receipt);
-          if (label) status.textContent = label;
+          if (label) {
+            status.textContent = label;
+            status.dataset.state = label.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "");
+          }
+          if (receipt.type === "transcript.final") {
+            caption.textContent = receipt.detail.transcript || "";
+            caption.hidden = !preferences.captions;
+          }
+          if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
           window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
         };
         const machine = new NexusConnectionMachine({ onReceipt });
@@ -906,6 +1036,30 @@
           audioElement: audio,
           openWorkspace: createWorkspaceAdapter(),
           onReceipt
+        });
+        runtime.updateExperiencePreferences(preferences);
+        function savePreferences(change) {
+          preferences = runtime.updateExperiencePreferences({ ...preferences, ...change });
+          localStorage.setItem("nexus.genesis.preferences", JSON.stringify(preferences));
+        }
+        captionsControl.addEventListener("change", () => {
+          savePreferences({ captions: captionsControl.checked });
+          caption.hidden = !captionsControl.checked;
+        });
+        slowSpeechControl.addEventListener("change", () => {
+          savePreferences({ pace: slowSpeechControl.checked ? "slow" : "natural" });
+        });
+        volumeControl.addEventListener("input", () => {
+          const volume = Number(volumeControl.value) / 100;
+          remoteAudio.setVolume(volume);
+          savePreferences({ volume });
+        });
+        replayControl.addEventListener("click", () => {
+          try {
+            runtime.replayLastResponse();
+          } catch (error) {
+            status.textContent = error.message;
+          }
         });
         orb.addEventListener("click", async () => {
           if (runtime.started) {
@@ -966,10 +1120,12 @@
           snapshot: () => Object.freeze({ state: machine.snapshot(), receipts: [...receipts] })
         });
       }
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", boot, { once: true });
-      } else {
-        boot();
+      if (typeof document !== "undefined") {
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot, { once: true });
+        } else {
+          boot();
+        }
       }
       module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, statusFromReceipt };
     }

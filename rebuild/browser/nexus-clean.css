@@ -85,6 +85,50 @@ body {
   font-size: .95rem;
 }
 
+.caption {
+  width: min(44rem, calc(100vw - 2rem));
+  min-height: 1.5em;
+  margin: -.75rem 0 0;
+  text-align: center;
+  color: #f6fbff;
+  font-size: 1rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem 1rem;
+  width: min(44rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: .75rem 1rem;
+  border: 1px solid rgba(111, 222, 255, .28);
+  border-radius: 1rem;
+  background: rgba(8, 22, 34, .72);
+  color: #d7f5ff;
+}
+
+.controls legend {
+  padding: 0 .5rem;
+  color: #b9d7e8;
+  font-size: .8rem;
+}
+
+.controls label { cursor: pointer; }
+.controls input, .controls button { accent-color: #00aeff; }
+.controls button {
+  border: 1px solid rgba(111, 222, 255, .45);
+  border-radius: .65rem;
+  padding: .45rem .75rem;
+  background: rgba(0, 126, 255, .15);
+  color: #f6fbff;
+  cursor: pointer;
+}
+.controls button:disabled { cursor: not-allowed; opacity: .45; }
+.controls :focus-visible { outline: .15rem solid #fff; outline-offset: .2rem; }
+.volume-control { display: inline-flex; align-items: center; gap: .45rem; }
+
 .workspace {
   width: min(720px, calc(100vw - 32px));
   margin: 28px auto 0;

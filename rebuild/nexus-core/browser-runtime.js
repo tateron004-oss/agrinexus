@@ -1,16 +1,14 @@
 "use strict";
 
 const { routeCommand } = require("./router");
+const {
+  DEFAULT_EXPERIENCE_PREFERENCES,
+  createPresenceInstructions,
+  detectWakePhrase,
+  normalizeExperiencePreferences
+} = require("./experience-profile");
 
-const DEFAULT_INSTRUCTIONS = [
-  "You are Nexus Genesis, a warm, capable voice-first assistant.",
-  "Greet the signed-in user naturally and respond concisely.",
-  "For every Nexus application request, call route_nexus_command exactly once with the user's complete command.",
-  "Application requests include asking to help, open, start, record, find, search, plan, play, sell, show, or remind through a Nexus capability.",
-  "Do not answer an application request conversationally before calling route_nexus_command.",
-  "Never claim that an external action completed without a verified receipt.",
-  "Health guidance must preserve consent, safety, and emergency escalation."
-].join(" ");
+const DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
 
 class NexusBrowserRuntime {
   constructor({
@@ -31,6 +29,7 @@ class NexusBrowserRuntime {
     this.openWorkspace = openWorkspace;
     this.onReceipt = onReceipt;
     this.instructions = instructions;
+    this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
     this.started = false;
     this.unsubscribe = null;
     this.sessionToken = null;
@@ -98,7 +97,7 @@ class NexusBrowserRuntime {
               interrupt_response: true
             }
           },
-          output: { voice: "marin" }
+          output: { voice: this.preferences.voice }
         },
         tools: [{
           type: "function",
@@ -114,6 +113,32 @@ class NexusBrowserRuntime {
       }
     });
     this.receipt("runtime.session-configured");
+  }
+
+  updateExperiencePreferences(value = {}) {
+    this.preferences = normalizeExperiencePreferences({ ...this.preferences, ...value });
+    this.instructions = createPresenceInstructions(this.preferences);
+    if (this.started) this.configureSession();
+    this.receipt("experience.preferences-updated", {
+      pace: this.preferences.pace,
+      volume: this.preferences.volume,
+      captions: this.preferences.captions,
+      language: this.preferences.language,
+      voiceIdentity: this.preferences.voiceIdentity
+    });
+    return this.preferences;
+  }
+
+  replayLastResponse() {
+    if (!this.started) throw new Error("Start Nexus before replaying a response.");
+    this.realtime.send({
+      type: "response.create",
+      response: {
+        output_modalities: ["audio"],
+        instructions: "Repeat your immediately previous answer once, without adding new information."
+      }
+    });
+    this.receipt("conversation.replay-requested");
   }
 
   attachRemoteAudio(peer) {
@@ -144,7 +169,10 @@ class NexusBrowserRuntime {
       return this.route(args.command, event.call_id);
     }
     if (event.type === "conversation.item.input_audio_transcription.completed") {
-      this.receipt("transcript.final", { transcript: event.transcript || "" });
+      const transcript = event.transcript || "";
+      this.receipt("transcript.final", { transcript });
+      const wakePhrase = detectWakePhrase(transcript);
+      if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
     }
     if (event.type === "input_audio_buffer.speech_started") {
       this.clearResponseFallback();

@@ -5,6 +5,10 @@ const { NexusMicrophoneController } = require("../nexus-core/microphone-controll
 const { NexusRealtimeConnector } = require("../nexus-core/realtime-connector");
 const { NexusVoiceFoundation } = require("../nexus-core/voice-foundation");
 const { NexusBrowserRuntime } = require("../nexus-core/browser-runtime");
+const {
+  DEFAULT_EXPERIENCE_PREFERENCES,
+  normalizeExperiencePreferences
+} = require("../nexus-core/experience-profile");
 
 function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
   return ({ workspace, command }) => new Promise((resolve, reject) => {
@@ -52,6 +56,8 @@ function createRemoteAudioUnlock({ windowObject = window, audioElement } = {}) {
   const AudioContextConstructor = windowObject.AudioContext || windowObject.webkitAudioContext;
   let context = null;
   let source = null;
+  let gain = null;
+  let volume = 1;
 
   return Object.freeze({
     unlock() {
@@ -61,21 +67,33 @@ function createRemoteAudioUnlock({ windowObject = window, audioElement } = {}) {
       audioElement.setAttribute("playsinline", "");
       if (!AudioContextConstructor) return null;
       if (!context) context = new AudioContextConstructor();
+      if (!gain && typeof context.createGain === "function") {
+        gain = context.createGain();
+        gain.gain.value = volume;
+        gain.connect(context.destination);
+      }
       return context.state === "suspended" ? context.resume() : Promise.resolve();
     },
     attach(stream) {
       if (!stream || !context || typeof context.createMediaStreamSource !== "function") return false;
       if (source && typeof source.disconnect === "function") source.disconnect();
       source = context.createMediaStreamSource(stream);
-      source.connect(context.destination);
+      source.connect(gain || context.destination);
       audioElement.muted = true;
       return true;
+    },
+    setVolume(value) {
+      volume = Math.min(1, Math.max(0, Number(value)));
+      audioElement.volume = volume;
+      if (gain) gain.gain.value = volume;
+      return volume;
     },
     close() {
       if (source && typeof source.disconnect === "function") source.disconnect();
       source = null;
       if (context && typeof context.close === "function") context.close().catch(() => {});
       context = null;
+      gain = null;
       audioElement.muted = false;
     }
   });
@@ -85,6 +103,11 @@ function boot() {
   const orb = document.getElementById("nexus-orb");
   const status = document.getElementById("nexus-status");
   const audio = document.getElementById("nexus-audio");
+  const caption = document.getElementById("nexus-caption");
+  const captionsControl = document.getElementById("nexus-captions");
+  const slowSpeechControl = document.getElementById("nexus-slow-speech");
+  const volumeControl = document.getElementById("nexus-volume");
+  const replayControl = document.getElementById("nexus-replay");
   const config = window.NEXUS_CLEAN_CONFIG || {};
   const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
   if (!sessionToken) {
@@ -116,7 +139,20 @@ function boot() {
   });
 
   const receipts = [];
+  let preferences = DEFAULT_EXPERIENCE_PREFERENCES;
+  try {
+    preferences = normalizeExperiencePreferences(JSON.parse(
+      localStorage.getItem("nexus.genesis.preferences") || "{}"
+    ));
+  } catch {
+    preferences = DEFAULT_EXPERIENCE_PREFERENCES;
+  }
+  captionsControl.checked = preferences.captions;
+  slowSpeechControl.checked = preferences.pace === "slow";
+  volumeControl.value = String(Math.round(preferences.volume * 100));
   const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
+  remoteAudio.setVolume(preferences.volume);
+  caption.hidden = !preferences.captions;
   const onReceipt = (receipt) => {
     receipts.push(receipt);
     if (receipt.type === "realtime.remote-track") {
@@ -131,7 +167,15 @@ function boot() {
       }
     }
     const label = statusFromReceipt(receipt);
-    if (label) status.textContent = label;
+    if (label) {
+      status.textContent = label;
+      status.dataset.state = label.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "");
+    }
+    if (receipt.type === "transcript.final") {
+      caption.textContent = receipt.detail.transcript || "";
+      caption.hidden = !preferences.captions;
+    }
+    if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
     window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
   };
   const machine = new NexusConnectionMachine({ onReceipt });
@@ -181,6 +225,31 @@ function boot() {
     audioElement: audio,
     openWorkspace: createWorkspaceAdapter(),
     onReceipt
+  });
+  runtime.updateExperiencePreferences(preferences);
+
+  function savePreferences(change) {
+    preferences = runtime.updateExperiencePreferences({ ...preferences, ...change });
+    localStorage.setItem("nexus.genesis.preferences", JSON.stringify(preferences));
+  }
+  captionsControl.addEventListener("change", () => {
+    savePreferences({ captions: captionsControl.checked });
+    caption.hidden = !captionsControl.checked;
+  });
+  slowSpeechControl.addEventListener("change", () => {
+    savePreferences({ pace: slowSpeechControl.checked ? "slow" : "natural" });
+  });
+  volumeControl.addEventListener("input", () => {
+    const volume = Number(volumeControl.value) / 100;
+    remoteAudio.setVolume(volume);
+    savePreferences({ volume });
+  });
+  replayControl.addEventListener("click", () => {
+    try {
+      runtime.replayLastResponse();
+    } catch (error) {
+      status.textContent = error.message;
+    }
   });
 
   orb.addEventListener("click", async () => {
@@ -244,10 +313,12 @@ function boot() {
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot, { once: true });
-} else {
-  boot();
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
 }
 
 module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, statusFromReceipt };
