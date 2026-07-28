@@ -167,6 +167,10 @@ async function connectRealtime(page) {
 test.use({
   baseURL: BASE_URL,
   headless: false,
+  // The self-hosted gate launches a disposable Chrome profile on every run.
+  // Block first-install service-worker controller changes from reloading the
+  // authenticated page while Nexus is acquiring the physical microphone.
+  serviceWorkers: "block",
   launchOptions: {
     channel: "chrome",
     args: ["--autoplay-policy=no-user-gesture-required"]
