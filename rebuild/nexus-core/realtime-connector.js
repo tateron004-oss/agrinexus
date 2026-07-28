@@ -16,8 +16,15 @@ class NexusRealtimeConnector {
     this.exchangeSdp = exchangeSdp;
     this.readyTimeoutMs = readyTimeoutMs;
     this.onEvent = onEvent;
+    this.subscribers = new Set();
     this.peer = null;
     this.channel = null;
+  }
+
+  subscribe(callback) {
+    if (typeof callback !== "function") throw new Error("A Realtime event subscriber must be a function.");
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
   }
 
   async connect({ stream, track, sessionToken, onSessionIssued = () => {} }) {
@@ -115,12 +122,14 @@ class NexusRealtimeConnector {
   }
 
   event(type, detail = {}) {
-    this.onEvent(Object.freeze({
+    const receipt = Object.freeze({
       schema: "nexus.realtime.receipt.v1",
       type,
       detail: Object.freeze({ ...detail }),
       at: new Date().toISOString()
-    }));
+    });
+    this.onEvent(receipt);
+    for (const subscriber of this.subscribers) subscriber(receipt);
   }
 }
 

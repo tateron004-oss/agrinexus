@@ -1,0 +1,172 @@
+"use strict";
+
+const { routeCommand } = require("./router");
+
+const DEFAULT_INSTRUCTIONS = [
+  "You are Nexus Genesis, a warm, capable voice-first assistant.",
+  "Greet the signed-in user naturally and respond concisely.",
+  "Use the configured function route_nexus_command for application requests.",
+  "Never claim that an external action completed without a verified receipt.",
+  "Health guidance must preserve consent, safety, and emergency escalation."
+].join(" ");
+
+class NexusBrowserRuntime {
+  constructor({
+    foundation,
+    realtime,
+    audioElement,
+    openWorkspace,
+    onReceipt = () => {},
+    instructions = DEFAULT_INSTRUCTIONS
+  } = {}) {
+    if (!foundation || typeof foundation.start !== "function") throw new Error("A voice foundation is required.");
+    if (!realtime || typeof realtime.send !== "function") throw new Error("A Realtime connector is required.");
+    if (!audioElement) throw new Error("A remote audio element is required.");
+    if (typeof openWorkspace !== "function") throw new Error("A workspace adapter is required.");
+    this.foundation = foundation;
+    this.realtime = realtime;
+    this.audioElement = audioElement;
+    this.openWorkspace = openWorkspace;
+    this.onReceipt = onReceipt;
+    this.instructions = instructions;
+    this.started = false;
+    this.unsubscribe = null;
+  }
+
+  async start({ sessionToken, userGesture = false } = {}) {
+    if (typeof this.realtime.subscribe === "function" && !this.unsubscribe) {
+      this.unsubscribe = this.realtime.subscribe((receipt) => {
+        if (receipt.type !== "realtime.data-message") return;
+        Promise.resolve(this.handleRealtimeEvent(receipt.detail.data)).catch((error) => {
+          this.receipt("runtime.event-failed", { name: error.name, message: error.message });
+        });
+      });
+    }
+    const started = await this.foundation.start({ sessionToken, userGesture });
+    this.attachRemoteAudio(started.connection.peer);
+    this.configureSession();
+    this.started = true;
+    this.receipt("runtime.ready", { sessionId: started.connection.sessionId });
+    return started;
+  }
+
+  configureSession() {
+    this.realtime.send({
+      type: "session.update",
+      session: {
+        type: "realtime",
+        instructions: this.instructions,
+        audio: {
+          input: {
+            turn_detection: {
+              type: "server_vad",
+              create_response: true,
+              interrupt_response: true
+            }
+          },
+          output: { voice: "marin" }
+        },
+        tools: [{
+          type: "function",
+          name: "route_nexus_command",
+          description: "Open and populate the correct Nexus application for the user's command.",
+          parameters: {
+            type: "object",
+            properties: { command: { type: "string" } },
+            required: ["command"]
+          }
+        }],
+        tool_choice: "auto"
+      }
+    });
+    this.receipt("runtime.session-configured");
+  }
+
+  attachRemoteAudio(peer) {
+    peer.addEventListener("track", (event) => {
+      const stream = event.streams && event.streams[0];
+      if (!stream) {
+        this.receipt("audio.remote-failed", { reason: "missing-stream" });
+        return;
+      }
+      this.audioElement.srcObject = stream;
+      const playback = typeof this.audioElement.play === "function" ? this.audioElement.play() : null;
+      if (playback && typeof playback.catch === "function") {
+        playback.catch((error) => this.receipt("audio.playback-failed", { message: error.message }));
+      }
+      this.receipt("audio.remote-attached");
+    });
+  }
+
+  async handleRealtimeEvent(rawEvent) {
+    const event = typeof rawEvent === "string" ? JSON.parse(rawEvent) : rawEvent;
+    if (!event || typeof event.type !== "string") return null;
+
+    if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
+      const args = JSON.parse(event.arguments || "{}");
+      return this.route(args.command, event.call_id);
+    }
+    if (event.type === "conversation.item.input_audio_transcription.completed") {
+      this.receipt("transcript.final", { transcript: event.transcript || "" });
+    }
+    if (event.type === "input_audio_buffer.speech_started") {
+      this.receipt("conversation.barge-in");
+    }
+    if (event.type === "response.audio.done") {
+      this.receipt("conversation.return-to-listening");
+    }
+    return null;
+  }
+
+  async route(command, callId = null) {
+    const state = this.foundation.machine.snapshot().state;
+    const resolution = routeCommand(command, state);
+    let result = resolution;
+    if (resolution.accepted) {
+      const acknowledgement = await this.openWorkspace({
+        workspace: resolution.workspace,
+        command: resolution.command
+      });
+      if (!acknowledgement || acknowledgement.visible !== true) {
+        throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
+      }
+      result = Object.freeze({ ...resolution, acknowledgement });
+      this.receipt("workspace.visible", {
+        workspace: resolution.workspace,
+        acknowledgementId: acknowledgement.id || null
+      });
+    }
+    if (callId) {
+      this.realtime.send({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: callId,
+          output: JSON.stringify(result)
+        }
+      });
+      this.realtime.send({ type: "response.create" });
+    }
+    return result;
+  }
+
+  stop(reason = "user-stop") {
+    this.foundation.stop(reason);
+    if (this.unsubscribe) this.unsubscribe();
+    this.unsubscribe = null;
+    this.audioElement.srcObject = null;
+    this.started = false;
+    this.receipt("runtime.closed", { reason });
+  }
+
+  receipt(type, detail = {}) {
+    this.onReceipt(Object.freeze({
+      schema: "nexus.runtime.receipt.v1",
+      type,
+      detail: Object.freeze({ ...detail }),
+      at: new Date().toISOString()
+    }));
+  }
+}
+
+module.exports = { NexusBrowserRuntime, DEFAULT_INSTRUCTIONS };
