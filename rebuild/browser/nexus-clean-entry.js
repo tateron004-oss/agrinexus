@@ -37,7 +37,11 @@ function statusFromReceipt(receipt) {
     "runtime.recovering": "Reconnecting…",
     "runtime.recovered": "Listening",
     "conversation.barge-in": "Listening",
+    "conversation.processing": "Thinking…",
+    "conversation.response-started": "Thinking…",
+    "conversation.speaking": "Speaking…",
     "conversation.return-to-listening": "Listening",
+    "realtime.error": "Voice response failed — tap to reconnect",
     "workspace.visible": "Listening",
     "runtime.recovery-failed": "Voice connection unavailable"
   };
