@@ -145,7 +145,7 @@ class NexusBrowserRuntime {
     if (event.type === "input_audio_buffer.speech_started") {
       this.receipt("conversation.barge-in");
     }
-    if (event.type === "response.audio.done") {
+    if (event.type === "response.output_audio.done" || event.type === "response.audio.done") {
       this.receipt("conversation.return-to-listening");
     }
     return null;
