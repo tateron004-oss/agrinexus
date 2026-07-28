@@ -14,6 +14,7 @@ assert.match(workflow, /nexus-protected-foundation-guard\.js/g);
 assert.match(workflow, /if-no-files-found: error/);
 assert.doesNotMatch(spec, /useFakeDeviceForMediaStream|use-file-for-fake-audio-capture|headless:\s*true/i);
 assert.match(spec, /headless:\s*false/);
+assert.match(spec, /serviceWorkers:\s*"block"/);
 assert.doesNotMatch(spec, /navigator\.mediaDevices\.getUserMedia/);
 assert.doesNotMatch(spec, /waitForNavigation/);
 assert.match(spec, /#loginView"\)\)\.toBeHidden/);
