@@ -48,6 +48,39 @@ function statusFromReceipt(receipt) {
   return labels[receipt.type] || null;
 }
 
+function createRemoteAudioUnlock({ windowObject = window, audioElement } = {}) {
+  const AudioContextConstructor = windowObject.AudioContext || windowObject.webkitAudioContext;
+  let context = null;
+  let source = null;
+
+  return Object.freeze({
+    unlock() {
+      audioElement.autoplay = true;
+      audioElement.muted = false;
+      audioElement.volume = 1;
+      audioElement.setAttribute("playsinline", "");
+      if (!AudioContextConstructor) return null;
+      if (!context) context = new AudioContextConstructor();
+      return context.state === "suspended" ? context.resume() : Promise.resolve();
+    },
+    attach(stream) {
+      if (!stream || !context || typeof context.createMediaStreamSource !== "function") return false;
+      if (source && typeof source.disconnect === "function") source.disconnect();
+      source = context.createMediaStreamSource(stream);
+      source.connect(context.destination);
+      audioElement.muted = true;
+      return true;
+    },
+    close() {
+      if (source && typeof source.disconnect === "function") source.disconnect();
+      source = null;
+      if (context && typeof context.close === "function") context.close().catch(() => {});
+      context = null;
+      audioElement.muted = false;
+    }
+  });
+}
+
 function boot() {
   const orb = document.getElementById("nexus-orb");
   const status = document.getElementById("nexus-status");
@@ -83,8 +116,20 @@ function boot() {
   });
 
   const receipts = [];
+  const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
   const onReceipt = (receipt) => {
     receipts.push(receipt);
+    if (receipt.type === "realtime.remote-track") {
+      const attached = remoteAudio.attach(receipt.detail && receipt.detail.stream);
+      if (attached) {
+        receipts.push(Object.freeze({
+          schema: "nexus.runtime.receipt.v1",
+          type: "audio.web-audio-attached",
+          detail: Object.freeze({}),
+          at: new Date().toISOString()
+        }));
+      }
+    }
     const label = statusFromReceipt(receipt);
     if (label) status.textContent = label;
     window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -141,12 +186,14 @@ function boot() {
   orb.addEventListener("click", async () => {
     if (runtime.started) {
       runtime.stop("user-stop");
+      remoteAudio.close();
       orb.setAttribute("aria-pressed", "false");
       status.textContent = "Speak";
       return;
     }
     orb.disabled = true;
     try {
+      await remoteAudio.unlock();
       await runtime.start({ sessionToken, userGesture: true });
       orb.setAttribute("aria-pressed", "true");
     } catch (error) {
@@ -203,4 +250,4 @@ if (document.readyState === "loading") {
   boot();
 }
 
-module.exports = { createWorkspaceAdapter, statusFromReceipt };
+module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, statusFromReceipt };

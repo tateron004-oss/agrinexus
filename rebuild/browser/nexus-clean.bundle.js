@@ -2,7 +2,11 @@
 (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __commonJS = (cb, mod) => function __require() {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+    try {
+      return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+    } catch (e) {
+      throw mod = 0, e;
+    }
   };
 
   // rebuild/nexus-core/contracts.js
@@ -762,15 +766,47 @@
           "runtime.recovering": "Reconnecting\u2026",
           "runtime.recovered": "Listening",
           "conversation.barge-in": "Listening",
-          "conversation.processing": "Thinking\\u2026",
-          "conversation.response-started": "Thinking\\u2026",
-          "conversation.speaking": "Speaking\\u2026",
+          "conversation.processing": "Thinking\u2026",
+          "conversation.response-started": "Thinking\u2026",
+          "conversation.speaking": "Speaking\u2026",
           "conversation.return-to-listening": "Listening",
-          "realtime.error": "Voice response failed \\u2014 tap to reconnect",
+          "realtime.error": "Voice response failed \u2014 tap to reconnect",
           "workspace.visible": "Listening",
           "runtime.recovery-failed": "Voice connection unavailable"
         };
         return labels[receipt.type] || null;
+      }
+      function createRemoteAudioUnlock({ windowObject = window, audioElement } = {}) {
+        const AudioContextConstructor = windowObject.AudioContext || windowObject.webkitAudioContext;
+        let context = null;
+        let source = null;
+        return Object.freeze({
+          unlock() {
+            audioElement.autoplay = true;
+            audioElement.muted = false;
+            audioElement.volume = 1;
+            audioElement.setAttribute("playsinline", "");
+            if (!AudioContextConstructor) return null;
+            if (!context) context = new AudioContextConstructor();
+            return context.state === "suspended" ? context.resume() : Promise.resolve();
+          },
+          attach(stream) {
+            if (!stream || !context || typeof context.createMediaStreamSource !== "function") return false;
+            if (source && typeof source.disconnect === "function") source.disconnect();
+            source = context.createMediaStreamSource(stream);
+            source.connect(context.destination);
+            audioElement.muted = true;
+            return true;
+          },
+          close() {
+            if (source && typeof source.disconnect === "function") source.disconnect();
+            source = null;
+            if (context && typeof context.close === "function") context.close().catch(() => {
+            });
+            context = null;
+            audioElement.muted = false;
+          }
+        });
       }
       function boot() {
         const orb = document.getElementById("nexus-orb");
@@ -805,8 +841,20 @@
           });
         });
         const receipts = [];
+        const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
         const onReceipt = (receipt) => {
           receipts.push(receipt);
+          if (receipt.type === "realtime.remote-track") {
+            const attached = remoteAudio.attach(receipt.detail && receipt.detail.stream);
+            if (attached) {
+              receipts.push(Object.freeze({
+                schema: "nexus.runtime.receipt.v1",
+                type: "audio.web-audio-attached",
+                detail: Object.freeze({}),
+                at: (/* @__PURE__ */ new Date()).toISOString()
+              }));
+            }
+          }
           const label = statusFromReceipt(receipt);
           if (label) status.textContent = label;
           window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -862,12 +910,14 @@
         orb.addEventListener("click", async () => {
           if (runtime.started) {
             runtime.stop("user-stop");
+            remoteAudio.close();
             orb.setAttribute("aria-pressed", "false");
             status.textContent = "Speak";
             return;
           }
           orb.disabled = true;
           try {
+            await remoteAudio.unlock();
             await runtime.start({ sessionToken, userGesture: true });
             orb.setAttribute("aria-pressed", "true");
           } catch (error) {
@@ -921,7 +971,7 @@
       } else {
         boot();
       }
-      module.exports = { createWorkspaceAdapter, statusFromReceipt };
+      module.exports = { createWorkspaceAdapter, createRemoteAudioUnlock, statusFromReceipt };
     }
   });
   require_nexus_clean_entry();
