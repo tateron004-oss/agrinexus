@@ -137,7 +137,40 @@ async function realtimeStatus(page) {
   });
 }
 
-async function connectRealtime(page) {
+async function physicalVoiceFailureEvidence(page, browserConsole = []) {
+  return page.evaluate(async consoleEntries => {
+    let permissionState = "unsupported";
+    try {
+      permissionState = String((await navigator.permissions.query({ name: "microphone" })).state || "unknown");
+    } catch (error) {
+      permissionState = `query-failed:${error?.name || "Error"}`;
+    }
+    const button = document.querySelector("#nexusPermanentMicrophoneBtn");
+    const status = document.querySelector("#nexusPermanentMicrophoneStatus");
+    const output = document.querySelector("#globalVoiceOutputStatus");
+    return {
+      url: location.href,
+      title: document.title,
+      loginVisible: document.querySelector("#loginView")?.hidden === false,
+      appVisible: document.querySelector("#appView")?.hidden === false,
+      permissionState,
+      button: {
+        text: String(button?.textContent || "").trim(),
+        disabled: Boolean(button?.disabled),
+        state: String(button?.dataset?.nexusPermanentMicrophoneState || "")
+      },
+      visibleStatus: String(status?.textContent || "").trim(),
+      outputStatus: String(output?.textContent || "").trim(),
+      realtimeStatus: window.NexusGenesisRealtimeClientStatus?.() || {},
+      lastRealtimeStatus: window.NexusGenesisRealtimeLastClientStatus || {},
+      lifecycle: window.NexusGenesisVoiceLifecycleDiagnostics?.() || {},
+      audioPipeline: window.nexusVoiceAudioPipeline?.snapshot?.() || {},
+      browserConsole: consoleEntries
+    };
+  }, browserConsole);
+}
+
+async function connectRealtime(page, browserConsole = []) {
   const microphone = page.locator("#nexusPermanentMicrophoneBtn");
   let lastStatus;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -157,7 +190,16 @@ async function connectRealtime(page) {
       return;
     } catch (error) {
       if (attempt === 3) {
-        throw new Error(`${error.message}\nLast Realtime status: ${JSON.stringify(lastStatus)}`);
+        const evidence = await physicalVoiceFailureEvidence(page, browserConsole);
+        fs.writeFileSync(
+          path.join(OUTPUT, "microphone-startup-failure.json"),
+          `${JSON.stringify(evidence, null, 2)}\n`
+        );
+        await page.screenshot({ path: path.join(OUTPUT, "microphone-startup-failure.png"), fullPage: true });
+        throw new Error(
+          `${error.message}\nLast Realtime status: ${JSON.stringify(lastStatus)}`
+          + `\nPhysical voice failure evidence: ${JSON.stringify(evidence)}`
+        );
       }
       await page.waitForTimeout(1000);
     }
@@ -180,6 +222,14 @@ test.use({
 test("physical Windows microphone certifies the protected production release", async ({ page, context }, testInfo) => {
   test.setTimeout(20 * 60 * 1000);
   fs.mkdirSync(OUTPUT, { recursive: true });
+  const browserConsole = [];
+  page.on("console", message => {
+    const text = String(message.text() || "");
+    if (/\b(Nexus|microphone|media|realtime|permission|webrtc)\b/i.test(text)) {
+      browserConsole.push({ type: message.type(), text: text.slice(0, 1000) });
+      while (browserConsole.length > 200) browserConsole.shift();
+    }
+  });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await installObserver(page);
   await page.goto("/?voiceDebug=1&voiceAcceptance=real-device", { waitUntil: "domcontentloaded" });
@@ -188,7 +238,7 @@ test("physical Windows microphone certifies the protected production release", a
   // Preserve the production sequence that was proven with the real browser:
   // login -> Nexus microphone click -> live Realtime track -> spoken turn.
   // Do not open and stop a second probe stream before Nexus acquires the device.
-  await connectRealtime(page);
+  await connectRealtime(page, browserConsole);
 
   const deviceProof = await page.evaluate(async () => {
     const devices = await navigator.mediaDevices.enumerateDevices();
