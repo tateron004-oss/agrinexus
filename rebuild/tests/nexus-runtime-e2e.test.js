@@ -125,7 +125,7 @@ async function main() {
   assert.ok(sent.some((event) => event.type === "response.create"));
 
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_started" });
-  await runtime.handleRealtimeEvent({ type: "response.audio.done" });
+  await runtime.handleRealtimeEvent({ type: "response.output_audio.done" });
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.barge-in"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
   assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
