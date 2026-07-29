@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const { createOpenMapProvider, parseMapRequest } = require("../nexus-core/map-service");
-const { resolveVisibleMap } = require("../browser/nexus-clean-entry");
+const { resolveVisibleMap, resetVisibleMapStateForTest } = require("../browser/nexus-clean-entry");
 
 async function verifyNewestMapRequestWins() {
   const elements = {
@@ -78,6 +78,78 @@ async function verifyNewestMapRequestWins() {
   assert.match(elements["nexus-map-summary"].textContent, /Kenya/);
 }
 
+async function verifyCityMapDoesNotSelectBusiness() {
+  resetVisibleMapStateForTest();
+  const requests = [];
+  const provider = createOpenMapProvider({
+    fetchImpl: async (url) => {
+      requests.push(url);
+      return {
+        ok: true,
+        json: async () => [
+          {
+            display_name: "Jumia Pickup Station, Mombasa, Kenya",
+            lat: "-4.0437",
+            lon: "39.6684",
+            boundingbox: ["-4.044", "-4.043", "39.668", "39.669"],
+            addresstype: "commercial",
+            category: "shop",
+            address: { country_code: "ke" }
+          },
+          {
+            display_name: "Mombasa, Mombasa County, Kenya",
+            lat: "-4.0505",
+            lon: "39.6672",
+            boundingbox: ["-4.135", "-3.930", "39.550", "39.760"],
+            addresstype: "city",
+            category: "boundary",
+            address: { country_code: "ke" }
+          }
+        ]
+      };
+    }
+  });
+  const result = await provider("Show me a map of Mombasa, Kenya");
+  assert.equal(result.location.label, "Mombasa, Mombasa County, Kenya");
+  assert.equal(result.location.administrative, true);
+  assert.equal(result.location.placeType, "city");
+  assert.match(requests[0], /countrycodes=ke/);
+  assert.doesNotMatch(requests[0], /featuretype=country/);
+
+  const elements = {
+    "nexus-map-canvas": {},
+    "nexus-map-summary": { textContent: "" },
+    "nexus-map-link": { href: "", removeAttribute() { this.href = ""; } }
+  };
+  let markerCount = 0;
+  let fittedBounds = null;
+  const map = {
+    removeLayer() {},
+    fitBounds(bounds, options) { fittedBounds = { bounds, options }; },
+    setView() { return this; },
+    invalidateSize() {}
+  };
+  const leaflet = {
+    map() { return map; },
+    tileLayer() { return { addTo() { return this; } }; },
+    marker() {
+      markerCount += 1;
+      return { bindPopup() { return this; }, addTo() { return this; }, openPopup() {} };
+    }
+  };
+  await resolveVisibleMap({
+    command: "Show me a map of Mombasa, Kenya",
+    sessionToken: "test",
+    documentObject: { getElementById: (id) => elements[id] || null },
+    fetchImpl: async () => ({ ok: true, json: async () => result }),
+    leaflet
+  });
+  assert.equal(markerCount, 0, "A city request must not create or open a nearby business marker.");
+  assert.deepEqual(fittedBounds.bounds, [[-4.135, 39.55], [-3.93, 39.76]]);
+  assert.equal(fittedBounds.options.maxZoom, 12);
+  assert.match(elements["nexus-map-summary"].textContent, /city-area map of Mombasa/i);
+}
+
 async function main() {
   assert.deepEqual(parseMapRequest("Nexus, show me a route from Nairobi, Kenya to Abuja, Nigeria"), {
     type: "route",
@@ -150,6 +222,7 @@ async function main() {
   assert.match(requests.at(-1), /countrycodes=ke/);
   assert.match(requests.at(-1), /featuretype=country/);
   await verifyNewestMapRequestWins();
+  await verifyCityMapDoesNotSelectBusiness();
   console.log("Nexus visible map and route service: PASS");
 }
 

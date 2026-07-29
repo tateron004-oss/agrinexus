@@ -6,6 +6,36 @@ const COUNTRY_CODES = Object.freeze({
   nigeria: "ng"
 });
 
+const ADMINISTRATIVE_PLACE_TYPES = new Set([
+  "administrative",
+  "city",
+  "county",
+  "municipality",
+  "state",
+  "town",
+  "village"
+]);
+
+function countryCodeFromQuery(query) {
+  const normalized = String(query || "").toLowerCase();
+  const country = Object.keys(COUNTRY_CODES).find((name) => new RegExp(`\\b${name}\\b`, "i").test(normalized));
+  return country ? COUNTRY_CODES[country] : null;
+}
+
+function administrativePlaceScore(result, countryCode) {
+  const address = result && result.address || {};
+  const resultCountryCode = String(address.country_code || "").toLowerCase();
+  if (countryCode && resultCountryCode && resultCountryCode !== countryCode) return -1000;
+  const type = String(result && (result.addresstype || result.type) || "").toLowerCase();
+  const category = String(result && result.category || "").toLowerCase();
+  let score = countryCode && resultCountryCode === countryCode ? 100 : 0;
+  if (ADMINISTRATIVE_PLACE_TYPES.has(type)) score += 80;
+  if (category === "boundary" || category === "place") score += 40;
+  if (Array.isArray(result && result.boundingbox) && result.boundingbox.length === 4) score += 20;
+  if (type === "commercial" || category === "shop" || category === "amenity") score -= 200;
+  return score;
+}
+
 function parseMapRequest(command) {
   const text = String(command || "").replace(/\s+/g, " ").trim();
   const route = /\b(?:route|directions|navigate|travel)\b.*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text)
@@ -26,16 +56,17 @@ function parseMapRequest(command) {
 function createOpenMapProvider({ fetchImpl = fetch } = {}) {
   async function geocode(query) {
     const normalizedQuery = String(query || "").trim();
-    const countryCode = COUNTRY_CODES[normalizedQuery.toLowerCase()] || null;
+    const exactCountryCode = COUNTRY_CODES[normalizedQuery.toLowerCase()] || null;
+    const countryCode = countryCodeFromQuery(normalizedQuery);
     const parameters = new URLSearchParams({
       format: "jsonv2",
-      limit: countryCode ? "5" : "3",
+      limit: countryCode ? "10" : "5",
       addressdetails: "1",
       q: normalizedQuery
     });
     if (countryCode) {
       parameters.set("countrycodes", countryCode);
-      parameters.set("featuretype", "country");
+      if (exactCountryCode) parameters.set("featuretype", "country");
     }
     const response = await fetchImpl(
       `https://nominatim.openstreetmap.org/search?${parameters.toString()}`,
@@ -44,19 +75,20 @@ function createOpenMapProvider({ fetchImpl = fetch } = {}) {
     if (!response.ok) throw new Error(`Map location lookup failed (${response.status}).`);
     const results = await response.json();
     const selected = Array.isArray(results)
-      ? results.find((result) => {
-        if (!countryCode) return true;
-        const resultCountryCode = String(result.address?.country_code || "").toLowerCase();
-        return resultCountryCode === countryCode
-          && (result.addresstype === "country" || result.type === "administrative");
-      })
+      ? [...results].sort((left, right) =>
+        administrativePlaceScore(right, countryCode) - administrativePlaceScore(left, countryCode)
+      )[0]
       : null;
     if (!selected) throw new Error(`Nexus could not locate ${normalizedQuery}.`);
+    const placeType = String(selected.addresstype || selected.type || "").toLowerCase();
     return Object.freeze({
       label: selected.display_name || normalizedQuery,
       lat: Number(selected.lat),
       lon: Number(selected.lon),
-      boundingBox: (selected.boundingbox || []).map(Number)
+      boundingBox: (selected.boundingbox || []).map(Number),
+      placeType,
+      administrative: ADMINISTRATIVE_PLACE_TYPES.has(placeType)
+        || ["boundary", "place"].includes(String(selected.category || "").toLowerCase())
     });
   }
 

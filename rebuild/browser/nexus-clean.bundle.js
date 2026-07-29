@@ -1268,6 +1268,11 @@
       var nexusLeafletMap = null;
       var nexusLeafletLayers = [];
       var nexusMapRequestGeneration = 0;
+      function resetVisibleMapStateForTest() {
+        nexusLeafletMap = null;
+        nexusLeafletLayers = [];
+        nexusMapRequestGeneration = 0;
+      }
       async function resolveVisibleMap({ command, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
         const requestGeneration = ++nexusMapRequestGeneration;
         const canvas = documentObject.getElementById("nexus-map-canvas");
@@ -1312,19 +1317,22 @@
           link.href = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${result.origin.lat}%2C${result.origin.lon}%3B${result.destination.lat}%2C${result.destination.lon}`;
         } else {
           const location = result.location;
-          const marker = leaflet.marker([location.lat, location.lon]).bindPopup(location.label).addTo(nexusLeafletMap);
-          nexusLeafletLayers.push(marker);
+          let marker = null;
+          if (!location.administrative) {
+            marker = leaflet.marker([location.lat, location.lon]).bindPopup(location.label).addTo(nexusLeafletMap);
+            nexusLeafletLayers.push(marker);
+          }
           if (location.boundingBox.length === 4) {
             nexusLeafletMap.fitBounds([
               [location.boundingBox[0], location.boundingBox[2]],
               [location.boundingBox[1], location.boundingBox[3]]
-            ]);
+            ], { padding: [28, 28], maxZoom: location.administrative ? 12 : 16 });
           } else {
-            nexusLeafletMap.setView([location.lat, location.lon], 8);
+            nexusLeafletMap.setView([location.lat, location.lon], location.administrative ? 11 : 15);
           }
-          marker.openPopup();
-          summary.textContent = `Visible map centered on ${location.label}`;
-          link.href = `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lon}#map=8/${location.lat}/${location.lon}`;
+          if (marker) marker.openPopup();
+          summary.textContent = location.administrative ? `Visible city-area map of ${location.label}` : `Visible map centered on ${location.label}`;
+          link.href = `https://www.openstreetmap.org/#map=${location.administrative ? 11 : 15}/${location.lat}/${location.lon}`;
         }
         setTimeout(() => nexusLeafletMap.invalidateSize(), 0);
         return result;
@@ -1761,6 +1769,7 @@
         renderEvidenceWorkspace,
         researchEvidence,
         resolveVisibleMap,
+        resetVisibleMapStateForTest,
         safeExternalUrl,
         isEvidenceDisplayFollowUp,
         statusFromReceipt
