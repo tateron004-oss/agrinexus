@@ -86,6 +86,10 @@ async function main() {
   });
   assert.deepEqual(parseMapRequest("Nexus, show me a map of Kenya"), { type: "place", place: "Kenya" });
   assert.deepEqual(parseMapRequest("Nexus, take me back to Kenya"), { type: "place", place: "Kenya" });
+  assert.deepEqual(parseMapRequest("Nexus, reset the map and show Mombasa, Kenya"), {
+    type: "place",
+    place: "Mombasa, Kenya"
+  });
 
   const requests = [];
   const provider = createOpenMapProvider({

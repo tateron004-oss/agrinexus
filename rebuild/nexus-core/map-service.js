@@ -14,6 +14,7 @@ function parseMapRequest(command) {
     return Object.freeze({ type: "route", origin: route[1].trim(), destination: route[2].trim() });
   }
   const place = text
+    .replace(/\b(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and)?\b/gi, " ")
     .replace(/\b(?:go|get|take|bring|move|zoom)\s+(?:me\s+)?back\s+to\b/gi, " ")
     .replace(/\b(nexus|please|show|open|display|me|a|the|map|maps|of)\b/gi, " ")
     .replace(/\s+/g, " ")
