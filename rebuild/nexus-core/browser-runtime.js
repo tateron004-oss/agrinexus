@@ -36,6 +36,7 @@ class NexusBrowserRuntime {
     this.sessionToken = null;
     this.recovery = null;
     this.responseFallbackTimer = null;
+    this.visualRoutes = new Map();
   }
 
   async start({ sessionToken, userGesture = false } = {}) {
@@ -170,6 +171,16 @@ class NexusBrowserRuntime {
       this.receipt("transcript.final", { transcript });
       const wakePhrase = detectWakePhrase(transcript);
       if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
+      const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state);
+      if (resolution.accepted) {
+        this.route(transcript).catch((error) => {
+          this.receipt("workspace.route-failed", {
+            name: error.name,
+            message: error.message,
+            command: transcript
+          });
+        });
+      }
     }
     if (event.type === "input_audio_buffer.speech_started") {
       this.clearResponseFallback();
@@ -215,22 +226,36 @@ class NexusBrowserRuntime {
     const resolution = routeCommand(command, state);
     let result = resolution;
     if (resolution.accepted) {
-      const acknowledgement = await this.openWorkspace({
-        workspace: resolution.workspace,
-        command: resolution.command
-      });
-      if (!acknowledgement || acknowledgement.visible !== true) {
-        throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
+      const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+      let visualRoute = this.visualRoutes.get(routeKey);
+      if (!visualRoute) {
+        visualRoute = this.openWorkspace({
+          workspace: resolution.workspace,
+          command: resolution.command
+        }).then((acknowledgement) => {
+          if (!acknowledgement || acknowledgement.visible !== true) {
+            throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
+          }
+          const routed = Object.freeze({ ...resolution, acknowledgement });
+          this.receipt("workspace.visible", {
+            workspace: resolution.workspace,
+            acknowledgementId: acknowledgement.id || null,
+            evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+            evidenceStatus: acknowledgement.evidenceStatus || null,
+            evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+            evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+          });
+          return routed;
+        }).catch((error) => {
+          this.visualRoutes.delete(routeKey);
+          throw error;
+        });
+        this.visualRoutes.set(routeKey, visualRoute);
+        setTimeout(() => {
+          if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
+        }, 15000);
       }
-      result = Object.freeze({ ...resolution, acknowledgement });
-      this.receipt("workspace.visible", {
-        workspace: resolution.workspace,
-        acknowledgementId: acknowledgement.id || null,
-        evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-        evidenceStatus: acknowledgement.evidenceStatus || null,
-        evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
-        evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
-      });
+      result = await visualRoute;
     }
     if (callId) {
       this.realtime.send({
@@ -259,6 +284,7 @@ class NexusBrowserRuntime {
     this.audioElement.srcObject = null;
     this.sessionToken = null;
     this.started = false;
+    this.visualRoutes.clear();
     this.receipt("runtime.closed", { reason });
   }
 

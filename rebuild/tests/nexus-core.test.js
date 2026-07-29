@@ -18,6 +18,8 @@ assert.equal(routeCommand("Search farming jobs in Kenya", machine.state).workspa
 assert.equal(routeCommand("Sell 50 bags of maize", machine.state).workspace, "marketplace");
 assert.equal(routeCommand("Record my blood pressure", machine.state).workspace, "health");
 assert.equal(routeCommand("Play Kenyan music", machine.state).workspace, "music");
+assert.equal(routeCommand("Show today's weather in Nairobi", machine.state).workspace, "live-knowledge");
+assert.equal(routeCommand("Show the forecast for Mombasa", machine.state).workspace, "live-knowledge");
 assert.equal(routeCommand("Open the map", "closed").code, "realtime-not-connected");
 
 assert.throws(() => {

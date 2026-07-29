@@ -462,11 +462,11 @@
         ["workforce", /\b(job|jobs|work|career|employment|resume)\b/i],
         ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
         ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
-        ["agriculture", /\b(farm|farmer|crop|maize|soil|weather for my field)\b/i],
+        ["agriculture", /\b(agriculture|agricultural|farm|farmer|crop|maize|soil|weather for my field)\b/i],
         ["learning", /\b(learn|lesson|course|literacy|training)\b/i],
         ["music", /\b(play|music|song|songs)\b/i],
         ["offline", /\b(offline|sync|queue)\b/i],
-        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|(show|display) (me )?(the )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
+        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|weather|forecast|(show|display) (me )?(the )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
       ]);
       function routeCommand(command, connectionState) {
         if (connectionState !== "connected") {
@@ -610,6 +610,7 @@
           this.sessionToken = null;
           this.recovery = null;
           this.responseFallbackTimer = null;
+          this.visualRoutes = /* @__PURE__ */ new Map();
         }
         async start({ sessionToken, userGesture = false } = {}) {
           if (typeof this.realtime.subscribe === "function" && !this.unsubscribe) {
@@ -736,6 +737,16 @@
             this.receipt("transcript.final", { transcript });
             const wakePhrase = detectWakePhrase(transcript);
             if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
+            const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state);
+            if (resolution.accepted) {
+              this.route(transcript).catch((error) => {
+                this.receipt("workspace.route-failed", {
+                  name: error.name,
+                  message: error.message,
+                  command: transcript
+                });
+              });
+            }
           }
           if (event.type === "input_audio_buffer.speech_started") {
             this.clearResponseFallback();
@@ -780,22 +791,36 @@
           const resolution = routeCommand(command, state);
           let result = resolution;
           if (resolution.accepted) {
-            const acknowledgement = await this.openWorkspace({
-              workspace: resolution.workspace,
-              command: resolution.command
-            });
-            if (!acknowledgement || acknowledgement.visible !== true) {
-              throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
+            const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+            let visualRoute = this.visualRoutes.get(routeKey);
+            if (!visualRoute) {
+              visualRoute = this.openWorkspace({
+                workspace: resolution.workspace,
+                command: resolution.command
+              }).then((acknowledgement) => {
+                if (!acknowledgement || acknowledgement.visible !== true) {
+                  throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
+                }
+                const routed = Object.freeze({ ...resolution, acknowledgement });
+                this.receipt("workspace.visible", {
+                  workspace: resolution.workspace,
+                  acknowledgementId: acknowledgement.id || null,
+                  evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+                  evidenceStatus: acknowledgement.evidenceStatus || null,
+                  evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+                  evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+                });
+                return routed;
+              }).catch((error) => {
+                this.visualRoutes.delete(routeKey);
+                throw error;
+              });
+              this.visualRoutes.set(routeKey, visualRoute);
+              setTimeout(() => {
+                if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
+              }, 15e3);
             }
-            result = Object.freeze({ ...resolution, acknowledgement });
-            this.receipt("workspace.visible", {
-              workspace: resolution.workspace,
-              acknowledgementId: acknowledgement.id || null,
-              evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-              evidenceStatus: acknowledgement.evidenceStatus || null,
-              evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
-              evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
-            });
+            result = await visualRoute;
           }
           if (callId) {
             this.realtime.send({
@@ -822,6 +847,7 @@
           this.audioElement.srcObject = null;
           this.sessionToken = null;
           this.started = false;
+          this.visualRoutes.clear();
           this.receipt("runtime.closed", { reason });
         }
         receipt(type, detail = {}) {
