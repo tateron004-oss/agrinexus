@@ -454,19 +454,19 @@
     "rebuild/nexus-core/intent-parameter-extractor.js"(exports, module) {
       "use strict";
       var WORKFLOW_RULES = Object.freeze([
-        ["maps", /\b(map|maps|route|directions|navigate|location)\b/i],
+        ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom in to)\b/i],
         ["reminders", /\b(remind|reminder)\b/i],
         ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
         ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
         ["mobile-clinic", /\b(mobile clinic|clinic visit)\b/i],
-        ["pharmacy", /\b(pharmacy|pharmacist|prescription)\b/i],
+        ["pharmacy", /\b(pharmacy|pharmacist|prescription|medication support)\b/i],
         ["offline", /\b(offline|sync|queue)\b/i],
         ["workforce", /(?:\b(job|jobs|work|career|employment|resume|cv)\b|résumé)/i],
         ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
+        ["learning", /\b(learn|learning|lesson|course|literacy|training)\b/i],
         ["agriculture", /\b(agriculture|agricultural|farm|farmer|crop|maize|soil|weather for my field)\b/i],
-        ["learning", /\b(learn|lesson|course|literacy|training)\b/i],
         ["music", /\b(play|music|song|songs)\b/i],
-        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|weather|forecast|pilot evidence|evidence dashboard|implementation report|learning brief|scale-up options|(show|display) (me )?(the )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
+        ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|weather|forecast|pilot evidence|evidence dashboard|implementation report|learning brief|scale-up options|(show|display) (me )?(the )?(approved )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
       ]);
       function cleanText(value) {
         return String(value || "").replace(/\s+/g, " ").replace(/^[\s,;:.-]+|[\s,;:?.!-]+$/g, "").trim();
@@ -480,6 +480,9 @@
       }
       function detectWorkflow(text) {
         if (providerCardRequest(text)) return "health";
+        if (/\bweather for my field\b/i.test(text)) return "agriculture";
+        const liveKnowledgeRule = WORKFLOW_RULES.find(([workflow]) => workflow === "live-knowledge");
+        if (liveKnowledgeRule[1].test(text)) return "live-knowledge";
         const match = WORKFLOW_RULES.find(([, pattern]) => pattern.test(text));
         return match ? match[0] : null;
       }
@@ -510,6 +513,38 @@
       function extractMusicQuery(text) {
         return cleanText(text.replace(/^(?:play|open|start|put\s+on)\s+/i, "").replace(/\b(?:music|media|songs?)\b/ig, " ")) || "Kenyan";
       }
+      var MAP_ACTION_PATTERN = [
+        "show",
+        "display",
+        "open(?:\\s+up)?",
+        "view",
+        "see",
+        "find",
+        "locate",
+        "pull\\s+up",
+        "bring\\s+up",
+        "take\\s+me\\s+(?:back\\s+)?to",
+        "go\\s+(?:back\\s+)?to",
+        "move\\s+to",
+        "zoom\\s+(?:in\\s+)?to"
+      ].join("|");
+      function extractMapParameters(text) {
+        const route = /\b(?:route|directions|navigate|travel)\b.*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text) || /\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text);
+        if (route) {
+          return {
+            action: "route",
+            origin: cleanText(route[1]),
+            destination: cleanText(route[2])
+          };
+        }
+        let place = cleanText(text).replace(/^(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and\s+|\s+to\s+)?/i, "");
+        const actionPrefix = new RegExp(
+          `^(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:(?:a|the)\\s+)?(?:city\\s+of\\s+)?(?:maps?\\s+(?:of|for|to)\\s+)?`,
+          "i"
+        );
+        place = cleanText(place.replace(actionPrefix, "").replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for|to)\s+/i, "").replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "").replace(/\s+(?:map|maps)$/i, ""));
+        return { action: "show-place", place: place || null };
+      }
       function extractParameters(workflow, text) {
         const location = locationAfterPreposition(text) || null;
         if (workflow === "health") {
@@ -527,7 +562,7 @@
         if (workflow === "agriculture") {
           return { action: /\b(picture|pictures|image|images|photo|photos)\b/i.test(text) ? "images" : "support", crop: /\b(maize|corn|wheat|rice|coffee|tea)\b/i.exec(text)?.[1]?.toLowerCase() || null, location };
         }
-        if (workflow === "maps") return { action: /\b(route|directions|navigate)\b/i.test(text) ? "route" : "show-place" };
+        if (workflow === "maps") return extractMapParameters(text);
         return { action: "open", location };
       }
       function extractIntentAndParameters(command) {
@@ -545,6 +580,7 @@
         WORKFLOW_RULES,
         cleanText,
         stripConversationFrame,
+        extractMapParameters,
         extractIntentAndParameters
       };
     }
@@ -663,6 +699,109 @@
     }
   });
 
+  // rebuild/nexus-core/request-transaction.js
+  var require_request_transaction = __commonJS({
+    "rebuild/nexus-core/request-transaction.js"(exports, module) {
+      "use strict";
+      var WORKFLOW_CONTRACTS = Object.freeze({
+        maps: Object.freeze({
+          required(parameters) {
+            return parameters.action === "route" ? ["origin", "destination"] : ["place"];
+          },
+          outcomes: ["map", "map-fallback"]
+        }),
+        reminders: Object.freeze({ required: () => ["task"], outcomes: ["application"] }),
+        marketplace: Object.freeze({
+          required: (parameters) => ["sell", "buy"].includes(parameters.action) ? ["quantity", "unit", "product"] : [],
+          outcomes: ["application"]
+        }),
+        health: Object.freeze({
+          required: () => [],
+          outcomes: ["application", "provider-card"]
+        }),
+        "live-knowledge": Object.freeze({
+          required: (parameters) => parameters.action === "weather" ? ["location"] : [],
+          outcomes: ["evidence", "weather", "pilot-dashboard", "source-directory"]
+        }),
+        agriculture: Object.freeze({ required: () => [], outcomes: ["application", "agriculture-images"] }),
+        workforce: Object.freeze({ required: () => [], outcomes: ["application", "resume"] }),
+        music: Object.freeze({ required: () => ["query"], outcomes: ["music"] }),
+        telehealth: Object.freeze({ required: () => [], outcomes: ["application"] }),
+        "mobile-clinic": Object.freeze({ required: () => [], outcomes: ["application"] }),
+        pharmacy: Object.freeze({ required: () => [], outcomes: ["application"] }),
+        learning: Object.freeze({ required: () => [], outcomes: ["application"] }),
+        offline: Object.freeze({ required: () => [], outcomes: ["application"] })
+      });
+      function present(value) {
+        if (value === null || value === void 0 || value === "") return false;
+        if (typeof value === "object") return Object.keys(value).length > 0;
+        return true;
+      }
+      function validateResolution(resolution) {
+        const contract = WORKFLOW_CONTRACTS[resolution.workspace];
+        if (!contract) return Object.freeze({ valid: false, code: "unknown-workflow", missing: [] });
+        const parameters = resolution.parameters || {};
+        const missing = contract.required(parameters).filter((key) => !present(parameters[key]));
+        return Object.freeze({
+          valid: missing.length === 0,
+          code: missing.length ? "missing-required-parameters" : "validated",
+          missing
+        });
+      }
+      function verifyAcknowledgement(resolution, acknowledgement) {
+        const contract = WORKFLOW_CONTRACTS[resolution.workspace];
+        const outcomeKind = String(acknowledgement && acknowledgement.outcomeKind || "");
+        const validOutcome = Boolean(contract && contract.outcomes.includes(outcomeKind));
+        const verified = Boolean(
+          acknowledgement && acknowledgement.visible === true && acknowledgement.populated === true && acknowledgement.outcomeVerified === true && validOutcome
+        );
+        return Object.freeze({
+          verified,
+          code: verified ? "visible-outcome-verified" : "visible-outcome-unverified",
+          outcomeKind: outcomeKind || null,
+          recovery: acknowledgement && acknowledgement.recovery || null
+        });
+      }
+      var NexusRequestTransaction = class {
+        constructor({ execute, onStage = () => {
+        } } = {}) {
+          if (typeof execute !== "function") throw new Error("A workflow executor is required.");
+          this.execute = execute;
+          this.onStage = onStage;
+        }
+        async run(resolution) {
+          const transactionId = `nexus-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          const validation = validateResolution(resolution);
+          this.onStage("request.validated", { transactionId, workspace: resolution.workspace, ...validation });
+          if (!validation.valid) {
+            const error = new Error(`Nexus needs ${validation.missing.join(" and ")} before opening ${resolution.workspace}.`);
+            error.code = validation.code;
+            error.transactionId = transactionId;
+            throw error;
+          }
+          this.onStage("request.executing", { transactionId, workspace: resolution.workspace });
+          const acknowledgement = await this.execute({ ...resolution, transactionId });
+          const outcome = verifyAcknowledgement(resolution, acknowledgement);
+          this.onStage("request.outcome", { transactionId, workspace: resolution.workspace, ...outcome });
+          if (!outcome.verified) {
+            const error = new Error(`Nexus could not verify the requested ${resolution.workspace} result.`);
+            error.code = outcome.code;
+            error.transactionId = transactionId;
+            error.recovery = outcome.recovery;
+            throw error;
+          }
+          return Object.freeze({ ...resolution, transactionId, acknowledgement, outcome });
+        }
+      };
+      module.exports = {
+        WORKFLOW_CONTRACTS,
+        validateResolution,
+        verifyAcknowledgement,
+        NexusRequestTransaction
+      };
+    }
+  });
+
   // rebuild/nexus-core/browser-runtime.js
   var require_browser_runtime = __commonJS({
     "rebuild/nexus-core/browser-runtime.js"(exports, module) {
@@ -675,6 +814,7 @@
         normalizeExperiencePreferences
       } = require_experience_profile();
       var { NEXUS_VOICE_LATENCY_PROFILE } = require_latency_profile();
+      var { NexusRequestTransaction } = require_request_transaction();
       var DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
       var NexusBrowserRuntime = class {
         constructor({
@@ -703,6 +843,16 @@
           this.recovery = null;
           this.responseFallbackTimer = null;
           this.visualRoutes = /* @__PURE__ */ new Map();
+          this.requestTransaction = new NexusRequestTransaction({
+            execute: (resolution) => this.openWorkspace({
+              workspace: resolution.workspace,
+              command: resolution.command,
+              utterance: resolution.utterance,
+              parameters: resolution.parameters,
+              transactionId: resolution.transactionId
+            }),
+            onStage: (type, detail) => this.receipt(type, detail)
+          });
         }
         async start({ sessionToken, userGesture = false } = {}) {
           if (typeof this.realtime.subscribe === "function" && !this.unsubscribe) {
@@ -886,17 +1036,14 @@
             const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
             let visualRoute = this.visualRoutes.get(routeKey);
             if (!visualRoute) {
-              visualRoute = this.openWorkspace({
-                workspace: resolution.workspace,
-                command: resolution.command
-              }).then((acknowledgement) => {
-                if (!acknowledgement || acknowledgement.visible !== true) {
-                  throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
-                }
-                const routed = Object.freeze({ ...resolution, acknowledgement });
+              visualRoute = this.requestTransaction.run(resolution).then((routed) => {
+                const acknowledgement = routed.acknowledgement;
                 this.receipt("workspace.visible", {
                   workspace: resolution.workspace,
+                  transactionId: routed.transactionId,
                   acknowledgementId: acknowledgement.id || null,
+                  outcomeKind: acknowledgement.outcomeKind || null,
+                  outcomeVerified: acknowledgement.outcomeVerified === true,
                   evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
                   evidenceStatus: acknowledgement.evidenceStatus || null,
                   evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
@@ -969,7 +1116,7 @@
         normalizeExperiencePreferences
       } = require_experience_profile();
       function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
-        return ({ workspace, command }) => new Promise((resolve, reject) => {
+        return ({ workspace, command, utterance, parameters, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
           const timer = setTimeout(() => {
             windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
@@ -981,6 +1128,10 @@
             windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
             resolve({
               visible: event.detail.visible === true,
+              populated: event.detail.populated === true,
+              outcomeVerified: event.detail.outcomeVerified === true,
+              outcomeKind: event.detail.outcomeKind || null,
+              recovery: event.detail.recovery || null,
               id: event.detail.acknowledgementId || requestId,
               evidenceReceiptId: event.detail.evidenceReceiptId || null,
               evidenceStatus: event.detail.evidenceStatus || null,
@@ -992,7 +1143,7 @@
           }
           windowObject.addEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
           windowObject.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
-            detail: Object.freeze({ requestId, workspace, command })
+            detail: Object.freeze({ requestId, workspace, command, utterance, parameters, transactionId })
           }));
         });
       }
@@ -1362,12 +1513,24 @@
       var nexusLeafletMap = null;
       var nexusLeafletLayers = [];
       var nexusMapRequestGeneration = 0;
+      function stabilizeVisibleMapLayout(map, globalObject = typeof window !== "undefined" ? window : null) {
+        const invalidate = () => map?.invalidateSize?.({ pan: false, animate: false });
+        invalidate();
+        if (typeof globalObject?.requestAnimationFrame === "function") {
+          globalObject.requestAnimationFrame(invalidate);
+        }
+        if (typeof globalObject?.setTimeout === "function") {
+          globalObject.setTimeout(invalidate, 250);
+        } else {
+          setTimeout(invalidate, 250);
+        }
+      }
       function resetVisibleMapStateForTest() {
         nexusLeafletMap = null;
         nexusLeafletLayers = [];
         nexusMapRequestGeneration = 0;
       }
-      async function resolveVisibleMap({ command, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
+      async function resolveVisibleMap({ command, parameters, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
         const requestGeneration = ++nexusMapRequestGeneration;
         const canvas = documentObject.getElementById("nexus-map-canvas");
         const summary = documentObject.getElementById("nexus-map-summary");
@@ -1382,7 +1545,7 @@
         const response = await fetchImpl("/api/maps/resolve", {
           method: "POST",
           headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
-          body: JSON.stringify({ command })
+          body: JSON.stringify({ command, parameters })
         });
         const result = await response.json();
         if (requestGeneration !== nexusMapRequestGeneration) {
@@ -1398,6 +1561,7 @@
             maxZoom: 19
           }).addTo(nexusLeafletMap);
         }
+        stabilizeVisibleMapLayout(nexusLeafletMap, documentObject.defaultView);
         if (result.type === "route") {
           const latLngs = result.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
           const line = leaflet.polyline(latLngs, { color: "#39d7ff", weight: 6, opacity: 0.9 }).addTo(nexusLeafletMap);
@@ -1428,7 +1592,7 @@
           summary.textContent = location.administrative ? `Visible city-area map of ${location.label}` : `Visible map centered on ${location.label}`;
           link.href = `https://www.openstreetmap.org/#map=${location.administrative ? 11 : 15}/${location.lat}/${location.lon}`;
         }
-        setTimeout(() => nexusLeafletMap.invalidateSize(), 0);
+        stabilizeVisibleMapLayout(nexusLeafletMap, documentObject.defaultView);
         return result;
       }
       function renderWorkspace({ workspace, command, documentObject = document }) {
@@ -1547,7 +1711,11 @@
           const specializedIntent = visualIntent(detail.command);
           if (detail.workspace === "maps") {
             try {
-              mapResult = await resolveVisibleMap({ command: detail.command, sessionToken });
+              mapResult = await resolveVisibleMap({
+                command: detail.command,
+                parameters: detail.parameters,
+                sessionToken
+              });
             } catch (error) {
               visualSuccess = false;
               if (error.code !== "NEXUS_MAP_REQUEST_SUPERSEDED") {
@@ -1605,6 +1773,11 @@
               }
             }
           }
+          const specializedKind = specializedIntent || null;
+          const outcomeKind = detail.workspace === "maps" ? mapResult ? "map" : "map-fallback" : detail.workspace === "music" ? "music" : specializedKind || (detail.workspace === "live-knowledge" ? "evidence" : "application");
+          const outcomeVerified = Boolean(
+            visualSuccess && !workspace.hidden && workspace.dataset.populated === "true" && (detail.workspace !== "maps" || mapResult && /^visible-(?:map|route)-ready$/.test(mapResult.status))
+          );
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
               detail: Object.freeze({
@@ -1613,6 +1786,13 @@
                 workspace: detail.workspace,
                 visible: visualSuccess && !workspace.hidden && workspace.dataset.populated === "true",
                 populated: visualSuccess && workspace.dataset.populated === "true",
+                outcomeVerified,
+                outcomeKind,
+                recovery: outcomeVerified ? null : {
+                  state: "visible-failure",
+                  message: `Nexus could not verify the requested ${detail.workspace} result.`,
+                  retryable: true
+                },
                 mapStatus: mapResult && mapResult.status || null,
                 evidenceReceiptId: evidence && evidence.id || null,
                 evidenceStatus: evidence && evidence.status || null,
@@ -1864,6 +2044,7 @@
         researchEvidence,
         resolveVisibleMap,
         resetVisibleMapStateForTest,
+        stabilizeVisibleMapLayout,
         safeExternalUrl,
         isEvidenceDisplayFollowUp,
         musicSearchFromCommand,

@@ -2,7 +2,11 @@
 
 const assert = require("node:assert/strict");
 const { createOpenMapProvider, extractPlaceIntent, parseMapRequest } = require("../nexus-core/map-service");
-const { resolveVisibleMap, resetVisibleMapStateForTest } = require("../browser/nexus-clean-entry");
+const {
+  resolveVisibleMap,
+  resetVisibleMapStateForTest,
+  stabilizeVisibleMapLayout
+} = require("../browser/nexus-clean-entry");
 
 async function verifyNewestMapRequestWins() {
   const elements = {
@@ -157,6 +161,9 @@ async function main() {
     destination: "Abuja, Nigeria"
   });
   assert.deepEqual(parseMapRequest("Nexus, show me a map of Kenya"), { type: "place", place: "Kenya" });
+  assert.deepEqual(parseMapRequest("Nexus, open up a map of Kenya"), { type: "place", place: "Kenya" });
+  assert.deepEqual(parseMapRequest("Nexus, open the map to Mombasa"), { type: "place", place: "Mombasa" });
+  assert.deepEqual(parseMapRequest("Nexus, open a map for Kenya"), { type: "place", place: "Kenya" });
   assert.deepEqual(parseMapRequest("Nexus, pull up a map of Mombasa, Kenya"), {
     type: "place",
     place: "Mombasa, Kenya"
@@ -168,6 +175,7 @@ async function main() {
   });
   const paraphrases = [
     "Show me Mombasa.",
+    "Open up a map of Mombasa, Kenya.",
     "Pull up a map of Mombasa, Kenya.",
     "Take me to Mombasa, Kenya.",
     "Open Mombasa, Kenya on the map.",
@@ -189,6 +197,26 @@ async function main() {
     action: "show-place",
     place: "Mombasa, Kenya"
   });
+
+  let invalidations = 0;
+  let animationFrameScheduled = false;
+  let delayedInvalidationScheduled = false;
+  stabilizeVisibleMapLayout(
+    { invalidateSize() { invalidations += 1; } },
+    {
+      requestAnimationFrame(callback) {
+        animationFrameScheduled = true;
+        callback();
+      },
+      setTimeout(callback, delay) {
+        delayedInvalidationScheduled = delay === 250;
+        callback();
+      }
+    }
+  );
+  assert.equal(invalidations, 3, "Map layout must be recalculated now, after paint, and after workspace animation.");
+  assert.equal(animationFrameScheduled, true);
+  assert.equal(delayedInvalidationScheduled, true);
 
   const requests = [];
   const provider = createOpenMapProvider({

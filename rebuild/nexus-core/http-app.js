@@ -67,7 +67,7 @@ function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = nu
       try {
         sessionAuthority.verify(readBearer(request.headers.authorization));
         const body = await readJson(request);
-        const result = await mapProvider(body.command);
+        const result = await mapProvider(body.parameters && body.parameters.action ? body.parameters : body.command);
         onReceipt(receipt("map.visible-result-ready", { type: result.type, status: result.status }));
         return json(response, 200, result);
       } catch (error) {

@@ -7,19 +7,19 @@ const { locationFromWeatherCommand } = require("../nexus-core/visual-data-servic
 const { musicSearchFromCommand, visualIntent } = require("../browser/nexus-clean-entry");
 
 const paraphrases = [
-  ["maps", ["Show me a map of Mombasa, Kenya", "Could you open Mombasa on the map please", "I want to see the city of Mombasa on the map"]],
-  ["reminders", ["Remind me tomorrow morning to check my blood pressure", "Please create a reminder to call the clinic tonight", "Set a reminder for me to take medicine at 8 pm"]],
-  ["health", ["Record my blood pressure as 140 over 90", "Please open chronic health support", "Create a card I can show my doctor"]],
-  ["telehealth", ["Open Telehealth Intake", "Could you begin a video visit", "I want to talk to a clinician"]],
-  ["mobile-clinic", ["Open Mobile Clinic support", "Help me find a mobile clinic", "I need a clinic visit"]],
-  ["pharmacy", ["Open Pharmacy Support", "Help me contact a pharmacist", "I have a prescription question"]],
-  ["workforce", ["Search for farming jobs in Kenya", "Help me create a résumé", "Are there agricultural employment options around Nairobi"]],
-  ["marketplace", ["Help me sell 50 bags of maize", "I want to buy 2 tons of rice in Kenya", "Open the AgriTrade marketplace"]],
-  ["agriculture", ["Open Agriculture Help", "Show pictures of possible maize diseases", "I need help with my coffee crop in Kenya"]],
-  ["learning", ["Open Learning and Literacy", "Help me learn English", "Find a training course"]],
-  ["music", ["Play Kenyan music", "Could you put on soul songs please", "I want to hear gospel music"]],
-  ["offline", ["Open the Offline Queue", "Show my sync queue", "What work is offline"]],
-  ["live-knowledge", ["Show today's weather in Nairobi, Kenya", "Show me the websites and sources", "Open the Pilot Evidence Dashboard"]]
+  ["maps", ["Show me a map of Mombasa, Kenya", "Could you open Mombasa on the map please", "I want to see the city of Mombasa on the map", "Open up a map of Kenya", "Show me a map of Abuja, Nigeria", "Take me back to Nairobi, Kenya", "Plan a route from Nairobi to Nakuru", "Where is Accra on the map"]],
+  ["reminders", ["Remind me tomorrow morning to check my blood pressure", "Please create a reminder to call the clinic tonight", "Set a reminder for me to take medicine at 8 pm", "Remind me Friday to visit the pharmacy", "Create a reminder to check the maize tomorrow", "Add a reminder to exercise tonight"]],
+  ["health", ["Record my blood pressure as 140 over 90", "Please open chronic health support", "Create a card I can show my doctor", "My blood pressure is 160 over 100", "Help me with diabetes care", "Prepare a summary for my pharmacist"]],
+  ["telehealth", ["Open Telehealth Intake", "Could you begin a video visit", "I want to talk to a clinician", "Help me prepare for telehealth", "Start my doctor intake", "Open the video visit workspace"]],
+  ["mobile-clinic", ["Open Mobile Clinic support", "Help me find a mobile clinic", "I need a clinic visit", "Find a clinic visit near Kisumu", "Show mobile clinic options", "Help me access a mobile clinic"]],
+  ["pharmacy", ["Open Pharmacy Support", "Help me contact a pharmacist", "I have a prescription question", "I need medication support", "Show the pharmacy workspace", "Help with my prescription"]],
+  ["workforce", ["Search for farming jobs in Kenya", "Help me create a résumé", "Are there agricultural employment options around Nairobi", "Find farm work near Abuja", "Open the jobs workspace", "Help with my CV"]],
+  ["marketplace", ["Help me sell 50 bags of maize", "I want to buy 2 tons of rice in Kenya", "Open the AgriTrade marketplace", "Sell 10 crates of coffee near Nairobi", "Find a buyer for my crop", "Show marketplace options"]],
+  ["agriculture", ["Open Agriculture Help", "Show pictures of possible maize diseases", "I need help with my coffee crop in Kenya", "What is wrong with my rice crop", "Open farmer support", "Show maize disease images"]],
+  ["learning", ["Open Learning and Literacy", "Help me learn English", "Find a training course", "Start a literacy lesson", "Show learning options", "Find agricultural training"]],
+  ["music", ["Play Kenyan music", "Could you put on soul songs please", "I want to hear gospel music", "Start jazz music", "Play Afrobeats songs", "Put on relaxing music"]],
+  ["offline", ["Open the Offline Queue", "Show my sync queue", "What work is offline", "Review queued offline work", "Show requests waiting to sync", "Open offline items"]],
+  ["live-knowledge", ["Show today's weather in Nairobi, Kenya", "Show me the websites and sources", "Open the Pilot Evidence Dashboard", "What is the forecast for Abuja, Nigeria", "Search the internet for maize prices", "Display the approved references"]]
 ];
 
 for (const [workflow, commands] of paraphrases) {

@@ -1,5 +1,7 @@
 "use strict";
 
+const { extractIntentAndParameters, extractMapParameters } = require("./intent-parameter-extractor");
+
 const COUNTRY_CODES = Object.freeze({
   india: "in",
   kenya: "ke",
@@ -16,24 +18,6 @@ const ADMINISTRATIVE_PLACE_TYPES = new Set([
   "village"
 ]);
 
-const MAP_ACTION_PATTERN = [
-  "show",
-  "display",
-  "open",
-  "view",
-  "see",
-  "find",
-  "locate",
-  "pull\\s+up",
-  "bring\\s+up",
-  "take\\s+me\\s+to",
-  "take\\s+me\\s+back\\s+to",
-  "go\\s+back\\s+to",
-  "go\\s+to",
-  "move\\s+to",
-  "zoom\\s+(?:in\\s+)?to"
-].join("|");
-
 function cleanLocationCandidate(value) {
   return String(value || "")
     .replace(/\s+/g, " ")
@@ -42,27 +26,10 @@ function cleanLocationCandidate(value) {
 }
 
 function extractPlaceIntent(command) {
-  let candidate = String(command || "").replace(/\s+/g, " ").trim();
-  candidate = candidate
-    .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
-    .replace(/^(?:please|could\s+you|can\s+you|would\s+you|will\s+you)\b[\s,;:.-]*/i, "")
-    .replace(/^(?:i(?:'d|\s+would)?\s+like\s+to|i\s+want\s+to)\s+/i, "")
-    .replace(/^(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and\s+|\s+to\s+)?/i, "")
-    .trim();
-
-  const actionPrefix = new RegExp(
-    `^(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:(?:a|the)\\s+)?(?:city\\s+of\\s+)?(?:maps?\\s+(?:of|for)\\s+)?`,
-    "i"
-  );
-  candidate = candidate.replace(actionPrefix, "");
-  candidate = candidate.replace(/[\s,;:?.!-]+$/g, "");
-  candidate = candidate
-    .replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for)\s+/i, "")
-    .replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "")
-    .replace(/\s+(?:map|maps)$/i, "")
-    .replace(/\s+(?:please)$/i, "");
-
-  const place = cleanLocationCandidate(candidate);
+  const resolution = extractIntentAndParameters(command);
+  const place = resolution.workflow === "maps"
+    ? resolution.parameters.place
+    : extractMapParameters(resolution.utterance).place;
   return Object.freeze({
     action: "show-place",
     place: place || cleanLocationCandidate(command)
@@ -90,14 +57,18 @@ function administrativePlaceScore(result, countryCode) {
 }
 
 function parseMapRequest(command) {
-  const text = String(command || "").replace(/\s+/g, " ").trim();
-  const route = /\b(?:route|directions|navigate|travel)\b.*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text)
-    || /\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text);
-  if (route) {
-    return Object.freeze({ type: "route", origin: route[1].trim(), destination: route[2].trim() });
+  if (command && typeof command === "object" && command.action) {
+    return command.action === "route"
+      ? Object.freeze({ type: "route", origin: command.origin, destination: command.destination })
+      : Object.freeze({ type: "place", place: command.place });
   }
-  const intent = extractPlaceIntent(text);
-  return Object.freeze({ type: "place", place: intent.place });
+  const resolution = extractIntentAndParameters(command);
+  const parameters = resolution.workflow === "maps"
+    ? resolution.parameters
+    : extractMapParameters(resolution.utterance);
+  return parameters.action === "route"
+    ? Object.freeze({ type: "route", origin: parameters.origin, destination: parameters.destination })
+    : Object.freeze({ type: "place", place: parameters.place });
 }
 
 function createOpenMapProvider({ fetchImpl = fetch } = {}) {

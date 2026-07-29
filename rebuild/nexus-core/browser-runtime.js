@@ -8,6 +8,7 @@ const {
   normalizeExperiencePreferences
 } = require("./experience-profile");
 const { NEXUS_VOICE_LATENCY_PROFILE } = require("./latency-profile");
+const { NexusRequestTransaction } = require("./request-transaction");
 
 const DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
 
@@ -37,6 +38,16 @@ class NexusBrowserRuntime {
     this.recovery = null;
     this.responseFallbackTimer = null;
     this.visualRoutes = new Map();
+    this.requestTransaction = new NexusRequestTransaction({
+      execute: (resolution) => this.openWorkspace({
+        workspace: resolution.workspace,
+        command: resolution.command,
+        utterance: resolution.utterance,
+        parameters: resolution.parameters,
+        transactionId: resolution.transactionId
+      }),
+      onStage: (type, detail) => this.receipt(type, detail)
+    });
   }
 
   async start({ sessionToken, userGesture = false } = {}) {
@@ -229,17 +240,14 @@ class NexusBrowserRuntime {
       const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
       let visualRoute = this.visualRoutes.get(routeKey);
       if (!visualRoute) {
-        visualRoute = this.openWorkspace({
-          workspace: resolution.workspace,
-          command: resolution.command
-        }).then((acknowledgement) => {
-          if (!acknowledgement || acknowledgement.visible !== true) {
-            throw new Error(`Workspace ${resolution.workspace} did not provide visible acknowledgement.`);
-          }
-          const routed = Object.freeze({ ...resolution, acknowledgement });
+        visualRoute = this.requestTransaction.run(resolution).then((routed) => {
+          const acknowledgement = routed.acknowledgement;
           this.receipt("workspace.visible", {
             workspace: resolution.workspace,
+            transactionId: routed.transactionId,
             acknowledgementId: acknowledgement.id || null,
+            outcomeKind: acknowledgement.outcomeKind || null,
+            outcomeVerified: acknowledgement.outcomeVerified === true,
             evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
             evidenceStatus: acknowledgement.evidenceStatus || null,
             evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,

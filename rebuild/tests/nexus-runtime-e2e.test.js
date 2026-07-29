@@ -71,7 +71,16 @@ async function main() {
     audioElement,
     openWorkspace: async (request) => {
       opened.push(request);
-      return { visible: true, id: `ack-${request.workspace}` };
+      return {
+        visible: true,
+        populated: true,
+        outcomeVerified: true,
+        outcomeKind: request.workspace === "maps" ? "map"
+          : request.workspace === "music" ? "music"
+            : request.workspace === "live-knowledge" ? "evidence"
+              : "application",
+        id: `ack-${request.workspace}`
+      };
     },
     onReceipt: (receipt) => receipts.push(receipt)
   });
@@ -117,6 +126,7 @@ async function main() {
     assert.equal(result.acknowledgement.visible, true);
   }
   assert.equal(opened.length, 13);
+  assert.equal(opened.every((request) => request.transactionId && request.parameters), true);
 
   eventSubscriber({
     type: "realtime.data-message",
@@ -146,6 +156,10 @@ async function main() {
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
   assert.ok(receipts.some((receipt) => receipt.type === "realtime.error"));
   assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
+  assert.equal(receipts.filter((receipt) => receipt.type === "request.outcome").length, 14);
+  assert.equal(receipts.every((receipt) => (
+    receipt.type !== "request.outcome" || receipt.detail.verified === true
+  )), true);
 
   const responseCreateCount = sent.filter((event) => event.type === "response.create").length;
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_stopped" });

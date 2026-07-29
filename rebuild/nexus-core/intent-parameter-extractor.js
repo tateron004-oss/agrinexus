@@ -1,19 +1,19 @@
 "use strict";
 
 const WORKFLOW_RULES = Object.freeze([
-  ["maps", /\b(map|maps|route|directions|navigate|location)\b/i],
+  ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom in to)\b/i],
   ["reminders", /\b(remind|reminder)\b/i],
   ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
   ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
   ["mobile-clinic", /\b(mobile clinic|clinic visit)\b/i],
-  ["pharmacy", /\b(pharmacy|pharmacist|prescription)\b/i],
+  ["pharmacy", /\b(pharmacy|pharmacist|prescription|medication support)\b/i],
   ["offline", /\b(offline|sync|queue)\b/i],
   ["workforce", /(?:\b(job|jobs|work|career|employment|resume|cv)\b|résumé)/i],
   ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
+  ["learning", /\b(learn|learning|lesson|course|literacy|training)\b/i],
   ["agriculture", /\b(agriculture|agricultural|farm|farmer|crop|maize|soil|weather for my field)\b/i],
-  ["learning", /\b(learn|lesson|course|literacy|training)\b/i],
   ["music", /\b(play|music|song|songs)\b/i],
-  ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|weather|forecast|pilot evidence|evidence dashboard|implementation report|learning brief|scale-up options|(show|display) (me )?(the )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
+  ["live-knowledge", /\b(search the (web|internet)|look up|latest|current news|live knowledge|approved source|weather|forecast|pilot evidence|evidence dashboard|implementation report|learning brief|scale-up options|(show|display) (me )?(the )?(approved )?(source|sources|reference|references|evidence|link|links|website|websites|resource|resources)|open (the )?(source|reference|link|website)|cite|citation)\b/i]
 ]);
 
 function cleanText(value) {
@@ -40,6 +40,9 @@ function providerCardRequest(text) {
 
 function detectWorkflow(text) {
   if (providerCardRequest(text)) return "health";
+  if (/\bweather for my field\b/i.test(text)) return "agriculture";
+  const liveKnowledgeRule = WORKFLOW_RULES.find(([workflow]) => workflow === "live-knowledge");
+  if (liveKnowledgeRule[1].test(text)) return "live-knowledge";
   const match = WORKFLOW_RULES.find(([, pattern]) => pattern.test(text));
   return match ? match[0] : null;
 }
@@ -81,6 +84,36 @@ function extractMusicQuery(text) {
     .replace(/\b(?:music|media|songs?)\b/ig, " ")) || "Kenyan";
 }
 
+const MAP_ACTION_PATTERN = [
+  "show", "display", "open(?:\\s+up)?", "view", "see", "find", "locate",
+  "pull\\s+up", "bring\\s+up", "take\\s+me\\s+(?:back\\s+)?to",
+  "go\\s+(?:back\\s+)?to", "move\\s+to", "zoom\\s+(?:in\\s+)?to"
+].join("|");
+
+function extractMapParameters(text) {
+  const route = /\b(?:route|directions|navigate|travel)\b.*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text)
+    || /\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text);
+  if (route) {
+    return {
+      action: "route",
+      origin: cleanText(route[1]),
+      destination: cleanText(route[2])
+    };
+  }
+  let place = cleanText(text)
+    .replace(/^(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and\s+|\s+to\s+)?/i, "");
+  const actionPrefix = new RegExp(
+    `^(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:(?:a|the)\\s+)?(?:city\\s+of\\s+)?(?:maps?\\s+(?:of|for|to)\\s+)?`,
+    "i"
+  );
+  place = cleanText(place
+    .replace(actionPrefix, "")
+    .replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for|to)\s+/i, "")
+    .replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "")
+    .replace(/\s+(?:map|maps)$/i, ""));
+  return { action: "show-place", place: place || null };
+}
+
 function extractParameters(workflow, text) {
   const location = locationAfterPreposition(text) || null;
   if (workflow === "health") {
@@ -98,7 +131,7 @@ function extractParameters(workflow, text) {
   if (workflow === "agriculture") {
     return { action: /\b(picture|pictures|image|images|photo|photos)\b/i.test(text) ? "images" : "support", crop: /\b(maize|corn|wheat|rice|coffee|tea)\b/i.exec(text)?.[1]?.toLowerCase() || null, location };
   }
-  if (workflow === "maps") return { action: /\b(route|directions|navigate)\b/i.test(text) ? "route" : "show-place" };
+  if (workflow === "maps") return extractMapParameters(text);
   return { action: "open", location };
 }
 
@@ -118,5 +151,6 @@ module.exports = {
   WORKFLOW_RULES,
   cleanText,
   stripConversationFrame,
+  extractMapParameters,
   extractIntentAndParameters
 };

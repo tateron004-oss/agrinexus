@@ -12,7 +12,7 @@ const {
 } = require("../nexus-core/experience-profile");
 
 function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
-  return ({ workspace, command }) => new Promise((resolve, reject) => {
+  return ({ workspace, command, utterance, parameters, transactionId }) => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     const timer = setTimeout(() => {
       windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
@@ -24,6 +24,10 @@ function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}
       windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
       resolve({
         visible: event.detail.visible === true,
+        populated: event.detail.populated === true,
+        outcomeVerified: event.detail.outcomeVerified === true,
+        outcomeKind: event.detail.outcomeKind || null,
+        recovery: event.detail.recovery || null,
         id: event.detail.acknowledgementId || requestId,
         evidenceReceiptId: event.detail.evidenceReceiptId || null,
         evidenceStatus: event.detail.evidenceStatus || null,
@@ -35,7 +39,7 @@ function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}
     }
     windowObject.addEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
     windowObject.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
-      detail: Object.freeze({ requestId, workspace, command })
+      detail: Object.freeze({ requestId, workspace, command, utterance, parameters, transactionId })
     }));
   });
 }
@@ -424,13 +428,26 @@ let nexusLeafletMap = null;
 let nexusLeafletLayers = [];
 let nexusMapRequestGeneration = 0;
 
+function stabilizeVisibleMapLayout(map, globalObject = typeof window !== "undefined" ? window : null) {
+  const invalidate = () => map?.invalidateSize?.({ pan: false, animate: false });
+  invalidate();
+  if (typeof globalObject?.requestAnimationFrame === "function") {
+    globalObject.requestAnimationFrame(invalidate);
+  }
+  if (typeof globalObject?.setTimeout === "function") {
+    globalObject.setTimeout(invalidate, 250);
+  } else {
+    setTimeout(invalidate, 250);
+  }
+}
+
 function resetVisibleMapStateForTest() {
   nexusLeafletMap = null;
   nexusLeafletLayers = [];
   nexusMapRequestGeneration = 0;
 }
 
-async function resolveVisibleMap({ command, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
+async function resolveVisibleMap({ command, parameters, sessionToken, documentObject = document, fetchImpl = fetch, leaflet = window.L }) {
   const requestGeneration = ++nexusMapRequestGeneration;
   const canvas = documentObject.getElementById("nexus-map-canvas");
   const summary = documentObject.getElementById("nexus-map-summary");
@@ -445,7 +462,7 @@ async function resolveVisibleMap({ command, sessionToken, documentObject = docum
   const response = await fetchImpl("/api/maps/resolve", {
     method: "POST",
     headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
-    body: JSON.stringify({ command })
+    body: JSON.stringify({ command, parameters })
   });
   const result = await response.json();
   if (requestGeneration !== nexusMapRequestGeneration) {
@@ -461,6 +478,7 @@ async function resolveVisibleMap({ command, sessionToken, documentObject = docum
       maxZoom: 19
     }).addTo(nexusLeafletMap);
   }
+  stabilizeVisibleMapLayout(nexusLeafletMap, documentObject.defaultView);
   if (result.type === "route") {
     const latLngs = result.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
     const line = leaflet.polyline(latLngs, { color: "#39d7ff", weight: 6, opacity: 0.9 }).addTo(nexusLeafletMap);
@@ -493,7 +511,7 @@ async function resolveVisibleMap({ command, sessionToken, documentObject = docum
       : `Visible map centered on ${location.label}`;
     link.href = `https://www.openstreetmap.org/#map=${location.administrative ? 11 : 15}/${location.lat}/${location.lon}`;
   }
-  setTimeout(() => nexusLeafletMap.invalidateSize(), 0);
+  stabilizeVisibleMapLayout(nexusLeafletMap, documentObject.defaultView);
   return result;
 }
 
@@ -625,7 +643,11 @@ function boot() {
     const specializedIntent = visualIntent(detail.command);
     if (detail.workspace === "maps") {
       try {
-        mapResult = await resolveVisibleMap({ command: detail.command, sessionToken });
+        mapResult = await resolveVisibleMap({
+          command: detail.command,
+          parameters: detail.parameters,
+          sessionToken
+        });
       } catch (error) {
         visualSuccess = false;
         if (error.code !== "NEXUS_MAP_REQUEST_SUPERSEDED") {
@@ -683,6 +705,18 @@ function boot() {
         }
       }
     }
+    const specializedKind = specializedIntent || null;
+    const outcomeKind = detail.workspace === "maps"
+      ? (mapResult ? "map" : "map-fallback")
+      : detail.workspace === "music"
+        ? "music"
+        : specializedKind || (detail.workspace === "live-knowledge" ? "evidence" : "application");
+    const outcomeVerified = Boolean(
+      visualSuccess
+      && !workspace.hidden
+      && workspace.dataset.populated === "true"
+      && (detail.workspace !== "maps" || (mapResult && /^visible-(?:map|route)-ready$/.test(mapResult.status)))
+    );
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
         detail: Object.freeze({
@@ -691,6 +725,13 @@ function boot() {
           workspace: detail.workspace,
           visible: visualSuccess && !workspace.hidden && workspace.dataset.populated === "true",
           populated: visualSuccess && workspace.dataset.populated === "true",
+          outcomeVerified,
+          outcomeKind,
+          recovery: outcomeVerified ? null : {
+            state: "visible-failure",
+            message: `Nexus could not verify the requested ${detail.workspace} result.`,
+            retryable: true
+          },
           mapStatus: mapResult && mapResult.status || null,
           evidenceReceiptId: evidence && evidence.id || null,
           evidenceStatus: evidence && evidence.status || null,
@@ -949,6 +990,7 @@ module.exports = {
   researchEvidence,
   resolveVisibleMap,
   resetVisibleMapStateForTest,
+  stabilizeVisibleMapLayout,
   safeExternalUrl,
   isEvidenceDisplayFollowUp,
   musicSearchFromCommand,
