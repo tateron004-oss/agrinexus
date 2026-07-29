@@ -189,6 +189,10 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       } else if (visual) {
         await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
       }
+      await expect.poll(() => page.evaluate(({ before }) => {
+        return window.__cleanEvidence.receipts.slice(before)
+          .some((item) => item.type === "conversation.return-to-listening");
+      }, { before }), { timeout: 60000 }).toBe(true);
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
       driverEvidence.turns.push({ workspace, command, visual, passed: true });
     }
