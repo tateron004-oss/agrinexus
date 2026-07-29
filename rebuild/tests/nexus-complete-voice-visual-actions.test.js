@@ -37,6 +37,7 @@ assert.equal(ROUTES.length, 13);
 assert.equal(visualIntent(commands[3][1]), "agriculture-images");
 assert.equal(visualIntent(commands[4][1]), "resume");
 assert.equal(visualIntent(commands[5][1]), "weather");
+assert.equal(visualIntent(commands[6][1]), "source-directory");
 assert.equal(visualIntent(commands[7][1]), "provider-card");
 assert.equal(visualIntent(commands[8][1]), "pilot-dashboard");
 assert.equal(weatherDescription(0), "Clear sky");

@@ -202,6 +202,7 @@ function visualIntent(command) {
   if (/(?:\b(resume|cv)\b|résumé)/i.test(text)) return "resume";
   if (/\b(card|summary)\b/i.test(text) && /\b(doctor|physician|provider|pharmacist|blood pressure|symptom)\b/i.test(text)) return "provider-card";
   if (/\b(pilot evidence|evidence dashboard|session completion|technical failures|sessions recovered|usage by language|participant feedback|implementation report|learning brief|scale-up options)\b/i.test(text)) return "pilot-dashboard";
+  if (/\b(websites?|sources?|references?|links?|resources?)\b/i.test(text)) return "source-directory";
   return null;
 }
 
@@ -283,6 +284,32 @@ async function renderSpecializedVisual({ workspace, command, sessionToken, appSu
         <div class="app-actions"><button type="button" data-resume-action="print">Print / Save PDF</button><button type="button" data-resume-action="download">Download text</button></div>
       </form>`;
     return { handled: true, visible: true, status: "resume-builder-ready" };
+  }
+  if (intent === "source-directory") {
+    const sources = [
+      ["FAO", "Food and Agriculture Organization", "https://www.fao.org/"],
+      ["KALRO", "Kenya Agricultural and Livestock Research Organization", "https://www.kalro.org/"],
+      ["Kenya Agriculture Ministry", "Ministry of Agriculture and Livestock Development", "https://kilimo.go.ke/"],
+      ["WHO", "World Health Organization", "https://www.who.int/"],
+      ["ILO", "International Labour Organization", "https://www.ilo.org/"],
+      ["UNESCO", "United Nations Educational, Scientific and Cultural Organization", "https://www.unesco.org/"],
+      ["World Bank", "World Bank public development resources", "https://www.worldbank.org/"]
+    ];
+    appSurface.innerHTML = `
+      <section class="source-directory" data-nexus-visual="source-directory">
+        <div class="app-heading"><span class="app-icon" aria-hidden="true">🔗</span>
+          <div><strong>Approved Websites & Sources</strong><span>Direct links to official organizations</span></div>
+        </div>
+        <div class="evidence-sources">${sources.map(([name, description, url]) => `
+          <article class="evidence-source"><strong>${escapeMarkup(name)}</strong>
+            <span>${escapeMarkup(description)}</span>
+            <a class="evidence-source-link" href="${escapeMarkup(url)}" target="_blank" rel="noopener noreferrer">
+              <span>Open official website</span><small>${escapeMarkup(url)}</small>
+            </a>
+          </article>`).join("")}</div>
+        <p>Use these official resources as starting points. Nexus will identify the exact source used when answering a specific research question.</p>
+      </section>`;
+    return { handled: true, visible: true, status: "approved-source-directory-ready" };
   }
   if (intent === "provider-card") {
     const pressure = /\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i.exec(command || "");
@@ -596,7 +623,7 @@ function boot() {
         }
       }
     }
-    if (detail.workspace === "live-knowledge" && !["weather", "pilot-dashboard"].includes(specializedIntent)) {
+    if (detail.workspace === "live-knowledge" && !["weather", "pilot-dashboard", "source-directory"].includes(specializedIntent)) {
       const evidenceSurface = document.getElementById("nexus-evidence-surface");
       try {
         if (activeEvidenceReceipt && isEvidenceDisplayFollowUp(detail.command)) {
