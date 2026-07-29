@@ -17,6 +17,7 @@ assert.equal(routeCommand("Open the map of Nairobi", machine.state).workspace, "
 assert.equal(routeCommand("Search farming jobs in Kenya", machine.state).workspace, "workforce");
 assert.equal(routeCommand("Sell 50 bags of maize", machine.state).workspace, "marketplace");
 assert.equal(routeCommand("Record my blood pressure", machine.state).workspace, "health");
+assert.equal(routeCommand("Create a provider card for my doctor", machine.state).workspace, "health");
 assert.equal(routeCommand("Play Kenyan music", machine.state).workspace, "music");
 assert.equal(routeCommand("Show today's weather in Nairobi", machine.state).workspace, "live-knowledge");
 assert.equal(routeCommand("Show the forecast for Mombasa", machine.state).workspace, "live-knowledge");

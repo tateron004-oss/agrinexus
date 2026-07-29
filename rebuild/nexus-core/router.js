@@ -25,7 +25,13 @@ function routeCommand(command, connectionState) {
     });
   }
   const normalized = String(command || "").trim();
-  const match = ROUTES.find(([, pattern]) => pattern.test(normalized));
+  const providerCardRequest = (
+    /\b(card|summary)\b.*\b(doctor|physician|provider|pharmacist)\b/i.test(normalized)
+    || /\b(doctor|physician|provider|pharmacist)\b.*\b(card|summary)\b/i.test(normalized)
+  );
+  const match = providerCardRequest
+    ? ["health"]
+    : ROUTES.find(([, pattern]) => pattern.test(normalized));
   return Object.freeze({
     accepted: Boolean(match),
     code: match ? "workspace-route-resolved" : "conversation",
