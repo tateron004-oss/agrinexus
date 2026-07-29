@@ -26,6 +26,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Verify committed production bundle is current
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.28.1
+          node rebuild/scripts/build-browser.js
+          git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
       - name: Run isolated clean suites
         run: |
           node rebuild/tests/nexus-core.test.js
@@ -61,7 +66,9 @@ jobs:
         run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.25.8
       - name: Build clean browser
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: node rebuild/scripts/build-browser.js
+        run: |
+          node rebuild/scripts/build-browser.js
+          git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
       - name: Certify physical voice and all 19 visible actions
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |

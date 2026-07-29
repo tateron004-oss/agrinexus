@@ -87,7 +87,7 @@ services:
     name: agrinexus-platform
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node rebuild/scripts/build-browser.js
     startCommand: npm start
     healthCheckPath: /api/healthz
     autoDeploy: true
