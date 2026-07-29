@@ -7,7 +7,7 @@ const path = require("node:path");
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
 const OUTPUT = path.resolve("output/nexus-clean-windows-certification");
 const commands = [
-  ["agriculture", "Nexus, help with my maize crop in Kenya."],
+  ["agriculture", "Nexus, help with my maize crop in Kenya.", null],
   ["health", "Nexus, record my blood pressure 140 over 90."],
   ["telehealth", "Nexus, begin a telehealth intake."],
   ["mobile-clinic", "Nexus, find a mobile clinic in Kenya."],
@@ -19,7 +19,13 @@ const commands = [
   ["music", "Nexus, play Kenyan music."],
   ["reminders", "Nexus, remind me to take my medicine."],
   ["offline", "Nexus, show my offline queue."],
-  ["live-knowledge", "Nexus, search the internet for today's Kenya weather."]
+  ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", "weather"],
+  ["maps", "Nexus, reset the map and show Mombasa, Kenya.", "map"],
+  ["agriculture", "Nexus, show me pictures of possible maize diseases.", "agriculture-images"],
+  ["workforce", "Nexus, help me create a résumé.", "resume"],
+  ["live-knowledge", "Nexus, show me the websites and sources.", "evidence"],
+  ["health", "Nexus, create a provider card for my doctor.", "provider-card"],
+  ["live-knowledge", "Nexus, open the pilot evidence dashboard.", "pilot-dashboard"]
 ];
 
 function speak(text) {
@@ -164,7 +170,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     });
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
 
-    for (const [workspace, command] of commands) {
+    for (const [workspace, command, visual] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
       await injectSpokenCommand(page, command);
@@ -174,13 +180,22 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       }, { before, workspace }), { timeout: 60000 }).toBe(true);
       await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
       await expect(page.locator("#nexus-workspace")).toBeVisible();
+      if (visual === "map") {
+        await expect(page.locator("#nexus-map-canvas")).toBeVisible();
+        await expect(page.locator("#nexus-map-summary")).toContainText(/Mombasa/i);
+        await expect(page.locator("#nexus-map-link")).toHaveAttribute("href", /^https:\/\/www\.openstreetmap\.org\//);
+      } else if (visual === "evidence") {
+        await expect(page.locator(".evidence-source-link").first()).toBeVisible();
+      } else if (visual) {
+        await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
+      }
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
-      driverEvidence.turns.push({ workspace, command, passed: true });
+      driverEvidence.turns.push({ workspace, command, visual, passed: true });
     }
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
-    expect(driverEvidence.turns).toHaveLength(13);
+    expect(driverEvidence.turns).toHaveLength(commands.length);
   } catch (error) {
     driverEvidence.failure = {
       name: error.name,

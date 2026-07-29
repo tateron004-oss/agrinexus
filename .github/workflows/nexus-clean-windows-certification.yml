@@ -60,7 +60,7 @@ jobs:
       - name: Build clean browser
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node rebuild/scripts/build-browser.js
-      - name: Certify physical voice and 13 commands
+      - name: Certify physical voice and all 19 visible actions
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           if (-not $env:OPENAI_API_KEY) { throw "OPENAI_API_KEY secret is required." }
