@@ -1,6 +1,6 @@
 "use strict";
 
-function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = null, mapProvider = null, sessionAuthority = null, onReceipt = () => {} } = {}) {
+function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = null, mapProvider = null, visualDataService = null, sessionAuthority = null, onReceipt = () => {} } = {}) {
   if (!voiceSessionService || typeof voiceSessionService.issue !== "function") {
     throw new Error("A voice session service is required.");
   }
@@ -74,6 +74,26 @@ function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = nu
         const unauthorized = /Bearer|token|signature|expired|session contract/i.test(error.message);
         return json(response, unauthorized ? 401 : 422, {
           error: unauthorized ? "unauthorized" : "map-resolution-failed",
+          message: unauthorized ? "A valid signed-in Nexus session is required." : error.message
+        });
+      }
+    }
+    if (request.method === "POST" && ["/api/visual/weather", "/api/visual/images"].includes(url.pathname)) {
+      if (!visualDataService || !sessionAuthority) {
+        return json(response, 503, { error: "visual-data-unavailable", message: "Live visual data retrieval is not configured." });
+      }
+      try {
+        sessionAuthority.verify(readBearer(request.headers.authorization));
+        const body = await readJson(request);
+        const result = url.pathname.endsWith("/weather")
+          ? await visualDataService.weather(body.command)
+          : await visualDataService.images(body.command);
+        onReceipt(receipt("visual-data.ready", { status: result.status }));
+        return json(response, 200, result);
+      } catch (error) {
+        const unauthorized = /Bearer|token|signature|expired|session contract/i.test(error.message);
+        return json(response, unauthorized ? 401 : 422, {
+          error: unauthorized ? "unauthorized" : "visual-data-failed",
           message: unauthorized ? "A valid signed-in Nexus session is required." : error.message
         });
       }

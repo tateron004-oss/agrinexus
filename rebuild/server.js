@@ -10,6 +10,7 @@ const { createNexusCleanHttpHandler } = require("./nexus-core/http-app");
 const { ApprovedEvidenceService, createTavilyEvidenceProvider } = require("./nexus-core/approved-evidence-service");
 const { EvidenceReceiptStore } = require("./nexus-core/evidence-receipt-store");
 const { createOpenMapProvider } = require("./nexus-core/map-service");
+const { createVisualDataService } = require("./nexus-core/visual-data-service");
 
 const root = path.resolve(__dirname, "browser");
 const port = Number(process.env.NEXUS_CLEAN_PORT || 4317);
@@ -31,6 +32,7 @@ const api = createNexusCleanHttpHandler({
   voiceSessionService: service,
   evidenceService,
   mapProvider: createOpenMapProvider(),
+  visualDataService: createVisualDataService(),
   sessionAuthority: authority
 });
 
@@ -42,7 +44,7 @@ const contentTypes = {
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || "nexus.local"}`);
-  if (url.pathname === "/health" || url.pathname === "/api/voice/session" || url.pathname.startsWith("/api/evidence/") || url.pathname.startsWith("/api/maps/")) {
+  if (url.pathname === "/health" || url.pathname === "/api/voice/session" || url.pathname.startsWith("/api/evidence/") || url.pathname.startsWith("/api/maps/") || url.pathname.startsWith("/api/visual/")) {
     return api(request, response);
   }
   const requested = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");

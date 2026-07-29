@@ -195,6 +195,122 @@ function renderAppSurface({ workspace, command, appSurface }) {
   return true;
 }
 
+function visualIntent(command) {
+  const text = String(command || "");
+  if (/\b(weather|forecast)\b/i.test(text)) return "weather";
+  if (/\b(picture|pictures|image|images|photo|photos)\b/i.test(text) && /\b(maize|crop|plant|disease|pest)\b/i.test(text)) return "agriculture-images";
+  if (/(?:\b(resume|cv)\b|résumé)/i.test(text)) return "resume";
+  if (/\b(card|summary)\b/i.test(text) && /\b(doctor|physician|provider|pharmacist|blood pressure|symptom)\b/i.test(text)) return "provider-card";
+  if (/\b(pilot evidence|evidence dashboard|session completion|technical failures|sessions recovered|usage by language|participant feedback|implementation report|learning brief|scale-up options)\b/i.test(text)) return "pilot-dashboard";
+  return null;
+}
+
+function weatherDescription(code) {
+  const value = Number(code);
+  if (value === 0) return "Clear sky";
+  if ([1, 2, 3].includes(value)) return "Partly cloudy";
+  if ([45, 48].includes(value)) return "Fog";
+  if ([51, 53, 55, 56, 57].includes(value)) return "Drizzle";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return "Rain";
+  if ([71, 73, 75, 77, 85, 86].includes(value)) return "Snow";
+  if ([95, 96, 99].includes(value)) return "Thunderstorm";
+  return "Current conditions";
+}
+
+async function fetchVisualData({ kind, command, sessionToken, fetchImpl = fetch }) {
+  const response = await fetchImpl(`/api/visual/${kind}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
+    body: JSON.stringify({ command })
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || "Nexus could not load the requested visual information.");
+  return result;
+}
+
+async function renderSpecializedVisual({ workspace, command, sessionToken, appSurface }) {
+  const intent = visualIntent(command);
+  if (!intent || !appSurface) return { handled: false, visible: true };
+  appSurface.hidden = false;
+  if (intent === "weather") {
+    appSurface.innerHTML = `<div class="app-request" role="status">Loading live weather and source…</div>`;
+    const weather = await fetchVisualData({ kind: "weather", command, sessionToken });
+    const sourceUrl = safeExternalUrl(weather.sourceUrl);
+    appSurface.innerHTML = `
+      <article class="visual-card weather-card" data-nexus-visual="weather">
+        <div class="app-heading"><span class="app-icon" aria-hidden="true">🌦️</span>
+          <div><strong>${escapeMarkup(weather.location)}</strong><span>${escapeMarkup(weatherDescription(weather.weatherCode))}</span></div>
+        </div>
+        <div class="visual-metrics">
+          <span><b>${escapeMarkup(weather.temperatureC)}°C</b><small>Temperature</small></span>
+          <span><b>${escapeMarkup(weather.highC)}° / ${escapeMarkup(weather.lowC)}°</b><small>High / low</small></span>
+          <span><b>${escapeMarkup(weather.rainChance)}%</b><small>Rain chance</small></span>
+          <span><b>${escapeMarkup(weather.windKph)} km/h</b><small>Wind</small></span>
+        </div>
+        <p>Observed ${escapeMarkup(weather.observedAt || "now")} · ${escapeMarkup(weather.timezone)}</p>
+        ${sourceUrl ? `<a class="evidence-source-link" href="${escapeMarkup(sourceUrl)}" target="_blank" rel="noopener noreferrer">Open exact Open-Meteo weather data</a>` : ""}
+      </article>`;
+    return { handled: true, visible: Boolean(sourceUrl), status: weather.status };
+  }
+  if (intent === "agriculture-images") {
+    appSurface.innerHTML = `<div class="app-request" role="status">Loading source-labeled agriculture pictures…</div>`;
+    const result = await fetchVisualData({ kind: "images", command, sessionToken });
+    appSurface.innerHTML = `
+      <section data-nexus-visual="agriculture-images">
+        <div class="app-heading"><span class="app-icon" aria-hidden="true">🌽</span>
+          <div><strong>Possible maize concerns</strong><span>Reference images—not a diagnosis</span></div>
+        </div>
+        <div class="visual-image-grid">${result.items.map((item) => `
+          <figure><img src="${escapeMarkup(safeExternalUrl(item.imageUrl))}" alt="${escapeMarkup(item.title)}" loading="lazy">
+            <figcaption><strong>${escapeMarkup(item.title)}</strong><span>${escapeMarkup(item.license)}</span>
+              <a href="${escapeMarkup(safeExternalUrl(item.sourceUrl))}" target="_blank" rel="noopener noreferrer">Open Wikimedia Commons source</a>
+            </figcaption>
+          </figure>`).join("")}</div>
+        <p>Compare patterns carefully and consult a local agricultural extension professional before treatment.</p>
+      </section>`;
+    return { handled: true, visible: result.items.length > 0, status: result.status };
+  }
+  if (intent === "resume") {
+    appSurface.innerHTML = `
+      <form class="resume-builder" data-nexus-visual="resume">
+        <div class="app-heading"><span class="app-icon" aria-hidden="true">📄</span>
+          <div><strong>Résumé Builder</strong><span>Edit, print, or save as PDF</span></div>
+        </div>
+        <label>Full name<input aria-label="Résumé full name" placeholder="Your full name"></label>
+        <label>Target role<input aria-label="Résumé target role" value="Agriculture / farming role"></label>
+        <label>Skills<textarea aria-label="Résumé skills" rows="3" placeholder="Crop production, equipment, teamwork, languages"></textarea></label>
+        <label>Experience<textarea aria-label="Résumé experience" rows="5" placeholder="Employer, work performed, dates, results"></textarea></label>
+        <div class="app-actions"><button type="button" data-resume-action="print">Print / Save PDF</button><button type="button" data-resume-action="download">Download text</button></div>
+      </form>`;
+    return { handled: true, visible: true, status: "resume-builder-ready" };
+  }
+  if (intent === "provider-card") {
+    const pressure = /\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i.exec(command || "");
+    appSurface.innerHTML = `
+      <article class="provider-card" data-nexus-visual="provider-card">
+        <div class="app-heading"><span class="app-icon" aria-hidden="true">🩺</span>
+          <div><strong>Provider Communication Card</strong><span>Show or read this to a healthcare professional</span></div>
+        </div>
+        <dl><dt>Blood pressure</dt><dd>${pressure ? `${escapeMarkup(pressure[1])}/${escapeMarkup(pressure[2])}` : "Not provided"}</dd>
+          <dt>User report</dt><dd>${escapeMarkup(command)}</dd>
+          <dt>Safety</dt><dd>This card supports communication and does not diagnose or replace urgent medical care.</dd></dl>
+        <div class="app-actions"><button type="button" data-provider-card-action="read">Read aloud</button><button type="button" data-provider-card-action="print">Print / Save PDF</button></div>
+      </article>`;
+    return { handled: true, visible: true, status: "provider-card-ready" };
+  }
+  appSurface.innerHTML = `
+    <section class="pilot-dashboard" data-nexus-visual="pilot-dashboard">
+      <div class="app-heading"><span class="app-icon" aria-hidden="true">📊</span>
+        <div><strong>Pilot Evidence Dashboard</strong><span>Evidence, failures, recovery, feedback, and scale-up planning</span></div>
+      </div>
+      <div class="visual-metrics"><span><b>Awaiting pilot data</b><small>Session completion</small></span>
+        <span><b>0 fabricated</b><small>Only recorded failures shown</small></span>
+        <span><b>Source register</b><small>Approval status required</small></span></div>
+      <div class="app-actions"><button type="button">Session completion</button><button type="button">Technical failures</button><button type="button">Recovered sessions</button><button type="button">Participant feedback</button><button type="button">Source register</button><button type="button">Implementation report</button><button type="button">Learning brief</button><button type="button">Scale-up options</button></div>
+    </section>`;
+  return { handled: true, visible: true, status: "pilot-dashboard-ready" };
+}
+
 function renderEvidenceWorkspace({ receipt, surface }) {
   if (!surface || !receipt) return false;
   const verified = receipt.verified === true;
@@ -467,6 +583,8 @@ function boot() {
     let evidence = null;
     let mapResult = null;
     let visualSuccess = true;
+    const appSurface = document.getElementById("nexus-app-surface");
+    const specializedIntent = visualIntent(detail.command);
     if (detail.workspace === "maps") {
       try {
         mapResult = await resolveVisibleMap({ command: detail.command, sessionToken });
@@ -478,7 +596,7 @@ function boot() {
         }
       }
     }
-    if (detail.workspace === "live-knowledge") {
+    if (detail.workspace === "live-knowledge" && !["weather", "pilot-dashboard"].includes(specializedIntent)) {
       const evidenceSurface = document.getElementById("nexus-evidence-surface");
       try {
         if (activeEvidenceReceipt && isEvidenceDisplayFollowUp(detail.command)) {
@@ -502,6 +620,30 @@ function boot() {
         evidence = { status: "provider-error", summary: "Approved evidence retrieval failed.", claims: [] };
       }
       visualSuccess = Boolean(evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0);
+    }
+    if (specializedIntent) {
+      try {
+        const specialized = await renderSpecializedVisual({
+          workspace: detail.workspace,
+          command: detail.command,
+          sessionToken,
+          appSurface
+        });
+        if (specialized.handled) {
+          visualSuccess = specialized.visible === true;
+          workspace.dataset.populated = visualSuccess ? "true" : "false";
+          if (detail.workspace === "live-knowledge") {
+            const evidenceSurface = document.getElementById("nexus-evidence-surface");
+            if (evidenceSurface) evidenceSurface.hidden = true;
+          }
+        }
+      } catch (error) {
+        visualSuccess = false;
+        if (appSurface) {
+          appSurface.hidden = false;
+          appSurface.innerHTML = `<div class="evidence-summary evidence-limited">${escapeMarkup(error.message)}</div>`;
+        }
+      }
     }
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
@@ -533,6 +675,35 @@ function boot() {
       orb.focus();
     });
   }
+  document.addEventListener("click", (event) => {
+    const button = event.target && event.target.closest && event.target.closest("button");
+    if (!button) return;
+    if (button.dataset.resumeAction === "print" || button.dataset.providerCardAction === "print") {
+      window.print();
+      return;
+    }
+    if (button.dataset.resumeAction === "download") {
+      const form = button.closest("form");
+      const fields = form ? [...form.querySelectorAll("input, textarea")].map((field) =>
+        `${field.getAttribute("aria-label") || "Field"}: ${field.value || ""}`
+      ) : [];
+      const blob = new Blob([fields.join("\n\n")], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "nexus-resume.txt";
+      link.click();
+      URL.revokeObjectURL(link.href);
+      return;
+    }
+    if (button.dataset.providerCardAction === "read") {
+      const card = button.closest("[data-nexus-visual='provider-card']");
+      const text = card && card.innerText || "";
+      if (text && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      }
+    }
+  });
 
   const receipts = [];
   let preferences = DEFAULT_EXPERIENCE_PREFERENCES;
@@ -732,6 +903,10 @@ module.exports = {
   createWorkspaceAdapter,
   createRemoteAudioUnlock,
   renderWorkspace,
+  renderSpecializedVisual,
+  visualIntent,
+  weatherDescription,
+  fetchVisualData,
   renderEvidenceWorkspace,
   researchEvidence,
   resolveVisibleMap,
