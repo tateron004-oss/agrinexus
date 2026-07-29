@@ -800,10 +800,7 @@ function boot() {
     if (button.dataset.providerCardAction === "read") {
       const card = button.closest("[data-nexus-visual='provider-card']");
       const text = card && card.innerText || "";
-      if (text && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-      }
+      if (text) runtime.speakText(text, "provider-card-read");
     }
   });
 
@@ -976,12 +973,13 @@ function boot() {
         });
       },
       send(chunks) {
+        runtime.cancelActiveResponse("certification-next-command");
         realtime.send({ type: "input_audio_buffer.clear" });
         for (const audio of chunks) {
           realtime.send({ type: "input_audio_buffer.append", audio });
         }
         realtime.send({ type: "input_audio_buffer.commit" });
-        realtime.send({ type: "response.create" });
+        runtime.requestResponse({}, "certification-command");
       },
       end() {
         const track = microphone.stream?.getAudioTracks?.()[0];

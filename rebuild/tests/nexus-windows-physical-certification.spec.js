@@ -139,7 +139,25 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
-    window.__cleanEvidence = { receipts: [], errors: [] };
+    window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
+    const recordSpeechSource = (source, detail = {}) => {
+      window.__cleanEvidence.speechSources.push({ source, detail, at: Date.now() });
+      if (source === "browser-speech-synthesis") {
+        window.__cleanEvidence.audioViolations.push({
+          reason: "browser-speech-started-during-realtime-certification",
+          source,
+          detail,
+          at: Date.now()
+        });
+      }
+    };
+    if (window.speechSynthesis) {
+      const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+      window.speechSynthesis.speak = (utterance) => {
+        recordSpeechSource("browser-speech-synthesis", { text: String(utterance?.text || "") });
+        return originalSpeak(utterance);
+      };
+    }
     window.addEventListener("nexus.clean.receipt", (event) => window.__cleanEvidence.receipts.push(event.detail));
     window.addEventListener("error", (event) => window.__cleanEvidence.errors.push(String(event.message)));
     window.addEventListener("unhandledrejection", (event) => window.__cleanEvidence.errors.push(String(event.reason)));
@@ -193,12 +211,43 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "conversation.return-to-listening");
       }, { before }), { timeout: 60000 }).toBe(true);
+      if (visual === "provider-card") {
+        await expect.poll(() => page.evaluate(({ before }) => {
+          return window.__cleanEvidence.receipts.slice(before)
+            .some((item) => item.type === "audio.owner-released");
+        }, { before }), { timeout: 60000 }).toBe(true);
+        const beforeRead = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+        await page.locator('[data-provider-card-action="read"]').click();
+        await expect.poll(() => page.evaluate(({ beforeRead }) => {
+          return window.__cleanEvidence.receipts.slice(beforeRead).some((item) =>
+            item.type === "conversation.response-requested" &&
+            item.detail.reason === "provider-card-read"
+          );
+        }, { beforeRead }), { timeout: 10000 }).toBe(true);
+        await expect.poll(() => page.evaluate(({ beforeRead }) => {
+          return window.__cleanEvidence.receipts.slice(beforeRead)
+            .some((item) => item.type === "conversation.return-to-listening");
+        }, { beforeRead }), { timeout: 60000 }).toBe(true);
+      }
+      const turnAudioViolations = await page.evaluate(({ before }) => {
+        const receipts = window.__cleanEvidence.receipts.slice(before);
+        return [
+          ...window.__cleanEvidence.audioViolations,
+          ...receipts.filter((item) =>
+            item.type === "audio.exclusive-owner-violation" ||
+            item.type === "audio.exclusive-response-blocked"
+          )
+        ];
+      }, { before });
+      expect(turnAudioViolations, `More than one speech source or response activated for: ${command}`).toEqual([]);
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
       driverEvidence.turns.push({ workspace, command, visual, passed: true });
     }
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
+    const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
+    expect(audioViolations).toEqual([]);
     expect(driverEvidence.turns).toHaveLength(commands.length);
   } catch (error) {
     driverEvidence.failure = {

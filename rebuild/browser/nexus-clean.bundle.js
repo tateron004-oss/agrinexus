@@ -1005,6 +1005,10 @@
           this.sessionToken = null;
           this.recovery = null;
           this.responseFallbackTimer = null;
+          this.activeResponseId = null;
+          this.responseActive = false;
+          this.responseRequestPending = false;
+          this.deferredResponse = null;
           this.visualRoutes = /* @__PURE__ */ new Map();
           this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
@@ -1107,14 +1111,68 @@
         }
         replayLastResponse() {
           if (!this.started) throw new Error("Start Nexus before replaying a response.");
-          this.realtime.send({
-            type: "response.create",
+          this.requestResponse({
             response: {
               output_modalities: ["audio"],
               instructions: "Repeat your immediately previous answer once, without adding new information."
             }
-          });
+          }, "replay");
           this.receipt("conversation.replay-requested");
+        }
+        speakText(text, reason = "visual-read") {
+          const content = String(text || "").trim();
+          if (!content) throw new Error("Nexus needs visible text to read.");
+          if (!this.started) throw new Error("Start Nexus before asking it to read visible content.");
+          this.requestResponse({
+            response: {
+              output_modalities: ["audio"],
+              instructions: `Read the following visible Nexus content once, faithfully and clearly. Do not add information:
+
+${content}`
+            }
+          }, reason);
+        }
+        requestResponse(event = {}, reason = "runtime", { defer = false } = {}) {
+          if (this.responseActive || this.responseRequestPending) {
+            if (defer && !this.deferredResponse) {
+              this.deferredResponse = { event, reason };
+              this.receipt("audio.exclusive-response-deferred", {
+                reason,
+                activeResponseId: this.activeResponseId
+              });
+              return true;
+            }
+            this.receipt("audio.exclusive-response-blocked", {
+              reason,
+              activeResponseId: this.activeResponseId
+            });
+            return false;
+          }
+          this.responseRequestPending = true;
+          this.realtime.send({ type: "response.create", ...event });
+          this.receipt("conversation.response-requested", { reason });
+          return true;
+        }
+        cancelActiveResponse(reason = "barge-in") {
+          if (!this.responseActive && !this.responseRequestPending) return false;
+          const event = { type: "response.cancel" };
+          if (this.activeResponseId) event.response_id = this.activeResponseId;
+          this.realtime.send(event);
+          this.receipt("audio.active-response-cancelled", {
+            reason,
+            responseId: this.activeResponseId
+          });
+          this.activeResponseId = null;
+          this.responseActive = false;
+          this.responseRequestPending = false;
+          this.deferredResponse = null;
+          return true;
+        }
+        flushDeferredResponse() {
+          const deferred = this.deferredResponse;
+          this.deferredResponse = null;
+          if (!deferred) return false;
+          return this.requestResponse(deferred.event, deferred.reason);
         }
         attachRemoteAudio(peer) {
           peer.addEventListener("track", (event) => {
@@ -1162,6 +1220,7 @@
           }
           if (event.type === "input_audio_buffer.speech_started") {
             this.clearResponseFallback();
+            this.cancelActiveResponse("barge-in");
             this.receipt("conversation.barge-in");
           }
           if (event.type === "input_audio_buffer.speech_stopped") {
@@ -1170,8 +1229,7 @@
             this.responseFallbackTimer = setTimeout(() => {
               this.responseFallbackTimer = null;
               try {
-                this.realtime.send({ type: "response.create" });
-                this.receipt("conversation.response-requested", { reason: "vad-fallback" });
+                this.requestResponse({}, "vad-fallback");
               } catch (error) {
                 this.receipt("runtime.event-failed", { name: error.name, message: error.message });
               }
@@ -1179,7 +1237,23 @@
           }
           if (event.type === "response.created") {
             this.clearResponseFallback();
-            this.receipt("conversation.response-started");
+            const responseId = event.response && event.response.id || event.response_id || null;
+            if (this.responseActive && responseId !== this.activeResponseId) {
+              this.receipt("audio.exclusive-owner-violation", {
+                owner: "realtime",
+                activeResponseId: this.activeResponseId,
+                overlappingResponseId: responseId
+              });
+              this.realtime.send({
+                type: "response.cancel",
+                ...responseId ? { response_id: responseId } : {}
+              });
+              return null;
+            }
+            this.responseRequestPending = false;
+            this.responseActive = true;
+            this.activeResponseId = responseId;
+            this.receipt("conversation.response-started", { responseId });
           }
           if (event.type === "response.output_audio.delta" || event.type === "response.audio.delta") {
             this.receipt("conversation.speaking");
@@ -1188,9 +1262,21 @@
             this.clearResponseFallback();
             this.receipt("conversation.return-to-listening");
           }
+          if (event.type === "response.done" || event.type === "response.cancelled") {
+            this.activeResponseId = null;
+            this.responseActive = false;
+            this.responseRequestPending = false;
+            this.receipt("audio.owner-released", { owner: "realtime" });
+            this.flushDeferredResponse();
+          }
           if (event.type === "error") {
             this.clearResponseFallback();
             const detail = event.error || {};
+            if (detail.code === "response_cancel_not_active" || detail.code === "conversation_already_has_active_response") {
+              this.activeResponseId = null;
+              this.responseActive = false;
+              this.responseRequestPending = false;
+            }
             this.receipt("realtime.error", {
               code: detail.code || "unknown",
               message: detail.message || "Realtime voice request failed."
@@ -1250,7 +1336,7 @@
                 output: JSON.stringify(result)
               }
             });
-            this.realtime.send({ type: "response.create" });
+            this.requestResponse({}, "tool-result", { defer: true });
           }
           return result;
         }
@@ -1266,6 +1352,10 @@
           this.audioElement.srcObject = null;
           this.sessionToken = null;
           this.started = false;
+          this.activeResponseId = null;
+          this.responseActive = false;
+          this.responseRequestPending = false;
+          this.deferredResponse = null;
           this.visualRoutes.clear();
           this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
@@ -2042,10 +2132,7 @@
           if (button.dataset.providerCardAction === "read") {
             const card = button.closest("[data-nexus-visual='provider-card']");
             const text = card && card.innerText || "";
-            if (text && window.speechSynthesis) {
-              window.speechSynthesis.cancel();
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-            }
+            if (text) runtime.speakText(text, "provider-card-read");
           }
         });
         const receipts = [];
@@ -2214,12 +2301,13 @@
               });
             },
             send(chunks) {
+              runtime.cancelActiveResponse("certification-next-command");
               realtime.send({ type: "input_audio_buffer.clear" });
               for (const audio2 of chunks) {
                 realtime.send({ type: "input_audio_buffer.append", audio: audio2 });
               }
               realtime.send({ type: "input_audio_buffer.commit" });
-              realtime.send({ type: "response.create" });
+              runtime.requestResponse({}, "certification-command");
             },
             end() {
               const track = microphone.stream?.getAudioTracks?.()[0];
