@@ -5,6 +5,7 @@ const { NexusMicrophoneController } = require("../nexus-core/microphone-controll
 const { NexusRealtimeConnector } = require("../nexus-core/realtime-connector");
 const { NexusVoiceFoundation } = require("../nexus-core/voice-foundation");
 const { NexusBrowserRuntime } = require("../nexus-core/browser-runtime");
+const { extractIntentAndParameters } = require("../nexus-core/intent-parameter-extractor");
 const {
   DEFAULT_EXPERIENCE_PREFERENCES,
   normalizeExperiencePreferences
@@ -163,10 +164,8 @@ function isEvidenceDisplayFollowUp(command) {
 }
 
 function musicSearchFromCommand(command) {
-  return String(command || "Kenyan music")
-    .replace(/\b(nexus|please|play|open|music|media|song|songs)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim() || "Kenyan music";
+  const resolution = extractIntentAndParameters(command);
+  return resolution.parameters.query || "Kenyan";
 }
 
 function musicPlaybackUrl(command) {
@@ -196,13 +195,14 @@ function renderAppSurface({ workspace, command, appSurface }) {
 }
 
 function visualIntent(command) {
-  const text = String(command || "");
-  if (/\b(weather|forecast)\b/i.test(text)) return "weather";
-  if (/\b(picture|pictures|image|images|photo|photos)\b/i.test(text) && /\b(maize|crop|plant|disease|pest)\b/i.test(text)) return "agriculture-images";
-  if (/(?:\b(resume|cv)\b|résumé)/i.test(text)) return "resume";
-  if (/\b(card|summary)\b/i.test(text) && /\b(doctor|physician|provider|pharmacist|blood pressure|symptom)\b/i.test(text)) return "provider-card";
-  if (/\b(pilot evidence|evidence dashboard|session completion|technical failures|sessions recovered|usage by language|participant feedback|implementation report|learning brief|scale-up options)\b/i.test(text)) return "pilot-dashboard";
-  if (/\b(websites?|sources?|references?|links?|resources?)\b/i.test(text)) return "source-directory";
+  const resolution = extractIntentAndParameters(command);
+  const action = resolution.parameters.action;
+  if (resolution.workflow === "live-knowledge" && action === "weather") return "weather";
+  if (resolution.workflow === "agriculture" && action === "images") return "agriculture-images";
+  if (resolution.workflow === "workforce" && action === "resume") return "resume";
+  if (resolution.workflow === "health" && action === "provider-card") return "provider-card";
+  if (resolution.workflow === "live-knowledge" && action === "pilot-dashboard") return "pilot-dashboard";
+  if (resolution.workflow === "live-knowledge" && action === "source-directory") return "source-directory";
   return null;
 }
 
@@ -951,5 +951,6 @@ module.exports = {
   resetVisibleMapStateForTest,
   safeExternalUrl,
   isEvidenceDisplayFollowUp,
+  musicSearchFromCommand,
   statusFromReceipt
 };

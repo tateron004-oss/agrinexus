@@ -1,9 +1,10 @@
 "use strict";
 
+const { extractIntentAndParameters } = require("./intent-parameter-extractor");
+
 function locationFromWeatherCommand(command) {
-  const text = String(command || "").replace(/[?.!]+$/g, "").trim();
-  const match = /\b(?:in|for|at)\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
-  return (match && match[1] || "Nairobi, Kenya").trim();
+  const resolution = extractIntentAndParameters(command);
+  return resolution.parameters.location || "Nairobi, Kenya";
 }
 
 function createVisualDataService({ fetchImpl = globalThis.fetch } = {}) {
@@ -51,7 +52,9 @@ function createVisualDataService({ fetchImpl = globalThis.fetch } = {}) {
     },
 
     async images(command) {
-      const query = /\bmaize\b/i.test(command || "") ? "maize plant disease" : String(command || "crop disease");
+      const resolution = extractIntentAndParameters(command);
+      const crop = resolution.parameters.crop || "crop";
+      const query = `${crop} plant disease`;
       const url = new URL("https://commons.wikimedia.org/w/api.php");
       url.searchParams.set("action", "query");
       url.searchParams.set("generator", "search");

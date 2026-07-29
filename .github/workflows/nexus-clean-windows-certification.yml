@@ -38,6 +38,7 @@ jobs:
           node rebuild/tests/nexus-runtime-e2e.test.js
           node rebuild/tests/nexus-http-e2e.test.js
           node rebuild/tests/nexus-browser-shell.test.js
+          node rebuild/tests/nexus-generalized-intent-parameters.test.js
           node scripts/nexus-protected-foundation-guard.js
 
   physical-voice:
