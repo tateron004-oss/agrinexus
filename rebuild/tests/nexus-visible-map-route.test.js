@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { createOpenMapProvider, parseMapRequest } = require("../nexus-core/map-service");
+const { createOpenMapProvider, extractPlaceIntent, parseMapRequest } = require("../nexus-core/map-service");
 const { resolveVisibleMap, resetVisibleMapStateForTest } = require("../browser/nexus-clean-entry");
 
 async function verifyNewestMapRequestWins() {
@@ -157,9 +157,36 @@ async function main() {
     destination: "Abuja, Nigeria"
   });
   assert.deepEqual(parseMapRequest("Nexus, show me a map of Kenya"), { type: "place", place: "Kenya" });
+  assert.deepEqual(parseMapRequest("Nexus, pull up a map of Mombasa, Kenya"), {
+    type: "place",
+    place: "Mombasa, Kenya"
+  });
   assert.deepEqual(parseMapRequest("Nexus, take me back to Kenya"), { type: "place", place: "Kenya" });
   assert.deepEqual(parseMapRequest("Nexus, reset the map and show Mombasa, Kenya"), {
     type: "place",
+    place: "Mombasa, Kenya"
+  });
+  const paraphrases = [
+    "Show me Mombasa.",
+    "Pull up a map of Mombasa, Kenya.",
+    "Take me to Mombasa, Kenya.",
+    "Open Mombasa, Kenya on the map.",
+    "I want to see Mombasa, Kenya.",
+    "Can you display the city of Mombasa, Kenya?",
+    "Please find Mombasa, Kenya.",
+    "Nexus, bring up the map for Mombasa, Kenya.",
+    "Zoom in to Mombasa, Kenya.",
+    "Reset the map to Mombasa, Kenya."
+  ];
+  paraphrases.forEach((command) => {
+    assert.equal(
+      parseMapRequest(command).place,
+      command === "Show me Mombasa." ? "Mombasa" : "Mombasa, Kenya",
+      `Natural map command must extract only the location: ${command}`
+    );
+  });
+  assert.deepEqual(extractPlaceIntent("Open Mombasa, Kenya on the map"), {
+    action: "show-place",
     place: "Mombasa, Kenya"
   });
 

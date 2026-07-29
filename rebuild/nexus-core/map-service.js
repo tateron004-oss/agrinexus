@@ -16,6 +16,59 @@ const ADMINISTRATIVE_PLACE_TYPES = new Set([
   "village"
 ]);
 
+const MAP_ACTION_PATTERN = [
+  "show",
+  "display",
+  "open",
+  "view",
+  "see",
+  "find",
+  "locate",
+  "pull\\s+up",
+  "bring\\s+up",
+  "take\\s+me\\s+to",
+  "take\\s+me\\s+back\\s+to",
+  "go\\s+back\\s+to",
+  "go\\s+to",
+  "move\\s+to",
+  "zoom\\s+(?:in\\s+)?to"
+].join("|");
+
+function cleanLocationCandidate(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,;:.-]+|[\s,;:?.!-]+$/g, "")
+    .trim();
+}
+
+function extractPlaceIntent(command) {
+  let candidate = String(command || "").replace(/\s+/g, " ").trim();
+  candidate = candidate
+    .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+    .replace(/^(?:please|could\s+you|can\s+you|would\s+you|will\s+you)\b[\s,;:.-]*/i, "")
+    .replace(/^(?:i(?:'d|\s+would)?\s+like\s+to|i\s+want\s+to)\s+/i, "")
+    .replace(/^(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and\s+|\s+to\s+)?/i, "")
+    .trim();
+
+  const actionPrefix = new RegExp(
+    `^(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:(?:a|the)\\s+)?(?:city\\s+of\\s+)?(?:maps?\\s+(?:of|for)\\s+)?`,
+    "i"
+  );
+  candidate = candidate.replace(actionPrefix, "");
+  candidate = candidate.replace(/[\s,;:?.!-]+$/g, "");
+  candidate = candidate
+    .replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for)\s+/i, "")
+    .replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "")
+    .replace(/\s+(?:map|maps)$/i, "")
+    .replace(/\s+(?:please)$/i, "");
+
+  const place = cleanLocationCandidate(candidate);
+  return Object.freeze({
+    action: "show-place",
+    place: place || cleanLocationCandidate(command)
+  });
+}
+
 function countryCodeFromQuery(query) {
   const normalized = String(query || "").toLowerCase();
   const country = Object.keys(COUNTRY_CODES).find((name) => new RegExp(`\\b${name}\\b`, "i").test(normalized));
@@ -43,14 +96,8 @@ function parseMapRequest(command) {
   if (route) {
     return Object.freeze({ type: "route", origin: route[1].trim(), destination: route[2].trim() });
   }
-  const place = text
-    .replace(/\b(?:reset|refresh|clear)\s+(?:the\s+)?maps?(?:\s+and)?\b/gi, " ")
-    .replace(/\b(?:go|get|take|bring|move|zoom)\s+(?:me\s+)?back\s+to\b/gi, " ")
-    .replace(/\b(nexus|please|show|open|display|me|a|the|map|maps|of)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .replace(/^[\s,;:.-]+|[\s,;:.-]+$/g, "")
-    .trim();
-  return Object.freeze({ type: "place", place: place || text });
+  const intent = extractPlaceIntent(text);
+  return Object.freeze({ type: "place", place: intent.place });
 }
 
 function createOpenMapProvider({ fetchImpl = fetch } = {}) {
@@ -124,4 +171,4 @@ function createOpenMapProvider({ fetchImpl = fetch } = {}) {
   };
 }
 
-module.exports = { createOpenMapProvider, parseMapRequest };
+module.exports = { createOpenMapProvider, extractPlaceIntent, parseMapRequest };
