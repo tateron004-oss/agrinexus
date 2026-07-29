@@ -61,7 +61,9 @@ jobs:
       - name: Verify Windows x64 certification host
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          if (-not $IsWindows) { throw "Physical certification requires Windows." }
+          if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+            throw "Physical certification requires Windows."
+          }
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne [System.Runtime.InteropServices.Architecture]::X64) {
             throw "Physical certification requires an x64 host."
           }
