@@ -31,6 +31,181 @@
     const value = text(command).toLowerCase();
     return /\b(weather|forecast|temperature|rain|raining|heat|hali ya hewa|clima|meteo|météo)\b/.test(value);
   }
+  function visualExperienceIntent(command = "") {
+    const value = text(command).toLowerCase();
+    if (!value) return "";
+    if (weatherRequest(value)) return "";
+    if (/\b(map|maps|show (?:me )?(?:nairobi|mombasa|kenya)|reset (?:the )?map|return to kenya)\b/.test(value)) return "map";
+    if (/\b(agriculture help|agricultural help|farm help|crop help|help (?:me )?with (?:agriculture|farming|my crop))\b/.test(value)) return "agriculture";
+    if (/\b(maize|corn)\b.*\b(picture|pictures|photo|photos|image|images|disease|yellow|spot|spots|leaf|leaves)\b|\b(picture|pictures|photo|photos|image|images)\b.*\b(maize|corn)\b/.test(value)) return "maize-images";
+    if (/\b(create|make|build|write|prepare|help me (?:create|make|write))\b.*\b(r[eé]sum[eé]|cv|curriculum vitae)\b/.test(value)) return "resume";
+    if (/\b(show|open|display|give)\b.*\b(website|web site|link|source|sources|resource|resources)\b/.test(value)) return "sources";
+    if (/\b(show|open|display|create|make)\b.*\b(card|visual|list|document|report|workspace|process)\b/.test(value)) return "display";
+    return "";
+  }
+  function ensureVisualExperienceStyles() {
+    if (typeof document === "undefined" || document.getElementById("nexus-visual-experience-styles")) return;
+    const style = document.createElement("style");
+    style.id = "nexus-visual-experience-styles";
+    style.textContent = `
+      .nexus-visual-shell{position:fixed;inset:0;z-index:2147482997;background:rgba(2,12,24,.9);display:grid;place-items:center;padding:16px;font-family:Inter,system-ui,sans-serif;color:#102033}
+      .nexus-visual-card{width:min(1080px,100%);max-height:96vh;overflow:auto;background:#f7fbfc;border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.5)}
+      .nexus-visual-card>header{position:sticky;top:0;z-index:2;background:#073b4c;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;gap:16px;align-items:start}.nexus-visual-card h1{margin:0;font-size:clamp(1.5rem,4vw,2.4rem)}.nexus-visual-card header p{margin:.35rem 0 0}
+      .nexus-visual-close{width:48px;height:48px;border:0;border-radius:50%;background:#fff;color:#073b4c;font-size:2rem;flex:none}.nexus-visual-body{padding:22px}.nexus-visual-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+      .nexus-visual-panel{background:#fff;border:2px solid #c7dce3;border-radius:16px;padding:17px}.nexus-visual-panel h2,.nexus-visual-panel h3{color:#07566b}.nexus-visual-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.nexus-visual-actions button,.nexus-visual-actions a{border:0;border-radius:10px;background:#07566b;color:#fff;padding:12px 15px;font-weight:800;text-decoration:none}
+      .nexus-visual-source{border-left:6px solid #06a77d;background:#effcf7}.nexus-map-frame{width:100%;height:min(62vh,620px);border:0;border-radius:16px;background:#dceef2}.nexus-disease-image{width:100%;height:190px;object-fit:cover;border-radius:12px;background:#dceef2}.nexus-resume-field{display:grid;gap:5px;margin:10px 0}.nexus-resume-field input,.nexus-resume-field textarea{font:inherit;border:2px solid #9db9c2;border-radius:9px;padding:10px}.nexus-resume-field textarea{min-height:90px}
+      @media(max-width:600px){.nexus-visual-shell{padding:0}.nexus-visual-card{height:100%;max-height:none;border-radius:0}.nexus-map-frame{height:52vh}}
+      @media print{body>*:not(.nexus-visual-shell){display:none!important}.nexus-visual-shell{position:static;background:#fff;padding:0}.nexus-visual-card{box-shadow:none;max-height:none}.nexus-visual-card>header,.nexus-visual-actions{position:static}.nexus-visual-close{display:none}}
+    `;
+    document.head.appendChild(style);
+  }
+  function visualShell(title, subtitle = "Nexus visual workspace") {
+    ensureVisualExperienceStyles();
+    document.querySelector("[data-nexus-visual-shell]")?.remove();
+    const shell = document.createElement("div");
+    shell.className = "nexus-visual-shell";
+    shell.dataset.nexusVisualShell = "true";
+    shell.setAttribute("role", "dialog");
+    shell.setAttribute("aria-modal", "true");
+    shell.innerHTML = `<article class="nexus-visual-card"><header><div><h1>${html(title)}</h1><p>${html(subtitle)}</p></div><button class="nexus-visual-close" data-visual-action="close" aria-label="Close visual workspace">×</button></header><div class="nexus-visual-body"><p>Opening…</p></div></article>`;
+    shell.addEventListener("click", event => {
+      const action = event.target?.closest?.("[data-visual-action]")?.dataset?.visualAction;
+      if (action === "close") shell.remove();
+      if (action === "print") global.print?.();
+      if (action === "download-resume") downloadResume(shell);
+    });
+    document.body.appendChild(shell);
+    return shell;
+  }
+  function requestedMapPlace(command = "") {
+    const match = text(command).match(/\b(Nairobi|Mombasa|Kisumu|Nakuru|Nyeri|Eldoret|Meru|Machakos|Kakamega|Kisii|Malindi|Lamu|Kenya)\b/i);
+    return match?.[1] || "Kenya";
+  }
+  async function openReliableMap(command = "", options = {}) {
+    if (typeof document === "undefined" || typeof global.fetch !== "function") return { opened: false, reason: "browser-unavailable" };
+    const requested = requestedMapPlace(command);
+    const shell = visualShell(`🗺️ Map of ${requested}`, "Interactive OpenStreetMap — reset-safe");
+    const body = shell.querySelector(".nexus-visual-body");
+    try {
+      const known = {
+        kenya: [0.0236, 37.9062, 6.8], nairobi: [-1.2864, 36.8172, 12], mombasa: [-4.0435, 39.6682, 12],
+        kisumu: [-0.0917, 34.768, 12], nakuru: [-0.3031, 36.08, 12], nyeri: [-0.4197, 36.9476, 12],
+        eldoret: [0.5143, 35.2698, 12], meru: [0.0463, 37.6559, 12], machakos: [-1.5177, 37.2634, 12],
+        kakamega: [0.2827, 34.7519, 12], kisii: [-0.6817, 34.7667, 12], malindi: [-3.2192, 40.1169, 12], lamu: [-2.2696, 40.9006, 12]
+      };
+      let point = known[requested.toLowerCase()];
+      if (!point) {
+        const response = await global.fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(requested)}&count=1&language=en&format=json`);
+        const place = response.ok ? (await response.json())?.results?.[0] : null;
+        if (!place) throw new Error("location not found");
+        point = [place.latitude, place.longitude, 12];
+      }
+      const [lat, lon, zoom] = point;
+      const span = zoom < 8 ? 8 : .18;
+      const bbox = [lon - span, lat - span, lon + span, lat + span].join("%2C");
+      const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
+      const direct = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=${zoom}/${lat}/${lon}`;
+      body.innerHTML = `<iframe class="nexus-map-frame" title="Interactive map of ${html(requested)}" src="${embed}"></iframe>
+        <section class="nexus-visual-panel nexus-visual-source"><strong>Visible location: ${html(requested)}, Kenya</strong><p>Map supplied by OpenStreetMap contributors. This command creates a fresh map each time, so an earlier India or other location cannot remain stuck.</p></section>
+        <div class="nexus-visual-actions"><a href="${direct}" target="_blank" rel="noopener noreferrer">Open full map website ↗</a><button data-visual-action="close">Close and keep listening</button></div>`;
+      global.dispatchEvent?.(new global.CustomEvent("nexus.map.opened", { detail: { location: requested, visible: true, reset: true, source: "OpenStreetMap" } }));
+      recordPilotEvidence({ topic: "maps", outcome: "completed", pathway: options.source?.includes("voice") ? "voice" : "typed", durationBand: "under-2-min", language: document.documentElement.lang || "unknown" });
+      return { opened: true, location: requested, reset: true };
+    } catch (error) {
+      body.innerHTML = `<section class="nexus-visual-panel"><h2>Map could not load</h2><p>${html(error?.message || "Map service unavailable")}</p><p>Nexus did not show a substitute location.</p></section><div class="nexus-visual-actions"><a href="https://www.openstreetmap.org/search?query=${encodeURIComponent(requested + ", Kenya")}" target="_blank" rel="noopener noreferrer">Open ${html(requested)} on OpenStreetMap ↗</a><button data-visual-action="close">Close</button></div>`;
+      return { opened: true, failed: true };
+    }
+  }
+  function agricultureResources() {
+    return [
+      ["Kenya Agricultural & Livestock Research Organization", "https://www.kalro.org/", "Kenyan crop research and extension resources"],
+      ["FAO Plant Production and Protection", "https://www.fao.org/plant-production-protection/en/", "International crop and plant-health guidance"],
+      ["Plantwise Knowledge Bank", "https://plantwiseplusknowledgebank.org/", "Crop problem identification and management factsheets"],
+      ["CABI Maize resources", "https://www.cabi.org/crop-protection/maize/", "Maize crop-protection information"]
+    ];
+  }
+  function resourceCards(resources) {
+    return resources.map(([name, url, note]) => `<article class="nexus-visual-panel nexus-visual-source"><h3>${html(name)}</h3><p>${html(note)}</p><a href="${html(url)}" target="_blank" rel="noopener noreferrer">Open exact website ↗</a></article>`).join("");
+  }
+  function openAgricultureHelp(options = {}) {
+    const shell = visualShell("🌱 Agriculture Help", "Visible crop support, pictures, sources, and next steps");
+    shell.querySelector(".nexus-visual-body").innerHTML = `<section class="nexus-visual-grid">
+      <article class="nexus-visual-panel"><h2>What do you need?</h2><p>Describe the crop, affected plant part, color or spots, how much of the field is affected, recent rain, and anything already applied.</p><div class="nexus-visual-actions"><button data-nexus-command="Nexus, show pictures of possible maize diseases">Show maize disease pictures</button></div></article>
+      <article class="nexus-visual-panel"><h2>Safe field checks</h2><ol><li>Compare affected and healthy plants.</li><li>Check both sides of leaves and the stem.</li><li>Photograph the whole plant and a close-up.</li><li>Do not spray until the problem is identified.</li><li>Confirm important treatment decisions with a local extension officer.</li></ol></article>
+      ${resourceCards(agricultureResources())}</section><div class="nexus-visual-actions"><button data-visual-action="print">Print / Save PDF</button><button data-visual-action="close">Close and keep listening</button></div>`;
+    global.dispatchEvent?.(new global.CustomEvent("nexus.agriculture.opened", { detail: { visible: true, sourceCount: agricultureResources().length } }));
+    recordPilotEvidence({ topic: "agriculture", outcome: "completed", pathway: options.source?.includes("voice") ? "voice" : "typed", durationBand: "under-2-min", language: document.documentElement.lang || "unknown" });
+    return { opened: true };
+  }
+  async function openMaizeDiseaseImages(options = {}) {
+    const shell = visualShell("🌽 Possible Maize Disease Pictures", "Visual comparison only — not a diagnosis");
+    const body = shell.querySelector(".nexus-visual-body");
+    const fallback = [
+      ["Maize lethal necrosis", "https://en.wikipedia.org/wiki/Maize_lethal_necrosis", "Mottling, yellowing, drying leaf margins"],
+      ["Northern corn leaf blight", "https://en.wikipedia.org/wiki/Northern_corn_leaf_blight", "Long gray-green or tan cigar-shaped lesions"],
+      ["Common rust", "https://en.wikipedia.org/wiki/Common_rust", "Small raised cinnamon-brown pustules"],
+      ["Gray leaf spot", "https://en.wikipedia.org/wiki/Corn_grey_leaf_spot", "Rectangular gray or tan lesions between veins"]
+    ];
+    try {
+      const api = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" + encodeURIComponent("maize disease leaf") + "&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=520&format=json&origin=*";
+      const response = await global.fetch(api);
+      const pages = response.ok ? Object.values((await response.json())?.query?.pages || {}) : [];
+      const images = pages.map(page => ({ title: page.title?.replace(/^File:/, ""), url: page.imageinfo?.[0]?.thumburl || page.imageinfo?.[0]?.url, page: `https://commons.wikimedia.org/?curid=${page.pageid}` })).filter(item => item.url).slice(0, 6);
+      const pictureHtml = images.length ? images.map(item => `<article class="nexus-visual-panel"><img class="nexus-disease-image" src="${html(item.url)}" alt="${html(item.title)}"><h3>${html(item.title)}</h3><a href="${html(item.page)}" target="_blank" rel="noopener noreferrer">Open image source ↗</a></article>`).join("") : "";
+      body.innerHTML = `<section class="nexus-visual-panel"><strong>Important:</strong> Pictures help compare symptoms but cannot confirm a disease. Several nutrient, water, pest, and disease problems look alike. Use local agriculture extension or laboratory confirmation before treatment.</section>
+        ${pictureHtml ? `<section class="nexus-visual-grid">${pictureHtml}</section>` : ""}
+        <h2>Common possibilities to compare</h2><section class="nexus-visual-grid">${fallback.map(([name,url,note]) => `<article class="nexus-visual-panel"><h3>${html(name)}</h3><p>${html(note)}</p><a href="${html(url)}" target="_blank" rel="noopener noreferrer">Open illustrated reference ↗</a></article>`).join("")}</section>
+        <h2>Verified agriculture resources</h2><section class="nexus-visual-grid">${resourceCards(agricultureResources())}</section><div class="nexus-visual-actions"><button data-visual-action="print">Print / Save PDF</button><button data-visual-action="close">Close and keep listening</button></div>`;
+      return { opened: true, imageCount: images.length };
+    } catch (error) {
+      body.innerHTML = `<section class="nexus-visual-panel"><h2>Pictures could not load</h2><p>${html(error?.message || "Image service unavailable")}</p><p>Nexus will not invent or mislabel disease pictures.</p></section><section class="nexus-visual-grid">${resourceCards(agricultureResources())}</section><div class="nexus-visual-actions"><button data-visual-action="close">Close</button></div>`;
+      return { opened: true, failed: true };
+    }
+  }
+  function resumeValues(shell) {
+    return Object.fromEntries([...shell.querySelectorAll("[data-resume-field]")].map(field => [field.dataset.resumeField, field.value.trim()]));
+  }
+  function downloadResume(shell) {
+    const value = resumeValues(shell);
+    const content = `${value.name || "YOUR NAME"}\n${value.contact || "Contact information"}\n\nPROFESSIONAL SUMMARY\n${value.summary || ""}\n\nEXPERIENCE\n${value.experience || ""}\n\nSKILLS\n${value.skills || ""}\n\nEDUCATION & TRAINING\n${value.education || ""}\n`;
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "nexus-resume.txt"; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function openResumeBuilder(command = "", options = {}) {
+    const shell = visualShell("📄 Résumé Builder", "Fill, review, print, or download — nothing is submitted");
+    shell.querySelector(".nexus-visual-body").innerHTML = `<section class="nexus-visual-panel"><div class="nexus-resume-field"><label>Your name</label><input data-resume-field="name" autocomplete="name"></div><div class="nexus-resume-field"><label>Phone or email</label><input data-resume-field="contact"></div><div class="nexus-resume-field"><label>Professional summary</label><textarea data-resume-field="summary" placeholder="What work do you want, and what makes you dependable?"></textarea></div><div class="nexus-resume-field"><label>Work and community experience</label><textarea data-resume-field="experience" placeholder="Role, organization, location, dates, and what you accomplished"></textarea></div><div class="nexus-resume-field"><label>Skills</label><textarea data-resume-field="skills" placeholder="Farming, equipment, customer service, languages, technology, leadership…"></textarea></div><div class="nexus-resume-field"><label>Education, training, and certificates</label><textarea data-resume-field="education"></textarea></div></section>
+      <section class="nexus-visual-panel nexus-visual-source"><strong>Privacy and control</strong><p>This draft stays in the current browser unless you choose Download or Print. Nexus does not apply for a job or share the résumé without your permission.</p></section><div class="nexus-visual-actions"><button data-visual-action="print">Print / Save PDF</button><button data-visual-action="download-resume">Download résumé</button><button data-visual-action="close">Close and keep listening</button></div>`;
+    global.dispatchEvent?.(new global.CustomEvent("nexus.resume.opened", { detail: { visible: true, editable: true } }));
+    recordPilotEvidence({ topic: "workforce", outcome: "completed", pathway: options.source?.includes("voice") ? "voice" : "typed", durationBand: "under-2-min", language: document.documentElement.lang || "unknown" });
+    return { opened: true };
+  }
+  function openSourceWebsites(command = "") {
+    const value = text(command).toLowerCase();
+    const resources = /\b(weather|forecast|temperature)\b/.test(value)
+      ? [["Open-Meteo", "https://open-meteo.com/", "Public weather forecast and geocoding documentation"]]
+      : /\b(health|blood pressure|medicine|doctor|pharmac)\b/.test(value)
+        ? [["World Health Organization", "https://www.who.int/health-topics", "International health topic resources"], ["Kenya Ministry of Health", "https://www.health.go.ke/", "Kenya public-health information"], ["MedlinePlus", "https://medlineplus.gov/", "Patient-friendly health information from the U.S. National Library of Medicine"]]
+        : agricultureResources();
+    const shell = visualShell("🔗 Websites and Sources", "Clickable resources for review and verification");
+    shell.querySelector(".nexus-visual-body").innerHTML = `<section class="nexus-visual-grid">${resourceCards(resources)}</section><div class="nexus-visual-actions"><button data-visual-action="print">Print source list</button><button data-visual-action="close">Close and keep listening</button></div>`;
+    return { opened: true, sourceCount: resources.length };
+  }
+  function openGenericDisplay(command = "") {
+    const shell = visualShell("📋 Nexus Visual Result", "A visible workspace for the requested information");
+    shell.querySelector(".nexus-visual-body").innerHTML = `<section class="nexus-visual-panel"><h2>Your request</h2><p>${html(command)}</p><h2>What Nexus needs next</h2><p>Please state the topic and the information you want shown. Nexus will keep the result visible instead of answering only by voice.</p></section><div class="nexus-visual-actions"><button data-visual-action="close">Close and keep listening</button></div>`;
+    return { opened: true, needsDetails: true };
+  }
+  function openVisualExperience(command = "", options = {}) {
+    const intent = visualExperienceIntent(command);
+    if (intent === "map") return openReliableMap(command, options);
+    if (intent === "agriculture") return openAgricultureHelp(options);
+    if (intent === "maize-images") return openMaizeDiseaseImages(options);
+    if (intent === "resume") return openResumeBuilder(command, options);
+    if (intent === "sources") return openSourceWebsites(command);
+    if (intent === "display") return openGenericDisplay(command);
+    return { opened: false };
+  }
   function weatherLocation(command = "") {
     const value = text(command)
       .replace(/^\s*(?:hello|hey|good\s+(?:morning|afternoon|evening))?\s*nexus[\s,.:;-]*/i, "")
@@ -553,6 +728,7 @@
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command" }), 0);
+      if (visualExperienceIntent(command)) setTimeout(() => void openVisualExperience(command, { source: "typed-command" }), 0);
     }, true);
     document.addEventListener("keydown", event => {
       if (event.key !== "Enter" || event.shiftKey) return;
@@ -561,6 +737,7 @@
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command-enter" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command-enter" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command-enter" }), 0);
+      if (visualExperienceIntent(command)) setTimeout(() => void openVisualExperience(command, { source: "typed-command-enter" }), 0);
     }, true);
   }
   global.addEventListener?.("genesis.workspace.acknowledged", event => {
@@ -593,10 +770,12 @@
       : null;
     const weatherCardRequested = weatherRequest(transcript);
     if (weatherCardRequested) void openLiveWeatherCard(transcript, { source: "voice-final-transcript" });
+    const visualIntent = visualExperienceIntent(transcript);
+    if (visualIntent) void openVisualExperience(transcript, { source: "voice-final-transcript" });
     const action = typeof actionBuilder === "function" ? actionBuilder(transcript) : null;
-    if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested) return { handled: false };
+    if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested && !visualIntent) return { handled: false };
     seen.set(sessionId + ":" + transcriptId, now);
-    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, weatherCardRequested, transcriptId, sessionId, originalTranscript: transcript };
+    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, weatherCardRequested, visualIntent, transcriptId, sessionId, originalTranscript: transcript };
   }
   global.NexusBrowserActionController = Object.freeze({
     handleFinalUserTranscript,
@@ -607,6 +786,13 @@
     isWeatherRequest: weatherRequest,
     getWeatherLocation: weatherLocation,
     openLiveWeatherCard,
+    getVisualExperienceIntent: visualExperienceIntent,
+    openVisualExperience,
+    openReliableMap,
+    openAgricultureHelp,
+    openMaizeDiseaseImages,
+    openResumeBuilder,
+    openSourceWebsites,
     setPilotEvidenceConsent,
     recordPilotEvidence,
     getPilotEvidenceSummary: pilotEvidenceSummary,
