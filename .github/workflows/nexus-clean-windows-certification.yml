@@ -48,7 +48,7 @@ jobs:
   physical-voice:
     name: New Genesis physical voice and commands
     needs: clean-foundation
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: self-hosted
     timeout-minutes: 35
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPENAI_REALTIME_API_KEY || secrets.NEXUS_OPENAI_API_KEY }}
@@ -58,6 +58,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Verify Windows x64 certification host
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          if (-not $IsWindows) { throw "Physical certification requires Windows." }
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne [System.Runtime.InteropServices.Architecture]::X64) {
+            throw "Physical certification requires an x64 host."
+          }
+          Write-Host "Certified host: Windows x64"
       - name: Verify installed Node runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
