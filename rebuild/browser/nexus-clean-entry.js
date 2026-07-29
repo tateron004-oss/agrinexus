@@ -10,9 +10,10 @@ const {
   DEFAULT_EXPERIENCE_PREFERENCES,
   normalizeExperiencePreferences
 } = require("../nexus-core/experience-profile");
+const { createVisualContext } = require("../nexus-core/visual-context");
 
 function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
-  return ({ workspace, command, utterance, parameters, transactionId }) => new Promise((resolve, reject) => {
+  return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     const timer = setTimeout(() => {
       windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
@@ -34,12 +35,15 @@ function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}
         evidenceSummary: event.detail.evidenceSummary || null,
         evidenceClaims: event.detail.evidenceClaims || [],
         evidenceSourceCount: event.detail.evidenceSourceCount || 0,
-        evidenceLinksVisible: event.detail.evidenceLinksVisible === true
+        evidenceLinksVisible: event.detail.evidenceLinksVisible === true,
+        visualContext: event.detail.visualContext || null
       });
     }
     windowObject.addEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
     windowObject.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
-      detail: Object.freeze({ requestId, workspace, command, utterance, parameters, transactionId })
+      detail: Object.freeze({
+        requestId, workspace, command, utterance, parameters, visualContext, visualReference, transactionId
+      })
     }));
   });
 }
@@ -717,6 +721,24 @@ function boot() {
       && workspace.dataset.populated === "true"
       && (detail.workspace !== "maps" || (mapResult && /^visible-(?:map|route)-ready$/.test(mapResult.status)))
     );
+    const visibleItems = appSurface
+      ? Array.from(appSurface.querySelectorAll("a, button, li, article, [data-nexus-item]"))
+        .filter((node) => !node.hidden && node.getAttribute("aria-hidden") !== "true")
+        .map((node) => node.textContent)
+      : [];
+    const visualContext = createVisualContext({
+      workspace: detail.workspace,
+      outcomeKind,
+      surfaceId: `visible-${detail.requestId}`,
+      summary: appSurface && appSurface.textContent || workspace.textContent,
+      items: visibleItems,
+      selectedItem: detail.visualReference && detail.visualReference.selectedItem || null,
+      viewport: detail.workspace === "maps"
+        ? { place: detail.parameters && detail.parameters.place || null, route: detail.parameters && detail.parameters.action === "route" }
+        : null,
+      sourceIds: evidence && Array.isArray(evidence.sources) ? evidence.sources.map((source) => source.id || source.url) : [],
+      availableActions: ["inspect", "explain", "refine", "compare", "select", "previous-view"]
+    });
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
         detail: Object.freeze({
@@ -727,6 +749,7 @@ function boot() {
           populated: visualSuccess && workspace.dataset.populated === "true",
           outcomeVerified,
           outcomeKind,
+          visualContext,
           recovery: outcomeVerified ? null : {
             state: "visible-failure",
             message: `Nexus could not verify the requested ${detail.workspace} result.`,

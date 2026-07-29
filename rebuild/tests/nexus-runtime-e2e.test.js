@@ -79,7 +79,14 @@ async function main() {
           : request.workspace === "music" ? "music"
             : request.workspace === "live-knowledge" ? "evidence"
               : "application",
-        id: `ack-${request.workspace}`
+        id: `ack-${request.workspace}`,
+        visualContext: {
+          workspace: request.workspace,
+          outcomeKind: request.workspace === "maps" ? "map" : "application",
+          surfaceId: `surface-${request.workspace}`,
+          summary: `${request.workspace} result`,
+          items: ["First result", "Second result"]
+        }
       };
     },
     onReceipt: (receipt) => receipts.push(receipt)
@@ -128,6 +135,23 @@ async function main() {
   assert.equal(opened.length, 13);
   assert.equal(opened.every((request) => request.transactionId && request.parameters), true);
 
+  const mombasa = await runtime.route("Show me a map of Mombasa, Kenya");
+  const kenya = await runtime.route("Now open the map to see all of Kenya");
+  assert.equal(mombasa.workspace, "maps");
+  assert.equal(kenya.workspace, "maps");
+  assert.equal(kenya.contextual, true);
+  assert.equal(kenya.parameters.place, "Kenya");
+  assert.equal(kenya.previousTransactionId, mombasa.transactionId);
+  const visualQuestion = await runtime.route("What does this map show?");
+  assert.equal(visualQuestion.workspace, "maps");
+  assert.equal(visualQuestion.visualFollowUp, true);
+  assert.equal(visualQuestion.visualContext.surfaceId, "surface-maps");
+  assert.ok(receipts.some((receipt) => (
+    receipt.type === "conversation.context-advanced"
+    && receipt.detail.transactionId === kenya.transactionId
+    && receipt.detail.contextual === true
+  )));
+
   eventSubscriber({
     type: "realtime.data-message",
     detail: { data: JSON.stringify({
@@ -155,8 +179,8 @@ async function main() {
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.speaking"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.return-to-listening"));
   assert.ok(receipts.some((receipt) => receipt.type === "realtime.error"));
-  assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 14);
-  assert.equal(receipts.filter((receipt) => receipt.type === "request.outcome").length, 14);
+  assert.equal(receipts.filter((receipt) => receipt.type === "workspace.visible").length, 17);
+  assert.equal(receipts.filter((receipt) => receipt.type === "request.outcome").length, 17);
   assert.equal(receipts.every((receipt) => (
     receipt.type !== "request.outcome" || receipt.detail.verified === true
   )), true);
@@ -179,6 +203,7 @@ async function main() {
   assert.equal(foundation.stopReason, "test-complete");
   assert.equal(audioElement.srcObject, null);
   assert.equal(eventSubscriber, null);
+  assert.equal(runtime.conversationContext.activeWorkspace, null);
 
   console.log("Nexus clean runtime end-to-end commands: PASS");
 }

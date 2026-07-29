@@ -9,6 +9,11 @@ const {
 } = require("./experience-profile");
 const { NEXUS_VOICE_LATENCY_PROFILE } = require("./latency-profile");
 const { NexusRequestTransaction } = require("./request-transaction");
+const {
+  clearConversationContext,
+  createConversationContext,
+  rememberCompletedTurn
+} = require("./conversation-context");
 
 const DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
 
@@ -38,12 +43,15 @@ class NexusBrowserRuntime {
     this.recovery = null;
     this.responseFallbackTimer = null;
     this.visualRoutes = new Map();
+    this.conversationContext = createConversationContext();
     this.requestTransaction = new NexusRequestTransaction({
       execute: (resolution) => this.openWorkspace({
         workspace: resolution.workspace,
         command: resolution.command,
         utterance: resolution.utterance,
         parameters: resolution.parameters,
+        visualContext: resolution.visualContext || null,
+        visualReference: resolution.visualReference || null,
         transactionId: resolution.transactionId
       }),
       onStage: (type, detail) => this.receipt(type, detail)
@@ -182,7 +190,11 @@ class NexusBrowserRuntime {
       this.receipt("transcript.final", { transcript });
       const wakePhrase = detectWakePhrase(transcript);
       if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-      const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state);
+      const resolution = routeCommand(
+        transcript,
+        this.foundation.machine.snapshot().state,
+        this.conversationContext
+      );
       if (resolution.accepted) {
         this.route(transcript).catch((error) => {
           this.receipt("workspace.route-failed", {
@@ -234,7 +246,7 @@ class NexusBrowserRuntime {
 
   async route(command, callId = null) {
     const state = this.foundation.machine.snapshot().state;
-    const resolution = routeCommand(command, state);
+    const resolution = routeCommand(command, state, this.conversationContext);
     let result = resolution;
     if (resolution.accepted) {
       const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
@@ -252,6 +264,16 @@ class NexusBrowserRuntime {
             evidenceStatus: acknowledgement.evidenceStatus || null,
             evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
             evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+          });
+          this.conversationContext = rememberCompletedTurn(this.conversationContext, routed);
+          this.receipt("conversation.context-advanced", {
+            workspace: routed.workspace,
+            transactionId: routed.transactionId,
+            turn: this.conversationContext.turn,
+            contextual: routed.contextual === true,
+            visualFollowUp: routed.visualFollowUp === true,
+            visualSurfaceId: this.conversationContext.visual && this.conversationContext.visual.surfaceId || null,
+            previousTransactionId: routed.previousTransactionId || null
           });
           return routed;
         }).catch((error) => {
@@ -293,6 +315,7 @@ class NexusBrowserRuntime {
     this.sessionToken = null;
     this.started = false;
     this.visualRoutes.clear();
+    this.conversationContext = clearConversationContext();
     this.receipt("runtime.closed", { reason });
   }
 

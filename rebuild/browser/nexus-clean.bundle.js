@@ -454,7 +454,7 @@
     "rebuild/nexus-core/intent-parameter-extractor.js"(exports, module) {
       "use strict";
       var WORKFLOW_RULES = Object.freeze([
-        ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom in to)\b/i],
+        ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom (?:in|out) to)\b/i],
         ["reminders", /\b(remind|reminder)\b/i],
         ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
         ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
@@ -526,7 +526,7 @@
         "take\\s+me\\s+(?:back\\s+)?to",
         "go\\s+(?:back\\s+)?to",
         "move\\s+to",
-        "zoom\\s+(?:in\\s+)?to"
+        "zoom\\s+(?:(?:in|out)\\s+)?to"
       ].join("|");
       function extractMapParameters(text) {
         const route = /\b(?:route|directions|navigate|travel)\b.*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text) || /\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i.exec(text);
@@ -542,7 +542,10 @@
           `^(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:(?:a|the)\\s+)?(?:city\\s+of\\s+)?(?:maps?\\s+(?:of|for|to)\\s+)?`,
           "i"
         );
-        place = cleanText(place.replace(actionPrefix, "").replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for|to)\s+/i, "").replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "").replace(/\s+(?:map|maps)$/i, ""));
+        place = cleanText(place.replace(actionPrefix, "").replace(new RegExp(
+          `^(?:to\\s+)?(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:all|the\\s+whole|whole)?\\s*(?:of\\s+)?`,
+          "i"
+        ), "").replace(/^(?:to\s+)?(?:see|view|show|display)\s+(?:me\s+)?(?:all|the\s+whole|whole)\s+(?:of\s+)?/i, "").replace(/^(?:all|the\s+whole|whole)\s+(?:of\s+)?/i, "").replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for|to)\s+/i, "").replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "").replace(/\s+(?:map|maps)$/i, ""));
         return { action: "show-place", place: place || null };
       }
       function extractParameters(workflow, text) {
@@ -580,8 +583,142 @@
         WORKFLOW_RULES,
         cleanText,
         stripConversationFrame,
+        extractParameters,
         extractMapParameters,
         extractIntentAndParameters
+      };
+    }
+  });
+
+  // rebuild/nexus-core/conversation-context.js
+  var require_conversation_context = __commonJS({
+    "rebuild/nexus-core/conversation-context.js"(exports, module) {
+      "use strict";
+      var CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|there|it|all of|whole of|go back|take me back|zoom|change|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
+      var REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|there|it|what about|how about|use that|use the same)\b/i;
+      function cloneParameters(value = {}) {
+        return Object.freeze({ ...value });
+      }
+      function createConversationContext() {
+        return Object.freeze({
+          activeWorkspace: null,
+          parameters: Object.freeze({}),
+          visual: null,
+          utterance: null,
+          transactionId: null,
+          turn: 0
+        });
+      }
+      function isContextualFollowUp(utterance, context) {
+        if (!context || !context.activeWorkspace) return false;
+        const text = String(utterance || "").trim();
+        if (!text) return false;
+        if (CONTEXTUAL_CUES.test(text)) return true;
+        if (/^(?:why|when|where|who|which|how|what)\b/i.test(text)) return true;
+        if (context.activeWorkspace === "maps") {
+          return /^(?:to\s+)?(?:see|view|show|display|find|locate|move|zoom)\b/i.test(text);
+        }
+        return false;
+      }
+      function hasReferentialCue(utterance) {
+        return REFERENTIAL_CUES.test(String(utterance || ""));
+      }
+      function normalizeContextualUtterance(utterance) {
+        return String(utterance || "").trim().replace(/^(?:and\s+then|and|then|now|next)\b[\s,;:.-]*/i, "").replace(/^(?:what|how)\s+about\b[\s,;:.-]*/i, "").replace(/^(?:change|update|replace|make)\s+(?:it|that)\s+(?:to|with|as)?\s*/i, "").replace(/^use\s+(?:that|this|the\s+same)\s*(?:but|with|for)?\s*/i, "").trim();
+      }
+      function mergeContextParameters(previous = {}, current = {}) {
+        const merged = { ...previous };
+        for (const [key, value] of Object.entries(current)) {
+          if (key === "action" && ["open", "research", "support", "search-jobs"].includes(value) && previous.action && previous.action !== value) continue;
+          if (value !== null && value !== void 0 && value !== "") merged[key] = value;
+        }
+        return Object.freeze(merged);
+      }
+      function rememberCompletedTurn(context, resolution) {
+        return Object.freeze({
+          activeWorkspace: resolution.workspace,
+          parameters: cloneParameters(resolution.parameters),
+          visual: resolution.acknowledgement && resolution.acknowledgement.visualContext || null,
+          utterance: resolution.utterance,
+          transactionId: resolution.transactionId || null,
+          turn: Number(context && context.turn || 0) + 1
+        });
+      }
+      function clearConversationContext() {
+        return createConversationContext();
+      }
+      module.exports = {
+        clearConversationContext,
+        createConversationContext,
+        hasReferentialCue,
+        isContextualFollowUp,
+        mergeContextParameters,
+        normalizeContextualUtterance,
+        rememberCompletedTurn
+      };
+    }
+  });
+
+  // rebuild/nexus-core/visual-context.js
+  var require_visual_context = __commonJS({
+    "rebuild/nexus-core/visual-context.js"(exports, module) {
+      "use strict";
+      var VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
+      var VISUAL_QUESTION_CUES = /^(?:what|why|where|which|who|how|can|could|would|does|do|is|are)\b/i;
+      var VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
+      function compactText(value, limit = 180) {
+        return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
+      }
+      function freezeArray(values = []) {
+        return Object.freeze(values.filter(Boolean).map((value) => compactText(value)).filter(Boolean).slice(0, 12));
+      }
+      function createVisualContext({
+        workspace = null,
+        outcomeKind = null,
+        surfaceId = null,
+        summary = null,
+        items = [],
+        selectedItem = null,
+        viewport = null,
+        sourceIds = [],
+        availableActions = []
+      } = {}) {
+        return Object.freeze({
+          workspace,
+          outcomeKind,
+          surfaceId,
+          summary: compactText(summary) || null,
+          items: freezeArray(items),
+          selectedItem: compactText(selectedItem) || null,
+          viewport: viewport && typeof viewport === "object" ? Object.freeze({ ...viewport }) : null,
+          sourceIds: freezeArray(sourceIds),
+          availableActions: freezeArray(availableActions)
+        });
+      }
+      function isVisualFollowUp(utterance, context) {
+        if (!context || !context.visual || !context.visual.surfaceId) return false;
+        const text = compactText(utterance);
+        if (!text) return false;
+        return VISUAL_REFERENCE_CUES.test(text) && (VISUAL_QUESTION_CUES.test(text) || VISUAL_ACTION_CUES.test(text));
+      }
+      function describeVisualReference(utterance, visual) {
+        if (!visual) return null;
+        const text = compactText(utterance);
+        const ordinal = /\b(first|second|third|fourth|fifth|last|previous)\b/i.exec(text)?.[1]?.toLowerCase() || null;
+        const action = VISUAL_ACTION_CUES.exec(text)?.[1]?.toLowerCase() || (VISUAL_QUESTION_CUES.test(text) ? "explain" : "inspect");
+        return Object.freeze({
+          action,
+          ordinal,
+          surfaceId: visual.surfaceId,
+          outcomeKind: visual.outcomeKind,
+          selectedItem: visual.selectedItem,
+          visibleItems: visual.items
+        });
+      }
+      module.exports = {
+        createVisualContext,
+        describeVisualReference,
+        isVisualFollowUp
       };
     }
   });
@@ -592,9 +729,20 @@
       "use strict";
       var {
         WORKFLOW_RULES: ROUTES,
-        extractIntentAndParameters
+        extractIntentAndParameters,
+        extractParameters
       } = require_intent_parameter_extractor();
-      function routeCommand(command, connectionState) {
+      var {
+        hasReferentialCue,
+        isContextualFollowUp,
+        mergeContextParameters,
+        normalizeContextualUtterance
+      } = require_conversation_context();
+      var {
+        describeVisualReference,
+        isVisualFollowUp
+      } = require_visual_context();
+      function routeCommand(command, connectionState, context = null) {
         if (connectionState !== "connected") {
           return Object.freeze({
             accepted: false,
@@ -603,14 +751,24 @@
           });
         }
         const resolution = extractIntentAndParameters(command);
-        const match = resolution.workflow;
+        const visualFollowUp = isVisualFollowUp(resolution.utterance, context);
+        const contextual = (visualFollowUp || isContextualFollowUp(resolution.utterance, context)) && (!resolution.workflow || resolution.workflow === context.activeWorkspace || hasReferentialCue(resolution.utterance));
+        const match = contextual ? context.activeWorkspace : resolution.workflow;
+        const contextualUtterance = contextual ? normalizeContextualUtterance(resolution.utterance) : resolution.utterance;
+        const extracted = contextual ? extractParameters(match, contextualUtterance) : resolution.parameters;
+        const parameters = contextual ? mergeContextParameters(context.parameters, extracted) : resolution.parameters;
         return Object.freeze({
           accepted: Boolean(match),
           code: match ? "workspace-route-resolved" : "conversation",
           workspace: match,
           command: resolution.original,
           utterance: resolution.utterance,
-          parameters: resolution.parameters
+          parameters,
+          contextual,
+          visualFollowUp,
+          visualContext: contextual ? context.visual || null : null,
+          visualReference: visualFollowUp ? describeVisualReference(resolution.utterance, context.visual) : null,
+          previousTransactionId: contextual ? context.transactionId || null : null
         });
       }
       module.exports = { ROUTES, routeCommand };
@@ -815,6 +973,11 @@
       } = require_experience_profile();
       var { NEXUS_VOICE_LATENCY_PROFILE } = require_latency_profile();
       var { NexusRequestTransaction } = require_request_transaction();
+      var {
+        clearConversationContext,
+        createConversationContext,
+        rememberCompletedTurn
+      } = require_conversation_context();
       var DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
       var NexusBrowserRuntime = class {
         constructor({
@@ -843,12 +1006,15 @@
           this.recovery = null;
           this.responseFallbackTimer = null;
           this.visualRoutes = /* @__PURE__ */ new Map();
+          this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
             execute: (resolution) => this.openWorkspace({
               workspace: resolution.workspace,
               command: resolution.command,
               utterance: resolution.utterance,
               parameters: resolution.parameters,
+              visualContext: resolution.visualContext || null,
+              visualReference: resolution.visualReference || null,
               transactionId: resolution.transactionId
             }),
             onStage: (type, detail) => this.receipt(type, detail)
@@ -979,7 +1145,11 @@
             this.receipt("transcript.final", { transcript });
             const wakePhrase = detectWakePhrase(transcript);
             if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-            const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state);
+            const resolution = routeCommand(
+              transcript,
+              this.foundation.machine.snapshot().state,
+              this.conversationContext
+            );
             if (resolution.accepted) {
               this.route(transcript).catch((error) => {
                 this.receipt("workspace.route-failed", {
@@ -1030,7 +1200,7 @@
         }
         async route(command, callId = null) {
           const state = this.foundation.machine.snapshot().state;
-          const resolution = routeCommand(command, state);
+          const resolution = routeCommand(command, state, this.conversationContext);
           let result = resolution;
           if (resolution.accepted) {
             const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
@@ -1048,6 +1218,16 @@
                   evidenceStatus: acknowledgement.evidenceStatus || null,
                   evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
                   evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+                });
+                this.conversationContext = rememberCompletedTurn(this.conversationContext, routed);
+                this.receipt("conversation.context-advanced", {
+                  workspace: routed.workspace,
+                  transactionId: routed.transactionId,
+                  turn: this.conversationContext.turn,
+                  contextual: routed.contextual === true,
+                  visualFollowUp: routed.visualFollowUp === true,
+                  visualSurfaceId: this.conversationContext.visual && this.conversationContext.visual.surfaceId || null,
+                  previousTransactionId: routed.previousTransactionId || null
                 });
                 return routed;
               }).catch((error) => {
@@ -1087,6 +1267,7 @@
           this.sessionToken = null;
           this.started = false;
           this.visualRoutes.clear();
+          this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
         }
         receipt(type, detail = {}) {
@@ -1115,8 +1296,9 @@
         DEFAULT_EXPERIENCE_PREFERENCES,
         normalizeExperiencePreferences
       } = require_experience_profile();
+      var { createVisualContext } = require_visual_context();
       function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
-        return ({ workspace, command, utterance, parameters, transactionId }) => new Promise((resolve, reject) => {
+        return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
           const timer = setTimeout(() => {
             windowObject.removeEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
@@ -1138,12 +1320,22 @@
               evidenceSummary: event.detail.evidenceSummary || null,
               evidenceClaims: event.detail.evidenceClaims || [],
               evidenceSourceCount: event.detail.evidenceSourceCount || 0,
-              evidenceLinksVisible: event.detail.evidenceLinksVisible === true
+              evidenceLinksVisible: event.detail.evidenceLinksVisible === true,
+              visualContext: event.detail.visualContext || null
             });
           }
           windowObject.addEventListener("nexus.clean.workspace.acknowledged", onAcknowledged);
           windowObject.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
-            detail: Object.freeze({ requestId, workspace, command, utterance, parameters, transactionId })
+            detail: Object.freeze({
+              requestId,
+              workspace,
+              command,
+              utterance,
+              parameters,
+              visualContext,
+              visualReference,
+              transactionId
+            })
           }));
         });
       }
@@ -1778,6 +1970,18 @@
           const outcomeVerified = Boolean(
             visualSuccess && !workspace.hidden && workspace.dataset.populated === "true" && (detail.workspace !== "maps" || mapResult && /^visible-(?:map|route)-ready$/.test(mapResult.status))
           );
+          const visibleItems = appSurface ? Array.from(appSurface.querySelectorAll("a, button, li, article, [data-nexus-item]")).filter((node) => !node.hidden && node.getAttribute("aria-hidden") !== "true").map((node) => node.textContent) : [];
+          const visualContext = createVisualContext({
+            workspace: detail.workspace,
+            outcomeKind,
+            surfaceId: `visible-${detail.requestId}`,
+            summary: appSurface && appSurface.textContent || workspace.textContent,
+            items: visibleItems,
+            selectedItem: detail.visualReference && detail.visualReference.selectedItem || null,
+            viewport: detail.workspace === "maps" ? { place: detail.parameters && detail.parameters.place || null, route: detail.parameters && detail.parameters.action === "route" } : null,
+            sourceIds: evidence && Array.isArray(evidence.sources) ? evidence.sources.map((source) => source.id || source.url) : [],
+            availableActions: ["inspect", "explain", "refine", "compare", "select", "previous-view"]
+          });
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
               detail: Object.freeze({
@@ -1788,6 +1992,7 @@
                 populated: visualSuccess && workspace.dataset.populated === "true",
                 outcomeVerified,
                 outcomeKind,
+                visualContext,
                 recovery: outcomeVerified ? null : {
                   state: "visible-failure",
                   message: `Nexus could not verify the requested ${detail.workspace} result.`,

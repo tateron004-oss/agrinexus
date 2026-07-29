@@ -7,7 +7,7 @@ const { locationFromWeatherCommand } = require("../nexus-core/visual-data-servic
 const { musicSearchFromCommand, visualIntent } = require("../browser/nexus-clean-entry");
 
 const paraphrases = [
-  ["maps", ["Show me a map of Mombasa, Kenya", "Could you open Mombasa on the map please", "I want to see the city of Mombasa on the map", "Open up a map of Kenya", "Show me a map of Abuja, Nigeria", "Take me back to Nairobi, Kenya", "Plan a route from Nairobi to Nakuru", "Where is Accra on the map"]],
+  ["maps", ["Show me a map of Mombasa, Kenya", "Could you open Mombasa on the map please", "I want to see the city of Mombasa on the map", "Open up a map of Kenya", "Open the map to see all of Kenya", "Show the whole of Nigeria on the map", "Zoom out to view all of Ghana", "Show me a map of Abuja, Nigeria", "Take me back to Nairobi, Kenya", "Plan a route from Nairobi to Nakuru", "Where is Accra on the map"]],
   ["reminders", ["Remind me tomorrow morning to check my blood pressure", "Please create a reminder to call the clinic tonight", "Set a reminder for me to take medicine at 8 pm", "Remind me Friday to visit the pharmacy", "Create a reminder to check the maize tomorrow", "Add a reminder to exercise tonight"]],
   ["health", ["Record my blood pressure as 140 over 90", "Please open chronic health support", "Create a card I can show my doctor", "My blood pressure is 160 over 100", "Help me with diabetes care", "Prepare a summary for my pharmacist"]],
   ["telehealth", ["Open Telehealth Intake", "Could you begin a video visit", "I want to talk to a clinician", "Help me prepare for telehealth", "Start my doctor intake", "Open the video visit workspace"]],

@@ -164,6 +164,18 @@ async function main() {
   assert.deepEqual(parseMapRequest("Nexus, open up a map of Kenya"), { type: "place", place: "Kenya" });
   assert.deepEqual(parseMapRequest("Nexus, open the map to Mombasa"), { type: "place", place: "Mombasa" });
   assert.deepEqual(parseMapRequest("Nexus, open a map for Kenya"), { type: "place", place: "Kenya" });
+  assert.deepEqual(parseMapRequest("Nexus, open the map to see all of Kenya"), {
+    type: "place",
+    place: "Kenya"
+  });
+  assert.deepEqual(parseMapRequest("Nexus, show the whole of Nigeria on the map"), {
+    type: "place",
+    place: "Nigeria"
+  });
+  assert.deepEqual(parseMapRequest("Nexus, zoom out to view all of Ghana"), {
+    type: "place",
+    place: "Ghana"
+  });
   assert.deepEqual(parseMapRequest("Nexus, pull up a map of Mombasa, Kenya"), {
     type: "place",
     place: "Mombasa, Kenya"

@@ -1,7 +1,7 @@
 "use strict";
 
 const WORKFLOW_RULES = Object.freeze([
-  ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom in to)\b/i],
+  ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom (?:in|out) to)\b/i],
   ["reminders", /\b(remind|reminder)\b/i],
   ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
   ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
@@ -87,7 +87,7 @@ function extractMusicQuery(text) {
 const MAP_ACTION_PATTERN = [
   "show", "display", "open(?:\\s+up)?", "view", "see", "find", "locate",
   "pull\\s+up", "bring\\s+up", "take\\s+me\\s+(?:back\\s+)?to",
-  "go\\s+(?:back\\s+)?to", "move\\s+to", "zoom\\s+(?:in\\s+)?to"
+  "go\\s+(?:back\\s+)?to", "move\\s+to", "zoom\\s+(?:(?:in|out)\\s+)?to"
 ].join("|");
 
 function extractMapParameters(text) {
@@ -108,6 +108,12 @@ function extractMapParameters(text) {
   );
   place = cleanText(place
     .replace(actionPrefix, "")
+    .replace(new RegExp(
+      `^(?:to\\s+)?(?:${MAP_ACTION_PATTERN})\\s+(?:me\\s+)?(?:all|the\\s+whole|whole)?\\s*(?:of\\s+)?`,
+      "i"
+    ), "")
+    .replace(/^(?:to\s+)?(?:see|view|show|display)\s+(?:me\s+)?(?:all|the\s+whole|whole)\s+(?:of\s+)?/i, "")
+    .replace(/^(?:all|the\s+whole|whole)\s+(?:of\s+)?/i, "")
     .replace(/^(?:me\s+)?(?:a|the)\s+maps?\s+(?:of|for|to)\s+/i, "")
     .replace(/\s+(?:on|in)\s+(?:the\s+)?maps?$/i, "")
     .replace(/\s+(?:map|maps)$/i, ""));
@@ -151,6 +157,7 @@ module.exports = {
   WORKFLOW_RULES,
   cleanText,
   stripConversationFrame,
+  extractParameters,
   extractMapParameters,
   extractIntentAndParameters
 };
