@@ -1,0 +1,3 @@
+Nexus visual experience production release trigger
+Source controller commit: 62ae2c243480540fe1dc6c6b1793b22773e3383d
+Purpose: force Render to deploy the verified additive visual controller without modifying protected runtime files.
