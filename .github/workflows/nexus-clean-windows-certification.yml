@@ -78,7 +78,7 @@ jobs:
         run: ./scripts/nexus-windows-real-device-preflight.ps1
       - name: Install certification driver
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.25.8
+        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
       - name: Build clean browser
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
