@@ -107,6 +107,14 @@ engine.handle("Nexus, reopen this intake draft");
 assert.equal(state.values[fieldKey("health", "reading")], "140 over 90", "marketplace data cannot contaminate health");
 assert.notEqual(state.values[fieldKey("health", "reading")], "maize");
 
+state.context = { userId: "ron", processId: "workforce", documentId: "resume-natural-language" };
+assert.equal(engine.handle("Nexus, my skills are forklift operation and inventory control").action, "update");
+assert.equal(state.values[fieldKey("workforce", "skills")], "forklift operation and inventory control");
+assert.equal(engine.handle("Nexus, skills are farm equipment and team leadership").action, "update");
+assert.equal(state.values[fieldKey("workforce", "skills")], "farm equipment and team leadership");
+assert.equal(engine.handle("Nexus, add crop planning to my skills").action, "update");
+assert.match(state.values[fieldKey("workforce", "skills")], /crop planning/);
+
 state.context = { userId: "different-user", processId: "health", documentId: "reading-1" };
 assert.equal(engine.handle("Nexus, reopen this intake draft").handled, false, "drafts are isolated by user");
 
@@ -127,6 +135,16 @@ assert.match(
   "typed and spoken updates must use the same guided entry controller"
 );
 assert.match(browserEntry, /processId:[\s\S]*documentId:/, "browser adapter must bind process and document identity");
+assert.match(
+  browserEntry,
+  /activeWorkspaceRequest[\s\S]*request-superseded[\s\S]*ownsWorkspace/,
+  "one authoritative request must own the visible workspace"
+);
+assert.match(
+  browserEntry,
+  /stagedAppSurface[\s\S]*if \(!ownsWorkspace\(\)\) return;[\s\S]*replaceChildren/,
+  "slow specialized visuals must stage output and commit only while they own the workspace"
+);
 assert.match(cleanServer, /userId:\$\{JSON\.stringify\(issued\.session\.userId\)\}/, "authenticated user identity must survive session renewal");
 
 console.log("Nexus Universal Guided Entry Engine passed across eight process adapters.");

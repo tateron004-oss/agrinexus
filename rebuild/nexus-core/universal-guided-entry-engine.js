@@ -152,6 +152,54 @@ class NexusUniversalGuidedEntryEngine {
     return candidates[0].field;
   }
 
+  parseFieldProposal(spoken, fields, schema) {
+    const normalized = clean(spoken)
+      .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+      .replace(/^(?:please|kindly)\s+/i, "");
+    const aliases = [];
+    for (const field of fields) {
+      const definition = schema.fields.find((item) => item.key === field.key)
+        || schema.fields.find((item) => clean(field.label).toLowerCase().includes(clean(item.key).toLowerCase()));
+      for (const alias of [field.key, field.label, ...(definition?.aliases || [])]) {
+        const value = clean(alias);
+        if (value) aliases.push({ field, alias: value });
+      }
+    }
+    aliases.sort((left, right) => right.alias.length - left.alias.length);
+
+    for (const candidate of aliases) {
+      const escaped = candidate.alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const patterns = [
+        {
+          expression: new RegExp(`^(?:add|append)\\s+(.+?)\\s+(?:to|under|in)\\s+(?:my\\s+)?${escaped}[.!?]*$`, "i"),
+          valueIndex: 1,
+          append: true
+        },
+        {
+          expression: new RegExp(`^(?:change|replace|correct|set|enter|record|put)\\s+(?:my\\s+)?${escaped}\\s+(?:to|with|as|is|are|:)\\s*(.+)$`, "i"),
+          valueIndex: 1,
+          append: false
+        },
+        {
+          expression: new RegExp(`^(?:my\\s+)?${escaped}\\s+(?:is|are|:)\\s*(.+)$`, "i"),
+          valueIndex: 1,
+          append: false
+        }
+      ];
+      for (const pattern of patterns) {
+        const match = normalized.match(pattern.expression);
+        if (!match || !clean(match[pattern.valueIndex])) continue;
+        return {
+          field: candidate.field,
+          value: clean(match[pattern.valueIndex]),
+          append: pattern.append,
+          action: /^(?:change|replace|correct)\b/i.test(normalized) ? "correct" : "update"
+        };
+      }
+    }
+    return null;
+  }
+
   snapshot(fields) {
     return Object.fromEntries(fields.map((field) => [field.key, clean(field.get())]));
   }
@@ -252,6 +300,17 @@ class NexusUniversalGuidedEntryEngine {
         sensitivity: identity.schema.sensitivity
       });
       return { handled: true, action: "confirmation-required", requiresConfirmation: true, missingFields };
+    }
+
+    const proposal = this.parseFieldProposal(spoken, fields, identity.schema);
+    if (proposal) {
+      return this.updateField(
+        identity,
+        proposal.field,
+        proposal.value,
+        proposal.append,
+        proposal.action
+      );
     }
 
     const correction = spoken.match(/\b(?:change|replace|correct)\s+(.+?)\s+(?:to|with)\s+(.+)$/i);

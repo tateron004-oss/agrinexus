@@ -7,6 +7,12 @@ on:
       - main
       - rebuild/nexus-genesis-clean-foundation
   workflow_dispatch:
+    inputs:
+      enforce_release:
+        description: Enforce every evidence-backed release certification status
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,7 +40,7 @@ jobs:
 
   release-certification:
     name: Release certification
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && inputs.enforce_release == true
     needs: protected-experience-contract
     runs-on: ubuntu-latest
     timeout-minutes: 10

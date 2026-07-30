@@ -126,6 +126,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🌱",
     status: "Crop support ready",
     fields: ["Crop or livestock", "Location", "What are you seeing?"],
+    fieldKeys: ["subject", "location", "observation"],
     actions: ["Analyze concern", "Save field note"]
   },
   health: {
@@ -133,6 +134,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🩺",
     status: "Private health workspace ready",
     fields: ["Blood pressure or reading", "When measured", "Symptoms or notes"],
+    fieldKeys: ["reading", "measuredAt", "symptoms"],
     actions: ["Record reading", "Prepare care summary"]
   },
   telehealth: {
@@ -140,6 +142,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🧑🏾‍⚕️",
     status: "Intake preparation ready",
     fields: ["Reason for visit", "Preferred date", "Care provider"],
+    fieldKeys: ["reason", "preferredDate", "provider"],
     actions: ["Begin intake", "Review consent"]
   },
   "mobile-clinic": {
@@ -147,6 +150,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🚐",
     status: "Clinic access search ready",
     fields: ["Location", "Care needed", "Travel distance"],
+    fieldKeys: ["location", "careNeeded", "travelDistance"],
     actions: ["Find clinic options", "Prepare visit"]
   },
   pharmacy: {
@@ -154,6 +158,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "💊",
     status: "Medication support ready",
     fields: ["Medication", "Request type", "Pharmacy or location"],
+    fieldKeys: ["medication", "requestType", "pharmacy"],
     actions: ["Review request", "Prepare pharmacy contact"]
   },
   learning: {
@@ -161,6 +166,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🎓",
     status: "Learning search ready",
     fields: ["Topic or skill", "Learning level", "Language"],
+    fieldKeys: ["topic", "level", "language"],
     actions: ["Find learning options", "Start a lesson"]
   },
   workforce: {
@@ -168,6 +174,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "💼",
     status: "Job search ready",
     fields: ["Job or skill", "Location", "Work preference"],
+    fieldKeys: ["role", "location", "preference"],
     actions: ["Search opportunities", "Prepare application"]
   },
   marketplace: {
@@ -175,6 +182,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🛒",
     status: "Marketplace workspace ready",
     fields: ["Product", "Quantity", "Location"],
+    fieldKeys: ["product", "quantity", "location"],
     actions: ["Prepare listing", "Review marketplace options"]
   },
   reminders: {
@@ -182,6 +190,7 @@ const WORKSPACE_VIEWS = Object.freeze({
     icon: "🔔",
     status: "Reminder setup ready",
     fields: ["Reminder", "Date and time", "Repeat"],
+    fieldKeys: ["reminder", "time", "repeat"],
     actions: ["Create reminder", "View reminders"]
   },
   offline: {
@@ -246,7 +255,7 @@ function renderAppSurface({ workspace, command, appSurface }) {
     </div>
     <div class="app-request"><span>Voice request</span><strong>${safeCommand}</strong></div>
     <div class="app-fields">${view.fields.map((field, index) =>
-      `<label>${field}<input type="text" value="${index === 0 ? safeCommand : ""}" aria-label="${field}"></label>`
+      `<label>${field}<input type="text" name="${escapeMarkup(view.fieldKeys?.[index] || `field-${index + 1}`)}" value="${index === 0 ? safeCommand : ""}" aria-label="${field}"></label>`
     ).join("")}</div>
     <div class="app-actions">${view.actions.map((action) =>
       `<button type="button">${action}</button>`
@@ -364,10 +373,10 @@ async function renderSpecializedVisual({ workspace, command, sessionToken, appSu
         <div class="app-heading"><span class="app-icon" aria-hidden="true">📄</span>
           <div><strong>Résumé Builder</strong><span>Edit, print, or save as PDF</span></div>
         </div>
-        <label>Full name<input aria-label="Résumé full name" placeholder="Your full name"></label>
-        <label>Target role<input aria-label="Résumé target role" value="Agriculture / farming role"></label>
-        <label>Skills<textarea aria-label="Résumé skills" rows="3" placeholder="Crop production, equipment, teamwork, languages"></textarea></label>
-        <label>Experience<textarea aria-label="Résumé experience" rows="5" placeholder="Employer, work performed, dates, results"></textarea></label>
+        <label>Full name<input name="name" aria-label="Résumé full name" placeholder="Your full name"></label>
+        <label>Target role<input name="role" aria-label="Résumé target role" value="Agriculture / farming role"></label>
+        <label>Skills<textarea name="skills" aria-label="Résumé skills" rows="3" placeholder="Crop production, equipment, teamwork, languages"></textarea></label>
+        <label>Experience<textarea name="experience" aria-label="Résumé experience" rows="5" placeholder="Employer, work performed, dates, results"></textarea></label>
         <div class="app-actions"><button type="button" data-resume-action="print">Print / Save PDF</button><button type="button" data-resume-action="download">Download text</button></div>
       </form>`;
     return { handled: true, visible: true, status: "resume-builder-ready" };
@@ -709,6 +718,7 @@ function boot() {
   const config = window.NEXUS_CLEAN_CONFIG || {};
   const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
   let activeEvidenceReceipt = null;
+  let activeWorkspaceRequest = null;
   if (!sessionToken) {
     status.textContent = "Sign in to speak with Nexus";
     orb.disabled = true;
@@ -718,6 +728,31 @@ function boot() {
     const detail = event.detail || {};
     const workspace = document.getElementById("nexus-workspace");
     if (!workspace || !detail.requestId || !detail.workspace) return;
+    const previousRequest = activeWorkspaceRequest;
+    activeWorkspaceRequest = Object.freeze({
+      requestId: detail.requestId,
+      transactionId: detail.transactionId || null,
+      workspace: detail.workspace
+    });
+    if (previousRequest && previousRequest.requestId !== detail.requestId) {
+      window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+        detail: Object.freeze({
+          requestId: previousRequest.requestId,
+          acknowledgementId: `superseded-${previousRequest.requestId}`,
+          workspace: previousRequest.workspace,
+          visible: false,
+          populated: false,
+          outcomeVerified: false,
+          outcomeKind: null,
+          recovery: Object.freeze({
+            state: "request-superseded",
+            message: "A newer Nexus request owns the visible workspace.",
+            retryable: false
+          })
+        })
+      }));
+    }
+    const ownsWorkspace = () => activeWorkspaceRequest?.requestId === detail.requestId;
     const preserveGuidedDocument = shouldPreserveGuidedDocument({
       activeWorkspace: workspace.dataset.workspace,
       activeDocument: workspace.dataset.document,
@@ -746,6 +781,7 @@ function boot() {
           parameters: detail.parameters,
           sessionToken
         });
+        if (!ownsWorkspace()) return;
       } catch (error) {
         visualSuccess = false;
         if (error.code !== "NEXUS_MAP_REQUEST_SUPERSEDED") {
@@ -756,19 +792,26 @@ function boot() {
     }
     if (detail.workspace === "live-knowledge" && !["weather", "pilot-dashboard", "source-directory"].includes(specializedIntent)) {
       const evidenceSurface = document.getElementById("nexus-evidence-surface");
+      const stagedEvidenceSurface = document.createElement("div");
       try {
         if (activeEvidenceReceipt && isEvidenceDisplayFollowUp(detail.command)) {
-          renderEvidenceWorkspace({ receipt: activeEvidenceReceipt, surface: evidenceSurface });
+          renderEvidenceWorkspace({ receipt: activeEvidenceReceipt, surface: stagedEvidenceSurface });
           evidence = activeEvidenceReceipt;
         } else {
           evidence = await researchEvidence({
             question: detail.command,
             sessionToken,
-            surface: evidenceSurface
+            surface: stagedEvidenceSurface
           });
+          if (!ownsWorkspace()) return;
           if (evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0) {
             activeEvidenceReceipt = evidence;
           }
+        }
+        if (!ownsWorkspace()) return;
+        if (evidenceSurface) {
+          evidenceSurface.replaceChildren(...stagedEvidenceSurface.childNodes);
+          evidenceSurface.hidden = false;
         }
       } catch (error) {
         if (evidenceSurface) {
@@ -781,13 +824,17 @@ function boot() {
     }
     if (specializedIntent) {
       try {
+        const stagedAppSurface = document.createElement("div");
         const specialized = await renderSpecializedVisual({
           workspace: detail.workspace,
           command: detail.command,
           sessionToken,
-          appSurface
+          appSurface: stagedAppSurface
         });
+        if (!ownsWorkspace()) return;
         if (specialized.handled) {
+          appSurface.replaceChildren(...stagedAppSurface.childNodes);
+          appSurface.hidden = false;
           visualSuccess = specialized.visible === true;
           workspace.dataset.populated = visualSuccess ? "true" : "false";
           workspace.dataset.document = specializedIntent || detail.workspace;
@@ -800,6 +847,7 @@ function boot() {
           }
         }
       } catch (error) {
+        if (!ownsWorkspace()) return;
         visualSuccess = false;
         if (appSurface) {
           appSurface.hidden = false;
@@ -808,6 +856,7 @@ function boot() {
       }
     }
     const specializedKind = specializedIntent || null;
+    if (!ownsWorkspace()) return;
     const outcomeKind = detail.workspace === "maps"
       ? (mapResult ? "map" : "map-fallback")
       : detail.workspace === "music"
@@ -838,6 +887,7 @@ function boot() {
       availableActions: ["inspect", "explain", "refine", "compare", "select", "previous-view"]
     });
     requestAnimationFrame(() => {
+      if (!ownsWorkspace()) return;
       window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
         detail: Object.freeze({
           requestId: detail.requestId,

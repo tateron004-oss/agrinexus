@@ -34,6 +34,8 @@ assert.equal(controller.handle("Nexus, change experience to supervised a team of
 assert.match(values.experience, /twelve employees/);
 assert.equal(controller.handle("Nexus, add forklift operation and inventory control to skills").action, "update");
 assert.match(values.skills, /forklift operation/);
+assert.equal(controller.handle("Nexus, my skills are irrigation planning and team leadership").action, "update");
+assert.equal(values.skills, "irrigation planning and team leadership");
 
 const readback = controller.handle("Nexus, read my resume back");
 assert.equal(readback.action, "readback");

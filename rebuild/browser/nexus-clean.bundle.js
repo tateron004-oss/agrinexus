@@ -1634,6 +1634,49 @@ ${content}`
           if (!candidates.length || candidates[1] && candidates[0].score === candidates[1].score) return null;
           return candidates[0].field;
         }
+        parseFieldProposal(spoken, fields, schema) {
+          const normalized = clean(spoken).replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/^(?:please|kindly)\s+/i, "");
+          const aliases = [];
+          for (const field of fields) {
+            const definition = schema.fields.find((item) => item.key === field.key) || schema.fields.find((item) => clean(field.label).toLowerCase().includes(clean(item.key).toLowerCase()));
+            for (const alias of [field.key, field.label, ...definition?.aliases || []]) {
+              const value = clean(alias);
+              if (value) aliases.push({ field, alias: value });
+            }
+          }
+          aliases.sort((left, right) => right.alias.length - left.alias.length);
+          for (const candidate of aliases) {
+            const escaped = candidate.alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const patterns = [
+              {
+                expression: new RegExp(`^(?:add|append)\\s+(.+?)\\s+(?:to|under|in)\\s+(?:my\\s+)?${escaped}[.!?]*$`, "i"),
+                valueIndex: 1,
+                append: true
+              },
+              {
+                expression: new RegExp(`^(?:change|replace|correct|set|enter|record|put)\\s+(?:my\\s+)?${escaped}\\s+(?:to|with|as|is|are|:)\\s*(.+)$`, "i"),
+                valueIndex: 1,
+                append: false
+              },
+              {
+                expression: new RegExp(`^(?:my\\s+)?${escaped}\\s+(?:is|are|:)\\s*(.+)$`, "i"),
+                valueIndex: 1,
+                append: false
+              }
+            ];
+            for (const pattern of patterns) {
+              const match = normalized.match(pattern.expression);
+              if (!match || !clean(match[pattern.valueIndex])) continue;
+              return {
+                field: candidate.field,
+                value: clean(match[pattern.valueIndex]),
+                append: pattern.append,
+                action: /^(?:change|replace|correct)\b/i.test(normalized) ? "correct" : "update"
+              };
+            }
+          }
+          return null;
+        }
         snapshot(fields) {
           return Object.fromEntries(fields.map((field) => [field.key, clean(field.get())]));
         }
@@ -1723,6 +1766,16 @@ ${content}`
               sensitivity: identity.schema.sensitivity
             });
             return { handled: true, action: "confirmation-required", requiresConfirmation: true, missingFields };
+          }
+          const proposal = this.parseFieldProposal(spoken, fields, identity.schema);
+          if (proposal) {
+            return this.updateField(
+              identity,
+              proposal.field,
+              proposal.value,
+              proposal.append,
+              proposal.action
+            );
           }
           const correction = spoken.match(/\b(?:change|replace|correct)\s+(.+?)\s+(?:to|with)\s+(.+)$/i);
           if (correction) {
@@ -1919,6 +1972,7 @@ ${content}`
           icon: "\u{1F331}",
           status: "Crop support ready",
           fields: ["Crop or livestock", "Location", "What are you seeing?"],
+          fieldKeys: ["subject", "location", "observation"],
           actions: ["Analyze concern", "Save field note"]
         },
         health: {
@@ -1926,6 +1980,7 @@ ${content}`
           icon: "\u{1FA7A}",
           status: "Private health workspace ready",
           fields: ["Blood pressure or reading", "When measured", "Symptoms or notes"],
+          fieldKeys: ["reading", "measuredAt", "symptoms"],
           actions: ["Record reading", "Prepare care summary"]
         },
         telehealth: {
@@ -1933,6 +1988,7 @@ ${content}`
           icon: "\u{1F9D1}\u{1F3FE}\u200D\u2695\uFE0F",
           status: "Intake preparation ready",
           fields: ["Reason for visit", "Preferred date", "Care provider"],
+          fieldKeys: ["reason", "preferredDate", "provider"],
           actions: ["Begin intake", "Review consent"]
         },
         "mobile-clinic": {
@@ -1940,6 +1996,7 @@ ${content}`
           icon: "\u{1F690}",
           status: "Clinic access search ready",
           fields: ["Location", "Care needed", "Travel distance"],
+          fieldKeys: ["location", "careNeeded", "travelDistance"],
           actions: ["Find clinic options", "Prepare visit"]
         },
         pharmacy: {
@@ -1947,6 +2004,7 @@ ${content}`
           icon: "\u{1F48A}",
           status: "Medication support ready",
           fields: ["Medication", "Request type", "Pharmacy or location"],
+          fieldKeys: ["medication", "requestType", "pharmacy"],
           actions: ["Review request", "Prepare pharmacy contact"]
         },
         learning: {
@@ -1954,6 +2012,7 @@ ${content}`
           icon: "\u{1F393}",
           status: "Learning search ready",
           fields: ["Topic or skill", "Learning level", "Language"],
+          fieldKeys: ["topic", "level", "language"],
           actions: ["Find learning options", "Start a lesson"]
         },
         workforce: {
@@ -1961,6 +2020,7 @@ ${content}`
           icon: "\u{1F4BC}",
           status: "Job search ready",
           fields: ["Job or skill", "Location", "Work preference"],
+          fieldKeys: ["role", "location", "preference"],
           actions: ["Search opportunities", "Prepare application"]
         },
         marketplace: {
@@ -1968,6 +2028,7 @@ ${content}`
           icon: "\u{1F6D2}",
           status: "Marketplace workspace ready",
           fields: ["Product", "Quantity", "Location"],
+          fieldKeys: ["product", "quantity", "location"],
           actions: ["Prepare listing", "Review marketplace options"]
         },
         reminders: {
@@ -1975,6 +2036,7 @@ ${content}`
           icon: "\u{1F514}",
           status: "Reminder setup ready",
           fields: ["Reminder", "Date and time", "Repeat"],
+          fieldKeys: ["reminder", "time", "repeat"],
           actions: ["Create reminder", "View reminders"]
         },
         offline: {
@@ -2032,7 +2094,7 @@ ${content}`
     </div>
     <div class="app-request"><span>Voice request</span><strong>${safeCommand}</strong></div>
     <div class="app-fields">${view.fields.map(
-          (field, index) => `<label>${field}<input type="text" value="${index === 0 ? safeCommand : ""}" aria-label="${field}"></label>`
+          (field, index) => `<label>${field}<input type="text" name="${escapeMarkup(view.fieldKeys?.[index] || `field-${index + 1}`)}" value="${index === 0 ? safeCommand : ""}" aria-label="${field}"></label>`
         ).join("")}</div>
     <div class="app-actions">${view.actions.map(
           (action) => `<button type="button">${action}</button>`
@@ -2137,10 +2199,10 @@ ${content}`
         <div class="app-heading"><span class="app-icon" aria-hidden="true">\u{1F4C4}</span>
           <div><strong>R\xE9sum\xE9 Builder</strong><span>Edit, print, or save as PDF</span></div>
         </div>
-        <label>Full name<input aria-label="R\xE9sum\xE9 full name" placeholder="Your full name"></label>
-        <label>Target role<input aria-label="R\xE9sum\xE9 target role" value="Agriculture / farming role"></label>
-        <label>Skills<textarea aria-label="R\xE9sum\xE9 skills" rows="3" placeholder="Crop production, equipment, teamwork, languages"></textarea></label>
-        <label>Experience<textarea aria-label="R\xE9sum\xE9 experience" rows="5" placeholder="Employer, work performed, dates, results"></textarea></label>
+        <label>Full name<input name="name" aria-label="R\xE9sum\xE9 full name" placeholder="Your full name"></label>
+        <label>Target role<input name="role" aria-label="R\xE9sum\xE9 target role" value="Agriculture / farming role"></label>
+        <label>Skills<textarea name="skills" aria-label="R\xE9sum\xE9 skills" rows="3" placeholder="Crop production, equipment, teamwork, languages"></textarea></label>
+        <label>Experience<textarea name="experience" aria-label="R\xE9sum\xE9 experience" rows="5" placeholder="Employer, work performed, dates, results"></textarea></label>
         <div class="app-actions"><button type="button" data-resume-action="print">Print / Save PDF</button><button type="button" data-resume-action="download">Download text</button></div>
       </form>`;
           return { handled: true, visible: true, status: "resume-builder-ready" };
@@ -2459,6 +2521,7 @@ ${content}`
         const config = window.NEXUS_CLEAN_CONFIG || {};
         const sessionToken = config.sessionToken || sessionStorage.getItem("nexus.clean.session");
         let activeEvidenceReceipt = null;
+        let activeWorkspaceRequest = null;
         if (!sessionToken) {
           status.textContent = "Sign in to speak with Nexus";
           orb.disabled = true;
@@ -2468,6 +2531,31 @@ ${content}`
           const detail = event.detail || {};
           const workspace = document.getElementById("nexus-workspace");
           if (!workspace || !detail.requestId || !detail.workspace) return;
+          const previousRequest = activeWorkspaceRequest;
+          activeWorkspaceRequest = Object.freeze({
+            requestId: detail.requestId,
+            transactionId: detail.transactionId || null,
+            workspace: detail.workspace
+          });
+          if (previousRequest && previousRequest.requestId !== detail.requestId) {
+            window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+              detail: Object.freeze({
+                requestId: previousRequest.requestId,
+                acknowledgementId: `superseded-${previousRequest.requestId}`,
+                workspace: previousRequest.workspace,
+                visible: false,
+                populated: false,
+                outcomeVerified: false,
+                outcomeKind: null,
+                recovery: Object.freeze({
+                  state: "request-superseded",
+                  message: "A newer Nexus request owns the visible workspace.",
+                  retryable: false
+                })
+              })
+            }));
+          }
+          const ownsWorkspace = () => activeWorkspaceRequest?.requestId === detail.requestId;
           const preserveGuidedDocument = shouldPreserveGuidedDocument({
             activeWorkspace: workspace.dataset.workspace,
             activeDocument: workspace.dataset.document,
@@ -2496,6 +2584,7 @@ ${content}`
                 parameters: detail.parameters,
                 sessionToken
               });
+              if (!ownsWorkspace()) return;
             } catch (error) {
               visualSuccess = false;
               if (error.code !== "NEXUS_MAP_REQUEST_SUPERSEDED") {
@@ -2506,19 +2595,26 @@ ${content}`
           }
           if (detail.workspace === "live-knowledge" && !["weather", "pilot-dashboard", "source-directory"].includes(specializedIntent)) {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
+            const stagedEvidenceSurface = document.createElement("div");
             try {
               if (activeEvidenceReceipt && isEvidenceDisplayFollowUp(detail.command)) {
-                renderEvidenceWorkspace({ receipt: activeEvidenceReceipt, surface: evidenceSurface });
+                renderEvidenceWorkspace({ receipt: activeEvidenceReceipt, surface: stagedEvidenceSurface });
                 evidence = activeEvidenceReceipt;
               } else {
                 evidence = await researchEvidence({
                   question: detail.command,
                   sessionToken,
-                  surface: evidenceSurface
+                  surface: stagedEvidenceSurface
                 });
+                if (!ownsWorkspace()) return;
                 if (evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0) {
                   activeEvidenceReceipt = evidence;
                 }
+              }
+              if (!ownsWorkspace()) return;
+              if (evidenceSurface) {
+                evidenceSurface.replaceChildren(...stagedEvidenceSurface.childNodes);
+                evidenceSurface.hidden = false;
               }
             } catch (error) {
               if (evidenceSurface) {
@@ -2531,13 +2627,17 @@ ${content}`
           }
           if (specializedIntent) {
             try {
+              const stagedAppSurface = document.createElement("div");
               const specialized = await renderSpecializedVisual({
                 workspace: detail.workspace,
                 command: detail.command,
                 sessionToken,
-                appSurface
+                appSurface: stagedAppSurface
               });
+              if (!ownsWorkspace()) return;
               if (specialized.handled) {
+                appSurface.replaceChildren(...stagedAppSurface.childNodes);
+                appSurface.hidden = false;
                 visualSuccess = specialized.visible === true;
                 workspace.dataset.populated = visualSuccess ? "true" : "false";
                 workspace.dataset.document = specializedIntent || detail.workspace;
@@ -2550,6 +2650,7 @@ ${content}`
                 }
               }
             } catch (error) {
+              if (!ownsWorkspace()) return;
               visualSuccess = false;
               if (appSurface) {
                 appSurface.hidden = false;
@@ -2558,6 +2659,7 @@ ${content}`
             }
           }
           const specializedKind = specializedIntent || null;
+          if (!ownsWorkspace()) return;
           const outcomeKind = detail.workspace === "maps" ? mapResult ? "map" : "map-fallback" : detail.workspace === "music" ? "music" : specializedKind || (detail.workspace === "live-knowledge" ? "evidence" : "application");
           const outcomeVerified = Boolean(
             visualSuccess && !workspace.hidden && workspace.dataset.populated === "true" && (detail.workspace !== "maps" || mapResult && /^visible-(?:map|route)-ready$/.test(mapResult.status))
@@ -2575,6 +2677,7 @@ ${content}`
             availableActions: ["inspect", "explain", "refine", "compare", "select", "previous-view"]
           });
           requestAnimationFrame(() => {
+            if (!ownsWorkspace()) return;
             window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
               detail: Object.freeze({
                 requestId: detail.requestId,
