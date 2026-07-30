@@ -1373,6 +1373,142 @@ ${content}`
     }
   });
 
+  // rebuild/nexus-core/voice-form-controller.js
+  var require_voice_form_controller = __commonJS({
+    "rebuild/nexus-core/voice-form-controller.js"(exports, module) {
+      "use strict";
+      var DRAFT_KEY = "nexus.clean.voice-form-drafts.v1";
+      var ALIASES = Object.freeze({
+        name: ["name", "full name"],
+        role: ["role", "target role", "job"],
+        skills: ["skill", "skills"],
+        experience: ["experience", "work experience", "employment history"],
+        reading: ["blood pressure", "reading", "glucose", "weight"],
+        time: ["when measured", "date", "time"],
+        symptoms: ["symptom", "symptoms", "notes", "comment", "comments"],
+        reason: ["reason for visit", "reason", "care needed"],
+        provider: ["provider", "care provider"],
+        topic: ["topic", "skill", "question"],
+        level: ["learning level", "level"],
+        language: ["language"],
+        location: ["location", "city", "region"],
+        preference: ["work preference", "preference"],
+        product: ["product", "crop"],
+        quantity: ["quantity", "amount"],
+        reminder: ["reminder"],
+        repeat: ["repeat"]
+      });
+      function normalize(value) {
+        return String(value || "").replace(/[“”]/g, '"').replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
+      }
+      function fieldMatch(fields, spokenName) {
+        const wanted = normalize(spokenName).toLowerCase().replace(/[?.!]+$/g, "");
+        const aliases = Object.entries(ALIASES).find(([, names]) => names.some((name) => wanted === name || wanted.includes(name)))?.[1] || [wanted];
+        return fields.find((field) => {
+          const label = normalize(field.label || field.key).toLowerCase();
+          return aliases.some((alias) => label.includes(alias));
+        }) || null;
+      }
+      var NexusVoiceFormController = class {
+        constructor({ fields, storage, scope, onReceipt = () => {
+        } } = {}) {
+          this.fields = fields || (() => []);
+          this.storage = storage;
+          this.scope = scope || (() => "current-form");
+          this.onReceipt = onReceipt;
+          this.pendingConfirmation = null;
+        }
+        receipt(type, detail = {}) {
+          const receipt = Object.freeze({
+            schema: "nexus.voice-form.receipt.v1",
+            type,
+            detail: Object.freeze({ scope: this.scope(), ...detail }),
+            at: (/* @__PURE__ */ new Date()).toISOString()
+          });
+          this.onReceipt(receipt);
+          return receipt;
+        }
+        handle(command) {
+          const spoken = normalize(command);
+          const lower = spoken.toLowerCase();
+          const fields = this.fields();
+          if (!spoken || !fields.length) return { handled: false };
+          if (/\b(read|review|repeat)\b.*\b(form|information|details|resume|résumé|intake|entries|back)\b/.test(lower)) {
+            const populated = fields.filter((field) => normalize(field.get()));
+            const readback = populated.length ? populated.map((field) => `${field.label}: ${normalize(field.get())}`).join(". ") : "The current form does not contain any entered information.";
+            this.receipt("voice-form.readback", { readback, fieldCount: populated.length });
+            return { handled: true, action: "readback", readback };
+          }
+          if (/\b(save|store|keep)\b.*\b(draft|form|resume|résumé|intake|changes|information)\b/.test(lower)) {
+            const drafts = this.readDrafts();
+            drafts[this.scope()] = {
+              values: Object.fromEntries(fields.map((field) => [field.key, field.get()])),
+              savedAt: (/* @__PURE__ */ new Date()).toISOString()
+            };
+            this.storage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+            this.receipt("voice-form.saved", { fieldCount: fields.length });
+            return { handled: true, action: "save", fieldCount: fields.length };
+          }
+          if (/\b(reopen|restore|load)\b.*\b(draft|form|resume|résumé|intake)\b/.test(lower)) {
+            const draft = this.readDrafts()[this.scope()];
+            if (!draft) return { handled: false };
+            let restored = 0;
+            fields.forEach((field) => {
+              if (!Object.prototype.hasOwnProperty.call(draft.values || {}, field.key)) return;
+              field.set(draft.values[field.key], false);
+              restored += 1;
+            });
+            this.receipt("voice-form.reopened", { fieldCount: restored });
+            return { handled: true, action: "reopen", fieldCount: restored };
+          }
+          if (/\b(cancel|do not submit|don't submit|do not send|don't send)\b/.test(lower) && this.pendingConfirmation) {
+            this.pendingConfirmation = null;
+            this.receipt("voice-form.cancelled", { externalExecution: false });
+            return { handled: true, action: "cancel" };
+          }
+          if (/\b(yes|confirm|approve|go ahead)\b/.test(lower) && this.pendingConfirmation) {
+            const requestedAction = this.pendingConfirmation;
+            this.pendingConfirmation = null;
+            this.receipt("voice-form.confirmed", { requestedAction, externalExecution: false });
+            return { handled: true, action: "confirm", externalExecution: false };
+          }
+          if (/\b(submit|send|share|apply)\b/.test(lower)) {
+            this.pendingConfirmation = spoken;
+            this.receipt("voice-form.confirmation-required", { requestedAction: spoken, requiresConfirmation: true });
+            return { handled: true, action: "confirmation-required", requiresConfirmation: true };
+          }
+          const correction = spoken.match(/\b(?:change|replace|correct)\s+(.+?)\s+(?:to|with)\s+(.+)$/i);
+          if (correction) {
+            const field = fieldMatch(fields, correction[1]);
+            if (!field) return { handled: false };
+            field.set(correction[2], false);
+            this.receipt("voice-form.corrected", { field: field.key, label: field.label, value: field.get() });
+            return { handled: true, action: "correct", field: field.key };
+          }
+          const addition = spoken.match(/\b(?:add|enter|record|put|set|my answer is)\s+(?:(?:a|the|this)\s+)?(.+?)(?:\s+(?:to|under|in|as|is|:)\s+)(.+)$/i);
+          if (addition) {
+            const first = fieldMatch(fields, addition[1]);
+            const second = fieldMatch(fields, addition[2]);
+            const field = first || second;
+            if (!field) return { handled: false };
+            field.set(first ? addition[2] : addition[1], /\badd\b/i.test(spoken));
+            this.receipt("voice-form.updated", { field: field.key, label: field.label, value: field.get() });
+            return { handled: true, action: "update", field: field.key };
+          }
+          return { handled: false };
+        }
+        readDrafts() {
+          try {
+            return JSON.parse(this.storage.getItem(DRAFT_KEY) || "{}");
+          } catch {
+            return {};
+          }
+        }
+      };
+      module.exports = { NexusVoiceFormController, DRAFT_KEY };
+    }
+  });
+
   // rebuild/browser/nexus-clean-entry.js
   var require_nexus_clean_entry = __commonJS({
     "rebuild/browser/nexus-clean-entry.js"(exports, module) {
@@ -1387,6 +1523,7 @@ ${content}`
         normalizeExperiencePreferences
       } = require_experience_profile();
       var { createVisualContext } = require_visual_context();
+      var { NexusVoiceFormController } = require_voice_form_controller();
       function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
         return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
@@ -1446,6 +1583,50 @@ ${content}`
           "runtime.recovery-failed": "Voice connection unavailable"
         };
         return labels[receipt.type] || null;
+      }
+      function visibleFormFields() {
+        const workspace = document.getElementById("nexus-workspace");
+        if (!workspace || workspace.hidden) return [];
+        return [...workspace.querySelectorAll("input:not([disabled]), textarea:not([disabled]), select:not([disabled])")].filter((field) => !field.readOnly && field.type !== "hidden").map((field, index) => {
+          const label = field.getAttribute("aria-label") || field.labels?.[0]?.textContent || field.closest("label")?.textContent || field.placeholder || `Field ${index + 1}`;
+          const key = field.name || field.id || field.getAttribute("aria-label") || `field-${index + 1}`;
+          return {
+            key,
+            label: String(label).replace(/\s+/g, " ").trim(),
+            get: () => field.value,
+            set: (value, append) => {
+              field.value = append && field.value.trim() ? `${field.value.trim()} ${String(value).trim()}` : String(value).trim();
+              field.dispatchEvent(new Event("input", { bubbles: true }));
+              field.dispatchEvent(new Event("change", { bubbles: true }));
+              field.focus();
+            }
+          };
+        });
+      }
+      function showVoiceFormReceipt(receipt) {
+        const surface = document.getElementById("nexus-app-surface");
+        if (!surface) return;
+        let proof = surface.querySelector("[data-nexus-voice-form-proof]");
+        if (!proof) {
+          proof = document.createElement("section");
+          proof.dataset.nexusVoiceFormProof = "true";
+          proof.className = "app-request";
+          proof.setAttribute("role", "status");
+          proof.setAttribute("aria-live", "polite");
+          surface.prepend(proof);
+        }
+        const labels = {
+          "voice-form.updated": `${receipt.detail.label} updated: ${receipt.detail.value}`,
+          "voice-form.corrected": `${receipt.detail.label} corrected: ${receipt.detail.value}`,
+          "voice-form.readback": receipt.detail.readback,
+          "voice-form.saved": `Draft saved locally with ${receipt.detail.fieldCount} fields.`,
+          "voice-form.reopened": `Draft reopened with ${receipt.detail.fieldCount} restored fields.`,
+          "voice-form.confirmation-required": "Confirmation required before Nexus submits, sends, shares, or applies. Say \u201CNexus, confirm\u201D to approve.",
+          "voice-form.confirmed": "Approval recorded. No outside provider completion is claimed without a verified execution receipt.",
+          "voice-form.cancelled": "Submission cancelled. The draft was not sent or shared."
+        };
+        proof.textContent = labels[receipt.type] || "Voice form updated.";
+        proof.dataset.receiptType = receipt.type;
       }
       var WORKSPACE_VIEWS = Object.freeze({
         agriculture: {
@@ -2150,6 +2331,7 @@ ${content}`
         const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
         remoteAudio.setVolume(preferences.volume);
         caption.hidden = !preferences.captions;
+        let voiceFormController = null;
         const onReceipt = (receipt) => {
           receipts.push(receipt);
           const workspaceStatusLabels = {
@@ -2182,6 +2364,10 @@ ${content}`
           if (receipt.type === "transcript.final") {
             caption.textContent = receipt.detail.transcript || "";
             caption.hidden = !preferences.captions;
+            const formResult = voiceFormController?.handle(receipt.detail.transcript || "");
+            if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+              runtime.speakText(formResult.readback, "voice-form-readback");
+            }
           }
           if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
           window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -2233,6 +2419,15 @@ ${content}`
           audioElement: audio,
           openWorkspace: createWorkspaceAdapter(),
           onReceipt
+        });
+        voiceFormController = new NexusVoiceFormController({
+          fields: visibleFormFields,
+          storage: localStorage,
+          scope: () => document.getElementById("nexus-workspace")?.dataset?.workspace || "current-form",
+          onReceipt: (receipt) => {
+            showVoiceFormReceipt(receipt);
+            window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
+          }
         });
         runtime.updateExperiencePreferences(preferences);
         function savePreferences(change) {
