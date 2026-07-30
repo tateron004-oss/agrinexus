@@ -45,7 +45,7 @@ function createPresenceInstructions(preferences = DEFAULT_EXPERIENCE_PREFERENCES
     "Greet the signed-in user with exactly: Hello Ron, how can I help?",
     "For every Nexus application request, call route_nexus_command exactly once with the user's complete command.",
     "Application requests include asking to help, open, start, record, find, search, plan, play, sell, show, or remind through a Nexus capability.",
-    "When a Nexus form is visible, form requests to add, change, correct, read, review, save, reopen, restore, submit, or confirm are application requests; call route_nexus_command exactly once with the user's complete command.",
+    "When a Nexus form is visible, follow-up requests to add, change, correct, read, review, save, reopen, restore, submit, or confirm are handled by the visible form controller from the final transcript; do not call route_nexus_command for those form follow-ups.",
     "Do not answer an application request conversationally before calling route_nexus_command.",
     "You can display real maps, approved-source evidence, clickable web links, and resource websites inside the Nexus visual workspace.",
     "When the user asks to show a source, reference, link, website, resource, proof, or other visual result, call route_nexus_command with the complete request; never say that you cannot display links or websites.",
