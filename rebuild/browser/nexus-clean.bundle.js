@@ -2116,6 +2116,13 @@ ${content}`
       function isDraftReopenCommand(command) {
         return /\b(reopen|restore|load)\b.*\b(draft|form|resume|résumé|intake)\b/i.test(String(command || ""));
       }
+      function guidedEntryProcessForDocument(documentId, fallbackProcess) {
+        const documentProcess = {
+          resume: "workforce",
+          "provider-card": "health"
+        }[String(documentId || "").toLowerCase()];
+        return documentProcess || fallbackProcess || "current-form";
+      }
       function isGuidedEntryFollowUp(command) {
         return /\b(add|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(String(command || ""));
       }
@@ -2439,6 +2446,7 @@ ${content}`
         commandText.textContent = command || "";
         host.dataset.workspace = workspace;
         host.dataset.document = workspace;
+        host.dataset.guidedEntryProcess = workspace;
         host.hidden = false;
         if (mapSurface) mapSurface.hidden = workspace !== "maps";
         if (appSurface) {
@@ -2641,6 +2649,10 @@ ${content}`
                 visualSuccess = specialized.visible === true;
                 workspace.dataset.populated = visualSuccess ? "true" : "false";
                 workspace.dataset.document = specializedIntent || detail.workspace;
+                workspace.dataset.guidedEntryProcess = guidedEntryProcessForDocument(
+                  specializedIntent,
+                  detail.workspace
+                );
                 if (specializedIntent === "resume" && isDraftReopenCommand(detail.command)) {
                   voiceFormController?.handle(detail.command);
                 }
@@ -2856,7 +2868,7 @@ ${content}`
             }
             return {
               userId,
-              processId: workspace?.dataset?.workspace || "current-form",
+              processId: workspace?.dataset?.guidedEntryProcess || workspace?.dataset?.workspace || "current-form",
               documentId: workspace?.dataset?.document || "active-document"
             };
           },
@@ -2981,6 +2993,7 @@ ${content}`
         renderSpecializedVisual,
         visualIntent,
         isDraftReopenCommand,
+        guidedEntryProcessForDocument,
         isGuidedEntryFollowUp,
         shouldPreserveGuidedDocument,
         weatherDescription,

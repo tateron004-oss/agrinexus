@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { NexusVoiceFormController } = require("../nexus-core/voice-form-controller");
 const {
+  guidedEntryProcessForDocument,
   isDraftReopenCommand,
   isGuidedEntryFollowUp,
   shouldPreserveGuidedDocument
@@ -61,6 +62,9 @@ assert.ok(receipts.some((receipt) => receipt.type === "voice-form.reopened"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.confirmation-required"));
 assert.equal(isDraftReopenCommand("Nexus, reopen this resume draft."), true);
 assert.equal(isDraftReopenCommand("Nexus, help me create a resume."), false);
+assert.equal(guidedEntryProcessForDocument("resume", "offline"), "workforce");
+assert.equal(guidedEntryProcessForDocument("provider-card", "maps"), "health");
+assert.equal(guidedEntryProcessForDocument("lesson", "learning"), "learning");
 assert.equal(isGuidedEntryFollowUp("Nexus, add forklift operation to skills."), true);
 assert.equal(isGuidedEntryFollowUp("Nexus, help me create a resume."), false);
 assert.equal(shouldPreserveGuidedDocument({
@@ -87,5 +91,10 @@ assert.match(
   browserEntry,
   /preserveGuidedDocument[\s\S]*shouldPreserveGuidedDocument[\s\S]*if \(!preserveGuidedDocument\)[\s\S]*renderWorkspace/,
   "Same-process guided-entry tool calls must not replace the active specialized document."
+);
+assert.match(
+  browserEntry,
+  /processId:\s*workspace\?\.dataset\?\.guidedEntryProcess[\s\S]*workspace\?\.dataset\?\.workspace/,
+  "Guided drafts must use the document's canonical process identity before the route workspace fallback."
 );
 console.log("Nexus clean voice-assisted form entry passed.");
