@@ -48838,7 +48838,13 @@ function initializeNexusGenesisVoiceRuntimeManager(policyPayload = {}) {
   const realtimeAdapter = factory.RealtimeVoiceAdapter({
     lock,
     sessionContext,
-    startSession: () => startRealtimeVoiceSession({ managedRuntime: true }),
+    startSession: (startOptions = {}) => {
+      if (!Object.keys(startOptions || {}).length) return startRealtimeVoiceSession({ managedRuntime: true });
+      return startRealtimeVoiceSession({
+        ...startOptions,
+        managedRuntime: true
+      });
+    },
     stopSession: reason => stopRealtimeVoiceSession(reason || "manager-realtime-stop"),
     startListening: () => Boolean(realtimeVoiceActive() && realtimeMicrophoneProofIsLive(realtimeVoiceSession?.sdkController)),
     stopListening: () => realtimeVoiceSession?.sdkController?.mute?.(true),
