@@ -11,7 +11,7 @@ const {
   normalizeExperiencePreferences
 } = require("../nexus-core/experience-profile");
 const { createVisualContext } = require("../nexus-core/visual-context");
-const { NexusVoiceFormController } = require("../nexus-core/voice-form-controller");
+const { NexusGuidedEntryTransactionController } = require("../nexus-core/guided-entry-transaction-controller");
 
 function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
   return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
@@ -851,11 +851,6 @@ function boot() {
             specializedIntent,
             detail.workspace
           );
-          if (specializedIntent === "resume" && isDraftReopenCommand(detail.command)) {
-            voiceFormController?.handle(detail.command, {
-              requestId: detail.requestId
-            });
-          }
           if (detail.workspace === "live-knowledge") {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
             if (evidenceSurface) evidenceSurface.hidden = true;
@@ -869,6 +864,13 @@ function boot() {
           appSurface.innerHTML = `<div class="evidence-summary evidence-limited">${escapeMarkup(error.message)}</div>`;
         }
       }
+    }
+    if (isDraftReopenCommand(detail.command) && visibleFormFields().length > 0) {
+      await guidedEntryController?.execute(detail.command, {
+        requestId: detail.requestId,
+        processId: workspace.dataset.guidedEntryProcess,
+        documentId: workspace.dataset.document
+      });
     }
     const specializedKind = specializedIntent || null;
     if (!ownsWorkspace()) return;
@@ -982,7 +984,7 @@ function boot() {
   const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
   remoteAudio.setVolume(preferences.volume);
   caption.hidden = !preferences.captions;
-  let voiceFormController = null;
+  let guidedEntryController = null;
   const onReceipt = (receipt) => {
     receipts.push(receipt);
     const workspaceStatusLabels = {
@@ -1016,13 +1018,14 @@ function boot() {
       caption.textContent = receipt.detail.transcript || "";
       caption.hidden = !preferences.captions;
       const transcript = receipt.detail.transcript || "";
-      const formResult = isDraftReopenCommand(transcript)
-        ? null
-        : voiceFormController?.handle(transcript, {
+      if (!isDraftReopenCommand(transcript) && visibleFormFields().length > 0) {
+        guidedEntryController?.execute(transcript, {
           requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
+        }).then((formResult) => {
+          if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+            runtime.speakText(formResult.readback, "voice-form-readback");
+          }
         });
-      if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
-        runtime.speakText(formResult.readback, "voice-form-readback");
       }
     }
     if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
@@ -1076,10 +1079,10 @@ function boot() {
     openWorkspace: createWorkspaceAdapter(),
     onReceipt
   });
-  voiceFormController = new NexusVoiceFormController({
+  guidedEntryController = new NexusGuidedEntryTransactionController({
     fields: visibleFormFields,
     storage: localStorage,
-    scope: () => {
+    context: () => {
       const workspace = document.getElementById("nexus-workspace");
       let userId = config.userId || sessionStorage.getItem("nexus.guided-entry.user");
       if (!userId) {
@@ -1094,6 +1097,10 @@ function boot() {
         documentId: workspace?.dataset?.document || "active-document"
       };
     },
+    ensureAuthoritativeDocument: async () => visibleFormFields().length > 0,
+    settleVisibleDocument: () => new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    ),
     onReceipt: (receipt) => {
       showVoiceFormReceipt(receipt);
       window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -1106,7 +1113,7 @@ function boot() {
       const input = guidedEntryForm.elements.command;
       const command = String(input?.value || "").trim();
       if (!command) return;
-      const result = voiceFormController.handle(command);
+      const result = await guidedEntryController.execute(command);
       if (!result.handled) {
         if (result.clarificationRequired) {
           status.textContent = "Please name the field you want Nexus to update.";
@@ -1171,7 +1178,11 @@ function boot() {
 
   window.NexusCleanRuntime = Object.freeze({
     start: () => runtime.start({ sessionToken, userGesture: true }),
-    stop: (reason) => runtime.stop(reason),
+    stop: (reason) => {
+      guidedEntryController?.cancelAll(reason || "runtime-stop");
+      remoteAudio.close();
+      return runtime.stop(reason);
+    },
     route: (command) => runtime.route(command),
     certificationAudio: config.certification ? Object.freeze({
       begin() {

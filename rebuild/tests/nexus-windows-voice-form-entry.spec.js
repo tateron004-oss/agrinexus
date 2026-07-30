@@ -224,8 +224,13 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     evidence.failure = { name: error.name, message: error.message, stack: error.stack };
     throw error;
   } finally {
+    await page.evaluate(() => {
+      try { window.NexusCleanRuntime?.certificationAudio?.end(); } catch {}
+      try { window.NexusCleanRuntime?.stop("certification-complete"); } catch {}
+    }).catch(() => {});
     evidence.finishedAt = new Date().toISOString();
     fs.writeFileSync(path.join(OUTPUT, "certification.json"), `${JSON.stringify(evidence, null, 2)}\n`);
     await page.screenshot({ path: path.join(OUTPUT, evidence.failure ? "failure.png" : "passed.png"), fullPage: true }).catch(() => {});
+    await context.close().catch(() => {});
   }
 });

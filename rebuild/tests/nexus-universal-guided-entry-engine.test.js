@@ -131,8 +131,13 @@ const cleanServer = fs.readFileSync(path.join(__dirname, "../server.js"), "utf8"
 assert.match(browserHtml, /id="nexus-guided-entry"/, "typed guided entry must be visible in every active workspace");
 assert.match(
   browserEntry,
-  /guidedEntryForm\.addEventListener\("submit"[\s\S]*voiceFormController\.handle\(command\)/,
+  /guidedEntryForm\.addEventListener\("submit"[\s\S]*guidedEntryController\.execute\(command\)/,
   "typed and spoken updates must use the same guided entry controller"
+);
+assert.match(
+  browserEntry,
+  /NexusGuidedEntryTransactionController/,
+  "The browser must use the replacement single-owner transaction controller."
 );
 assert.match(browserEntry, /processId:[\s\S]*documentId:/, "browser adapter must bind process and document identity");
 assert.match(

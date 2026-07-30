@@ -25,6 +25,7 @@ jobs:
           node-version: "22"
       - run: npm install --no-save --no-package-lock esbuild@0.28.1
       - run: |
+          node rebuild/tests/nexus-guided-entry-transaction-controller.test.js
           node rebuild/tests/nexus-voice-form-entry.test.js
           node rebuild/tests/nexus-universal-guided-entry-engine.test.js
           node rebuild/scripts/build-browser.js

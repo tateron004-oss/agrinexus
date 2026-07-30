@@ -107,13 +107,13 @@ assert.equal(shouldPreserveGuidedDocument({
 const browserEntry = fs.readFileSync(path.join(__dirname, "../browser/nexus-clean-entry.js"), "utf8");
 assert.match(
   browserEntry,
-  /specializedIntent === "resume" && isDraftReopenCommand\(detail\.command\)[\s\S]*voiceFormController\?\.handle\(detail\.command,\s*\{[\s\S]*requestId:\s*detail\.requestId/,
-  "A routed reopen must restore the newly rendered form, not only the form node that existed before routing."
+  /if \(isDraftReopenCommand\(detail\.command\) && visibleFormFields\(\)\.length > 0\)[\s\S]*guidedEntryController\?\.execute\(detail\.command,\s*\{[\s\S]*requestId:\s*detail\.requestId/,
+  "The replacement controller must own a routed reopen after the authoritative form is rendered."
 );
 assert.match(
   browserEntry,
-  /const formResult = isDraftReopenCommand\(transcript\)[\s\S]*\?\s*null[\s\S]*voiceFormController\?\.handle/,
-  "The final transcript path must defer reopen to the authoritative rendered-form transaction."
+  /if \(!isDraftReopenCommand\(transcript\)[\s\S]*guidedEntryController\?\.execute/,
+  "The final transcript path must leave reopen exclusively to the rendered-document transaction."
 );
 assert.match(
   browserEntry,
@@ -125,4 +125,5 @@ assert.match(
   /processId:\s*workspace\?\.dataset\?\.guidedEntryProcess[\s\S]*workspace\?\.dataset\?\.workspace/,
   "Guided drafts must use the document's canonical process identity before the route workspace fallback."
 );
+assert.doesNotMatch(browserEntry, /NexusVoiceFormController/, "The legacy form controller must not own browser commands.");
 console.log("Nexus clean voice-assisted form entry passed.");
