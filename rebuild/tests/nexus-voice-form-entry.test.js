@@ -4,7 +4,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { NexusVoiceFormController } = require("../nexus-core/voice-form-controller");
-const { isDraftReopenCommand } = require("../browser/nexus-clean-entry");
+const {
+  isDraftReopenCommand,
+  isGuidedEntryFollowUp,
+  shouldPreserveGuidedDocument
+} = require("../browser/nexus-clean-entry");
 
 const storageData = new Map();
 const storage = {
@@ -55,10 +59,31 @@ assert.ok(receipts.some((receipt) => receipt.type === "voice-form.reopened"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.confirmation-required"));
 assert.equal(isDraftReopenCommand("Nexus, reopen this resume draft."), true);
 assert.equal(isDraftReopenCommand("Nexus, help me create a resume."), false);
+assert.equal(isGuidedEntryFollowUp("Nexus, add forklift operation to skills."), true);
+assert.equal(isGuidedEntryFollowUp("Nexus, help me create a resume."), false);
+assert.equal(shouldPreserveGuidedDocument({
+  activeWorkspace: "workforce",
+  activeDocument: "resume",
+  requestedWorkspace: "workforce",
+  command: "Nexus, add forklift operation to skills.",
+  editableFieldCount: 4
+}), true, "A routed form follow-up must preserve its active specialized document.");
+assert.equal(shouldPreserveGuidedDocument({
+  activeWorkspace: "workforce",
+  activeDocument: "resume",
+  requestedWorkspace: "health",
+  command: "Nexus, record blood pressure is 140 over 90.",
+  editableFieldCount: 4
+}), false, "Switching processes must not preserve the prior document.");
 const browserEntry = fs.readFileSync(path.join(__dirname, "../browser/nexus-clean-entry.js"), "utf8");
 assert.match(
   browserEntry,
   /specializedIntent === "resume" && isDraftReopenCommand\(detail\.command\)[\s\S]*voiceFormController\?\.handle\(detail\.command\)/,
   "A routed reopen must restore the newly rendered form, not only the form node that existed before routing."
+);
+assert.match(
+  browserEntry,
+  /preserveGuidedDocument[\s\S]*shouldPreserveGuidedDocument[\s\S]*if \(!preserveGuidedDocument\)[\s\S]*renderWorkspace/,
+  "Same-process guided-entry tool calls must not replace the active specialized document."
 );
 console.log("Nexus clean voice-assisted form entry passed.");

@@ -271,6 +271,28 @@ function isDraftReopenCommand(command) {
   return /\b(reopen|restore|load)\b.*\b(draft|form|resume|résumé|intake)\b/i.test(String(command || ""));
 }
 
+function isGuidedEntryFollowUp(command) {
+  return /\b(add|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i
+    .test(String(command || ""));
+}
+
+function shouldPreserveGuidedDocument({
+  activeWorkspace,
+  activeDocument,
+  requestedWorkspace,
+  command,
+  editableFieldCount
+} = {}) {
+  return Boolean(
+    activeWorkspace
+    && activeWorkspace === requestedWorkspace
+    && activeDocument
+    && activeDocument !== activeWorkspace
+    && Number(editableFieldCount) > 0
+    && isGuidedEntryFollowUp(command)
+  );
+}
+
 function weatherDescription(code) {
   const value = Number(code);
   if (value === 0) return "Clear sky";
@@ -696,7 +718,21 @@ function boot() {
     const detail = event.detail || {};
     const workspace = document.getElementById("nexus-workspace");
     if (!workspace || !detail.requestId || !detail.workspace) return;
-    if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
+    const preserveGuidedDocument = shouldPreserveGuidedDocument({
+      activeWorkspace: workspace.dataset.workspace,
+      activeDocument: workspace.dataset.document,
+      requestedWorkspace: detail.workspace,
+      command: detail.command,
+      editableFieldCount: visibleFormFields().length
+    });
+    if (!preserveGuidedDocument) {
+      if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
+    } else {
+      const commandText = document.getElementById("nexus-workspace-command");
+      if (commandText) commandText.textContent = detail.command || "";
+      workspace.dataset.populated = "true";
+      workspace.hidden = false;
+    }
     document.body.classList.add("nexus-workspace-open");
     let evidence = null;
     let mapResult = null;
@@ -1112,6 +1148,8 @@ module.exports = {
   renderSpecializedVisual,
   visualIntent,
   isDraftReopenCommand,
+  isGuidedEntryFollowUp,
+  shouldPreserveGuidedDocument,
   weatherDescription,
   fetchVisualData,
   renderEvidenceWorkspace,
