@@ -1,7 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { NexusVoiceFormController } = require("../nexus-core/voice-form-controller");
+const { isDraftReopenCommand } = require("../browser/nexus-clean-entry");
 
 const storageData = new Map();
 const storage = {
@@ -50,4 +53,12 @@ assert.ok(receipts.some((receipt) => receipt.type === "voice-form.corrected"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.saved"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.reopened"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.confirmation-required"));
+assert.equal(isDraftReopenCommand("Nexus, reopen this resume draft."), true);
+assert.equal(isDraftReopenCommand("Nexus, help me create a resume."), false);
+const browserEntry = fs.readFileSync(path.join(__dirname, "../browser/nexus-clean-entry.js"), "utf8");
+assert.match(
+  browserEntry,
+  /specializedIntent === "resume" && isDraftReopenCommand\(detail\.command\)[\s\S]*voiceFormController\?\.handle\(detail\.command\)/,
+  "A routed reopen must restore the newly rendered form, not only the form node that existed before routing."
+);
 console.log("Nexus clean voice-assisted form entry passed.");

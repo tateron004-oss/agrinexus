@@ -267,6 +267,10 @@ function visualIntent(command) {
   return null;
 }
 
+function isDraftReopenCommand(command) {
+  return /\b(reopen|restore|load)\b.*\b(draft|form|resume|résumé|intake)\b/i.test(String(command || ""));
+}
+
 function weatherDescription(code) {
   const value = Number(code);
   if (value === 0) return "Clear sky";
@@ -749,6 +753,9 @@ function boot() {
         if (specialized.handled) {
           visualSuccess = specialized.visible === true;
           workspace.dataset.populated = visualSuccess ? "true" : "false";
+          if (specializedIntent === "resume" && isDraftReopenCommand(detail.command)) {
+            voiceFormController?.handle(detail.command);
+          }
           if (detail.workspace === "live-knowledge") {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
             if (evidenceSurface) evidenceSurface.hidden = true;
@@ -1072,6 +1079,7 @@ module.exports = {
   renderWorkspace,
   renderSpecializedVisual,
   visualIntent,
+  isDraftReopenCommand,
   weatherDescription,
   fetchVisualData,
   renderEvidenceWorkspace,
