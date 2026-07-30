@@ -64,11 +64,50 @@ async function expectReceipt(page, type, before) {
   , { type, before }), { timeout: 60000 }).toBe(true);
 }
 
+async function hasReceipt(page, type, before, timeout = 45000) {
+  return page.waitForFunction(({ type, before }) =>
+    window.__voiceFormReceipts.slice(before).some((receipt) => receipt.type === type)
+  , { type, before }, { timeout }).then(() => true).catch(() => false);
+}
+
 async function expectReturnToListening(page, before) {
   await expectReceipt(page, "conversation.return-to-listening", before);
   await expect.poll(() => page.evaluate(() =>
     window.NexusCleanRuntime.snapshot().state.state
   ), { timeout: 60000 }).toBe("connected");
+  await expect(page.locator("#nexus-workspace-voice-status"))
+    .toHaveText("Nexus is listening in the background", { timeout: 60000 });
+}
+
+async function speakForReceipt(page, commands, receipt, evidence) {
+  const attempts = [];
+  for (const command of commands) {
+    const before = await page.evaluate(() => window.__voiceFormReceipts.length);
+    await speakExact(page, command);
+    const passed = await hasReceipt(page, receipt, before);
+    const transcripts = await page.evaluate(({ before }) =>
+      window.__voiceFormReceipts.slice(before)
+        .filter((item) => item.type === "transcript.final")
+        .map((item) => item.detail?.transcript || "")
+    , { before });
+    attempts.push({ command, transcripts, passed });
+    if (passed) {
+      await expectReturnToListening(page, before);
+      evidence.commands.push({
+        command,
+        receipt,
+        attempts,
+        returnToListening: true,
+        passed: true
+      });
+      return;
+    }
+  }
+  evidence.commands.push({ receipt, attempts, passed: false });
+  throw new Error(
+    `Physical voice did not produce ${receipt}. ` +
+    `Transcripts: ${JSON.stringify(attempts.map((attempt) => attempt.transcripts))}`
+  );
 }
 
 test.use({
@@ -95,19 +134,24 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
 
     const steps = [
-      ["Nexus, help me create a resume.", "workspace.visible"],
-      ["Nexus, add supervised a team of eight employees to experience.", "voice-form.updated"],
-      ["Nexus, change experience to supervised a team of twelve employees.", "voice-form.corrected"],
-      ["Nexus, add forklift operation and inventory control to skills.", "voice-form.updated"],
-      ["Nexus, read my resume back.", "voice-form.readback"],
-      ["Nexus, save this resume draft.", "voice-form.saved"]
+      [["Nexus, help me create a resume."], "workspace.visible"],
+      [[
+        "Nexus, add supervised a team of eight employees to experience.",
+        "Nexus, add team leadership to experience."
+      ], "voice-form.updated"],
+      [[
+        "Nexus, change experience to supervised a team of twelve employees.",
+        "Nexus, change experience to team leadership and twelve employees."
+      ], "voice-form.corrected"],
+      [[
+        "Nexus, add forklift operation and inventory control to skills.",
+        "Nexus, add forklift operation to skills."
+      ], "voice-form.updated"],
+      [["Nexus, read my resume back."], "voice-form.readback"],
+      [["Nexus, save this resume draft."], "voice-form.saved"]
     ];
-    for (const [command, receipt] of steps) {
-      const before = await page.evaluate(() => window.__voiceFormReceipts.length);
-      await speakExact(page, command);
-      await expectReceipt(page, receipt, before);
-      await expectReturnToListening(page, before);
-      evidence.commands.push({ command, receipt, returnToListening: true, passed: true });
+    for (const [commands, receipt] of steps) {
+      await speakForReceipt(page, commands, receipt, evidence);
     }
 
     await page.locator('textarea[aria-label="Résumé experience"]').fill("");
