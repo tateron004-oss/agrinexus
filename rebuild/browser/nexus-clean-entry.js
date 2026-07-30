@@ -11,6 +11,7 @@ const {
   normalizeExperiencePreferences
 } = require("../nexus-core/experience-profile");
 const { createVisualContext } = require("../nexus-core/visual-context");
+const { NexusVoiceFormController } = require("../nexus-core/voice-form-controller");
 
 function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
   return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
@@ -65,6 +66,58 @@ function statusFromReceipt(receipt) {
     "runtime.recovery-failed": "Voice connection unavailable"
   };
   return labels[receipt.type] || null;
+}
+
+function visibleFormFields() {
+  const workspace = document.getElementById("nexus-workspace");
+  if (!workspace || workspace.hidden) return [];
+  return [...workspace.querySelectorAll("input:not([disabled]), textarea:not([disabled]), select:not([disabled])")]
+    .filter((field) => !field.readOnly && field.type !== "hidden")
+    .map((field, index) => {
+      const label = field.getAttribute("aria-label")
+        || field.labels?.[0]?.textContent
+        || field.closest("label")?.textContent
+        || field.placeholder
+        || `Field ${index + 1}`;
+      const key = field.name || field.id || field.getAttribute("aria-label") || `field-${index + 1}`;
+      return {
+        key,
+        label: String(label).replace(/\s+/g, " ").trim(),
+        get: () => field.value,
+        set: (value, append) => {
+          field.value = append && field.value.trim() ? `${field.value.trim()} ${String(value).trim()}` : String(value).trim();
+          field.dispatchEvent(new Event("input", { bubbles: true }));
+          field.dispatchEvent(new Event("change", { bubbles: true }));
+          field.focus();
+        }
+      };
+    });
+}
+
+function showVoiceFormReceipt(receipt) {
+  const surface = document.getElementById("nexus-app-surface");
+  if (!surface) return;
+  let proof = surface.querySelector("[data-nexus-voice-form-proof]");
+  if (!proof) {
+    proof = document.createElement("section");
+    proof.dataset.nexusVoiceFormProof = "true";
+    proof.className = "app-request";
+    proof.setAttribute("role", "status");
+    proof.setAttribute("aria-live", "polite");
+    surface.prepend(proof);
+  }
+  const labels = {
+    "voice-form.updated": `${receipt.detail.label} updated: ${receipt.detail.value}`,
+    "voice-form.corrected": `${receipt.detail.label} corrected: ${receipt.detail.value}`,
+    "voice-form.readback": receipt.detail.readback,
+    "voice-form.saved": `Draft saved locally with ${receipt.detail.fieldCount} fields.`,
+    "voice-form.reopened": `Draft reopened with ${receipt.detail.fieldCount} restored fields.`,
+    "voice-form.confirmation-required": "Confirmation required before Nexus submits, sends, shares, or applies. Say “Nexus, confirm” to approve.",
+    "voice-form.confirmed": "Approval recorded. No outside provider completion is claimed without a verified execution receipt.",
+    "voice-form.cancelled": "Submission cancelled. The draft was not sent or shared."
+  };
+  proof.textContent = labels[receipt.type] || "Voice form updated.";
+  proof.dataset.receiptType = receipt.type;
 }
 
 const WORKSPACE_VIEWS = Object.freeze({
@@ -819,6 +872,7 @@ function boot() {
   const remoteAudio = createRemoteAudioUnlock({ audioElement: audio });
   remoteAudio.setVolume(preferences.volume);
   caption.hidden = !preferences.captions;
+  let voiceFormController = null;
   const onReceipt = (receipt) => {
     receipts.push(receipt);
     const workspaceStatusLabels = {
@@ -851,6 +905,10 @@ function boot() {
     if (receipt.type === "transcript.final") {
       caption.textContent = receipt.detail.transcript || "";
       caption.hidden = !preferences.captions;
+      const formResult = voiceFormController?.handle(receipt.detail.transcript || "");
+      if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+        runtime.speakText(formResult.readback, "voice-form-readback");
+      }
     }
     if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
     window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -902,6 +960,15 @@ function boot() {
     audioElement: audio,
     openWorkspace: createWorkspaceAdapter(),
     onReceipt
+  });
+  voiceFormController = new NexusVoiceFormController({
+    fields: visibleFormFields,
+    storage: localStorage,
+    scope: () => document.getElementById("nexus-workspace")?.dataset?.workspace || "current-form",
+    onReceipt: (receipt) => {
+      showVoiceFormReceipt(receipt);
+      window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
+    }
   });
   runtime.updateExperiencePreferences(preferences);
 
