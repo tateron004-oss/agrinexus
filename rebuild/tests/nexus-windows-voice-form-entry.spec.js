@@ -50,6 +50,10 @@ function synthesize(text) {
 }
 
 async function speakExact(page, text) {
+  // Match the certified physical-command driver: allow the prior Realtime
+  // response cleanup to settle after return-to-listening before committing
+  // the next physical utterance.
+  await page.waitForTimeout(500);
   const pcm = await synthesize(text);
   const chunks = [];
   for (let offset = 0; offset < pcm.length; offset += 16384) {
