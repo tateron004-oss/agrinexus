@@ -32,7 +32,9 @@ function routeCommand(command, connectionState, context = null) {
       || resolution.workflow === context.activeWorkspace
       || hasReferentialCue(resolution.utterance)
     );
-  const match = contextual ? context.activeWorkspace : resolution.workflow;
+  const match = contextual
+    ? context.activeWorkspace
+    : resolution.workflow || (isInternetAnswerQuestion(resolution.utterance) ? "live-knowledge" : null);
   const contextualUtterance = contextual
     ? normalizeContextualUtterance(resolution.utterance)
     : resolution.utterance;
@@ -55,4 +57,13 @@ function routeCommand(command, connectionState, context = null) {
   });
 }
 
-module.exports = { ROUTES, routeCommand };
+function isInternetAnswerQuestion(command) {
+  const text = String(command || "").trim();
+  if (!text || /^(?:hello|hi|hey|good (?:morning|afternoon|evening)|thanks?|thank you)\b/i.test(text)) {
+    return false;
+  }
+  return /^(?:how|what|why|when|where|who|which)\b/i.test(text)
+    || /^(?:tell me about|explain|show me how|teach me how|walk me through)\b/i.test(text);
+}
+
+module.exports = { ROUTES, isInternetAnswerQuestion, routeCommand };

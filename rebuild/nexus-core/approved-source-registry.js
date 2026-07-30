@@ -19,6 +19,10 @@ const DOMAIN_PROFILES = Object.freeze({
   education: profile("Education & literacy", [
     "unesco.org", "education.go.ke", "unicef.org", "worldbank.org", "knbs.or.ke"
   ], /\b(education|literacy|school|learning|training|student|teacher)\b/i),
+  culinary: profile("Cooking & food preparation", [
+    "food.gov.uk", "foodsafety.gov", "usda.gov", "extension.umn.edu",
+    "extension.psu.edu", "bbcgoodfood.com", "kingarthurbaking.com"
+  ], /\b(cook|cooking|bake|baking|recipe|ingredient|meal|dish|pie|bread|cake|kitchen|food preparation)\b/i),
   "cross-domain": profile("Cross-domain public evidence", [
     "who.int", "fao.org", "ilo.org", "unesco.org", "unicef.org", "worldbank.org",
     "un.org", "undp.org", "knbs.or.ke", "kenyalaw.org"
