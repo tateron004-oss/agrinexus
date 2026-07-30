@@ -54,11 +54,8 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 35
     env:
-      NEXUS_LIVE_BASE_URL: https://nexus-genesis-certified.onrender.com
-      NEXUS_PLAYWRIGHT_EMAIL: ${{ secrets.NEXUS_PLAYWRIGHT_EMAIL }}
-      NEXUS_PLAYWRIGHT_PASSWORD: ${{ secrets.NEXUS_PLAYWRIGHT_PASSWORD }}
+      NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
       NEXUS_PROTECTED_BASELINE: 0e3ce5b6
-      NEXUS_EXPECTED_RUNTIME: nexus-behavior-502
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,15 +89,15 @@ jobs:
       - name: Verify Render production runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          $health = Invoke-RestMethod -Uri "$env:NEXUS_LIVE_BASE_URL/api/healthz" -TimeoutSec 30
-          if ($health.webBuild -ne $env:NEXUS_EXPECTED_RUNTIME) {
-            throw "Render production runtime is $($health.webBuild); expected $env:NEXUS_EXPECTED_RUNTIME."
+          $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 30
+          if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
+            throw "Render did not return the certified Nexus Genesis health contract."
           }
-          Write-Host "Render production runtime verified: $($health.webBuild)"
+          Write-Host "Certified Nexus Genesis production runtime verified."
       - name: Certify Render production voice and every application
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          npx playwright test tests/playwright/nexus-windows-real-device-acceptance.spec.js --workers=1 --reporter=line
+          npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
           if ($LASTEXITCODE -ne 0) {
             throw "Render production voice certification failed with exit code $LASTEXITCODE."
           }
