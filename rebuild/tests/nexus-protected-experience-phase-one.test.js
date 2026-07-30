@@ -36,6 +36,8 @@ assert.match(instructions, /English, Spanish, French, Swahili, Arabic, or Portug
 assert.match(instructions, /Never claim/);
 assert.match(instructions, /clickable web links/);
 assert.match(instructions, /never say that you cannot display links or websites/);
+assert.match(instructions, /form requests to add, change, correct, read, review, save, reopen, restore, submit, or confirm/i);
+assert.match(instructions, /call route_nexus_command exactly once with the user's complete command/i);
 
 const sent = [];
 const receipts = [];
