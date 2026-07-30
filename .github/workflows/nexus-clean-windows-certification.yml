@@ -51,9 +51,11 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 35
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPENAI_REALTIME_API_KEY || secrets.NEXUS_OPENAI_API_KEY }}
-      NEXUS_CLEAN_BASE_URL: http://127.0.0.1:4317
-      NEXUS_CLEAN_CERTIFICATION: "true"
+      NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
+      NEXUS_PLAYWRIGHT_EMAIL: ${{ secrets.NEXUS_PLAYWRIGHT_EMAIL }}
+      NEXUS_PLAYWRIGHT_PASSWORD: ${{ secrets.NEXUS_PLAYWRIGHT_PASSWORD }}
+      NEXUS_PROTECTED_BASELINE: 0e3ce5b6
+      NEXUS_EXPECTED_RUNTIME: nexus-behavior-502
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,41 +86,23 @@ jobs:
         run: |
           node rebuild/scripts/build-browser.js
           git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
-      - name: Certify physical voice and all 19 visible actions
+      - name: Verify Render production runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          if (-not $env:OPENAI_API_KEY) { throw "OPENAI_API_KEY secret is required." }
-          $secretBytes = New-Object byte[] 48
-          [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($secretBytes)
-          $env:NEXUS_CLEAN_SESSION_SECRET = [Convert]::ToBase64String($secretBytes)
-          $process = Start-Process node -ArgumentList "rebuild/server.js" -PassThru -RedirectStandardOutput "clean-server.log" -RedirectStandardError "clean-server-error.log"
-          $process.Id | Set-Content "clean-server.pid"
-          try {
-            $healthy = $false
-            for ($i = 0; $i -lt 30; $i++) {
-              if ($process.HasExited) {
-                throw "Clean Genesis server exited before certification. See clean-server-error.log."
-              }
-              try {
-                $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 2
-                if ($health.ok) {
-                  $healthy = $true
-                  break
-                }
-              } catch {}
-              Start-Sleep -Seconds 1
-            }
-            if (-not $healthy) {
-              throw "Clean Genesis server did not become healthy."
-            }
-            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
-            if ($LASTEXITCODE -ne 0) {
-              throw "Physical voice certification failed with exit code $LASTEXITCODE."
-            }
-          } finally {
-            if (-not $process.HasExited) {
-              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-            }
+          $health = Invoke-RestMethod -Uri "$env:NEXUS_LIVE_BASE_URL/api/healthz" -TimeoutSec 30
+          if ($health.webBuild -ne $env:NEXUS_EXPECTED_RUNTIME) {
+            throw "Render production runtime is $($health.webBuild); expected $env:NEXUS_EXPECTED_RUNTIME."
+          }
+          Write-Host "Render production runtime verified: $($health.webBuild)"
+      - name: Certify Render production voice and every application
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          if (-not $env:NEXUS_PLAYWRIGHT_EMAIL -or -not $env:NEXUS_PLAYWRIGHT_PASSWORD) {
+            throw "Production Playwright credentials are required."
+          }
+          npx playwright test tests/playwright/nexus-windows-real-device-acceptance.spec.js --workers=1 --reporter=line
+          if ($LASTEXITCODE -ne 0) {
+            throw "Render production voice certification failed with exit code $LASTEXITCODE."
           }
       - name: Reverify protected foundation
         if: always()
@@ -133,7 +117,5 @@ jobs:
             output/nexus-clean-windows-certification/
             output/nexus-windows-real-device/
             test-results/
-            clean-server.log
-            clean-server-error.log
           if-no-files-found: warn
           retention-days: 90
