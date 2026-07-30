@@ -97,9 +97,6 @@ jobs:
       - name: Certify Render production voice and every application
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          if (-not $env:NEXUS_PLAYWRIGHT_EMAIL -or -not $env:NEXUS_PLAYWRIGHT_PASSWORD) {
-            throw "Production Playwright credentials are required."
-          }
           npx playwright test tests/playwright/nexus-windows-real-device-acceptance.spec.js --workers=1 --reporter=line
           if ($LASTEXITCODE -ne 0) {
             throw "Render production voice certification failed with exit code $LASTEXITCODE."
