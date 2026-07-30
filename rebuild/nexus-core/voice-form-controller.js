@@ -7,6 +7,8 @@ const {
 
 class NexusVoiceFormController {
   constructor({ fields, storage, scope, onReceipt = () => {} } = {}) {
+    this.transactionSequence = 0;
+    this.requestSequences = new Map();
     const resolveScope = scope || (() => "current-form");
     this.engine = new NexusUniversalGuidedEntryEngine({
       fields,
@@ -30,8 +32,16 @@ class NexusVoiceFormController {
     });
   }
 
-  handle(command) {
-    return this.engine.handle(command);
+  handle(command, options = {}) {
+    const requestId = String(options.requestId || `voice-form-${Date.now()}-${++this.transactionSequence}`);
+    if (!this.requestSequences.has(requestId)) {
+      this.requestSequences.set(requestId, ++this.transactionSequence);
+    }
+    return this.engine.handle(command, {
+      ...options,
+      requestId,
+      transactionSequence: this.requestSequences.get(requestId)
+    });
   }
 }
 

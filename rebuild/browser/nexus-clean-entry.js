@@ -852,7 +852,9 @@ function boot() {
             detail.workspace
           );
           if (specializedIntent === "resume" && isDraftReopenCommand(detail.command)) {
-            voiceFormController?.handle(detail.command);
+            voiceFormController?.handle(detail.command, {
+              requestId: detail.requestId
+            });
           }
           if (detail.workspace === "live-knowledge") {
             const evidenceSurface = document.getElementById("nexus-evidence-surface");
@@ -1013,7 +1015,12 @@ function boot() {
     if (receipt.type === "transcript.final") {
       caption.textContent = receipt.detail.transcript || "";
       caption.hidden = !preferences.captions;
-      const formResult = voiceFormController?.handle(receipt.detail.transcript || "");
+      const transcript = receipt.detail.transcript || "";
+      const formResult = isDraftReopenCommand(transcript)
+        ? null
+        : voiceFormController?.handle(transcript, {
+          requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
+        });
       if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
         runtime.speakText(formResult.readback, "voice-form-readback");
       }

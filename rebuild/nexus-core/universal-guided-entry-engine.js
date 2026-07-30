@@ -92,6 +92,8 @@ class NexusUniversalGuidedEntryEngine {
     this.pendingConfirmation = null;
     this.undoStack = [];
     this.activeIdentityKey = null;
+    this.activeTransactions = new Map();
+    this.completedRequestIds = new Set();
   }
 
   resolveContext() {
@@ -132,6 +134,39 @@ class NexusUniversalGuidedEntryEngine {
       this.receipt("guided-entry.context-switched", identity, { previousIdentityKey: this.activeIdentityKey });
     }
     this.activeIdentityKey = identity.key;
+  }
+
+  claimTransaction(identity, command, options = {}) {
+    const requestId = safeId(options.requestId, this.idFactory());
+    const sequence = Number(options.transactionSequence || 0);
+    const active = this.activeTransactions.get(identity.key);
+    if (this.completedRequestIds.has(requestId) || (active && sequence && sequence <= active.sequence)) {
+      this.receipt("guided-entry.transaction-rejected", identity, {
+        requestId,
+        transactionSequence: sequence,
+        reason: this.completedRequestIds.has(requestId) ? "duplicate-request" : "stale-request",
+        activeRequestId: active?.requestId || null
+      });
+      return null;
+    }
+    const transaction = Object.freeze({
+      requestId,
+      sequence,
+      command: clean(command),
+      identityKey: identity.key,
+      documentId: identity.documentId,
+      startedAt: this.now()
+    });
+    this.activeTransactions.set(identity.key, transaction);
+    return transaction;
+  }
+
+  completeTransaction(transaction) {
+    if (!transaction) return;
+    this.completedRequestIds.add(transaction.requestId);
+    if (this.completedRequestIds.size > 200) {
+      this.completedRequestIds.delete(this.completedRequestIds.values().next().value);
+    }
   }
 
   matchField(spokenName, fields, schema) {
@@ -229,13 +264,21 @@ class NexusUniversalGuidedEntryEngine {
     return { handled: true, action, field: field.key, transactionId: transaction.id };
   }
 
-  handle(command) {
+  handle(command, options = {}) {
     const spoken = clean(command);
     const lower = spoken.toLowerCase();
     const fields = this.fields();
     if (!spoken || !fields.length) return { handled: false };
     const identity = this.resolveContext();
     this.activate(identity);
+    const owner = this.claimTransaction(identity, spoken, options);
+    if (!owner) {
+      return { handled: true, action: "rejected", rejected: true, requestId: safeId(options.requestId, "") };
+    }
+    const finish = (result) => {
+      this.completeTransaction(owner);
+      return { ...result, requestId: owner.requestId };
+    };
 
     if (/\b(undo|revert)\b(?:\s+the)?(?:\s+last)?(?:\s+change)?\b/.test(lower)) {
       const transaction = [...this.undoStack].reverse().find((item) => item.identityKey === identity.key);
@@ -245,7 +288,7 @@ class NexusUniversalGuidedEntryEngine {
       field.set(transaction.previousValue, false);
       this.undoStack.splice(this.undoStack.lastIndexOf(transaction), 1);
       this.receipt("guided-entry.undone", identity, { transactionId: transaction.id, field: field.key, value: transaction.previousValue });
-      return { handled: true, action: "undo", field: field.key };
+      return finish({ handled: true, action: "undo", field: field.key });
     }
 
     if (/\b(read|review|repeat)\b.*\b(form|information|details|resume|résumé|intake|entries|listing|lesson|assessment|back)\b/.test(lower)) {
@@ -254,40 +297,83 @@ class NexusUniversalGuidedEntryEngine {
         ? populated.map((field) => `${field.label}: ${clean(field.get())}`).join(". ")
         : "The current process does not contain any entered information.";
       this.receipt("voice-form.readback", identity, { readback, fieldCount: populated.length });
-      return { handled: true, action: "readback", readback };
+      return finish({ handled: true, action: "readback", readback });
     }
 
     if (/\b(save|store|keep)\b.*\b(draft|form|resume|résumé|intake|changes|information|listing|lesson|assessment)\b/.test(lower)) {
       const transaction = { id: this.idFactory() };
       const record = this.storage.save(identity, this.snapshot(fields), transaction);
       this.receipt("voice-form.saved", identity, { transactionId: transaction.id, fieldCount: fields.length, draftVersion: record.version });
-      return { handled: true, action: "save", fieldCount: fields.length, draftVersion: record.version };
+      return finish({ handled: true, action: "save", fieldCount: fields.length, draftVersion: record.version });
     }
 
     if (/\b(reopen|restore|load|continue)\b.*\b(draft|form|resume|résumé|intake|listing|lesson|assessment|process)\b/.test(lower)) {
       const draft = this.storage.read(identity);
-      if (!draft || draft.identity && draft.identity.key && draft.identity.key !== identity.key) return { handled: false };
+      if (!draft || draft.identity && draft.identity.key && draft.identity.key !== identity.key) {
+        this.completeTransaction(owner);
+        return { handled: false, requestId: owner.requestId };
+      }
       let restored = 0;
+      const verifiedRestoredFields = [];
       fields.forEach((field) => {
         if (!Object.prototype.hasOwnProperty.call(draft.values || {}, field.key)) return;
         field.set(draft.values[field.key], false);
+        const expectedValue = clean(draft.values[field.key]);
+        const visibleValue = clean(field.get());
+        if (visibleValue !== expectedValue) return;
         restored += 1;
+        verifiedRestoredFields.push(Object.freeze({
+          field: field.key,
+          value: visibleValue
+        }));
       });
-      this.receipt("voice-form.reopened", identity, { fieldCount: restored, draftVersion: draft.version, recovered: true });
-      return { handled: true, action: "reopen", fieldCount: restored, draftVersion: draft.version };
+      const expectedFields = Object.keys(draft.values || {}).filter((key) => fields.some((field) => field.key === key));
+      if (restored !== expectedFields.length) {
+        this.receipt("voice-form.reopen-verification-failed", identity, {
+          requestId: owner.requestId,
+          committedFormVersion: draft.version,
+          expectedFields,
+          verifiedRestoredFields
+        });
+        return finish({
+          handled: true,
+          action: "reopen-verification-failed",
+          verified: false,
+          fieldCount: restored,
+          draftVersion: draft.version
+        });
+      }
+      this.receipt("voice-form.reopened", identity, {
+        requestId: owner.requestId,
+        fieldCount: restored,
+        draftVersion: draft.version,
+        committedFormVersion: draft.version,
+        verifiedRestoredFields,
+        visibleValuesVerified: true,
+        recovered: true
+      });
+      return finish({
+        handled: true,
+        action: "reopen",
+        fieldCount: restored,
+        draftVersion: draft.version,
+        committedFormVersion: draft.version,
+        verifiedRestoredFields,
+        visibleValuesVerified: true
+      });
     }
 
     if (/\b(cancel|do not submit|don't submit|do not send|don't send)\b/.test(lower) && this.pendingConfirmation?.identityKey === identity.key) {
       this.pendingConfirmation = null;
       this.receipt("voice-form.cancelled", identity, { externalExecution: false });
-      return { handled: true, action: "cancel" };
+      return finish({ handled: true, action: "cancel" });
     }
 
     if (/\b(yes|confirm|approve|go ahead)\b/.test(lower) && this.pendingConfirmation?.identityKey === identity.key) {
       const requestedAction = this.pendingConfirmation.command;
       this.pendingConfirmation = null;
       this.receipt("voice-form.confirmed", identity, { requestedAction, externalExecution: false, providerReceiptRequired: true });
-      return { handled: true, action: "confirm", externalExecution: false };
+      return finish({ handled: true, action: "confirm", externalExecution: false });
     }
 
     if (/\b(submit|send|share|apply|publish)\b/.test(lower)) {
@@ -299,25 +385,25 @@ class NexusUniversalGuidedEntryEngine {
         missingFields,
         sensitivity: identity.schema.sensitivity
       });
-      return { handled: true, action: "confirmation-required", requiresConfirmation: true, missingFields };
+      return finish({ handled: true, action: "confirmation-required", requiresConfirmation: true, missingFields });
     }
 
     const proposal = this.parseFieldProposal(spoken, fields, identity.schema);
     if (proposal) {
-      return this.updateField(
+      return finish(this.updateField(
         identity,
         proposal.field,
         proposal.value,
         proposal.append,
         proposal.action
-      );
+      ));
     }
 
     const correction = spoken.match(/\b(?:change|replace|correct)\s+(.+?)\s+(?:to|with)\s+(.+)$/i);
     if (correction) {
       const field = this.matchField(correction[1], fields, identity.schema);
       if (!field) return { handled: false, clarificationRequired: true };
-      return this.updateField(identity, field, correction[2], false, "correct");
+      return finish(this.updateField(identity, field, correction[2], false, "correct"));
     }
 
     const addition = spoken.match(/\b(?:add|enter|record|put|set|my answer is)\s+(?:(?:a|the|this)\s+)?(.+?)(?:\s+(?:to|under|in|as|is|:)\s+)(.+)$/i);
@@ -329,8 +415,9 @@ class NexusUniversalGuidedEntryEngine {
         this.receipt("guided-entry.clarification-required", identity, { command: spoken, reason: "field-ambiguous" });
         return { handled: false, clarificationRequired: true };
       }
-      return this.updateField(identity, field, first ? addition[2] : addition[1], /\badd\b/i.test(spoken), "update");
+      return finish(this.updateField(identity, field, first ? addition[2] : addition[1], /\badd\b/i.test(spoken), "update"));
     }
+    this.completeTransaction(owner);
     return { handled: false };
   }
 }

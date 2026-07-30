@@ -175,6 +175,35 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     await expectReturnToListening(page, before);
     await expect(page.locator('textarea[aria-label="Résumé experience"]')).toHaveValue(/twelve employees/i);
     await expect(page.locator('textarea[aria-label="Résumé skills"]')).toHaveValue(/forklift operation/i);
+    await page.waitForTimeout(1500);
+    const reopenProof = await page.evaluate(({ before }) => {
+      const receipts = window.__voiceFormReceipts.slice(before);
+      const receipt = receipts.findLast((item) => item.type === "voice-form.reopened");
+      const experience = document.querySelector('textarea[aria-label="Résumé experience"]')?.value || "";
+      const skills = document.querySelector('textarea[aria-label="Résumé skills"]')?.value || "";
+      return {
+        receipt,
+        experience,
+        skills,
+        laterReplacement: receipt
+          ? receipts.slice(receipts.lastIndexOf(receipt) + 1).some((item) =>
+            item.type === "voice-form.reopened"
+          )
+          : true,
+        rejectedTransactions: receipts
+          .filter((item) => item.type === "guided-entry.transaction-rejected")
+          .map((item) => item.detail)
+      };
+    }, { before });
+    expect(reopenProof.receipt?.detail?.requestId).toBeTruthy();
+    expect(reopenProof.receipt?.detail?.committedFormVersion).toBeGreaterThan(0);
+    expect(reopenProof.receipt?.detail?.visibleValuesVerified).toBe(true);
+    expect(reopenProof.receipt?.detail?.verifiedRestoredFields).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: "experience", value: reopenProof.experience }),
+      expect.objectContaining({ field: "skills", value: reopenProof.skills })
+    ]));
+    expect(reopenProof.laterReplacement).toBe(false);
+    evidence.reopenProof = reopenProof;
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, submit this application.");

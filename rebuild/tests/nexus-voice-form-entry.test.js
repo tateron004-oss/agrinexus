@@ -45,8 +45,25 @@ assert.match(readback.readback, /twelve employees/);
 assert.equal(controller.handle("Nexus, save this resume draft").action, "save");
 values.experience = "";
 values.skills = "";
-assert.equal(controller.handle("Nexus, reopen this resume draft").action, "reopen");
+const reopened = controller.handle("Nexus, reopen this resume draft", { requestId: "reopen-final-form" });
+assert.equal(reopened.action, "reopen");
 assert.match(values.experience, /twelve employees/);
+assert.equal(reopened.visibleValuesVerified, true);
+assert.equal(reopened.committedFormVersion, 1);
+assert.deepEqual(reopened.verifiedRestoredFields.map((item) => item.field), ["experience", "skills"]);
+assert.equal(
+  controller.handle("Nexus, reopen this resume draft", { requestId: "reopen-final-form" }).action,
+  "rejected",
+  "A duplicate reopen request must not replace the committed form."
+);
+assert.equal(
+  controller.engine.handle("Nexus, reopen this resume draft", {
+    requestId: "older-delayed-reopen",
+    transactionSequence: 1
+  }).action,
+  "rejected",
+  "An older delayed reopen transaction must not replace the committed form."
+);
 
 const guarded = controller.handle("Nexus, submit this application");
 assert.equal(guarded.action, "confirmation-required");
@@ -59,6 +76,12 @@ assert.ok(receipts.some((receipt) => receipt.type === "voice-form.updated"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.corrected"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.saved"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.reopened"));
+const reopenedReceipt = receipts.find((receipt) => receipt.type === "voice-form.reopened");
+assert.equal(reopenedReceipt.detail.requestId, "reopen-final-form");
+assert.equal(reopenedReceipt.detail.committedFormVersion, 1);
+assert.equal(reopenedReceipt.detail.visibleValuesVerified, true);
+assert.deepEqual(reopenedReceipt.detail.verifiedRestoredFields.map((item) => item.field), ["experience", "skills"]);
+assert.ok(receipts.some((receipt) => receipt.type === "guided-entry.transaction-rejected"));
 assert.ok(receipts.some((receipt) => receipt.type === "voice-form.confirmation-required"));
 assert.equal(isDraftReopenCommand("Nexus, reopen this resume draft."), true);
 assert.equal(isDraftReopenCommand("Nexus, help me create a resume."), false);
@@ -84,8 +107,13 @@ assert.equal(shouldPreserveGuidedDocument({
 const browserEntry = fs.readFileSync(path.join(__dirname, "../browser/nexus-clean-entry.js"), "utf8");
 assert.match(
   browserEntry,
-  /specializedIntent === "resume" && isDraftReopenCommand\(detail\.command\)[\s\S]*voiceFormController\?\.handle\(detail\.command\)/,
+  /specializedIntent === "resume" && isDraftReopenCommand\(detail\.command\)[\s\S]*voiceFormController\?\.handle\(detail\.command,\s*\{[\s\S]*requestId:\s*detail\.requestId/,
   "A routed reopen must restore the newly rendered form, not only the form node that existed before routing."
+);
+assert.match(
+  browserEntry,
+  /const formResult = isDraftReopenCommand\(transcript\)[\s\S]*\?\s*null[\s\S]*voiceFormController\?\.handle/,
+  "The final transcript path must defer reopen to the authoritative rendered-form transaction."
 );
 assert.match(
   browserEntry,
