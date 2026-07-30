@@ -81,17 +81,24 @@ async function expectReturnToListening(page, before) {
 
 async function speakForReceipt(page, commands, receipt, evidence) {
   const attempts = [];
-  for (const command of commands) {
+  for (const [index, command] of commands.entries()) {
     const before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, command);
     const passed = await hasReceipt(page, receipt, before);
+    const returnedToListening = await hasReceipt(
+      page,
+      "conversation.return-to-listening",
+      before,
+      60000
+    );
     const transcripts = await page.evaluate(({ before }) =>
       window.__voiceFormReceipts.slice(before)
         .filter((item) => item.type === "transcript.final")
         .map((item) => item.detail?.transcript || "")
     , { before });
-    attempts.push({ command, transcripts, passed });
+    attempts.push({ command, transcripts, passed, returnedToListening });
     if (passed) {
+      expect(returnedToListening).toBe(true);
       await expectReturnToListening(page, before);
       evidence.commands.push({
         command,
@@ -101,6 +108,10 @@ async function speakForReceipt(page, commands, receipt, evidence) {
         passed: true
       });
       return;
+    }
+    if (index < commands.length - 1) {
+      expect(returnedToListening).toBe(true);
+      await expectReturnToListening(page, before);
     }
   }
   evidence.commands.push({ receipt, attempts, passed: false });
