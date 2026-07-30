@@ -80,7 +80,10 @@ assert.equal(unrelatedConversation.accepted, false);
 assert.equal(unrelatedConversation.code, "conversation");
 
 const noContext = routeCommand("What about Abuja?", "connected", createConversationContext());
-assert.equal(noContext.accepted, false);
+assert.equal(noContext.accepted, true);
+assert.equal(noContext.workspace, "live-knowledge");
+assert.equal(noContext.contextual, false);
+assert.equal(noContext.code, "workspace-route-resolved");
 
 const sequences = [
   {

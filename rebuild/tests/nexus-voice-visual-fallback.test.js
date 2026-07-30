@@ -30,7 +30,20 @@ const runtime = new NexusBrowserRuntime({
   audioElement: { play: () => Promise.resolve(), srcObject: null },
   openWorkspace: async ({ workspace, command }) => {
     opened.push({ workspace, command });
-    return { visible: true, id: `visible-${workspace}` };
+    return {
+      visible: true,
+      populated: true,
+      outcomeVerified: true,
+      outcomeKind: workspace === "live-knowledge" ? "evidence" : "application",
+      id: `visible-${workspace}`,
+      visualContext: {
+        workspace,
+        outcomeKind: workspace === "live-knowledge" ? "evidence" : "application",
+        surfaceId: `visible-${workspace}`,
+        summary: `${workspace} requested result is visibly populated`,
+        items: [`${workspace} result`]
+      }
+    };
   },
   onReceipt: receipt => receipts.push(receipt)
 });
