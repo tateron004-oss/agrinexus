@@ -40,17 +40,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify interactive physical audio
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: ./scripts/nexus-windows-real-device-preflight.ps1
       - name: Install certification driver
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npm install --no-save --no-package-lock @playwright/test@1.61.1
       - name: Certify production voice-assisted form entry
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npx playwright test rebuild/tests/nexus-windows-voice-form-entry.spec.js --workers=1 --reporter=line
       - name: Reverify protected foundation
         if: always()
-        shell: powershell
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node scripts/nexus-protected-foundation-guard.js
       - name: Publish evidence
         if: always()
