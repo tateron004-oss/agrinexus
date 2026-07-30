@@ -64,6 +64,14 @@
             referrerpolicy="strict-origin-when-cross-origin"></iframe>
           <a id="nexus-music-link" target="_blank" rel="noopener noreferrer">Open music player</a>
         </div>
+        <form id="nexus-guided-entry" class="guided-entry" aria-label="Type information for the active Nexus process">
+          <label for="nexus-guided-entry-command">Speak or type naturally</label>
+          <div class="guided-entry-row">
+            <input id="nexus-guided-entry-command" name="command" autocomplete="off"
+              placeholder="Example: Add 50 bags to quantity">
+            <button type="submit">Update</button>
+          </div>
+        </form>
       </div>
     </section>
     <audio id="nexus-audio" autoplay></audio>

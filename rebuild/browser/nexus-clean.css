@@ -226,6 +226,43 @@ body {
   padding: clamp(1.25rem, 4vw, 3rem) 0 3rem;
 }
 
+.guided-entry {
+  margin-top: 1rem;
+  padding-top: .9rem;
+  border-top: 1px solid rgba(133, 218, 255, .22);
+}
+
+.guided-entry label {
+  display: block;
+  margin-bottom: .45rem;
+  color: #b9dcf2;
+  font-size: .88rem;
+}
+
+.guided-entry-row {
+  display: flex;
+  gap: .55rem;
+}
+
+.guided-entry-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(133, 218, 255, .35);
+  border-radius: .65rem;
+  padding: .7rem .8rem;
+  color: #f1fbff;
+  background: rgba(2, 12, 20, .82);
+}
+
+.guided-entry-row button {
+  border: 1px solid rgba(133, 218, 255, .45);
+  border-radius: .65rem;
+  padding: .65rem .9rem;
+  color: #03131d;
+  background: #8be2ff;
+  font-weight: 700;
+}
+
 .workspace h1 {
   margin: 0 0 10px;
   font-size: clamp(1.65rem, 4vw, 2.5rem);

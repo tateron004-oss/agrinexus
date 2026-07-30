@@ -595,6 +595,7 @@ function renderWorkspace({ workspace, command, documentObject = document }) {
       : WORKSPACE_VIEWS[workspace]?.title || workspace;
   commandText.textContent = command || "";
   host.dataset.workspace = workspace;
+  host.dataset.document = workspace;
   host.hidden = false;
 
   if (mapSurface) mapSurface.hidden = workspace !== "maps";
@@ -753,6 +754,7 @@ function boot() {
         if (specialized.handled) {
           visualSuccess = specialized.visible === true;
           workspace.dataset.populated = visualSuccess ? "true" : "false";
+          workspace.dataset.document = specializedIntent || detail.workspace;
           if (specializedIntent === "resume" && isDraftReopenCommand(detail.command)) {
             voiceFormController?.handle(detail.command);
           }
@@ -971,12 +973,42 @@ function boot() {
   voiceFormController = new NexusVoiceFormController({
     fields: visibleFormFields,
     storage: localStorage,
-    scope: () => document.getElementById("nexus-workspace")?.dataset?.workspace || "current-form",
+    scope: () => {
+      const workspace = document.getElementById("nexus-workspace");
+      let userId = config.userId || sessionStorage.getItem("nexus.guided-entry.user");
+      if (!userId) {
+        userId = `session-${crypto.randomUUID()}`;
+        sessionStorage.setItem("nexus.guided-entry.user", userId);
+      }
+      return {
+        userId,
+        processId: workspace?.dataset?.workspace || "current-form",
+        documentId: workspace?.dataset?.document || "active-document"
+      };
+    },
     onReceipt: (receipt) => {
       showVoiceFormReceipt(receipt);
       window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
     }
   });
+  const guidedEntryForm = document.getElementById("nexus-guided-entry");
+  if (guidedEntryForm) {
+    guidedEntryForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const input = guidedEntryForm.elements.command;
+      const command = String(input?.value || "").trim();
+      if (!command) return;
+      const result = voiceFormController.handle(command);
+      if (!result.handled) {
+        if (result.clarificationRequired) {
+          status.textContent = "Please name the field you want Nexus to update.";
+        } else {
+          await runtime.route(command);
+        }
+      }
+      input.value = "";
+    });
+  }
   runtime.updateExperiencePreferences(preferences);
 
   function savePreferences(change) {

@@ -61,7 +61,7 @@ const server = http.createServer(async (request, response) => {
     const certification = process.env.NEXUS_CLEAN_CERTIFICATION === "true";
     const html = fs.readFileSync(file, "utf8").replace(
       "<script>window.NEXUS_CLEAN_CONFIG = window.NEXUS_CLEAN_CONFIG || {};</script>",
-      `<script>window.NEXUS_CLEAN_CONFIG = Object.freeze({sessionToken:${JSON.stringify(issued.token)},certification:${certification}});</script>`
+      `<script>window.NEXUS_CLEAN_CONFIG = Object.freeze({sessionToken:${JSON.stringify(issued.token)},userId:${JSON.stringify(issued.session.userId)},certification:${certification}});</script>`
     );
     response.end(html);
     return;
