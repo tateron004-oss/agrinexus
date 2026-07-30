@@ -5,6 +5,14 @@
     "cache": "agrinexus-pwa-v447",
     "certification": "production certification #101"
   },
+  "genesisProductionCertification": {
+    "service": "https://nexus-genesis-certified.onrender.com",
+    "commit": "2edcbbcd52a8b1a7c92cb99d154a537b8091303b",
+    "workflowRun": 30512522817,
+    "applicationLanes": 20,
+    "spokenVisualActions": 19,
+    "result": "passed"
+  },
   "authorizedUpdate": {
     "baseCommit": "348f4fde948c0106f73949354bd09b51fc341072",
     "recoveryBranch": "recovery/pre-restart-safe-auth-2026-07-27",
@@ -21,6 +29,9 @@
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",
     "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",
-    "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5"
+    "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
+    "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
+    ".github/workflows/nexus-clean-windows-certification.yml": "6e0eed2b58cd4acc52819af1400ae1d50ddbac7e",
+    "rebuild/tests/nexus-windows-physical-certification.spec.js": "e7fb968e827d43324fc862a5526664dd7569bd08"
   }
 }
