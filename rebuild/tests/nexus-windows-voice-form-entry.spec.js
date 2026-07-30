@@ -64,6 +64,13 @@ async function expectReceipt(page, type, before) {
   , { type, before }), { timeout: 60000 }).toBe(true);
 }
 
+async function expectReturnToListening(page, before) {
+  await expectReceipt(page, "conversation.return-to-listening", before);
+  await expect.poll(() => page.evaluate(() =>
+    window.NexusCleanRuntime.snapshot().state.state
+  ), { timeout: 60000 }).toBe("connected");
+}
+
 test.use({
   baseURL: BASE_URL,
   headless: false,
@@ -99,7 +106,8 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
       const before = await page.evaluate(() => window.__voiceFormReceipts.length);
       await speakExact(page, command);
       await expectReceipt(page, receipt, before);
-      evidence.commands.push({ command, receipt, passed: true });
+      await expectReturnToListening(page, before);
+      evidence.commands.push({ command, receipt, returnToListening: true, passed: true });
     }
 
     await page.locator('textarea[aria-label="Résumé experience"]').fill("");
@@ -107,17 +115,20 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     let before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, reopen this resume draft.");
     await expectReceipt(page, "voice-form.reopened", before);
+    await expectReturnToListening(page, before);
     await expect(page.locator('textarea[aria-label="Résumé experience"]')).toHaveValue(/twelve employees/i);
     await expect(page.locator('textarea[aria-label="Résumé skills"]')).toHaveValue(/forklift operation/i);
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, submit this application.");
     await expectReceipt(page, "voice-form.confirmation-required", before);
+    await expectReturnToListening(page, before);
     await expect(page.locator("[data-nexus-voice-form-proof]")).toContainText(/Confirmation required/i);
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, confirm.");
     await expectReceipt(page, "voice-form.confirmed", before);
+    await expectReturnToListening(page, before);
     const confirmation = await page.evaluate(() =>
       window.__voiceFormReceipts.findLast((receipt) => receipt.type === "voice-form.confirmed")
     );
