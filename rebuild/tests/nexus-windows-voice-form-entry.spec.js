@@ -1,0 +1,134 @@
+const { test, expect } = require("@playwright/test");
+const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
+const OUTPUT = path.resolve("output/nexus-voice-form-certification");
+
+function waveData(wav) {
+  for (let offset = 12; offset + 8 <= wav.length;) {
+    const id = wav.toString("ascii", offset, offset + 4);
+    const size = wav.readUInt32LE(offset + 4);
+    if (id === "data") return wav.subarray(offset + 8, offset + 8 + size);
+    offset += 8 + size + (size % 2);
+  }
+  throw new Error("Synthesized WAV contains no PCM data.");
+}
+
+function synthesize(text) {
+  const wavPath = path.join(os.tmpdir(), `nexus-form-${process.pid}-${Date.now()}.wav`);
+  const encodedText = Buffer.from(text, "utf16le").toString("base64");
+  const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
+  const script = [
+    "Add-Type -AssemblyName System.Speech",
+    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedText}'))`,
+    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
+    "$f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(24000,16,1)",
+    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
+    "$v.Rate=-1",
+    "$v.SetOutputToWaveFile($p,$f)",
+    "$v.Speak($t)",
+    "$v.Dispose()"
+  ].join(";");
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("exit", (code) => {
+      try {
+        if (code !== 0) throw new Error(stderr || `speech synthesis exited ${code}`);
+        resolve(waveData(fs.readFileSync(wavPath)));
+      } catch (error) {
+        reject(error);
+      } finally {
+        fs.rmSync(wavPath, { force: true });
+      }
+    });
+  });
+}
+
+async function speakExact(page, text) {
+  const pcm = await synthesize(text);
+  const chunks = [];
+  for (let offset = 0; offset < pcm.length; offset += 16384) {
+    chunks.push(pcm.subarray(offset, offset + 16384).toString("base64"));
+  }
+  await page.evaluate((audio) => window.NexusCleanRuntime.certificationAudio.send(audio), chunks);
+}
+
+async function expectReceipt(page, type, before) {
+  await expect.poll(() => page.evaluate(({ type, before }) =>
+    window.__voiceFormReceipts.slice(before).some((receipt) => receipt.type === type)
+  , { type, before }), { timeout: 60000 }).toBe(true);
+}
+
+test.use({
+  baseURL: BASE_URL,
+  headless: false,
+  launchOptions: { channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required"] }
+});
+
+test("voice fills, corrects, reads, saves, reopens, and guards a production form", async ({ page, context }) => {
+  test.setTimeout(15 * 60 * 1000);
+  fs.mkdirSync(OUTPUT, { recursive: true });
+  const evidence = { startedAt: new Date().toISOString(), commands: [], failure: null };
+  await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
+  await page.addInitScript(() => {
+    window.__voiceFormReceipts = [];
+    window.addEventListener("nexus.clean.receipt", (event) => window.__voiceFormReceipts.push(event.detail));
+  });
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.locator("#nexus-orb").click();
+    await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), { timeout: 60000 }).toBe("connected");
+    await page.locator("#nexus-audio").evaluate((audio) => { audio.muted = true; });
+    await expect.poll(() => page.evaluate(() => Boolean(window.NexusCleanRuntime.certificationAudio)), { timeout: 10000 }).toBe(true);
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
+
+    const steps = [
+      ["Nexus, help me create a resume.", "workspace.visible"],
+      ["Nexus, add supervised a team of eight employees to experience.", "voice-form.updated"],
+      ["Nexus, change experience to supervised a team of twelve employees.", "voice-form.corrected"],
+      ["Nexus, add forklift operation and inventory control to skills.", "voice-form.updated"],
+      ["Nexus, read my resume back.", "voice-form.readback"],
+      ["Nexus, save this resume draft.", "voice-form.saved"]
+    ];
+    for (const [command, receipt] of steps) {
+      const before = await page.evaluate(() => window.__voiceFormReceipts.length);
+      await speakExact(page, command);
+      await expectReceipt(page, receipt, before);
+      evidence.commands.push({ command, receipt, passed: true });
+    }
+
+    await page.locator('textarea[aria-label="Résumé experience"]').fill("");
+    await page.locator('textarea[aria-label="Résumé skills"]').fill("");
+    let before = await page.evaluate(() => window.__voiceFormReceipts.length);
+    await speakExact(page, "Nexus, reopen this resume draft.");
+    await expectReceipt(page, "voice-form.reopened", before);
+    await expect(page.locator('textarea[aria-label="Résumé experience"]')).toHaveValue(/twelve employees/i);
+    await expect(page.locator('textarea[aria-label="Résumé skills"]')).toHaveValue(/forklift operation/i);
+
+    before = await page.evaluate(() => window.__voiceFormReceipts.length);
+    await speakExact(page, "Nexus, submit this application.");
+    await expectReceipt(page, "voice-form.confirmation-required", before);
+    await expect(page.locator("[data-nexus-voice-form-proof]")).toContainText(/Confirmation required/i);
+
+    before = await page.evaluate(() => window.__voiceFormReceipts.length);
+    await speakExact(page, "Nexus, confirm.");
+    await expectReceipt(page, "voice-form.confirmed", before);
+    const confirmation = await page.evaluate(() =>
+      window.__voiceFormReceipts.findLast((receipt) => receipt.type === "voice-form.confirmed")
+    );
+    expect(confirmation.detail.externalExecution).toBe(false);
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
+  } catch (error) {
+    evidence.failure = { name: error.name, message: error.message, stack: error.stack };
+    throw error;
+  } finally {
+    evidence.finishedAt = new Date().toISOString();
+    fs.writeFileSync(path.join(OUTPUT, "certification.json"), `${JSON.stringify(evidence, null, 2)}\n`);
+    await page.screenshot({ path: path.join(OUTPUT, evidence.failure ? "failure.png" : "passed.png"), fullPage: true }).catch(() => {});
+  }
+});
