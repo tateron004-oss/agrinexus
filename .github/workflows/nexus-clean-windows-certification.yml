@@ -7,6 +7,9 @@ on:
       - rebuild/nexus-genesis-clean-foundation
     paths:
       - "rebuild/**"
+      - "public/app.js"
+      - "public/nexus-genesis-voice-runtime-manager.js"
+      - ".github/nexus-protected-foundation.json"
       - ".github/workflows/nexus-clean-windows-certification.yml"
 
 permissions:
