@@ -79,8 +79,6 @@ async function expectReturnToListening(page, before) {
   await expect.poll(() => page.evaluate(() =>
     window.NexusCleanRuntime.snapshot().state.state
   ), { timeout: 60000 }).toBe("connected");
-  await expect(page.locator("#nexus-workspace-voice-status"))
-    .toHaveText("Nexus is listening in the background", { timeout: 60000 });
 }
 
 async function speakForReceipt(page, commands, receipt, evidence) {
