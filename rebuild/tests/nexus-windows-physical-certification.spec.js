@@ -186,12 +186,12 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await page.locator("#nexus-audio").evaluate((audio) => {
       audio.muted = true;
     });
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
+    // Route every certification command through the Windows speaker and physical microphone.
 
     for (const [workspace, command, visual] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await injectSpokenCommand(page, command);
+      await speak(command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
@@ -243,7 +243,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
       driverEvidence.turns.push({ workspace, command, visual, passed: true });
     }
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
+    // No synthetic browser injection is used in production certification.
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
     const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
