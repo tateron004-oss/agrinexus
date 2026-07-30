@@ -13,11 +13,11 @@
   },
   "protectedFiles": {
     "server.js": "33ff74e7cb2dfa6ef4c37748ede8dd42d72ed28b",
-    "public/app.js": "89f5aa9bfdeea27e5c27bfd8fcc9ca6be57db8fd",
+    "public/app.js": "c5ebd570a22ab070b9820894dbc7d30c9b3a354a",
     "public/index.html": "08abe641e234c54578dfb2060ac9d2a2f39fe685",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "754b9ad12d200e94b338eb7e6aa950dc3f9cf393",
-    "public/nexus-genesis-voice-runtime-manager.js": "2bae39dc62a586caf13d19fdd111b520cb88eef0",
+    "public/nexus-genesis-voice-runtime-manager.js": "2a928e4c518ac2bf7dddc672f8b34b97b94b00d3",
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",
     "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",

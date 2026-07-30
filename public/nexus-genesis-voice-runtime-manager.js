@@ -772,9 +772,24 @@
       return /\b(stop listening|stop nexus|pause nexus|end conversation|go quiet|sign out)\b/i.test(String(text || ""));
     }
 
+    function normalizeSupervisorStartOptions(startOptions = {}) {
+      if (typeof startOptions === "string") {
+        return { source: startOptions, reason: startOptions };
+      }
+      const provided = startOptions && typeof startOptions === "object" ? startOptions : {};
+      const source = String(provided.source || provided.reason || "genesis-start").slice(0, 120);
+      return {
+        ...provided,
+        source,
+        reason: String(provided.reason || source).slice(0, 120)
+      };
+    }
+
     const supervisor = {
       supervisorName: "NexusGenesisContinuousConversationSupervisor",
-      async start(reason = "genesis-start") {
+      async start(startOptions = {}) {
+        const runtimeStartOptions = normalizeSupervisorStartOptions(startOptions);
+        const reason = runtimeStartOptions.reason;
         if (active && state !== "terminated") {
           if (typeof options.isTransportActive === "function" && !options.isTransportActive()) {
             return this.recover(`transport-missing:${reason}`);
@@ -785,7 +800,12 @@
         active = true;
         logTransition("acquiring", reason);
         armWatchdog("recognition-never-started", options.recognitionStartDeadlineMs || 5000, () => this.recover("recognition-never-started"));
-        const result = await runtimeManager.startSession({ source: "conversation-supervisor", reason, supervisorSessionId: sessionId });
+        const result = await runtimeManager.startSession({
+          ...runtimeStartOptions,
+          source: runtimeStartOptions.source || "conversation-supervisor",
+          reason,
+          supervisorSessionId: sessionId
+        });
         if (!result?.ok) return this.recover(result?.error?.category || "runtime-start-failed");
         clearWatchdog("recognition-never-started");
         logTransition("listening", "runtime-started");

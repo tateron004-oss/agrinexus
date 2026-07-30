@@ -58369,8 +58369,14 @@ async function startVoiceListening(options = {}) {
   }
   if (!manager) return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime" });
   const supervisor = nexusGenesisConversationSupervisor || window.NexusGenesisConversationSupervisor;
+  // Replaces supervisor.start(options.source || "start-voice-listening"): the
+  // complete in-memory start context must retain the verified MediaStream.
   const result = supervisor
-    ? await supervisor.start(options.source || "start-voice-listening")
+    ? await supervisor.start({
+        ...options,
+        source: options.source || "start-voice-listening",
+        reason: options.reason || options.source || "start-voice-listening"
+      })
     : await manager.startSession(options);
   if (!result?.ok && manager.getState().activeRuntime === "legacy") {
     return startVoiceRuntimeTransport({ ...options, runtimeOnly: "realtime", managedRuntime: true });
