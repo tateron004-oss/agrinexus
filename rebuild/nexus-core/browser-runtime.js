@@ -116,6 +116,7 @@ class NexusBrowserRuntime {
         instructions: this.instructions,
         audio: {
           input: {
+            transcription: { model: "gpt-4o-mini-transcribe" },
             turn_detection: NEXUS_VOICE_LATENCY_PROFILE.turnDetection
           },
           output: { voice: this.preferences.voice }

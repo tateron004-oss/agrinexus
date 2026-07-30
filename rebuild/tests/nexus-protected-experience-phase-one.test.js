@@ -56,6 +56,11 @@ runtime.updateExperiencePreferences({ pace: "slow", volume: 0.4, language: "fr" 
 assert.equal(runtime.preferences.voiceIdentity, "british-female");
 assert.match(runtime.instructions, /language code fr/);
 assert.equal(receipts.at(-1).type, "experience.preferences-updated");
+runtime.configureSession();
+const configuredSession = sent.find((event) => event.type === "session.update");
+assert.deepEqual(configuredSession.session.audio.input.transcription, {
+  model: "gpt-4o-mini-transcribe"
+});
 
 runtime.started = true;
 runtime.replayLastResponse();
