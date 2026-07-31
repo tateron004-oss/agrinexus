@@ -67,12 +67,40 @@ async function main() {
         async setLocalDescription() {}
         async setRemoteDescription() {
           this.connectionState = "connected";
-          this.emit("track", { streams: [{ id: "remote-browser-audio" }] });
+          this.emit("track", { streams: [new MediaStream()] });
           this.emit("connectionstatechange");
         }
         close() { this.connectionState = "closed"; }
       }
       window.RTCPeerConnection = Peer;
+      class TestAudioContext {
+        constructor() {
+          this.state = "running";
+          this.destination = {};
+        }
+        createGain() {
+          return {
+            gain: { value: 1 },
+            connect() {}
+          };
+        }
+        createMediaStreamSource() {
+          return {
+            connect() {},
+            disconnect() {}
+          };
+        }
+        resume() {
+          this.state = "running";
+          return Promise.resolve();
+        }
+        close() {
+          this.state = "closed";
+          return Promise.resolve();
+        }
+      }
+      window.AudioContext = TestAudioContext;
+      window.webkitAudioContext = TestAudioContext;
       const track = {
         id: "browser-microphone-track",
         readyState: "live",
@@ -106,12 +134,60 @@ async function main() {
     await context.route("https://api.openai.com/v1/realtime/calls", async (route) => {
       await route.fulfill({ status: 200, contentType: "application/sdp", body: "browser-answer" });
     });
+    await context.route(`${baseUrl}/api/maps/resolve`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          type: "place",
+          status: "visible-map-ready",
+          location: {
+            label: "Kenya",
+            lat: -0.0236,
+            lon: 37.9062,
+            administrative: true,
+            boundingBox: [-4.7, 5.1, 33.9, 41.9]
+          }
+        })
+      });
+    });
+    await context.route(`${baseUrl}/api/visual/weather`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: "live",
+          location: "Nairobi, Kenya",
+          weatherCode: 2,
+          temperatureC: 23,
+          highC: 25,
+          lowC: 15,
+          rainChance: 20,
+          windKph: 11,
+          observedAt: "now",
+          timezone: "Africa/Nairobi",
+          sourceUrl: "https://open-meteo.com/"
+        })
+      });
+    });
 
     const page = await context.newPage();
     await page.goto(baseUrl);
     await page.locator("#nexus-orb").click();
     await page.locator("#nexus-status").waitFor({ state: "visible" });
-    await page.waitForFunction(() => document.querySelector("#nexus-status").textContent === "Listening");
+    try {
+      await page.waitForFunction(() => document.querySelector("#nexus-status").textContent === "Listening");
+    } catch (error) {
+      console.error("Browser smoke diagnostic", JSON.stringify(await page.evaluate(() => ({
+        status: document.querySelector("#nexus-status")?.textContent,
+        pressed: document.querySelector("#nexus-orb")?.getAttribute("aria-pressed"),
+        snapshot: window.NexusCleanRuntime?.snapshot?.(),
+        mediaRequests: window.__mediaRequests,
+        audioPlayed: window.__audioPlayed
+      })), null, 2));
+      throw error;
+    }
+    await page.waitForFunction(() => document.querySelector("#nexus-orb").getAttribute("aria-pressed") === "true");
     const proof = await page.evaluate(() => ({
       mediaRequests: window.__mediaRequests,
       audioPlayed: window.__audioPlayed,
@@ -119,7 +195,11 @@ async function main() {
       snapshot: window.NexusCleanRuntime.snapshot()
     }));
     assert.equal(proof.mediaRequests, 1);
-    assert.equal(proof.audioPlayed, 1);
+    assert.ok(
+      proof.audioPlayed === 1
+        || proof.snapshot.receipts.some((receipt) => receipt.type === "audio.web-audio-attached"),
+      "remote audio must attach through HTML media playback or the Web Audio output"
+    );
     assert.equal(proof.pressed, "true");
     assert.equal(proof.snapshot.state.state, "connected");
     assert.ok(proof.snapshot.receipts.some((receipt) => receipt.type === "audio.remote-attached"));
@@ -157,7 +237,8 @@ async function main() {
           && element.clientWidth === document.documentElement.clientWidth;
       }), true);
     }
-    assert.ok(await page.locator("#nexus-map-frame").getAttribute("src"));
+    assert.equal(await page.locator("#nexus-map-canvas").count(), 1);
+    assert.match(await page.locator("#nexus-map-link").getAttribute("href"), /openstreetmap\.org/);
     const musicSource = await page.locator("#nexus-music-frame").getAttribute("src");
     assert.match(musicSource, /youtube-nocookie\.com\/embed/);
     assert.match(musicSource, /autoplay=1/);
