@@ -1,0 +1,7 @@
+{
+  "url": "https://nexus-genesis-certified.onrender.com/",
+  "title": "Nexus Genesis",
+  "snapshot": "- main \"Nexus Genesis\":\n  - paragraph: Hello Ron, how can I help?\n  - button \"Speak to Nexus\" [pressed]:\n  - status: Listening\n  - paragraph: アイデアね。\n  - generic \"Open voice preferences\":\n    - generic: ⚙",
+  "logs": [],
+  "capturedAt": "2026-07-31T19:19:07.004Z"
+}

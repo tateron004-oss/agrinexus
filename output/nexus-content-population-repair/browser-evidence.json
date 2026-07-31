@@ -1,0 +1,2552 @@
+{
+  "captures": [
+    {
+      "label": "resume-contextual-revision",
+      "prompt": "Work my two seasons keeping the cooperative's books into it",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\01-resume-contextual-revision.png",
+      "dom": {
+        "workspace": "workforce",
+        "contentAction": "resume:update",
+        "populated": "true",
+        "visibleText": "resume · update Warehouse coordinator résumé Editable résumé draft based on the conversation. Name * Save visible draft Print Experience Two seasons managing the cooperative's bookkeeping and stock records. Maintained weekly books Reconciled stock records",
+        "links": [],
+        "mediaSource": null
+      }
+    },
+    {
+      "label": "music-any-culture-followup",
+      "prompt": "Different direction—something glossy from 1980s Japan",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\02-music-any-culture-followup.png",
+      "dom": {
+        "workspace": "music",
+        "contentAction": "music:play",
+        "populated": "true",
+        "visibleText": "music · play Now playing: Japanese city pop A different live result from 1980s Japan.",
+        "links": [],
+        "mediaSource": "https://www.youtube-nocookie.com/embed/citypop456?autoplay=1"
+      }
+    },
+    {
+      "label": "live-sources-contextual-alternative",
+      "prompt": "Give me another reputable angle",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\03-live-sources-contextual-alternative.png",
+      "dom": {
+        "workspace": "live-knowledge",
+        "contentAction": "search:search",
+        "populated": "true",
+        "visibleText": "search · search Another reputable source set Current reputable sources, not a stored answer. World Bank land restoration A second institutional perspective. Retrieved today Open source · World Bank",
+        "links": [
+          {
+            "text": "Open source · World Bank",
+            "href": "https://www.worldbank.org/example"
+          }
+        ],
+        "mediaSource": null
+      }
+    },
+    {
+      "label": "voice-style-visible-field-update",
+      "prompt": "Add that the fever started yesterday",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\04-voice-style-visible-field-update.png",
+      "dom": {
+        "workspace": "telehealth",
+        "contentAction": "intake:update",
+        "populated": "true",
+        "visibleText": "intake · update Travel health intake Editable intake; no diagnosis has been made. Main concern * Country visited Save visible draft Print",
+        "links": [],
+        "mediaSource": null
+      }
+    },
+    {
+      "label": "live-images-unseen-topic",
+      "prompt": "Bring up source-labeled street-art images from Accra",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\05-live-images-unseen-topic.png",
+      "dom": {
+        "workspace": "live-knowledge",
+        "contentAction": "images:search",
+        "populated": "true",
+        "visibleText": "images · search Accra street-art images Live, source-labeled images for the current request. Accra mural A source-labeled image result. CC BY-SA Open source · Wikimedia Commons",
+        "links": [
+          {
+            "text": "Open source · Wikimedia Commons",
+            "href": "https://commons.wikimedia.org/wiki/File:Accra_mural.jpg"
+          }
+        ],
+        "mediaSource": null
+      }
+    },
+    {
+      "label": "live-map-new-country",
+      "prompt": "I need Mwanza on a map",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\06-live-map-new-country.png",
+      "dom": {
+        "workspace": "maps",
+        "contentAction": "map:open",
+        "populated": "true",
+        "visibleText": "map · open Mwanza, Tanzania Live OpenStreetMap view. Open interactive map",
+        "links": [
+          {
+            "text": "Open interactive map",
+            "href": "https://www.openstreetmap.org/#map=12/-2.516/32.917"
+          }
+        ],
+        "mediaSource": "https://www.openstreetmap.org/export/embed.html?bbox=32.8%2C-2.6%2C33.0%2C-2.4&marker=-2.516%2C32.917"
+      }
+    },
+    {
+      "label": "marketplace-natural-revision",
+      "prompt": "Put the price at KSh 6,500 per sack",
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-content-population-repair\\07-marketplace-natural-revision.png",
+      "dom": {
+        "workspace": "marketplace",
+        "contentAction": "marketplace-draft:update",
+        "populated": "true",
+        "visibleText": "marketplace-draft · update Bean marketplace draft Local editable draft; nothing has been submitted. Product * Quantity * Price Save visible draft Print",
+        "links": [],
+        "mediaSource": null
+      }
+    }
+  ],
+  "requests": [
+    {
+      "command": "Could you shape a CV for a warehouse coordinator role?",
+      "requestedWorkspace": "live-knowledge",
+      "activeWorkspace": "live-knowledge",
+      "previousArtifact": null,
+      "visibleFields": [],
+      "history": []
+    },
+    {
+      "command": "Work my two seasons keeping the cooperative's books into it",
+      "requestedWorkspace": "workforce",
+      "activeWorkspace": "workforce",
+      "previousArtifact": {
+        "kind": "document",
+        "title": "Warehouse coordinator résumé",
+        "description": "Editable résumé draft based on the conversation.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "value": "Amina N.",
+            "required": true,
+            "options": []
+          }
+        ],
+        "sections": [
+          {
+            "heading": "Experience",
+            "body": "Add relevant work experience through normal conversation.",
+            "items": []
+          }
+        ],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "name",
+          "label": "Name *",
+          "value": "Amina N."
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        }
+      ]
+    },
+    {
+      "command": "Take me somewhere horn-led from Addis Ababa",
+      "requestedWorkspace": "workforce",
+      "activeWorkspace": "workforce",
+      "previousArtifact": {
+        "kind": "document",
+        "title": "Warehouse coordinator résumé",
+        "description": "Editable résumé draft based on the conversation.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "value": "Amina N.",
+            "required": true,
+            "options": []
+          }
+        ],
+        "sections": [
+          {
+            "heading": "Experience",
+            "body": "Two seasons managing the cooperative's bookkeeping and stock records.",
+            "items": [
+              "Maintained weekly books",
+              "Reconciled stock records"
+            ]
+          }
+        ],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "name",
+          "label": "Name *",
+          "value": "Amina N."
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        }
+      ]
+    },
+    {
+      "command": "Different direction—something glossy from 1980s Japan",
+      "requestedWorkspace": "music",
+      "activeWorkspace": "music",
+      "previousArtifact": {
+        "kind": "media",
+        "title": "Now playing: Mulatu Astatke — Ethiopian jazz",
+        "description": "A live result for horn-led music from Addis Ababa.",
+        "fields": [],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "video",
+          "title": "Mulatu Astatke — Ethiopian jazz",
+          "provider": "YouTube Data API v3",
+          "sourceUrl": "https://www.youtube.com/watch?v=ethiopia123",
+          "embedUrl": "https://www.youtube-nocookie.com/embed/ethiopia123?autoplay=1",
+          "state": "playing"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        }
+      ]
+    },
+    {
+      "command": "That's enough—make it quiet now",
+      "requestedWorkspace": "music",
+      "activeWorkspace": "music",
+      "previousArtifact": {
+        "kind": "media",
+        "title": "Now playing: Japanese city pop",
+        "description": "A different live result from 1980s Japan.",
+        "fields": [],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "video",
+          "title": "Japanese city pop",
+          "provider": "YouTube Data API v3",
+          "sourceUrl": "https://www.youtube.com/watch?v=citypop456",
+          "embedUrl": "https://www.youtube-nocookie.com/embed/citypop456?autoplay=1",
+          "state": "playing"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        }
+      ]
+    },
+    {
+      "command": "What happened to the soil in the Sahel, according to current institutions?",
+      "requestedWorkspace": "music",
+      "activeWorkspace": "music",
+      "previousArtifact": {
+        "kind": "media",
+        "title": "Playback stopped",
+        "description": "The visible media player was cleared.",
+        "fields": [],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "stopped"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        }
+      ]
+    },
+    {
+      "command": "Give me another reputable angle",
+      "requestedWorkspace": "live-knowledge",
+      "activeWorkspace": "live-knowledge",
+      "previousArtifact": {
+        "kind": "list",
+        "title": "Sahel soil-restoration sources",
+        "description": "Current reputable sources, not a stored answer.",
+        "fields": [],
+        "sections": [],
+        "items": [
+          {
+            "id": "S1",
+            "title": "FAO land and water",
+            "description": "Current institutional evidence.",
+            "sourceName": "FAO",
+            "sourceUrl": "https://www.fao.org/example",
+            "imageUrl": "",
+            "metadata": [
+              "Retrieved today"
+            ]
+          }
+        ],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        }
+      ]
+    },
+    {
+      "command": "Set up an intake for a traveler back from Ghana",
+      "requestedWorkspace": "live-knowledge",
+      "activeWorkspace": "live-knowledge",
+      "previousArtifact": {
+        "kind": "list",
+        "title": "Another reputable source set",
+        "description": "Current reputable sources, not a stored answer.",
+        "fields": [],
+        "sections": [],
+        "items": [
+          {
+            "id": "S3",
+            "title": "World Bank land restoration",
+            "description": "A second institutional perspective.",
+            "sourceName": "World Bank",
+            "sourceUrl": "https://www.worldbank.org/example",
+            "imageUrl": "",
+            "metadata": [
+              "Retrieved today"
+            ]
+          }
+        ],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        }
+      ]
+    },
+    {
+      "command": "Add that the fever started yesterday",
+      "requestedWorkspace": "telehealth",
+      "activeWorkspace": "telehealth",
+      "previousArtifact": {
+        "kind": "form",
+        "title": "Travel health intake",
+        "description": "Editable intake; no diagnosis has been made.",
+        "fields": [
+          {
+            "id": "concern",
+            "label": "Main concern",
+            "type": "textarea",
+            "value": "Headache",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "country",
+            "label": "Country visited",
+            "type": "text",
+            "value": "Ghana",
+            "required": false,
+            "options": []
+          }
+        ],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "concern",
+          "label": "Main concern *",
+          "value": "Headache"
+        },
+        {
+          "id": "country",
+          "label": "Country visited",
+          "value": "Ghana"
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        }
+      ]
+    },
+    {
+      "command": "Bring up source-labeled street-art images from Accra",
+      "requestedWorkspace": "telehealth",
+      "activeWorkspace": "telehealth",
+      "previousArtifact": {
+        "kind": "form",
+        "title": "Travel health intake",
+        "description": "Editable intake; no diagnosis has been made.",
+        "fields": [
+          {
+            "id": "concern",
+            "label": "Main concern",
+            "type": "textarea",
+            "value": "Fever started yesterday",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "country",
+            "label": "Country visited",
+            "type": "text",
+            "value": "Ghana",
+            "required": false,
+            "options": []
+          }
+        ],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "concern",
+          "label": "Main concern *",
+          "value": "Fever started yesterday"
+        },
+        {
+          "id": "country",
+          "label": "Country visited",
+          "value": "Ghana"
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        }
+      ]
+    },
+    {
+      "command": "I need Mwanza on a map",
+      "requestedWorkspace": "live-knowledge",
+      "activeWorkspace": "live-knowledge",
+      "previousArtifact": {
+        "kind": "list",
+        "title": "Accra street-art images",
+        "description": "Live, source-labeled images for the current request.",
+        "fields": [],
+        "sections": [],
+        "items": [
+          {
+            "id": "img-1",
+            "title": "Accra mural",
+            "description": "A source-labeled image result.",
+            "sourceName": "Wikimedia Commons",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Accra_mural.jpg",
+            "imageUrl": "https://upload.wikimedia.org/example.jpg",
+            "metadata": [
+              "CC BY-SA"
+            ]
+          }
+        ],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Could you shape a CV for a warehouse coordinator role?"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable résumé is visible."
+        },
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Bring up source-labeled street-art images from Accra"
+        },
+        {
+          "role": "assistant",
+          "content": "The image result is visible."
+        }
+      ]
+    },
+    {
+      "command": "Make a buyer-facing draft for 18 sacks of red beans",
+      "requestedWorkspace": "maps",
+      "activeWorkspace": "maps",
+      "previousArtifact": {
+        "kind": "map",
+        "title": "Mwanza, Tanzania",
+        "description": "Live OpenStreetMap view.",
+        "fields": [],
+        "sections": [],
+        "items": [],
+        "links": [
+          {
+            "label": "Open interactive map",
+            "url": "https://www.openstreetmap.org/#map=12/-2.516/32.917"
+          }
+        ],
+        "media": {
+          "kind": "map",
+          "title": "Mwanza map",
+          "provider": "OpenStreetMap",
+          "sourceUrl": "https://www.openstreetmap.org/#map=12/-2.516/32.917",
+          "embedUrl": "https://www.openstreetmap.org/export/embed.html?bbox=32.8%2C-2.6%2C33.0%2C-2.4&marker=-2.516%2C32.917",
+          "state": "ready"
+        }
+      },
+      "visibleFields": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Work my two seasons keeping the cooperative's books into it"
+        },
+        {
+          "role": "assistant",
+          "content": "The experience was added to the visible résumé."
+        },
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Bring up source-labeled street-art images from Accra"
+        },
+        {
+          "role": "assistant",
+          "content": "The image result is visible."
+        },
+        {
+          "role": "user",
+          "content": "I need Mwanza on a map"
+        },
+        {
+          "role": "assistant",
+          "content": "The live map is visible."
+        }
+      ]
+    },
+    {
+      "command": "Put the price at KSh 6,500 per sack",
+      "requestedWorkspace": "marketplace",
+      "activeWorkspace": "marketplace",
+      "previousArtifact": {
+        "kind": "draft",
+        "title": "Bean marketplace draft",
+        "description": "Local editable draft; nothing has been submitted.",
+        "fields": [
+          {
+            "id": "product",
+            "label": "Product",
+            "type": "text",
+            "value": "red beans",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "quantity",
+            "label": "Quantity",
+            "type": "text",
+            "value": "18 sacks",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "text",
+            "value": "",
+            "required": false,
+            "options": []
+          }
+        ],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "product",
+          "label": "Product *",
+          "value": "red beans"
+        },
+        {
+          "id": "quantity",
+          "label": "Quantity *",
+          "value": "18 sacks"
+        },
+        {
+          "id": "price",
+          "label": "Price",
+          "value": ""
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Take me somewhere horn-led from Addis Ababa"
+        },
+        {
+          "role": "assistant",
+          "content": "The Ethiopian jazz result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Bring up source-labeled street-art images from Accra"
+        },
+        {
+          "role": "assistant",
+          "content": "The image result is visible."
+        },
+        {
+          "role": "user",
+          "content": "I need Mwanza on a map"
+        },
+        {
+          "role": "assistant",
+          "content": "The live map is visible."
+        },
+        {
+          "role": "user",
+          "content": "Make a buyer-facing draft for 18 sacks of red beans"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable marketplace draft is visible and has not been submitted."
+        }
+      ]
+    },
+    {
+      "command": "Put on morna from Cabo Verde",
+      "requestedWorkspace": "marketplace",
+      "activeWorkspace": "marketplace",
+      "previousArtifact": {
+        "kind": "draft",
+        "title": "Bean marketplace draft",
+        "description": "Local editable draft; nothing has been submitted.",
+        "fields": [
+          {
+            "id": "product",
+            "label": "Product",
+            "type": "text",
+            "value": "red beans",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "quantity",
+            "label": "Quantity",
+            "type": "text",
+            "value": "18 sacks",
+            "required": true,
+            "options": []
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "text",
+            "value": "KSh 6,500 per sack",
+            "required": false,
+            "options": []
+          }
+        ],
+        "sections": [],
+        "items": [],
+        "links": [],
+        "media": {
+          "kind": "",
+          "title": "",
+          "provider": "",
+          "sourceUrl": "",
+          "embedUrl": "",
+          "state": "none"
+        }
+      },
+      "visibleFields": [
+        {
+          "id": "product",
+          "label": "Product *",
+          "value": "red beans"
+        },
+        {
+          "id": "quantity",
+          "label": "Quantity *",
+          "value": "18 sacks"
+        },
+        {
+          "id": "price",
+          "label": "Price",
+          "value": "KSh 6,500 per sack"
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Different direction—something glossy from 1980s Japan"
+        },
+        {
+          "role": "assistant",
+          "content": "The city-pop result is visibly playing."
+        },
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Bring up source-labeled street-art images from Accra"
+        },
+        {
+          "role": "assistant",
+          "content": "The image result is visible."
+        },
+        {
+          "role": "user",
+          "content": "I need Mwanza on a map"
+        },
+        {
+          "role": "assistant",
+          "content": "The live map is visible."
+        },
+        {
+          "role": "user",
+          "content": "Make a buyer-facing draft for 18 sacks of red beans"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable marketplace draft is visible and has not been submitted."
+        },
+        {
+          "role": "user",
+          "content": "Put the price at KSh 6,500 per sack"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable marketplace draft is visible and has not been submitted."
+        }
+      ]
+    }
+  ],
+  "evidence": {
+    "acknowledgements": [
+      {
+        "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+        "acknowledgementId": "content-browser-result-1",
+        "workspace": "workforce",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "workforce",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-1",
+          "summary": "resume · createWarehouse coordinator résuméEditable résumé draft based on the conversation.Name *Save visible draftPrintExperienceAdd relevant work experience through normal conversation.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+        "acknowledgementId": "content-browser-result-2",
+        "workspace": "workforce",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "workforce",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-2",
+          "summary": "resume · updateWarehouse coordinator résuméEditable résumé draft based on the conversation.Name *Save visible draftPrintExperienceTwo seasons managing the cooperative's bookkeeping and stock records.Maintained weekly booksReconciled stock records",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+        "acknowledgementId": "content-browser-result-3",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "browser-result-3",
+          "summary": "music · playNow playing: Mulatu Astatke — Ethiopian jazzA live result for horn-led music from Addis Ababa.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+        "acknowledgementId": "content-browser-result-4",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "browser-result-4",
+          "summary": "music · playNow playing: Japanese city popA different live result from 1980s Japan.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+        "acknowledgementId": "content-browser-result-5",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "browser-result-5",
+          "summary": "media-control · stopPlayback stoppedThe visible media player was cleared.Playback is stopped.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+        "acknowledgementId": "content-browser-result-6",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "evidence",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "evidence",
+          "surfaceId": "browser-result-6",
+          "summary": "search · searchSahel soil-restoration sourcesCurrent reputable sources, not a stored answer.FAO land and waterCurrent institutional evidence.Retrieved todayOpen source · FAO",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "S1"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+        "acknowledgementId": "content-browser-result-7",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "evidence",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "evidence",
+          "surfaceId": "browser-result-7",
+          "summary": "search · searchAnother reputable source setCurrent reputable sources, not a stored answer.World Bank land restorationA second institutional perspective.Retrieved todayOpen source · World Bank",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "S3"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+        "acknowledgementId": "content-browser-result-8",
+        "workspace": "telehealth",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "telehealth",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-8",
+          "summary": "intake · createTravel health intakeEditable intake; no diagnosis has been made.Main concern *Country visitedSave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+        "acknowledgementId": "content-browser-result-9",
+        "workspace": "telehealth",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "telehealth",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-9",
+          "summary": "intake · updateTravel health intakeEditable intake; no diagnosis has been made.Main concern *Fever started yesterdayCountry visitedSave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+        "acknowledgementId": "content-browser-result-10",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-10",
+          "summary": "images · searchAccra street-art imagesLive, source-labeled images for the current request.Accra muralA source-labeled image result.CC BY-SAOpen source · Wikimedia Commons",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "img-1"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+        "acknowledgementId": "content-browser-result-11",
+        "workspace": "maps",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "map",
+        "visualContext": {
+          "workspace": "maps",
+          "outcomeKind": "map",
+          "surfaceId": "browser-result-11",
+          "summary": "map · openMwanza, TanzaniaLive OpenStreetMap view.Open interactive map",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+        "acknowledgementId": "content-browser-result-12",
+        "workspace": "marketplace",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "marketplace",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-12",
+          "summary": "marketplace-draft · createBean marketplace draftLocal editable draft; nothing has been submitted.Product *Quantity *PriceSave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+        "acknowledgementId": "content-browser-result-13",
+        "workspace": "marketplace",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "marketplace",
+          "outcomeKind": "application",
+          "surfaceId": "browser-result-13",
+          "summary": "marketplace-draft · updateBean marketplace draftLocal editable draft; nothing has been submitted.Product *Quantity *PriceSave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      {
+        "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+        "acknowledgementId": "content-browser-result-14",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": false,
+        "outcomeVerified": false,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "browser-result-14",
+          "summary": "music · playMusic provider unavailableYouTube credentials are unavailable for this request.What Nexus can do nextYouTube credentials are unavailable for this request.Try another source when configured.Open a reputable page about morna.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": {
+          "message": "YouTube credentials are unavailable for this request.",
+          "nextActions": [
+            "Try another source when configured.",
+            "Open a reputable page about morna."
+          ]
+        }
+      }
+    ],
+    "snapshot": {
+      "activeWorkspace": "music",
+      "currentResult": {
+        "schema": "nexus.content.result.v2",
+        "requestId": "browser-result-14",
+        "status": "failed",
+        "capability": "music",
+        "operation": "play",
+        "workspace": "music",
+        "query": "Cape Verdean morna",
+        "artifact": {
+          "kind": "status",
+          "title": "Music provider unavailable",
+          "description": "YouTube credentials are unavailable for this request.",
+          "fields": [],
+          "sections": [],
+          "items": [],
+          "links": [],
+          "media": {
+            "kind": "",
+            "title": "",
+            "provider": "",
+            "sourceUrl": "",
+            "embedUrl": "",
+            "state": "none"
+          }
+        },
+        "acknowledgement": "",
+        "evidence": null,
+        "recovery": {
+          "message": "YouTube credentials are unavailable for this request.",
+          "nextActions": [
+            "Try another source when configured.",
+            "Open a reputable page about morna."
+          ]
+        }
+      },
+      "pending": [],
+      "stages": [
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+            "command": "Could you shape a CV for a warehouse coordinator role?",
+            "workspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:02.386Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+            "command": "Could you shape a CV for a warehouse coordinator role?",
+            "activeWorkspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:02.386Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "resume"
+          },
+          "at": "2026-07-31T19:59:02.392Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+            "resultId": "browser-result-1",
+            "status": "ready",
+            "capability": "resume"
+          },
+          "at": "2026-07-31T19:59:02.394Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "03c07bd6-c07e-4559-8beb-70970bd30bb7",
+            "resultId": "browser-result-1",
+            "summary": "resume · createWarehouse coordinator résuméEditable résumé draft based on the conversation.Name *Save visible draftPrintExperienceAdd relevant work experience through normal conversation."
+          },
+          "at": "2026-07-31T19:59:02.554Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+            "command": "Work my two seasons keeping the cooperative's books into it",
+            "workspace": "workforce"
+          },
+          "at": "2026-07-31T19:59:02.739Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+            "command": "Work my two seasons keeping the cooperative's books into it",
+            "activeWorkspace": "workforce"
+          },
+          "at": "2026-07-31T19:59:02.739Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "resume"
+          },
+          "at": "2026-07-31T19:59:02.743Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+            "resultId": "browser-result-2",
+            "status": "ready",
+            "capability": "resume"
+          },
+          "at": "2026-07-31T19:59:02.743Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "6bcbe564-4730-4234-8767-740e11f19c83",
+            "resultId": "browser-result-2",
+            "summary": "resume · updateWarehouse coordinator résuméEditable résumé draft based on the conversation.Name *Save visible draftPrintExperienceTwo seasons managing the cooperative's bookkeeping and stock records.Maintained weekly booksReconciled stock records"
+          },
+          "at": "2026-07-31T19:59:02.888Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+            "command": "Take me somewhere horn-led from Addis Ababa",
+            "workspace": "workforce"
+          },
+          "at": "2026-07-31T19:59:03.153Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+            "command": "Take me somewhere horn-led from Addis Ababa",
+            "activeWorkspace": "workforce"
+          },
+          "at": "2026-07-31T19:59:03.153Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:03.157Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+            "resultId": "browser-result-3",
+            "status": "ready",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:03.159Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "ce7b50ee-2a40-4b17-b881-668bcc541fdc",
+            "resultId": "browser-result-3",
+            "summary": "music · playNow playing: Mulatu Astatke — Ethiopian jazzA live result for horn-led music from Addis Ababa."
+          },
+          "at": "2026-07-31T19:59:03.321Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+            "command": "Different direction—something glossy from 1980s Japan",
+            "workspace": "music"
+          },
+          "at": "2026-07-31T19:59:03.505Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+            "command": "Different direction—something glossy from 1980s Japan",
+            "activeWorkspace": "music"
+          },
+          "at": "2026-07-31T19:59:03.506Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:03.509Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+            "resultId": "browser-result-4",
+            "status": "ready",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:03.511Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "1a9d4d36-e384-403a-af33-c8501a48544f",
+            "resultId": "browser-result-4",
+            "summary": "music · playNow playing: Japanese city popA different live result from 1980s Japan."
+          },
+          "at": "2026-07-31T19:59:03.671Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+            "command": "That's enough—make it quiet now",
+            "workspace": "music"
+          },
+          "at": "2026-07-31T19:59:03.931Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+            "command": "That's enough—make it quiet now",
+            "activeWorkspace": "music"
+          },
+          "at": "2026-07-31T19:59:03.931Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "media-control"
+          },
+          "at": "2026-07-31T19:59:03.934Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+            "resultId": "browser-result-5",
+            "status": "ready",
+            "capability": "media-control"
+          },
+          "at": "2026-07-31T19:59:03.935Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "59e4de9d-b1de-4267-8342-2b4d117c10b9",
+            "resultId": "browser-result-5",
+            "summary": "media-control · stopPlayback stoppedThe visible media player was cleared.Playback is stopped."
+          },
+          "at": "2026-07-31T19:59:04.088Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+            "command": "What happened to the soil in the Sahel, according to current institutions?",
+            "workspace": "music"
+          },
+          "at": "2026-07-31T19:59:04.272Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+            "command": "What happened to the soil in the Sahel, according to current institutions?",
+            "activeWorkspace": "music"
+          },
+          "at": "2026-07-31T19:59:04.272Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "search"
+          },
+          "at": "2026-07-31T19:59:04.278Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+            "resultId": "browser-result-6",
+            "status": "ready",
+            "capability": "search"
+          },
+          "at": "2026-07-31T19:59:04.279Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "9c51927b-0f23-4098-8063-1a8082fee349",
+            "resultId": "browser-result-6",
+            "summary": "search · searchSahel soil-restoration sourcesCurrent reputable sources, not a stored answer.FAO land and waterCurrent institutional evidence.Retrieved todayOpen source · FAO"
+          },
+          "at": "2026-07-31T19:59:04.420Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+            "command": "Give me another reputable angle",
+            "workspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:04.605Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+            "command": "Give me another reputable angle",
+            "activeWorkspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:04.605Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "search"
+          },
+          "at": "2026-07-31T19:59:04.609Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+            "resultId": "browser-result-7",
+            "status": "ready",
+            "capability": "search"
+          },
+          "at": "2026-07-31T19:59:04.610Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "47e20885-ece2-4b73-8b75-0806ea78e03e",
+            "resultId": "browser-result-7",
+            "summary": "search · searchAnother reputable source setCurrent reputable sources, not a stored answer.World Bank land restorationA second institutional perspective.Retrieved todayOpen source · World Bank"
+          },
+          "at": "2026-07-31T19:59:04.770Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+            "command": "Set up an intake for a traveler back from Ghana",
+            "workspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:05.038Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+            "command": "Set up an intake for a traveler back from Ghana",
+            "activeWorkspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:05.038Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "intake"
+          },
+          "at": "2026-07-31T19:59:05.042Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+            "resultId": "browser-result-8",
+            "status": "ready",
+            "capability": "intake"
+          },
+          "at": "2026-07-31T19:59:05.043Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "1434c62a-e66f-4b85-ac05-5ffa41b74588",
+            "resultId": "browser-result-8",
+            "summary": "intake · createTravel health intakeEditable intake; no diagnosis has been made.Main concern *Country visitedSave visible draftPrint"
+          },
+          "at": "2026-07-31T19:59:05.187Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+            "command": "Add that the fever started yesterday",
+            "workspace": "telehealth"
+          },
+          "at": "2026-07-31T19:59:05.367Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+            "command": "Add that the fever started yesterday",
+            "activeWorkspace": "telehealth"
+          },
+          "at": "2026-07-31T19:59:05.367Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "intake"
+          },
+          "at": "2026-07-31T19:59:05.372Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+            "resultId": "browser-result-9",
+            "status": "ready",
+            "capability": "intake"
+          },
+          "at": "2026-07-31T19:59:05.373Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "21c66608-b8ac-426f-92ab-de5892e0d41c",
+            "resultId": "browser-result-9",
+            "summary": "intake · updateTravel health intakeEditable intake; no diagnosis has been made.Main concern *Fever started yesterdayCountry visitedSave visible draftPrint"
+          },
+          "at": "2026-07-31T19:59:05.537Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+            "command": "Bring up source-labeled street-art images from Accra",
+            "workspace": "telehealth"
+          },
+          "at": "2026-07-31T19:59:05.801Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+            "command": "Bring up source-labeled street-art images from Accra",
+            "activeWorkspace": "telehealth"
+          },
+          "at": "2026-07-31T19:59:05.802Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "images"
+          },
+          "at": "2026-07-31T19:59:05.805Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+            "resultId": "browser-result-10",
+            "status": "ready",
+            "capability": "images"
+          },
+          "at": "2026-07-31T19:59:05.806Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "62ad3b2e-73b4-4685-8b33-966828918e18",
+            "resultId": "browser-result-10",
+            "summary": "images · searchAccra street-art imagesLive, source-labeled images for the current request.Accra muralA source-labeled image result.CC BY-SAOpen source · Wikimedia Commons"
+          },
+          "at": "2026-07-31T19:59:05.971Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+            "command": "I need Mwanza on a map",
+            "workspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:06.238Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+            "command": "I need Mwanza on a map",
+            "activeWorkspace": "live-knowledge"
+          },
+          "at": "2026-07-31T19:59:06.239Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "map"
+          },
+          "at": "2026-07-31T19:59:06.243Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+            "resultId": "browser-result-11",
+            "status": "ready",
+            "capability": "map"
+          },
+          "at": "2026-07-31T19:59:06.245Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "04282e3a-5ddc-4985-9083-ad5d2c792c50",
+            "resultId": "browser-result-11",
+            "summary": "map · openMwanza, TanzaniaLive OpenStreetMap view.Open interactive map"
+          },
+          "at": "2026-07-31T19:59:06.404Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+            "command": "Make a buyer-facing draft for 18 sacks of red beans",
+            "workspace": "maps"
+          },
+          "at": "2026-07-31T19:59:06.669Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+            "command": "Make a buyer-facing draft for 18 sacks of red beans",
+            "activeWorkspace": "maps"
+          },
+          "at": "2026-07-31T19:59:06.669Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "marketplace-draft"
+          },
+          "at": "2026-07-31T19:59:06.673Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+            "resultId": "browser-result-12",
+            "status": "ready",
+            "capability": "marketplace-draft"
+          },
+          "at": "2026-07-31T19:59:06.675Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "c957c0a7-2ae6-46c2-b2d6-c48faba73906",
+            "resultId": "browser-result-12",
+            "summary": "marketplace-draft · createBean marketplace draftLocal editable draft; nothing has been submitted.Product *Quantity *PriceSave visible draftPrint"
+          },
+          "at": "2026-07-31T19:59:06.837Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+            "command": "Put the price at KSh 6,500 per sack",
+            "workspace": "marketplace"
+          },
+          "at": "2026-07-31T19:59:07.022Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+            "command": "Put the price at KSh 6,500 per sack",
+            "activeWorkspace": "marketplace"
+          },
+          "at": "2026-07-31T19:59:07.022Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+            "httpStatus": 200,
+            "status": "ready",
+            "capability": "marketplace-draft"
+          },
+          "at": "2026-07-31T19:59:07.027Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+            "resultId": "browser-result-13",
+            "status": "ready",
+            "capability": "marketplace-draft"
+          },
+          "at": "2026-07-31T19:59:07.027Z"
+        },
+        {
+          "type": "renderer.acknowledged",
+          "detail": {
+            "requestId": "e0c8ad8b-2146-49a6-91a2-9d7e62ec1861",
+            "resultId": "browser-result-13",
+            "summary": "marketplace-draft · updateBean marketplace draftLocal editable draft; nothing has been submitted.Product *Quantity *PriceSave visible draftPrint"
+          },
+          "at": "2026-07-31T19:59:07.171Z"
+        },
+        {
+          "type": "conversation.received",
+          "detail": {
+            "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+            "command": "Put on morna from Cabo Verde",
+            "workspace": "marketplace"
+          },
+          "at": "2026-07-31T19:59:07.438Z"
+        },
+        {
+          "type": "resolver.requested",
+          "detail": {
+            "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+            "command": "Put on morna from Cabo Verde",
+            "activeWorkspace": "marketplace"
+          },
+          "at": "2026-07-31T19:59:07.438Z"
+        },
+        {
+          "type": "resolver.returned",
+          "detail": {
+            "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+            "httpStatus": 200,
+            "status": "failed",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:07.442Z"
+        },
+        {
+          "type": "renderer.visible",
+          "detail": {
+            "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+            "resultId": "browser-result-14",
+            "status": "failed",
+            "capability": "music"
+          },
+          "at": "2026-07-31T19:59:07.443Z"
+        },
+        {
+          "type": "renderer.failure-visible",
+          "detail": {
+            "requestId": "d85f63a7-0f7f-4334-bee1-e64780eb5afe",
+            "resultId": "browser-result-14",
+            "summary": "music · playMusic provider unavailableYouTube credentials are unavailable for this request.What Nexus can do nextYouTube credentials are unavailable for this request.Try another source when configured.Open a reputable page about morna."
+          },
+          "at": "2026-07-31T19:59:07.588Z"
+        }
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "That's enough—make it quiet now"
+        },
+        {
+          "role": "assistant",
+          "content": "Playback visibly stopped."
+        },
+        {
+          "role": "user",
+          "content": "What happened to the soil in the Sahel, according to current institutions?"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Give me another reputable angle"
+        },
+        {
+          "role": "assistant",
+          "content": "The current source links are visible."
+        },
+        {
+          "role": "user",
+          "content": "Set up an intake for a traveler back from Ghana"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Add that the fever started yesterday"
+        },
+        {
+          "role": "assistant",
+          "content": "The visible intake fields were updated."
+        },
+        {
+          "role": "user",
+          "content": "Bring up source-labeled street-art images from Accra"
+        },
+        {
+          "role": "assistant",
+          "content": "The image result is visible."
+        },
+        {
+          "role": "user",
+          "content": "I need Mwanza on a map"
+        },
+        {
+          "role": "assistant",
+          "content": "The live map is visible."
+        },
+        {
+          "role": "user",
+          "content": "Make a buyer-facing draft for 18 sacks of red beans"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable marketplace draft is visible and has not been submitted."
+        },
+        {
+          "role": "user",
+          "content": "Put the price at KSh 6,500 per sack"
+        },
+        {
+          "role": "assistant",
+          "content": "The editable marketplace draft is visible and has not been submitted."
+        },
+        {
+          "role": "user",
+          "content": "Put on morna from Cabo Verde"
+        },
+        {
+          "role": "assistant",
+          "content": "YouTube credentials are unavailable for this request."
+        }
+      ]
+    }
+  }
+}

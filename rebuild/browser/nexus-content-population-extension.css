@@ -1,0 +1,128 @@
+.nexus-content-result {
+  display: grid;
+  gap: 1rem;
+}
+
+.nexus-content-card,
+.nexus-content-list > article,
+.nexus-content-form {
+  border: 1px solid rgba(50, 88, 74, 0.22);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 1rem;
+  box-shadow: 0 0.4rem 1.2rem rgba(24, 61, 49, 0.08);
+  color: #163b30;
+}
+
+.nexus-content-card p,
+.nexus-content-card li,
+.nexus-content-list p,
+.nexus-content-form label {
+  color: #274f43;
+}
+
+.nexus-content-card a,
+.nexus-content-list a {
+  color: #075f89;
+  text-decoration: underline;
+}
+
+.nexus-content-card h2,
+.nexus-content-card h3,
+.nexus-content-list h3 {
+  margin: 0 0 0.45rem;
+}
+
+.nexus-content-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nexus-content-list a {
+  overflow-wrap: anywhere;
+}
+
+.nexus-content-list img {
+  width: 100%;
+  max-height: 22rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.nexus-content-section,
+.nexus-content-recovery {
+  border: 1px solid rgba(50, 88, 74, 0.22);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 1rem;
+}
+
+.nexus-content-recovery {
+  border-left: 0.35rem solid #a33131;
+}
+
+.nexus-content-media iframe {
+  width: 100%;
+  min-height: 28rem;
+  border: 0;
+  border-radius: 1rem;
+  background: #10251f;
+}
+
+.nexus-content-meta,
+.nexus-content-evidence {
+  color: #415e54;
+  font-size: 0.9rem;
+}
+
+.nexus-content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.nexus-content-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nexus-content-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 650;
+}
+
+.nexus-content-form .nexus-content-checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.nexus-content-form .nexus-content-checkbox input {
+  width: auto;
+}
+
+.nexus-content-form input,
+.nexus-content-form textarea,
+.nexus-content-form select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #9ab5aa;
+  border-radius: 0.65rem;
+  padding: 0.7rem;
+  font: inherit;
+}
+
+.nexus-content-status[data-state="failed"] {
+  border-left: 0.35rem solid #a33131;
+}
+
+.nexus-content-status[data-state="ready"] {
+  border-left: 0.35rem solid #24744f;
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  [data-nexus-printable-card], [data-nexus-printable-card] * { visibility: visible !important; }
+  [data-nexus-printable-card] { position: fixed; inset: 0; box-shadow: none; }
+  .nexus-content-actions { display: none !important; }
+}

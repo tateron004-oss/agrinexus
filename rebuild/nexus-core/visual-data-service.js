@@ -1,14 +1,24 @@
 "use strict";
 
 const { extractIntentAndParameters } = require("./intent-parameter-extractor");
+const { createContentActionService } = require("./content-action-service");
+const musicProvider = require("../../server/nexus-music-media-source-provider");
 
 function locationFromWeatherCommand(command) {
   const resolution = extractIntentAndParameters(command);
   return resolution.parameters.location || "Nairobi, Kenya";
 }
 
-function createVisualDataService({ fetchImpl = globalThis.fetch } = {}) {
-  return Object.freeze({
+function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = null, musicSourceProvider = musicProvider } = {}) {
+  const contentActions = createContentActionService({ fetchImpl, musicProvider: musicSourceProvider, goalResolver });
+  const service = {
+    content(request = {}, context = {}) {
+      return contentActions.execute(request, {
+        ...context,
+        weather: (command) => service.weather(command)
+      });
+    },
+
     async weather(command) {
       const requested = locationFromWeatherCommand(command);
       const geocodeUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
@@ -80,7 +90,8 @@ function createVisualDataService({ fetchImpl = globalThis.fetch } = {}) {
       if (!items.length) throw new Error("No source-labeled agriculture images were returned.");
       return Object.freeze({ status: "agriculture-images-ready", query, items });
     }
-  });
+  };
+  return Object.freeze(service);
 }
 
 module.exports = { createVisualDataService, locationFromWeatherCommand };
