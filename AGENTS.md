@@ -2,8 +2,13 @@
 
 ## Golden production baseline
 
-The production foundation is the intact Build 502 source restored at GitHub commit
-`0e3ce5b6`. Preserve the behavior that passed production voice certification.
+The production foundation is certified GitHub release `501a1e06` (tree-equivalent
+to local source commit `36620d7b`). It includes and preserves the earlier Build 502
+foundation from `0e3ce5b6`.
+
+Release `501a1e06` passed the deterministic Windows production gates for physical
+voice, all applications, Guided Entry final-screen persistence, and three
+consecutive complete production passes. Preserve that certified behavior.
 
 ## Protected behavior
 
@@ -46,4 +51,3 @@ Before publishing any change:
 2. Run the full protected QA/certification appropriate to the change.
 3. Confirm no protected file appears in the diff.
 4. Do not deploy a failing or incomplete commit.
-
