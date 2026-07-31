@@ -114,6 +114,15 @@ assert.equal(engine.handle("Nexus, skills are farm equipment and team leadership
 assert.equal(state.values[fieldKey("workforce", "skills")], "farm equipment and team leadership");
 assert.equal(engine.handle("Nexus, add crop planning to my skills").action, "update");
 assert.match(state.values[fieldKey("workforce", "skills")], /crop planning/);
+assert.equal(engine.handle("Hey, Nexus: add irrigation scheduling to skills.").action, "update");
+assert.match(state.values[fieldKey("workforce", "skills")], /irrigation scheduling/);
+assert.equal(engine.handle("Next us. Add safe equipment operation to skills.").action, "update");
+assert.match(state.values[fieldKey("workforce", "skills")], /safe equipment operation/);
+assert.equal(
+  engine.handle("Next, review the agenda before lunch").handled,
+  false,
+  "Ordinary speech beginning with next must not be rewritten as a Nexus command."
+);
 
 state.context = { userId: "different-user", processId: "health", documentId: "reading-1" };
 assert.equal(engine.handle("Nexus, reopen this intake draft").handled, false, "drafts are isolated by user");

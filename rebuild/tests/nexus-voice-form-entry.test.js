@@ -31,6 +31,17 @@ const controller = new NexusVoiceFormController({
 
 assert.equal(controller.handle("Nexus, add supervised a team of eight employees to experience").action, "update");
 assert.match(values.experience, /eight employees/);
+values.experience = "";
+assert.equal(controller.handle("Nexus. Add team leadership to experience.").action, "update");
+assert.equal(values.experience, "team leadership");
+values.experience = "";
+assert.equal(controller.handle("Next, Ed supervised a team of eight employees to experience.").action, "update");
+assert.equal(values.experience, "supervised a team of eight employees");
+assert.ok(receipts.some((receipt) => (
+  receipt.type === "guided-entry.transcript-normalized"
+  && receipt.detail.originalTranscript === "Next, Ed supervised a team of eight employees to experience."
+  && receipt.detail.normalizedTranscript === "Nexus add supervised a team of eight employees to experience."
+)));
 assert.equal(controller.handle("Nexus, change experience to supervised a team of twelve employees").action, "correct");
 assert.match(values.experience, /twelve employees/);
 assert.equal(controller.handle("Nexus, add forklift operation and inventory control to skills").action, "update");

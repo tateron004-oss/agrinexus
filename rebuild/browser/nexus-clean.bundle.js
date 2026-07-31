@@ -1519,11 +1519,71 @@ ${content}`
     }
   });
 
+  // rebuild/nexus-core/guided-entry-transcript-normalizer.js
+  var require_guided_entry_transcript_normalizer = __commonJS({
+    "rebuild/nexus-core/guided-entry-transcript-normalizer.js"(exports, module) {
+      "use strict";
+      function clean(value) {
+        return String(value || "").normalize("NFKC").replace(/[“”]/g, '"').replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
+      }
+      function escapeExpression(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+      function fieldAliases(fields, schema) {
+        const aliases = [];
+        for (const field of fields || []) {
+          const definition = (schema?.fields || []).find((item) => item.key === field.key) || (schema?.fields || []).find((item) => clean(field.label).toLowerCase().includes(clean(item.key).toLowerCase()));
+          for (const alias of [field.key, field.label, ...definition?.aliases || []]) {
+            const normalized = clean(alias).toLowerCase();
+            if (normalized && !aliases.includes(normalized)) aliases.push(normalized);
+          }
+        }
+        return aliases.sort((left, right) => right.length - left.length);
+      }
+      function namesKnownField(command, aliases) {
+        return aliases.some((alias) => new RegExp(`(?:^|\\b)${escapeExpression(alias)}(?:\\b|$)`, "i").test(command));
+      }
+      function normalizeGuidedEntryTranscript(command, { fields = [], schema = null } = {}) {
+        const original = clean(command);
+        if (!original) return Object.freeze({ original, normalized: "", changed: false, rules: Object.freeze([]) });
+        const aliases = fieldAliases(fields, schema);
+        const wake = original.match(
+          /^(?:(hey|hello)\s*[,;:!?.-]*\s*)?(nexus|next(?:\s+(?:us|is))?)\b[\s,;:!?.-]*/i
+        );
+        if (!wake) return Object.freeze({ original, normalized: original, changed: false, rules: Object.freeze([]) });
+        let remainder = clean(original.slice(wake[0].length));
+        const rules = [];
+        const recognizedWake = /^nexus$/i.test(wake[2]);
+        if (/^ed\b/i.test(remainder) && namesKnownField(remainder, aliases)) {
+          remainder = remainder.replace(/^ed\b/i, "add");
+          rules.push("leading-action-ed-to-add");
+        }
+        const beginsGuidedAction = /^(?:add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(remainder);
+        if (!recognizedWake && (!beginsGuidedAction || !namesKnownField(remainder, aliases))) {
+          return Object.freeze({ original, normalized: original, changed: false, rules: Object.freeze([]) });
+        }
+        if (!recognizedWake) rules.unshift("wake-alias-to-nexus");
+        if (wake[0] !== "Nexus ") rules.push("wake-boundary-canonicalized");
+        const normalized = clean(`Nexus ${remainder}`);
+        return Object.freeze({
+          original,
+          normalized,
+          changed: normalized !== original,
+          rules: Object.freeze(rules)
+        });
+      }
+      module.exports = {
+        normalizeGuidedEntryTranscript
+      };
+    }
+  });
+
   // rebuild/nexus-core/universal-guided-entry-engine.js
   var require_universal_guided_entry_engine = __commonJS({
     "rebuild/nexus-core/universal-guided-entry-engine.js"(exports, module) {
       "use strict";
       var { getProcessSchema, normalizeProcessId } = require_guided_entry_schemas();
+      var { normalizeGuidedEntryTranscript } = require_guided_entry_transcript_normalizer();
       var STORE_KEY = "nexus.guided-entry.drafts.v1";
       var LEGACY_STORE_KEY = "nexus.clean.voice-form-drafts.v1";
       function clean(value) {
@@ -1763,17 +1823,29 @@ ${content}`
           return { handled: true, action, field: field.key, transactionId: transaction.id };
         }
         handle(command, options = {}) {
-          const spoken = clean(command);
-          const lower = spoken.toLowerCase();
+          const originalSpoken = clean(command);
           const fields = this.fields();
-          if (!spoken || !fields.length) return { handled: false };
+          if (!originalSpoken || !fields.length) return { handled: false };
           const identity = this.resolveContext();
+          const normalizedTranscript = normalizeGuidedEntryTranscript(originalSpoken, {
+            fields,
+            schema: identity.schema
+          });
+          const spoken = normalizedTranscript.normalized;
+          const lower = spoken.toLowerCase();
           this.activate(identity);
           const owner = this.claimTransaction(identity, spoken, options);
           if (!owner) {
             return { handled: true, action: "rejected", rejected: true, requestId: safeId(options.requestId, "") };
           }
           const finish = (result) => {
+            if (normalizedTranscript.changed) {
+              this.receipt("guided-entry.transcript-normalized", identity, {
+                originalTranscript: normalizedTranscript.original,
+                normalizedTranscript: normalizedTranscript.normalized,
+                rules: normalizedTranscript.rules
+              });
+            }
             this.completeTransaction(owner);
             return { ...result, requestId: owner.requestId };
           };

@@ -1,6 +1,7 @@
 "use strict";
 
 const { getProcessSchema, normalizeProcessId } = require("./guided-entry-schemas");
+const { normalizeGuidedEntryTranscript } = require("./guided-entry-transcript-normalizer");
 
 const STORE_KEY = "nexus.guided-entry.drafts.v1";
 const LEGACY_STORE_KEY = "nexus.clean.voice-form-drafts.v1";
@@ -265,17 +266,29 @@ class NexusUniversalGuidedEntryEngine {
   }
 
   handle(command, options = {}) {
-    const spoken = clean(command);
-    const lower = spoken.toLowerCase();
+    const originalSpoken = clean(command);
     const fields = this.fields();
-    if (!spoken || !fields.length) return { handled: false };
+    if (!originalSpoken || !fields.length) return { handled: false };
     const identity = this.resolveContext();
+    const normalizedTranscript = normalizeGuidedEntryTranscript(originalSpoken, {
+      fields,
+      schema: identity.schema
+    });
+    const spoken = normalizedTranscript.normalized;
+    const lower = spoken.toLowerCase();
     this.activate(identity);
     const owner = this.claimTransaction(identity, spoken, options);
     if (!owner) {
       return { handled: true, action: "rejected", rejected: true, requestId: safeId(options.requestId, "") };
     }
     const finish = (result) => {
+      if (normalizedTranscript.changed) {
+        this.receipt("guided-entry.transcript-normalized", identity, {
+          originalTranscript: normalizedTranscript.original,
+          normalizedTranscript: normalizedTranscript.normalized,
+          rules: normalizedTranscript.rules
+        });
+      }
       this.completeTransaction(owner);
       return { ...result, requestId: owner.requestId };
     };
