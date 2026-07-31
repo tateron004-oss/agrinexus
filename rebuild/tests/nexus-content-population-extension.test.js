@@ -7,7 +7,9 @@ const {
   GOAL_SCHEMA,
   createContentActionService,
   createOpenAIGoalResolver,
-  emptyArtifact
+  emptyArtifact,
+  normalizeGoalRoute,
+  normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
 const { renderArtifactMarkup } = require("../browser/nexus-content-population-extension");
 
@@ -23,6 +25,15 @@ async function main() {
   assert.match(browserSource, /recentConversation|history/);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps" }).capability, "map");
+
+  const normalizedSources = normalizeWebSearchPayload({ output: [
+    { type: "web_search_call", action: { type: "search", sources: [{ type: "url", url: "https://energy.gov.bb/policy" }] } },
+    { type: "message", content: [{ type: "output_text", text: "Current policy orientation.", annotations: [{ type: "url_citation", title: "Regulator", url: "https://fairtradingcommission.gov.bb/renewables" }] }] }
+  ] });
+  assert.equal(normalizedSources.sources.length, 2);
+  assert.match(normalizedSources.sources[0].title, /energy\.gov\.bb/);
 
   let openAIRequest;
   const resolver = createOpenAIGoalResolver({
@@ -55,6 +66,7 @@ async function main() {
   assert.equal(openAIRequest.text.format.type, "json_schema");
   assert.equal(openAIRequest.text.format.strict, true);
   assert.match(openAIRequest.instructions, /whole conversation/i);
+  assert.match(openAIRequest.instructions, /Use listings when the goal is to discover businesses/i);
   assert.match(openAIRequest.input, /cooperative's books/);
   assert.match(openAIRequest.input, /Amina's résumé/);
 
@@ -97,9 +109,19 @@ async function main() {
   assert.equal(sources.evidence.verified, true);
   assert.equal(sources.artifact.items.length, 2);
 
+  let publicMusicCalls = 0;
+  const publicMusicService = createContentActionService({
+    goalResolver: { async resolve() { return { capability: "music", operation: "play", workspace: "music", query: "Play desert blues by Tinariwen", location: "", needsLiveProvider: true, artifact: artifact("media", "Tinariwen"), acknowledgement: "Playing." }; } },
+    fetchImpl: async () => ({ ok: true, async json() { publicMusicCalls += 1; return publicMusicCalls === 1 ? { results: [] } : { results: [{ trackName: "Track", artistName: "Tinariwen", previewUrl: "https://audio.example/preview.m4a", trackViewUrl: "https://music.example/track" }] }; } })
+  });
+  const publicMusic = await publicMusicService.execute({ command: "Try some desert blues" });
+  assert.equal(publicMusicCalls, 2);
+  assert.equal(publicMusic.artifact.media.kind, "audio");
+
   const failureService = createContentActionService({
     goalResolver: { async resolve() { return { capability: "music", operation: "play", workspace: "music", query: "Cape Verdean morna", location: "", needsLiveProvider: true, artifact: artifact("media", "Morna"), acknowledgement: "Playing." }; } },
-    musicProvider: { async getMusicMediaSourceResultAsync() { return { sourceStatus: "source-result-unavailable", resultSummary: "YouTube credentials are unavailable." }; } }
+    musicProvider: { async getMusicMediaSourceResultAsync() { return { sourceStatus: "source-result-unavailable", resultSummary: "YouTube credentials are unavailable." }; } },
+    publicMusicProvider: false
   });
   const failure = await failureService.execute({ command: "Put on morna from Cabo Verde" });
   assert.equal(failure.status, "failed");

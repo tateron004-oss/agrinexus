@@ -1,0 +1,2004 @@
+{
+  "schema": "nexus.capability.windows.physical.v1",
+  "requestedCommit": "8cca79b847811432417e0dfe4f030176d8093771",
+  "startedAt": "2026-07-31T21:42:34.687Z",
+  "turns": [
+    {
+      "id": "live-sources",
+      "command": "Nexus, what do current reputable sources say about community solar policy in Barbados?",
+      "capability": "search",
+      "check": "sources",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "1294c46e-a85a-41b2-8cf3-c83d4ebf1425",
+          "command": "Nexus, what do current reputable sources say about community solar policy in Barbados?",
+          "activeWorkspace": "live-knowledge"
+        },
+        "at": "2026-07-31T21:42:46.297Z"
+      },
+      "acknowledgement": {
+        "requestId": "1294c46e-a85a-41b2-8cf3-c83d4ebf1425",
+        "acknowledgementId": "content-ncr_47988eaf-dc28-4688-b9c1-335b9caabd85",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "evidence",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "evidence",
+          "surfaceId": "ncr_47988eaf-dc28-4688-b9c1-335b9caabd85",
+          "summary": "search · searchCommunity Solar Policy in Barbados## Barbados community-solar policy: current orientation **Status checked: July 31, 2026** Barbados has a functioning framework for distributed and independent renewable generation, but it does **not appear to have a dedicated “community solar” statute",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "W1",
+            "W2",
+            "W3",
+            "W4",
+            "W5",
+            "W6",
+            "W7",
+            "W8",
+            "W9",
+            "W10"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "1294c46e-a85a-41b2-8cf3-c83d4ebf1425",
+        "capturedAt": "2026-07-31T21:44:21.995Z",
+        "workspace": "live-knowledge",
+        "populated": "true",
+        "action": "search:search",
+        "resultId": "ncr_47988eaf-dc28-4688-b9c1-335b9caabd85",
+        "resultStatus": "ready",
+        "artifactKind": "list",
+        "visibleText": "search · search Community Solar Policy in Barbados ## Barbados community-solar policy: current orientation **Status checked: July 31, 2026** Barbados has a functioning framework for distributed and independent renewable generation, but it does **not appear to have a dedicated “community solar” statute or a U.S.-style virtual-net-metering/subscriber-credit programme**. Projects described locally as community solar generally operate as licensed independent power producers selling electricity to Barbados Light & Power Company Limited (BLPC), with community participation achieved through equity ownership rather than allocation of production credits among subscribers. This is an inference from the current legislation, tariff structure and published project model. ([energy.gov.bb](https://energy.gov.bb/publications/electric-light-power-act-supporting-documents/)) ### 1. Government legislation and policy - The principal electricity law is the **Electric Light and Power Act, Cap. 278**, originating as the Electric Light and Power Act 2013 and amended in 2015 and 2019. It establishes licensing for generation, storage, transmission and distribution, dispatch, and electricity sales. The 2019 amendments also require the utility’s Grid Code to be approved by the Fair Trading Commission (FTC) and Chief Electrical Officer. ([energy.gov.bb](https://energy.gov.bb/our-publications/barbados-legislation/)) - Generation intended to supply another person generally requires a generation licence, subject to statutory exemptions. Storage supplying the public grid may also require a storage licence. ([energy.gov.bb](https://energy.gov.bb/wp-content/uploads/2024/07/Electric-Light-and-Power-Amendment-Act-2019.pdf)) - The Energy Ministry is still publishing a **draft Electricity Supply Bill 2023.3** for public comment; it should not be treated as enacted law. The approved legislation page continues to list the Electric Light and Power Act and its amendments as the governing renewable-energy legislation. ([energy.gov.bb](https://energy.gov.bb/ou energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb support.blpc.com.bb Live web source Retrieved live Open source · support.blpc.com.bb www.blpc.com.bb Live web source Retrieved live Open source · blpc.com.bb energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb www.seforall.org Live web source Retrieved live Open source · seforall.org energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb ftc.gov.bb Live web source Retrieved live Open source · ftc.gov.bb energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb ftc.gov.bb Live web source Retrieved live Open source · ftc.gov.bb",
+        "itemCount": 10,
+        "linkCount": 10,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Nexus, what do current reputable sources say about community solar policy in Barbados?"
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\01-live-sources.png",
+      "passed": true
+    },
+    {
+      "id": "source-follow-up",
+      "command": "Show me another reputable source with a different perspective.",
+      "capability": "search",
+      "check": "sources",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "1683a432-72c9-4907-91f9-93032d834f4e",
+          "command": "Show me another reputable source with a different perspective.",
+          "activeWorkspace": "live-knowledge"
+        },
+        "at": "2026-07-31T21:44:24.553Z"
+      },
+      "acknowledgement": {
+        "requestId": "1683a432-72c9-4907-91f9-93032d834f4e",
+        "acknowledgementId": "content-ncr_9ec2f9a1-0a83-4bba-aa19-0cd614d93a2d",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "evidence",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "evidence",
+          "surfaceId": "ncr_9ec2f9a1-0a83-4bba-aa19-0cd614d93a2d",
+          "summary": "search · searchIndependent Perspective on Community Solar in Barbados## Barbados community-solar policy: independent assessment ### Bottom line Barbados **does not appear to have a formal community-solar or virtual-net-metering framework** under which an off-site project allocates generation credits",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "W1",
+            "W2",
+            "W3",
+            "W4",
+            "W5",
+            "W6",
+            "W7",
+            "W8",
+            "W9",
+            "W10"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "1683a432-72c9-4907-91f9-93032d834f4e",
+        "capturedAt": "2026-07-31T21:45:33.235Z",
+        "workspace": "live-knowledge",
+        "populated": "true",
+        "action": "search:search",
+        "resultId": "ncr_9ec2f9a1-0a83-4bba-aa19-0cd614d93a2d",
+        "resultStatus": "ready",
+        "artifactKind": "list",
+        "visibleText": "search · search Independent Perspective on Community Solar in Barbados ## Barbados community-solar policy: independent assessment ### Bottom line Barbados **does not appear to have a formal community-solar or virtual-net-metering framework** under which an off-site project allocates generation credits directly among multiple subscribers’ Barbados Light & Power accounts. Barbados instead uses a **generator-sale model**: 1. A licensed renewable-energy system supplies electricity to the grid. 2. Barbados Light & Power purchases the generation under a Feed-in Tariff or legacy Renewable Energy Rider. 3. The generator or project owner receives the payment. 4. Any participating households or investors receive benefits through private ownership, dividends, leases or contractual distributions—not standardized utility-bill credits. BLPC describes its current arrangement as charging customers normally for all consumption while separately crediting or paying for renewable generation. That is **net billing/FIT treatment, not virtual net metering**. ([support.blpc.com.bb](https://support.blpc.com.bb/support/solutions/articles/42000060966?utm_source=openai)) ### What “community solar” currently means in Barbados The term is being used for at least two commercially different structures: - **Community Solar Gardens:** Blue Circle Energy and Sol Ecolution described a portfolio of 33 plants across Barbados, totalling about 23 MW and incorporating the required 30% domestic ownership component. The available description does not identify household subscriptions or allocation of production credits to individual electricity accounts. ([energy.gov.bb](https://www.energy.gov.bb/wp-content/uploads/2023/09/Energy-Bulletin-2022-Single-Pages.pdf?utm_source=openai)) - **Remote-panel investment:** Cloud Solar offers participants remotely hosted panels. Generation is pooled and sold to BLPC, with the economic return handled by the company’s platform. This broadens investment access but is not regulated utility-administered virtual net metering. ([cloud.solar](https:/ energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb energycenter.org Live web source Retrieved live Open source · energycenter.org www.iadb.org Live web source Retrieved live Open source · iadb.org www.iadb.org Live web source Retrieved live Open source · iadb.org energy.gov.bb Live web source Retrieved live Open source · energy.gov.bb www.iadb.org Live web source Retrieved live Open source · iadb.org publications.iadb.org Live web source Retrieved live Open source · publications.iadb.org ftc.gov.bb Live web source Retrieved live Open source · ftc.gov.bb www.seforall.org Live web source Retrieved live Open source · seforall.org publications.iadb.org Live web source Retrieved live Open source · publications.iadb.org",
+        "itemCount": 10,
+        "linkCount": 10,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Show me another reputable source with a different perspective."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\02-source-follow-up.png",
+      "passed": true
+    },
+    {
+      "id": "images",
+      "command": "Bring up source-labeled pictures of wooden architecture in Paramaribo.",
+      "capability": "images",
+      "check": "images",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "fe0efdcb-d76c-42ef-a74f-084da85aad4d",
+          "command": "show the source labeled pictures of wooden architecture in Paramaribo",
+          "activeWorkspace": "live-knowledge"
+        },
+        "at": "2026-07-31T21:45:35.459Z"
+      },
+      "acknowledgement": {
+        "requestId": "fe0efdcb-d76c-42ef-a74f-084da85aad4d",
+        "acknowledgementId": "content-ncr_f3866065-e906-4e62-a4ea-2131e93cc08e",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_f3866065-e906-4e62-a4ea-2131e93cc08e",
+          "summary": "images · searchImages: wooden architecture in Paramaribo Suriname historic wooden buildingsLive, source-labeled image results.Historic house.jpgThe image shows a historic, two-story, white wooden building with a red roof and green shutters, typical of colonial architecture. It has a balcony with dec",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "154662434"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "fe0efdcb-d76c-42ef-a74f-084da85aad4d",
+        "capturedAt": "2026-07-31T21:45:40.217Z",
+        "workspace": "live-knowledge",
+        "populated": "true",
+        "action": "images:search",
+        "resultId": "ncr_f3866065-e906-4e62-a4ea-2131e93cc08e",
+        "resultStatus": "ready",
+        "artifactKind": "list",
+        "visibleText": "images · search Images: wooden architecture in Paramaribo Suriname historic wooden buildings Live, source-labeled image results. Historic house.jpg The image shows a historic, two-story, white wooden building with a red roof and green shutters, typical of colonial architecture. It has a balcony with decorative railings and a wraparound porch on the ground floor. Fort Zeelandia, Waterkant, ( Paramaribo) CC BY-SA 4.0 Open source · Wikimedia Commons",
+        "itemCount": 1,
+        "linkCount": 1,
+        "imageCount": 1,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Bring up source-labeled pictures of wooden architecture in Paramaribo."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\03-images.png",
+      "passed": true
+    },
+    {
+      "id": "map",
+      "command": "Put La Paz, Bolivia on a live map for me.",
+      "capability": "map",
+      "check": "map",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "e2033273-bc4b-40e0-9c03-0b3eb61375f3",
+          "command": "Put La Paz, Bolivia on a live map for me.",
+          "activeWorkspace": "maps"
+        },
+        "at": "2026-07-31T21:45:42.092Z"
+      },
+      "acknowledgement": {
+        "requestId": "e2033273-bc4b-40e0-9c03-0b3eb61375f3",
+        "acknowledgementId": "content-ncr_1c1f8794-0107-42ac-85d9-0a472335691b",
+        "workspace": "maps",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "map",
+        "visualContext": {
+          "workspace": "maps",
+          "outcomeKind": "map",
+          "surfaceId": "ncr_1c1f8794-0107-42ac-85d9-0a472335691b",
+          "summary": "map · openLa Paz, BoliviaMunicipio Nuestra Señora de La Paz, Provincia Pedro Domingo Murillo, La Paz, BoliviaLocationMunicipio Nuestra Señora de La Paz, Provincia Pedro Domingo Murillo, La Paz, BoliviaOpen interactive map",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "e2033273-bc4b-40e0-9c03-0b3eb61375f3",
+        "capturedAt": "2026-07-31T21:45:45.033Z",
+        "workspace": "maps",
+        "populated": "true",
+        "action": "map:open",
+        "resultId": "ncr_1c1f8794-0107-42ac-85d9-0a472335691b",
+        "resultStatus": "ready",
+        "artifactKind": "map",
+        "visibleText": "map · open La Paz, Bolivia Municipio Nuestra Señora de La Paz, Provincia Pedro Domingo Murillo, La Paz, Bolivia Location Municipio Nuestra Señora de La Paz, Provincia Pedro Domingo Murillo, La Paz, Bolivia Open interactive map",
+        "itemCount": 0,
+        "linkCount": 1,
+        "imageCount": 0,
+        "mapCount": 1,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Put La Paz, Bolivia on a live map for me."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\04-map.png",
+      "passed": true
+    },
+    {
+      "id": "listings",
+      "command": "Find bicycle repair shops near Windhoek, Namibia.",
+      "capability": "listings",
+      "check": "sources",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "62c27622-aef3-4237-af4f-61db52b8e723",
+          "command": "Find bicycle repair shops near Windhoek, Namibia.",
+          "activeWorkspace": "maps"
+        },
+        "at": "2026-07-31T21:45:46.895Z"
+      },
+      "acknowledgement": {
+        "requestId": "62c27622-aef3-4237-af4f-61db52b8e723",
+        "acknowledgementId": "content-ncr_e8d08b06-d3d4-4054-8428-17c503ce0bfe",
+        "workspace": "maps",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "maps",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_e8d08b06-d3d4-4054-8428-17c503ce0bfe",
+          "summary": "listings · searchBicycle repair shops near Windhoek, NamibiaLive place results near Windhoek, Namibia.CycledelicCycledelic, Andimba Toivo ya Toivo Street, Suiderhof, Windhoek, Khomas Region, 10000, Namibiabicycle · shopOpen source · OpenStreetMap / NominatimMannie's Bike MeccaMannie's Bike Mecca, Ac",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [
+            "34308090",
+            "34151539",
+            "34324435",
+            "34527816",
+            "34431912",
+            "34565924"
+          ],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "62c27622-aef3-4237-af4f-61db52b8e723",
+        "capturedAt": "2026-07-31T21:45:50.399Z",
+        "workspace": "maps",
+        "populated": "true",
+        "action": "listings:search",
+        "resultId": "ncr_e8d08b06-d3d4-4054-8428-17c503ce0bfe",
+        "resultStatus": "ready",
+        "artifactKind": "list",
+        "visibleText": "listings · search Bicycle repair shops near Windhoek, Namibia Live place results near Windhoek, Namibia. Cycledelic Cycledelic, Andimba Toivo ya Toivo Street, Suiderhof, Windhoek, Khomas Region, 10000, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim Mannie's Bike Mecca Mannie's Bike Mecca, Acacia Street, Suiderhof, Windhoek, Khomas Region, 10000, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim Cycletec Adventure Centre Cycletec Adventure Centre, 324, Sam Nujoma Drive, Ludwigsdorf, Windhoek, Khomas Region, 10000, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim Ebikes4Africa Ebikes4Africa, Bernabe de la Bat Street, Bokamoso Business Centre, Katutura, Windhoek, Khomas Region, 10028, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim Kings Daughter's Bicycle Shop Kings Daughter's Bicycle Shop, Abraham Mashego Street, Soweto, Windhoek, Khomas Region, 13007, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim Family of Hope Services Bicycle Workshop Family of Hope Services Bicycle Workshop, Walvis Bay Street, Big Bend, Greenwell Matongo, Windhoek, Khomas Region, 13007, Namibia bicycle · shop Open source · OpenStreetMap / Nominatim",
+        "itemCount": 6,
+        "linkCount": 6,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Find bicycle repair shops near Windhoek, Namibia."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\05-listings.png",
+      "passed": true
+    },
+    {
+      "id": "music",
+      "command": "Play Cesaria Evora morna from Cabo Verde.",
+      "capability": "music",
+      "check": "music",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "12304437-b84e-47c2-b152-fa806c4e506f",
+          "command": "Place is area Evora Morna from Cabo Verde.",
+          "activeWorkspace": "maps"
+        },
+        "at": "2026-07-31T21:45:52.343Z"
+      },
+      "acknowledgement": {
+        "requestId": "12304437-b84e-47c2-b152-fa806c4e506f",
+        "acknowledgementId": "content-ncr_352fc561-442d-42f8-af5d-4f61086ff5aa",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "ncr_352fc561-442d-42f8-af5d-4f61086ff5aa",
+          "summary": "music · playNow playing: Nos Cabo Verde — Cesária EvoraLive public music preview for “Cesária Évora morna Cabo Verde”.Open music source",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "12304437-b84e-47c2-b152-fa806c4e506f",
+        "capturedAt": "2026-07-31T21:45:57.615Z",
+        "workspace": "music",
+        "populated": "true",
+        "action": "music:play",
+        "resultId": "ncr_352fc561-442d-42f8-af5d-4f61086ff5aa",
+        "resultStatus": "ready",
+        "artifactKind": "media",
+        "visibleText": "music · play Now playing: Nos Cabo Verde — Cesária Evora Live public music preview for “Cesária Évora morna Cabo Verde”. Open music source",
+        "itemCount": 0,
+        "linkCount": 1,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 1,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Place is area Evora Morna from Cabo Verde."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\06-music.png",
+      "passed": true
+    },
+    {
+      "id": "music-follow-up",
+      "command": "Play something different by a Japanese city pop artist.",
+      "capability": "music",
+      "check": "music",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "8563c87c-0851-4563-8d40-f61f6df79a68",
+          "command": "Play something different by a Japanese city pop artist.",
+          "activeWorkspace": "music"
+        },
+        "at": "2026-07-31T21:45:59.585Z"
+      },
+      "acknowledgement": {
+        "requestId": "8563c87c-0851-4563-8d40-f61f6df79a68",
+        "acknowledgementId": "content-ncr_07b09875-7ac1-47a9-bd39-0da5e93314dc",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "ncr_07b09875-7ac1-47a9-bd39-0da5e93314dc",
+          "summary": "music · playNow playing: Plastic Love — Mariya TakeuchiLive public music preview for “Plastic Love by Mariya Takeuchi”.Open music source",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "8563c87c-0851-4563-8d40-f61f6df79a68",
+        "capturedAt": "2026-07-31T21:46:03.831Z",
+        "workspace": "music",
+        "populated": "true",
+        "action": "music:play",
+        "resultId": "ncr_07b09875-7ac1-47a9-bd39-0da5e93314dc",
+        "resultStatus": "ready",
+        "artifactKind": "media",
+        "visibleText": "music · play Now playing: Plastic Love — Mariya Takeuchi Live public music preview for “Plastic Love by Mariya Takeuchi”. Open music source",
+        "itemCount": 0,
+        "linkCount": 1,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 1,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Play something different by a Japanese city pop artist."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\07-music-follow-up.png",
+      "passed": true
+    },
+    {
+      "id": "music-stop",
+      "command": "That is enough, make it quiet now.",
+      "capability": "media-control",
+      "check": "stopped",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "f367183f-5e71-4149-a9e0-77beebcc70ae",
+          "command": "That is enough, make it quiet now.",
+          "activeWorkspace": "music"
+        },
+        "at": "2026-07-31T21:46:05.602Z"
+      },
+      "acknowledgement": {
+        "requestId": "f367183f-5e71-4149-a9e0-77beebcc70ae",
+        "acknowledgementId": "content-ncr_066a3e1c-9c26-4fad-b67b-256c6ccc1729",
+        "workspace": "music",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "music",
+        "visualContext": {
+          "workspace": "music",
+          "outcomeKind": "music",
+          "surfaceId": "ncr_066a3e1c-9c26-4fad-b67b-256c6ccc1729",
+          "summary": "media-control · stopPlayback stoppedThe visible media player was cleared.Playback is stopped.",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "f367183f-5e71-4149-a9e0-77beebcc70ae",
+        "capturedAt": "2026-07-31T21:46:08.663Z",
+        "workspace": "music",
+        "populated": "true",
+        "action": "media-control:stop",
+        "resultId": "ncr_066a3e1c-9c26-4fad-b67b-256c6ccc1729",
+        "resultStatus": "ready",
+        "artifactKind": "media",
+        "visibleText": "media-control · stop Playback stopped The visible media player was cleared. Playback is stopped.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 1,
+        "controls": [],
+        "transcript": [
+          "That is enough, make it quiet now."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\08-music-stop.png",
+      "passed": true
+    },
+    {
+      "id": "reminder",
+      "command": "Remind me next Tuesday morning to renew the greenhouse water filter.",
+      "capability": "reminder",
+      "check": "artifact",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "ee746c39-ddb2-4c2f-b0cf-f8c3e93641c5",
+          "command": "Remind me next Tuesday morning to renew the greenhouse water filter.",
+          "activeWorkspace": "reminders"
+        },
+        "at": "2026-07-31T21:46:10.588Z"
+      },
+      "acknowledgement": {
+        "requestId": "ee746c39-ddb2-4c2f-b0cf-f8c3e93641c5",
+        "acknowledgementId": "content-ncr_861b2df3-bc06-4c68-ae14-a8ba85853662",
+        "workspace": "reminders",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "reminders",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_861b2df3-bc06-4c68-ae14-a8ba85853662",
+          "summary": "reminder · createRenew the greenhouse water filterReminder for next Tuesday morning.Reminder *Date and time *RepeatDoes not repeatDailyWeeklyMonthlyYearlySave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "ee746c39-ddb2-4c2f-b0cf-f8c3e93641c5",
+        "capturedAt": "2026-07-31T21:46:15.962Z",
+        "workspace": "reminders",
+        "populated": "true",
+        "action": "reminder:create",
+        "resultId": "ncr_861b2df3-bc06-4c68-ae14-a8ba85853662",
+        "resultStatus": "ready",
+        "artifactKind": "status",
+        "visibleText": "reminder · create Renew the greenhouse water filter Reminder for next Tuesday morning. Reminder * Date and time * Repeat Does not repeat Daily Weekly Monthly Yearly Save visible draft Print",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "reminder",
+            "value": "Renew the greenhouse water filter"
+          },
+          {
+            "name": "time",
+            "value": ""
+          },
+          {
+            "name": "repeat",
+            "value": "Does not repeat"
+          }
+        ],
+        "transcript": [
+          "Remind me next Tuesday morning to renew the greenhouse water filter."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\09-reminder.png",
+      "passed": true
+    },
+    {
+      "id": "reminder-follow-up",
+      "command": "What reminder did I just set?",
+      "capability": "reminder",
+      "check": "artifact",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "be46d7a0-0db2-4c62-bba9-3718c6d38374",
+          "command": "What reminder did I just set?",
+          "activeWorkspace": "reminders"
+        },
+        "at": "2026-07-31T21:46:17.771Z"
+      },
+      "acknowledgement": {
+        "requestId": "be46d7a0-0db2-4c62-bba9-3718c6d38374",
+        "acknowledgementId": "content-ncr_8401357d-1abc-46b8-a590-f7ea3b797e91",
+        "workspace": "reminders",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "reminders",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_8401357d-1abc-46b8-a590-f7ea3b797e91",
+          "summary": "reminder · reviewRenew the greenhouse water filterReminder for next Tuesday morning.Reminder *Date and time *RepeatDoes not repeatDailyWeeklyMonthlyYearlySave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "be46d7a0-0db2-4c62-bba9-3718c6d38374",
+        "capturedAt": "2026-07-31T21:46:21.278Z",
+        "workspace": "reminders",
+        "populated": "true",
+        "action": "reminder:review",
+        "resultId": "ncr_8401357d-1abc-46b8-a590-f7ea3b797e91",
+        "resultStatus": "ready",
+        "artifactKind": "status",
+        "visibleText": "reminder · review Renew the greenhouse water filter Reminder for next Tuesday morning. Reminder * Date and time * Repeat Does not repeat Daily Weekly Monthly Yearly Save visible draft Print",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "reminder",
+            "value": "Renew the greenhouse water filter"
+          },
+          {
+            "name": "time",
+            "value": ""
+          },
+          {
+            "name": "repeat",
+            "value": "Does not repeat"
+          }
+        ],
+        "transcript": [
+          "What reminder did I just set?"
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\10-reminder-follow-up.png",
+      "passed": true
+    },
+    {
+      "id": "marketplace",
+      "command": "Make an editable marketplace draft for eighteen sacks of red beans in Kigali.",
+      "capability": "marketplace-draft",
+      "check": "form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "28884a86-ce0b-4e6c-9ea3-a427e8bdde5b",
+          "command": "Make an editable marketplace draft for 18 sacks of red beans in Kigali.",
+          "activeWorkspace": "marketplace"
+        },
+        "at": "2026-07-31T21:46:23.139Z"
+      },
+      "acknowledgement": {
+        "requestId": "28884a86-ce0b-4e6c-9ea3-a427e8bdde5b",
+        "acknowledgementId": "content-ncr_3edca068-ad88-4622-907e-a16fcbac640d",
+        "workspace": "marketplace",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "marketplace",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_3edca068-ad88-4622-907e-a16fcbac640d",
+          "summary": "marketplace-draft · create18 Sacks of Red Beans for SaleEditable marketplace listing draft for red beans in Kigali.Product *Quantity *Location *PriceContact informationDescription18 sacks of red beans available in Kigali.Save visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "28884a86-ce0b-4e6c-9ea3-a427e8bdde5b",
+        "capturedAt": "2026-07-31T21:46:27.411Z",
+        "workspace": "marketplace",
+        "populated": "true",
+        "action": "marketplace-draft:create",
+        "resultId": "ncr_3edca068-ad88-4622-907e-a16fcbac640d",
+        "resultStatus": "ready",
+        "artifactKind": "draft",
+        "visibleText": "marketplace-draft · create 18 Sacks of Red Beans for Sale Editable marketplace listing draft for red beans in Kigali. Product * Quantity * Location * Price Contact information Description Save visible draft Print",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "product",
+            "value": "Red beans"
+          },
+          {
+            "name": "quantity",
+            "value": "18 sacks"
+          },
+          {
+            "name": "location",
+            "value": "Kigali"
+          },
+          {
+            "name": "price",
+            "value": ""
+          },
+          {
+            "name": "contact",
+            "value": ""
+          },
+          {
+            "name": "description",
+            "value": "18 sacks of red beans available in Kigali."
+          }
+        ],
+        "transcript": [
+          "Make an editable marketplace draft for 18 sacks of red beans in Kigali."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\11-marketplace.png",
+      "passed": true
+    },
+    {
+      "id": "marketplace-follow-up",
+      "command": "Put the price at sixty-five dollars per sack and say collection only.",
+      "capability": "marketplace-draft",
+      "check": "form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "3d1abf7e-a26c-4b2b-b64c-9d18a51851fb",
+          "command": "put the price at $65 per sack and say collection only.",
+          "activeWorkspace": "marketplace"
+        },
+        "at": "2026-07-31T21:46:29.422Z"
+      },
+      "acknowledgement": {
+        "requestId": "3d1abf7e-a26c-4b2b-b64c-9d18a51851fb",
+        "acknowledgementId": "content-ncr_77181c87-af15-440e-847f-31e005b3fc96",
+        "workspace": "marketplace",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "marketplace",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_77181c87-af15-440e-847f-31e005b3fc96",
+          "summary": "marketplace-draft · updateRed Beans for Sale — 18 SacksEditable marketplace listing draft.Product *Quantity *Location *Weight per sackPriceConditionNewUsedDescription18 sacks of red beans available in Kigali at $65 per sack. Collection only.Contact detailsSave visible draftPrint",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "3d1abf7e-a26c-4b2b-b64c-9d18a51851fb",
+        "capturedAt": "2026-07-31T21:46:35.143Z",
+        "workspace": "marketplace",
+        "populated": "true",
+        "action": "marketplace-draft:update",
+        "resultId": "ncr_77181c87-af15-440e-847f-31e005b3fc96",
+        "resultStatus": "ready",
+        "artifactKind": "draft",
+        "visibleText": "marketplace-draft · update Red Beans for Sale — 18 Sacks Editable marketplace listing draft. Product * Quantity * Location * Weight per sack Price Condition New Used Description Contact details Save visible draft Print",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "product",
+            "value": "Red beans"
+          },
+          {
+            "name": "quantity",
+            "value": "18 sacks"
+          },
+          {
+            "name": "location",
+            "value": "Kigali"
+          },
+          {
+            "name": "sack_weight",
+            "value": ""
+          },
+          {
+            "name": "price",
+            "value": "$65 per sack"
+          },
+          {
+            "name": "condition",
+            "value": "New"
+          },
+          {
+            "name": "description",
+            "value": "18 sacks of red beans available in Kigali at $65 per sack. Collection only."
+          },
+          {
+            "name": "contact",
+            "value": ""
+          }
+        ],
+        "transcript": [
+          "put the price at $65 per sack and say collection only."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\12-marketplace-follow-up.png",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "command": "Create a one-page field report about salt damage in a coastal rice plot.",
+      "capability": "report",
+      "check": "document",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "54dcc46a-a695-4258-8b16-0e7bcad5438d",
+          "command": "Create a one-page field report about salt damage in a coastal rice plot.",
+          "activeWorkspace": "marketplace"
+        },
+        "at": "2026-07-31T21:46:37.308Z"
+      },
+      "acknowledgement": {
+        "requestId": "54dcc46a-a695-4258-8b16-0e7bcad5438d",
+        "acknowledgementId": "content-ncr_3e04df71-93f2-4eb3-af01-925ade913f43",
+        "workspace": "report",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "report",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_3e04df71-93f2-4eb3-af01-925ade913f43",
+          "summary": "report · createField Report — Salt Damage in a Coastal Rice PlotEditable one-page field report.Inspection datePlot locationObserverRice growth stageEstimated affected areaDamage severityLowModerateSevereField observationsRecord visible symptoms such as leaf-tip burn, yellowing, stunted growth, patch",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "54dcc46a-a695-4258-8b16-0e7bcad5438d",
+        "capturedAt": "2026-07-31T21:46:47.458Z",
+        "workspace": "report",
+        "populated": "true",
+        "action": "report:create",
+        "resultId": "ncr_3e04df71-93f2-4eb3-af01-925ade913f43",
+        "resultStatus": "ready",
+        "artifactKind": "document",
+        "visibleText": "report · create Field Report — Salt Damage in a Coastal Rice Plot Editable one-page field report. Inspection date Plot location Observer Rice growth stage Estimated affected area Damage severity Low Moderate Severe Field observations Water and soil findings Assessment Recommended follow-up actions Follow-up date and notes Save visible draft Print",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "inspection_date",
+            "value": ""
+          },
+          {
+            "name": "location",
+            "value": ""
+          },
+          {
+            "name": "observer",
+            "value": ""
+          },
+          {
+            "name": "rice_stage",
+            "value": ""
+          },
+          {
+            "name": "affected_area",
+            "value": ""
+          },
+          {
+            "name": "severity",
+            "value": "Low"
+          },
+          {
+            "name": "field_observations",
+            "value": "Record visible symptoms such as leaf-tip burn, yellowing, stunted growth, patchy stands, poor tillering, or plant death. Note whether damage is concentrated near plot edges, low areas, or irrigation inlets."
+          },
+          {
+            "name": "water_soil_findings",
+            "value": "Record irrigation-water source, recent tidal flooding or storm surge, drainage condition, visible salt crusting, and any available soil or water salinity measurements."
+          },
+          {
+            "name": "assessment",
+            "value": "Observed damage is consistent with possible salt stress. Confirm the cause through soil and irrigation-water salinity testing and comparison with unaffected parts of the plot."
+          },
+          {
+            "name": "actions",
+            "value": "Collect soil and water samples; document affected zones; inspect drainage and seawater-entry points; use suitable fresh water to flush salts where drainage and local guidance permit; and consult a local agricultural extension specialist about salt-tolerant varieties and recovery options."
+          },
+          {
+            "name": "follow_up",
+            "value": ""
+          }
+        ],
+        "transcript": [
+          "Create a one-page field report about salt damage in a coastal rice plot."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\13-report.png",
+      "passed": true
+    },
+    {
+      "id": "resume",
+      "command": "Build an editable resume for a marine electrician changing careers into solar installation.",
+      "capability": "resume",
+      "check": "form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "c8de129e-5832-42fe-b588-2acd9e5b4bd6",
+          "command": "Build an editable resume for a marine electrician changing careers into solar installation.",
+          "activeWorkspace": "workforce"
+        },
+        "at": "2026-07-31T21:46:49.244Z"
+      },
+      "acknowledgement": {
+        "requestId": "c8de129e-5832-42fe-b588-2acd9e5b4bd6",
+        "acknowledgementId": "content-ncr_3cb2bad9-d8cd-4639-ac9c-181248a5e2a6",
+        "workspace": "workforce",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "workforce",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_3cb2bad9-d8cd-4639-ac9c-181248a5e2a6",
+          "summary": "resume · createResume — Marine Electrician Transitioning to Solar InstallationEditable resume highlighting transferable electrical, safety, troubleshooting, and field-installation experience.Full namePhoneEmailLocationTarget roleProfessional summarySafety-focused marine electrician transitioning int",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "c8de129e-5832-42fe-b588-2acd9e5b4bd6",
+        "capturedAt": "2026-07-31T21:47:04.822Z",
+        "workspace": "workforce",
+        "populated": "true",
+        "action": "resume:create",
+        "resultId": "ncr_3cb2bad9-d8cd-4639-ac9c-181248a5e2a6",
+        "resultStatus": "ready",
+        "artifactKind": "document",
+        "visibleText": "resume · create Resume — Marine Electrician Transitioning to Solar Installation Editable resume highlighting transferable electrical, safety, troubleshooting, and field-installation experience. Full name Phone Email Location Target role Professional summary Core skills Most recent employer Most recent job title Employment dates Most recent experience Additional work experience Solar or renewable-energy training Electrical and safety certifications Education Relevant projects Additional information Save visible draft Print Positioning guidance Emphasize transferable electrical expertise and safety practices. Add any solar coursework, rooftop experience, DC systems knowledge, working-at-heights training, or photovoltaic projects you have completed.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "full_name",
+            "value": ""
+          },
+          {
+            "name": "phone",
+            "value": ""
+          },
+          {
+            "name": "email",
+            "value": ""
+          },
+          {
+            "name": "location",
+            "value": ""
+          },
+          {
+            "name": "target_role",
+            "value": "Solar Installer / Solar PV Technician"
+          },
+          {
+            "name": "summary",
+            "value": "Safety-focused marine electrician transitioning into solar installation, with hands-on experience installing, maintaining, and troubleshooting electrical systems in demanding environments. Skilled in wiring, electrical testing, fault diagnosis, reading technical diagrams, preventive maintenance, and compliance with safety procedures. Eager to apply transferable field expertise to solar PV installation and renewable-energy projects."
+          },
+          {
+            "name": "skills",
+            "value": "Electrical installation and wiring Fault finding and diagnostics Multimeter and electrical test equipment Technical drawings and wiring diagrams Cable routing, termination, and labeling Preventive and corrective maintenance Electrical safety and lockout/tagout procedures Hand and power tools Outdoor and confined-space work Teamwork and customer communication"
+          },
+          {
+            "name": "employer_1",
+            "value": ""
+          },
+          {
+            "name": "job_title_1",
+            "value": "Marine Electrician"
+          },
+          {
+            "name": "dates_1",
+            "value": ""
+          },
+          {
+            "name": "experience_1",
+            "value": "• Installed, inspected, maintained, and repaired marine electrical wiring, equipment, and control systems. • Diagnosed electrical faults using meters, schematics, and systematic testing procedures. • Routed, terminated, labeled, and secured cables in accordance with technical specifications and safety standards. • Performed preventive maintenance to improve system reliability and reduce equipment downtime. • Coordinated with technicians and other trades to complete work safely and on schedule. • Documented inspections, repairs, test results, and materials used."
+          },
+          {
+            "name": "additional_experience",
+            "value": ""
+          },
+          {
+            "name": "solar_training",
+            "value": ""
+          },
+          {
+            "name": "electrical_certifications",
+            "value": ""
+          },
+          {
+            "name": "education",
+            "value": ""
+          },
+          {
+            "name": "projects",
+            "value": ""
+          },
+          {
+            "name": "additional_info",
+            "value": "Driver’s license: Work authorization: Availability: Languages:"
+          }
+        ],
+        "transcript": [
+          "Build an editable resume for a marine electrician changing careers into solar installation."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\14-resume.png",
+      "passed": true
+    },
+    {
+      "id": "resume-follow-up",
+      "command": "Add three years maintaining shipboard power systems to my experience.",
+      "capability": "resume",
+      "check": "form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "66945cf8-b6c5-4be5-9eb1-368b187bde07",
+          "command": "Add three years maintaining shipboard power systems to my experience.",
+          "activeWorkspace": "workforce"
+        },
+        "at": "2026-07-31T21:47:06.840Z"
+      },
+      "acknowledgement": {
+        "requestId": "66945cf8-b6c5-4be5-9eb1-368b187bde07",
+        "acknowledgementId": "content-ncr_8b7d1ee7-fd68-496d-a84c-4abc1cc5ab16",
+        "workspace": "workforce",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "workforce",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_8b7d1ee7-fd68-496d-a84c-4abc1cc5ab16",
+          "summary": "resume · updateRésumé — Marine Electrician Transitioning to Solar InstallationEditable résumé emphasizing transferable electrical, safety, troubleshooting, and field-installation experience.Full namePhoneEmailLocationProfessional titleProfessional summarySafety-focused marine electrician transitioni",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "66945cf8-b6c5-4be5-9eb1-368b187bde07",
+        "capturedAt": "2026-07-31T21:47:17.520Z",
+        "workspace": "workforce",
+        "populated": "true",
+        "action": "resume:update",
+        "resultId": "ncr_8b7d1ee7-fd68-496d-a84c-4abc1cc5ab16",
+        "resultStatus": "ready",
+        "artifactKind": "document",
+        "visibleText": "resume · update Résumé — Marine Electrician Transitioning to Solar Installation Editable résumé emphasizing transferable electrical, safety, troubleshooting, and field-installation experience. Full name Phone Email Location Professional title Professional summary Core skills Most recent employer Most recent job title Employment dates Most recent role achievements Previous employer Previous job title Previous employment dates Previous role achievements Solar training or relevant projects Education Licenses and certifications Tools and technology Additional information Save visible draft Print Tailoring note Replace general duties with measurable accomplishments where possible, and list only skills, training, and certifications you actually possess.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "full_name",
+            "value": ""
+          },
+          {
+            "name": "phone",
+            "value": ""
+          },
+          {
+            "name": "email",
+            "value": ""
+          },
+          {
+            "name": "location",
+            "value": ""
+          },
+          {
+            "name": "professional_title",
+            "value": "Marine Electrician | Aspiring Solar Installer"
+          },
+          {
+            "name": "summary",
+            "value": "Safety-focused marine electrician transitioning into solar installation, with three years of experience maintaining shipboard power systems and hands-on expertise installing, maintaining, and troubleshooting electrical systems in demanding environments. Skilled in wiring, electrical testing, reading technical diagrams, preventive maintenance, and regulatory compliance. Eager to apply transferable electrical expertise to photovoltaic system installation and renewable-energy projects."
+          },
+          {
+            "name": "skills",
+            "value": "Electrical installation and repair Wiring, cabling, and terminations Electrical testing and fault diagnosis Reading schematics and wiring diagrams DC and AC electrical systems Multimeters and electrical test equipment Preventive maintenance Safety procedures and PPE Lockout/tagout practices Conduit and cable routing Teamwork and field coordination Documentation and inspection"
+          },
+          {
+            "name": "employer_1",
+            "value": ""
+          },
+          {
+            "name": "job_title_1",
+            "value": "Marine Electrician"
+          },
+          {
+            "name": "dates_1",
+            "value": ""
+          },
+          {
+            "name": "experience_1",
+            "value": "• Maintained shipboard power systems for three years, supporting safe and reliable electrical operations. • Installed, inspected, maintained, and repaired marine electrical wiring, equipment, and control systems. • Diagnosed electrical faults using schematics, meters, and testing equipment. • Routed and terminated cables while following technical specifications and safety requirements. • Completed preventive maintenance and documented inspection and repair work. • Coordinated with technicians and other trades to complete projects safely and on schedule."
+          },
+          {
+            "name": "employer_2",
+            "value": ""
+          },
+          {
+            "name": "job_title_2",
+            "value": ""
+          },
+          {
+            "name": "dates_2",
+            "value": ""
+          },
+          {
+            "name": "experience_2",
+            "value": ""
+          },
+          {
+            "name": "solar_training",
+            "value": "Add photovoltaic installation courses, hands-on projects, apprenticeships, or experience with panels, racking, inverters, batteries, charge controllers, grounding, and commissioning."
+          },
+          {
+            "name": "education",
+            "value": ""
+          },
+          {
+            "name": "certifications",
+            "value": "Add relevant electrical license, OSHA or other safety training, first aid/CPR, working-at-heights training, manufacturer credentials, or solar certification."
+          },
+          {
+            "name": "tools",
+            "value": "Add electrical hand tools, multimeters, insulation testers, clamp meters, conduit tools, torque tools, and any solar design or monitoring software used."
+          },
+          {
+            "name": "additional",
+            "value": "Add driver’s license, travel availability, work authorization, languages, or other relevant details."
+          }
+        ],
+        "transcript": [
+          "Add three years maintaining shipboard power systems to my experience."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\15-resume-follow-up.png",
+      "passed": true
+    },
+    {
+      "id": "intake",
+      "command": "Set up an intake form for a traveler returning from Peru.",
+      "capability": "intake",
+      "check": "form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "2a5f9890-aa66-46c0-8474-274fb2f55b7e",
+          "command": "Set up an intake form for a traveler returning from Peru.",
+          "activeWorkspace": "workforce"
+        },
+        "at": "2026-07-31T21:47:19.887Z"
+      },
+      "acknowledgement": {
+        "requestId": "2a5f9890-aa66-46c0-8474-274fb2f55b7e",
+        "acknowledgementId": "content-ncr_d3913ecb-4a86-4937-9acb-5cd2c155dd33",
+        "workspace": "workforce",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "workforce",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_d3913ecb-4a86-4937-9acb-5cd2c155dd33",
+          "summary": "intake · createPost-Travel Intake — Returning Traveler from PeruEditable intake form for documenting itinerary, exposures, symptoms, and relevant health history after travel to Peru. This form supports clinical review and does not provide a diagnosis.Traveler’s full nameDate of birthPronounsPhoneEma",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "2a5f9890-aa66-46c0-8474-274fb2f55b7e",
+        "capturedAt": "2026-07-31T21:47:43.233Z",
+        "workspace": "workforce",
+        "populated": "true",
+        "action": "intake:create",
+        "resultId": "ncr_d3913ecb-4a86-4937-9acb-5cd2c155dd33",
+        "resultStatus": "ready",
+        "artifactKind": "form",
+        "visibleText": "intake · create Post-Travel Intake — Returning Traveler from Peru Editable intake form for documenting itinerary, exposures, symptoms, and relevant health history after travel to Peru. This form supports clinical review and does not provide a diagnosis. Traveler’s full name Date of birth Pronouns Phone Email Emergency contact name and phone Date departed for Peru Date returned Locations visited in Peru Purpose of travel Tourism Business Visiting friends or relatives Study or research Humanitarian or healthcare work Other Types of accommodation Rural, Amazon/jungle, or high-altitude travel Current symptoms When did symptoms begin? Fever or chills No Yes Unsure Highest measured temperature Diarrhea, vomiting, nausea, or abdominal pain Cough, sore throat, shortness of breath, or chest pain Rash, sores, swelling, or unusual bites Severe headache, confusion, weakness, or neck stiffness Other symptoms or concerns Untreated water, ice, street food, raw food, or unpasteurized dairy exposure Mosquito, tick, sand fly, or other insect bites Animal bites, scratches, or other animal contact Swimming or wading in freshwater Contact with sick people or healthcare settings New sexual contact or possible blood/body-fluid exposure Injuries, tattoos, injections, dental work, or medical procedures during travel Pre-travel and routine vaccines received Malaria prevention or other travel medicines used Current medications and supplements Medication or other allergies Medical conditions, pregnancy, or immune-system concerns Medical care or testing already received Additional notes or questions for the clinician Save visible draft Print For clinical review Review the timing of symptoms against the complete itinerary and reported exposures. Record vital signs, examination findings, testing, assessment, and follow-up in the appropriate clinical record. Urgent symptoms Seek urgent medical evaluation for trouble breathing, chest pain, confusion, fainting, severe dehydration, uncontrolled bleeding, persistent high fever, severe headache with neck stiffness, or rapidly worsening symptoms. Tell the care team about the recent travel to Peru.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "traveler_name",
+            "value": ""
+          },
+          {
+            "name": "date_of_birth",
+            "value": ""
+          },
+          {
+            "name": "pronouns",
+            "value": ""
+          },
+          {
+            "name": "phone",
+            "value": ""
+          },
+          {
+            "name": "email",
+            "value": ""
+          },
+          {
+            "name": "emergency_contact",
+            "value": ""
+          },
+          {
+            "name": "departure_date",
+            "value": ""
+          },
+          {
+            "name": "return_date",
+            "value": ""
+          },
+          {
+            "name": "locations_visited",
+            "value": ""
+          },
+          {
+            "name": "trip_purpose",
+            "value": "Tourism"
+          },
+          {
+            "name": "accommodations",
+            "value": ""
+          },
+          {
+            "name": "rural_jungle_high_altitude",
+            "value": ""
+          },
+          {
+            "name": "current_symptoms",
+            "value": ""
+          },
+          {
+            "name": "symptom_onset",
+            "value": ""
+          },
+          {
+            "name": "fever",
+            "value": "No"
+          },
+          {
+            "name": "highest_temperature",
+            "value": ""
+          },
+          {
+            "name": "digestive_symptoms",
+            "value": ""
+          },
+          {
+            "name": "respiratory_symptoms",
+            "value": ""
+          },
+          {
+            "name": "skin_symptoms",
+            "value": ""
+          },
+          {
+            "name": "neurologic_symptoms",
+            "value": ""
+          },
+          {
+            "name": "other_symptoms",
+            "value": ""
+          },
+          {
+            "name": "food_water",
+            "value": ""
+          },
+          {
+            "name": "insect_bites",
+            "value": ""
+          },
+          {
+            "name": "animal_contact",
+            "value": ""
+          },
+          {
+            "name": "freshwater_exposure",
+            "value": ""
+          },
+          {
+            "name": "sick_contacts",
+            "value": ""
+          },
+          {
+            "name": "sexual_exposure",
+            "value": ""
+          },
+          {
+            "name": "injury_procedure",
+            "value": ""
+          },
+          {
+            "name": "vaccines",
+            "value": ""
+          },
+          {
+            "name": "preventive_medicines",
+            "value": ""
+          },
+          {
+            "name": "current_medications",
+            "value": ""
+          },
+          {
+            "name": "allergies",
+            "value": ""
+          },
+          {
+            "name": "medical_conditions",
+            "value": ""
+          },
+          {
+            "name": "care_received",
+            "value": ""
+          },
+          {
+            "name": "additional_notes",
+            "value": ""
+          }
+        ],
+        "transcript": [
+          "Set up an intake form for a traveler returning from Peru."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\16-intake.png",
+      "passed": true
+    },
+    {
+      "id": "field-completion",
+      "command": "Fill the main concern with fever and joint pain that started yesterday.",
+      "capability": "intake",
+      "check": "filled-form",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "5ba7ae07-2730-4499-ab30-1421e688ed9a",
+          "command": "Fill the main concern with fever and joint pain that started yesterday.",
+          "activeWorkspace": "marketplace"
+        },
+        "at": "2026-07-31T21:47:45.131Z"
+      },
+      "acknowledgement": {
+        "requestId": "5ba7ae07-2730-4499-ab30-1421e688ed9a",
+        "acknowledgementId": "content-ncr_83d0fcb0-93b0-449c-95a9-cd6f985db74f",
+        "workspace": "marketplace",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "marketplace",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_83d0fcb0-93b0-449c-95a9-cd6f985db74f",
+          "summary": "intake · updatePost-Travel Intake — Returning Traveler from PeruEditable intake form for documenting itinerary, exposures, symptoms, and relevant health history after travel to Peru. This form supports clinical review and does not provide a diagnosis.Traveler’s full nameDate of birthPronounsPhoneEma",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "5ba7ae07-2730-4499-ab30-1421e688ed9a",
+        "capturedAt": "2026-07-31T21:47:58.065Z",
+        "workspace": "marketplace",
+        "populated": "true",
+        "action": "intake:update",
+        "resultId": "ncr_83d0fcb0-93b0-449c-95a9-cd6f985db74f",
+        "resultStatus": "ready",
+        "artifactKind": "form",
+        "visibleText": "intake · update Post-Travel Intake — Returning Traveler from Peru Editable intake form for documenting itinerary, exposures, symptoms, and relevant health history after travel to Peru. This form supports clinical review and does not provide a diagnosis. Traveler’s full name Date of birth Pronouns Phone Email Emergency contact name and phone Date departed for Peru Date returned Locations visited in Peru Purpose of travel Tourism Business Visiting friends or relatives Study or research Humanitarian or healthcare work Other Types of accommodation Rural, Amazon/jungle, or high-altitude travel Current symptoms When did symptoms begin? Fever or chills No Yes Unsure Highest measured temperature Diarrhea, vomiting, nausea, or abdominal pain Cough, sore throat, shortness of breath, or chest pain Rash, sores, swelling, or unusual bites Severe headache, confusion, weakness, or neck stiffness Other symptoms or concerns Untreated water, ice, street food, raw food, or unpasteurized dairy exposure Mosquito, tick, sand fly, or other insect bites Animal bites, scratches, or other animal contact Swimming or wading in freshwater Contact with sick people or healthcare settings New sexual contact or possible blood/body-fluid exposure Injuries, tattoos, injections, dental work, or medical procedures during travel Pre-travel and routine vaccines received Malaria prevention or other travel medicines used Current medications and supplements Medication or other allergies Medical conditions, pregnancy, or immune-system concerns Medical care or testing already received Additional notes or questions for the clinician Save visible draft Print For clinical review Review the timing of symptoms against the complete itinerary and reported exposures. Record vital signs, examination findings, testing, assessment, and follow-up in the appropriate clinical record. Urgent symptoms Seek urgent medical evaluation for trouble breathing, chest pain, confusion, fainting, severe dehydration, uncontrolled bleeding, persistent high fever, severe headache with neck stiffness, or rapidly worsening symptoms. Tell the care team about the recent travel to Peru.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "traveler_name",
+            "value": ""
+          },
+          {
+            "name": "date_of_birth",
+            "value": ""
+          },
+          {
+            "name": "pronouns",
+            "value": ""
+          },
+          {
+            "name": "phone",
+            "value": ""
+          },
+          {
+            "name": "email",
+            "value": ""
+          },
+          {
+            "name": "emergency_contact",
+            "value": ""
+          },
+          {
+            "name": "departure_date",
+            "value": ""
+          },
+          {
+            "name": "return_date",
+            "value": ""
+          },
+          {
+            "name": "locations_visited",
+            "value": ""
+          },
+          {
+            "name": "trip_purpose",
+            "value": "Tourism"
+          },
+          {
+            "name": "accommodations",
+            "value": ""
+          },
+          {
+            "name": "rural_jungle_high_altitude",
+            "value": ""
+          },
+          {
+            "name": "current_symptoms",
+            "value": "Fever and joint pain"
+          },
+          {
+            "name": "symptom_onset",
+            "value": "Yesterday"
+          },
+          {
+            "name": "fever",
+            "value": "Yes"
+          },
+          {
+            "name": "highest_temperature",
+            "value": ""
+          },
+          {
+            "name": "digestive_symptoms",
+            "value": ""
+          },
+          {
+            "name": "respiratory_symptoms",
+            "value": ""
+          },
+          {
+            "name": "skin_symptoms",
+            "value": ""
+          },
+          {
+            "name": "neurologic_symptoms",
+            "value": ""
+          },
+          {
+            "name": "other_symptoms",
+            "value": ""
+          },
+          {
+            "name": "food_water",
+            "value": ""
+          },
+          {
+            "name": "insect_bites",
+            "value": ""
+          },
+          {
+            "name": "animal_contact",
+            "value": ""
+          },
+          {
+            "name": "freshwater_exposure",
+            "value": ""
+          },
+          {
+            "name": "sick_contacts",
+            "value": ""
+          },
+          {
+            "name": "sexual_exposure",
+            "value": ""
+          },
+          {
+            "name": "injury_procedure",
+            "value": ""
+          },
+          {
+            "name": "vaccines",
+            "value": ""
+          },
+          {
+            "name": "preventive_medicines",
+            "value": ""
+          },
+          {
+            "name": "current_medications",
+            "value": ""
+          },
+          {
+            "name": "allergies",
+            "value": ""
+          },
+          {
+            "name": "medical_conditions",
+            "value": ""
+          },
+          {
+            "name": "care_received",
+            "value": ""
+          },
+          {
+            "name": "additional_notes",
+            "value": ""
+          }
+        ],
+        "transcript": [
+          "Fill the main concern with fever and joint pain that started yesterday."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\17-field-completion.png",
+      "passed": true
+    },
+    {
+      "id": "question-card",
+      "command": "Make a question card I can use when asking a clinician about recurring migraines.",
+      "capability": "question-card",
+      "check": "document",
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "cb252de7-76d8-44ed-89eb-0f0162841379",
+          "command": "Make a question card I can use when asking a clinician about recurring migraines.",
+          "activeWorkspace": "telehealth"
+        },
+        "at": "2026-07-31T21:47:59.831Z"
+      },
+      "acknowledgement": {
+        "requestId": "cb252de7-76d8-44ed-89eb-0f0162841379",
+        "acknowledgementId": "content-ncr_b70a0454-13f9-4087-afb7-384fca1ecade",
+        "workspace": "telehealth",
+        "contentExtension": true,
+        "visible": true,
+        "populated": true,
+        "outcomeVerified": true,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "telehealth",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_b70a0454-13f9-4087-afb7-384fca1ecade",
+          "summary": "question-card · createRecurring Migraine — Clinician Question CardAn editable card for organizing migraine details and questions. It does not provide a diagnosis or treatment plan.What concerns me mostHow often headaches occurHow long they usually lastSymptoms before, during, or afterPossible trigge",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": null
+      },
+      "proof": {
+        "requestId": "cb252de7-76d8-44ed-89eb-0f0162841379",
+        "capturedAt": "2026-07-31T21:48:12.513Z",
+        "workspace": "telehealth",
+        "populated": "true",
+        "action": "question-card:create",
+        "resultId": "ncr_b70a0454-13f9-4087-afb7-384fca1ecade",
+        "resultStatus": "ready",
+        "artifactKind": "card",
+        "visibleText": "question-card · create Recurring Migraine — Clinician Question Card An editable card for organizing migraine details and questions. It does not provide a diagnosis or treatment plan. What concerns me most How often headaches occur How long they usually last Symptoms before, during, or after Possible triggers or patterns Impact on work, school, sleep, or daily life Medicines or remedies tried and their effects Relevant health history, family history, or recent changes Clinician’s answers and next steps Save visible draft Print Questions to ask Could these headaches be migraines, or should we consider another cause? Do I need an examination, imaging, blood tests, or referral to a specialist? What symptoms or changes should prompt urgent care? What treatment options are appropriate for stopping an attack? Would preventive treatment be appropriate based on my headache frequency? Could medication overuse be contributing to my headaches? What lifestyle changes or trigger tracking may help? Are there medication risks or interactions relevant to my health history? Should I keep a headache diary, and what should I record? When should we follow up, and how will we judge whether treatment is working? Bring to the visit A list of medications, supplements, allergies, and doses A headache diary or calendar, if available Details about onset, location, severity, duration, associated symptoms, and menstrual or other patterns Family history of migraine, stroke, or neurological conditions Urgent warning signs Seek urgent medical care for a sudden extremely severe headache, a new headache after head injury, or headache with weakness, numbness, trouble speaking, confusion, fainting, seizure, fever with stiff neck, vision loss, chest pain, pregnancy-related concerns, or rapidly worsening symptoms.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [
+          {
+            "name": "main_concern",
+            "value": ""
+          },
+          {
+            "name": "frequency",
+            "value": ""
+          },
+          {
+            "name": "duration",
+            "value": ""
+          },
+          {
+            "name": "symptoms",
+            "value": ""
+          },
+          {
+            "name": "triggers",
+            "value": ""
+          },
+          {
+            "name": "impact",
+            "value": ""
+          },
+          {
+            "name": "medications",
+            "value": ""
+          },
+          {
+            "name": "other_history",
+            "value": ""
+          },
+          {
+            "name": "notes",
+            "value": ""
+          }
+        ],
+        "transcript": [
+          "Make a question card I can use when asking a clinician about recurring migraines."
+        ],
+        "state": "connected",
+        "recovery": null,
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\18-question-card.png",
+      "passed": true
+    },
+    {
+      "id": "truthful-failure",
+      "command": "Show source-labeled photographs of the purple library on Mars colony seven.",
+      "capability": "images",
+      "check": "failure",
+      "expectFailure": true,
+      "route": {
+        "type": "resolver.requested",
+        "detail": {
+          "requestId": "50669918-0437-4875-a324-4e8c36fe64dd",
+          "command": "Show source-labeled photographs of the Purple Library on Mars Colony 7.",
+          "activeWorkspace": "live-knowledge"
+        },
+        "at": "2026-07-31T21:48:14.188Z"
+      },
+      "acknowledgement": {
+        "requestId": "50669918-0437-4875-a324-4e8c36fe64dd",
+        "acknowledgementId": "content-ncr_61464b05-3dab-4a1b-aa01-5f9ba7a3014c",
+        "workspace": "live-knowledge",
+        "contentExtension": true,
+        "visible": true,
+        "populated": false,
+        "outcomeVerified": false,
+        "outcomeKind": "application",
+        "visualContext": {
+          "workspace": "live-knowledge",
+          "outcomeKind": "application",
+          "surfaceId": "ncr_61464b05-3dab-4a1b-aa01-5f9ba7a3014c",
+          "summary": "images · searchNexus could not complete that live requestThe live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs.What Nexus can do nextThe live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs.Try a",
+          "items": [],
+          "selectedItem": null,
+          "viewport": null,
+          "sourceIds": [],
+          "availableActions": [
+            "inspect",
+            "revise",
+            "review",
+            "print",
+            "share",
+            "ask-follow-up"
+          ]
+        },
+        "recovery": {
+          "message": "The live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs.",
+          "nextActions": [
+            "Try a broader query.",
+            "Choose another live capability or source.",
+            "Retry when the provider is available."
+          ]
+        }
+      },
+      "proof": {
+        "requestId": "50669918-0437-4875-a324-4e8c36fe64dd",
+        "capturedAt": "2026-07-31T21:48:21.695Z",
+        "workspace": "live-knowledge",
+        "populated": "false",
+        "action": "images:search",
+        "resultId": "ncr_61464b05-3dab-4a1b-aa01-5f9ba7a3014c",
+        "resultStatus": "failed",
+        "artifactKind": "status",
+        "visibleText": "images · search Nexus could not complete that live request The live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs. What Nexus can do next The live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs. Try a broader query. Choose another live capability or source. Retry when the provider is available.",
+        "itemCount": 0,
+        "linkCount": 0,
+        "imageCount": 0,
+        "mapCount": 0,
+        "musicCount": 0,
+        "stoppedCount": 0,
+        "controls": [],
+        "transcript": [
+          "Show source-labeled photographs of the Purple Library on Mars Colony 7."
+        ],
+        "state": "connected",
+        "recovery": {
+          "message": "The live image provider returned no source-labeled results for \"Purple Library\" \"Mars Colony 7\" photographs.",
+          "nextActions": [
+            "Try a broader query.",
+            "Choose another live capability or source.",
+            "Retry when the provider is available."
+          ]
+        },
+        "audioViolations": []
+      },
+      "screenshot": "C:\\Users\\tater\\Documents\\Codex\\2026-05-04\\good-morning-coach\\agrinexus_git_push_work\\.worktrees\\nexus-content-population-repair\\output\\nexus-capability-windows-physical\\19-truthful-failure.png",
+      "passed": true
+    }
+  ],
+  "foundation": {
+    "state": "connected",
+    "microphoneAcquired": true,
+    "remoteAudioAttached": true,
+    "voice": "marin",
+    "britishFemaleInstruction": true,
+    "voiceOutputElements": 1,
+    "certificationEnabled": true,
+    "bargeIn": true,
+    "continuousListening": true,
+    "guidedEntry": true,
+    "singleAudioOutput": true
+  },
+  "failure": null,
+  "identity": {
+    "schema": "nexus.certification.identity.v1",
+    "contractVersion": "nexus.release-certification.v2",
+    "releaseSha": "8cca79b847811432417e0dfe4f030176d8093771",
+    "bundleSha256": "104f18d30fa1bd2d699096393917f731ab7af806a53eb3fdcd9f3a79446ca699",
+    "deployedAt": null
+  },
+  "passed": true,
+  "finishedAt": "2026-07-31T21:48:32.338Z"
+}

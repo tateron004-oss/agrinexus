@@ -69,6 +69,10 @@
   background: #10251f;
 }
 
+.nexus-content-media audio {
+  width: 100%;
+}
+
 .nexus-content-meta,
 .nexus-content-evidence {
   color: #415e54;

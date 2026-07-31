@@ -133,6 +133,7 @@ function createOpenAIGoalResolver({
             "Use the previous visible artifact to interpret references such as it, that, another, change it, add, remove, review, or complete.",
             "For forms and documents, return a fully visible editable artifact. Preserve prior fields and content unless the user asks to change them.",
             "For search, images, maps, listings, weather, or music, set needsLiveProvider true and produce no invented provider results.",
+            "Use listings when the goal is to discover businesses, services, venues, sellers, or other places. Use map when the goal is to display a known location or route.",
             "Music may be any artist, track, genre, culture, language, or source. Put the actual requested media query in query.",
             "Never claim that a provider action succeeded. acknowledgement describes the requested outcome and is used only after UI verification.",
             "If a request is underspecified, build the most useful editable draft and leave unknown fields blank instead of inventing personal facts.",
@@ -163,6 +164,57 @@ function createOpenAIGoalResolver({
       return goal;
     }
   });
+}
+
+function normalizeWebSearchPayload(payload) {
+  const sources = [];
+  const textParts = [];
+  function addSource(urlValue, titleValue = "") {
+    const url = safeHttpUrl(urlValue);
+    if (!url || sources.some((source) => source.url === url)) return;
+    sources.push({ title: clean(titleValue, 240) || new URL(url).hostname, url });
+  }
+  for (const item of payload && payload.output || []) {
+    if (item && item.type === "web_search_call") {
+      for (const source of item.action && item.action.sources || []) addSource(source && source.url, source && source.title);
+    }
+    for (const content of item && item.content || []) {
+      if (content && content.type === "output_text" && content.text) textParts.push(clean(content.text, 6000));
+      for (const annotation of content && content.annotations || []) {
+        if (!annotation || annotation.type !== "url_citation") continue;
+        addSource(annotation.url, annotation.title);
+      }
+    }
+  }
+  return Object.freeze({ summary: textParts.filter(Boolean).join(" ").slice(0, 6000), sources: sources.slice(0, 10) });
+}
+
+function createOpenAIWebSearchProvider({
+  fetchImpl = globalThis.fetch,
+  apiKey = process.env.OPENAI_API_KEY,
+  model = process.env.NEXUS_CONTENT_MODEL || "gpt-5.6-sol"
+} = {}) {
+  return async function openAIWebSearch(query) {
+    if (!apiKey) throw new Error("The live web-search provider is not configured (OPENAI_API_KEY is missing).");
+    const response = await fetchImpl("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        model,
+        store: false,
+        reasoning: { effort: "low" },
+        tools: [{ type: "web_search" }],
+        tool_choice: "auto",
+        include: ["web_search_call.action.sources"],
+        instructions: "Search the live web for the current request. Prefer primary, governmental, academic, institutional, and otherwise reputable sources. Give a short factual orientation with source citations. Do not claim an action beyond search.",
+        input: clean(query, 4000)
+      })
+    });
+    if (!response.ok) throw new Error(`The live web-search provider failed (${response.status}).`);
+    const normalized = normalizeWebSearchPayload(await response.json());
+    if (!normalized.sources.length) throw new Error("The live web-search provider returned no visible source links.");
+    return normalized;
+  };
 }
 
 function normalizeArtifact(value) {
@@ -212,11 +264,51 @@ function resultEnvelope(goal, artifact, extra = {}) {
   });
 }
 
-function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null } = {}) {
+function normalizeGoalRoute(goal) {
+  if (goal && goal.capability === "map" && goal.operation === "search") {
+    return { ...goal, capability: "listings", workspace: clean(goal.workspace, 120) || "maps" };
+  }
+  return goal;
+}
+
+function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null, webSearchProvider = null, publicMusicProvider = true } = {}) {
   const resolver = goalResolver || createOpenAIGoalResolver({ fetchImpl });
+  const liveWebSearch = webSearchProvider || createOpenAIWebSearchProvider({ fetchImpl });
+
+  async function publicMusic(goal) {
+    const query = clean(goal.query) || "music";
+    const cleanedQuery = clean(query.replace(/\b(?:please|play|put on|listen to|some|music|song|track)\b/ig, " ")) || query;
+    const searches = [query, cleanedQuery];
+    let track = null;
+    let providerError = null;
+    for (const search of searches) {
+      const url = new URL("https://itunes.apple.com/search");
+      url.searchParams.set("term", search);
+      url.searchParams.set("media", "music");
+      url.searchParams.set("entity", "song");
+      url.searchParams.set("limit", "12");
+      try {
+        const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (public-music-search)" } });
+        if (!response.ok) throw new Error(`The public music provider failed (${response.status}).`);
+        const payload = await response.json();
+        track = (Array.isArray(payload && payload.results) ? payload.results : []).find((item) => safeHttpUrl(item.previewUrl) && safeHttpUrl(item.trackViewUrl));
+        if (track) break;
+      } catch (error) {
+        providerError = error;
+      }
+    }
+    if (!track) throw providerError || new Error(`No playable public preview was returned for ${query}.`);
+    const title = [clean(track.trackName, 220), clean(track.artistName, 180)].filter(Boolean).join(" — ") || query;
+    const artifact = emptyArtifact("media", `Now playing: ${title}`);
+    artifact.description = `Live public music preview for “${query}”.`;
+    artifact.links = [{ label: "Open music source", url: track.trackViewUrl }];
+    artifact.media = { kind: "audio", title, provider: "Apple Music / iTunes Search API", sourceUrl: track.trackViewUrl, embedUrl: track.previewUrl, state: "playing" };
+    return artifact;
+  }
 
   async function music(goal) {
     if (!musicProvider || typeof musicProvider.getMusicMediaSourceResultAsync !== "function") {
+      if (publicMusicProvider) return publicMusic(goal);
       throw new Error("The live music search provider is not configured.");
     }
     const query = clean(goal.query) || "music";
@@ -224,6 +316,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     const sourceUrl = safeHttpUrl(found && found.sourceUrl);
     const videoId = /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&]+)/i.exec(sourceUrl)?.[1] || "";
     if (!videoId || found.sourceStatus !== "source-result-available") {
+      if (publicMusicProvider) return publicMusic(goal);
       throw new Error(clean(found && found.resultSummary) || `No playable live result was returned for ${query}.`);
     }
     const title = clean(found.resultSummary).replace(/^YouTube video found:\s*/i, "") || query;
@@ -235,19 +328,36 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
   }
 
   async function images(goal) {
-    const query = clean(goal.query) || clean(goal.artifact && goal.artifact.title) || "images";
-    const url = new URL("https://commons.wikimedia.org/w/api.php");
-    url.searchParams.set("action", "query"); url.searchParams.set("generator", "search");
-    url.searchParams.set("gsrsearch", `filetype:bitmap ${query}`); url.searchParams.set("gsrnamespace", "6");
-    url.searchParams.set("gsrlimit", "8"); url.searchParams.set("prop", "imageinfo");
-    url.searchParams.set("iiprop", "url|extmetadata"); url.searchParams.set("iiurlwidth", "720"); url.searchParams.set("format", "json");
-    const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-search)" } });
-    if (!response.ok) throw new Error(`The live image provider failed (${response.status}).`);
-    const payload = await response.json();
-    const items = Object.values(payload && payload.query && payload.query.pages || {}).map((page) => {
-      const info = page.imageinfo && page.imageinfo[0] || {};
-      return { id: String(page.pageid || page.title), title: clean(page.title).replace(/^File:/, ""), description: clean(info.extmetadata && info.extmetadata.ImageDescription && info.extmetadata.ImageDescription.value), sourceName: "Wikimedia Commons", sourceUrl: info.descriptionurl || "", imageUrl: info.thumburl || info.url || "", metadata: [clean(info.extmetadata && info.extmetadata.LicenseShortName && info.extmetadata.LicenseShortName.value) || "See source for license"] };
-    }).filter((item) => item.imageUrl && item.sourceUrl).slice(0, 8);
+    const rawQuery = clean(goal.query) || clean(goal.artifact && goal.artifact.title) || "images";
+    const query = clean(rawQuery.replace(/\b(?:source[- ]label(?:ed|s)?|with source labels?|show|find|search(?: for)?|images?|photos?|pictures?)\b/ig, " ")) || rawQuery;
+    async function lookup(searchQuery) {
+      const url = new URL("https://commons.wikimedia.org/w/api.php");
+      url.searchParams.set("action", "query"); url.searchParams.set("generator", "search");
+      url.searchParams.set("gsrsearch", `filetype:bitmap ${searchQuery}`); url.searchParams.set("gsrnamespace", "6");
+      url.searchParams.set("gsrlimit", "8"); url.searchParams.set("prop", "imageinfo");
+      url.searchParams.set("iiprop", "url|extmetadata"); url.searchParams.set("iiurlwidth", "720"); url.searchParams.set("format", "json");
+      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-search)" } });
+      if (!response.ok) throw new Error(`The live image provider failed (${response.status}).`);
+      const payload = await response.json();
+      return Object.values(payload && payload.query && payload.query.pages || {}).map((page) => {
+        const info = page.imageinfo && page.imageinfo[0] || {};
+        return { id: String(page.pageid || page.title), title: clean(page.title).replace(/^File:/, ""), description: clean(info.extmetadata && info.extmetadata.ImageDescription && info.extmetadata.ImageDescription.value), sourceName: "Wikimedia Commons", sourceUrl: info.descriptionurl || "", imageUrl: info.thumburl || info.url || "", metadata: [clean(info.extmetadata && info.extmetadata.LicenseShortName && info.extmetadata.LicenseShortName.value) || "See source for license"] };
+      }).filter((item) => item.imageUrl && item.sourceUrl).slice(0, 8);
+    }
+    let items = await lookup(query);
+    const retries = [];
+    if (/\s+in\s+/i.test(query)) {
+      const [subject, location] = query.split(/\s+in\s+/i, 2);
+      retries.push(`${location.replace(/,.*$/, "")} ${subject}`);
+    }
+    const location = clean(goal.location).replace(/,.*$/, "");
+    if (location) retries.push(`${location} ${query.replace(new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), "")}`);
+    const words = query.replace(/\b(?:photographs?|photos?|pictures?|images?)\b/ig, " ").split(/\s+/).filter(Boolean);
+    if (words.length > 2) retries.push(`${words.slice(-2).join(" ")} ${words.slice(0, -2).join(" ")}`, `${words.at(-1)} ${words.slice(0, -1).join(" ")}`);
+    for (const retry of [...new Set(retries.map((value) => clean(value)).filter((value) => value && value.toLowerCase() !== query.toLowerCase()))].slice(0, 3)) {
+      if (items.length) break;
+      items = await lookup(retry);
+    }
     if (!items.length) throw new Error(`The live image provider returned no source-labeled results for ${query}.`);
     const artifact = emptyArtifact("list", `Images: ${query}`); artifact.description = "Live, source-labeled image results."; artifact.items = items;
     return artifact;
@@ -256,37 +366,54 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
   async function listings(goal) {
     const query = clean(goal.query) || clean(goal.artifact && goal.artifact.title) || "places";
     const location = clean(goal.location);
-    const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("q", [query, location].filter(Boolean).join(" near "));
-    url.searchParams.set("format", "jsonv2"); url.searchParams.set("addressdetails", "1"); url.searchParams.set("limit", "8");
-    const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-listings-search)" } });
-    if (!response.ok) throw new Error(`The live listings provider failed (${response.status}).`);
-    const payload = await response.json();
-    const items = (Array.isArray(payload) ? payload : []).map((item) => ({
+    const subject = location ? query.replace(new RegExp(`\\s+near\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*$`, "i"), "") : query;
+    async function lookup(searchQuery) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", searchQuery);
+      url.searchParams.set("format", "jsonv2"); url.searchParams.set("addressdetails", "1"); url.searchParams.set("limit", "8");
+      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-listings-search)" } });
+      if (!response.ok) throw new Error(`The live listings provider failed (${response.status}).`);
+      const payload = await response.json();
+      return (Array.isArray(payload) ? payload : []).map((item) => ({
       id: clean(item.place_id || item.osm_id), title: clean(item.name || String(item.display_name || "").split(",")[0]) || "Listing",
       description: clean(item.display_name), sourceName: "OpenStreetMap / Nominatim",
       sourceUrl: item.osm_id ? `https://www.openstreetmap.org/${item.osm_type === "node" ? "node" : item.osm_type === "way" ? "way" : "relation"}/${encodeURIComponent(item.osm_id)}` : "",
       imageUrl: "", metadata: [item.type, item.category].map((value) => clean(value)).filter(Boolean)
-    })).filter((item) => item.description);
+      })).filter((item) => item.description);
+    }
+    const searches = [[subject, location].filter(Boolean).join(" near ")];
+    const broader = subject.replace(/\brepairs?\b/ig, " ").replace(/\bshops\b/ig, "shop").replace(/\s+/g, " ").trim();
+    if (broader && broader.toLowerCase() !== subject.toLowerCase()) searches.push([broader, location].filter(Boolean).join(" near "));
+    let items = [];
+    for (const search of searches) {
+      items = await lookup(search);
+      if (items.length) break;
+    }
     if (!items.length) throw new Error(`The live listings provider returned no places for ${[query, location].filter(Boolean).join(" near ")}.`);
     const artifact = emptyArtifact("list", clean(goal.artifact && goal.artifact.title) || `Listings for ${query}`); artifact.description = `Live place results${location ? ` near ${location}` : ""}.`; artifact.items = items;
     return artifact;
   }
 
   async function research(goal, context) {
-    if (!context || typeof context.research !== "function") throw new Error("The reputable-source search provider is not configured.");
-    const receipt = await context.research({ question: clean(goal.query) || clean(context.command), parentReceiptId: context.parentReceiptId || null });
+    const query = clean(goal.query) || clean(context && context.command);
     const artifact = emptyArtifact("list", clean(goal.artifact && goal.artifact.title) || "Live source results");
-    artifact.description = clean(receipt.summary, 3000) || "Open the reputable sources below to inspect the current results.";
-    artifact.items = (receipt.sources || []).map((source) => ({ id: source.id, title: source.title, description: source.organization || "Reputable source", sourceName: source.organization || "Approved source", sourceUrl: source.url, imageUrl: "", metadata: [source.publishedAt ? `Published ${source.publishedAt}` : "", source.retrievedAt ? `Retrieved ${source.retrievedAt}` : ""].filter(Boolean) }));
-    if (!artifact.items.length) throw new Error(clean(receipt.summary) || "The reputable-source provider returned no visible links.");
-    return { artifact, evidence: { receiptId: receipt.id, status: receipt.status, verified: Boolean(receipt.verified) } };
+    if (context && typeof context.research === "function") {
+      const receipt = await context.research({ question: query, parentReceiptId: context.parentReceiptId || null });
+      artifact.description = clean(receipt.summary, 3000) || "Open the reputable sources below to inspect the current results.";
+      artifact.items = (receipt.sources || []).map((source) => ({ id: source.id, title: source.title, description: source.organization || "Reputable source", sourceName: source.organization || "Approved source", sourceUrl: source.url, imageUrl: "", metadata: [source.publishedAt ? `Published ${source.publishedAt}` : "", source.retrievedAt ? `Retrieved ${source.retrievedAt}` : ""].filter(Boolean) }));
+      if (artifact.items.length) return { artifact, evidence: { receiptId: receipt.id, status: receipt.status, verified: Boolean(receipt.verified), provider: receipt.provider } };
+    }
+    const live = await liveWebSearch(query);
+    artifact.description = clean(live.summary, 3000) || "Open the live sources below to inspect the current results.";
+    artifact.items = live.sources.map((source, index) => ({ id: `W${index + 1}`, title: source.title, description: "Live web source", sourceName: new URL(source.url).hostname.replace(/^www\./, ""), sourceUrl: source.url, imageUrl: "", metadata: ["Retrieved live"] }));
+    const organizations = [...new Set(artifact.items.map((item) => item.sourceName))];
+    return { artifact, evidence: { receiptId: null, status: organizations.length >= 2 ? "cross-source-live" : "single-source-live", verified: organizations.length >= 2, provider: "openai-web-search" } };
   }
 
   async function execute(request = {}, context = {}) {
     let goal;
     try {
-      goal = await resolver.resolve(request);
+      goal = normalizeGoalRoute(await resolver.resolve(request));
     } catch (error) {
       const fallbackGoal = { capability: "workspace", operation: "open", workspace: request.activeWorkspace || request.requestedWorkspace || "live-knowledge", query: clean(request.command), acknowledgement: "", artifact: emptyArtifact("status", "Nexus needs its goal resolver") };
       fallbackGoal.artifact.description = clean(error.message);
@@ -329,10 +456,11 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     }
   }
 
-  return Object.freeze({ execute, music, images, listings });
+  return Object.freeze({ execute, music, images, listings, research });
 }
 
 module.exports = {
   CAPABILITIES, GOAL_SCHEMA, clean, createContentActionService, createOpenAIGoalResolver,
-  emptyArtifact, normalizeArtifact, outputText, resultEnvelope, safeHttpUrl
+  createOpenAIWebSearchProvider, emptyArtifact, normalizeArtifact, normalizeWebSearchPayload,
+  normalizeGoalRoute, outputText, resultEnvelope, safeHttpUrl
 };

@@ -87,7 +87,9 @@
     }).join("");
     const mediaUrl = safeUrl(artifact.media && artifact.media.embedUrl);
     const media = mediaUrl
-      ? `<div class="nexus-content-media"><iframe id="${artifact.media.kind === "map" ? "nexus-content-map-frame" : "nexus-content-music-frame"}" src="${escapeMarkup(mediaUrl)}" title="${escapeMarkup(artifact.media.title || artifact.title || "Nexus media result")}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`
+      ? artifact.media.kind === "audio"
+        ? `<div class="nexus-content-media"><audio id="nexus-content-music-player" src="${escapeMarkup(mediaUrl)}" title="${escapeMarkup(artifact.media.title || artifact.title || "Nexus music result")}" controls autoplay></audio></div>`
+        : `<div class="nexus-content-media"><iframe id="${artifact.media.kind === "map" ? "nexus-content-map-frame" : "nexus-content-music-frame"}" src="${escapeMarkup(mediaUrl)}" title="${escapeMarkup(artifact.media.title || artifact.title || "Nexus media result")}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`
       : artifact.media && artifact.media.state === "stopped" ? `<p class="nexus-content-meta" data-media-state="stopped">Playback is stopped.</p>` : "";
     return `<section class="nexus-content-result" data-nexus-content-result-id="${resultId}" data-nexus-content-artifact="${escapeMarkup(artifact.kind || "status")}" data-result-status="${escapeMarkup(status)}"><article class="nexus-content-card"><p class="nexus-content-meta">${escapeMarkup(result.capability || "workspace")} · ${escapeMarkup(result.operation || "open")}</p><h2>${escapeMarkup(artifact.title || "Nexus result")}</h2>${description}</article>${failure}${fields}${sections}${items ? `<div class="nexus-content-list">${items}</div>` : ""}${links ? `<nav class="nexus-content-actions" aria-label="Result links">${links}</nav>` : ""}${media}</section>`;
   }
@@ -243,7 +245,7 @@
       const root = appSurface.querySelector(`[data-nexus-content-result-id="${globalObject.CSS?.escape ? globalObject.CSS.escape(result.requestId) : result.requestId}"]`);
       if (!root || !normalize(root.textContent)) throw new Error("The requested content did not become visible.");
       const media = result.artifact && result.artifact.media;
-      if (result.status === "ready" && media && media.state === "playing" && !root.querySelector("iframe[src]")) throw new Error("The requested media did not become visible.");
+      if (result.status === "ready" && media && media.state === "playing" && !root.querySelector("iframe[src], audio[src], video[src]")) throw new Error("The requested media did not become visible.");
       shell.dataset.populated = result.status === "ready" ? "true" : "false";
       shell.dataset.contentAction = `${result.capability}:${result.operation}`;
       const artifacts = readJson(this.window.localStorage, STORAGE.artifacts, {});
