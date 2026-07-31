@@ -175,10 +175,22 @@ async function main() {
   assert.equal(runtime.requestResponse({}, "overlap-test"), false);
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive);
   assert.ok(receipts.some((receipt) => receipt.type === "audio.exclusive-response-blocked"));
-  assert.equal(runtime.requestResponse({}, "tool-result-test", { defer: true }), true);
+  assert.equal(runtime.speakText("Provider communication card", "provider-card-read"), true);
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive);
+  assert.ok(receipts.some((receipt) => (
+    receipt.type === "audio.exclusive-response-deferred"
+    && receipt.detail.reason === "provider-card-read"
+  )));
   await runtime.handleRealtimeEvent({ type: "response.output_audio.done", response_id: "response-one" });
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive + 1);
+  assert.ok(receipts.some((receipt) => (
+    receipt.type === "conversation.response-requested"
+    && receipt.detail.reason === "provider-card-read"
+  )));
+  assert.match(
+    sent.filter((event) => event.type === "response.create").at(-1).response.instructions,
+    /Provider communication card/
+  );
   const listeningAfterAudioDone = receipts.filter((receipt) => receipt.type === "conversation.return-to-listening").length;
   await runtime.handleRealtimeEvent({ type: "response.done", response: { id: "response-one" } });
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive + 1);

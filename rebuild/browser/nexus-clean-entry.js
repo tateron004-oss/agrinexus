@@ -98,15 +98,6 @@ function visibleFormFields() {
 function showVoiceFormReceipt(receipt) {
   const surface = document.getElementById("nexus-app-surface");
   if (!surface) return;
-  let proof = surface.querySelector("[data-nexus-voice-form-proof]");
-  if (!proof) {
-    proof = document.createElement("section");
-    proof.dataset.nexusVoiceFormProof = "true";
-    proof.className = "app-request";
-    proof.setAttribute("role", "status");
-    proof.setAttribute("aria-live", "polite");
-    surface.prepend(proof);
-  }
   const labels = {
     "voice-form.updated": `${receipt.detail.label} updated: ${receipt.detail.value}`,
     "voice-form.corrected": `${receipt.detail.label} corrected: ${receipt.detail.value}`,
@@ -117,7 +108,18 @@ function showVoiceFormReceipt(receipt) {
     "voice-form.confirmed": "Approval recorded. No outside provider completion is claimed without a verified execution receipt.",
     "voice-form.cancelled": "Submission cancelled. The draft was not sent or shared."
   };
-  proof.textContent = labels[receipt.type] || "Voice form updated.";
+  const label = labels[receipt.type];
+  if (!label) return;
+  let proof = surface.querySelector("[data-nexus-voice-form-proof]");
+  if (!proof) {
+    proof = document.createElement("section");
+    proof.dataset.nexusVoiceFormProof = "true";
+    proof.className = "app-request";
+    proof.setAttribute("role", "status");
+    proof.setAttribute("aria-live", "polite");
+    surface.prepend(proof);
+  }
+  proof.textContent = label;
   proof.dataset.receiptType = receipt.type;
 }
 

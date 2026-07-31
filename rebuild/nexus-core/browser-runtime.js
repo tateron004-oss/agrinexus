@@ -167,12 +167,12 @@ class NexusBrowserRuntime {
     const content = String(text || "").trim();
     if (!content) throw new Error("Nexus needs visible text to read.");
     if (!this.started) throw new Error("Start Nexus before asking it to read visible content.");
-    this.requestResponse({
+    return this.requestResponse({
       response: {
         output_modalities: ["audio"],
         instructions: `Read the following visible Nexus content once, faithfully and clearly. Do not add information:\n\n${content}`
       }
-    }, reason);
+    }, reason, { defer: true });
   }
 
   requestResponse(event = {}, reason = "runtime", { defer = false } = {}) {

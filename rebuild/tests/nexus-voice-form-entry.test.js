@@ -136,4 +136,14 @@ assert.match(
   "Guided drafts must use the document's canonical process identity before the route workspace fallback."
 );
 assert.doesNotMatch(browserEntry, /NexusVoiceFormController/, "The legacy form controller must not own browser commands.");
+assert.match(
+  browserEntry,
+  /const label = labels\[receipt\.type\];\s*if \(!label\) return;/,
+  "Generic transaction receipts must not replace an authoritative confirmation-required proof."
+);
+assert.doesNotMatch(
+  browserEntry,
+  /labels\[receipt\.type\]\s*\|\|\s*"Voice form updated\."/,
+  "Unknown receipt types must not overwrite the visible Guided Entry state."
+);
 console.log("Nexus clean voice-assisted form entry passed.");
