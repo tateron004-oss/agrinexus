@@ -1017,6 +1017,7 @@
           this.responseActive = false;
           this.responseRequestPending = false;
           this.deferredResponse = null;
+          this.completedResponseKeys = /* @__PURE__ */ new Set();
           this.visualRoutes = /* @__PURE__ */ new Map();
           this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
@@ -1183,6 +1184,30 @@ ${content}`
           if (!deferred) return false;
           return this.requestResponse(deferred.event, deferred.reason);
         }
+        completeResponse(event, completionEvent) {
+          const responseId = event?.response?.id || event?.response_id || this.activeResponseId || null;
+          const completionKey = responseId || `pending:${this.responseActive}:${this.responseRequestPending}`;
+          if (this.completedResponseKeys.has(completionKey)) return false;
+          this.completedResponseKeys.add(completionKey);
+          if (this.completedResponseKeys.size > 32) {
+            this.completedResponseKeys.delete(this.completedResponseKeys.values().next().value);
+          }
+          this.clearResponseFallback();
+          this.activeResponseId = null;
+          this.responseActive = false;
+          this.responseRequestPending = false;
+          this.receipt("audio.owner-released", {
+            owner: "realtime",
+            responseId,
+            completionEvent
+          });
+          this.receipt("conversation.return-to-listening", {
+            responseId,
+            completionEvent
+          });
+          this.flushDeferredResponse();
+          return true;
+        }
         attachRemoteAudio(peer) {
           peer.addEventListener("track", (event) => {
             this.attachRemoteStream(event.streams && event.streams[0]);
@@ -1267,15 +1292,14 @@ ${content}`
           if (event.type === "response.output_audio.delta" || event.type === "response.audio.delta") {
             this.receipt("conversation.speaking");
           }
-          if (event.type === "response.output_audio.done" || event.type === "response.audio.done") {
-            this.clearResponseFallback();
-            this.receipt("conversation.return-to-listening");
+          if (event.type === "response.output_audio.done" || event.type === "response.audio.done" || event.type === "response.done") {
+            this.completeResponse(event, event.type);
           }
-          if (event.type === "response.done" || event.type === "response.cancelled") {
+          if (event.type === "response.cancelled") {
             this.activeResponseId = null;
             this.responseActive = false;
             this.responseRequestPending = false;
-            this.receipt("audio.owner-released", { owner: "realtime" });
+            this.receipt("audio.owner-released", { owner: "realtime", completionEvent: event.type });
             this.flushDeferredResponse();
           }
           if (event.type === "error") {
@@ -1365,6 +1389,7 @@ ${content}`
           this.responseActive = false;
           this.responseRequestPending = false;
           this.deferredResponse = null;
+          this.completedResponseKeys.clear();
           this.visualRoutes.clear();
           this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
@@ -1911,6 +1936,8 @@ ${content}`
           storage,
           context,
           ensureAuthoritativeDocument = async () => true,
+          mountGeneration = null,
+          visibleGeneration = null,
           settleVisibleDocument = async () => {
           },
           onReceipt = () => {
@@ -1921,12 +1948,19 @@ ${content}`
           this.fields = fields || (() => []);
           this.context = context || (() => ({}));
           this.ensureAuthoritativeDocument = ensureAuthoritativeDocument;
+          this.mountedGeneration = null;
+          this.mountGeneration = typeof mountGeneration === "function" ? mountGeneration : (envelope) => {
+            this.mountedGeneration = envelope.generationId;
+          };
+          this.visibleGeneration = typeof visibleGeneration === "function" ? visibleGeneration : () => this.mountedGeneration;
           this.settleVisibleDocument = settleVisibleDocument;
           this.onReceipt = onReceipt;
           this.now = now;
           this.idFactory = idFactory;
           this.sequence = 0;
           this.active = null;
+          this.screenOwner = null;
+          this.mountedGeneration = null;
           this.requests = /* @__PURE__ */ new Map();
           this.bufferedReceipts = /* @__PURE__ */ new Map();
           this.engine = new NexusUniversalGuidedEntryEngine({
@@ -1951,6 +1985,7 @@ ${content}`
           const envelope = freezeEnvelope({
             requestId: id,
             sequence: ++this.sequence,
+            generationId: `${id}:generation`,
             command: clean(command),
             documentId: clean(options.documentId || this.context()?.documentId || "active-document"),
             processId: clean(options.processId || this.context()?.processId || "current-form"),
@@ -1959,10 +1994,16 @@ ${content}`
             at: this.now()
           });
           this.requests.set(id, envelope);
+          this.screenOwner = envelope;
           return envelope;
         }
         isCurrent(envelope) {
-          return Boolean(envelope && this.active?.requestId === envelope.requestId);
+          return Boolean(
+            envelope && this.active?.requestId === envelope.requestId && this.screenOwner?.generationId === envelope.generationId
+          );
+        }
+        ownsScreen(envelope) {
+          return Boolean(envelope && this.screenOwner?.generationId === envelope.generationId);
         }
         emit(type, envelope, detail = {}) {
           const receipt = Object.freeze({
@@ -1971,6 +2012,7 @@ ${content}`
             detail: Object.freeze({
               requestId: envelope.requestId,
               transactionSequence: envelope.sequence,
+              generationId: envelope.generationId,
               processId: envelope.processId,
               documentId: envelope.documentId,
               ...detail
@@ -1994,6 +2036,7 @@ ${content}`
         }
         async commit(envelope) {
           if (!envelope?.accepted) return this.reject(envelope, envelope?.reason || "invalid-envelope");
+          if (!this.ownsScreen(envelope)) return this.reject(envelope, "screen-lease-superseded");
           if (this.active && this.active.sequence > envelope.sequence) return this.reject(envelope, "stale-request");
           this.active = envelope;
           this.bufferedReceipts.set(envelope.requestId, []);
@@ -2001,6 +2044,10 @@ ${content}`
           const rendered = await this.ensureAuthoritativeDocument(envelope);
           if (!this.isCurrent(envelope)) return this.reject(envelope, "superseded-during-render");
           if (!rendered || !this.fields().length) return this.reject(envelope, "authoritative-document-unavailable");
+          this.mountGeneration(envelope);
+          if (this.visibleGeneration() !== envelope.generationId) {
+            return this.reject(envelope, "generation-mount-failed");
+          }
           this.emit("guided-entry.document-authoritative", envelope, { state: "rendered" });
           const result = this.engine.handle(envelope.command, {
             requestId: envelope.requestId,
@@ -2012,6 +2059,9 @@ ${content}`
           }
           await this.settleVisibleDocument(envelope);
           if (!this.isCurrent(envelope)) return this.reject(envelope, "superseded-before-verification");
+          if (this.visibleGeneration() !== envelope.generationId) {
+            return this.reject(envelope, "visible-generation-replaced");
+          }
           const visibleValues = this.visibleSnapshot();
           const buffered = this.bufferedReceipts.get(envelope.requestId) || [];
           const reopened = [...buffered].reverse().find((receipt) => receipt.type === "voice-form.reopened");
@@ -2068,6 +2118,7 @@ ${content}`
         cancelAll(reason = "controller-teardown") {
           const active = this.active;
           this.active = null;
+          this.screenOwner = null;
           this.bufferedReceipts.clear();
           if (active) this.emit("guided-entry.transaction-cancelled", active, { reason });
         }
@@ -2160,6 +2211,7 @@ ${content}`
           return {
             key,
             label: String(label).replace(/\s+/g, " ").trim(),
+            node: field,
             get: () => field.value,
             set: (value, append) => {
               field.value = append && field.value.trim() ? `${field.value.trim()} ${String(value).trim()}` : String(value).trim();
@@ -2800,6 +2852,11 @@ ${content}`
             command: detail.command,
             editableFieldCount: visibleFormFields().length
           });
+          const guidedEnvelope = isDraftReopenCommand(detail.command) ? guidedEntryController?.begin(detail.command, {
+            requestId: detail.requestId,
+            processId: workspace.dataset.guidedEntryProcess,
+            documentId: workspace.dataset.document
+          }) : null;
           if (!preserveGuidedDocument) {
             if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
           } else {
@@ -2862,7 +2919,7 @@ ${content}`
             }
             visualSuccess = Boolean(evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0);
           }
-          if (specializedIntent) {
+          if (specializedIntent && !preserveGuidedDocument) {
             try {
               const stagedAppSurface = document.createElement("div");
               const specialized = await renderSpecializedVisual({
@@ -2896,12 +2953,8 @@ ${content}`
               }
             }
           }
-          if (isDraftReopenCommand(detail.command) && visibleFormFields().length > 0) {
-            await guidedEntryController?.execute(detail.command, {
-              requestId: detail.requestId,
-              processId: workspace.dataset.guidedEntryProcess,
-              documentId: workspace.dataset.document
-            });
+          if (guidedEnvelope && visibleFormFields().length > 0) {
+            await guidedEntryController?.commit(guidedEnvelope);
           }
           const specializedKind = specializedIntent || null;
           if (!ownsWorkspace()) return;
@@ -3112,6 +3165,14 @@ ${content}`
             };
           },
           ensureAuthoritativeDocument: async () => visibleFormFields().length > 0,
+          mountGeneration: (envelope) => {
+            const form = visibleFormFields()[0]?.node?.closest?.("form");
+            if (form) form.dataset.guidedEntryGeneration = envelope.generationId;
+          },
+          visibleGeneration: () => {
+            const form = visibleFormFields()[0]?.node?.closest?.("form");
+            return form?.dataset?.guidedEntryGeneration || null;
+          },
           settleVisibleDocument: () => new Promise(
             (resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))
           ),

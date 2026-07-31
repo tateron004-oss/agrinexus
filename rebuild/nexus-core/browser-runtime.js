@@ -46,6 +46,7 @@ class NexusBrowserRuntime {
     this.responseActive = false;
     this.responseRequestPending = false;
     this.deferredResponse = null;
+    this.completedResponseKeys = new Set();
     this.visualRoutes = new Map();
     this.conversationContext = createConversationContext();
     this.requestTransaction = new NexusRequestTransaction({
@@ -219,6 +220,31 @@ class NexusBrowserRuntime {
     return this.requestResponse(deferred.event, deferred.reason);
   }
 
+  completeResponse(event, completionEvent) {
+    const responseId = event?.response?.id || event?.response_id || this.activeResponseId || null;
+    const completionKey = responseId || `pending:${this.responseActive}:${this.responseRequestPending}`;
+    if (this.completedResponseKeys.has(completionKey)) return false;
+    this.completedResponseKeys.add(completionKey);
+    if (this.completedResponseKeys.size > 32) {
+      this.completedResponseKeys.delete(this.completedResponseKeys.values().next().value);
+    }
+    this.clearResponseFallback();
+    this.activeResponseId = null;
+    this.responseActive = false;
+    this.responseRequestPending = false;
+    this.receipt("audio.owner-released", {
+      owner: "realtime",
+      responseId,
+      completionEvent
+    });
+    this.receipt("conversation.return-to-listening", {
+      responseId,
+      completionEvent
+    });
+    this.flushDeferredResponse();
+    return true;
+  }
+
   attachRemoteAudio(peer) {
     peer.addEventListener("track", (event) => {
       this.attachRemoteStream(event.streams && event.streams[0]);
@@ -306,15 +332,18 @@ class NexusBrowserRuntime {
     if (event.type === "response.output_audio.delta" || event.type === "response.audio.delta") {
       this.receipt("conversation.speaking");
     }
-    if (event.type === "response.output_audio.done" || event.type === "response.audio.done") {
-      this.clearResponseFallback();
-      this.receipt("conversation.return-to-listening");
+    if (
+      event.type === "response.output_audio.done"
+      || event.type === "response.audio.done"
+      || event.type === "response.done"
+    ) {
+      this.completeResponse(event, event.type);
     }
-    if (event.type === "response.done" || event.type === "response.cancelled") {
+    if (event.type === "response.cancelled") {
       this.activeResponseId = null;
       this.responseActive = false;
       this.responseRequestPending = false;
-      this.receipt("audio.owner-released", { owner: "realtime" });
+      this.receipt("audio.owner-released", { owner: "realtime", completionEvent: event.type });
       this.flushDeferredResponse();
     }
     if (event.type === "error") {
@@ -407,6 +436,7 @@ class NexusBrowserRuntime {
     this.responseActive = false;
     this.responseRequestPending = false;
     this.deferredResponse = null;
+    this.completedResponseKeys.clear();
     this.visualRoutes.clear();
     this.conversationContext = clearConversationContext();
     this.receipt("runtime.closed", { reason });

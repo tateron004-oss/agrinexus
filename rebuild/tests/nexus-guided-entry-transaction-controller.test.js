@@ -16,6 +16,8 @@ const fields = () => [
 const receipts = [];
 let releaseRender;
 let delayRender = false;
+let visibleGeneration = null;
+let replaceGenerationDuringSettle = false;
 const controller = new NexusGuidedEntryTransactionController({
   fields,
   storage,
@@ -26,7 +28,11 @@ const controller = new NexusGuidedEntryTransactionController({
     if (delayRender) await new Promise((resolve) => { releaseRender = resolve; });
     return true;
   },
-  settleVisibleDocument: async () => {}
+  mountGeneration: (envelope) => { visibleGeneration = envelope.generationId; },
+  visibleGeneration: () => visibleGeneration,
+  settleVisibleDocument: async () => {
+    if (replaceGenerationDuringSettle) visibleGeneration = "late-competing-render";
+  }
 });
 
 (async () => {
@@ -60,6 +66,15 @@ const controller = new NexusGuidedEntryTransactionController({
   const stale = await stalePromise;
   assert.equal(stale.action, "rejected");
   assert.equal(stale.reason, "superseded-during-render");
+
+  replaceGenerationDuringSettle = true;
+  const replaced = await controller.execute("Nexus, reopen this resume draft", { requestId: "reopen-replaced" });
+  assert.equal(replaced.action, "rejected");
+  assert.equal(replaced.reason, "visible-generation-replaced");
+  assert.ok(receipts.some((item) => (
+    item.type === "guided-entry.transaction-rejected"
+    && item.detail.generationId === "reopen-replaced:generation"
+  )));
 
   controller.cancelAll();
   assert.ok(receipts.some((item) => item.type === "guided-entry.transaction-cancelled"));

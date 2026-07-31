@@ -107,8 +107,18 @@ assert.equal(shouldPreserveGuidedDocument({
 const browserEntry = fs.readFileSync(path.join(__dirname, "../browser/nexus-clean-entry.js"), "utf8");
 assert.match(
   browserEntry,
-  /if \(isDraftReopenCommand\(detail\.command\) && visibleFormFields\(\)\.length > 0\)[\s\S]*guidedEntryController\?\.execute\(detail\.command,\s*\{[\s\S]*requestId:\s*detail\.requestId/,
-  "The replacement controller must own a routed reopen after the authoritative form is rendered."
+  /const guidedEnvelope = isDraftReopenCommand\(detail\.command\)[\s\S]*guidedEntryController\?\.begin\(detail\.command,[\s\S]*if \(guidedEnvelope && visibleFormFields\(\)\.length > 0\)[\s\S]*guidedEntryController\?\.commit\(guidedEnvelope\)/,
+  "The replacement controller must acquire final-screen ownership before rendering and commit the same generation."
+);
+assert.match(
+  browserEntry,
+  /if \(specializedIntent && !preserveGuidedDocument\)/,
+  "A guided reopen must not permit a competing specialized renderer to replace the authoritative form."
+);
+assert.match(
+  browserEntry,
+  /mountGeneration:[\s\S]*guidedEntryGeneration[\s\S]*visibleGeneration:/,
+  "The browser must mount and verify the controller's final-screen generation."
 );
 assert.match(
   browserEntry,

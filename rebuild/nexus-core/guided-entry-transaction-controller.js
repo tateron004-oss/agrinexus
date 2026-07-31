@@ -20,6 +20,8 @@ class NexusGuidedEntryTransactionController {
     storage,
     context,
     ensureAuthoritativeDocument = async () => true,
+    mountGeneration = null,
+    visibleGeneration = null,
     settleVisibleDocument = async () => {},
     onReceipt = () => {},
     now = () => new Date().toISOString(),
@@ -28,12 +30,21 @@ class NexusGuidedEntryTransactionController {
     this.fields = fields || (() => []);
     this.context = context || (() => ({}));
     this.ensureAuthoritativeDocument = ensureAuthoritativeDocument;
+    this.mountedGeneration = null;
+    this.mountGeneration = typeof mountGeneration === "function"
+      ? mountGeneration
+      : (envelope) => { this.mountedGeneration = envelope.generationId; };
+    this.visibleGeneration = typeof visibleGeneration === "function"
+      ? visibleGeneration
+      : () => this.mountedGeneration;
     this.settleVisibleDocument = settleVisibleDocument;
     this.onReceipt = onReceipt;
     this.now = now;
     this.idFactory = idFactory;
     this.sequence = 0;
     this.active = null;
+    this.screenOwner = null;
+    this.mountedGeneration = null;
     this.requests = new Map();
     this.bufferedReceipts = new Map();
     this.engine = new NexusUniversalGuidedEntryEngine({
@@ -59,6 +70,7 @@ class NexusGuidedEntryTransactionController {
     const envelope = freezeEnvelope({
       requestId: id,
       sequence: ++this.sequence,
+      generationId: `${id}:generation`,
       command: clean(command),
       documentId: clean(options.documentId || this.context()?.documentId || "active-document"),
       processId: clean(options.processId || this.context()?.processId || "current-form"),
@@ -67,11 +79,20 @@ class NexusGuidedEntryTransactionController {
       at: this.now()
     });
     this.requests.set(id, envelope);
+    this.screenOwner = envelope;
     return envelope;
   }
 
   isCurrent(envelope) {
-    return Boolean(envelope && this.active?.requestId === envelope.requestId);
+    return Boolean(
+      envelope
+      && this.active?.requestId === envelope.requestId
+      && this.screenOwner?.generationId === envelope.generationId
+    );
+  }
+
+  ownsScreen(envelope) {
+    return Boolean(envelope && this.screenOwner?.generationId === envelope.generationId);
   }
 
   emit(type, envelope, detail = {}) {
@@ -81,6 +102,7 @@ class NexusGuidedEntryTransactionController {
       detail: Object.freeze({
         requestId: envelope.requestId,
         transactionSequence: envelope.sequence,
+        generationId: envelope.generationId,
         processId: envelope.processId,
         documentId: envelope.documentId,
         ...detail
@@ -108,6 +130,7 @@ class NexusGuidedEntryTransactionController {
 
   async commit(envelope) {
     if (!envelope?.accepted) return this.reject(envelope, envelope?.reason || "invalid-envelope");
+    if (!this.ownsScreen(envelope)) return this.reject(envelope, "screen-lease-superseded");
     if (this.active && this.active.sequence > envelope.sequence) return this.reject(envelope, "stale-request");
     this.active = envelope;
     this.bufferedReceipts.set(envelope.requestId, []);
@@ -116,6 +139,10 @@ class NexusGuidedEntryTransactionController {
     const rendered = await this.ensureAuthoritativeDocument(envelope);
     if (!this.isCurrent(envelope)) return this.reject(envelope, "superseded-during-render");
     if (!rendered || !this.fields().length) return this.reject(envelope, "authoritative-document-unavailable");
+    this.mountGeneration(envelope);
+    if (this.visibleGeneration() !== envelope.generationId) {
+      return this.reject(envelope, "generation-mount-failed");
+    }
     this.emit("guided-entry.document-authoritative", envelope, { state: "rendered" });
 
     const result = this.engine.handle(envelope.command, {
@@ -129,6 +156,9 @@ class NexusGuidedEntryTransactionController {
 
     await this.settleVisibleDocument(envelope);
     if (!this.isCurrent(envelope)) return this.reject(envelope, "superseded-before-verification");
+    if (this.visibleGeneration() !== envelope.generationId) {
+      return this.reject(envelope, "visible-generation-replaced");
+    }
     const visibleValues = this.visibleSnapshot();
     const buffered = this.bufferedReceipts.get(envelope.requestId) || [];
     const reopened = [...buffered].reverse().find((receipt) => receipt.type === "voice-form.reopened");
@@ -188,6 +218,7 @@ class NexusGuidedEntryTransactionController {
   cancelAll(reason = "controller-teardown") {
     const active = this.active;
     this.active = null;
+    this.screenOwner = null;
     this.bufferedReceipts.clear();
     if (active) this.emit("guided-entry.transaction-cancelled", active, { reason });
   }

@@ -171,15 +171,22 @@ async function main() {
   assert.ok(sent.some((event) => event.type === "response.create"));
   await runtime.handleRealtimeEvent({ type: "response.created", response: { id: "response-one" } });
   await runtime.handleRealtimeEvent({ type: "response.output_audio.delta" });
-  await runtime.handleRealtimeEvent({ type: "response.output_audio.done" });
   const createCountWhileActive = sent.filter((event) => event.type === "response.create").length;
   assert.equal(runtime.requestResponse({}, "overlap-test"), false);
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive);
   assert.ok(receipts.some((receipt) => receipt.type === "audio.exclusive-response-blocked"));
   assert.equal(runtime.requestResponse({}, "tool-result-test", { defer: true }), true);
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive);
+  await runtime.handleRealtimeEvent({ type: "response.output_audio.done", response_id: "response-one" });
+  assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive + 1);
+  const listeningAfterAudioDone = receipts.filter((receipt) => receipt.type === "conversation.return-to-listening").length;
   await runtime.handleRealtimeEvent({ type: "response.done", response: { id: "response-one" } });
   assert.equal(sent.filter((event) => event.type === "response.create").length, createCountWhileActive + 1);
+  assert.equal(
+    receipts.filter((receipt) => receipt.type === "conversation.return-to-listening").length,
+    listeningAfterAudioDone,
+    "late response.done must not complete the same response twice"
+  );
   assert.ok(receipts.some((receipt) => receipt.type === "audio.exclusive-response-deferred"));
   await runtime.handleRealtimeEvent({ type: "response.created", response: { id: "response-two" } });
   await runtime.handleRealtimeEvent({ type: "response.created", response: { id: "response-overlap" } });
@@ -188,6 +195,14 @@ async function main() {
   await runtime.handleRealtimeEvent({ type: "input_audio_buffer.speech_started" });
   assert.ok(sent.some((event) => event.type === "response.cancel" && event.response_id === "response-two"));
   await runtime.handleRealtimeEvent({ type: "error", error: { code: "voice_test", message: "test error" } });
+  await runtime.handleRealtimeEvent({ type: "response.created", response: { id: "response-done-only" } });
+  const listeningBeforeDoneOnly = receipts.filter((receipt) => receipt.type === "conversation.return-to-listening").length;
+  await runtime.handleRealtimeEvent({ type: "response.done", response: { id: "response-done-only" } });
+  assert.equal(
+    receipts.filter((receipt) => receipt.type === "conversation.return-to-listening").length,
+    listeningBeforeDoneOnly + 1,
+    "response.done must return to listening when no audio.done event arrives"
+  );
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.barge-in"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.processing"));
   assert.ok(receipts.some((receipt) => receipt.type === "conversation.response-requested"));

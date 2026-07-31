@@ -83,6 +83,7 @@ function visibleFormFields() {
       return {
         key,
         label: String(label).replace(/\s+/g, " ").trim(),
+        node: field,
         get: () => field.value,
         set: (value, append) => {
           field.value = append && field.value.trim() ? `${field.value.trim()} ${String(value).trim()}` : String(value).trim();
@@ -769,6 +770,13 @@ function boot() {
       command: detail.command,
       editableFieldCount: visibleFormFields().length
     });
+    const guidedEnvelope = isDraftReopenCommand(detail.command)
+      ? guidedEntryController?.begin(detail.command, {
+        requestId: detail.requestId,
+        processId: workspace.dataset.guidedEntryProcess,
+        documentId: workspace.dataset.document
+      })
+      : null;
     if (!preserveGuidedDocument) {
       if (!renderWorkspace({ workspace: detail.workspace, command: detail.command })) return;
     } else {
@@ -831,7 +839,7 @@ function boot() {
       }
       visualSuccess = Boolean(evidence && evidence.id && Array.isArray(evidence.sources) && evidence.sources.length > 0);
     }
-    if (specializedIntent) {
+    if (specializedIntent && !preserveGuidedDocument) {
       try {
         const stagedAppSurface = document.createElement("div");
         const specialized = await renderSpecializedVisual({
@@ -865,12 +873,8 @@ function boot() {
         }
       }
     }
-    if (isDraftReopenCommand(detail.command) && visibleFormFields().length > 0) {
-      await guidedEntryController?.execute(detail.command, {
-        requestId: detail.requestId,
-        processId: workspace.dataset.guidedEntryProcess,
-        documentId: workspace.dataset.document
-      });
+    if (guidedEnvelope && visibleFormFields().length > 0) {
+      await guidedEntryController?.commit(guidedEnvelope);
     }
     const specializedKind = specializedIntent || null;
     if (!ownsWorkspace()) return;
@@ -1098,6 +1102,14 @@ function boot() {
       };
     },
     ensureAuthoritativeDocument: async () => visibleFormFields().length > 0,
+    mountGeneration: (envelope) => {
+      const form = visibleFormFields()[0]?.node?.closest?.("form");
+      if (form) form.dataset.guidedEntryGeneration = envelope.generationId;
+    },
+    visibleGeneration: () => {
+      const form = visibleFormFields()[0]?.node?.closest?.("form");
+      return form?.dataset?.guidedEntryGeneration || null;
+    },
     settleVisibleDocument: () => new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve))
     ),
