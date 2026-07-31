@@ -11,6 +11,7 @@ const { ApprovedEvidenceService, createTavilyEvidenceProvider } = require("./nex
 const { EvidenceReceiptStore } = require("./nexus-core/evidence-receipt-store");
 const { createOpenMapProvider } = require("./nexus-core/map-service");
 const { createVisualDataService } = require("./nexus-core/visual-data-service");
+const { createCertificationIdentity } = require("./nexus-core/certification-identity");
 
 const root = path.resolve(__dirname, "browser");
 const port = Number(process.env.NEXUS_CLEAN_PORT || 4317);
@@ -35,6 +36,12 @@ const api = createNexusCleanHttpHandler({
   visualDataService: createVisualDataService(),
   sessionAuthority: authority
 });
+const bundlePath = path.join(root, "nexus-clean.bundle.js");
+const certificationIdentity = createCertificationIdentity({
+  bundlePath,
+  releaseSha: process.env.RENDER_GIT_COMMIT || process.env.NEXUS_RELEASE_SHA,
+  deployedAt: process.env.RENDER_SERVICE_DEPLOYED_AT
+});
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -44,6 +51,12 @@ const contentTypes = {
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || "nexus.local"}`);
+  if (url.pathname === "/api/certification/identity") {
+    response.setHeader("cache-control", "no-store");
+    response.setHeader("content-type", "application/json; charset=utf-8");
+    response.end(JSON.stringify(certificationIdentity));
+    return;
+  }
   if (url.pathname === "/health" || url.pathname === "/api/voice/session" || url.pathname.startsWith("/api/evidence/") || url.pathname.startsWith("/api/maps/") || url.pathname.startsWith("/api/visual/")) {
     return api(request, response);
   }

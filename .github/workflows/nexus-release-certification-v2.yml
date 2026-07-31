@@ -1,0 +1,174 @@
+name: Nexus deterministic release certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - rebuild/nexus-genesis-clean-foundation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-deterministic-release-certification
+  cancel-in-progress: false
+
+env:
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+  NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
+
+jobs:
+  release-identity:
+    name: Exact deployed release identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify controller contracts
+        run: node rebuild/tests/nexus-release-certification-controller.test.js
+      - name: Wait for exact Render release
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Publish release identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-release-identity-${{ github.run_id }}
+          path: output/nexus-release-certification/
+          if-no-files-found: error
+          retention-days: 90
+
+  voice-lifecycle:
+    name: Physical voice lifecycle and applications
+    needs: release-identity
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 40
+    env:
+      NEXUS_CERTIFICATION_LANE: voice-lifecycle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reset retained runner state
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-certification-reset.ps1
+      - name: Verify physical devices
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-real-device-preflight.ps1
+      - name: Install locked certification driver
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
+      - name: Reverify exact deployed release
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Run physical voice and application lane
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+      - name: Create authoritative evidence summary
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          NEXUS_CERTIFICATION_OUTCOME: ${{ job.status }}
+        run: node scripts/nexus-certification-evidence.js
+      - name: Reverify protected foundation
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-protected-foundation-guard.js
+      - name: Publish voice evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-v2-voice-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/
+            test-results/
+          if-no-files-found: error
+          retention-days: 90
+
+  guided-entry:
+    name: Guided Entry final-screen persistence
+    needs: voice-lifecycle
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    env:
+      NEXUS_CERTIFICATION_LANE: guided-entry
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reset retained runner state
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-certification-reset.ps1
+      - name: Verify physical devices
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-real-device-preflight.ps1
+      - name: Install locked certification driver
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npm install --no-save --no-package-lock @playwright/test@1.61.1
+      - name: Reverify exact deployed release
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Run Guided Entry persistence lane
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-windows-voice-form-entry.spec.js --workers=1 --reporter=line
+      - name: Create authoritative evidence summary
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          NEXUS_CERTIFICATION_OUTCOME: ${{ job.status }}
+        run: node scripts/nexus-certification-evidence.js
+      - name: Reverify protected foundation
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-protected-foundation-guard.js
+      - name: Publish Guided Entry evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-v2-guided-entry-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/
+            test-results/
+          if-no-files-found: error
+          retention-days: 90
+
+  consecutive-stability:
+    name: Three consecutive complete production passes
+    needs: guided-entry
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+    env:
+      NEXUS_CERTIFICATION_LANE: consecutive-stability
+      NEXUS_STABILITY_RUNS: "3"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify physical devices
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-real-device-preflight.ps1
+      - name: Install locked certification driver
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
+      - name: Require three consecutive complete passes
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-stability-certification.ps1
+      - name: Create authoritative evidence summary
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          NEXUS_CERTIFICATION_OUTCOME: ${{ job.status }}
+        run: node scripts/nexus-certification-evidence.js
+      - name: Reverify protected foundation
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-protected-foundation-guard.js
+      - name: Publish stability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-v2-stability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/
+            test-results/
+          if-no-files-found: error
+          retention-days: 90
