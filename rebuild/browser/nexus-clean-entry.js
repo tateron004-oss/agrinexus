@@ -1023,16 +1023,6 @@ function boot() {
     if (receipt.type === "transcript.final") {
       caption.textContent = receipt.detail.transcript || "";
       caption.hidden = !preferences.captions;
-      const transcript = receipt.detail.transcript || "";
-      if (!isDraftReopenCommand(transcript) && visibleFormFields().length > 0) {
-        guidedEntryController?.execute(transcript, {
-          requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
-        }).then((formResult) => {
-          if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
-            runtime.speakText(formResult.readback, "voice-form-readback");
-          }
-        });
-      }
     }
     if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
     window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -1083,6 +1073,16 @@ function boot() {
     realtime,
     audioElement: audio,
     openWorkspace: createWorkspaceAdapter(),
+    interceptCommand: async (command, options = {}) => {
+      if (isDraftReopenCommand(command) || visibleFormFields().length === 0) return { handled: false };
+      const formResult = await guidedEntryController?.execute(command, {
+        requestId: options.requestId || crypto.randomUUID()
+      });
+      if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+        runtime.speakText(formResult.readback, "voice-form-readback");
+      }
+      return formResult || { handled: false };
+    },
     onReceipt
   });
   guidedEntryController = new NexusGuidedEntryTransactionController({

@@ -993,6 +993,7 @@
           realtime,
           audioElement,
           openWorkspace,
+          interceptCommand = null,
           onReceipt = () => {
           },
           instructions = DEFAULT_INSTRUCTIONS
@@ -1005,6 +1006,7 @@
           this.realtime = realtime;
           this.audioElement = audioElement;
           this.openWorkspace = openWorkspace;
+          this.interceptCommand = typeof interceptCommand === "function" ? interceptCommand : null;
           this.onReceipt = onReceipt;
           this.instructions = instructions;
           this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
@@ -1020,6 +1022,7 @@
           this.completedResponseKeys = /* @__PURE__ */ new Set();
           this.visualRoutes = /* @__PURE__ */ new Map();
           this.visibleWorkspaceTransactions = /* @__PURE__ */ new Set();
+          this.commandInterceptions = /* @__PURE__ */ new Map();
           this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
             execute: (resolution) => this.openWorkspace({
@@ -1231,20 +1234,16 @@ ${content}`
           if (!event || typeof event.type !== "string") return null;
           if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
             const args = JSON.parse(event.arguments || "{}");
-            return this.route(args.command, event.call_id);
+            return this.handleCommand(args.command, event.call_id);
           }
           if (event.type === "conversation.item.input_audio_transcription.completed") {
             const transcript = event.transcript || "";
             this.receipt("transcript.final", { transcript });
             const wakePhrase = detectWakePhrase(transcript);
             if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-            const resolution = routeCommand(
-              transcript,
-              this.foundation.machine.snapshot().state,
-              this.conversationContext
-            );
-            if (resolution.accepted) {
-              this.route(transcript).catch((error) => {
+            const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state, this.conversationContext);
+            if (resolution.accepted || this.interceptCommand) {
+              this.handleCommand(transcript).catch((error) => {
                 this.receipt("workspace.route-failed", {
                   name: error.name,
                   message: error.message,
@@ -1317,6 +1316,43 @@ ${content}`
             });
           }
           return null;
+        }
+        commandKey(command) {
+          return String(command || "").toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/\s+/g, " ").trim();
+        }
+        async handleCommand(command, callId = null) {
+          const key = this.commandKey(command);
+          let interception = key && this.commandInterceptions.get(key);
+          if (!interception) {
+            interception = Promise.resolve(this.interceptCommand?.(command, {
+              requestId: callId || void 0
+            })).then((result) => result || { handled: false });
+            if (key) {
+              this.commandInterceptions.set(key, interception);
+              setTimeout(() => {
+                if (this.commandInterceptions.get(key) === interception) this.commandInterceptions.delete(key);
+              }, 15e3);
+            }
+          }
+          const owned = await interception;
+          if (!owned.handled) return this.route(command, callId);
+          this.receipt("command.consumed-by-guided-entry", {
+            command,
+            action: owned.action || null,
+            requestId: owned.requestId || null
+          });
+          if (callId) {
+            this.realtime.send({
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: callId,
+                output: JSON.stringify(owned)
+              }
+            });
+            this.requestResponse({}, "guided-entry-result", { defer: true });
+          }
+          return owned;
         }
         async route(command, callId = null) {
           const state = this.foundation.machine.snapshot().state;
@@ -1399,6 +1435,7 @@ ${content}`
           this.completedResponseKeys.clear();
           this.visualRoutes.clear();
           this.visibleWorkspaceTransactions.clear();
+          this.commandInterceptions.clear();
           this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
         }
@@ -3168,16 +3205,6 @@ ${content}`
           if (receipt.type === "transcript.final") {
             caption.textContent = receipt.detail.transcript || "";
             caption.hidden = !preferences.captions;
-            const transcript = receipt.detail.transcript || "";
-            if (!isDraftReopenCommand(transcript) && visibleFormFields().length > 0) {
-              guidedEntryController?.execute(transcript, {
-                requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
-              }).then((formResult) => {
-                if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
-                  runtime.speakText(formResult.readback, "voice-form-readback");
-                }
-              });
-            }
           }
           if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
           window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -3228,6 +3255,16 @@ ${content}`
           realtime,
           audioElement: audio,
           openWorkspace: createWorkspaceAdapter(),
+          interceptCommand: async (command, options = {}) => {
+            if (isDraftReopenCommand(command) || visibleFormFields().length === 0) return { handled: false };
+            const formResult = await guidedEntryController?.execute(command, {
+              requestId: options.requestId || crypto.randomUUID()
+            });
+            if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+              runtime.speakText(formResult.readback, "voice-form-readback");
+            }
+            return formResult || { handled: false };
+          },
           onReceipt
         });
         guidedEntryController = new NexusGuidedEntryTransactionController({

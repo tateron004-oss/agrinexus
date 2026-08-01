@@ -23,6 +23,7 @@ class NexusBrowserRuntime {
     realtime,
     audioElement,
     openWorkspace,
+    interceptCommand = null,
     onReceipt = () => {},
     instructions = DEFAULT_INSTRUCTIONS
   } = {}) {
@@ -34,6 +35,7 @@ class NexusBrowserRuntime {
     this.realtime = realtime;
     this.audioElement = audioElement;
     this.openWorkspace = openWorkspace;
+    this.interceptCommand = typeof interceptCommand === "function" ? interceptCommand : null;
     this.onReceipt = onReceipt;
     this.instructions = instructions;
     this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
@@ -49,6 +51,7 @@ class NexusBrowserRuntime {
     this.completedResponseKeys = new Set();
     this.visualRoutes = new Map();
     this.visibleWorkspaceTransactions = new Set();
+    this.commandInterceptions = new Map();
     this.conversationContext = createConversationContext();
     this.requestTransaction = new NexusRequestTransaction({
       execute: (resolution) => this.openWorkspace({
@@ -271,20 +274,16 @@ class NexusBrowserRuntime {
 
     if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
       const args = JSON.parse(event.arguments || "{}");
-      return this.route(args.command, event.call_id);
+      return this.handleCommand(args.command, event.call_id);
     }
     if (event.type === "conversation.item.input_audio_transcription.completed") {
       const transcript = event.transcript || "";
       this.receipt("transcript.final", { transcript });
       const wakePhrase = detectWakePhrase(transcript);
       if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-      const resolution = routeCommand(
-        transcript,
-        this.foundation.machine.snapshot().state,
-        this.conversationContext
-      );
-      if (resolution.accepted) {
-        this.route(transcript).catch((error) => {
+      const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state, this.conversationContext);
+      if (resolution.accepted || this.interceptCommand) {
+        this.handleCommand(transcript).catch((error) => {
           this.receipt("workspace.route-failed", {
             name: error.name,
             message: error.message,
@@ -361,6 +360,49 @@ class NexusBrowserRuntime {
       });
     }
     return null;
+  }
+
+  commandKey(command) {
+    return String(command || "")
+      .toLocaleLowerCase()
+      .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async handleCommand(command, callId = null) {
+    const key = this.commandKey(command);
+    let interception = key && this.commandInterceptions.get(key);
+    if (!interception) {
+      interception = Promise.resolve(this.interceptCommand?.(command, {
+        requestId: callId || undefined
+      })).then((result) => result || { handled: false });
+      if (key) {
+        this.commandInterceptions.set(key, interception);
+        setTimeout(() => {
+          if (this.commandInterceptions.get(key) === interception) this.commandInterceptions.delete(key);
+        }, 15000);
+      }
+    }
+    const owned = await interception;
+    if (!owned.handled) return this.route(command, callId);
+    this.receipt("command.consumed-by-guided-entry", {
+      command,
+      action: owned.action || null,
+      requestId: owned.requestId || null
+    });
+    if (callId) {
+      this.realtime.send({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: callId,
+          output: JSON.stringify(owned)
+        }
+      });
+      this.requestResponse({}, "guided-entry-result", { defer: true });
+    }
+    return owned;
   }
 
   async route(command, callId = null) {
@@ -450,6 +492,7 @@ class NexusBrowserRuntime {
     this.completedResponseKeys.clear();
     this.visualRoutes.clear();
     this.visibleWorkspaceTransactions.clear();
+    this.commandInterceptions.clear();
     this.conversationContext = clearConversationContext();
     this.receipt("runtime.closed", { reason });
   }
