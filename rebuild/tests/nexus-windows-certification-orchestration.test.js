@@ -13,15 +13,24 @@ const contents = Object.fromEntries(
 
 for (const [name, workflow] of Object.entries(contents)) {
   assert.match(workflow, /workflow_dispatch:/, `${name} must be explicitly dispatched`);
-  assert.doesNotMatch(
-    workflow,
-    /^\s{2}push:/m,
-    `${name} must not auto-queue the single physical Windows runner on push`
-  );
   assert.match(
     workflow,
     /group: nexus-windows-physical-certification\s+cancel-in-progress: false/,
     `${name} must use the shared, non-canceling microphone-owner lock`
+  );
+}
+
+assert.match(
+  contents.canonical,
+  /^\s{2}push:\s*$[\s\S]*?rebuild\/nexus-genesis-clean-foundation/m,
+  "canonical certification must auto-queue for the protected release branch"
+);
+
+for (const name of ["form", "clean"]) {
+  assert.doesNotMatch(
+    contents[name],
+    /^\s{2}push:/m,
+    `${name} diagnostic workflow must remain manual-only`
   );
 }
 
