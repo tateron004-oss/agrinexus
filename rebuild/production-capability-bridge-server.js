@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, "..");
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 10000);
 const LEGACY_PORT = Number(process.env.NEXUS_LEGACY_PORT || (PORT === 65535 ? 65534 : PORT + 1));
+const CERTIFICATION_PORT = Number(process.env.NEXUS_CERTIFICATION_PORT || (PORT === 65535 ? 65533 : PORT + 2));
 const LEGACY_HOST = "127.0.0.1";
 const MAX_BODY = 256 * 1024;
 const bridgeSessions = new Set();
@@ -87,6 +88,26 @@ function proxyRequest(request, response, { capture = false } = {}) {
         headers: legacyResponse.headers,
         body: Buffer.concat(chunks)
       }));
+    });
+    upstream.on("error", reject);
+    request.pipe(upstream);
+  });
+}
+
+function proxyCertificationRequest(request, response) {
+  return new Promise((resolve, reject) => {
+    const upstreamPath = request.url.replace(/^\/certification(?=\/|\?|$)/, "") || "/";
+    const upstream = http.request({
+      hostname: LEGACY_HOST,
+      port: CERTIFICATION_PORT,
+      method: request.method,
+      path: upstreamPath,
+      headers: { ...request.headers, host: `${LEGACY_HOST}:${CERTIFICATION_PORT}` }
+    }, (certificationResponse) => {
+      const headers = { ...certificationResponse.headers, "cache-control": "no-store" };
+      response.writeHead(certificationResponse.statusCode || 502, headers);
+      certificationResponse.pipe(response);
+      certificationResponse.on("end", resolve);
     });
     upstream.on("error", reject);
     request.pipe(upstream);
@@ -175,6 +196,15 @@ async function handleCapability(request, response) {
 
 async function handler(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || `${HOST}:${PORT}`}`);
+  const certificationReferer = (() => {
+    try { return new URL(String(request.headers.referer || "")).pathname.startsWith("/certification"); }
+    catch { return false; }
+  })();
+  if (url.pathname === "/certification" || url.pathname.startsWith("/certification/") ||
+      (certificationReferer && url.pathname.startsWith("/api/"))) {
+    try { return await proxyCertificationRequest(request, response); }
+    catch (error) { return json(response, 502, { error: "certification-runtime-unavailable", message: error.message }); }
+  }
   if (url.pathname === "/api/login" && request.method === "POST") {
     try {
       const proxied = await proxyRequest(request, response, { capture: true });
@@ -251,8 +281,24 @@ const legacy = spawn(process.execPath, [path.join(ROOT, "server.js")], {
   stdio: ["ignore", "inherit", "inherit"]
 });
 
+const certification = spawn(process.execPath, [path.join(__dirname, "server.js")], {
+  cwd: ROOT,
+  env: {
+    ...process.env,
+    NEXUS_CLEAN_HOST: LEGACY_HOST,
+    NEXUS_CLEAN_PORT: String(CERTIFICATION_PORT),
+    NEXUS_CLEAN_CERTIFICATION: "true"
+  },
+  stdio: ["ignore", "inherit", "inherit"]
+});
+
 legacy.on("exit", (code, signal) => {
   console.error(`Protected Nexus runtime exited (${code == null ? signal : code}).`);
+  process.exit(code || 1);
+});
+
+certification.on("exit", (code, signal) => {
+  console.error(`Nexus certification runtime exited (${code == null ? signal : code}).`);
   process.exit(code || 1);
 });
 
@@ -263,6 +309,7 @@ server.listen(PORT, HOST, () => console.log(`Nexus production capability bridge 
 function shutdown(signal) {
   server.close(() => process.exit(0));
   if (!legacy.killed) legacy.kill(signal);
+  if (!certification.killed) certification.kill(signal);
   setTimeout(() => process.exit(0), 3000).unref();
 }
 process.on("SIGTERM", () => shutdown("SIGTERM"));
