@@ -5,6 +5,7 @@
   const nativeFetch = windowObject.fetch.bind(windowObject);
   const state = {
     currentResult: null,
+    resultStack: [],
     currentCommand: "",
     history: [],
     controller: null,
@@ -17,6 +18,76 @@
     lastAgentEndAt: 0,
     lastUserSpeechAt: 0
   };
+
+  function localResult(capability, operation, acknowledgement, extra = {}) {
+    return {
+      schema: "nexus.content.result.v2",
+      requestId: `production-local-${Date.now()}-${++state.requestSequence}`,
+      status: "ready",
+      capability,
+      operation,
+      acknowledgement,
+      localLifecycleAction: true,
+      ...extra
+    };
+  }
+
+  function handleLocalLifecycle(command) {
+    const value = clean(command).toLowerCase();
+    const surface = ensureSurface();
+    const audio = surface.querySelector("#nexus-capability-audio");
+    if (/\b(close|dismiss)\b.*\b(workspace|window|document|map|results?)\b|\breturn to (?:our )?conversation\b/.test(value)) {
+      if (state.controller) state.controller.abort("closed-by-voice");
+      surface.hidden = true;
+      document.body.classList.remove("nexus-capability-open");
+      stage("workspace.closed", { input: "voice" });
+      return localResult("workspace", "close", "The workspace is closed and our conversation remains available.");
+    }
+    if (/^\s*(?:nexus,?\s*)?(?:cancel|cancel this request)\b/.test(value)) {
+      if (state.controller) state.controller.abort("cancelled-by-voice");
+      stage("request.cancelled", { input: "voice" });
+      return localResult("workspace", "cancel", "The active request was cancelled.");
+    }
+    if (/\b(go back|previous result|return to the previous result)\b/.test(value) && state.resultStack.length) {
+      const previous = state.resultStack.pop();
+      renderArtifact(previous);
+      state.currentResult = previous;
+      stage("workspace.previous-visible", { resultId: previous.requestId });
+      return { ...previous, acknowledgement: "The previous result is visible again.", localLifecycleAction: true };
+    }
+    if (/\b(?:pause|stop)\b.*\b(?:music|audio|song|speaking)\b|^\s*(?:nexus,?\s*)?(?:pause|stop)\s*$/.test(value)) {
+      if (audio) { audio.pause(); if (/\bstop\b/.test(value)) audio.currentTime = 0; }
+      if (/\bspeaking\b/.test(value)) windowObject.speechSynthesis?.cancel();
+      stage("media.paused", { stopped: /\bstop\b/.test(value) });
+      return localResult("media-control", /\bstop\b/.test(value) ? "stop" : "pause", /\bstop\b/.test(value) ? "Playback is stopped." : "Playback is paused.");
+    }
+    if (/\bresume\b.*\b(?:music|audio|song|speaking)\b|^\s*(?:nexus,?\s*)?resume\s*$/.test(value)) {
+      if (audio) audio.play().catch(() => {});
+      stage("media.resumed", {});
+      return localResult("media-control", "resume", "Playback resumed when permitted by the browser.");
+    }
+    if (/\b(increase|larger|bigger)\b.*\b(text|font)\b|\bmake this screen easier to read\b/.test(value)) {
+      const frame = surface.querySelector(".nexus-capability-frame");
+      if (frame) frame.style.fontSize = `${Math.min(150, Number(frame.dataset.fontPercent || 100) + 15)}%`;
+      if (frame) frame.dataset.fontPercent = String(Math.min(150, Number(frame.dataset.fontPercent || 100) + 15));
+      stage("accessibility.text-resized", { percent: frame?.dataset.fontPercent || "115" });
+      return localResult("accessibility", "update", "The workspace text is larger and remains visible.");
+    }
+    if (/\bread (?:the )?(?:visible )?(?:results?|screen|document) aloud\b/.test(value)) {
+      const text = clean(surface.querySelector("#nexus-capability-body")?.innerText, 5000);
+      if (text && windowObject.speechSynthesis && windowObject.SpeechSynthesisUtterance) {
+        windowObject.speechSynthesis.cancel();
+        windowObject.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      }
+      stage("accessibility.read-aloud", { textLength: text.length });
+      return localResult("accessibility", "read", "I am reading the visible result aloud while keeping it on screen.");
+    }
+    if (/\b(?:try|retry) (?:that|this|the request) again\b/.test(value) && state.currentCommand) {
+      stage("request.retry-by-voice", { command: state.currentCommand });
+      return executeCapability(state.currentCommand, { retry: true });
+    }
+    return null;
+  }
 
   function clean(value, limit = 6000) {
     return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
@@ -57,10 +128,11 @@
   function isVisualCapabilityRequest(command) {
     const value = clean(command).toLowerCase();
     if (!value) return false;
+    const lifecycleRequest = /\b(close|dismiss|cancel|retry|go back|previous result|pause|resume|stop speaking|read .* aloud|increase .* text|larger .* text|easier to read|return to .*conversation)\b/.test(value);
     const visualOutcome = /\b(show|display|open|find|search|research|look up|create|make|build|draft|prepare|write|play|map|route|directions|remind|revise|change|add|fill|complete|review|print|share|stop|put|set|update)\b/.test(value);
     const artifactOrLiveSource = /\b(image|picture|photo|source|website|map|route|direction|music|song|artist|genre|resume|résumé|cv|document|report|form|intake|card|questions?|marketplace|listing|draft|reminder|weather|forecast|places?|shops?|results?)\b/.test(value);
     const contextualFollowUp = Boolean(state.currentResult) && /^(?:please\s+)?(?:change|revise|add|remove|fill|complete|review|print|share|show|play|stop|make|try|use|put|set|update)\b/.test(value);
-    return (visualOutcome && artifactOrLiveSource) || contextualFollowUp;
+    return lifecycleRequest || (visualOutcome && artifactOrLiveSource) || contextualFollowUp;
   }
 
   function commandOverlap(left, right) {
@@ -269,6 +341,10 @@
   }
 
   async function executeCapability(command, options = {}) {
+    if (!options.retry) {
+      const lifecycle = handleLocalLifecycle(command);
+      if (lifecycle) return lifecycle;
+    }
     const requestId = `production-capability-${Date.now()}-${++state.requestSequence}`;
     if (state.controller) state.controller.abort("superseded-by-new-request");
     const controller = new AbortController();
@@ -288,6 +364,10 @@
       }
       stage("provider.returned", { requestId, status: result.status, capability: result.capability, timing: result.timing || null, providerTrace: result.providerTrace || [] });
       const root = await settleVisual(result, requestId);
+      if (state.currentResult && state.currentResult.requestId !== result.requestId) {
+        state.resultStack.push(state.currentResult);
+        state.resultStack = state.resultStack.slice(-12);
+      }
       state.currentResult = result;
       state.history.push({ role: "user", content: command }, { role: "assistant", content: result.status === "ready" ? result.acknowledgement : result.recovery && result.recovery.message || "Provider failed." });
       state.history = state.history.slice(-20);

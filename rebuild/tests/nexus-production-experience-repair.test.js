@@ -100,6 +100,14 @@ async function main() {
   assert.match(productionScript, /timed-out-after/);
   assert.match(productionScript, /provider\.retry/);
   assert.match(productionScript, /superseded-by-new-request/);
+  assert.match(productionScript, /workspace\.closed/);
+  assert.match(productionScript, /request\.cancelled/);
+  assert.match(productionScript, /workspace\.previous-visible/);
+  assert.match(productionScript, /media\.paused/);
+  assert.match(productionScript, /media\.resumed/);
+  assert.match(productionScript, /accessibility\.text-resized/);
+  assert.match(productionScript, /accessibility\.read-aloud/);
+  assert.match(productionScript, /request\.retry-by-voice/);
   assert.match(productionCss, /#0c2530/);
   assert.doesNotMatch(productionCss.split("@media print")[0], /background:\s*(?:#fff|white|rgba\(255,\s*255,\s*255)/i);
 
