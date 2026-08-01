@@ -50,6 +50,27 @@ async function main() {
   assert.equal(marketplace.capability, "marketplace-draft");
   assert.ok(marketplace.artifact.fields.length >= 4);
 
+  let clinicProviderCalls = 0;
+  const clinicRecoveryService = createContentActionService({
+    goalResolver: { async resolve() { return {
+      capability: "listings", operation: "search", workspace: "mobile-clinic",
+      query: "mobile clinic in Kenya", location: "Kenya", needsLiveProvider: true,
+      artifact: emptyArtifact("list", "Mobile clinics in Kenya"), acknowledgement: "Clinic listings are visible."
+    }; } },
+    fetchImpl: async () => {
+      clinicProviderCalls += 1;
+      return { ok: true, status: 200, async json() { return []; } };
+    }
+  });
+  const clinicRecovery = await clinicRecoveryService.execute({ command: "Nexus, find a mobile clinic in Kenya." });
+  assert.equal(clinicRecovery.status, "ready");
+  assert.equal(clinicRecovery.workspace, "mobile-clinic");
+  assert.equal(clinicRecovery.evidence.status, "truthful-no-results-recovery");
+  assert.ok(clinicProviderCalls >= 3);
+  assert.ok(clinicRecovery.artifact.links.some(link => /openstreetmap\.org\/search/.test(link.url)));
+  assert.match(clinicRecovery.acknowledgement, /No verified clinic listings were returned/i);
+  assert.doesNotMatch(clinicRecovery.acknowledgement, /Clinic listings are visible/i);
+
   assert.deepEqual(parseMapRequest("Nairobi, Kenya to Nakuru, Kenya"), { type: "route", origin: "Nairobi, Kenya", destination: "Nakuru, Kenya" });
   assert.deepEqual(parseMapRequest("Show a map of Nairobi, Kenya and give me directions to Nakuru."), { type: "route", origin: "Nairobi, Kenya", destination: "Nakuru, Kenya" });
   const mapRequests = [];
@@ -99,6 +120,8 @@ async function main() {
   assert.match(productionScript, /renderer\.acknowledged/);
   assert.match(productionScript, /timed-out-after/);
   assert.match(productionScript, /provider\.retry/);
+  assert.match(productionScript, /activeCertifiedGuidedEntry/);
+  assert.match(productionScript, /guided-entry\.owner-preserved/);
   assert.match(productionScript, /superseded-by-new-request/);
   assert.match(productionScript, /workspace\.closed/);
   assert.match(productionScript, /request\.cancelled/);

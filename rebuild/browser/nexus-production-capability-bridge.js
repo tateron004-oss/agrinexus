@@ -135,6 +135,15 @@
     return lifecycleRequest || (visualOutcome && artifactOrLiveSource) || contextualFollowUp;
   }
 
+  function activeCertifiedGuidedEntry(command) {
+    const workspace = document.querySelector("#nexus-workspace");
+    const editable = workspace && workspace.querySelector(
+      '[data-nexus-voice-form-proof], textarea[aria-label^="Résumé "], input[aria-label^="Résumé "]'
+    );
+    if (!editable) return false;
+    return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(command);
+  }
+
   function commandOverlap(left, right) {
     const tokens = value => new Set(clean(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(token => token.length >= 3));
     const expected = tokens(left);
@@ -554,6 +563,10 @@
     const request = commandFromRequest(input, options);
     if (!request || !isVisualCapabilityRequest(request.command)) return nativeFetch(input, options);
     const legacyPromise = nativeFetch(input, options);
+    if (activeCertifiedGuidedEntry(request.command)) {
+      stage("guided-entry.owner-preserved", { command: request.command });
+      return legacyPromise;
+    }
     const latestVisibleAck = [...state.stages].reverse().find(event => event.type === "renderer.acknowledged");
     const recentMatchingResult = state.currentResult && state.currentResult.status === "ready" && latestVisibleAck
       && Date.now() - Date.parse(latestVisibleAck.at) < 15000 && commandOverlap(request.command, state.currentCommand) >= 0.4;

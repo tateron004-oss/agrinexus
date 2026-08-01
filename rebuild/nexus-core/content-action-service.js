@@ -710,14 +710,48 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     const searches = [[subject, location].filter(Boolean).join(" near ")];
     const broader = subject.replace(/\brepairs?\b/ig, " ").replace(/\bshops\b/ig, "shop").replace(/\s+/g, " ").trim();
     if (broader && broader.toLowerCase() !== subject.toLowerCase()) searches.push([broader, location].filter(Boolean).join(" near "));
+    const clinicRequest = /\b(mobile\s+clinic|clinic|health\s+(?:centre|center|facility)|medical\s+facility)\b/i.test(`${query} ${subject}`);
+    const country = clean(location || /\bin\s+([A-Za-z][A-Za-z .'-]{2,80})/i.exec(query)?.[1], 100)
+      .replace(/[?.!,;:]+$/, "");
+    if (clinicRequest) {
+      const clinicLocations = [...new Set([location, country].map(value => clean(value, 100)).filter(Boolean))];
+      for (const place of clinicLocations) {
+        searches.push(`clinic, ${place}`, `health centre, ${place}`, `hospital, ${place}`);
+      }
+      if (!clinicLocations.length) searches.push("clinic", "health centre", "hospital");
+    }
     let items = [];
-    for (const search of searches) {
-      items = await lookup(search);
+    let providerError = null;
+    for (const search of [...new Set(searches.filter(Boolean))].slice(0, 8)) {
+      try {
+        items = await lookup(search);
+      } catch (error) {
+        providerError = error;
+        continue;
+      }
       if (items.length) break;
     }
-    if (!items.length) throw new Error(`The live listings provider returned no places for ${[query, location].filter(Boolean).join(" near ")}.`);
+    if (!items.length && clinicRequest) {
+      const area = country || location || "the requested area";
+      const sourceQuery = ["clinic health centre hospital", country || location].filter(Boolean).join(" ");
+      const artifact = emptyArtifact("list", `Clinic search recovery for ${area}`);
+      artifact.description = providerError
+        ? `The live place provider was unavailable, so Nexus did not invent clinic listings for ${area}.`
+        : `The live place provider returned no verified clinic listings for ${area}. Nexus did not invent results.`;
+      artifact.sections = [{
+        heading: "Useful recovery actions",
+        body: "Broaden the request to a city or county, retry the live search, or inspect the current OpenStreetMap source directly. For urgent medical needs, use the local emergency service or nearest known health facility.",
+        items: ["Try a city-level request such as “find clinics near Nairobi, Kenya.”", "Retry to check the live provider again.", "Open the source search and verify a facility before travelling."]
+      }];
+      artifact.links = [{
+        label: `Search OpenStreetMap for health facilities in ${area}`,
+        url: `https://www.openstreetmap.org/search?query=${encodeURIComponent(sourceQuery)}`
+      }];
+      return { artifact, recovered: true, providerError: clean(providerError && providerError.message, 400) };
+    }
+    if (!items.length) throw providerError || new Error(`The live listings provider returned no places for ${[query, location].filter(Boolean).join(" near ")}.`);
     const artifact = emptyArtifact("list", clean(goal.artifact && goal.artifact.title) || `Listings for ${query}`); artifact.description = `Live place results${location ? ` near ${location}` : ""}.`; artifact.items = items;
-    return artifact;
+    return { artifact, recovered: false, providerError: "" };
   }
 
   async function research(goal, context) {
@@ -755,7 +789,21 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       else if (goal.capability === "media-control" && goal.operation === "stop") {
         artifact = emptyArtifact("media", "Playback stopped"); artifact.description = "The visible media player was cleared."; artifact.media = emptyMedia("stopped");
       } else if (goal.capability === "images") artifact = await images(goal);
-      else if (goal.capability === "listings") artifact = await listings(goal);
+      else if (goal.capability === "listings") {
+        const listingResult = await listings(goal);
+        artifact = listingResult.artifact;
+        if (listingResult.recovered) {
+          goal = {
+            ...goal,
+            acknowledgement: "No verified clinic listings were returned. A visible recovery workspace with a current source search and next steps is open."
+          };
+          evidence = {
+            status: "truthful-no-results-recovery",
+            provider: "OpenStreetMap / Nominatim",
+            error: listingResult.providerError || null
+          };
+        }
+      }
       else if (goal.capability === "search") ({ artifact, evidence } = await research(goal, { ...context, command: request.command }));
       else if (goal.capability === "map") {
         if (!context || typeof context.map !== "function") throw new Error("The live map provider is not configured.");
