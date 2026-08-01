@@ -2,15 +2,12 @@ name: Nexus deterministic release certification
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
 
 permissions:
   contents: read
 
 concurrency:
-  group: nexus-deterministic-release-certification
+  group: nexus-windows-physical-certification
   cancel-in-progress: false
 
 env:
@@ -29,7 +26,9 @@ jobs:
         with:
           node-version: "22"
       - name: Verify controller contracts
-        run: node rebuild/tests/nexus-release-certification-controller.test.js
+        run: |
+          node rebuild/tests/nexus-release-certification-controller.test.js
+          node rebuild/tests/nexus-windows-certification-orchestration.test.js
       - name: Wait for exact Render release
         run: node scripts/nexus-release-certification-controller.js verify-deployment
       - name: Publish release identity

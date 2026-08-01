@@ -2,16 +2,13 @@ name: Nexus clean Windows certification
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
 
 permissions:
   contents: read
 
 concurrency:
-  group: nexus-clean-windows-certification
-  cancel-in-progress: true
+  group: nexus-windows-physical-certification
+  cancel-in-progress: false
 
 jobs:
   clean-foundation:
@@ -50,6 +47,8 @@ jobs:
     env:
       NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
       NEXUS_PROTECTED_BASELINE: 0e3ce5b6
+      NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+      NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,6 +87,9 @@ jobs:
             throw "Render did not return the certified Nexus Genesis health contract."
           }
           Write-Host "Certified Nexus Genesis production runtime verified."
+      - name: Verify exact deployed release
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
       - name: Certify Render production voice and every application
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |

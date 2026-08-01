@@ -1,0 +1,50 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const workflows = {
+  canonical: ".github/workflows/nexus-release-certification-v2.yml",
+  form: ".github/workflows/nexus-voice-form-entry-certification.yml",
+  clean: ".github/workflows/nexus-clean-windows-certification.yml"
+};
+
+const contents = Object.fromEntries(
+  Object.entries(workflows).map(([name, file]) => [name, fs.readFileSync(file, "utf8")])
+);
+
+for (const [name, workflow] of Object.entries(contents)) {
+  assert.match(workflow, /workflow_dispatch:/, `${name} must be explicitly dispatched`);
+  assert.doesNotMatch(
+    workflow,
+    /^\s{2}push:/m,
+    `${name} must not auto-queue the single physical Windows runner on push`
+  );
+  assert.match(
+    workflow,
+    /group: nexus-windows-physical-certification\s+cancel-in-progress: false/,
+    `${name} must use the shared, non-canceling microphone-owner lock`
+  );
+}
+
+for (const name of ["form", "clean"]) {
+  assert.match(
+    contents[name],
+    /NEXUS_EXPECTED_RELEASE_SHA: \$\{\{ github\.sha \}\}/,
+    `${name} must bind evidence to the dispatched branch head`
+  );
+  assert.match(
+    contents[name],
+    /nexus-release-certification-controller\.js verify-deployment/,
+    `${name} must reject stale or undeployed code before taking the microphone`
+  );
+}
+
+assert.match(contents.canonical, /needs: release-identity/);
+assert.match(contents.canonical, /needs: voice-lifecycle/);
+assert.match(contents.canonical, /needs: guided-entry/);
+assert.match(
+  contents.canonical,
+  /node rebuild\/tests\/nexus-windows-certification-orchestration\.test\.js/,
+  "canonical Linux preflight must enforce the orchestration contract"
+);
+
+console.log("Nexus Windows certification orchestration: PASS");
