@@ -219,6 +219,10 @@ test("new Genesis build passes every application through physical voice", async 
       if (journey.mapText) await expect(page.locator("#nexus-map-summary")).toContainText(journey.mapText);
       if (journey.media) await expect(page.locator("#nexus-app-surface")).toContainText(journey.media);
       if (journey.links) await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
+      await expect.poll(() => page.evaluate(({ before }) => window.__cleanEvidence.receipts.slice(before)
+        .some((item) => item.type === "conversation.return-to-listening"), { before }), { timeout: 60000 }).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      await expect(page.locator("#nexus-status")).toHaveText("Listening");
       if (journey.edit) {
         const [editCommand, fieldLabel, expectedValue] = journey.edit;
         const beforeEdit = await page.evaluate(() => window.__cleanEvidence.receipts.length);
@@ -226,6 +230,10 @@ test("new Genesis build passes every application through physical voice", async 
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
           .some((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit }), { timeout: 30000 }).toBe(true);
         await expect(page.getByLabel(fieldLabel, { exact: true })).toHaveValue(expectedValue);
+        await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .some((item) => item.type === "conversation.return-to-listening"), { beforeEdit }), { timeout: 60000 }).toBe(true);
+        await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+        await expect(page.locator("#nexus-status")).toHaveText("Listening");
       }
       for (const selector of journey.controls || []) {
         const control = page.locator(selector);
