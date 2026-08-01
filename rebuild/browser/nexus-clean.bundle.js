@@ -1019,6 +1019,7 @@
           this.deferredResponse = null;
           this.completedResponseKeys = /* @__PURE__ */ new Set();
           this.visualRoutes = /* @__PURE__ */ new Map();
+          this.visibleWorkspaceTransactions = /* @__PURE__ */ new Set();
           this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
             execute: (resolution) => this.openWorkspace({
@@ -1327,17 +1328,23 @@ ${content}`
             if (!visualRoute) {
               visualRoute = this.requestTransaction.run(resolution).then((routed) => {
                 const acknowledgement = routed.acknowledgement;
-                this.receipt("workspace.visible", {
-                  workspace: resolution.workspace,
-                  transactionId: routed.transactionId,
-                  acknowledgementId: acknowledgement.id || null,
-                  outcomeKind: acknowledgement.outcomeKind || null,
-                  outcomeVerified: acknowledgement.outcomeVerified === true,
-                  evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-                  evidenceStatus: acknowledgement.evidenceStatus || null,
-                  evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
-                  evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
-                });
+                if (routed.outcome?.verified === true && !this.visibleWorkspaceTransactions.has(routed.transactionId)) {
+                  this.visibleWorkspaceTransactions.add(routed.transactionId);
+                  if (this.visibleWorkspaceTransactions.size > 64) {
+                    this.visibleWorkspaceTransactions.delete(this.visibleWorkspaceTransactions.values().next().value);
+                  }
+                  this.receipt("workspace.visible", {
+                    workspace: routed.workspace,
+                    transactionId: routed.transactionId,
+                    acknowledgementId: acknowledgement.id || null,
+                    outcomeKind: acknowledgement.outcomeKind || null,
+                    outcomeVerified: true,
+                    evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+                    evidenceStatus: acknowledgement.evidenceStatus || null,
+                    evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+                    evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+                  });
+                }
                 this.conversationContext = rememberCompletedTurn(this.conversationContext, routed);
                 this.receipt("conversation.context-advanced", {
                   workspace: routed.workspace,
@@ -1391,6 +1398,7 @@ ${content}`
           this.deferredResponse = null;
           this.completedResponseKeys.clear();
           this.visualRoutes.clear();
+          this.visibleWorkspaceTransactions.clear();
           this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
         }

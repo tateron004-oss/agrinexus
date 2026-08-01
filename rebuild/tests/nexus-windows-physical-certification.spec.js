@@ -6,26 +6,26 @@ const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
 const OUTPUT = path.resolve("output/nexus-clean-windows-certification");
-const commands = [
-  ["agriculture", "Nexus, help with my maize crop in Kenya.", null],
-  ["health", "Nexus, record my blood pressure 140 over 90."],
-  ["telehealth", "Nexus, begin a telehealth intake."],
-  ["mobile-clinic", "Nexus, find a mobile clinic in Kenya."],
-  ["pharmacy", "Nexus, open pharmacy support."],
-  ["learning", "Nexus, start a digital literacy course."],
-  ["workforce", "Nexus, search for farming jobs in Kenya."],
-  ["marketplace", "Nexus, sell 50 bags of maize."],
-  ["maps", "Nexus, plan a route from Nairobi to Nakuru."],
-  ["music", "Nexus, play Kenyan music."],
-  ["reminders", "Nexus, remind me to take my medicine."],
-  ["offline", "Nexus, show my offline queue."],
-  ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", "weather"],
-  ["maps", "Nexus, reset the map and show Mombasa, Kenya.", "map"],
-  ["agriculture", "Nexus, show me pictures of possible maize diseases.", "agriculture-images"],
-  ["workforce", "Nexus, help me create a résumé.", "resume"],
-  ["live-knowledge", "Nexus, show me the websites and sources.", "evidence"],
-  ["health", "Nexus, create a provider card for my doctor.", "provider-card"],
-  ["live-knowledge", "Nexus, open the pilot evidence dashboard.", "pilot-dashboard"]
+const journeys = [
+  { app: "Agriculture Help", workspace: "agriculture", command: "Nexus, help with my maize crop in Kenya.", edit: ["Nexus, set location to Nakuru, Kenya.", "Location", /Nakuru/i] },
+  { app: "Health and Chronic Care", workspace: "health", command: "Nexus, record my blood pressure 140 over 90.", edit: ["Nexus, set symptoms or notes to no symptoms.", "Symptoms or notes", /no symptoms/i] },
+  { app: "Telehealth Intake", workspace: "telehealth", command: "Nexus, begin a telehealth intake.", edit: ["Nexus, set reason for visit to blood pressure review.", "Reason for visit", /blood pressure review/i] },
+  { app: "Mobile Clinic", workspace: "mobile-clinic", command: "Nexus, find a mobile clinic in Kenya.", edit: ["Nexus, set care needed to blood pressure screening.", "Care needed", /blood pressure screening/i] },
+  { app: "Pharmacy Support", workspace: "pharmacy", command: "Nexus, open pharmacy support.", edit: ["Nexus, set medication to metformin.", "Medication", /metformin/i] },
+  { app: "Learning and Literacy", workspace: "learning", command: "Nexus, start a digital literacy course.", edit: ["Nexus, set topic or skill to phishing email safety.", "Topic or skill", /phishing email safety/i] },
+  { app: "Jobs and Workforce", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." },
+  { app: "AgriTrade Marketplace", workspace: "marketplace", command: "Nexus, sell 50 bags of maize.", edit: ["Nexus, change quantity to 20 bags.", "Quantity", /20 bags/i] },
+  { app: "Logistics and Routes", workspace: "maps", command: "Nexus, plan a route from Nairobi to Nakuru.", mapText: /Nairobi|Nakuru/i },
+  { app: "Music and Media", workspace: "music", command: "Nexus, play Stevie Wonder.", media: /Stevie Wonder/i },
+  { app: "Reminders", workspace: "reminders", command: "Nexus, remind me tonight at 8 PM to check my blood pressure.", edit: ["Nexus, change date and time to tonight at 7:30 PM.", "Date and time", /7:30/i] },
+  { app: "Offline Queue", workspace: "offline", command: "Nexus, show my offline queue.", edit: ["Nexus, set queued request to find maize treatment guidance.", "Queued request", /maize treatment guidance/i] },
+  { app: "Live Weather", workspace: "live-knowledge", command: "Nexus, show today's weather in Nairobi, Kenya.", visual: "weather", links: true },
+  { app: "Maps", workspace: "maps", command: "Nexus, reset the map and show Mombasa, Kenya.", visual: "map", mapText: /Mombasa/i },
+  { app: "Agriculture Images", workspace: "agriculture", command: "Nexus, show me pictures of possible maize diseases.", visual: "agriculture-images", links: true },
+  { app: "Résumé Builder", workspace: "workforce", command: "Nexus, help me create a résumé.", visual: "resume", edit: ["Nexus, set résumé full name to Ron Tate.", "Résumé full name", /Ron Tate/i], controls: ["[data-resume-action='print']", "[data-resume-action='download']"] },
+  { app: "Internet Sources and Recipe", workspace: "live-knowledge", command: "Nexus, show an apple pie recipe with ingredients, steps, and sources.", visual: "evidence", links: true },
+  { app: "Provider Contact Card", workspace: "health", command: "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", visual: "provider-card", controls: ["[data-provider-card-action='read']", "[data-provider-card-action='print']"] },
+  { app: "Pilot Evidence", workspace: "live-knowledge", command: "Nexus, open the pilot evidence dashboard.", visual: "pilot-dashboard" }
 ];
 
 function speak(text) {
@@ -107,8 +107,8 @@ test.use({
   launchOptions: { channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required"] }
 });
 
-test("new Genesis build passes physical voice and every command", async ({ page, context }) => {
-  test.setTimeout(25 * 60 * 1000);
+test("new Genesis build passes every application through physical voice", async ({ page, context }) => {
+  test.setTimeout(38 * 60 * 1000);
   fs.mkdirSync(OUTPUT, { recursive: true });
   const driverEvidence = {
     startedAt: new Date().toISOString(),
@@ -194,13 +194,15 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     }).toBe(true);
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
 
-    for (const [workspace, command, visual] of commands) {
+    for (const journey of journeys) {
+      const { app, workspace, command, visual } = journey;
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
       await injectSpokenCommand(page, command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
-        return window.__cleanEvidence.receipts.slice(before)
-          .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+        const visible = window.__cleanEvidence.receipts.slice(before)
+          .filter((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+        return visible.length === 1 && visible[0].detail.outcomeVerified === true;
       }, { before, workspace }), { timeout: 60000 }).toBe(true);
       await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
       await expect(page.locator("#nexus-workspace")).toBeVisible();
@@ -212,6 +214,23 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         await expect(page.locator(".evidence-source-link").first()).toBeVisible();
       } else if (visual) {
         await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
+      }
+      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-populated", "true");
+      if (journey.mapText) await expect(page.locator("#nexus-map-summary")).toContainText(journey.mapText);
+      if (journey.media) await expect(page.locator("#nexus-app-surface")).toContainText(journey.media);
+      if (journey.links) await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
+      if (journey.edit) {
+        const [editCommand, fieldLabel, expectedValue] = journey.edit;
+        const beforeEdit = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+        await injectSpokenCommand(page, editCommand);
+        await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .some((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit }), { timeout: 30000 }).toBe(true);
+        await expect(page.getByLabel(fieldLabel, { exact: true })).toHaveValue(expectedValue);
+      }
+      for (const selector of journey.controls || []) {
+        const control = page.locator(selector);
+        await expect(control).toBeVisible();
+        await expect(control).toBeEnabled();
       }
       await expect.poll(() => page.evaluate(({ before }) => {
         return window.__cleanEvidence.receipts.slice(before)
@@ -247,14 +266,22 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       }, { before });
       expect(turnAudioViolations, `More than one speech source or response activated for: ${command}`).toEqual([]);
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
-      driverEvidence.turns.push({ workspace, command, visual, passed: true });
+      await page.locator("#nexus-workspace-close").click();
+      await expect(page.locator("#nexus-workspace")).toBeHidden();
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      await expect(page.locator("#nexus-status")).toHaveText("Listening");
+      driverEvidence.turns.push({ app, workspace, command, visual, populated: true, voiceEdited: Boolean(journey.edit), controlsVerified: (journey.controls || []).length, closed: true, returnedToListening: true, passed: true });
     }
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
     const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
     expect(audioViolations).toEqual([]);
-    expect(driverEvidence.turns).toHaveLength(commands.length);
+    expect(driverEvidence.turns).toHaveLength(journeys.length);
+    const visibleReceipts = await page.evaluate(() => window.__cleanEvidence.receipts
+      .filter((item) => item.type === "workspace.visible"));
+    expect(visibleReceipts.every((item) => item.detail.outcomeVerified === true)).toBe(true);
+    expect(new Set(visibleReceipts.map((item) => item.detail.transactionId)).size).toBe(visibleReceipts.length);
   } catch (error) {
     driverEvidence.failure = {
       name: error.name,
