@@ -33,59 +33,59 @@ jobs:
         with:
           fetch-depth: 0
       - name: Bind certification to deployed runtime
-        shell: powershell
+        shell: cmd
         run: |
-          $runtimeSha = git log -1 --format=%H -- rebuild/browser/nexus-clean.bundle.js
-          if (-not $runtimeSha) { throw "Unable to resolve runtime commit" }
-          "NEXUS_EXPECTED_RELEASE_SHA=$runtimeSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "Certification spec $env:GITHUB_SHA targets runtime $runtimeSha"
+          for /f "usebackq delims=" %%S in (`git log -1 --format^=%%H -- rebuild/browser/nexus-clean.bundle.js`) do set "RUNTIME_SHA=%%S"
+          if not defined RUNTIME_SHA exit /b 1
+          echo NEXUS_EXPECTED_RELEASE_SHA=%RUNTIME_SHA%>>"%GITHUB_ENV%"
+          echo Certification spec %GITHUB_SHA% targets runtime %RUNTIME_SHA%
       - name: Verify certification and protection contracts
-        shell: powershell
+        shell: cmd
         run: |
           node scripts/nexus-protected-foundation-guard.js
           node rebuild/tests/nexus-release-certification-controller.test.js
           node rebuild/tests/nexus-windows-certification-orchestration.test.js
       - name: Reset retained runner state
-        shell: powershell
-        run: ./scripts/nexus-windows-certification-reset.ps1
+        shell: cmd
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-certification-reset.ps1
       - name: Verify physical devices
-        shell: powershell
-        run: ./scripts/nexus-windows-real-device-preflight.ps1
+        shell: cmd
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-real-device-preflight.ps1
       - name: Install locked certification driver
-        shell: powershell
+        shell: cmd
         run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
       - name: Verify exact live runtime and bundle
-        shell: powershell
+        shell: cmd
         run: node scripts/nexus-release-certification-controller.js verify-deployment
       - name: Run every physical voice application journey
-        shell: powershell
+        shell: cmd
         env:
           NEXUS_CERTIFICATION_LANE: voice-lifecycle
         run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
       - name: Reset before Guided Entry
-        shell: powershell
-        run: ./scripts/nexus-windows-certification-reset.ps1
+        shell: cmd
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-certification-reset.ps1
       - name: Run Guided Entry persistence
-        shell: powershell
+        shell: cmd
         env:
           NEXUS_CERTIFICATION_LANE: guided-entry
         run: npx playwright test rebuild/tests/nexus-windows-voice-form-entry.spec.js --workers=1 --reporter=line
       - name: Require three consecutive complete passes
-        shell: powershell
+        shell: cmd
         env:
           NEXUS_CERTIFICATION_LANE: consecutive-stability
           NEXUS_STABILITY_RUNS: "3"
-        run: ./scripts/nexus-windows-stability-certification.ps1
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-stability-certification.ps1
       - name: Create authoritative evidence summary
         if: always()
-        shell: powershell
+        shell: cmd
         env:
           NEXUS_CERTIFICATION_OUTCOME: ${{ job.status }}
           NEXUS_CERTIFICATION_LANE: canonical-user-mode
         run: node scripts/nexus-certification-evidence.js
       - name: Reverify protected foundation
         if: always()
-        shell: powershell
+        shell: cmd
         run: node scripts/nexus-protected-foundation-guard.js
       - name: Publish canonical evidence
         if: always()
