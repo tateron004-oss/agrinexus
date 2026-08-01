@@ -80,6 +80,11 @@ function synthesizePcm(text) {
   });
 }
 
+function requiredFieldLabel(label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}\\s*\\*?$`, "i");
+}
+
 function readWaveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
     const id = wav.toString("ascii", offset, offset + 4);
@@ -243,7 +248,7 @@ test("new Genesis build passes every application through physical voice", async 
         await injectSpokenCommand(page, editCommand);
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
           .some((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit }), { timeout: 30000 }).toBe(true);
-        await expect(page.getByLabel(fieldLabel, { exact: true })).toHaveValue(expectedValue);
+        await expect(page.getByLabel(requiredFieldLabel(fieldLabel))).toHaveValue(expectedValue);
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
           .some((item) => item.type === "conversation.return-to-listening"), { beforeEdit }), { timeout: 60000 }).toBe(true);
         await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
