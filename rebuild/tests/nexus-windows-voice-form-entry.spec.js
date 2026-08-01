@@ -6,8 +6,14 @@ const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
 const OUTPUT = path.resolve("output/nexus-voice-form-certification");
-const EXPERIENCE_FIELD = '[aria-label="Résumé experience"], [aria-label="Work experience"]';
-const SKILLS_FIELD = '[aria-label="Résumé skills"], [aria-label="Skills"]';
+
+function experienceField(page) {
+  return page.getByRole("textbox", { name: /^(Résumé experience|Work experience)$/i }).first();
+}
+
+function skillsField(page) {
+  return page.getByRole("textbox", { name: /^(Résumé skills|Skills)$/i }).first();
+}
 
 function waveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
@@ -169,24 +175,26 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
       await speakForReceipt(page, commands, receipt, evidence);
     }
 
-    await page.locator(EXPERIENCE_FIELD).first().fill("");
-    await page.locator(SKILLS_FIELD).first().fill("");
+    await expect(experienceField(page)).toBeVisible({ timeout: 10000 });
+    await expect(skillsField(page)).toBeVisible({ timeout: 10000 });
+    await experienceField(page).fill("");
+    await skillsField(page).fill("");
     let before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, reopen this resume draft.");
     await expectReceipt(page, "voice-form.reopened", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator(EXPERIENCE_FIELD).first()).toHaveValue(/twelve employees/i);
-    await expect(page.locator(SKILLS_FIELD).first()).toHaveValue(/forklift operation/i);
+    await expect(experienceField(page)).toHaveValue(/twelve employees/i);
+    await expect(skillsField(page)).toHaveValue(/forklift operation/i);
     await page.waitForTimeout(1500);
-    const reopenProof = await page.evaluate(({ before }) => {
+    const visibleExperience = await experienceField(page).inputValue();
+    const visibleSkills = await skillsField(page).inputValue();
+    const reopenProof = await page.evaluate(({ before, visibleExperience, visibleSkills }) => {
       const receipts = window.__voiceFormReceipts.slice(before);
       const receipt = receipts.findLast((item) => item.type === "voice-form.reopened");
-      const experience = document.querySelector('[aria-label="Résumé experience"], [aria-label="Work experience"]')?.value || "";
-      const skills = document.querySelector('[aria-label="Résumé skills"], [aria-label="Skills"]')?.value || "";
       return {
         receipt,
-        experience,
-        skills,
+        experience: visibleExperience,
+        skills: visibleSkills,
         laterReplacement: receipt
           ? receipts.slice(receipts.lastIndexOf(receipt) + 1).some((item) =>
             item.type === "voice-form.reopened"
@@ -196,7 +204,7 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
           .filter((item) => item.type === "guided-entry.transaction-rejected")
           .map((item) => item.detail)
       };
-    }, { before });
+    }, { before, visibleExperience, visibleSkills });
     expect(reopenProof.receipt?.detail?.requestId).toBeTruthy();
     expect(reopenProof.receipt?.detail?.committedFormVersion).toBeGreaterThan(0);
     expect(reopenProof.receipt?.detail?.visibleValuesVerified).toBe(true);
