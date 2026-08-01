@@ -38,6 +38,12 @@ function fieldSchema() {
 }
 
 function artifactSchema() {
+  const mapPoint = {
+    type: ["object", "null"],
+    additionalProperties: false,
+    required: ["label", "lat", "lon"],
+    properties: { label: { type: "string" }, lat: { type: "number" }, lon: { type: "number" } }
+  };
   return {
     type: "object",
     additionalProperties: false,
@@ -71,11 +77,20 @@ function artifactSchema() {
       },
       media: {
         type: "object", additionalProperties: false,
-        required: ["kind", "title", "provider", "sourceUrl", "embedUrl", "state"],
+        required: ["kind", "title", "provider", "sourceUrl", "embedUrl", "state", "route"],
         properties: {
           kind: { type: "string" }, title: { type: "string" }, provider: { type: "string" },
           sourceUrl: { type: "string" }, embedUrl: { type: "string" },
-          state: { type: "string", enum: ["none", "ready", "playing", "stopped", "unavailable"] }
+          state: { type: "string", enum: ["none", "ready", "playing", "stopped", "unavailable"] },
+          route: {
+            type: ["object", "null"],
+            additionalProperties: false,
+            required: ["coordinates", "origin", "destination", "focus"],
+            properties: {
+              coordinates: { type: "array", items: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 } },
+              origin: mapPoint, destination: mapPoint, focus: mapPoint
+            }
+          }
         }
       }
     }
@@ -95,7 +110,7 @@ const GOAL_SCHEMA = Object.freeze({
 });
 
 function emptyMedia(state = "none") {
-  return { kind: "", title: "", provider: "", sourceUrl: "", embedUrl: "", state };
+  return { kind: "", title: "", provider: "", sourceUrl: "", embedUrl: "", state, route: null };
 }
 
 function emptyArtifact(kind = "status", title = "") {
@@ -115,7 +130,7 @@ function outputText(payload) {
 function createOpenAIGoalResolver({
   fetchImpl = globalThis.fetch,
   apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.NEXUS_CONTENT_MODEL || "gpt-5.6-sol"
+  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini"
 } = {}) {
   return Object.freeze({
     async resolve(context = {}) {
@@ -134,10 +149,12 @@ function createOpenAIGoalResolver({
             "For forms and documents, return a fully visible editable artifact. Preserve prior fields and content unless the user asks to change them.",
             "For search, images, maps, listings, weather, or music, set needsLiveProvider true and produce no invented provider results.",
             "Use listings when the goal is to discover businesses, services, venues, sellers, or other places. Use map when the goal is to display a known location or route.",
+            "For a route, put an explicit unambiguous 'origin, country to destination, country' string in query. Carry the origin country to the destination when appropriate.",
+            "When a request combines research, explanation, and pictures, use images and include a compact comparison in artifact.sections; the provider layer will attach current image and reputable-source evidence.",
             "Music may be any artist, track, genre, culture, language, or source. Put the actual requested media query in query.",
             "Never claim that a provider action succeeded. acknowledgement describes the requested outcome and is used only after UI verification.",
             "If a request is underspecified, build the most useful editable draft and leave unknown fields blank instead of inventing personal facts.",
-            "Medical artifacts organize the user's questions and information; do not diagnose or prescribe."
+            "Medical artifacts organize the user's questions and information; do not diagnose or prescribe. Question cards must include medication-safety language, urgent warning guidance, and reputable references without substituting for a pharmacist or prescriber."
           ].join("\n"),
           input: JSON.stringify({
             command: clean(context.command, 4000),
@@ -192,7 +209,7 @@ function normalizeWebSearchPayload(payload) {
 function createOpenAIWebSearchProvider({
   fetchImpl = globalThis.fetch,
   apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.NEXUS_CONTENT_MODEL || "gpt-5.6-sol"
+  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini"
 } = {}) {
   return async function openAIWebSearch(query) {
     if (!apiKey) throw new Error("The live web-search provider is not configured (OPENAI_API_KEY is missing).");
@@ -243,9 +260,28 @@ function normalizeArtifact(value) {
       kind: clean(artifact.media && artifact.media.kind, 40), title: clean(artifact.media && artifact.media.title, 240),
       provider: clean(artifact.media && artifact.media.provider, 180), sourceUrl: safeHttpUrl(artifact.media && artifact.media.sourceUrl),
       embedUrl: safeHttpUrl(artifact.media && artifact.media.embedUrl),
-      state: ["none", "ready", "playing", "stopped", "unavailable"].includes(artifact.media && artifact.media.state) ? artifact.media.state : "none"
+      state: ["none", "ready", "playing", "stopped", "unavailable"].includes(artifact.media && artifact.media.state) ? artifact.media.state : "none",
+      route: normalizeRoute(artifact.media && artifact.media.route)
     }
   };
+}
+
+function normalizeCoordinatePoint(value) {
+  if (!value || typeof value !== "object") return null;
+  const lat = Number(value.lat);
+  const lon = Number(value.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { label: clean(value.label, 300), lat, lon };
+}
+
+function normalizeRoute(value) {
+  if (!value || typeof value !== "object") return null;
+  const coordinates = (Array.isArray(value.coordinates) ? value.coordinates : []).map(point => [Number(point && point[0]), Number(point && point[1])]).filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1]) && point[0] >= -180 && point[0] <= 180 && point[1] >= -90 && point[1] <= 90).slice(0, 12000);
+  const origin = normalizeCoordinatePoint(value.origin);
+  const destination = normalizeCoordinatePoint(value.destination);
+  const focus = normalizeCoordinatePoint(value.focus);
+  if (!coordinates.length && !focus) return null;
+  return { coordinates, origin, destination, focus };
 }
 
 function resultEnvelope(goal, artifact, extra = {}) {
@@ -271,15 +307,143 @@ function normalizeGoalRoute(goal) {
   return goal;
 }
 
+function localResilienceGoal(context = {}) {
+  const command = clean(context.command, 4000);
+  const lower = command.toLowerCase();
+  const previous = context.previousArtifact && typeof context.previousArtifact === "object" ? normalizeArtifact(context.previousArtifact) : null;
+  const followUp = previous && /\b(change|revise|add|remove|fill|complete|review|print|share|update|replace|another|different)\b/i.test(command);
+  const base = (capability, operation, workspace, query, artifact, acknowledgement, needsLiveProvider = false) => ({ capability, operation, workspace, query, location: "", needsLiveProvider, artifact, acknowledgement });
+  if (followUp) {
+    const artifact = previous;
+    const visible = new Map((context.visibleFields || []).map(field => [clean(field.id, 80), clean(field.value, 5000)]));
+    artifact.fields = artifact.fields.map(field => visible.has(field.id) ? { ...field, value: visible.get(field.id) } : field);
+    const commandWords = new Set(lower.split(/[^a-z0-9]+/).filter(word => word.length >= 3));
+    const rankedFields = artifact.fields.map(field => ({
+      field,
+      score: `${field.id} ${field.label}`.toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length >= 3 && commandWords.has(word)).length
+    })).sort((left, right) => right.score - left.score);
+    const semanticTargetId = /\b(?:work\s+experience|experience\s+(?:bullets?|section)|employment|job\s+history|harvest\s+crews?)\b/i.test(command) ? "experience"
+      : /\b(?:professional\s+summary|career\s+profile|profile\s+section)\b/i.test(command) ? "professional-summary"
+      : /\b(?:skills?\s+(?:section|list)|competenc|proficien)\w*/i.test(command) ? "skills"
+      : /\b(?:education|training|degree|certificate|diploma)\b/i.test(command) ? "education"
+      : /\b(?:contact\s+(?:details?|information)|phone|email|address)\b/i.test(command) ? "contact"
+      : /\b(?:full\s+name|candidate(?:'s)?\s+name)\b/i.test(command) ? "full-name" : "";
+    const target = artifact.fields.find(field => field.id === semanticTargetId)
+      || (rankedFields[0] && rankedFields[0].score > 0 ? rankedFields[0].field : null);
+    if (target) {
+      const quotedValues = [...command.matchAll(/[\u0022\u201c\u201d\u2018\u2019]([^\u0022\u201c\u201d\u2018\u2019]{12,})[\u0022\u201c\u201d\u2018\u2019]/g)]
+        .map(match => clean(match[1], 5000)).filter(Boolean).sort((left, right) => right.length - left.length);
+      const fieldSignals = {
+        experience: /\b(experience|work|worked|role|job|crew|coordinat|managed|responsib|harvest)\w*/ig,
+        skills: /\b(skill|proficien|competenc|able|equipment|tool|technical|safety)\w*/ig,
+        education: /\b(education|school|degree|certificate|training|course|diploma)\w*/ig,
+        "professional-summary": /\b(summary|profile|professional|years?|reliable|experienced)\w*/ig,
+        contact: /\b(contact|phone|email|address|location)\w*/ig,
+        "full-name": /\b(name|called)\w*/ig
+      };
+      const signalPattern = fieldSignals[target.id] || new RegExp(`${target.label || target.id}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
+      const focusedValues = command.split(/(?<=[.!?])\s+/).map(sentence => ({
+        value: clean(sentence.replace(/^.*?(?:revision|response):\s*/i, ""), 5000),
+        score: (sentence.match(signalPattern) || []).length
+      })).filter(item => item.value.length >= 12 && item.score > 0).sort((left, right) => right.score - left.score || right.value.length - left.value.length);
+      const explicitValue = quotedValues[0] || (command.length >= 120 ? focusedValues[0] && focusedValues[0].value : /\b(?:with|as)\s+(.+)$/i.exec(command)?.[1]);
+      const targetPattern = `${target.label || target.id}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      const suppliedValue = clean(explicitValue || command
+        .replace(/^(?:please\s+)?(?:change|revise|add|remove|fill|complete|update|replace)\s+/i, "")
+        .replace(new RegExp(`\\s+to\\s+(?:the\\s+)?${targetPattern}[.!?]*$`, "i"), ""), 5000);
+      target.value = /\b(add|include|append)\b/i.test(command) && target.value ? `${target.value}\n${suppliedValue}` : suppliedValue;
+    } else {
+      artifact.sections.push({ heading: "Requested revision", body: command, items: [] });
+    }
+    const capability = /résumé|resume|cv/i.test(artifact.title) ? "resume" : artifact.kind === "form" ? "form" : artifact.kind === "card" ? "question-card" : "document";
+    return base(capability, "update", clean(context.activeWorkspace, 120) || "workspace", command, artifact, "The revised visible artifact is ready.");
+  }
+  if (/(?:\b(?:resume|curriculum vitae|cv)\b|résumé)/i.test(command)) {
+    const years = /\b(\d{1,2})\s+years?\b/i.exec(command)?.[1] || "";
+    const role = clean(command.replace(/^.*?(?:\b(?:resume|curriculum vitae|cv)\b|résumé)(?:\s+for)?/i, ""), 300);
+    const artifact = emptyArtifact("document", "Editable résumé draft");
+    artifact.description = "A visible editable résumé draft. Unknown personal facts remain blank for voice-guided completion.";
+    artifact.fields = [
+      { id: "full-name", label: "Full name", type: "text", value: "", required: true, options: [] },
+      { id: "contact", label: "Contact details", type: "textarea", value: "", required: true, options: [] },
+      { id: "professional-summary", label: "Professional summary", type: "textarea", value: role ? `${years ? `${years} years of ` : ""}${role}` : "", required: false, options: [] },
+      { id: "experience", label: "Work experience", type: "textarea", value: years ? `${years} years of relevant experience` : "", required: false, options: [] },
+      { id: "skills", label: "Skills", type: "textarea", value: "", required: false, options: [] },
+      { id: "education", label: "Education and training", type: "textarea", value: "", required: false, options: [] }
+    ];
+    return base("resume", "create", "workforce", command, artifact, "The editable résumé is visible and ready for your next change.");
+  }
+  if (/\b(question|questions|checklist)\b/i.test(command) && /\b(pharmacist|medicine|medication|prescription|drug|clinician|doctor)\b/i.test(command)) {
+    const artifact = emptyArtifact("card", "Medication conversation question card");
+    artifact.description = "A printable, shareable preparation card for a pharmacist or prescriber. It is not medical advice and does not replace professional care.";
+    artifact.sections = [
+      { heading: "Questions to ask", body: "Use the questions that fit your situation.", items: ["What is this medicine for, and how will I know it is working?", "How and when should I take it, and what should I do if I miss a dose?", "Which side effects are common, and which require urgent help?", "Could it interact with my other medicines, supplements, foods, alcohol, or health conditions?", "What monitoring or follow-up do I need?", "Are there activities I should avoid, and how should I store it?"] },
+      { heading: "Bring with you", body: "Share an up-to-date list so the pharmacist can check safety.", items: ["All prescription and non-prescription medicines", "Vitamins, supplements, and allergies", "Relevant conditions, pregnancy or breastfeeding status, and recent readings or symptoms"] },
+      { heading: "Safety note", body: "Do not start, stop, split, or change a prescribed dose without checking with the prescriber or pharmacist. Seek emergency help for severe trouble breathing, swelling, fainting, chest pain, or other emergency symptoms.", items: [] }
+    ];
+    artifact.links = [
+      { label: "FDA · Questions to Ask Your Healthcare Professional", url: "https://www.fda.gov/drugs/resources-you-drugs/questions-ask-your-healthcare-professional" },
+      { label: "MedlinePlus · Medicines", url: "https://medlineplus.gov/medicines.html" },
+      { label: "NHS · Medicines information", url: "https://www.nhs.uk/medicines/" }
+    ];
+    return base("question-card", "create", "pharmacy", command, artifact, "The readable medication question card is visible and ready to print or share.");
+  }
+  if (/\b(image|images|picture|pictures|photo|photos|symptom|symptoms)\b/i.test(command) && /\b(show|find|search|research|compare|identify)\b/i.test(command)) return base("images", "search", "live-knowledge", command, emptyArtifact("list", "Live image research"), "The source-attributed image research is visible.", true);
+  if (/\b(map|route|directions|navigate|navigation)\b/i.test(command)) return base("map", "open", "maps", command, emptyArtifact("map", "Live map and route"), "The validated live map and route are visible.", true);
+  if (/\b(play|listen|music|song|artist|album|genre)\b/i.test(command)) return base(/\b(stop|quiet|pause)\b/i.test(command) ? "media-control" : "music", /\b(stop|quiet|pause)\b/i.test(command) ? "stop" : "play", "music", command, emptyArtifact("media", "Live music results"), "The requested authorized music source is visible.", true);
+  if (/\b(research|sources?|websites?|look up|search the (?:web|internet)|current information)\b/i.test(command)) return base("search", "search", "live-knowledge", command, emptyArtifact("list", "Live reputable sources"), "The current reputable sources are visible.", true);
+  if (/\b(intake|form|questionnaire)\b/i.test(command)) {
+    const artifact = emptyArtifact("form", "Editable intake form");
+    artifact.description = "A visible intake draft with blank fields for details that were not provided.";
+    artifact.fields = ["Name", "Contact", "Main concern", "Relevant history", "Requested next step"].map((label, index) => ({ id: `field-${index + 1}`, label, type: index >= 2 ? "textarea" : "text", value: "", required: index < 3, options: [] }));
+    return base("intake", "create", "intake", command, artifact, "The editable intake form is visible.");
+  }
+  if (/\b(marketplace|listing|list for sale|seller|buyer|sell|selling)\b/i.test(command)) {
+    const amount = /\b(\d+(?:\.\d+)?)\s*(bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\b/i.exec(command);
+    const artifact = emptyArtifact("draft", "Editable marketplace draft");
+    artifact.description = "A visible marketplace draft. Review every detail before publishing or contacting anyone.";
+    artifact.fields = [
+      { id: "item", label: "Item or service", type: "text", value: "", required: true, options: [] },
+      { id: "quantity", label: "Quantity", type: "text", value: amount ? [amount[1], amount[2]].filter(Boolean).join(" ") : "", required: true, options: [] },
+      { id: "price", label: "Price and currency", type: "text", value: "", required: false, options: [] },
+      { id: "location", label: "Location", type: "text", value: "", required: true, options: [] },
+      { id: "description", label: "Description and collection or delivery terms", type: "textarea", value: "", required: false, options: [] }
+    ];
+    return base("marketplace-draft", "create", "marketplace", command, artifact, "The editable marketplace draft is visible for review.");
+  }
+  if (/\b(remind|reminder)\b/i.test(command)) {
+    const artifact = emptyArtifact("card", "Reminder draft");
+    artifact.description = "A visible reminder draft. Confirm the task and time before relying on it.";
+    artifact.fields = [
+      { id: "task", label: "Task", type: "textarea", value: clean(command.replace(/^.*?\bremind(?:er)?\b(?:\s+me)?(?:\s+to)?/i, ""), 1200), required: true, options: [] },
+      { id: "when", label: "When", type: "text", value: /\b(today|tonight|tomorrow|next\s+\w+|\w+day(?:\s+(?:morning|afternoon|evening))?|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.exec(command)?.[0] || "", required: true, options: [] }
+    ];
+    return base("reminder", "create", "reminders", command, artifact, "The visible reminder draft is ready for confirmation.");
+  }
+  if (/\b(report|document|brief|letter|draft)\b/i.test(command)) {
+    const artifact = emptyArtifact("document", "Editable document draft");
+    artifact.description = command;
+    artifact.sections = [{ heading: "Draft", body: "Use voice or typing to add, revise, review, and complete this document.", items: [] }];
+    return base("document", "create", "documents", command, artifact, "The editable document draft is visible.");
+  }
+  return null;
+}
+
 function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null, webSearchProvider = null, publicMusicProvider = true } = {}) {
   const resolver = goalResolver || createOpenAIGoalResolver({ fetchImpl });
   const liveWebSearch = webSearchProvider || createOpenAIWebSearchProvider({ fetchImpl });
 
   async function publicMusic(goal) {
     const query = clean(goal.query) || "music";
-    const cleanedQuery = clean(query.replace(/\b(?:please|play|put on|listen to|some|music|song|track)\b/ig, " ")) || query;
+    const cleanedQuery = clean(query
+      .replace(/^(?:hey[\s,]+)?nexus[\s,;:.-]*/i, "")
+      .replace(/\b(?:please|find(?:\s+and)?|search(?:\s+for)?|play|put on|listen to|bring up|open|some|music|songs?|tracks?|for me)\b/ig, " ")
+      .replace(/\b(?:authorized|official|valid|source choices?)\b/ig, " ")
+      .replace(/[,;]\s*(?:and\s+)?(?:show|display|open|list)\b.*$/i, "")
+      .replace(/^[\s,;:.-]+|[\s,;:.-]+$/g, "")) || query;
     const searches = [query, cleanedQuery];
     let track = null;
+    let tracks = [];
     let providerError = null;
     for (const search of searches) {
       const url = new URL("https://itunes.apple.com/search");
@@ -291,7 +455,8 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
         const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (public-music-search)" } });
         if (!response.ok) throw new Error(`The public music provider failed (${response.status}).`);
         const payload = await response.json();
-        track = (Array.isArray(payload && payload.results) ? payload.results : []).find((item) => safeHttpUrl(item.previewUrl) && safeHttpUrl(item.trackViewUrl));
+        tracks = (Array.isArray(payload && payload.results) ? payload.results : []).filter((item) => safeHttpUrl(item.previewUrl) && safeHttpUrl(item.trackViewUrl));
+        track = tracks[0] || null;
         if (track) break;
       } catch (error) {
         providerError = error;
@@ -301,8 +466,17 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     const title = [clean(track.trackName, 220), clean(track.artistName, 180)].filter(Boolean).join(" — ") || query;
     const artifact = emptyArtifact("media", `Now playing: ${title}`);
     artifact.description = `Live public music preview for “${query}”.`;
+    artifact.description = `Live authorized music results for ${query}. The first public preview is ready and every choice remains tied to this request.`;
     artifact.links = [{ label: "Open music source", url: track.trackViewUrl }];
-    artifact.media = { kind: "audio", title, provider: "Apple Music / iTunes Search API", sourceUrl: track.trackViewUrl, embedUrl: track.previewUrl, state: "playing" };
+    artifact.items = tracks.slice(0, 8).map((item, index) => ({
+      id: clean(item.trackId || `track-${index + 1}`),
+      title: [clean(item.trackName, 220), clean(item.artistName, 180)].filter(Boolean).join(" — ") || `Music choice ${index + 1}`,
+      description: [clean(item.collectionName, 220), clean(item.primaryGenreName, 120)].filter(Boolean).join(" · "),
+      sourceName: "Apple Music / iTunes Search API", sourceUrl: item.trackViewUrl,
+      imageUrl: safeHttpUrl(String(item.artworkUrl100 || "").replace(/100x100bb/i, "600x600bb")),
+      metadata: [item.releaseDate ? `Released ${String(item.releaseDate).slice(0, 10)}` : "", item.trackTimeMillis ? `${Math.round(item.trackTimeMillis / 1000)} seconds` : ""].filter(Boolean)
+    }));
+    artifact.media = { kind: "audio", title, provider: "Apple Music / iTunes Search API", sourceUrl: track.trackViewUrl, embedUrl: track.previewUrl, state: "playing", route: null };
     return artifact;
   }
 
@@ -323,13 +497,96 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     const artifact = emptyArtifact("media", `Now playing: ${title}`);
     artifact.description = `Live result for “${query}”.`;
     artifact.links = [{ label: "Open media source", url: sourceUrl }];
-    artifact.media = { kind: "video", title, provider: clean(found.sourceName), sourceUrl, embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1`, state: "playing" };
+    artifact.media = { kind: "video", title, provider: clean(found.sourceName), sourceUrl, embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1`, state: "playing", route: null };
     return artifact;
   }
 
   async function images(goal) {
     const rawQuery = clean(goal.query) || clean(goal.artifact && goal.artifact.title) || "images";
-    const query = clean(rawQuery.replace(/\b(?:source[- ]label(?:ed|s)?|with source labels?|show|find|search(?: for)?|images?|photos?|pictures?)\b/ig, " ")) || rawQuery;
+    const querySegments = rawQuery.split(/[.!?]+/).map(segment => clean(segment
+      .replace(/^(?:hey[\s,]+)?nexus[\s,;:.-]*/i, "")
+      .replace(/\b(?:please|show|display|find|search(?: for)?|research|bring up|source[- ]label(?:ed|s)?|with source labels?|images?|photos?|pictures?|explain|compare|tell me|give me)\b/ig, " ")
+      .replace(/\b(?:me|of common)\b/ig, " "))).filter(segment => segment.length >= 3);
+    const conversationalQuery = querySegments[0] || rawQuery;
+    const cropDisease = /\b([a-z][a-z-]*)\s+diseases?\b/i.exec(rawQuery);
+    const query = cropDisease
+      ? `${clean(cropDisease[1], 80)} disease symptoms`
+      : conversationalQuery;
+    function stripMarkup(value) { return clean(String(value || "").replace(/<[^>]+>/g, " ").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&"), 1200); }
+    function subjectTerms(value) {
+      const generic = new Set(["with", "from", "that", "this", "common", "kenya", "disease", "symptom", "infection", "picture", "image", "photo"]);
+      const terms = String(value || "").toLowerCase().split(/[^a-z0-9]+/)
+        .filter(word => word.length >= 4).map(word => word.endsWith("s") ? word.slice(0, -1) : word).filter(word => !generic.has(word));
+      if (terms.includes("maize") && !terms.includes("corn")) terms.push("corn");
+      return terms;
+    }
+    async function wikipediaLookup(searchQuery) {
+      const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
+      searchUrl.searchParams.set("action", "query"); searchUrl.searchParams.set("list", "search");
+      searchUrl.searchParams.set("srsearch", searchQuery); searchUrl.searchParams.set("srlimit", "14"); searchUrl.searchParams.set("format", "json");
+      const searchResponse = await fetchImpl(searchUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
+      if (!searchResponse.ok) throw new Error(`The image topic provider failed (${searchResponse.status}).`);
+      const searchPayload = await searchResponse.json();
+      const searchItems = Array.isArray(searchPayload && searchPayload.query && searchPayload.query.search) ? searchPayload.query.search : [];
+      const topicWords = subjectTerms(query);
+      const diseaseRequest = /\b(disease|symptom|infection|pest)\b/i.test(query);
+      const relevant = searchItems.filter(item => {
+        const title = String(item.title || "").toLowerCase();
+        const text = `${title} ${stripMarkup(item.snippet)}`.toLowerCase();
+        const topicMatches = topicWords.filter(word => text.includes(word)).length;
+        const pathology = /\b(disease|symptom|virus|viral|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest)\b/i.test(text);
+        const titleRelevant = topicWords.some(word => title.includes(word)) || /\b(disease|virus|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest)\b/i.test(title);
+        return topicMatches >= 1 && titleRelevant && (!diseaseRequest || pathology);
+      }).slice(0, 10);
+      if (!relevant.length) return [];
+      const pageUrl = new URL("https://en.wikipedia.org/w/api.php");
+      pageUrl.searchParams.set("action", "query"); pageUrl.searchParams.set("prop", "pageimages|info");
+      pageUrl.searchParams.set("piprop", "thumbnail"); pageUrl.searchParams.set("pithumbsize", "960"); pageUrl.searchParams.set("inprop", "url");
+      pageUrl.searchParams.set("titles", relevant.map(item => item.title).join("|")); pageUrl.searchParams.set("format", "json");
+      const pageResponse = await fetchImpl(pageUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
+      if (!pageResponse.ok) throw new Error(`The image thumbnail provider failed (${pageResponse.status}).`);
+      const pagePayload = await pageResponse.json();
+      const snippets = new Map(relevant.map(item => [item.title, stripMarkup(item.snippet)]));
+      const pages = Object.values(pagePayload && pagePayload.query && pagePayload.query.pages || {});
+      const pageItems = pages.map(page => ({
+        id: `wikipedia-${page.pageid}`, title: clean(page.title), description: snippets.get(page.title) || "Topic background and source image.",
+        sourceName: "Wikipedia / Wikimedia", sourceUrl: page.fullurl || "", imageUrl: page.thumbnail && page.thumbnail.source || "",
+        metadata: ["Live topic match", page.touched ? `Source updated ${String(page.touched).slice(0, 10)}` : ""].filter(Boolean)
+      })).filter(item => item.sourceUrl && item.imageUrl);
+      const missingImageTitles = pages.filter(page => !(page.thumbnail && page.thumbnail.source)).map(page => page.title).slice(0, 2);
+      for (const title of missingImageTitles) {
+        try {
+          const commonsItems = await lookup(title);
+          for (const item of commonsItems) if (!pageItems.some(existing => existing.sourceUrl === item.sourceUrl)) pageItems.push(item);
+        } catch {}
+      }
+      return pageItems;
+    }
+    async function openverseLookup(searchQuery) {
+      const url = new URL("https://api.openverse.org/v1/images/");
+      url.searchParams.set("q", searchQuery); url.searchParams.set("page_size", "12");
+      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-research)" } });
+      if (!response.ok) throw new Error(`The Openverse image provider failed (${response.status}).`);
+      const payload = await response.json();
+      const subjectWords = subjectTerms(query);
+      const diseaseRequest = /\b(disease|symptom|infection|pest)\b/i.test(query);
+      return (Array.isArray(payload && payload.results) ? payload.results : []).filter(item => {
+        const title = String(item.title || "").toLowerCase();
+        const text = `${title} ${item.description || ""} ${(item.tags || []).map(tag => tag.name || tag).join(" ")}`.toLowerCase();
+        const subjectMatch = subjectWords.some(word => text.includes(word));
+        const pathology = /\b(disease|symptom|virus|viral|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest|lesion)\b/i.test(text);
+        const titleSubject = subjectWords.some(word => title.includes(word));
+        const titlePathology = /\b(disease|symptom|virus|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest|lesion)\b/i.test(title);
+        const titleRelevant = diseaseRequest ? titleSubject && titlePathology : titleSubject || titlePathology;
+        return subjectMatch && titleRelevant && (!diseaseRequest || pathology);
+      }).map((item, index) => ({
+        id: clean(item.id || `openverse-${index + 1}`), title: clean(item.title, 260) || `Image result ${index + 1}`,
+        description: clean(item.creator ? `Image by ${item.creator}` : "Openly licensed image result."),
+        sourceName: clean(item.source || item.provider || "Openverse"),
+        sourceUrl: safeHttpUrl(item.foreign_landing_url || item.detail_url), imageUrl: safeHttpUrl(item.thumbnail || item.url),
+        metadata: [clean(item.license, 80) ? `${String(item.license).toUpperCase()} license` : "See source for license", item.creator ? `Creator: ${clean(item.creator, 160)}` : ""].filter(Boolean)
+      })).filter(item => item.sourceUrl && item.imageUrl).slice(0, 8);
+    }
     async function lookup(searchQuery) {
       const url = new URL("https://commons.wikimedia.org/w/api.php");
       url.searchParams.set("action", "query"); url.searchParams.set("generator", "search");
@@ -339,12 +596,68 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-search)" } });
       if (!response.ok) throw new Error(`The live image provider failed (${response.status}).`);
       const payload = await response.json();
+      const requiredWords = subjectTerms(query);
+      const diseaseRequest = /\b(disease|symptom|infection|pest)\b/i.test(query);
       return Object.values(payload && payload.query && payload.query.pages || {}).map((page) => {
         const info = page.imageinfo && page.imageinfo[0] || {};
         return { id: String(page.pageid || page.title), title: clean(page.title).replace(/^File:/, ""), description: clean(info.extmetadata && info.extmetadata.ImageDescription && info.extmetadata.ImageDescription.value), sourceName: "Wikimedia Commons", sourceUrl: info.descriptionurl || "", imageUrl: info.thumburl || info.url || "", metadata: [clean(info.extmetadata && info.extmetadata.LicenseShortName && info.extmetadata.LicenseShortName.value) || "See source for license"] };
-      }).filter((item) => item.imageUrl && item.sourceUrl).slice(0, 8);
+      }).filter((item) => {
+        const title = String(item.title || "").toLowerCase();
+        const text = `${title} ${stripMarkup(item.description)}`.toLowerCase();
+        const topicMatch = requiredWords.some(word => text.includes(word));
+        const pathology = /\b(disease|symptom|virus|viral|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest)\b/i.test(text);
+        const titleRelevant = requiredWords.some(word => title.includes(word)) || /\b(disease|virus|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung|bacter|pest)\b/i.test(title);
+        return item.imageUrl && item.sourceUrl && topicMatch && titleRelevant && (!diseaseRequest || pathology);
+      }).slice(0, 8);
     }
-    let items = await lookup(query);
+    async function wikipediaSummaryLookup(topic) {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(String(topic || "").trim().replace(/\s+/g, "_"))}`;
+      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (source-attributed-image-fallback)" } });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const sourceUrl = safeHttpUrl(payload.content_urls && payload.content_urls.desktop && payload.content_urls.desktop.page);
+      const imageUrl = safeHttpUrl(payload.thumbnail && payload.thumbnail.source);
+      if (!sourceUrl || !imageUrl) return null;
+      return {
+        id: `wikipedia-summary-${clean(payload.pageid || payload.title, 120)}`,
+        title: clean(payload.title, 260),
+        description: clean(payload.extract, 1200) || "Live topic summary and source image.",
+        sourceName: "Wikipedia / Wikimedia",
+        sourceUrl,
+        imageUrl,
+        metadata: ["Live canonical topic fallback"]
+      };
+    }
+    const comparisonTerms = (goal.artifact && goal.artifact.sections || [])
+      .flatMap(section => [section.heading, ...(section.items || [])])
+      .map(value => clean(value, 180)).filter(Boolean);
+    const cropAliasQuery = /\bmaize\b/i.test(query) ? query.replace(/\bmaize\b/ig, "corn") : "";
+    const expansions = /\b(disease|symptom|infection|pest)\b/i.test(query) ? [cropAliasQuery, `${query} leaf blight`, `${query} virus rust`].filter(Boolean) : [];
+    const targetedQueries = [...new Set([query, ...expansions, ...querySegments.slice(1), ...comparisonTerms.map(term => `${term} ${query}`)])].slice(0, 4);
+    let items = [];
+    let imageError = null;
+    for (const targetedQuery of targetedQueries) {
+      const found = [];
+      try { found.push(...await wikipediaLookup(targetedQuery)); } catch (error) { imageError = error; }
+      if (found.length < 4) try { found.push(...await openverseLookup(targetedQuery)); } catch (error) { imageError = error; }
+      if (found.length < 2) try { found.push(...await lookup(targetedQuery)); } catch (error) { imageError = error; }
+      for (const item of found) if (!items.some(existing => existing.sourceUrl === item.sourceUrl)) items.push(item);
+      if (items.length >= 6) break;
+    }
+    if (items.length < 3) {
+      const crop = subjectTerms(query)[0] || "";
+      const canonicalTopics = crop ? [
+        `${crop} mosaic viruses`, `${crop} brown streak virus disease`, `${crop} bacterial blight`,
+        `${crop} leaf blight`, `${crop} rust`, `${crop} smut`
+      ] : [];
+      for (const topic of canonicalTopics) {
+        if (items.length >= 4) break;
+        try {
+          const item = await wikipediaSummaryLookup(topic);
+          if (item && !items.some(existing => existing.sourceUrl === item.sourceUrl)) items.push(item);
+        } catch (error) { imageError = error; }
+      }
+    }
     const retries = [];
     if (/\s+in\s+/i.test(query)) {
       const [subject, location] = query.split(/\s+in\s+/i, 2);
@@ -355,11 +668,24 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     const words = query.replace(/\b(?:photographs?|photos?|pictures?|images?)\b/ig, " ").split(/\s+/).filter(Boolean);
     if (words.length > 2) retries.push(`${words.slice(-2).join(" ")} ${words.slice(0, -2).join(" ")}`, `${words.at(-1)} ${words.slice(0, -1).join(" ")}`);
     for (const retry of [...new Set(retries.map((value) => clean(value)).filter((value) => value && value.toLowerCase() !== query.toLowerCase()))].slice(0, 3)) {
-      if (items.length) break;
-      items = await lookup(retry);
+      if (items.length >= 4) break;
+      try {
+        const found = await lookup(retry);
+        for (const item of found) if (!items.some(existing => existing.sourceUrl === item.sourceUrl)) items.push(item);
+      } catch (error) { imageError = error; }
     }
-    if (!items.length) throw new Error(`The live image provider returned no source-labeled results for ${query}.`);
-    const artifact = emptyArtifact("list", `Images: ${query}`); artifact.description = "Live, source-labeled image results."; artifact.items = items;
+    if (!items.length) throw imageError || new Error(`The live image provider returned no source-labeled results for ${query}.`);
+    const artifact = emptyArtifact("list", clean(goal.artifact && goal.artifact.title) || `Images: ${query}`);
+    artifact.description = clean(goal.artifact && goal.artifact.description, 2000) || "Live, source-attributed image results with comparison guidance.";
+    artifact.sections = Array.isArray(goal.artifact && goal.artifact.sections) ? [...goal.artifact.sections] : [];
+    artifact.items = items.slice(0, 12);
+    try {
+      const live = await liveWebSearch(`${rawQuery} reputable symptom identification sources`);
+      artifact.links = live.sources.slice(0, 8).map(source => ({ label: source.title || new URL(source.url).hostname, url: source.url }));
+      if (live.summary) artifact.sections.push({ heading: "Source-backed comparison", body: clean(live.summary, 3000), items: [] });
+    } catch (error) {
+      artifact.sections.push({ heading: "Source retrieval note", body: `Every thumbnail links to its image source. Additional live reference search was unavailable: ${clean(error.message, 400)}`, items: [] });
+    }
     return artifact;
   }
 
@@ -415,9 +741,12 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     try {
       goal = normalizeGoalRoute(await resolver.resolve(request));
     } catch (error) {
-      const fallbackGoal = { capability: "workspace", operation: "open", workspace: request.activeWorkspace || request.requestedWorkspace || "live-knowledge", query: clean(request.command), acknowledgement: "", artifact: emptyArtifact("status", "Nexus needs its goal resolver") };
-      fallbackGoal.artifact.description = clean(error.message);
-      return resultEnvelope(fallbackGoal, fallbackGoal.artifact, { status: "failed", recovery: { message: clean(error.message), nextActions: ["Check the OpenAI provider configuration and retry the same natural-language request."] } });
+      goal = localResilienceGoal(request);
+      if (!goal) {
+        const fallbackGoal = { capability: "workspace", operation: "open", workspace: request.activeWorkspace || request.requestedWorkspace || "live-knowledge", query: clean(request.command), acknowledgement: "", artifact: emptyArtifact("status", "Nexus needs its goal resolver") };
+        fallbackGoal.artifact.description = clean(error.message);
+        return resultEnvelope(fallbackGoal, fallbackGoal.artifact, { status: "failed", recovery: { message: clean(error.message), nextActions: ["Check the OpenAI provider configuration and retry the same natural-language request."] } });
+      }
     }
     try {
       let artifact = goal.artifact;
@@ -438,7 +767,19 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
         const bbox = Array.isArray(focus.boundingBox) && focus.boundingBox.length === 4
           ? `${focus.boundingBox[2]},${focus.boundingBox[0]},${focus.boundingBox[3]},${focus.boundingBox[1]}`
           : `${focus.lon - span},${focus.lat - span},${focus.lon + span},${focus.lat + span}`;
-        artifact.media = { kind: "map", title: artifact.title, provider: "OpenStreetMap", sourceUrl: `https://www.openstreetmap.org/?mlat=${focus.lat}&mlon=${focus.lon}#map=12/${focus.lat}/${focus.lon}`, embedUrl: `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&marker=${encodeURIComponent(`${focus.lat},${focus.lon}`)}&layer=mapnik`, state: "ready" };
+        const sourceUrl = map.type === "route"
+          ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${encodeURIComponent(`${map.origin.lat},${map.origin.lon};${map.destination.lat},${map.destination.lon}`)}`
+          : `https://www.openstreetmap.org/?mlat=${focus.lat}&mlon=${focus.lon}#map=12/${focus.lat}/${focus.lon}`;
+        artifact.media = {
+          kind: "map", title: artifact.title, provider: "OpenStreetMap + OSRM", sourceUrl,
+          embedUrl: `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&marker=${encodeURIComponent(`${focus.lat},${focus.lon}`)}&layer=mapnik`, state: "ready",
+          route: {
+            coordinates: map.type === "route" ? map.geometry.coordinates : [],
+            origin: map.type === "route" ? map.origin : null,
+            destination: map.type === "route" ? map.destination : null,
+            focus
+          }
+        };
         artifact.links = [{ label: "Open interactive map", url: artifact.media.sourceUrl }];
         artifact.sections = [{ heading: map.type === "route" ? "Route summary" : "Location", body: artifact.description, items: map.type === "route" ? [`Distance: ${Math.round(map.distanceMeters / 100) / 10} km`, `Estimated driving time: ${Math.round(map.durationSeconds / 60)} minutes`] : [] }];
       } else if (goal.capability === "weather") {
@@ -447,6 +788,20 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
         artifact = emptyArtifact("card", `Weather: ${weather.location}`);
         artifact.description = `${weather.temperatureC}°C now · high ${weather.highC}°C · low ${weather.lowC}°C · rain chance ${weather.rainChance}%`;
         artifact.links = [{ label: "Open weather source", url: weather.sourceUrl }];
+      } else if (goal.capability === "question-card") {
+        artifact = normalizeArtifact(artifact);
+        const cardText = `${artifact.description} ${(artifact.sections || []).map(section => `${section.heading} ${section.body} ${(section.items || []).join(" ")}`).join(" ")}`;
+        if (!/not medical advice|do not (?:start|stop|change)|urgent|emergency|pharmacist|prescriber/i.test(cardText)) {
+          artifact.sections.push({ heading: "Medication safety", body: "This card helps prepare for a conversation and is not medical advice. Do not start, stop, split, or change a prescribed medicine without checking with a pharmacist or prescriber. Seek urgent or emergency help for severe or rapidly worsening symptoms.", items: [] });
+        }
+        try {
+          const live = await liveWebSearch(`${goal.query || request.command} official medication safety patient resources`);
+          artifact.links = live.sources.slice(0, 8).map(source => ({ label: source.title || new URL(source.url).hostname, url: source.url }));
+          evidence = { status: "live-references", provider: "openai-web-search", sourceCount: artifact.links.length };
+        } catch (error) {
+          artifact.sections.push({ heading: "Reference status", body: `The question card is available, but live reputable references could not be attached: ${clean(error.message, 400)}`, items: [] });
+          evidence = { status: "reference-provider-unavailable", provider: "openai-web-search", error: clean(error.message, 300) };
+        }
       }
       return resultEnvelope(goal, artifact, { evidence });
     } catch (error) {

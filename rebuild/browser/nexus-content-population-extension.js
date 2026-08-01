@@ -64,6 +64,21 @@
     return `<label for="${id}">${label}<input id="${id}" name="${id}" type="${type}" value="${value}"${field.required ? " required" : ""}></label>`;
   }
 
+  function routePreviewMarkup(media = {}) {
+    const coordinates = (media.route && Array.isArray(media.route.coordinates) ? media.route.coordinates : [])
+      .map(point => [Number(point && point[0]), Number(point && point[1])])
+      .filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+    if (coordinates.length < 2) return "";
+    const lons = coordinates.map(point => point[0]); const lats = coordinates.map(point => point[1]);
+    const minLon = Math.min(...lons); const maxLon = Math.max(...lons); const minLat = Math.min(...lats); const maxLat = Math.max(...lats);
+    const lonSpan = Math.max(0.000001, maxLon - minLon); const latSpan = Math.max(0.000001, maxLat - minLat);
+    const pointList = coordinates.map(([lon, lat]) => `${(5 + ((lon - minLon) / lonSpan) * 90).toFixed(2)},${(95 - ((lat - minLat) / latSpan) * 90).toFixed(2)}`);
+    const origin = escapeMarkup(media.route.origin && media.route.origin.label || "Origin");
+    const destination = escapeMarkup(media.route.destination && media.route.destination.label || "Destination");
+    const first = pointList[0].split(","); const last = pointList.at(-1).split(",");
+    return `<figure class="nexus-content-route-preview"><svg id="nexus-content-map-route" viewBox="0 0 100 100" role="img" aria-label="Route from ${origin} to ${destination}"><rect width="100" height="100" rx="4" fill="#071c24"></rect><polyline points="${pointList.join(" ")}" fill="none" stroke="#6af0ba" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></polyline><circle cx="${first[0]}" cy="${first[1]}" r="2.4" fill="#ffffff"></circle><circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="#ffcf70"></circle></svg><figcaption>${origin} → ${destination}</figcaption></figure>`;
+  }
+
   function renderArtifactMarkup(result) {
     const artifact = result && result.artifact || {};
     const status = result && result.status || "failed";
@@ -86,11 +101,13 @@
       return url ? `<a href="${escapeMarkup(url)}" target="_blank" rel="noopener noreferrer">${escapeMarkup(link.label || "Open source")}</a>` : "";
     }).join("");
     const mediaUrl = safeUrl(artifact.media && artifact.media.embedUrl);
-    const media = mediaUrl
+    const routePreview = artifact.media && artifact.media.kind === "map" ? routePreviewMarkup(artifact.media) : "";
+    const mediaElement = mediaUrl
       ? artifact.media.kind === "audio"
         ? `<div class="nexus-content-media"><audio id="nexus-content-music-player" src="${escapeMarkup(mediaUrl)}" title="${escapeMarkup(artifact.media.title || artifact.title || "Nexus music result")}" controls autoplay></audio></div>`
         : `<div class="nexus-content-media"><iframe id="${artifact.media.kind === "map" ? "nexus-content-map-frame" : "nexus-content-music-frame"}" src="${escapeMarkup(mediaUrl)}" title="${escapeMarkup(artifact.media.title || artifact.title || "Nexus media result")}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`
       : artifact.media && artifact.media.state === "stopped" ? `<p class="nexus-content-meta" data-media-state="stopped">Playback is stopped.</p>` : "";
+    const media = `${routePreview}${mediaElement}`;
     return `<section class="nexus-content-result" data-nexus-content-result-id="${resultId}" data-nexus-content-artifact="${escapeMarkup(artifact.kind || "status")}" data-result-status="${escapeMarkup(status)}"><article class="nexus-content-card"><p class="nexus-content-meta">${escapeMarkup(result.capability || "workspace")} · ${escapeMarkup(result.operation || "open")}</p><h2>${escapeMarkup(artifact.title || "Nexus result")}</h2>${description}</article>${failure}${fields}${sections}${items ? `<div class="nexus-content-list">${items}</div>` : ""}${links ? `<nav class="nexus-content-actions" aria-label="Result links">${links}</nav>` : ""}${media}</section>`;
   }
 
