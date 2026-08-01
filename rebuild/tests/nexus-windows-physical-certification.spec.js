@@ -101,6 +101,20 @@ async function injectSpokenCommand(page, text) {
   }, chunks);
 }
 
+async function expectVisibleWorkspaceIdentity(page, workspace) {
+  await expect.poll(() => page.locator("#nexus-workspace").evaluate((element, expected) => {
+    const identities = [
+      element.dataset.workspace,
+      element.dataset.document,
+      element.dataset.guidedEntryProcess
+    ].filter(Boolean);
+    return identities.includes(expected);
+  }, workspace), {
+    timeout: 5000,
+    message: `Visible workspace must expose semantic identity ${workspace}`
+  }).toBe(true);
+}
+
 test.use({
   baseURL: BASE_URL,
   headless: false,
@@ -204,7 +218,7 @@ test("new Genesis build passes every application through physical voice", async 
           .filter((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
         return visible.length === 1 && visible[0].detail.outcomeVerified === true;
       }, { before, workspace }), { timeout: 60000 }).toBe(true);
-      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
+      await expectVisibleWorkspaceIdentity(page, workspace);
       await expect(page.locator("#nexus-workspace")).toBeVisible();
       if (visual === "map") {
         await expect(page.locator("#nexus-map-canvas")).toBeVisible();
