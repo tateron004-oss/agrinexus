@@ -6,8 +6,8 @@ const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
 const OUTPUT = path.resolve("output/nexus-voice-form-certification");
-const EXPERIENCE_FIELD = 'textarea[aria-label="Résumé experience"], textarea[aria-label="Work experience"]';
-const SKILLS_FIELD = 'textarea[aria-label="Résumé skills"], textarea[aria-label="Skills"]';
+const EXPERIENCE_FIELD = '[aria-label="Résumé experience"], [aria-label="Work experience"]';
+const SKILLS_FIELD = '[aria-label="Résumé skills"], [aria-label="Skills"]';
 
 function waveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
@@ -181,8 +181,8 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     const reopenProof = await page.evaluate(({ before }) => {
       const receipts = window.__voiceFormReceipts.slice(before);
       const receipt = receipts.findLast((item) => item.type === "voice-form.reopened");
-      const experience = document.querySelector('textarea[aria-label="Résumé experience"], textarea[aria-label="Work experience"]')?.value || "";
-      const skills = document.querySelector('textarea[aria-label="Résumé skills"], textarea[aria-label="Skills"]')?.value || "";
+      const experience = document.querySelector('[aria-label="Résumé experience"], [aria-label="Work experience"]')?.value || "";
+      const skills = document.querySelector('[aria-label="Résumé skills"], [aria-label="Skills"]')?.value || "";
       return {
         receipt,
         experience,
