@@ -1322,7 +1322,7 @@ ${content}`
           const resolution = routeCommand(command, state, this.conversationContext);
           let result = resolution;
           if (resolution.accepted) {
-            const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+            const routeKey = resolution.command.toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/\s+/g, " ").trim();
             let visualRoute = this.visualRoutes.get(routeKey);
             if (!visualRoute) {
               visualRoute = this.requestTransaction.run(resolution).then((routed) => {
