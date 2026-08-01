@@ -6,6 +6,8 @@ const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
 const OUTPUT = path.resolve("output/nexus-voice-form-certification");
+const EXPERIENCE_FIELD = 'textarea[aria-label="Résumé experience"], textarea[aria-label="Work experience"]';
+const SKILLS_FIELD = 'textarea[aria-label="Résumé skills"], textarea[aria-label="Skills"]';
 
 function waveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
@@ -167,20 +169,20 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
       await speakForReceipt(page, commands, receipt, evidence);
     }
 
-    await page.locator('textarea[aria-label="Résumé experience"]').fill("");
-    await page.locator('textarea[aria-label="Résumé skills"]').fill("");
+    await page.locator(EXPERIENCE_FIELD).first().fill("");
+    await page.locator(SKILLS_FIELD).first().fill("");
     let before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, reopen this resume draft.");
     await expectReceipt(page, "voice-form.reopened", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator('textarea[aria-label="Résumé experience"]')).toHaveValue(/twelve employees/i);
-    await expect(page.locator('textarea[aria-label="Résumé skills"]')).toHaveValue(/forklift operation/i);
+    await expect(page.locator(EXPERIENCE_FIELD).first()).toHaveValue(/twelve employees/i);
+    await expect(page.locator(SKILLS_FIELD).first()).toHaveValue(/forklift operation/i);
     await page.waitForTimeout(1500);
     const reopenProof = await page.evaluate(({ before }) => {
       const receipts = window.__voiceFormReceipts.slice(before);
       const receipt = receipts.findLast((item) => item.type === "voice-form.reopened");
-      const experience = document.querySelector('textarea[aria-label="Résumé experience"]')?.value || "";
-      const skills = document.querySelector('textarea[aria-label="Résumé skills"]')?.value || "";
+      const experience = document.querySelector('textarea[aria-label="Résumé experience"], textarea[aria-label="Work experience"]')?.value || "";
+      const skills = document.querySelector('textarea[aria-label="Résumé skills"], textarea[aria-label="Skills"]')?.value || "";
       return {
         receipt,
         experience,
@@ -209,7 +211,7 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     await speakExact(page, "Nexus, submit this application.");
     await expectReceipt(page, "voice-form.confirmation-required", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator("[data-nexus-voice-form-proof]")).toContainText(/Confirmation required/i);
+    await expect(page.locator("[data-nexus-voice-form-proof], #nexus-workspace").first()).toContainText(/Confirmation required/i);
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, confirm.");
