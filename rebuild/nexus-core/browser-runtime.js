@@ -394,14 +394,14 @@ class NexusBrowserRuntime {
             previousTransactionId: routed.previousTransactionId || null
           });
           return routed;
-        }).catch((error) => {
-          this.visualRoutes.delete(routeKey);
-          throw error;
+        }).finally(() => {
+          setTimeout(() => {
+            if (this.visualRoutes.get(routeKey) === visualRoute) {
+              this.visualRoutes.delete(routeKey);
+            }
+          }, 15000);
         });
         this.visualRoutes.set(routeKey, visualRoute);
-        setTimeout(() => {
-          if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
-        }, 15000);
       }
       result = await visualRoute;
     }

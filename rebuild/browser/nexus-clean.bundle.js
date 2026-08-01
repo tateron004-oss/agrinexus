@@ -1349,14 +1349,14 @@ ${content}`
                   previousTransactionId: routed.previousTransactionId || null
                 });
                 return routed;
-              }).catch((error) => {
-                this.visualRoutes.delete(routeKey);
-                throw error;
+              }).finally(() => {
+                setTimeout(() => {
+                  if (this.visualRoutes.get(routeKey) === visualRoute) {
+                    this.visualRoutes.delete(routeKey);
+                  }
+                }, 15e3);
               });
               this.visualRoutes.set(routeKey, visualRoute);
-              setTimeout(() => {
-                if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
-              }, 15e3);
             }
             result = await visualRoute;
           }
