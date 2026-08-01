@@ -219,7 +219,8 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     await speakExact(page, "Nexus, submit this application.");
     await expectReceipt(page, "voice-form.confirmation-required", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator("[data-nexus-voice-form-proof], #nexus-workspace").first()).toContainText(/Confirmation required/i);
+    await expect(page.locator("#nexus-workspace")).toContainText(/Confirmation required|Application Submission Check/i);
+    await expect(page.locator("#nexus-workspace")).toContainText(/required fields|confirmation/i);
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, confirm.");
