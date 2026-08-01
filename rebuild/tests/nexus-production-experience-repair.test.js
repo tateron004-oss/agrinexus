@@ -71,6 +71,38 @@ async function main() {
   assert.match(clinicRecovery.acknowledgement, /No verified clinic listings were returned/i);
   assert.doesNotMatch(clinicRecovery.acknowledgement, /Clinic listings are visible/i);
 
+  let workforcePlaceCalls = 0;
+  let workforceWebQuery = "";
+  const workforceService = createContentActionService({
+    goalResolver: { async resolve() { return {
+      capability: "listings", operation: "search", workspace: "workforce",
+      query: "farming jobs in Kenya", location: "Kenya", needsLiveProvider: true,
+      artifact: emptyArtifact("list", "Farming jobs in Kenya"), acknowledgement: "The job results are visible."
+    }; } },
+    fetchImpl: async () => {
+      workforcePlaceCalls += 1;
+      throw new Error("Workforce job searches must not call the place-listings provider.");
+    },
+    webSearchProvider: async query => {
+      workforceWebQuery = query;
+      return {
+        summary: "Current farming opportunities from live sources.",
+        sources: [
+          { title: "Agriculture jobs in Kenya", url: "https://jobs.example.org/kenya-agriculture" },
+          { title: "Kenya workforce opportunities", url: "https://work.example.org/kenya" }
+        ]
+      };
+    }
+  });
+  const workforce = await workforceService.execute({ command: "Nexus, search for farming jobs in Kenya." });
+  assert.equal(workforce.status, "ready");
+  assert.equal(workforce.workspace, "workforce");
+  assert.equal(workforce.capability, "search");
+  assert.equal(workforceWebQuery, "farming jobs in Kenya");
+  assert.equal(workforcePlaceCalls, 0);
+  assert.equal(workforce.artifact.items.length, 2);
+  assert.ok(workforce.artifact.items.every(item => item.sourceUrl));
+
   assert.deepEqual(parseMapRequest("Nairobi, Kenya to Nakuru, Kenya"), { type: "route", origin: "Nairobi, Kenya", destination: "Nakuru, Kenya" });
   assert.deepEqual(parseMapRequest("Show a map of Nairobi, Kenya and give me directions to Nakuru."), { type: "route", origin: "Nairobi, Kenya", destination: "Nakuru, Kenya" });
   const mapRequests = [];

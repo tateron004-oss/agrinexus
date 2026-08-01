@@ -304,6 +304,15 @@ function normalizeGoalRoute(goal) {
   if (goal && goal.capability === "map" && goal.operation === "search") {
     return { ...goal, capability: "listings", workspace: clean(goal.workspace, 120) || "maps" };
   }
+  // Jobs are web records, not physical places. The conversational resolver can
+  // reasonably classify both as "listings", but sending a workforce request to
+  // Nominatim produces place-search queries such as "farming jobs in Kenya near
+  // Kenya" and hides the workspace when no map features are returned. Route job
+  // discovery through live web search while keeping place/service discovery on
+  // the OpenStreetMap listings provider.
+  if (goal && goal.capability === "listings" && clean(goal.workspace, 120) === "workforce") {
+    return { ...goal, capability: "search", operation: "search" };
+  }
   return goal;
 }
 
