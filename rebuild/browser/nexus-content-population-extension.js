@@ -50,6 +50,15 @@
     return "application";
   }
 
+  function workflowButtonCommand(label, fields = []) {
+    const action = normalize(label);
+    const context = (fields || [])
+      .map((field) => ({ label: normalize(field && (field.label || field.id)), value: normalize(field && field.value) }))
+      .filter((field) => field.label && field.value)
+      .map((field) => `${field.label}: ${field.value}`);
+    return [action, ...context].filter(Boolean).join(". ");
+  }
+
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
     const label = `${escapeMarkup(field.label || "Field")}${field.required ? " *" : ""}`;
@@ -127,6 +136,7 @@
       this.onOpenCapture = this.onOpenCapture.bind(this);
       this.onAcknowledgementCapture = this.onAcknowledgementCapture.bind(this);
       this.onReceipt = this.onReceipt.bind(this);
+      this.onWorkflowButtonClick = this.onWorkflowButtonClick.bind(this);
     }
 
     install() {
@@ -135,7 +145,43 @@
       this.window.addEventListener("nexus.clean.workspace.open", this.onOpenCapture, true);
       this.window.addEventListener("nexus.clean.workspace.acknowledged", this.onAcknowledgementCapture, true);
       this.window.addEventListener("nexus.clean.receipt", this.onReceipt);
+      this.document.addEventListener("click", this.onWorkflowButtonClick, true);
       return this;
+    }
+
+    onWorkflowButtonClick(event) {
+      const button = event.target && event.target.closest && event.target.closest("#nexus-app-surface .app-actions button");
+      if (!button || button.dataset.resumeAction || button.dataset.providerCardAction || button.dataset.contentAction || button.dataset.nexusActionPending === "true") return;
+      const surface = button.closest("#nexus-app-surface");
+      if (!surface || surface.querySelector("[data-nexus-content-result-id]")) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const workspaceShell = this.document.getElementById("nexus-workspace");
+      const workspace = workspaceShell && workspaceShell.dataset.workspace || this.activeWorkspace || "live-knowledge";
+      const fields = [...surface.querySelectorAll("input, textarea, select")].map((field) => ({
+        id: field.name || field.id,
+        label: field.getAttribute("aria-label") || field.closest("label")?.childNodes?.[0]?.textContent || field.name || field.id,
+        value: field.type === "checkbox" ? String(field.checked) : field.value
+      }));
+      const command = workflowButtonCommand(button.textContent, fields);
+      if (!command) return;
+      const requestId = globalObject.crypto?.randomUUID?.() || `button-${Date.now()}`;
+      button.dataset.nexusActionPending = "true";
+      button.dataset.nexusActionLabel = normalize(button.textContent);
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.textContent = "Working…";
+      this.stage("workflow.button-requested", { requestId, workspace, action: normalize(button.textContent) });
+      this.open(Object.freeze({
+        requestId,
+        transactionId: `button-action-${requestId}`,
+        workspace,
+        command,
+        utterance: command,
+        parameters: {},
+        contentExtensionExclusive: true,
+        source: "workflow-button"
+      }));
     }
 
     stage(type, detail = {}) {
@@ -348,7 +394,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
