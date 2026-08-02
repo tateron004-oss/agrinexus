@@ -15,6 +15,7 @@ assert.equal(isDirectResumeCommand("Nexus, sell 50 bags of maize."), false);
 assert.equal(isDirectApplicationCommand("Nexus, record my blood pressure 140 over 90."), true);
 assert.equal(isDirectApplicationCommand("Nexus, show my offline queue."), true);
 assert.equal(isDirectApplicationCommand("Nexus, set queued request to find maize treatment guidance."), false);
+assert.equal(isDirectApplicationCommand("Nexus, show an apple pie recipe with ingredients, steps, and sources."), false);
 assert.equal(isDirectApplicationCommand("Nexus sell fifty bags of maize."), false);
 assert.equal(isDirectApplicationCommand("Nexus sell 50 bags of maize."), true);
 assert.equal(isDirectApplicationCommand("How are you today?"), false);

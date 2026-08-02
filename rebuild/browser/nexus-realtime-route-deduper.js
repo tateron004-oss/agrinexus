@@ -16,6 +16,7 @@
     if (!wake) return false;
     const request = normalize(wake[1]);
     if (/^(?:set|change|correct|update|add|replace|read|review|save|reopen|restore|submit|confirm)\b/i.test(request)) return false;
+    if (/\b(?:recipe|ingredients?)\b/i.test(request)) return false;
     if (/^sell\b/i.test(request)) return /^sell\s+\d/i.test(request);
     return /^(?:help|open|start|begin|record|find|search|plan|play|show|remind|create|make|build)\b/i.test(request);
   }
