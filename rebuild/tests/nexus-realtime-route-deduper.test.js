@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
+const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
 
 const indexSource = fs.readFileSync(path.resolve(__dirname, "../browser/index.html"), "utf8");
 assert.ok(indexSource.indexOf("nexus-realtime-route-deduper.js") < indexSource.indexOf("nexus-clean.bundle.js"));
@@ -23,12 +23,18 @@ assert.equal(normalizeAgriculturalTranscript("Nexus, show pictures of possible M
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Mays' treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Maze's treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, reset the map to Mays Landing."), "Nexus, reset the map to Mays Landing.");
+assert.equal(normalizeMarketplaceTranscript("Nexus sell fifty bags of maize."), "Nexus sell 50 bags of maize.");
+assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of maize."), "Nexus, sell 25 crates of maize.");
+assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag", transcript: "Nexus, show pictures of possible Mase diseases."
 }))).transcript, "Nexus, show pictures of possible maize diseases.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-edit", transcript: "Nexus, set queued request to find Mays' treatment guidance."
 }))).transcript, "Nexus, set queued request to find Mays' treatment guidance.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-market", transcript: "Nexus sell fifty bags of maize."
+}))).transcript, "Nexus sell 50 bags of maize.");
 
 const sent = [];
 const listeners = new Map();

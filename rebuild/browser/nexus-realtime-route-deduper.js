@@ -28,12 +28,30 @@
     );
   }
 
+  function normalizeMarketplaceTranscript(value) {
+    const numbers = Object.freeze({
+      zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+      ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
+      sixty: 60, seventy: 70, eighty: 80, ninety: 90
+    });
+    return normalize(value).replace(
+      /(\bnexus\b[\s,;:.-]*sell\s+)([a-z]+)(?:[- ]([a-z]+))?(?=\s+(?:bags?|sacks?|kg|kilograms?|tons?|crates?|units?)\b)/i,
+      (match, prefix, first, second) => {
+        const left = numbers[first.toLowerCase()];
+        const right = second ? numbers[second.toLowerCase()] : 0;
+        if (left === undefined || (second && (right === undefined || left < 20 || right >= 10))) return match;
+        return `${prefix}${left + right}`;
+      }
+    );
+  }
+
   function normalizeRealtimeMessageData(value) {
     let message;
     try { message = JSON.parse(String(value || "")); } catch { return value; }
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
     if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(normalize(message.transcript))) return value;
-    const transcript = normalizeAgriculturalTranscript(message.transcript);
+    const transcript = normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(message.transcript));
     return transcript === normalize(message.transcript) ? value : JSON.stringify({ ...message, transcript });
   }
 
@@ -59,7 +77,8 @@
         }
         if (message.type === "conversation.item.input_audio_transcription.completed") {
           latestInputItemId = normalize(message.item_id) || latestInputItemId;
-          transcripts.set(latestInputItemId, normalize(message.transcript));
+          const normalizedMessage = JSON.parse(normalizeRealtimeMessageData(event.data));
+          transcripts.set(latestInputItemId, normalize(normalizedMessage.transcript));
           return;
         }
         const routeArgumentsCompleted = message.type === "response.function_call_arguments.done" && message.name === "route_nexus_command";
@@ -103,7 +122,7 @@
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeRealtimeMessageData });
+  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRealtimeMessageData });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);
