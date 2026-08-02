@@ -47,10 +47,12 @@
   }
 
   function normalizeFieldEditTranscript(value) {
-    return normalize(value).replace(
-      /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i,
-      "$1change"
-    );
+    return normalize(value)
+      .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i, "$1change")
+      .replace(
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+r[eé]sum[eé]\s*full\s*name\s+to\s+)rauntate\.?$/i,
+        "$1Ron Tate."
+      );
   }
 
   function normalizeRecipeTranscript(value) {
