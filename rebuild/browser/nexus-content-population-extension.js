@@ -165,6 +165,16 @@
     return value;
   }
 
+  function inputTypeForField(field) {
+    const requested = normalize(field?.type).toLowerCase();
+    if (!["text", "number", "date", "email", "tel"].includes(requested)) return "text";
+    if (requested !== "number") return requested;
+    const identity = normalize(`${field?.id || ""} ${field?.label || ""}`).toLowerCase();
+    return /\b(quantity|amount|dose|dosage|weight|distance|area|volume|length|height|width|depth|duration|time per week)\b/.test(identity)
+      ? "text"
+      : "number";
+  }
+
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
     const visibleLabel = String(field.label || "Field");
@@ -177,7 +187,7 @@
       return `<label for="${id}">${label}<select id="${id}" name="${id}" aria-label="${accessibleLabel}">${options}</select></label>`;
     }
     if (field.type === "checkbox") return `<label class="nexus-content-checkbox"><input id="${id}" name="${id}" type="checkbox" aria-label="${accessibleLabel}"${String(field.value).toLowerCase() === "true" ? " checked" : ""}>${label}</label>`;
-    const type = ["text", "number", "date", "email", "tel"].includes(field.type) ? field.type : "text";
+    const type = inputTypeForField(field);
     return `<label for="${id}">${label}<input id="${id}" name="${id}" type="${type}" aria-label="${accessibleLabel}" value="${value}"${field.required ? " required" : ""}></label>`;
   }
 
@@ -572,7 +582,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, escapeMarkup, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

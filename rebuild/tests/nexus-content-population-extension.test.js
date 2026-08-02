@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -66,6 +66,9 @@ async function main() {
   const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
   assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
   assert.equal(careNeededField.value, "blood pressure screening.");
+  assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
+  assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
+  assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
@@ -220,6 +223,13 @@ async function main() {
   });
   assert.match(locationMarkup, />County \/ area</);
   assert.match(locationMarkup, /aria-label="Location"/);
+
+  const quantityMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-quantity", status: "ready", capability: "marketplace", operation: "create", workspace: "marketplace",
+    artifact: { ...artifact("form", "Marketplace listing"), fields: [{ id: "quantity", label: "Quantity", type: "number", value: "50", required: true, options: [] }] }
+  });
+  assert.match(quantityMarkup, /name="quantity" type="text"/);
+  assert.doesNotMatch(quantityMarkup, /name="quantity" type="number"/);
 
   const clinicMarkup = renderArtifactMarkup({
     schema: "nexus.content.result.v2", requestId: "render-3", status: "ready", capability: "listings", operation: "search", workspace: "mobile-clinic",
