@@ -16,10 +16,50 @@
   });
 
   const REQUIRED_WORKSPACE_FIELDS = Object.freeze({
+    agriculture: Object.freeze([
+      Object.freeze({ id: "subject", label: "Crop or livestock", type: "text", value: "" }),
+      Object.freeze({ id: "location", label: "Location", type: "text", value: "" }),
+      Object.freeze({ id: "observation", label: "What are you seeing?", type: "text", value: "" })
+    ]),
+    health: Object.freeze([
+      Object.freeze({ id: "reading", label: "Blood pressure or reading", type: "text", value: "" }),
+      Object.freeze({ id: "measuredAt", label: "When measured", type: "text", value: "" }),
+      Object.freeze({ id: "symptoms", label: "Symptoms or notes", type: "text", value: "" })
+    ]),
+    telehealth: Object.freeze([
+      Object.freeze({ id: "reason", label: "Reason for visit", type: "text", value: "" }),
+      Object.freeze({ id: "preferredDate", label: "Preferred date", type: "text", value: "" }),
+      Object.freeze({ id: "provider", label: "Care provider", type: "text", value: "" })
+    ]),
     "mobile-clinic": Object.freeze([
       Object.freeze({ id: "location", label: "Location", type: "text", value: "" }),
       Object.freeze({ id: "careNeeded", label: "Care needed", type: "text", value: "" }),
       Object.freeze({ id: "travelDistance", label: "Travel distance", type: "text", value: "" })
+    ]),
+    pharmacy: Object.freeze([
+      Object.freeze({ id: "medication", label: "Medication", type: "text", value: "" }),
+      Object.freeze({ id: "requestType", label: "Request type", type: "text", value: "" }),
+      Object.freeze({ id: "pharmacy", label: "Pharmacy or location", type: "text", value: "" })
+    ]),
+    learning: Object.freeze([
+      Object.freeze({ id: "topic", label: "Topic or skill", type: "text", value: "" }),
+      Object.freeze({ id: "level", label: "Learning level", type: "text", value: "" }),
+      Object.freeze({ id: "language", label: "Language", type: "text", value: "" })
+    ]),
+    marketplace: Object.freeze([
+      Object.freeze({ id: "product", label: "Product", type: "text", value: "" }),
+      Object.freeze({ id: "quantity", label: "Quantity", type: "text", value: "" }),
+      Object.freeze({ id: "location", label: "Location", type: "text", value: "" })
+    ]),
+    reminders: Object.freeze([
+      Object.freeze({ id: "reminder", label: "Reminder", type: "text", value: "" }),
+      Object.freeze({ id: "time", label: "Date and time", type: "text", value: "" }),
+      Object.freeze({ id: "repeat", label: "Repeat", type: "text", value: "" })
+    ]),
+    offline: Object.freeze([
+      Object.freeze({ id: "queuedRequest", label: "Queued request", type: "text", value: "" }),
+      Object.freeze({ id: "connectionStatus", label: "Connection status", type: "text", value: "" }),
+      Object.freeze({ id: "syncPriority", label: "Sync priority", type: "text", value: "" })
     ])
   });
 

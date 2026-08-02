@@ -240,6 +240,19 @@ async function main() {
   assert.match(clinicMarkup, /aria-label="Care needed"/);
   assert.match(clinicMarkup, /aria-label="Travel distance"/);
 
+  const requiredEditFields = [
+    ["agriculture", "Location"], ["health", "Symptoms or notes"], ["telehealth", "Reason for visit"],
+    ["pharmacy", "Medication"], ["learning", "Topic or skill"], ["marketplace", "Quantity"],
+    ["reminders", "Date and time"], ["offline", "Queued request"]
+  ];
+  for (const [workspace, label] of requiredEditFields) {
+    const genericMarkup = renderArtifactMarkup({
+      schema: "nexus.content.result.v2", requestId: `generic-${workspace}`, status: "ready", capability: "workspace", operation: "open", workspace,
+      artifact: artifact("workspace", `${workspace} workspace`)
+    });
+    assert.ok(genericMarkup.includes(`aria-label="${label}"`), `${workspace} must retain ${label}`);
+  }
+
   console.log("Nexus open capability-layer unit acceptance: PASS (novel music, listings, sources, résumé context, form rendering, truthful failure)");
 }
 
