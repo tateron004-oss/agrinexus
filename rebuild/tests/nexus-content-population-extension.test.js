@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -66,6 +66,18 @@ async function main() {
     getElementById() { return { hidden: false, querySelectorAll() { return [locationField]; } }; }
   }, { Event: class { constructor(type) { this.type = type; } } }), true);
   assert.equal(locationField.value, "Nakuru, Kenya");
+  assert.equal(normalizeAgriculturalFieldValue("find Mays' treatment guidance."), "find maize treatment guidance.");
+  const queuedRequestField = {
+    name: "queuedRequest", id: "queuedRequest", value: "find Mays' treatment guidance.",
+    getAttribute(name) { return name === "aria-label" ? "Queued request" : null; },
+    dispatchEvent() { return true; }
+  };
+  assert.equal(reconcileAgriculturalFieldEdit({
+    type: "voice-form.updated", detail: { field: "queuedRequest", label: "Queued request", value: "find Mays' treatment guidance." }
+  }, {
+    getElementById() { return { hidden: false, querySelectorAll() { return [queuedRequestField]; } }; }
+  }, { Event: class { constructor(type) { this.type = type; } } }), true);
+  assert.equal(queuedRequestField.value, "find maize treatment guidance.");
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "health",
     command: "Nexus, set symptoms or notes to no symptoms."

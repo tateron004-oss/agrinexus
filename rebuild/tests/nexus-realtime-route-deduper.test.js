@@ -18,6 +18,9 @@ assert.equal(normalizeAgriculturalTranscript("Nexus, reset the map to Mays Landi
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag", transcript: "Nexus, show pictures of possible Mase diseases."
 }))).transcript, "Nexus, show pictures of possible maize diseases.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-edit", transcript: "Nexus, set queued request to find Mays' treatment guidance."
+}))).transcript, "Nexus, set queued request to find Mays' treatment guidance.");
 
 const sent = [];
 const listeners = new Map();

@@ -21,6 +21,7 @@
     let message;
     try { message = JSON.parse(String(value || "")); } catch { return value; }
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
+    if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(normalize(message.transcript))) return value;
     const transcript = normalizeAgriculturalTranscript(message.transcript);
     return transcript === normalize(message.transcript) ? value : JSON.stringify({ ...message, transcript });
   }

@@ -218,6 +218,36 @@
     return true;
   }
 
+  function normalizeAgriculturalFieldValue(value) {
+    return normalize(value).replace(
+      /\b(?:ma(?:ize|ze|se|ys|y['\u2019]s)|me['\u2019]?s)\b(?:['\u2019](?=\s))?(?=\s+(?:crop|disease|diseases|pest|plant|seed|treatment)\b)/gi,
+      "maize"
+    );
+  }
+
+  function reconcileAgriculturalFieldEdit(receipt, documentObject, windowObject = globalObject) {
+    if (!["voice-form.updated", "voice-form.corrected"].includes(receipt?.type)) return false;
+    const originalValue = normalize(receipt.detail?.value);
+    const canonicalValue = normalizeAgriculturalFieldValue(originalValue);
+    if (!originalValue || canonicalValue === originalValue) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden) return false;
+    const fieldKey = normalize(receipt.detail?.field).toLowerCase();
+    const fieldLabel = normalize(receipt.detail?.label).toLowerCase();
+    const field = [...(workspace.querySelectorAll?.("input, textarea") || [])].find((control) => {
+      const identity = normalize([control.name, control.id, control.getAttribute?.("aria-label")].filter(Boolean).join(" ")).toLowerCase();
+      return (fieldKey && identity.includes(fieldKey)) || (fieldLabel && identity.includes(fieldLabel));
+    });
+    if (!field) return false;
+    field.value = canonicalValue;
+    const EventConstructor = windowObject?.Event;
+    if (EventConstructor && field.dispatchEvent) {
+      field.dispatchEvent(new EventConstructor("input", { bubbles: true }));
+      field.dispatchEvent(new EventConstructor("change", { bubbles: true }));
+    }
+    return true;
+  }
+
   function canonicalCommandKey(command) {
     return normalize(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -571,6 +601,9 @@
 
     onReceipt(event) {
       const receipt = event.detail || {};
+      if (reconcileAgriculturalFieldEdit(receipt, this.document, this.window)) {
+        this.stage("voice-form.agricultural-value-reconciled", { field: receipt.detail?.field, value: normalizeAgriculturalFieldValue(receipt.detail?.value) });
+      }
       if (reconcileAssistantLocation(receipt, this.document, this.window)) {
         this.stage("voice-form.assistant-confirmation-reconciled", { field: "location", value: assistantLocationConfirmation(receipt) });
       }
@@ -828,7 +861,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
