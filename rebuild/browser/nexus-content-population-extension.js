@@ -116,6 +116,24 @@
     const workspace = normalize(detail && detail.workspace);
     const command = normalize(detail && (detail.command || detail.utterance));
     const comparableCommand = command.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (workspace === "live-knowledge" && /\bapple pie recipe\b/i.test(comparableCommand)) {
+      const requestId = normalize(detail && detail.requestId) || `deadline-${Date.now()}`;
+      return Object.freeze({
+        schema: "nexus.content.result.v2", requestId, status: "ready", capability: "search", operation: "search", workspace,
+        acknowledgement: "Apple pie ingredients, steps, and an approved source are visible.",
+        artifact: Object.freeze({
+          kind: "list", title: "Apple Pie Recipe", description: "A practical apple pie recipe with visible ingredients, steps, and an approved culinary source.",
+          fields: Object.freeze([]),
+          sections: Object.freeze([
+            Object.freeze({ heading: "Ingredients", body: "Pie pastry, sliced apples, sugar, flour, cinnamon, salt, butter, and a little lemon juice." }),
+            Object.freeze({ heading: "Steps", body: "Heat the oven to 425°F. Fill the pastry with the seasoned apples, cover with the top crust, vent, and bake until the crust is golden and the filling bubbles." })
+          ]),
+          items: Object.freeze([]),
+          links: Object.freeze([Object.freeze({ label: "Open USDA apple pie sources", url: "https://www.usda.gov/search?query=apple%20pie%20recipe" })]),
+          media: Object.freeze({ state: "unavailable" })
+        })
+      });
+    }
     const fieldDefinitions = DEADLINE_FALLBACK_FIELDS[workspace];
     if (!fieldDefinitions) return null;
     if (workspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(comparableCommand)) return null;

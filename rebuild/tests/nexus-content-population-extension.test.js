@@ -223,6 +223,10 @@ async function main() {
   assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
+  const recipeFallback = applicationDeadlineFallback({ workspace: "live-knowledge", command: "Nexus, show sources for an apple pie recipe with ingredients and steps.", requestId: "recipe-fallback" });
+  assert.equal(recipeFallback.capability, "search");
+  assert.match(recipeFallback.artifact.sections.map((section) => section.heading).join(" "), /Ingredients.*Steps/);
+  assert.match(recipeFallback.artifact.links[0].url, /^https:\/\/www\.usda\.gov\//);
   assert.match(renderArtifactMarkup({ requestId: "recipe", status: "ready", capability: "search", operation: "search", workspace: "live-knowledge", artifact: { ...artifact("list", "Recipe"), links: [{ label: "Open source", url: "https://www.usda.gov/" }] } }), /evidence-source-link/);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
