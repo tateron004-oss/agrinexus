@@ -155,6 +155,19 @@ function explicitApplicationWorkspace(command) {
   return aliases.find(([, pattern]) => pattern.test(value))?.[0] || "";
 }
 
+function explicitFastProviderGoal(command) {
+  const value = clean(command, 1000);
+  if (!/\b(?:search|find|show)\b.*\b(?:jobs?|employment|work opportunities)\b/i.test(value)) return null;
+  const query = clean(value
+    .replace(/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*/i, "")
+    .replace(/^(?:search|find|show)(?:\s+me)?\s+(?:for\s+)?/i, ""), 500) || "current job opportunities";
+  return {
+    capability: "search", operation: "search", workspace: "workforce", query, location: "",
+    needsLiveProvider: true, artifact: emptyArtifact("list", `Jobs: ${query}`),
+    acknowledgement: "The current source-linked job results are visible in Jobs & Workforce."
+  };
+}
+
 function outputText(payload) {
   if (clean(payload && payload.output_text, 200000)) return payload.output_text;
   for (const item of payload && payload.output || []) {
@@ -821,13 +834,14 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     let goal;
     try {
       const explicitWorkspace = explicitApplicationWorkspace(request.command);
+      const fastProviderGoal = explicitFastProviderGoal(request.command);
       goal = explicitWorkspace
         ? {
           capability: "workspace", operation: "open", workspace: explicitWorkspace, query: clean(request.command), location: "",
           needsLiveProvider: false, artifact: applicationWorkspaceArtifact(explicitWorkspace),
           acknowledgement: `${APPLICATION_WORKSPACES[explicitWorkspace][0]} is visibly open and synchronized with this request.`
         }
-        : normalizeGoalRoute(await resolver.resolve(request));
+        : fastProviderGoal || normalizeGoalRoute(await resolver.resolve(request));
     } catch (error) {
       goal = localResilienceGoal(request);
       if (!goal) {

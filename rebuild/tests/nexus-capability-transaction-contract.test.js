@@ -70,6 +70,23 @@ async function main() {
   assert.ok(application.artifact.fields.length >= 3);
   assert.match(application.acknowledgement, /visibly open and synchronized/i);
 
+  let workforceResolverCalls = 0;
+  const workforceService = createContentActionService({
+    goalResolver: { async resolve() { workforceResolverCalls += 1; throw new Error("Explicit workforce searches must not wait for the conversational resolver."); } }
+  });
+  const workforce = await workforceService.execute({ command: "Nexus, search for farming jobs in Kenya." }, {
+    research: async ({ question }) => ({
+      id: "workforce-live-1", status: "source-verified", verified: true, summary: "Current farming work sources in Kenya.", question,
+      sources: [{ id: "J1", title: "Agricultural jobs", organization: "ilo.org", url: "https://www.ilo.org/", retrievedAt: "2026-08-02" }]
+    })
+  });
+  assert.equal(workforceResolverCalls, 0);
+  assert.equal(workforce.status, "ready");
+  assert.equal(workforce.workspace, "workforce");
+  assert.equal(workforce.capability, "search");
+  assert.equal(workforce.artifact.items.length, 1);
+  assert.equal(workforce.artifact.items[0].sourceUrl, "https://www.ilo.org/");
+
   console.log("Nexus capability transaction contract: PASS (request isolation, truthful providers, typed receipts, synchronized applications, production physical matrix)");
 }
 
