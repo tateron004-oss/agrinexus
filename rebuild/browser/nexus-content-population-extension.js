@@ -110,6 +110,18 @@
     return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
   }
 
+  function normalizeGuidedFieldValue(field) {
+    if (!field) return "";
+    const identity = normalize(field.name || field.id || field.getAttribute?.("aria-label")).toLowerCase();
+    const value = normalize(field.value);
+    if (identity === "careneeded" || identity === "care needed") {
+      const canonical = value.replace(/\bblood pressures screening\b/i, "blood pressure screening");
+      if (canonical !== value) field.value = canonical;
+      return canonical;
+    }
+    return value;
+  }
+
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
     const visibleLabel = String(field.label || "Field");
@@ -201,6 +213,7 @@
       this.onOpenCapture = this.onOpenCapture.bind(this);
       this.onAcknowledgementCapture = this.onAcknowledgementCapture.bind(this);
       this.onReceipt = this.onReceipt.bind(this);
+      this.onGuidedFieldInput = this.onGuidedFieldInput.bind(this);
       this.onWorkflowButtonClick = this.onWorkflowButtonClick.bind(this);
     }
 
@@ -210,8 +223,15 @@
       this.window.addEventListener("nexus.clean.workspace.open", this.onOpenCapture, true);
       this.window.addEventListener("nexus.clean.workspace.acknowledged", this.onAcknowledgementCapture, true);
       this.window.addEventListener("nexus.clean.receipt", this.onReceipt);
+      this.document.addEventListener("input", this.onGuidedFieldInput, true);
       this.document.addEventListener("click", this.onWorkflowButtonClick, true);
       return this;
+    }
+
+    onGuidedFieldInput(event) {
+      const field = event.target;
+      if (!field || !field.closest?.("#nexus-workspace")) return;
+      normalizeGuidedFieldValue(field);
     }
 
     onWorkflowButtonClick(event) {
@@ -482,7 +502,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
