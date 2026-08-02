@@ -69,7 +69,17 @@ receive({
   response_id: "response-1",
   item: { type: "function_call", name: "route_nexus_command", call_id: "call-1" }
 });
-assert.deepEqual(sent, [{ type: "response.cancel", response_id: "response-1" }]);
+assert.deepEqual(sent, []);
+receive({
+  type: "response.function_call_arguments.done",
+  response_id: "response-1",
+  call_id: "call-1",
+  name: "route_nexus_command",
+  arguments: "{ \"command\": \"help me create a resume\" }"
+});
+assert.equal(sent[0].type, "conversation.item.create");
+assert.equal(sent[0].item.call_id, "call-1");
+assert.equal(JSON.parse(sent[0].item.output).code, "duplicate-route-coalesced");
 assert.equal(dispatched[0].type, "nexus.realtime.route-deduplicated");
 
 receive({ type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag", transcript: "Nexus, show possible Mays diseases." });
@@ -92,14 +102,16 @@ receive({
   response_id: "response-3",
   item: { type: "function_call", name: "route_nexus_command", call_id: "call-3" }
 });
-assert.deepEqual(sent, [{ type: "response.cancel", response_id: "response-3" }]);
+assert.deepEqual(sent, []);
 const beforeCancelledCompletion = coreMessageCount;
 receive({
   type: "response.function_call_arguments.done",
   response_id: "response-3",
+  call_id: "call-3",
   name: "route_nexus_command",
   arguments: "{ \"command\":"
 });
+assert.equal(sent[0].type, "conversation.item.create");
 assert.equal(coreMessageCount, beforeCancelledCompletion);
 
 sent.length = 0;
@@ -114,10 +126,11 @@ const beforeLateOwnership = coreMessageCount;
 receive({
   type: "response.function_call_arguments.done",
   response_id: "response-4",
+  call_id: "call-4",
   name: "route_nexus_command",
   arguments: "{ \"command\": \"record my blood pressure 140 over 90\" }"
 });
-assert.deepEqual(sent, []);
+assert.equal(sent[0].type, "conversation.item.create");
 assert.equal(coreMessageCount, beforeLateOwnership);
 
 console.log("Nexus realtime route deduper: PASS");

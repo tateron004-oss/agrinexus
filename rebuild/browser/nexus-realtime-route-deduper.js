@@ -61,15 +61,21 @@
           transcripts.set(latestInputItemId, normalize(message.transcript));
           return;
         }
-        const routeStarted = message.type === "response.output_item.added" && message.item?.type === "function_call" && message.item?.name === "route_nexus_command";
         const routeArgumentsCompleted = message.type === "response.function_call_arguments.done" && message.name === "route_nexus_command";
-        if (!routeStarted && !routeArgumentsCompleted) return;
+        if (!routeArgumentsCompleted) return;
         const transcript = transcripts.get(latestInputItemId) || "";
         if (!isDirectApplicationCommand(transcript) || channel.readyState !== "open") return;
         const responseId = normalize(message.response_id);
         if (responseId && cancelledResponseIds.has(responseId)) return;
         if (responseId) cancelledResponseIds.add(responseId);
-        if (routeStarted) channel.send(JSON.stringify({ type: "response.cancel", ...(responseId ? { response_id: responseId } : {}) }));
+        if (message.call_id) channel.send(JSON.stringify({
+          type: "conversation.item.create",
+          item: {
+            type: "function_call_output",
+            call_id: message.call_id,
+            output: JSON.stringify({ accepted: true, code: "duplicate-route-coalesced", message: "The final transcript owns this application route." })
+          }
+        }));
         windowObject.dispatchEvent?.(new windowObject.CustomEvent("nexus.realtime.route-deduplicated", {
           detail: Object.freeze({ command: normalize(transcript), capability: isDirectResumeCommand(transcript) ? "resume" : "application", responseId })
         }));
