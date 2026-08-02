@@ -2864,6 +2864,10 @@ ${content}`
           const encodedQuery = encodeURIComponent(query);
           musicFrame.src = musicPlaybackUrl(command);
           musicLink.href = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+          if (appSurface) {
+            appSurface.hidden = false;
+            appSurface.innerHTML = `<section class="app-request" data-nexus-music-summary><h3>${escapeMarkup(query)}</h3><p>Music playback is ready in the visible media player.</p></section>`;
+          }
         }
         const rendered = workspace === "maps" ? Boolean(mapCanvas) : workspace === "music" ? Boolean(musicFrame && musicFrame.src) : workspace === "live-knowledge" ? Boolean(evidenceSurface) : renderAppSurface({ workspace, command, appSurface });
         host.dataset.populated = rendered ? "true" : "false";
