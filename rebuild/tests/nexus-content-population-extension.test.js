@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -66,6 +66,17 @@ async function main() {
   const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
   assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
   assert.equal(careNeededField.value, "blood pressure screening.");
+  assert.equal(canonicalizeLeadingSpokenNumber("twenty bags."), "20 bags.");
+  assert.equal(canonicalizeLeadingSpokenNumber("one hundred and twenty-five kilograms"), "125 kilograms");
+  assert.equal(canonicalizeLeadingSpokenNumber("two point five liters"), "2.5 liters");
+  assert.equal(canonicalizeLeadingSpokenNumber("maize in twenty bags"), "maize in twenty bags");
+  const quantityField = { name: "quantity", value: "twenty bags." };
+  assert.equal(normalizeGuidedFieldValue(quantityField), "20 bags.");
+  assert.equal(quantityField.value, "20 bags.");
+  const doseField = { id: "dose", value: "two point five milliliters" };
+  assert.equal(normalizeGuidedFieldValue(doseField), "2.5 milliliters");
+  const productField = { name: "product", value: "twenty bags of maize" };
+  assert.equal(normalizeGuidedFieldValue(productField), "twenty bags of maize");
   assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");

@@ -193,12 +193,71 @@
       || /\b(create|make)\b.*\b(provider|doctor|physician)\b.*\b(card|summary)\b/i.test(normalizedCommand);
   }
 
+  function canonicalizeLeadingSpokenNumber(value) {
+    const input = normalize(value);
+    if (!input || /^[-+]?\d/.test(input)) return input;
+    const small = Object.freeze({
+      zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+      ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
+      sixty: 60, seventy: 70, eighty: 80, ninety: 90
+    });
+    const scales = Object.freeze({ thousand: 1000, million: 1000000 });
+    const tokens = input.match(/[A-Za-z]+(?:-[A-Za-z]+)?|[^\s]+/g) || [];
+    const numberWords = [];
+    let consumed = 0;
+    for (const token of tokens) {
+      const parts = token.toLowerCase().split("-");
+      if (parts.every((part) => Object.hasOwn(small, part) || Object.hasOwn(scales, part) || part === "hundred" || part === "and" || part === "point")) {
+        numberWords.push(...parts);
+        consumed += 1;
+        continue;
+      }
+      break;
+    }
+    if (!numberWords.length || numberWords.every((word) => word === "and")) return input;
+
+    let total = 0;
+    let group = 0;
+    let decimal = "";
+    let afterPoint = false;
+    for (const word of numberWords) {
+      if (word === "and") continue;
+      if (word === "point") {
+        afterPoint = true;
+        continue;
+      }
+      if (afterPoint) {
+        if (!Object.hasOwn(small, word) || small[word] > 9) return input;
+        decimal += String(small[word]);
+        continue;
+      }
+      if (Object.hasOwn(small, word)) {
+        group += small[word];
+      } else if (word === "hundred") {
+        group = Math.max(1, group) * 100;
+      } else if (Object.hasOwn(scales, word)) {
+        total += Math.max(1, group) * scales[word];
+        group = 0;
+      }
+    }
+    if (afterPoint && !decimal) return input;
+    const numeric = `${total + group}${afterPoint ? `.${decimal}` : ""}`;
+    const remainder = tokens.slice(consumed).join(" ").replace(/\s+([.,!?;:])/g, "$1");
+    return normalize(`${numeric}${remainder ? ` ${remainder}` : ""}`);
+  }
+
   function normalizeGuidedFieldValue(field) {
     if (!field) return "";
-    const identity = normalize(field.name || field.id || field.getAttribute?.("aria-label")).toLowerCase();
+    const identity = normalize([field.name, field.id, field.getAttribute?.("aria-label")].filter(Boolean).join(" ")).toLowerCase();
     const value = normalize(field.value);
-    if (identity === "careneeded" || identity === "care needed") {
+    if (/\bcareneeded\b|\bcare needed\b/.test(identity)) {
       const canonical = value.replace(/\bblood pressures screening\b/i, "blood pressure screening");
+      if (canonical !== value) field.value = canonical;
+      return canonical;
+    }
+    if (/\b(quantity|amount|dose|dosage|weight|distance|area|volume|length|height|width|depth|duration|time per week)\b/.test(identity)) {
+      const canonical = canonicalizeLeadingSpokenNumber(value);
       if (canonical !== value) field.value = canonical;
       return canonical;
     }
@@ -622,7 +681,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
