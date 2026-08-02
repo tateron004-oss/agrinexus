@@ -21,7 +21,7 @@
     "purpose": "Restart-safe signed authentication for the physical Windows voice acceptance gate"
   },
   "protectedFiles": {
-    "server.js": "33ff74e7cb2dfa6ef4c37748ede8dd42d72ed28b",
+    "server.js": "044fae9f1098851084235d485197a12816feaf2c",
     "public/app.js": "db86840a7306f18b0fc07c842612afbda175a4d4",
     "public/index.html": "08abe641e234c54578dfb2060ac9d2a2f39fe685",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
@@ -34,7 +34,7 @@
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
     ".github/workflows/nexus-clean-windows-certification.yml": "98dfd539fe8c1a1488dc986916e1d9182872126c",
     "rebuild/tests/nexus-windows-physical-certification.spec.js": "788aa5fe86c7bc25642ebe2e2d15c061903e06c7",
-    ".github/workflows/nexus-release-certification-v2.yml": "72652490872b4c9378b3c6e7d3a9837c5ef91f38",
+    ".github/workflows/nexus-release-certification-v2.yml": "69606917d9b42b7fffe19d07d4dab3c9e784d997",
     "rebuild/browser/nexus-clean-entry.js": "a6de2fa15b7dcfeb44d05b39fbaab2f175361780",
     "rebuild/browser/nexus-clean.bundle.js": "429deb56f843a7082f47e63936d89339b3cd95cf",
     "rebuild/nexus-core/browser-runtime.js": "fd55c53a104319b45ddff9126bacbac2c857b209",

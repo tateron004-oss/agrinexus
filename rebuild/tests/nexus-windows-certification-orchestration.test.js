@@ -2,7 +2,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const workflows = {
-  canonical: ".github/workflows/nexus-release-certification-v2.yml",
+  canonical: ".github/workflows/nexus-live-runtime-certification.yml",
+  legacy: ".github/workflows/nexus-release-certification-v2.yml",
   form: ".github/workflows/nexus-voice-form-entry-certification.yml",
   clean: ".github/workflows/nexus-clean-windows-certification.yml"
 };
@@ -26,7 +27,7 @@ assert.match(
   "canonical certification must auto-queue for the protected release branch"
 );
 
-for (const name of ["form", "clean"]) {
+for (const name of ["legacy", "form", "clean"]) {
   assert.doesNotMatch(
     contents[name],
     /^\s{2}push:/m,
@@ -47,9 +48,8 @@ for (const name of ["form", "clean"]) {
   );
 }
 
-assert.match(contents.canonical, /needs: release-identity/);
-assert.match(contents.canonical, /needs: voice-lifecycle/);
-assert.match(contents.canonical, /needs: guided-entry/);
+assert.match(contents.canonical, /Complete physical voice user-mode certification/);
+assert.match(contents.canonical, /nexus-production-certification-preflight\.js/);
 assert.match(
   contents.canonical,
   /node rebuild\/tests\/nexus-windows-certification-orchestration\.test\.js/,

@@ -2,15 +2,6 @@ name: Nexus deterministic release certification
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
-    paths:
-      - ".github/workflows/nexus-release-certification-v2.yml"
-      - ".github/nexus-protected-foundation.json"
-      - "rebuild/**"
-      - "scripts/nexus-*.js"
-      - "scripts/nexus-*.ps1"
 
 permissions:
   contents: read

@@ -7,7 +7,7 @@ const { triggerDeploy, validatedDeployHook } = require("../../scripts/nexus-rend
 const workflow = fs.readFileSync(".github/workflows/nexus-render-deploy.yml", "utf8");
 
 assert.match(workflow, /workflow_dispatch:/);
-assert.match(workflow, /^\s{2}push:\s*$[\s\S]*?rebuild\/nexus-genesis-clean-foundation/m);
+assert.doesNotMatch(workflow, /^\s{2}push:/m);
 assert.match(workflow, /group: nexus-render-production-deployment\s+cancel-in-progress: false/);
 assert.match(workflow, /RENDER_DEPLOY_HOOK_URL: \$\{\{ secrets\.RENDER_DEPLOY_HOOK_URL \}\}/);
 assert.match(workflow, /nexus-release-certification-controller\.js verify-deployment/);

@@ -2,14 +2,6 @@ name: Nexus Render exact-release deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
-    paths:
-      - ".github/workflows/nexus-render-deploy.yml"
-      - "rebuild/**"
-      - "scripts/nexus-*.js"
-      - "scripts/nexus-*.ps1"
 
 permissions:
   contents: read
