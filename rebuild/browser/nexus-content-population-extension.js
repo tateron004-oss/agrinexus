@@ -204,6 +204,13 @@
       && /\b(crop|blood pressure|telehealth|mobile clinic|pharmacy|course|jobs|maize|route|map|music|stevie wonder|offline queue|weather|forecast|pictures|images|resume|recipe|provider card|pilot evidence)\b/.test(value);
   }
 
+  function alignApplicationResultWorkspace(result, detail) {
+    const requestedWorkspace = normalize(detail?.workspace).toLowerCase();
+    if (!result || !requestedWorkspace || !APP_NAMES[requestedWorkspace] || !isApplicationRouteCommand(detail?.command || detail?.utterance)) return result;
+    if (normalize(result.workspace).toLowerCase() === requestedWorkspace) return result;
+    return Object.freeze({ ...result, workspace: requestedWorkspace });
+  }
+
   function shieldApplicationRouteFromGuidedEntry(command, documentObject, schedule) {
     if (!isApplicationRouteCommand(command)) return false;
     const workspace = documentObject?.getElementById?.("nexus-workspace");
@@ -611,7 +618,8 @@
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify(body)
       });
-      const result = await response.json();
+      const providerResult = await response.json();
+      const result = alignApplicationResultWorkspace(providerResult, detail);
       this.stage("resolver.returned", { requestId: detail.requestId, httpStatus: response.status, status: result.status, capability: result.capability });
       if (!response.ok) throw new Error(result.message || `Nexus content service failed (${response.status}).`);
       if (result.schema !== "nexus.content.result.v2" || !result.artifact) throw new Error("Nexus received an invalid content result contract.");
@@ -764,7 +772,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

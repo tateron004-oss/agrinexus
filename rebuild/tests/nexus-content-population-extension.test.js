@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -35,6 +35,17 @@ async function main() {
   assert.equal(canonicalCommandKey("Nexus, start a digital literacy course."), canonicalCommandKey("start a digital literacy course"));
   assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
   assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
+  const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
+  const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "marketplace",
+    command: "Nexus sell fifty bags of maize."
+  });
+  assert.equal(alignedMarketplace.workspace, "marketplace");
+  assert.equal(alignedMarketplace.artifact, marketplaceResult.artifact);
+  assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "health",
+    command: "Nexus, set symptoms or notes to no symptoms."
+  }), marketplaceResult);
   editableWorkspace.hidden = false;
   editableWorkspace.dataset = { workspace: "agriculture" };
   editableWorkspace.querySelectorAll = () => [{
