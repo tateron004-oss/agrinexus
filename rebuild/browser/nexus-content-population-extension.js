@@ -265,6 +265,7 @@
 
   function isApplicationRouteCommand(command) {
     const value = canonicalCommandKey(command);
+    if (/\bapple pie recipe\b/.test(value)) return false;
     return /\b(help|record|begin|find|open|start|search|sell|plan|play|remind|show|reset|create)\b/.test(value)
       && /\b(crop|blood pressure|telehealth|mobile clinic|pharmacy|course|jobs|maize|route|map|music|stevie wonder|offline queue|weather|forecast|pictures|images|resume|recipe|provider card|pilot evidence)\b/.test(value);
   }

@@ -230,6 +230,7 @@ async function main() {
   assert.equal(shouldYieldToProtectedRenderer("Nexus, help me create a résumé.", "workforce"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, create a provider card for my doctor.", "health"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, sell 50 bags of maize.", "marketplace"), false);
+  assert.equal(isApplicationRouteCommand("Nexus, show an apple pie recipe with ingredients, steps, and sources."), false);
   const certificationOwnership = [
     ["agriculture", "Nexus, help with my maize crop in Kenya.", false],
     ["health", "Nexus, record my blood pressure 140 over 90.", false],
