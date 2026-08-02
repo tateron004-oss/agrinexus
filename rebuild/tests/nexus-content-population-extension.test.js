@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -216,6 +216,42 @@ async function main() {
   assert.equal(learningTopicField.value, "phishing email safety.");
   const learningInboxField = { name: "topic", value: "organizing emails safely" };
   assert.equal(normalizeGuidedFieldValue(learningInboxField), "organizing emails safely");
+  const synchronizedEvents = [];
+  const synchronizedExperience = {
+    name: "experience",
+    id: "experience",
+    value: "Supervised a team of eight employees.",
+    getAttribute(name) { return name === "aria-label" ? "Work experience" : null; },
+    dispatchEvent(event) { synchronizedEvents.push(event.type); }
+  };
+  const synchronizedWorkspace = {
+    hidden: false,
+    querySelectorAll() { return [synchronizedExperience]; }
+  };
+  assert.equal(synchronizeGuidedFieldReceipt({
+    type: "voice-form.corrected",
+    detail: { field: "experience", value: "Supervised a team of twelve employees." }
+  }, { getElementById() { return synchronizedWorkspace; } }, { Event: class Event { constructor(type) { this.type = type; } } }), true);
+  assert.equal(synchronizedExperience.value, "Supervised a team of twelve employees.");
+  assert.deepEqual(synchronizedEvents, ["input", "change"]);
+  synchronizedWorkspace.dataset = { workspace: "workforce" };
+  synchronizedExperience.type = "textarea";
+  synchronizedExperience.readOnly = false;
+  const persistenceController = new NexusContentPopulationController({
+    windowObject: { Event: class Event { constructor(type) { this.type = type; } }, dispatchEvent() {} },
+    documentObject: { getElementById() { return synchronizedWorkspace; } },
+    fetchImpl: null
+  });
+  persistenceController.onReceipt({ detail: {
+    type: "voice-form.corrected",
+    detail: { field: "experience", value: "Supervised a team of twelve employees." }
+  } });
+  synchronizedExperience.value = "Supervised a team of eight employees.";
+  persistenceController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus, save this resume draft." }
+  } });
+  assert.equal(synchronizedExperience.value, "Supervised a team of twelve employees.");
   assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
