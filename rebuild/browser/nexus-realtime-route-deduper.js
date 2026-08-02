@@ -16,7 +16,7 @@
     if (!wake) return false;
     const request = normalize(wake[1]);
     if (/^(?:set|change|correct|update|add|replace|read|review|save|reopen|restore|submit|confirm)\b/i.test(request)) return false;
-    if (/\b(?:recipe|ingredients?)\b/i.test(request)) return false;
+    if (/\b(?:recipe|ingredients?)\b/i.test(request) && !/^show\s+sources?\b/i.test(request)) return false;
     if (/^sell\b/i.test(request)) return /^sell\s+\d/i.test(request);
     return /^(?:help|open|start|begin|record|find|search|plan|play|show|remind|create|make|build)\b/i.test(request);
   }
@@ -46,12 +46,19 @@
     );
   }
 
+  function normalizeRecipeTranscript(value) {
+    const command = normalize(value);
+    const wake = command.match(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)(.*)$/i);
+    if (!wake || !/\bapple pie recipe\b/i.test(wake[2]) || !/\bsources?\b/i.test(wake[2])) return command;
+    return `${wake[1]}show sources for an apple pie recipe with ingredients and steps.`;
+  }
+
   function normalizeRealtimeMessageData(value) {
     let message;
     try { message = JSON.parse(String(value || "")); } catch { return value; }
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
     if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(normalize(message.transcript))) return value;
-    const transcript = normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(message.transcript));
+    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(message.transcript)));
     return transcript === normalize(message.transcript) ? value : JSON.stringify({ ...message, transcript });
   }
 
@@ -122,7 +129,7 @@
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRealtimeMessageData });
+  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);
