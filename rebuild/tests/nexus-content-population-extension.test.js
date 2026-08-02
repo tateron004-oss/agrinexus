@@ -74,7 +74,10 @@ async function main() {
   }) } };
   assert.deepEqual(realtimeRouteCallLifecycle(routeStarted), { state: "started", id: "call-route" });
   assert.deepEqual(realtimeRouteCallLifecycle(routeFinished), { state: "finished", id: "call-route" });
-  const realtimeCoalescingController = new NexusContentPopulationController({ windowObject: { dispatchEvent() {} }, documentObject: {} });
+  const realtimeCoalescingController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent() {}, setTimeout() { return 1; }, clearTimeout() {} },
+    documentObject: {}
+  });
   realtimeCoalescingController.stage = () => {};
   realtimeCoalescingController.onReceipt({ detail: routeStarted });
   let transcriptStopped = false;
@@ -83,6 +86,12 @@ async function main() {
     stopImmediatePropagation() { transcriptStopped = true; }
   });
   assert.equal(transcriptStopped, true);
+  let guidedTranscriptStopped = false;
+  realtimeCoalescingController.onReceipt({
+    detail: { type: "transcript.final", detail: { transcript: "Nexus, set location to Nakuru, Kenya." } },
+    stopImmediatePropagation() { guidedTranscriptStopped = true; }
+  });
+  assert.equal(guidedTranscriptStopped, false);
   realtimeCoalescingController.onReceipt({ detail: routeFinished });
   assert.equal(realtimeCoalescingController.pendingRealtimeRoutes.size, 0);
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {

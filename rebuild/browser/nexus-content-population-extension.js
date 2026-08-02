@@ -591,7 +591,7 @@
         if (routeLifecycle.id) this.pendingRealtimeRoutes.delete(routeLifecycle.id);
         else this.pendingRealtimeRoutes.clear();
       }
-      if (receipt.type === "transcript.final" && this.pendingRealtimeRoutes.size) {
+      if (receipt.type === "transcript.final" && this.pendingRealtimeRoutes.size && isApplicationRouteCommand(receipt.detail?.transcript)) {
         event.stopImmediatePropagation?.();
         this.stage("conversation.transcript-route-coalesced", { command: normalize(receipt.detail?.transcript), pendingRouteCalls: this.pendingRealtimeRoutes.size });
         return;
