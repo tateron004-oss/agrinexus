@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { applicationDeadlineFallback, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -32,6 +32,30 @@ async function main() {
   assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, find a mobile clinic in Kenya.", editableDocument), false);
   editableWorkspace.hidden = true;
   assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), false);
+  assert.equal(canonicalCommandKey("Nexus, start a digital literacy course."), canonicalCommandKey("start a digital literacy course"));
+  assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
+  assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
+  editableWorkspace.hidden = false;
+  let restoreShield;
+  assert.equal(shieldApplicationRouteFromGuidedEntry("Nexus, start a digital literacy course.", editableDocument, (restore) => { restoreShield = restore; }), true);
+  assert.equal(editableWorkspace.hidden, true);
+  restoreShield();
+  assert.equal(editableWorkspace.hidden, false);
+  const coalescedEvents = [];
+  const coalescingController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent(event) { coalescedEvents.push(event); } },
+    documentObject: null,
+    fetchImpl: null
+  });
+  coalescingController.activeWorkspace = "learning";
+  coalescingController.pending.set("route-tool-call", {
+    detail: { requestId: "route-tool-call", workspace: "learning", command: "start a digital literacy course" },
+    commandKey: canonicalCommandKey("start a digital literacy course")
+  });
+  coalescingController.open({ requestId: "final-transcript", workspace: "learning", command: "Nexus, start a digital literacy course." });
+  assert.deepEqual([...coalescingController.pending.keys()], ["route-tool-call"]);
+  assert.equal(coalescedEvents.at(-1).detail.requestId, "final-transcript");
+  assert.equal(coalescedEvents.at(-1).detail.outcomeVerified, false);
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
   assert.equal(healthFallback.status, "ready");
   assert.deepEqual(healthFallback.artifact.fields.map((field) => field.label), ["Blood pressure or reading", "When measured", "Symptoms or notes"]);

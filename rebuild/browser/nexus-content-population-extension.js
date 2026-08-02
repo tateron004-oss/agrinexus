@@ -111,6 +111,33 @@
     return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
   }
 
+  function canonicalCommandKey(command) {
+    return normalize(command)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function isApplicationRouteCommand(command) {
+    const value = canonicalCommandKey(command);
+    return /\b(help|record|begin|find|open|start|search|sell|plan|play|remind|show|reset|create)\b/.test(value)
+      && /\b(crop|blood pressure|telehealth|mobile clinic|pharmacy|course|jobs|maize|route|map|music|stevie wonder|offline queue|weather|forecast|pictures|images|resume|recipe|provider card|pilot evidence)\b/.test(value);
+  }
+
+  function shieldApplicationRouteFromGuidedEntry(command, documentObject, schedule) {
+    if (!isApplicationRouteCommand(command)) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden) return false;
+    workspace.hidden = true;
+    const restore = () => { workspace.hidden = false; };
+    if (typeof schedule === "function") schedule(restore);
+    else if (typeof globalObject.queueMicrotask === "function") globalObject.queueMicrotask(restore);
+    else Promise.resolve().then(restore);
+    return true;
+  }
+
   function shouldYieldToProtectedRenderer(command, workspace = "") {
     const normalizedCommand = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const normalizedWorkspace = normalize(workspace).toLowerCase();
@@ -319,7 +346,11 @@
       if (receipt.type !== "transcript.final") return;
       const command = normalize(receipt.detail && receipt.detail.transcript);
       if (!command) return;
-      if (shouldYieldTranscriptToGuidedEntry(command, this.document)) {
+      const applicationRoute = isApplicationRouteCommand(command);
+      if (applicationRoute && shieldApplicationRouteFromGuidedEntry(command, this.document)) {
+        this.stage("transcript.application-route-shielded", { command, workspace: this.activeWorkspace });
+      }
+      if (!applicationRoute && shouldYieldTranscriptToGuidedEntry(command, this.document)) {
         this.stage("transcript.yielded-to-guided-entry", { command, workspace: this.activeWorkspace });
         return;
       }
@@ -396,10 +427,24 @@
     }
 
     open(detail) {
+      const commandKey = canonicalCommandKey(detail.command);
+      const duplicate = [...this.pending.values()].find((entry) => entry.commandKey && entry.commandKey === commandKey);
+      if (duplicate) {
+        this.stage("conversation.duplicate-route-coalesced", { requestId: detail.requestId, ownerRequestId: duplicate.detail.requestId, command: detail.command });
+        this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+          detail: Object.freeze({
+            requestId: detail.requestId, acknowledgementId: `coalesced-${detail.requestId}`,
+            workspace: detail.workspace || this.activeWorkspace, contentExtension: true,
+            visible: false, populated: false, outcomeVerified: false, outcomeKind: null,
+            recovery: Object.freeze({ state: "duplicate-route-coalesced", message: "The matching application route is already rendering.", retryable: false })
+          })
+        }));
+        return;
+      }
       this.lastOpenCommand = normalize(detail.command);
       this.lastOpenAt = Date.now();
       this.activeWorkspace = detail.workspace || this.activeWorkspace || "live-knowledge";
-      this.pending.set(detail.requestId, { detail });
+      this.pending.set(detail.requestId, { detail, commandKey });
       this.stage("conversation.received", { requestId: detail.requestId, command: detail.command, workspace: this.activeWorkspace });
       const providerRequest = Promise.resolve(this.provider(detail));
       const deadlineFallback = applicationDeadlineFallback(detail);
@@ -527,7 +572,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, escapeMarkup, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
