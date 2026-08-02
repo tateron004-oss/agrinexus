@@ -62,7 +62,30 @@ async function main() {
   assert.ok(output, "Realtime must receive a tool result for a consumed function call.");
   assert.equal(JSON.parse(output.item.output).field, "location");
 
-  console.log("Nexus Guided Entry exclusive command ownership: PASS");
+  const musicReceipts = [];
+  const musicRoutes = [];
+  const musicRuntime = new NexusBrowserRuntime({
+    foundation,
+    realtime: { send() {} },
+    audioElement: {},
+    openWorkspace: async (request) => {
+      musicRoutes.push(request);
+      return { visible: true, populated: true, outcomeVerified: true, outcomeKind: "music" };
+    },
+    onReceipt: (receipt) => musicReceipts.push(receipt)
+  });
+  await Promise.all([
+    musicRuntime.handleCommand("play Stevie Wonder", "music-tool-call"),
+    musicRuntime.handleCommand("Nexus, play Stevie Wonder.")
+  ]);
+  assert.equal(musicRoutes.length, 1, "Tool-call and punctuated final-transcript routes must share one visual transaction.");
+  assert.equal(
+    musicReceipts.filter((receipt) => receipt.type === "workspace.visible").length,
+    1,
+    "One spoken Music request must produce exactly one verified visible workspace."
+  );
+
+  console.log("Nexus Guided Entry and punctuated visual route ownership: PASS");
 }
 
 main().catch((error) => {

@@ -1318,7 +1318,7 @@ ${content}`
           return null;
         }
         commandKey(command) {
-          return String(command || "").toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/\s+/g, " ").trim();
+          return String(command || "").toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/[?.!]+$/g, "").replace(/\s+/g, " ").trim();
         }
         async handleCommand(command, callId = null) {
           const key = this.commandKey(command);
@@ -1359,7 +1359,7 @@ ${content}`
           const resolution = routeCommand(command, state, this.conversationContext);
           let result = resolution;
           if (resolution.accepted) {
-            const routeKey = resolution.command.toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/\s+/g, " ").trim();
+            const routeKey = this.commandKey(resolution.command);
             let visualRoute = this.visualRoutes.get(routeKey);
             if (!visualRoute) {
               visualRoute = this.requestTransaction.run(resolution).then((routed) => {
