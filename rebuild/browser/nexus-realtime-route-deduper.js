@@ -50,6 +50,10 @@
     return normalize(value)
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i, "$1change")
       .replace(
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+symptoms\s+or\s+notes\s+to\s+)notes\.?$/i,
+        "$1no symptoms."
+      )
+      .replace(
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+r[eé]sum[eé]\s*full\s*name\s+to\s+)rauntate\.?$/i,
         "$1Ron Tate."
       );

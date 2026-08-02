@@ -30,6 +30,8 @@ assert.equal(normalizeMarketplaceTranscript("Nexus sell fifty bags of maize."), 
 assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of maize."), "Nexus, sell 25 crates of maize.");
 assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
 assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonight at 7:30 p.m."), "Nexus, change date and time to tonight at 7:30 p.m.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to notes."), "Nexus, set symptoms or notes to no symptoms.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to mild dizziness."), "Nexus, set symptoms or notes to mild dizziness.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rauntate."), "Nexus, set resumeFullName to Ron Tate.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Jane Tate."), "Nexus, set resumeFullName to Jane Tate.");
 assert.equal(normalizeFieldEditTranscript("The date and time changed to tonight."), "The date and time changed to tonight.");
@@ -49,6 +51,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-reminder-edit", transcript: "Nexus, changed date and time to tonight at 7:30 p.m."
 }))).transcript, "Nexus, change date and time to tonight at 7:30 p.m.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-symptoms-edit", transcript: "Nexus, set symptoms or notes to notes."
+}))).transcript, "Nexus, set symptoms or notes to no symptoms.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-name", transcript: "Nexus, set resumeFullName to Rauntate."
 }))).transcript, "Nexus, set resumeFullName to Ron Tate.");
