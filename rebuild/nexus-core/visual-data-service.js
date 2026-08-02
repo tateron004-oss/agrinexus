@@ -2,6 +2,7 @@
 
 const { extractIntentAndParameters } = require("./intent-parameter-extractor");
 const { createContentActionService } = require("./content-action-service");
+const { createProviderFetch } = require("./provider-fetch");
 const musicProvider = require("../../server/nexus-music-media-source-provider");
 
 function locationFromWeatherCommand(command) {
@@ -10,6 +11,7 @@ function locationFromWeatherCommand(command) {
 }
 
 function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = null, musicSourceProvider = musicProvider } = {}) {
+  const providerFetch = createProviderFetch({ fetchImpl });
   const contentActions = createContentActionService({ fetchImpl, musicProvider: musicSourceProvider, goalResolver });
   const service = {
     async content(request = {}, context = {}) {
@@ -41,7 +43,7 @@ function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = 
       geocodeUrl.searchParams.set("count", "1");
       geocodeUrl.searchParams.set("language", "en");
       geocodeUrl.searchParams.set("format", "json");
-      const geocodeResponse = await fetchImpl(geocodeUrl);
+      const geocodeResponse = await providerFetch(geocodeUrl);
       if (!geocodeResponse.ok) throw new Error(`Weather location lookup failed (${geocodeResponse.status}).`);
       const geocode = await geocodeResponse.json();
       const place = geocode && geocode.results && geocode.results[0];
@@ -53,7 +55,7 @@ function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = 
       forecastUrl.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max");
       forecastUrl.searchParams.set("timezone", "auto");
       forecastUrl.searchParams.set("forecast_days", "1");
-      const forecastResponse = await fetchImpl(forecastUrl);
+      const forecastResponse = await providerFetch(forecastUrl);
       if (!forecastResponse.ok) throw new Error(`Weather forecast retrieval failed (${forecastResponse.status}).`);
       const forecast = await forecastResponse.json();
       return Object.freeze({
@@ -90,7 +92,7 @@ function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = 
       url.searchParams.set("iiprop", "url|extmetadata");
       url.searchParams.set("iiurlwidth", "640");
       url.searchParams.set("format", "json");
-      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (visual-support)" } });
+      const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (visual-support)" } });
       if (!response.ok) throw new Error(`Agriculture image retrieval failed (${response.status}).`);
       const payload = await response.json();
       const items = Object.values(payload && payload.query && payload.query.pages || {}).map((page) => {

@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { createProviderFetch } = require("./provider-fetch");
 
 const CAPABILITIES = Object.freeze([
   "workspace", "search", "images", "map", "listings", "weather", "music",
@@ -494,6 +495,7 @@ function localResilienceGoal(context = {}) {
 }
 
 function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null, webSearchProvider = null, publicMusicProvider = true } = {}) {
+  const providerFetch = createProviderFetch({ fetchImpl });
   const resolver = goalResolver || createOpenAIGoalResolver({ fetchImpl });
   const liveWebSearch = webSearchProvider || createOpenAIWebSearchProvider({ fetchImpl });
 
@@ -516,7 +518,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       url.searchParams.set("entity", "song");
       url.searchParams.set("limit", "12");
       try {
-        const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (public-music-search)" } });
+        const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (public-music-search)" } });
         if (!response.ok) throw new Error(`The public music provider failed (${response.status}).`);
         const payload = await response.json();
         tracks = (Array.isArray(payload && payload.results) ? payload.results : []).filter((item) => safeHttpUrl(item.previewUrl) && safeHttpUrl(item.trackViewUrl));
@@ -588,7 +590,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
       searchUrl.searchParams.set("action", "query"); searchUrl.searchParams.set("list", "search");
       searchUrl.searchParams.set("srsearch", searchQuery); searchUrl.searchParams.set("srlimit", "14"); searchUrl.searchParams.set("format", "json");
-      const searchResponse = await fetchImpl(searchUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
+      const searchResponse = await providerFetch(searchUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
       if (!searchResponse.ok) throw new Error(`The image topic provider failed (${searchResponse.status}).`);
       const searchPayload = await searchResponse.json();
       const searchItems = Array.isArray(searchPayload && searchPayload.query && searchPayload.query.search) ? searchPayload.query.search : [];
@@ -607,7 +609,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       pageUrl.searchParams.set("action", "query"); pageUrl.searchParams.set("prop", "pageimages|info");
       pageUrl.searchParams.set("piprop", "thumbnail"); pageUrl.searchParams.set("pithumbsize", "960"); pageUrl.searchParams.set("inprop", "url");
       pageUrl.searchParams.set("titles", relevant.map(item => item.title).join("|")); pageUrl.searchParams.set("format", "json");
-      const pageResponse = await fetchImpl(pageUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
+      const pageResponse = await providerFetch(pageUrl, { headers: { "user-agent": "Nexus-Genesis/1.0 (relevant-image-research)" } });
       if (!pageResponse.ok) throw new Error(`The image thumbnail provider failed (${pageResponse.status}).`);
       const pagePayload = await pageResponse.json();
       const snippets = new Map(relevant.map(item => [item.title, stripMarkup(item.snippet)]));
@@ -629,7 +631,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     async function openverseLookup(searchQuery) {
       const url = new URL("https://api.openverse.org/v1/images/");
       url.searchParams.set("q", searchQuery); url.searchParams.set("page_size", "12");
-      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-research)" } });
+      const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-research)" } });
       if (!response.ok) throw new Error(`The Openverse image provider failed (${response.status}).`);
       const payload = await response.json();
       const subjectWords = subjectTerms(query);
@@ -657,7 +659,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       url.searchParams.set("gsrsearch", `filetype:bitmap ${searchQuery}`); url.searchParams.set("gsrnamespace", "6");
       url.searchParams.set("gsrlimit", "8"); url.searchParams.set("prop", "imageinfo");
       url.searchParams.set("iiprop", "url|extmetadata"); url.searchParams.set("iiurlwidth", "720"); url.searchParams.set("format", "json");
-      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-search)" } });
+      const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-image-search)" } });
       if (!response.ok) throw new Error(`The live image provider failed (${response.status}).`);
       const payload = await response.json();
       const requiredWords = subjectTerms(query);
@@ -676,7 +678,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     }
     async function wikipediaSummaryLookup(topic) {
       const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(String(topic || "").trim().replace(/\s+/g, "_"))}`;
-      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (source-attributed-image-fallback)" } });
+      const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (source-attributed-image-fallback)" } });
       if (!response.ok) return null;
       const payload = await response.json();
       const sourceUrl = safeHttpUrl(payload.content_urls && payload.content_urls.desktop && payload.content_urls.desktop.page);
@@ -761,7 +763,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
       const url = new URL("https://nominatim.openstreetmap.org/search");
       url.searchParams.set("q", searchQuery);
       url.searchParams.set("format", "jsonv2"); url.searchParams.set("addressdetails", "1"); url.searchParams.set("limit", "8");
-      const response = await fetchImpl(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-listings-search)" } });
+      const response = await providerFetch(url, { headers: { "user-agent": "Nexus-Genesis/1.0 (open-listings-search)" } });
       if (!response.ok) throw new Error(`The live listings provider failed (${response.status}).`);
       const payload = await response.json();
       return (Array.isArray(payload) ? payload : []).map((item) => ({
