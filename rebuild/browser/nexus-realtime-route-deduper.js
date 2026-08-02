@@ -10,6 +10,21 @@
     return /\b(help|create|make|build|start)\b/.test(command) && /\b(resume|curriculum vitae|cv)\b/.test(command);
   }
 
+  function normalizeAgriculturalTranscript(value) {
+    return normalize(value).replace(
+      /\b(?:ma(?:ize|ze|se|ys|y['\u2019]s)|me['\u2019]?s)\b(?=\s+(?:crop|disease|diseases|pest|plant|seed|treatment)\b)/gi,
+      "maize"
+    );
+  }
+
+  function normalizeRealtimeMessageData(value) {
+    let message;
+    try { message = JSON.parse(String(value || "")); } catch { return value; }
+    if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
+    const transcript = normalizeAgriculturalTranscript(message.transcript);
+    return transcript === normalize(message.transcript) ? value : JSON.stringify({ ...message, transcript });
+  }
+
   function install(windowObject = globalObject) {
     const prototype = windowObject?.RTCPeerConnection?.prototype;
     if (!prototype || prototype.__nexusRealtimeRouteDeduper) return false;
@@ -18,9 +33,10 @@
     Object.defineProperty(prototype, "__nexusRealtimeRouteDeduper", { value: true });
     prototype.createDataChannel = function createDeduplicatedDataChannel(...args) {
       const channel = nativeCreateDataChannel.apply(this, args);
+      const nativeAddEventListener = channel.addEventListener.bind(channel);
       const transcripts = new Map();
       let latestInputItemId = "";
-      channel.addEventListener("message", (event) => {
+      nativeAddEventListener("message", (event) => {
         let message;
         try { message = JSON.parse(String(event.data || "")); } catch { return; }
         if (message.type === "conversation.item.input_audio_transcription.delta") {
@@ -41,12 +57,26 @@
           detail: Object.freeze({ command: normalize(transcript), capability: "resume", responseId: normalize(message.response_id) })
         }));
       });
+      channel.addEventListener = function addNormalizedRealtimeListener(type, listener, options) {
+        if (type !== "message" || !listener) return nativeAddEventListener(type, listener, options);
+        return nativeAddEventListener(type, function normalizedRealtimeListener(event) {
+          const data = normalizeRealtimeMessageData(event.data);
+          if (data === event.data) {
+            if (typeof listener === "function") return listener.call(this, event);
+            return listener.handleEvent?.(event);
+          }
+          const normalizedEvent = Object.create(event);
+          Object.defineProperty(normalizedEvent, "data", { value: data, enumerable: true });
+          if (typeof listener === "function") return listener.call(this, normalizedEvent);
+          return listener.handleEvent?.(normalizedEvent);
+        }, options);
+      };
       return channel;
     };
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectResumeCommand, normalize });
+  const exported = Object.freeze({ install, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeRealtimeMessageData });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);
