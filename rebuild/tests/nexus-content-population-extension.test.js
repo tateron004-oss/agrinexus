@@ -125,6 +125,9 @@ async function main() {
   const queuedAgricultureVariantField = { name: "queuedRequest", value: "find Mase treatment guidance." };
   assert.equal(normalizeGuidedFieldValue(queuedAgricultureVariantField), "find maize treatment guidance.");
   assert.equal(queuedAgricultureVariantField.value, "find maize treatment guidance.");
+  const queuedAgriculturePluralSoundField = { name: "queuedRequest", value: "find Mays treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgriculturePluralSoundField), "find maize treatment guidance.");
+  assert.equal(queuedAgriculturePluralSoundField.value, "find maize treatment guidance.");
   const queuedDirectionsField = { name: "queuedRequest", value: "find the maze entrance" };
   assert.equal(normalizeGuidedFieldValue(queuedDirectionsField), "find the maze entrance");
   const learningTopicField = { name: "topic", value: "phishing emails safety." };
