@@ -290,8 +290,9 @@
 
   function alignApplicationResultWorkspace(result, detail) {
     const command = detail?.command || detail?.utterance;
-    const requestedWorkspace = canonicalProtectedWorkspace(command) || normalize(detail?.workspace).toLowerCase();
-    if (!result || !requestedWorkspace || !APP_NAMES[requestedWorkspace] || !isApplicationRouteCommand(command)) return result;
+    const capabilityWorkspace = result?.capability === "resume" ? "workforce" : null;
+    const requestedWorkspace = capabilityWorkspace || canonicalProtectedWorkspace(command) || normalize(detail?.workspace).toLowerCase();
+    if (!result || !requestedWorkspace || !APP_NAMES[requestedWorkspace] || (!capabilityWorkspace && !isApplicationRouteCommand(command))) return result;
     if (normalize(result.workspace).toLowerCase() === requestedWorkspace) return result;
     return Object.freeze({ ...result, workspace: requestedWorkspace });
   }
@@ -446,7 +447,7 @@
 
   function workspaceFields(result, artifact) {
     const fields = [...(artifact.fields || [])].map((field) => {
-      if (result?.workspace === "workforce" && normalize(field.id).toLowerCase() === "experience") {
+      if ((result?.workspace === "workforce" || result?.capability === "resume") && normalize(field.id).toLowerCase() === "experience") {
         return { ...field, label: "Work experience" };
       }
       return field;
