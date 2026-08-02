@@ -29,7 +29,9 @@ assert.equal(normalizeMarketplaceTranscript("Nexus sell fifty bags of maize."), 
 assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of maize."), "Nexus, sell 25 crates of maize.");
 assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
 assert.equal(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
+assert.equal(normalizeRecipeTranscript("Next, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 assert.equal(routeCommand(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "connected").workspace, "live-knowledge");
+assert.equal(routeCommand(normalizeRecipeTranscript("Next, show an apple pie recipe with ingredients, steps, and sources."), "connected").workspace, "live-knowledge");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag", transcript: "Nexus, show pictures of possible Mase diseases."
 }))).transcript, "Nexus, show pictures of possible maize diseases.");
@@ -41,6 +43,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 }))).transcript, "Nexus sell 50 bags of maize.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-recipe", transcript: "Nexus, show an apple pie recipe with ingredients, steps, and sources."
+}))).transcript, "Nexus, show sources for an apple pie recipe with ingredients and steps.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-recipe-next", transcript: "Next, show an apple pie recipe with ingredients, steps, and sources."
 }))).transcript, "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 
 const sent = [];

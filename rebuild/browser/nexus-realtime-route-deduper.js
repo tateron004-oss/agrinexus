@@ -48,9 +48,9 @@
 
   function normalizeRecipeTranscript(value) {
     const command = normalize(value);
-    const wake = command.match(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)(.*)$/i);
-    if (!wake || !/\bapple pie recipe\b/i.test(wake[2]) || !/\bsources?\b/i.test(wake[2])) return command;
-    return `${wake[1]}show sources for an apple pie recipe with ingredients and steps.`;
+    const request = command.replace(/^(?:(?:(?:hey|hello)\s+)?nexus\b|next\b)[\s,;:.-]*/i, "");
+    if (request === command || !/\bapple pie recipe\b/i.test(request) || !/\bsources?\b/i.test(request)) return command;
+    return "Nexus, show sources for an apple pie recipe with ingredients and steps.";
   }
 
   function normalizeRealtimeMessageData(value) {
