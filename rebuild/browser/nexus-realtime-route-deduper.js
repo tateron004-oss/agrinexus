@@ -59,6 +59,12 @@
       );
   }
 
+  function normalizeWakeTranscript(value) {
+    const command = normalize(value);
+    if (!/^nextest\b/i.test(command) || !/\bpilot evidence dashboard\b/i.test(command)) return command;
+    return command.replace(/^nextest\b/i, "Nexus");
+  }
+
   function normalizeRecipeTranscript(value) {
     const command = normalize(value);
     const request = command.replace(/^(?:(?:(?:hey|hello)\s+)?nexus\b|next\b)[\s,;:.-]*/i, "");
@@ -71,11 +77,12 @@
     try { message = JSON.parse(String(value || "")); } catch { return value; }
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
     const originalTranscript = normalize(message.transcript);
-    const fieldEditTranscript = normalizeFieldEditTranscript(originalTranscript);
+    const wakeTranscript = normalizeWakeTranscript(originalTranscript);
+    const fieldEditTranscript = normalizeFieldEditTranscript(wakeTranscript);
     if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(fieldEditTranscript)) {
       return fieldEditTranscript === originalTranscript ? value : JSON.stringify({ ...message, transcript: fieldEditTranscript });
     }
-    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(originalTranscript)));
+    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(wakeTranscript)));
     return transcript === originalTranscript ? value : JSON.stringify({ ...message, transcript });
   }
 
@@ -146,7 +153,7 @@
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData });
+  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);

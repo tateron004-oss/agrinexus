@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { routeCommand } = require("../nexus-core/router");
-const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
+const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript } = require("../browser/nexus-realtime-route-deduper");
 
 const indexSource = fs.readFileSync(path.resolve(__dirname, "../browser/index.html"), "utf8");
 assert.ok(indexSource.indexOf("nexus-realtime-route-deduper.js") < indexSource.indexOf("nexus-clean.bundle.js"));
@@ -35,6 +35,8 @@ assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to mild 
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rauntate."), "Nexus, set resumeFullName to Ron Tate.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Jane Tate."), "Nexus, set resumeFullName to Jane Tate.");
 assert.equal(normalizeFieldEditTranscript("The date and time changed to tonight."), "The date and time changed to tonight.");
+assert.equal(normalizeWakeTranscript("Nextest, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
+assert.equal(normalizeWakeTranscript("Nextest, open my private notes."), "Nextest, open my private notes.");
 assert.equal(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 assert.equal(normalizeRecipeTranscript("Next, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 assert.equal(routeCommand(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "connected").workspace, "live-knowledge");
@@ -57,6 +59,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-name", transcript: "Nexus, set resumeFullName to Rauntate."
 }))).transcript, "Nexus, set resumeFullName to Ron Tate.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-pilot-wake", transcript: "Nextest, open the pilot evidence dashboard."
+}))).transcript, "Nexus, open the pilot evidence dashboard.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-market", transcript: "Nexus sell fifty bags of maize."
 }))).transcript, "Nexus sell 50 bags of maize.");
