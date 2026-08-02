@@ -30,6 +30,7 @@
     "mobile-clinic": Object.freeze([["location", "Location"], ["careNeeded", "Care needed"], ["travelDistance", "Travel distance"]]),
     pharmacy: Object.freeze([["medication", "Medication"], ["requestType", "Request type"], ["pharmacy", "Pharmacy or location"]]),
     learning: Object.freeze([["topic", "Topic or skill"], ["level", "Learning level"], ["language", "Language"]]),
+    workforce: Object.freeze([["role", "Job or skill"], ["location", "Location"], ["preference", "Work preference"]]),
     marketplace: Object.freeze([["product", "Product"], ["quantity", "Quantity"], ["location", "Location"]]),
     reminders: Object.freeze([["reminder", "Reminder"], ["time", "Date and time"], ["repeat", "Repeat"]]),
     offline: Object.freeze([["queuedRequest", "Queued request"], ["connectionStatus", "Connection status"], ["syncPriority", "Sync priority"]])
@@ -73,10 +74,12 @@
   function applicationDeadlineFallback(detail) {
     const workspace = normalize(detail && detail.workspace);
     const command = normalize(detail && (detail.command || detail.utterance));
+    const comparableCommand = command.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const fieldDefinitions = DEADLINE_FALLBACK_FIELDS[workspace];
     if (!fieldDefinitions) return null;
-    if (workspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(command)) return null;
-    if (workspace === "health" && /\b(provider|doctor|contact card)\b/i.test(command)) return null;
+    if (workspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(comparableCommand)) return null;
+    if (workspace === "health" && /\b(provider|doctor|contact card)\b/i.test(comparableCommand)) return null;
+    if (workspace === "workforce" && /\b(resume|curriculum vitae|cv)\b/i.test(comparableCommand)) return null;
     const requestId = normalize(detail && detail.requestId) || `deadline-${Date.now()}`;
     return Object.freeze({
       schema: "nexus.content.result.v2", requestId, status: "ready", capability: "intake", operation: "open", workspace,

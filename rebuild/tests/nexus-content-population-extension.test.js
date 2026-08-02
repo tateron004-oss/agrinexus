@@ -37,6 +37,8 @@ async function main() {
   assert.deepEqual(healthFallback.artifact.fields.map((field) => field.label), ["Blood pressure or reading", "When measured", "Symptoms or notes"]);
   assert.equal(applicationDeadlineFallback({ requestId: "provider-1", workspace: "health", command: "Nexus, create a provider card for my doctor." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "images-1", workspace: "agriculture", command: "Nexus, show maize disease pictures." }), null);
+  assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }).status, "ready");
+  assert.equal(applicationDeadlineFallback({ requestId: "resume-1", workspace: "workforce", command: "Nexus, help me create a résumé." }), null);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");
