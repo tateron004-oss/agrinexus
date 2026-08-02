@@ -77,6 +77,11 @@ async function main() {
   assert.equal(normalizeGuidedFieldValue(doseField), "2.5 milliliters");
   const productField = { name: "product", value: "twenty bags of maize" };
   assert.equal(normalizeGuidedFieldValue(productField), "twenty bags of maize");
+  const queuedAgricultureField = { name: "queuedRequest", value: "find maze treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgricultureField), "find maize treatment guidance.");
+  assert.equal(queuedAgricultureField.value, "find maize treatment guidance.");
+  const queuedDirectionsField = { name: "queuedRequest", value: "find the maze entrance" };
+  assert.equal(normalizeGuidedFieldValue(queuedDirectionsField), "find the maze entrance");
   assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
