@@ -22,10 +22,14 @@
   }
 
   function normalizeAgriculturalTranscript(value) {
-    return normalize(value).replace(
+    const command = normalize(value).replace(
       /\b(?:ma(?:ize|ze|zed|se|ys|y['\u2019]s)|meas|me['\u2019]?s)\b(?:['\u2019](?:s\b)?(?=\s))?(?=\s+(?:crop|disease|diseases|pest|plant|seed|treatment)\b)/gi,
       "maize"
     );
+    if (!/\b(?:pictures?|images?|photos?)\b/i.test(command) || !/\b(?:agricultur\w*|crops?|maize|diseases?|pests?|plants?)\b/i.test(command)) return command;
+    return normalize(command
+      .replace(/\bsource[- ]label(?:ed|led)\s+/ig, "")
+      .replace(/\s+with\s+source\s+labels?\b/ig, ""));
   }
 
   function normalizeMarketplaceTranscript(value) {

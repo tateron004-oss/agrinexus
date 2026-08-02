@@ -109,6 +109,13 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
       }, { before, workspace: journey.workspace }), { timeout: 90000 }).not.toBeNull().then(() => page.evaluate(({ before, workspace }) => window.__transactionEvidence.receipts.slice(before).find(item => item.type === "workspace.visible" && item.detail?.workspace === workspace), { before, workspace: journey.workspace }));
       expect(receipt.detail.outcomeVerified).toBe(true);
       expect(receipt.detail.transactionId).toBeTruthy();
+      const falseSuccessReceipts = await page.evaluate(({ before }) => window.__transactionEvidence.receipts.slice(before).filter(item =>
+        item.type === "workspace.visible"
+        && item.detail?.outcomeVerified === true
+        && item.detail?.outcomeKind === "source-directory"
+        && (!item.detail?.evidenceLinksVisible || Number(item.detail?.evidenceSourceCount || 0) < 1)
+      ), { before });
+      expect(falseSuccessReceipts, "A zero-source directory must never be reported as a verified result.").toEqual([]);
       await expect(page.locator("#nexus-workspace")).toBeVisible();
       await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-populated", "true");
 
