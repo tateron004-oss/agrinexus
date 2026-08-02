@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { install, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
+const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
 
 const indexSource = fs.readFileSync(path.resolve(__dirname, "../browser/index.html"), "utf8");
 assert.ok(indexSource.indexOf("nexus-realtime-route-deduper.js") < indexSource.indexOf("nexus-clean.bundle.js"));
@@ -12,6 +12,10 @@ assert.equal(isDirectResumeCommand("Nexus, help me create a résumé."), true);
 assert.equal(isDirectResumeCommand("Nexus, help me create a resume."), true);
 assert.equal(isDirectResumeCommand("Nexus, set résumé full name to Ron Tate."), false);
 assert.equal(isDirectResumeCommand("Nexus, sell 50 bags of maize."), false);
+assert.equal(isDirectApplicationCommand("Nexus, record my blood pressure 140 over 90."), true);
+assert.equal(isDirectApplicationCommand("Nexus, show my offline queue."), true);
+assert.equal(isDirectApplicationCommand("Nexus, set queued request to find maize treatment guidance."), false);
+assert.equal(isDirectApplicationCommand("How are you today?"), false);
 assert.equal(normalizeAgriculturalTranscript("Nexus, show pictures of possible Mays diseases."), "Nexus, show pictures of possible maize diseases.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Mays' treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Maze's treatment guidance."), "Nexus, find maize treatment guidance.");
@@ -76,5 +80,15 @@ receive({
   item: { type: "function_call", name: "route_nexus_command", call_id: "call-2" }
 });
 assert.deepEqual(sent, []);
+
+for (const [itemId, delta] of [["input-3", "Nexus, record"], ["input-3", " my blood pressure 140 over 90."]]) {
+  receive({ type: "conversation.item.input_audio_transcription.delta", item_id: itemId, delta });
+}
+receive({
+  type: "response.output_item.added",
+  response_id: "response-3",
+  item: { type: "function_call", name: "route_nexus_command", call_id: "call-3" }
+});
+assert.deepEqual(sent, [{ type: "response.cancel", response_id: "response-3" }]);
 
 console.log("Nexus realtime route deduper: PASS");
