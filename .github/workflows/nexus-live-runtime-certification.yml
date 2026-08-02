@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           RUNTIME_SHA="$(git log -1 --format=%H -- rebuild/browser/nexus-clean.bundle.js)"
-          DEPLOYMENT_SHA="$(git log -1 --format=%H -- server.js rebuild/production-certification-adapter.js rebuild/production-capability-bridge-server.js rebuild/browser rebuild/nexus-core)"
+          DEPLOYMENT_SHA="$GITHUB_SHA"
           test -n "$RUNTIME_SHA"
           test -n "$DEPLOYMENT_SHA"
           echo "NEXUS_EXPECTED_RELEASE_SHA=$DEPLOYMENT_SHA" >> "$GITHUB_ENV"
@@ -88,7 +88,7 @@ jobs:
         shell: cmd
         run: |
           for /f "usebackq delims=" %%S in (`git log -1 --format^=%%H -- rebuild/browser/nexus-clean.bundle.js`) do set "RUNTIME_SHA=%%S"
-          for /f "usebackq delims=" %%S in (`git log -1 --format^=%%H -- server.js rebuild/production-certification-adapter.js rebuild/production-capability-bridge-server.js rebuild/browser rebuild/nexus-core`) do set "DEPLOYMENT_SHA=%%S"
+          set "DEPLOYMENT_SHA=%GITHUB_SHA%"
           if not defined RUNTIME_SHA exit /b 1
           if not defined DEPLOYMENT_SHA exit /b 1
           echo NEXUS_EXPECTED_RELEASE_SHA=%DEPLOYMENT_SHA%>>"%GITHUB_ENV%"
@@ -125,15 +125,16 @@ jobs:
           NEXUS_LIVE_PROVIDER_BASE_URL: https://nexus-genesis-certified.onrender.com
         run: |
           for /L %%I in (1,1,3) do (
-            set "NEXUS_PRODUCTION_SESSION_ID=session-%%I"
-            node rebuild/tests/nexus-production-experience-windows-voice.js
+            powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-certification-reset.ps1
             if errorlevel 1 exit /b 1
+            set "NEXUS_TRANSACTION_SESSION=session-%%I"
+            npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
+            if errorlevel 1 exit /b 1
+            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+            if errorlevel 1 exit /b 1
+            xcopy output\nexus-clean-windows-certification output\nexus-production-sessions\session-%%I\ /E /I /Y
+            if errorlevel 2 exit /b 1
           )
-      - name: Run every physical voice application journey
-        shell: cmd
-        env:
-          NEXUS_CERTIFICATION_LANE: voice-lifecycle
-        run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
       - name: Reset before Guided Entry
         shell: cmd
         run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-certification-reset.ps1

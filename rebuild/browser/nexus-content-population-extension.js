@@ -509,6 +509,8 @@
       this.activeWorkspace = null;
       this.currentResult = null;
       this.pending = new Map();
+      this.activeRequestId = "";
+      this.verifiedRequests = new Set();
       this.guidedRouteShields = new Map();
       this.guidedFieldReceipts = new Map();
       this.guidedFieldWorkspace = "";
@@ -733,7 +735,7 @@
       return { shell, appSurface };
     }
 
-    async provider(detail) {
+    async provider(detail, signal) {
       if (!this.fetch) throw new Error("Network access is unavailable in this browser.");
       const token = this.window.NEXUS_CLEAN_CONFIG?.sessionToken || this.window.sessionStorage?.getItem("nexus.clean.session");
       const previousArtifact = this.currentResult && this.currentResult.artifact || readJson(this.window.localStorage, STORAGE.artifacts, {})[this.activeWorkspace] || null;
@@ -749,6 +751,7 @@
       this.stage("resolver.requested", { requestId: detail.requestId, command: detail.command, activeWorkspace: this.activeWorkspace });
       const response = await this.fetch("/api/visual/content", {
         method: "POST",
+        signal,
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify(body)
       });
@@ -758,6 +761,7 @@
       if (!response.ok) throw new Error(result.message || `Nexus content service failed (${response.status}).`);
       if (result.schema !== "nexus.content.result.v2" || !result.artifact) throw new Error("Nexus received an invalid content result contract.");
       if (result.requestId !== detail.requestId) throw new Error("Nexus rejected a content result owned by another request.");
+      if (result.status === "ready" && (result.receipt?.requestId !== detail.requestId || result.receipt?.capability !== result.capability || result.receipt?.workspace !== result.workspace || result.receipt?.providerSucceeded !== true)) throw new Error("Nexus rejected a result without an identity-bound capability receipt.");
       return result;
     }
 
@@ -778,10 +782,17 @@
       }
       this.lastOpenCommand = normalize(detail.command);
       this.lastOpenAt = Date.now();
+      for (const [pendingRequestId, entry] of this.pending) {
+        entry.controller?.abort?.("superseded-by-new-request");
+        this.pending.delete(pendingRequestId);
+        this.stage("request.stale-suppressed", { requestId: pendingRequestId, supersededBy: detail.requestId });
+      }
+      const controller = globalObject.AbortController ? new globalObject.AbortController() : null;
+      this.activeRequestId = detail.requestId;
       this.activeWorkspace = detail.workspace || this.activeWorkspace || "live-knowledge";
-      this.pending.set(detail.requestId, { detail, commandKey });
+      this.pending.set(detail.requestId, { detail, commandKey, controller });
       this.stage("conversation.received", { requestId: detail.requestId, command: detail.command, workspace: this.activeWorkspace });
-      const providerRequest = Promise.resolve(this.provider(detail));
+      const providerRequest = Promise.resolve(this.provider(detail, controller?.signal));
       const deadlineFallback = applicationDeadlineFallback(detail);
       const resultRequest = deadlineFallback && this.providerDeadlineMs >= 0
         ? new Promise((resolve, reject) => {
@@ -799,13 +810,20 @@
         })
         : providerRequest;
       resultRequest.then(async (result) => {
-        if (!this.pending.has(detail.requestId)) return;
+        if (!this.pending.has(detail.requestId) || this.activeRequestId !== detail.requestId) return;
         this.activeWorkspace = result.workspace || this.activeWorkspace;
         this.currentResult = result;
         this.render(result, detail);
         await this.settleRendered(result, detail);
+        this.verifiedRequests.add(detail.requestId);
         this.acknowledge(result, detail);
-      }).catch((error) => this.fail(error, detail));
+      }).catch((error) => {
+        if (controller?.signal?.aborted || this.activeRequestId !== detail.requestId) {
+          this.stage("request.stale-suppressed", { requestId: detail.requestId, message: normalize(error.message) });
+          return;
+        }
+        this.fail(error, detail);
+      });
     }
 
     render(result, detail) {
@@ -861,12 +879,39 @@
         this.render(result, detail);
       }
       await new Promise((resolve) => this.window.requestAnimationFrame(() => this.window.requestAnimationFrame(resolve)));
-      if (!this.document.querySelector(selector)) throw new Error("The requested result was replaced before acknowledgement.");
+      const root = this.document.querySelector(selector);
+      if (!root) throw new Error("The requested result was replaced before acknowledgement.");
+      if (result.status !== "ready") return;
+      const artifact = result.artifact || {};
+      const links = [...root.querySelectorAll("a[href]")];
+      if (result.capability === "weather") {
+        if (!result.receipt?.weather || !Number.isFinite(Number(result.receipt.weather.temperatureC)) || !links.length || !/°C|rain chance/i.test(normalize(root.textContent))) throw new Error("The live weather result did not become visibly verifiable.");
+      } else if (result.capability === "images") {
+        const images = [...root.querySelectorAll("img[src]")];
+        if (!images.length || !links.length) throw new Error("The image provider returned no visible source-bound images.");
+        await Promise.race([
+          Promise.all(images.map((image) => image.complete ? Promise.resolve() : new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); }))),
+          new Promise((resolve) => this.window.setTimeout(resolve, 6000))
+        ]);
+        if (!images.some((image) => Number(image.naturalWidth) >= 120 && Number(image.naturalHeight) >= 90)) throw new Error("The retrieved images could not be rendered visibly.");
+      } else if (result.capability === "map") {
+        const focus = artifact.media?.route?.focus;
+        if (!focus || !Number.isFinite(Number(focus.lat)) || !Number.isFinite(Number(focus.lon)) || !root.querySelector("#nexus-content-map-frame[src], .nexus-content-map-route") || !links.length) throw new Error("The requested geographic viewport did not become visible.");
+      } else if (["search", "listings"].includes(result.capability)) {
+        if (!(artifact.items || []).some((item) => safeUrl(item.sourceUrl)) || !links.length) throw new Error("The live provider returned no visible source records.");
+      } else {
+        const hasApplicationContent = root.querySelectorAll("input, textarea, select").length > 0
+          || (artifact.sections || []).some((section) => normalize(section.body) || (section.items || []).some((item) => normalize(item)))
+          || (artifact.items || []).length > 0;
+        if (!hasApplicationContent) throw new Error("The application opened an empty shell instead of requested content.");
+      }
     }
 
     acknowledge(result, detail) {
       this.pending.delete(detail.requestId);
-      const successful = result.status === "ready";
+      const successful = result.status === "ready" && this.verifiedRequests.has(detail.requestId);
+      this.verifiedRequests.delete(detail.requestId);
+      if (this.activeRequestId === detail.requestId) this.activeRequestId = "";
       const history = this.history();
       history.push({ role: "user", content: normalize(detail.command) });
       history.push({ role: "assistant", content: successful ? normalize(result.acknowledgement) : normalize(result.recovery && result.recovery.message) });

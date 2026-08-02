@@ -12,10 +12,25 @@ function locationFromWeatherCommand(command) {
 function createVisualDataService({ fetchImpl = globalThis.fetch, goalResolver = null, musicSourceProvider = musicProvider } = {}) {
   const contentActions = createContentActionService({ fetchImpl, musicProvider: musicSourceProvider, goalResolver });
   const service = {
-    content(request = {}, context = {}) {
-      return contentActions.execute(request, {
+    async content(request = {}, context = {}) {
+      const result = await contentActions.execute(request, {
         ...context,
         weather: (command) => service.weather(command)
+      });
+      const requestId = String(request.requestId || result.requestId || "").trim();
+      return Object.freeze({
+        ...result,
+        requestId,
+        receipt: Object.freeze({
+          schema: "nexus.capability.receipt.v1",
+          requestId,
+          capability: result.capability,
+          workspace: result.workspace,
+          query: result.query,
+          providerSucceeded: result.status === "ready",
+          weather: result.capability === "weather" ? result.evidence && result.evidence.weather || null : null,
+          issuedAt: new Date().toISOString()
+        })
       });
     },
 

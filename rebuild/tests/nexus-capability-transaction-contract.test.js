@@ -12,7 +12,7 @@ async function main() {
   const bridge = read("rebuild/browser/nexus-production-capability-bridge.js");
   const extension = read("rebuild/browser/nexus-content-population-extension.js");
   const server = read("rebuild/production-capability-bridge-server.js");
-  const physical = read("rebuild/tests/nexus-production-experience-windows-voice.js");
+  const physical = read("rebuild/tests/nexus-production-transaction-windows.spec.js");
   const workflow = read(".github/workflows/nexus-live-runtime-certification.yml");
 
   assert.doesNotMatch(extension, /Editable workspace ready while live enrichment continues/i);
@@ -30,12 +30,11 @@ async function main() {
   assert.match(server, /invalid-capability-request-id/);
 
   for (const phrase of [
-    "current weather in Nairobi", "United States on a fresh map", "maize diseases in Kenya",
-    "Agriculture Help again", "Health and Chronic Care", "Telehealth Intake", "Mobile Clinic",
-    "Pharmacy Support", "Learning and Literacy", "Jobs and Workforce", "AgriTrade Marketplace",
-    "open Reminders", "Offline Queue"
+    "live weather in Nairobi", "United States on a fresh map", "maize diseases",
+    "Agriculture Help and keep the visible workspace synchronized"
   ]) assert.ok(physical.includes(phrase), `Physical production contract is missing ${phrase}.`);
-  assert.match(workflow, /NEXUS_PRODUCTION_SESSION_ID/);
+  assert.match(workflow, /nexus-windows-physical-certification\.spec\.js/);
+  assert.match(workflow, /NEXUS_TRANSACTION_SESSION/);
   assert.match(workflow, /for \/L %%I in \(1,1,3\)/);
 
   const weatherGoal = {
