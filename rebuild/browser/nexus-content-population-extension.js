@@ -463,6 +463,7 @@
       const applicationRoute = isApplicationRouteCommand(command);
       if (applicationRoute && shieldApplicationRouteFromGuidedEntry(command, this.document)) {
         this.stage("transcript.application-route-shielded", { command, workspace: this.activeWorkspace });
+        return;
       }
       if (!applicationRoute && shouldYieldTranscriptToGuidedEntry(command, this.document)) {
         this.stage("transcript.yielded-to-guided-entry", { command, workspace: this.activeWorkspace });

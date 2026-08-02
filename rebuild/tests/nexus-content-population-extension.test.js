@@ -56,6 +56,23 @@ async function main() {
   assert.deepEqual([...coalescingController.pending.keys()], ["route-tool-call"]);
   assert.equal(coalescedEvents.at(-1).detail.requestId, "final-transcript");
   assert.equal(coalescedEvents.at(-1).detail.outcomeVerified, false);
+  let transcriptTimers = 0;
+  const transcriptStages = [];
+  const transcriptController = new NexusContentPopulationController({
+    windowObject: {
+      dispatchEvent(event) { transcriptStages.push(event.detail); },
+      setTimeout() { transcriptTimers += 1; return transcriptTimers; },
+      clearTimeout() {}
+    },
+    documentObject: editableDocument,
+    fetchImpl: null
+  });
+  transcriptController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus, sell 50 bags of maize." }
+  } });
+  assert.equal(transcriptTimers, 0, "Application transcripts must not schedule a second synthetic workspace route.");
+  assert.ok(transcriptStages.some((stage) => stage.type === "transcript.application-route-shielded"));
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
   assert.equal(healthFallback.status, "ready");
   assert.deepEqual(healthFallback.artifact.fields.map((field) => field.label), ["Blood pressure or reading", "When measured", "Symptoms or notes"]);
