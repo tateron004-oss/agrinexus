@@ -64,9 +64,10 @@
     }
   }
 
-  function outcomeKind(capability) {
+  function outcomeKind(capability, workspace = "") {
     if (capability === "music" || capability === "media-control") return "music";
     if (capability === "map") return "map";
+    if (capability === "search" && workspace && workspace !== "live-knowledge") return "application";
     if (capability === "search") return "evidence";
     return "application";
   }
@@ -466,14 +467,15 @@
       this.saveHistory(history);
       const surface = this.document.querySelector(`[data-nexus-content-result-id="${globalObject.CSS?.escape ? globalObject.CSS.escape(result.requestId) : result.requestId}"]`);
       const summary = normalize(surface && surface.textContent).slice(0, 300);
+      const resolvedOutcomeKind = outcomeKind(result.capability, result.workspace || this.activeWorkspace);
       this.stage(successful ? "renderer.acknowledged" : "renderer.failure-visible", { requestId: detail.requestId, resultId: result.requestId, summary });
       this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
         detail: Object.freeze({
           requestId: detail.requestId, acknowledgementId: `content-${result.requestId}`,
           workspace: result.workspace || this.activeWorkspace, contentExtension: true,
           visible: true, populated: successful, outcomeVerified: successful,
-          outcomeKind: outcomeKind(result.capability), visualContext: Object.freeze({
-            workspace: result.workspace || this.activeWorkspace, outcomeKind: outcomeKind(result.capability),
+          outcomeKind: resolvedOutcomeKind, visualContext: Object.freeze({
+            workspace: result.workspace || this.activeWorkspace, outcomeKind: resolvedOutcomeKind,
             surfaceId: result.requestId, summary, items: [], selectedItem: null, viewport: null,
             sourceIds: (result.artifact.items || []).map((item) => item.id).filter(Boolean),
             availableActions: ["inspect", "revise", "review", "print", "share", "ask-follow-up"]

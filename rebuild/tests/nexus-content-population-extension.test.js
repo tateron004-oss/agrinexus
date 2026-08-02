@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { applicationDeadlineFallback, normalizeGuidedFieldValue, renderArtifactMarkup, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { applicationDeadlineFallback, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -42,6 +42,8 @@ async function main() {
   const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
   assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
   assert.equal(careNeededField.value, "blood pressure screening.");
+  assert.equal(outcomeKind("search", "workforce"), "application");
+  assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");
