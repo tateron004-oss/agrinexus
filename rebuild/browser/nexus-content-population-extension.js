@@ -292,11 +292,12 @@
   function shouldYieldToProtectedRenderer(command, workspace = "") {
     const normalizedCommand = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const normalizedWorkspace = normalize(workspace).toLowerCase();
+    if (/\bapple pie recipe\b/i.test(normalizedCommand)) return false;
     if (["maps", "music", "live-knowledge"].includes(normalizedWorkspace)) return true;
     if (normalizedWorkspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(normalizedCommand)) return true;
     if (normalizedWorkspace === "workforce" && /\b(resume|curriculum vitae|cv)\b/i.test(normalizedCommand)) return true;
     if (normalizedWorkspace === "health" && /\b(provider|doctor|physician|contact card)\b/i.test(normalizedCommand)) return true;
-    return /\b(weather|forecast|pilot evidence|evidence dashboard|apple pie recipe)\b/i.test(normalizedCommand)
+    return /\b(weather|forecast|pilot evidence|evidence dashboard)\b/i.test(normalizedCommand)
       || /\b(show|display)\b.*\b(image|images|picture|pictures|photo|photos|source|sources|evidence)\b/i.test(normalizedCommand)
       || /\b(plan|show|reset)\b.*\b(map|route|directions|mombasa|nairobi|nakuru)\b/i.test(normalizedCommand)
       || /\bplay\b.*\b(music|song|stevie wonder)\b/i.test(normalizedCommand)

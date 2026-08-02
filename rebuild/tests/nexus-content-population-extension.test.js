@@ -247,7 +247,7 @@ async function main() {
     ["maps", "Nexus, reset the map and show Mombasa, Kenya.", true],
     ["agriculture", "Nexus, show me pictures of possible maize diseases.", true],
     ["workforce", "Nexus, help me create a résumé.", true],
-    ["live-knowledge", "Nexus, show an apple pie recipe with ingredients, steps, and sources.", true],
+    ["live-knowledge", "Nexus, show an apple pie recipe with ingredients, steps, and sources.", false],
     ["health", "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", true],
     ["live-knowledge", "Nexus, open the pilot evidence dashboard.", true]
   ];
