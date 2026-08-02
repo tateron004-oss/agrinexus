@@ -61,8 +61,8 @@
 
   function normalizeWakeTranscript(value) {
     const command = normalize(value);
-    if (!/^nextest\b/i.test(command) || !/\bpilot evidence dashboard\b/i.test(command)) return command;
-    return command.replace(/^nextest\b/i, "Nexus");
+    if (!/^next(?:est)?\b/i.test(command) || !/\bpilot evidence dashboard\b/i.test(command)) return command;
+    return command.replace(/^next(?:est)?\b/i, "Nexus");
   }
 
   function normalizeRecipeTranscript(value) {
