@@ -312,6 +312,11 @@ async function main() {
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");
+  const mappedListings = normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show bicycle repair shops near Windhoek, Namibia on the map", location: "Windhoek, Namibia", artifact: artifact("map", "Bicycle repair shops") });
+  assert.equal(mappedListings.capability, "listings");
+  assert.equal(mappedListings.operation, "search");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show the United States on a fresh map", artifact: artifact("map", "United States") }).capability, "map");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show driving directions from Windhoek to Swakopmund", artifact: artifact("map", "Route") }).capability, "map");
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps" }).capability, "map");
 
   const normalizedSources = normalizeWebSearchPayload({ output: [
@@ -361,6 +366,7 @@ async function main() {
     { capability: "music", operation: "play", workspace: "music", query: "Mulatu Astatke Ethiopian jazz", location: "", needsLiveProvider: true, artifact: artifact("media", "Music"), acknowledgement: "Music is visible." },
     { capability: "music", operation: "play", workspace: "music", query: "Mariya Takeuchi Japanese city pop", location: "", needsLiveProvider: true, artifact: artifact("media", "Music"), acknowledgement: "Music is visible." },
     { capability: "listings", operation: "search", workspace: "marketplace", query: "seed suppliers", location: "Huye, Rwanda", needsLiveProvider: true, artifact: artifact("list", "Seed suppliers"), acknowledgement: "Listings are visible." },
+    { capability: "map", operation: "open", workspace: "maps", query: "bicycle repair shops", location: "Windhoek, Namibia", needsLiveProvider: true, artifact: artifact("map", "Bicycle repair shops on the map"), acknowledgement: "Listings are visible." },
     { capability: "search", operation: "search", workspace: "live-knowledge", query: "recent soil restoration evidence in the Sahel", location: "", needsLiveProvider: true, artifact: artifact("list", "Sources"), acknowledgement: "Sources are visible." }
   ];
   const service = createContentActionService({
@@ -385,6 +391,10 @@ async function main() {
   const places = await service.execute({ command: "Who nearby might sell improved bean seed?" });
   assert.equal(places.artifact.items[0].title, "Huye Seed Cooperative");
   assert.match(providerQueries.find((query) => query.includes("nominatim")), /seed\+suppliers.*Huye/i);
+  const mappedPlaces = await service.execute({ command: "Show bicycle repair shops near Windhoek, Namibia, on the map." });
+  assert.equal(mappedPlaces.capability, "listings");
+  assert.equal(mappedPlaces.status, "ready");
+  assert.match(providerQueries.find((query) => query.includes("bicycle+repair+shops")), /Windhoek/i);
   const sources = await service.execute({ command: "Show me another reputable angle on that" }, {
     research: async ({ question }) => ({
       id: "evr_sahel", status: "cross-source-verified", verified: true, summary: "Cross-checked evidence.",

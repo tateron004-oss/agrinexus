@@ -353,8 +353,11 @@ function resultEnvelope(goal, artifact, extra = {}) {
 }
 
 function normalizeGoalRoute(goal) {
-  if (goal && goal.capability === "map" && goal.operation === "search") {
-    return { ...goal, capability: "listings", workspace: clean(goal.workspace, 120) || "maps" };
+  const mapGoalText = clean(`${goal && goal.query || ""} ${goal && goal.location || ""} ${goal && goal.artifact && goal.artifact.title || ""}`, 2000);
+  const discoversPlaces = /\b(?:shops?|stores?|business(?:es)?|services?|venues?|sellers?|suppliers?|clinics?|hospitals?|pharmacies|restaurants?|cafes?|hotels?|markets?|garages?)\b/i.test(mapGoalText);
+  const requestsRoute = /\b(?:route|directions?|navigate|navigation)\b|\bfrom\b.+\bto\b/i.test(mapGoalText);
+  if (goal && goal.capability === "map" && (goal.operation === "search" || (discoversPlaces && !requestsRoute))) {
+    return { ...goal, capability: "listings", operation: "search", workspace: clean(goal.workspace, 120) || "maps" };
   }
   // Jobs are web records, not physical places. The conversational resolver can
   // reasonably classify both as "listings", but sending a workforce request to
@@ -450,7 +453,7 @@ function localResilienceGoal(context = {}) {
     return base("question-card", "create", "pharmacy", command, artifact, "The readable medication question card is visible and ready to print or share.");
   }
   if (/\b(image|images|picture|pictures|photo|photos|symptom|symptoms)\b/i.test(command) && /\b(show|find|search|research|compare|identify)\b/i.test(command)) return base("images", "search", "live-knowledge", command, emptyArtifact("list", "Live image research"), "The source-attributed image research is visible.", true);
-  if (/\b(map|route|directions|navigate|navigation)\b/i.test(command)) return base("map", "open", "maps", command, emptyArtifact("map", "Live map and route"), "The validated live map and route are visible.", true);
+  if (/\b(map|route|directions|navigate|navigation)\b/i.test(command)) return normalizeGoalRoute(base("map", "open", "maps", command, emptyArtifact("map", "Live map and route"), "The validated live map and route are visible.", true));
   if (/\b(play|listen|music|song|artist|album|genre)\b/i.test(command)) return base(/\b(stop|quiet|pause)\b/i.test(command) ? "media-control" : "music", /\b(stop|quiet|pause)\b/i.test(command) ? "stop" : "play", "music", command, emptyArtifact("media", "Live music results"), "The requested authorized music source is visible.", true);
   if (/\b(research|sources?|websites?|look up|search the (?:web|internet)|current information)\b/i.test(command)) return base("search", "search", "live-knowledge", command, emptyArtifact("list", "Live reputable sources"), "The current reputable sources are visible.", true);
   if (/\b(intake|form|questionnaire)\b/i.test(command)) {
