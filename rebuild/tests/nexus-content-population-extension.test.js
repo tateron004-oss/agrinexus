@@ -45,6 +45,7 @@ async function main() {
   assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
   assert.equal(canonicalProtectedWorkspace("Next, show an apple pie recipe with ingredients, steps, and sources."), "live-knowledge");
   assert.equal(canonicalProtectedWorkspace("Nexus, show me pictures of possible Mase diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus: Show pictures of possible Mased diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
   assert.equal(canonicalProtectedWorkspace("Nexus, sell fifty bags of maize."), "marketplace");
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
