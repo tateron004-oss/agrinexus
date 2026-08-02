@@ -268,7 +268,7 @@
     return normalize(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+      .replace(/^(?:hey\s+|hello\s+)?nexus(?:t)?\b[\s,;:.-]*/i, "")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
   }
@@ -694,7 +694,7 @@
       }
       if (this.transcriptTimer) this.window.clearTimeout(this.transcriptTimer);
       this.transcriptTimer = this.window.setTimeout(() => {
-        if (this.lastOpenCommand === command && Date.now() - this.lastOpenAt < 900) return;
+        if (canonicalCommandKey(this.lastOpenCommand) === canonicalCommandKey(command) && Date.now() - this.lastOpenAt < 900) return;
         const requestId = globalObject.crypto?.randomUUID?.() || `content-${Date.now()}`;
         this.open(Object.freeze({
           requestId, transactionId: `content-follow-up-${requestId}`,

@@ -39,6 +39,7 @@ async function main() {
   editableWorkspace.hidden = true;
   assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), false);
   assert.equal(canonicalCommandKey("Nexus, start a digital literacy course."), canonicalCommandKey("start a digital literacy course"));
+  assert.equal(canonicalCommandKey("Nexust, open pharmacy support."), canonicalCommandKey("Nexus, open pharmacy support."));
   assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
   assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
   assert.equal(canonicalProtectedWorkspace("Next, show an apple pie recipe with ingredients, steps, and sources."), "live-knowledge");
