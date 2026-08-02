@@ -445,7 +445,12 @@
   }
 
   function workspaceFields(result, artifact) {
-    const fields = [...(artifact.fields || [])];
+    const fields = [...(artifact.fields || [])].map((field) => {
+      if (result?.workspace === "workforce" && normalize(field.id).toLowerCase() === "experience") {
+        return { ...field, label: "Work experience" };
+      }
+      return field;
+    });
     for (const required of REQUIRED_WORKSPACE_FIELDS[result && result.workspace] || []) {
       const present = fields.some((field) => normalize(field.id).toLowerCase() === required.id.toLowerCase()
         || normalize(field.label).toLowerCase() === required.label.toLowerCase());

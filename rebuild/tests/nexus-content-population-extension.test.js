@@ -228,6 +228,7 @@ async function main() {
   assert.match(recipeFallback.artifact.sections.map((section) => section.heading).join(" "), /Ingredients.*Steps/);
   assert.match(recipeFallback.artifact.links[0].url, /^https:\/\/www\.usda\.gov\//);
   assert.match(renderArtifactMarkup({ requestId: "recipe", status: "ready", capability: "search", operation: "search", workspace: "live-knowledge", artifact: { ...artifact("list", "Recipe"), links: [{ label: "Open source", url: "https://www.usda.gov/" }] } }), /evidence-source-link/);
+  assert.match(renderArtifactMarkup({ requestId: "resume", status: "ready", capability: "resume", operation: "create", workspace: "workforce", artifact: { ...artifact("form", "Resume"), fields: [{ id: "experience", label: "Experience", type: "textarea", value: "Team lead" }] } }), /Work experience/);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
