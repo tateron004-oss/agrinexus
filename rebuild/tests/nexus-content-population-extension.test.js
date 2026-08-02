@@ -11,13 +11,19 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
 }
 
 async function main() {
+  const hiddenWorkspaceDocument = { getElementById() { return { hidden: true }; } };
+  const visibleWorkspaceDocument = { getElementById() { return { hidden: false }; } };
+  assert.equal(shouldIgnoreUnscopedTranscript("Ja.", hiddenWorkspaceDocument), true);
+  assert.equal(shouldIgnoreUnscopedTranscript("Physical problems", hiddenWorkspaceDocument), true);
+  assert.equal(shouldIgnoreUnscopedTranscript("Nexus, help with my maize crop.", hiddenWorkspaceDocument), false);
+  assert.equal(shouldIgnoreUnscopedTranscript("show me the second result", visibleWorkspaceDocument), false);
   const browserSource = fs.readFileSync(path.resolve(__dirname, "..", "browser", "nexus-content-population-extension.js"), "utf8");
   assert.doesNotMatch(browserSource, /function\s+planContentAction|extractMarketplace|extractMusicQuery|pharmacist question card/i);
   assert.match(browserSource, /previousArtifact/);

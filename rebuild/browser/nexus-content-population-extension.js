@@ -151,6 +151,12 @@
     return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
   }
 
+  function shouldIgnoreUnscopedTranscript(command, documentObject) {
+    if (/^(?:(?:hey|hello)\s+)?nexus\b/i.test(normalize(command))) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    return !workspace || workspace.hidden;
+  }
+
   function shouldShieldGuidedFieldRoute(command, requestedWorkspace, documentObject) {
     const workspace = documentObject?.getElementById?.("nexus-workspace");
     if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() === normalize(requestedWorkspace).toLowerCase()) return false;
@@ -631,6 +637,10 @@
       if (receipt.type !== "transcript.final") return;
       const command = normalize(receipt.detail && receipt.detail.transcript);
       if (!command) return;
+      if (shouldIgnoreUnscopedTranscript(command, this.document)) {
+        this.stage("transcript.unscoped-preworkspace-ignored", { command });
+        return;
+      }
       const applicationRoute = isApplicationRouteCommand(command);
       if (applicationRoute && shieldApplicationRouteFromGuidedEntry(command, this.document)) {
         this.stage("transcript.application-route-shielded", { command, workspace: this.activeWorkspace });
@@ -861,7 +871,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
