@@ -2,8 +2,16 @@
 
 const assert = require("node:assert/strict");
 const { NexusBrowserRuntime } = require("../nexus-core/browser-runtime");
+const { normalizeGuidedEntryTranscript } = require("../nexus-core/guided-entry-transcript-normalizer");
 
 async function main() {
+  const compactWake = normalizeGuidedEntryTranscript("Nextis set location to Nakuru, Kenya.", {
+    fields: [{ key: "location", label: "Location" }],
+    schema: { fields: [{ key: "location", aliases: ["location", "city", "region"] }] }
+  });
+  assert.equal(compactWake.normalized, "Nexus set location to Nakuru, Kenya.");
+  assert.ok(compactWake.rules.includes("wake-alias-to-nexus"));
+
   const receipts = [];
   const sent = [];
   const opened = [];
