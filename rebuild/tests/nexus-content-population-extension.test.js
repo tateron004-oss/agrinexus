@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -262,6 +262,15 @@ async function main() {
   assert.equal(inputTypeForField({ id: "time", label: "Date and time", type: "date" }), "text");
   assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
   assert.equal(outcomeKind("search", "workforce"), "application");
+  const readyResult = (capability, artifact) => ({ status: "ready", capability, artifact });
+  assert.equal(validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "https://sources.example/crop" }] })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "" }] })), /Every image result/);
+  assert.equal(validateReadyArtifactContract(readyResult("search", { items: [{ sourceUrl: "https://sources.example/result" }] })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("listings", { items: [{ title: "Unverified listing" }] })), /Every live list result/);
+  assert.equal(validateReadyArtifactContract(readyResult("map", { media: { kind: "map", embedUrl: "https://www.openstreetmap.org/export/embed.html", sourceUrl: "https://www.openstreetmap.org/", route: { focus: { lat: 39.8, lon: -98.6 } } } })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("map", { media: { kind: "map", embedUrl: "https://www.openstreetmap.org/export/embed.html", sourceUrl: "https://www.openstreetmap.org/", route: {} } })), /verified viewport/);
+  assert.equal(validateReadyArtifactContract(readyResult("music", { media: { kind: "audio", state: "playing", embedUrl: "https://audio.example/preview.m4a", sourceUrl: "https://music.example/track" } })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("music", { media: { kind: "audio", state: "playing", embedUrl: "", sourceUrl: "https://music.example/track" } })), /playable, source-bound/);
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
   const recipeFallback = applicationDeadlineFallback({ workspace: "live-knowledge", command: "Nexus, show sources for an apple pie recipe with ingredients and steps.", requestId: "recipe-fallback" });
   assert.equal(recipeFallback, null, "Static recipes must not masquerade as live source retrieval.");

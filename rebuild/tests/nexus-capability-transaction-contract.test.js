@@ -31,6 +31,8 @@ async function main() {
 
   for (const phrase of [
     "live weather in Nairobi", "United States on a fresh map", "maize diseases",
+    "search the internet for current soil restoration evidence", "bicycle repair shops near Windhoek",
+    "play a public preview of Stevie Wonder music",
     "Agriculture Help and keep the visible workspace synchronized"
   ]) assert.ok(physical.includes(phrase), `Physical production contract is missing ${phrase}.`);
   assert.match(workflow, /nexus-windows-physical-certification\.spec\.js/);

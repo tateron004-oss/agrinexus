@@ -11,6 +11,9 @@ const journeys = [
   { id: "nairobi-weather", workspace: "live-knowledge", command: "Nexus, show today's live weather in Nairobi, Kenya.", kind: "weather" },
   { id: "united-states-map", workspace: "maps", command: "Nexus, reset the map and show the United States on a fresh map.", kind: "map" },
   { id: "agriculture-images", workspace: "agriculture", command: "Nexus, show source-labeled pictures of possible maize diseases.", kind: "images" },
+  { id: "internet-sources", workspace: "live-knowledge", command: "Nexus, search the internet for current soil restoration evidence in the Sahel.", kind: "search" },
+  { id: "source-listings", workspace: "maps", command: "Nexus, show bicycle repair shops near Windhoek, Namibia, on the map.", kind: "listings" },
+  { id: "playable-music", workspace: "music", command: "Nexus, play a public preview of Stevie Wonder music.", kind: "music" },
   { id: "agriculture-open", workspace: "agriculture", command: "Nexus, open Agriculture Help.", kind: "application", keepOpen: true },
   { id: "agriculture-reopen-visible", workspace: "agriculture", command: "Nexus, reopen Agriculture Help and keep the visible workspace synchronized.", kind: "application" }
 ];
@@ -132,6 +135,19 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
         const image = page.locator("#nexus-app-surface img[src]").first();
         await expect(image).toBeVisible();
         await expect.poll(() => image.evaluate(node => node.naturalWidth >= 120 && node.naturalHeight >= 90), { timeout: 15000 }).toBe(true);
+        await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
+      } else if (["search", "listings"].includes(journey.kind)) {
+        const records = page.locator("#nexus-workspace [data-nexus-item], #nexus-evidence-surface article");
+        await expect.poll(() => records.count(), { timeout: 20000 }).toBeGreaterThan(0);
+        await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
+      } else if (journey.kind === "music") {
+        const player = page.locator("#nexus-content-music-player[src], #nexus-content-music-frame[src], #nexus-music-frame[src]");
+        await expect.poll(() => player.count(), { timeout: 20000 }).toBeGreaterThan(0);
+        await expect(player.first()).toBeVisible();
+        const audio = page.locator("#nexus-content-music-player[src]");
+        if (await audio.count()) {
+          await expect.poll(() => audio.evaluate(node => !node.error && node.readyState >= 1 && !node.paused), { timeout: 20000 }).toBe(true);
+        }
         await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
       } else {
         await expect(page.locator("#nexus-app-surface input, #nexus-app-surface textarea, #nexus-app-surface select").first()).toBeVisible();

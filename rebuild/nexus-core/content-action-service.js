@@ -160,7 +160,8 @@ function explicitFastProviderGoal(command) {
   if (!/\b(?:search|find|show)\b.*\b(?:jobs?|employment|work opportunities)\b/i.test(value)) return null;
   const query = clean(value
     .replace(/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*/i, "")
-    .replace(/^(?:search|find|show)(?:\s+me)?\s+(?:for\s+)?/i, ""), 500) || "current job opportunities";
+    .replace(/^(?:search|find|show)(?:\s+me)?\s+(?:for\s+)?/i, "")
+    .replace(/[.!?]+$/g, ""), 500) || "current job opportunities";
   return {
     capability: "search", operation: "search", workspace: "workforce", query, location: "",
     needsLiveProvider: true, artifact: emptyArtifact("list", `Jobs: ${query}`),

@@ -112,6 +112,34 @@
     return "application";
   }
 
+  function validateReadyArtifactContract(result) {
+    if (!result || result.status !== "ready") return true;
+    const artifact = result.artifact || {};
+    const items = Array.isArray(artifact.items) ? artifact.items : [];
+    const media = artifact.media || {};
+    if (result.capability === "images") {
+      if (!items.length || items.some((item) => !safeUrl(item.imageUrl) || !safeUrl(item.sourceUrl))) {
+        throw new Error("Every image result must include a renderable image and its source.");
+      }
+    } else if (["search", "listings"].includes(result.capability)) {
+      if (!items.length || items.some((item) => !safeUrl(item.sourceUrl))) {
+        throw new Error("Every live list result must include a visible source record.");
+      }
+    } else if (result.capability === "map") {
+      const focus = media.route?.focus;
+      if (media.kind !== "map" || !safeUrl(media.embedUrl) || !safeUrl(media.sourceUrl)
+        || !Number.isFinite(Number(focus?.lat)) || !Number.isFinite(Number(focus?.lon))) {
+        throw new Error("The map result is not bound to a verified viewport and source.");
+      }
+    } else if (result.capability === "music") {
+      if (!["audio", "video"].includes(media.kind) || media.state !== "playing"
+        || !safeUrl(media.embedUrl) || !safeUrl(media.sourceUrl)) {
+        throw new Error("The music result does not include a playable, source-bound media item.");
+      }
+    }
+    return true;
+  }
+
   function applicationDeadlineFallback(detail) {
     void detail;
     return null;
@@ -882,6 +910,7 @@
       const root = this.document.querySelector(selector);
       if (!root) throw new Error("The requested result was replaced before acknowledgement.");
       if (result.status !== "ready") return;
+      validateReadyArtifactContract(result);
       const artifact = result.artifact || {};
       const links = [...root.querySelectorAll("a[href]")];
       if (result.capability === "weather") {
@@ -893,12 +922,27 @@
           Promise.all(images.map((image) => image.complete ? Promise.resolve() : new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); }))),
           new Promise((resolve) => this.window.setTimeout(resolve, 6000))
         ]);
-        if (!images.some((image) => Number(image.naturalWidth) >= 120 && Number(image.naturalHeight) >= 90)) throw new Error("The retrieved images could not be rendered visibly.");
+        if (images.length !== (artifact.items || []).length || images.some((image) => Number(image.naturalWidth) < 120 || Number(image.naturalHeight) < 90)) throw new Error("Every retrieved image must render visibly with its source.");
       } else if (result.capability === "map") {
         const focus = artifact.media?.route?.focus;
         if (!focus || !Number.isFinite(Number(focus.lat)) || !Number.isFinite(Number(focus.lon)) || !root.querySelector("#nexus-content-map-frame[src], .nexus-content-map-route") || !links.length) throw new Error("The requested geographic viewport did not become visible.");
       } else if (["search", "listings"].includes(result.capability)) {
-        if (!(artifact.items || []).some((item) => safeUrl(item.sourceUrl)) || !links.length) throw new Error("The live provider returned no visible source records.");
+        if (links.length < (artifact.items || []).length) throw new Error("The live provider returned list records without visible source links.");
+      } else if (result.capability === "music") {
+        const audio = root.querySelector("#nexus-content-music-player[src]");
+        const frame = root.querySelector("#nexus-content-music-frame[src]");
+        if ((!audio && !frame) || !links.length) throw new Error("The requested music player and source did not become visible.");
+        if (audio) {
+          if (Number(audio.readyState) < 1 && !audio.error) {
+            await Promise.race([
+              new Promise((resolve) => { audio.addEventListener("loadedmetadata", resolve, { once: true }); audio.addEventListener("canplay", resolve, { once: true }); audio.addEventListener("error", resolve, { once: true }); }),
+              new Promise((resolve) => this.window.setTimeout(resolve, 8000))
+            ]);
+          }
+          if (audio.error || Number(audio.readyState) < 1) throw new Error("The requested music source could not be loaded for playback.");
+          try { await audio.play(); } catch (error) { throw new Error(`The requested music source could not start playback: ${normalize(error.message)}`); }
+          if (audio.paused) throw new Error("The requested music source remained paused instead of playing.");
+        }
       } else {
         const hasApplicationContent = root.querySelectorAll("input, textarea, select").length > 0
           || (artifact.sections || []).some((section) => normalize(section.body) || (section.items || []).some((item) => normalize(item)))
@@ -955,7 +999,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
