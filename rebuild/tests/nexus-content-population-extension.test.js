@@ -301,6 +301,7 @@ async function main() {
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of maize diseases.", "agriculture"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of possible lmazed diseases."), false);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, help me create a résumé.", "workforce"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, create a provider card for my doctor.", "health"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, sell 50 bags of maize.", "marketplace"), false);

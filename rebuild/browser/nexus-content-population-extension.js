@@ -334,10 +334,12 @@
   function shouldYieldToProtectedRenderer(command, workspace = "") {
     const normalizedCommand = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const normalizedWorkspace = normalize(workspace).toLowerCase();
+    const requestsImages = /\b(?:show|display|find|search|research|compare)\b.*\b(?:image|images|picture|pictures|photo|photos)\b/i.test(normalizedCommand);
     const discoversPlaces = /\b(?:shops?|stores?|business(?:es)?|services?|venues?|sellers?|suppliers?|clinics?|hospitals?|pharmacies|restaurants?|cafes?|hotels?|markets?|garages?)\b/i.test(normalizedCommand);
     const requestsRoute = /\b(?:route|directions?|navigate|navigation)\b|\bfrom\b.+\bto\b/i.test(normalizedCommand);
     if (/\bapple pie recipe\b/i.test(normalizedCommand)) return false;
     if (discoversPlaces && !requestsRoute && /\b(?:map|near|nearby|around|in)\b/i.test(normalizedCommand)) return false;
+    if (!normalizedWorkspace && requestsImages) return false;
     if (["maps", "music", "live-knowledge"].includes(normalizedWorkspace)) return true;
     if (normalizedWorkspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(normalizedCommand)) return true;
     if (normalizedWorkspace === "workforce" && /\b(resume|curriculum vitae|cv)\b/i.test(normalizedCommand)) return true;
