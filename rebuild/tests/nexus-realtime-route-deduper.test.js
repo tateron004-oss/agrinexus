@@ -15,6 +15,8 @@ assert.equal(isDirectResumeCommand("Nexus, sell 50 bags of maize."), false);
 assert.equal(isDirectApplicationCommand("Nexus, record my blood pressure 140 over 90."), true);
 assert.equal(isDirectApplicationCommand("Nexus, show my offline queue."), true);
 assert.equal(isDirectApplicationCommand("Nexus, set queued request to find maize treatment guidance."), false);
+assert.equal(isDirectApplicationCommand("Nexus sell fifty bags of maize."), false);
+assert.equal(isDirectApplicationCommand("Nexus sell 50 bags of maize."), true);
 assert.equal(isDirectApplicationCommand("How are you today?"), false);
 assert.equal(normalizeAgriculturalTranscript("Nexus, show pictures of possible Mays diseases."), "Nexus, show pictures of possible maize diseases.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Mays' treatment guidance."), "Nexus, find maize treatment guidance.");
@@ -53,7 +55,8 @@ const windowObject = {
 assert.equal(install(windowObject), true);
 new PeerConnection().createDataChannel("oai-events");
 let coreData = "";
-channel.addEventListener("message", (event) => { coreData = event.data; });
+let coreMessageCount = 0;
+channel.addEventListener("message", (event) => { coreData = event.data; coreMessageCount += 1; });
 const receive = (message) => {
   const event = { data: JSON.stringify(message) };
   for (const listener of listeners.get("message") || []) listener(event);
@@ -90,5 +93,13 @@ receive({
   item: { type: "function_call", name: "route_nexus_command", call_id: "call-3" }
 });
 assert.deepEqual(sent, [{ type: "response.cancel", response_id: "response-3" }]);
+const beforeCancelledCompletion = coreMessageCount;
+receive({
+  type: "response.function_call_arguments.done",
+  response_id: "response-3",
+  name: "route_nexus_command",
+  arguments: "{ \"command\":"
+});
+assert.equal(coreMessageCount, beforeCancelledCompletion);
 
 console.log("Nexus realtime route deduper: PASS");

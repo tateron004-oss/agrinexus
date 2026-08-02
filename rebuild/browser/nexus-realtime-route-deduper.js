@@ -16,7 +16,8 @@
     if (!wake) return false;
     const request = normalize(wake[1]);
     if (/^(?:set|change|correct|update|add|replace|read|review|save|reopen|restore|submit|confirm)\b/i.test(request)) return false;
-    return /^(?:help|open|start|begin|record|find|search|plan|play|sell|show|remind|create|make|build)\b/i.test(request);
+    if (/^sell\b/i.test(request)) return /^sell\s+\d/i.test(request);
+    return /^(?:help|open|start|begin|record|find|search|plan|play|show|remind|create|make|build)\b/i.test(request);
   }
 
   function normalizeAgriculturalTranscript(value) {
@@ -45,6 +46,7 @@
       const channel = nativeCreateDataChannel.apply(this, args);
       const nativeAddEventListener = channel.addEventListener.bind(channel);
       const transcripts = new Map();
+      const cancelledResponseIds = new Set();
       let latestInputItemId = "";
       nativeAddEventListener("message", (event) => {
         let message;
@@ -62,6 +64,7 @@
         if (message.type !== "response.output_item.added" || message.item?.type !== "function_call" || message.item?.name !== "route_nexus_command") return;
         const transcript = transcripts.get(latestInputItemId) || "";
         if (!isDirectApplicationCommand(transcript) || channel.readyState !== "open") return;
+        if (message.response_id) cancelledResponseIds.add(normalize(message.response_id));
         channel.send(JSON.stringify({ type: "response.cancel", ...(message.response_id ? { response_id: message.response_id } : {}) }));
         windowObject.dispatchEvent?.(new windowObject.CustomEvent("nexus.realtime.route-deduplicated", {
           detail: Object.freeze({ command: normalize(transcript), capability: isDirectResumeCommand(transcript) ? "resume" : "application", responseId: normalize(message.response_id) })
@@ -70,6 +73,9 @@
       channel.addEventListener = function addNormalizedRealtimeListener(type, listener, options) {
         if (type !== "message" || !listener) return nativeAddEventListener(type, listener, options);
         return nativeAddEventListener(type, function normalizedRealtimeListener(event) {
+          let message;
+          try { message = JSON.parse(String(event.data || "")); } catch { message = null; }
+          if (message?.type === "response.function_call_arguments.done" && cancelledResponseIds.has(normalize(message.response_id))) return;
           const data = normalizeRealtimeMessageData(event.data);
           if (data === event.data) {
             if (typeof listener === "function") return listener.call(this, event);
