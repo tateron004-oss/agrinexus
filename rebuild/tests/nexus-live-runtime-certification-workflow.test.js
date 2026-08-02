@@ -11,8 +11,11 @@ assert.match(workflow, /NEXUS_CLEAN_BASE_URL: https:\/\/nexus-genesis-certified\
 assert.doesNotMatch(workflow, /agrinexus-platform\.onrender\.com\/certification/);
 assert.match(workflow, /shell: cmd/);
 assert.match(workflow, /git log -1 --format\^=%%H -- rebuild\/browser\/nexus-clean\.bundle\.js/);
-assert.match(workflow, /NEXUS_EXPECTED_RELEASE_SHA=%RUNTIME_SHA%/);
-assert.match(workflow, /NEXUS_EXPECTED_DEPLOYMENT_SHA=%GITHUB_SHA%/);
+assert.match(workflow, /git log -1 --format\^=%%H -- server\.js rebuild\/production-certification-adapter\.js rebuild\/production-capability-bridge-server\.js rebuild\/browser rebuild\/nexus-core/);
+assert.match(workflow, /NEXUS_EXPECTED_RELEASE_SHA=%DEPLOYMENT_SHA%/);
+assert.match(workflow, /NEXUS_EXPECTED_DEPLOYMENT_SHA=%DEPLOYMENT_SHA%/);
+assert.match(workflow, /NEXUS_EXPECTED_RUNTIME_SOURCE_SHA=%RUNTIME_SHA%/);
+assert.doesNotMatch(workflow, /NEXUS_EXPECTED_DEPLOYMENT_SHA=%GITHUB_SHA%/);
 assert.match(workflow, /nexus-production-certification-preflight\.js/);
 assert.match(workflow, /nexus-release-certification-controller\.js verify-deployment/);
 assert.match(workflow, /nexus-windows-physical-certification\.spec\.js/);

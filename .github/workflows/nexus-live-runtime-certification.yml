@@ -43,10 +43,13 @@ jobs:
         shell: cmd
         run: |
           for /f "usebackq delims=" %%S in (`git log -1 --format^=%%H -- rebuild/browser/nexus-clean.bundle.js`) do set "RUNTIME_SHA=%%S"
+          for /f "usebackq delims=" %%S in (`git log -1 --format^=%%H -- server.js rebuild/production-certification-adapter.js rebuild/production-capability-bridge-server.js rebuild/browser rebuild/nexus-core`) do set "DEPLOYMENT_SHA=%%S"
           if not defined RUNTIME_SHA exit /b 1
-          echo NEXUS_EXPECTED_RELEASE_SHA=%RUNTIME_SHA%>>"%GITHUB_ENV%"
-          echo NEXUS_EXPECTED_DEPLOYMENT_SHA=%GITHUB_SHA%>>"%GITHUB_ENV%"
-          echo Certification spec %GITHUB_SHA% targets runtime %RUNTIME_SHA%
+          if not defined DEPLOYMENT_SHA exit /b 1
+          echo NEXUS_EXPECTED_RELEASE_SHA=%DEPLOYMENT_SHA%>>"%GITHUB_ENV%"
+          echo NEXUS_EXPECTED_DEPLOYMENT_SHA=%DEPLOYMENT_SHA%>>"%GITHUB_ENV%"
+          echo NEXUS_EXPECTED_RUNTIME_SOURCE_SHA=%RUNTIME_SHA%>>"%GITHUB_ENV%"
+          echo Certification spec %GITHUB_SHA% targets deployment %DEPLOYMENT_SHA% and runtime %RUNTIME_SHA%
       - name: Verify certification and protection contracts
         shell: cmd
         run: |

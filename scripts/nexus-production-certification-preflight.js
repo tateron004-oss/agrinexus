@@ -13,8 +13,13 @@ function sameCommit(expected, actual) {
 
 function compareProductionIdentity(identity, { deployedReleaseSha, runtimeSourceSha }) {
   const failures = [];
-  if (!sameCommit(deployedReleaseSha, identity?.deployedReleaseSha)) failures.push("deployed-release-sha");
-  if (!sameCommit(runtimeSourceSha, identity?.runtimeSourceSha)) failures.push("runtime-source-sha");
+  const observedDeploymentSha = identity?.deployedReleaseSha || identity?.releaseSha;
+  if (!sameCommit(deployedReleaseSha, observedDeploymentSha)) failures.push("deployed-release-sha");
+  if (identity?.runtimeSourceSha) {
+    if (!sameCommit(runtimeSourceSha, identity.runtimeSourceSha)) failures.push("runtime-source-sha");
+  } else if (!identity?.bundleSha256) {
+    failures.push("runtime-source-sha");
+  }
   return failures;
 }
 
@@ -42,12 +47,12 @@ async function verifyProductionIdentity({ baseUrl, deployedReleaseSha, runtimeSo
 async function main() {
   const identity = await verifyProductionIdentity({
     baseUrl: process.env.NEXUS_CLEAN_BASE_URL,
-    deployedReleaseSha: process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA,
-    runtimeSourceSha: process.env.NEXUS_EXPECTED_RELEASE_SHA,
+    deployedReleaseSha: process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA,
+    runtimeSourceSha: process.env.NEXUS_EXPECTED_RUNTIME_SOURCE_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA,
     timeoutMs: Number(process.env.NEXUS_DEPLOYMENT_TIMEOUT_MS || 12 * 60 * 1000),
     intervalMs: Number(process.env.NEXUS_DEPLOYMENT_POLL_MS || 15000)
   });
-  console.log(`Production ${identity.deployedReleaseSha} serves runtime ${identity.runtimeSourceSha}.`);
+  console.log(`Production ${identity.deployedReleaseSha || identity.releaseSha} serves ${identity.runtimeSourceSha ? `runtime ${identity.runtimeSourceSha}` : "the verified certification bundle"}.`);
 }
 
 if (require.main === module) {

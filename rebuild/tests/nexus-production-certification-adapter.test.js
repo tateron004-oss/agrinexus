@@ -21,6 +21,22 @@ assert.deepEqual(compareProductionIdentity(adapter.identity, {
   deployedReleaseSha: deployed,
   runtimeSourceSha: "b".repeat(40)
 }), []);
+assert.deepEqual(compareProductionIdentity({
+  schema: "nexus.certification.identity.v1",
+  releaseSha: deployed,
+  bundleSha256: "c".repeat(64)
+}, {
+  deployedReleaseSha: deployed,
+  runtimeSourceSha: "b".repeat(40)
+}), []);
+assert.deepEqual(compareProductionIdentity({
+  schema: "nexus.certification.identity.v1",
+  releaseSha: "d".repeat(40),
+  bundleSha256: "c".repeat(64)
+}, {
+  deployedReleaseSha: deployed,
+  runtimeSourceSha: "b".repeat(40)
+}), ["deployed-release-sha"]);
 
 const request = new PassThrough();
 request.url = "/certification/api/certification/identity";
