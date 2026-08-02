@@ -125,7 +125,7 @@ async function main() {
     await context.route("https://api.openai.com/v1/realtime/calls", (route) => route.fulfill({ status: 200, contentType: "application/sdp", body: "answer" }));
     await context.route(`${baseUrl}/api/visual/content`, async (route) => {
       const body = route.request().postDataJSON(); requests.push(body);
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(resolved(body)) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...resolved(body), requestId: body.requestId }) });
     });
     await context.route("https://www.youtube-nocookie.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html><body>media</body></html>" }));
     await context.route("https://www.openstreetmap.org/export/embed.html**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html><body>map</body></html>" }));

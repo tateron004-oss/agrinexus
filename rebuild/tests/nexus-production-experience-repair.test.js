@@ -63,12 +63,11 @@ async function main() {
     }
   });
   const clinicRecovery = await clinicRecoveryService.execute({ command: "Nexus, find a mobile clinic in Kenya." });
-  assert.equal(clinicRecovery.status, "ready");
+  assert.equal(clinicRecovery.status, "failed");
   assert.equal(clinicRecovery.workspace, "mobile-clinic");
-  assert.equal(clinicRecovery.evidence.status, "truthful-no-results-recovery");
   assert.ok(clinicProviderCalls >= 3);
-  assert.ok(clinicRecovery.artifact.links.some(link => /openstreetmap\.org\/search/.test(link.url)));
-  assert.match(clinicRecovery.acknowledgement, /No verified clinic listings were returned/i);
+  assert.equal(clinicRecovery.acknowledgement, "");
+  assert.match(clinicRecovery.recovery.message, /returned no verified clinic listings|provider was unavailable/i);
   assert.doesNotMatch(clinicRecovery.acknowledgement, /Clinic listings are visible/i);
 
   let workforcePlaceCalls = 0;

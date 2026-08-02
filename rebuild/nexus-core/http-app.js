@@ -85,7 +85,7 @@ function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = nu
       try {
         const session = sessionAuthority.verify(readBearer(request.headers.authorization));
         const body = await readJson(request);
-        const result = url.pathname.endsWith("/weather")
+        let result = url.pathname.endsWith("/weather")
           ? await visualDataService.weather(body.command)
           : url.pathname.endsWith("/images")
             ? await visualDataService.images(body.command)
@@ -95,6 +95,11 @@ function createNexusCleanHttpHandler({ voiceSessionService, evidenceService = nu
                 : null,
               map: mapProvider ? (command) => mapProvider(command) : null
             });
+        if (url.pathname.endsWith("/content")) {
+          const requestId = String(body.requestId || "").trim();
+          if (!requestId) throw new Error("A request-owned content ID is required.");
+          result = { ...result, requestId };
+        }
         onReceipt(receipt("visual-data.ready", { status: result.status }));
         return json(response, 200, result);
       } catch (error) {

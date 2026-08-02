@@ -103,6 +103,7 @@ jobs:
           node rebuild/tests/nexus-production-certification-adapter.test.js
           node rebuild/tests/nexus-live-runtime-certification-workflow.test.js
           node rebuild/tests/nexus-windows-certification-orchestration.test.js
+          node rebuild/tests/nexus-capability-transaction-contract.test.js
       - name: Reset retained runner state
         shell: cmd
         run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/nexus-windows-certification-reset.ps1
@@ -117,6 +118,17 @@ jobs:
         run: |
           node scripts/nexus-production-certification-preflight.js
           node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Require three fresh uncached production capability sessions
+        shell: powershell
+        env:
+          NEXUS_PRODUCTION_REPAIR_BASE_URL: https://nexus-genesis-certified.onrender.com
+          NEXUS_LIVE_PROVIDER_BASE_URL: https://nexus-genesis-certified.onrender.com
+        run: |
+          1..3 | ForEach-Object {
+            $env:NEXUS_PRODUCTION_SESSION_ID = "session-$_"
+            node rebuild/tests/nexus-production-experience-windows-voice.js
+            if ($LASTEXITCODE -ne 0) { throw "Production capability session $_ failed." }
+          }
       - name: Run every physical voice application journey
         shell: cmd
         env:

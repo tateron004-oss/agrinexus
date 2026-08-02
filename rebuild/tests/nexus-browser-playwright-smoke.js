@@ -201,7 +201,7 @@ async function main() {
         artifact.items = [{ id: "source-1", title: "Open-Meteo", description: "Current weather source", sourceName: "Open-Meteo", sourceUrl: "https://open-meteo.com/", imageUrl: "", metadata: [] }];
       }
       const result = {
-        schema: "nexus.content.result.v2", requestId: `smoke-${Date.now()}-${Math.random()}`,
+        schema: "nexus.content.result.v2", requestId: body.requestId,
         status: "ready", capability, operation, workspace, query: body.command,
         artifact, acknowledgement: "The requested capability is visible.", evidence: null, recovery: null
       };

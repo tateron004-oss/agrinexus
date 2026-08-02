@@ -5,8 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
-const { createContentActionService } = require("./nexus-core/content-action-service");
 const { createOpenMapProvider } = require("./nexus-core/map-service");
+const { createVisualDataService } = require("./nexus-core/visual-data-service");
 const { loadLocalEnvFiles } = require("../server/local-env-loader");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -138,8 +138,8 @@ function legacyGet(pathname, request) {
 
 function injectBridge(html) {
   const tags = [
-    '<link rel="stylesheet" href="/nexus-production-capability-bridge.css?v=production-experience-1">',
-    '<script src="/nexus-production-capability-bridge.js?v=production-experience-1"></script>'
+    '<link rel="stylesheet" href="/nexus-production-capability-bridge.css?v=transaction-contract-2">',
+    '<script src="/nexus-production-capability-bridge.js?v=transaction-contract-2"></script>'
   ].join("\n  ");
   if (html.includes("/nexus-production-capability-bridge.js")) return html;
   return html.replace("<script src=\"/app.js", `${tags}\n  <script src=\"/app.js`);
@@ -163,6 +163,10 @@ async function handleCapability(request, response) {
     }
   });
   const body = await readJson(request);
+  const requestId = String(body.requestId || "").trim();
+  if (!/^production-capability-[A-Za-z0-9._:-]{8,180}$/.test(requestId)) {
+    return json(response, 400, { error: "invalid-capability-request-id", message: "A valid request-owned capability ID is required." });
+  }
   const startedAt = Date.now();
   const providerTrace = [];
   const trackedFetch = async (input, options = {}) => {
@@ -181,13 +185,29 @@ async function handleCapability(request, response) {
       record.elapsedMs = Date.now() - providerStartedAt;
     }
   };
-  const contentService = createContentActionService({ fetchImpl: trackedFetch });
+  const visualDataService = createVisualDataService({ fetchImpl: trackedFetch });
   const mapProvider = createOpenMapProvider({ fetchImpl: trackedFetch });
-  const result = await contentService.execute(body, {
+  const result = await visualDataService.content(body, {
     map: command => mapProvider(command)
+  });
+  const successfulProviderCalls = providerTrace.filter(item => Number(item.status) >= 200 && Number(item.status) < 400);
+  const liveCapability = ["weather", "images", "map", "search", "listings", "music"].includes(result.capability);
+  const providerSucceeded = result.status === "ready" && (!liveCapability || successfulProviderCalls.length > 0);
+  const receipt = Object.freeze({
+    schema: "nexus.capability.receipt.v1",
+    requestId,
+    capability: result.capability,
+    workspace: result.workspace,
+    query: result.query,
+    providerSucceeded,
+    providerCount: successfulProviderCalls.length,
+    weather: result.capability === "weather" ? result.evidence && result.evidence.weather || null : null,
+    issuedAt: new Date().toISOString()
   });
   return json(response, 200, {
     ...result,
+    requestId,
+    receipt,
     timing: { totalMs: Date.now() - startedAt },
     providerTrace,
     productionBridge: true

@@ -58,7 +58,7 @@ async function main() {
     await page.waitForTimeout(700);
     await page.waitForFunction(async () => {
       try {
-        const response = await fetch("/api/capability/content", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ command: "Nexus capability authentication readiness check" }) });
+        const response = await fetch("/api/capability/content", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "production-capability-readiness-browser", command: "Nexus capability authentication readiness check" }) });
         return response.status === 200;
       } catch { return false; }
     }, null, { timeout: 20000 });

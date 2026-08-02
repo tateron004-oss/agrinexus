@@ -117,6 +117,44 @@ function emptyArtifact(kind = "status", title = "") {
   return { kind, title, description: "", fields: [], sections: [], items: [], links: [], media: emptyMedia() };
 }
 
+const APPLICATION_WORKSPACES = Object.freeze({
+  agriculture: ["Agriculture Help", ["Crop or livestock", "Location", "Question or observation"]],
+  health: ["Health & Chronic Care", ["Reading or concern", "When observed", "Symptoms or notes"]],
+  telehealth: ["Telehealth Intake", ["Reason for visit", "Preferred date", "Care provider"]],
+  "mobile-clinic": ["Mobile Clinic", ["Location", "Care needed", "Travel distance"]],
+  pharmacy: ["Pharmacy Support", ["Medication", "Request type", "Pharmacy or location"]],
+  learning: ["Learning & Literacy", ["Topic or skill", "Learning level", "Language"]],
+  workforce: ["Jobs & Workforce", ["Job or skill", "Location", "Work preference"]],
+  marketplace: ["AgriTrade Marketplace", ["Product", "Quantity", "Location"]],
+  reminders: ["Reminders", ["Reminder", "Date and time", "Repeat"]],
+  offline: ["Offline Queue", ["Queued request", "Connection status", "Sync priority"]]
+});
+
+function applicationWorkspaceArtifact(workspace) {
+  const definition = APPLICATION_WORKSPACES[clean(workspace, 120)];
+  if (!definition) return null;
+  const artifact = emptyArtifact("form", definition[0]);
+  artifact.description = `${definition[0]} is open with its application fields visible and synchronized to this request.`;
+  artifact.fields = definition[1].map((label, index) => ({
+    id: label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `field-${index + 1}`,
+    label, type: index === 2 ? "textarea" : "text", value: "", required: index < 2, options: []
+  }));
+  return artifact;
+}
+
+function explicitApplicationWorkspace(command) {
+  const value = clean(command, 1000).toLowerCase();
+  if (!/\b(open|show|display|reopen|return to|go to)\b/.test(value)) return "";
+  const aliases = [
+    ["mobile-clinic", /\bmobile clinic\b/], ["telehealth", /\btelehealth(?: intake)?\b/],
+    ["agriculture", /\bagriculture help\b/], ["health", /\bhealth (?:and|&) chronic care\b|\bchronic care\b/],
+    ["pharmacy", /\bpharmacy support\b/], ["learning", /\blearning (?:and|&) literacy\b/],
+    ["workforce", /\bjobs? (?:and|&) workforce\b/], ["marketplace", /\bagritrade marketplace\b/],
+    ["reminders", /\breminders?\b/], ["offline", /\boffline queue\b/]
+  ];
+  return aliases.find(([, pattern]) => pattern.test(value))?.[0] || "";
+}
+
 function outputText(payload) {
   if (clean(payload && payload.output_text, 200000)) return payload.output_text;
   for (const item of payload && payload.output || []) {
@@ -782,7 +820,14 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
   async function execute(request = {}, context = {}) {
     let goal;
     try {
-      goal = normalizeGoalRoute(await resolver.resolve(request));
+      const explicitWorkspace = explicitApplicationWorkspace(request.command);
+      goal = explicitWorkspace
+        ? {
+          capability: "workspace", operation: "open", workspace: explicitWorkspace, query: clean(request.command), location: "",
+          needsLiveProvider: false, artifact: applicationWorkspaceArtifact(explicitWorkspace),
+          acknowledgement: `${APPLICATION_WORKSPACES[explicitWorkspace][0]} is visibly open and synchronized with this request.`
+        }
+        : normalizeGoalRoute(await resolver.resolve(request));
     } catch (error) {
       goal = localResilienceGoal(request);
       if (!goal) {
@@ -794,24 +839,24 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     try {
       let artifact = goal.artifact;
       let evidence = null;
+      if (goal.capability === "workspace") {
+        const applicationArtifact = applicationWorkspaceArtifact(goal.workspace);
+        const hasContent = (artifact.fields || []).length || (artifact.sections || []).length || (artifact.items || []).length;
+        if (applicationArtifact && !hasContent) {
+          artifact = applicationArtifact;
+          goal = { ...goal, acknowledgement: `${applicationArtifact.title} is visibly open and synchronized with this request.` };
+        }
+      }
       if (goal.capability === "music" && goal.operation === "play") artifact = await music(goal);
       else if (goal.capability === "media-control" && goal.operation === "stop") {
         artifact = emptyArtifact("media", "Playback stopped"); artifact.description = "The visible media player was cleared."; artifact.media = emptyMedia("stopped");
       } else if (goal.capability === "images") artifact = await images(goal);
       else if (goal.capability === "listings") {
         const listingResult = await listings(goal);
-        artifact = listingResult.artifact;
         if (listingResult.recovered) {
-          goal = {
-            ...goal,
-            acknowledgement: "No verified clinic listings were returned. A visible recovery workspace with a current source search and next steps is open."
-          };
-          evidence = {
-            status: "truthful-no-results-recovery",
-            provider: "OpenStreetMap / Nominatim",
-            error: listingResult.providerError || null
-          };
+          throw new Error(listingResult.providerError || listingResult.artifact.description || "The live place provider returned no verified listings.");
         }
+        artifact = listingResult.artifact;
       }
       else if (goal.capability === "search") ({ artifact, evidence } = await research(goal, { ...context, command: request.command }));
       else if (goal.capability === "map") {
@@ -845,6 +890,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
         artifact = emptyArtifact("card", `Weather: ${weather.location}`);
         artifact.description = `${weather.temperatureC}°C now · high ${weather.highC}°C · low ${weather.lowC}°C · rain chance ${weather.rainChance}%`;
         artifact.links = [{ label: "Open weather source", url: weather.sourceUrl }];
+        evidence = { status: weather.status, provider: weather.sourceName || "Open-Meteo", weather };
       } else if (goal.capability === "question-card") {
         artifact = normalizeArtifact(artifact);
         const cardText = `${artifact.description} ${(artifact.sections || []).map(section => `${section.heading} ${section.body} ${(section.items || []).join(" ")}`).join(" ")}`;

@@ -16,7 +16,10 @@
     lastTranscriptAt: 0,
     realtimeChannel: null,
     lastAgentEndAt: 0,
-    lastUserSpeechAt: 0
+    lastUserSpeechAt: 0,
+    activeRequestId: "",
+    transcriptGeneration: 0,
+    fallbackTimers: new Set()
   };
 
   function localResult(capability, operation, acknowledgement, extra = {}) {
@@ -130,7 +133,7 @@
     if (!value) return false;
     const lifecycleRequest = /\b(close|dismiss|cancel|retry|go back|previous result|pause|resume|stop speaking|read .* aloud|increase .* text|larger .* text|easier to read|return to .*conversation)\b/.test(value);
     const visualOutcome = /\b(show|display|open|find|search|research|look up|create|make|build|draft|prepare|write|play|map|route|directions|remind|revise|change|add|fill|complete|review|print|share|stop|put|set|update)\b/.test(value);
-    const artifactOrLiveSource = /\b(image|picture|photo|source|website|map|route|direction|music|song|artist|genre|resume|résumé|cv|document|report|form|intake|card|questions?|marketplace|listing|draft|reminder|weather|forecast|places?|shops?|results?)\b/.test(value);
+    const artifactOrLiveSource = /\b(image|picture|photo|source|website|map|route|direction|music|song|artist|genre|resume|résumé|cv|document|report|form|intake|card|questions?|marketplace|listing|draft|reminder|weather|forecast|places?|shops?|results?|agriculture|farming|health|telehealth|clinic|pharmacy|learning|literacy|workforce|jobs?|agritrade|offline queue)\b/.test(value);
     const contextualFollowUp = Boolean(state.currentResult) && /^(?:please\s+)?(?:change|revise|add|remove|fill|complete|review|print|share|show|play|stop|make|try|use|put|set|update)\b/.test(value);
     return lifecycleRequest || (visualOutcome && artifactOrLiveSource) || contextualFollowUp;
   }
@@ -258,6 +261,7 @@
     const old = target._leaflet_id && windowObject.L.DomUtil.get(target.id);
     if (old && old._leaflet_id) old._leaflet_id = null;
     const map = windowObject.L.map(target, { zoomControl: true });
+    target.__nexusLeafletMap = map;
     windowObject.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
@@ -281,7 +285,7 @@
     }));
   }
 
-  async function requestContent(command, signal) {
+  async function requestContent(command, requestId, signal) {
     const response = await nativeFetch("/api/capability/content", {
       method: "POST",
       credentials: "same-origin",
@@ -289,6 +293,7 @@
       signal,
       headers: { "content-type": "application/json", accept: "application/json", ...(state.sessionToken ? { "x-nexus-capability-session": state.sessionToken } : {}) },
       body: JSON.stringify({
+        requestId,
         command,
         activeWorkspace: state.currentResult && state.currentResult.workspace || null,
         previousArtifact: state.currentResult && state.currentResult.artifact || null,
@@ -303,7 +308,35 @@
       throw error;
     }
     if (payload.schema !== "nexus.content.result.v2" || !payload.artifact) throw new Error("Capability provider returned an invalid visual result.");
+    if (payload.requestId !== requestId || payload.receipt?.requestId !== requestId) throw new Error("Capability provider returned a result owned by another request.");
     return payload;
+  }
+
+  function assertProviderReceipt(result) {
+    const receipt = result && result.receipt;
+    if (!receipt || receipt.requestId !== result.requestId || receipt.capability !== result.capability) {
+      throw new Error("The provider did not return an identity-bound capability receipt.");
+    }
+    const artifact = result.artifact || {};
+    const linkedItems = (artifact.items || []).filter(item => safeUrl(item.sourceUrl));
+    const populatedFields = (artifact.fields || []).filter(field => clean(field.label) && (clean(field.value) || field.required));
+    const populatedSections = (artifact.sections || []).filter(section => clean(section.heading) && (clean(section.body) || (section.items || []).some(item => clean(item))));
+    const links = (artifact.links || []).filter(link => safeUrl(link.url));
+    if (result.status !== "ready") return;
+    if (result.capability === "weather") {
+      if (!receipt.providerSucceeded || !receipt.weather || !Number.isFinite(Number(receipt.weather.temperatureC)) || !links.length) throw new Error("No verified live weather receipt was returned.");
+    } else if (result.capability === "images") {
+      if (!receipt.providerSucceeded || !(artifact.items || []).some(item => safeUrl(item.imageUrl) && safeUrl(item.sourceUrl))) throw new Error("No source-bound image receipt was returned.");
+    } else if (result.capability === "map") {
+      const focus = artifact.media && artifact.media.route && artifact.media.route.focus;
+      if (!receipt.providerSucceeded || !focus || !Number.isFinite(Number(focus.lat)) || !Number.isFinite(Number(focus.lon)) || !links.length) throw new Error("No coordinate-bound map receipt was returned.");
+    } else if (["search", "listings"].includes(result.capability)) {
+      if (!receipt.providerSucceeded || !linkedItems.length) throw new Error("No live source records were returned.");
+    } else if (result.capability === "music") {
+      if (!receipt.providerSucceeded || !safeUrl(artifact.media && artifact.media.sourceUrl) || !safeUrl(artifact.media && artifact.media.embedUrl)) throw new Error("No playable source-bound media receipt was returned.");
+    } else if (!populatedFields.length && !populatedSections.length && !linkedItems.length) {
+      throw new Error("The application returned an empty workspace instead of populated content.");
+    }
   }
 
   function withTimeout(controller, milliseconds) {
@@ -312,6 +345,7 @@
   }
 
   async function settleVisual(result, requestId) {
+    assertProviderReceipt(result);
     const root = renderArtifact(result);
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     if (!root || !root.isConnected || !clean(root.innerText, 10000)) throw new Error("The requested artifact did not become visible.");
@@ -326,7 +360,11 @@
     }
     if (result.status === "ready" && result.capability === "map") {
       const map = root.querySelector("#nexus-capability-map");
-      if (!map || !result.artifact.media.route || !(result.artifact.media.route.coordinates || []).length) throw new Error("The route was not visibly plotted.");
+      const focus = result.artifact.media.route && result.artifact.media.route.focus;
+      if (!map || !focus || !Number.isFinite(Number(focus.lat)) || !Number.isFinite(Number(focus.lon))) throw new Error("The requested map viewport was not applied.");
+      const instance = map.__nexusLeafletMap;
+      const center = instance && instance.getCenter && instance.getCenter();
+      if (!center || Math.abs(center.lat - Number(focus.lat)) > 8 || Math.abs(center.lng - Number(focus.lon)) > 12) throw new Error("The visible map does not match the requested geography.");
     }
     if (result.status === "ready" && result.capability === "music") {
       const audio = root.querySelector("#nexus-capability-audio");
@@ -355,24 +393,30 @@
       if (lifecycle) return lifecycle;
     }
     const requestId = `production-capability-${Date.now()}-${++state.requestSequence}`;
+    state.transcriptGeneration += 1;
+    for (const timer of state.fallbackTimers) clearTimeout(timer);
+    state.fallbackTimers.clear();
     if (state.controller) state.controller.abort("superseded-by-new-request");
     const controller = new AbortController();
     state.controller = controller;
+    state.activeRequestId = requestId;
     state.currentCommand = command;
     showProgress(command, requestId);
     stage("conversation.goal-requested", { requestId, command, retry: Boolean(options.retry) });
     const clearTimer = withTimeout(controller, 36000);
     try {
       let result;
-      try { result = await requestContent(command, controller.signal); }
+      try { result = await requestContent(command, requestId, controller.signal); }
       catch (firstError) {
         if (controller.signal.aborted) throw firstError;
         stage("provider.retry", { requestId, error: clean(firstError.message, 300), authEvidence: firstError.authEvidence || null });
         await new Promise(resolve => setTimeout(resolve, 650));
-        result = await requestContent(command, controller.signal);
+        result = await requestContent(command, requestId, controller.signal);
       }
+      if (controller.signal.aborted || state.activeRequestId !== requestId) throw new Error("A stale capability result was rejected before rendering.");
       stage("provider.returned", { requestId, status: result.status, capability: result.capability, timing: result.timing || null, providerTrace: result.providerTrace || [] });
       const root = await settleVisual(result, requestId);
+      if (controller.signal.aborted || state.activeRequestId !== requestId) throw new Error("A stale capability result was rejected after rendering.");
       if (state.currentResult && state.currentResult.requestId !== result.requestId) {
         state.resultStack.push(state.currentResult);
         state.resultStack = state.resultStack.slice(-12);
@@ -388,6 +432,15 @@
       return result;
     } catch (error) {
       const cancelled = controller.signal.aborted && !String(controller.signal.reason || "").includes("timed-out");
+      const superseded = cancelled && String(controller.signal.reason || "").includes("superseded-by-new-request");
+      if (superseded) {
+        stage("request.stale-suppressed", { requestId, command });
+        return {
+          schema: "nexus.content.result.v2", requestId, status: "failed", capability: "workspace", operation: "open",
+          workspace: "", acknowledgement: "", artifact: { kind: "status", title: "", description: "", fields: [], sections: [], items: [], links: [], media: { kind: "", title: "", provider: "", sourceUrl: "", embedUrl: "", state: "unavailable" } },
+          recovery: null, suppressed: true
+        };
+      }
       const message = cancelled ? "The request was cancelled. Your previous result is unchanged." : controller.signal.aborted ? "The live request timed out before a visible result was ready." : clean(error.message, 600);
       const failure = {
         schema: "nexus.content.result.v2", requestId: `production-failure-${Date.now()}`, status: "failed", capability: "workspace", operation: "open", workspace: "live-knowledge", acknowledgement: "",
@@ -400,6 +453,7 @@
     } finally {
       clearTimer();
       if (state.controller === controller) state.controller = null;
+      if (state.activeRequestId === requestId) state.activeRequestId = "";
     }
   }
 
@@ -425,11 +479,15 @@
     if (observedAt - state.lastTranscriptAt < 5000 && commandOverlap(command, state.lastTranscriptCommand) >= 0.9) return;
     state.lastTranscriptCommand = command;
     state.lastTranscriptAt = observedAt;
+    const generation = ++state.transcriptGeneration;
     stage("conversation.transcript-observed", { command });
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      state.fallbackTimers.delete(timer);
+      if (generation !== state.transcriptGeneration) return;
       const alreadyRouted = state.stages.some(event => Date.parse(event.at) >= observedAt && event.type === "conversation.goal-requested" && commandOverlap(command, event.detail.command) >= 0.4);
       if (!alreadyRouted) executeCapability(command, { transcriptFallback: true, transcriptObservedAt: observedAt, postRenderVoiceAck: Boolean(options.postRenderVoiceAck) });
     }, 7000);
+    state.fallbackTimers.add(timer);
   }
 
   function installBrowserActionControllerBridge() {
@@ -525,6 +583,22 @@
   function modifyLegacyResponse(originalResponse, request, result) {
     return originalResponse.clone().json().catch(() => null).then(payload => {
       if (!payload || typeof payload !== "object") return originalResponse;
+      if (result.suppressed) {
+        if (request.realtime) {
+          payload.response = "";
+          payload.status = "superseded-no-output";
+          payload.ok = false;
+          payload.executionVerified = false;
+          payload.providerSucceeded = false;
+          payload.genesisAction = null;
+          payload.genesisAcknowledgement = { verified: false, visible: false, populated: false, workspace: "", capabilityBridge: true, suppressed: true };
+        }
+        const headers = new Headers(originalResponse.headers);
+        headers.set("content-type", "application/json; charset=utf-8");
+        headers.set("cache-control", "no-store");
+        headers.delete("content-length");
+        return new Response(JSON.stringify(payload), { status: originalResponse.status, statusText: originalResponse.statusText, headers });
+      }
       const success = result.status === "ready";
       const spoken = success ? clean(result.acknowledgement, 400) || "The requested result is visible." : clean(result.recovery && result.recovery.message, 400) || "I could not complete that live request.";
       if (request.realtime) {

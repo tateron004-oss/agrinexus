@@ -113,42 +113,8 @@
   }
 
   function applicationDeadlineFallback(detail) {
-    const workspace = normalize(detail && detail.workspace);
-    const command = normalize(detail && (detail.command || detail.utterance));
-    const comparableCommand = command.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (workspace === "live-knowledge" && /\bapple pie recipe\b/i.test(comparableCommand)) {
-      const requestId = normalize(detail && detail.requestId) || `deadline-${Date.now()}`;
-      return Object.freeze({
-        schema: "nexus.content.result.v2", requestId, status: "ready", capability: "search", operation: "search", workspace,
-        acknowledgement: "Apple pie ingredients, steps, and an approved source are visible.",
-        artifact: Object.freeze({
-          kind: "list", title: "Apple Pie Recipe", description: "A practical apple pie recipe with visible ingredients, steps, and an approved culinary source.",
-          fields: Object.freeze([]),
-          sections: Object.freeze([
-            Object.freeze({ heading: "Ingredients", body: "Pie pastry, sliced apples, sugar, flour, cinnamon, salt, butter, and a little lemon juice." }),
-            Object.freeze({ heading: "Steps", body: "Heat the oven to 425°F. Fill the pastry with the seasoned apples, cover with the top crust, vent, and bake until the crust is golden and the filling bubbles." })
-          ]),
-          items: Object.freeze([]),
-          links: Object.freeze([Object.freeze({ label: "Open USDA apple pie sources", url: "https://www.usda.gov/search?query=apple%20pie%20recipe" })]),
-          media: Object.freeze({ state: "unavailable" })
-        })
-      });
-    }
-    const fieldDefinitions = DEADLINE_FALLBACK_FIELDS[workspace];
-    if (!fieldDefinitions) return null;
-    if (workspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(comparableCommand)) return null;
-    if (workspace === "health" && /\b(provider|doctor|contact card)\b/i.test(comparableCommand)) return null;
-    if (workspace === "workforce" && /\b(resume|curriculum vitae|cv)\b/i.test(comparableCommand)) return null;
-    const requestId = normalize(detail && detail.requestId) || `deadline-${Date.now()}`;
-    return Object.freeze({
-      schema: "nexus.content.result.v2", requestId, status: "ready", capability: "intake", operation: "open", workspace,
-      acknowledgement: `${APP_NAMES[workspace] || workspace} is ready.`,
-      artifact: Object.freeze({
-        kind: "form", title: APP_NAMES[workspace] || workspace, description: "Editable workspace ready while live enrichment continues.",
-        fields: Object.freeze(fieldDefinitions.map(([id, label]) => Object.freeze({ id, label, type: "text", value: "" }))),
-        sections: Object.freeze([]), items: Object.freeze([]), links: Object.freeze([]), media: Object.freeze({ state: "unavailable" })
-      })
-    });
+    void detail;
+    return null;
   }
 
   function workflowButtonCommand(label, fields = []) {
@@ -772,6 +738,7 @@
       const token = this.window.NEXUS_CLEAN_CONFIG?.sessionToken || this.window.sessionStorage?.getItem("nexus.clean.session");
       const previousArtifact = this.currentResult && this.currentResult.artifact || readJson(this.window.localStorage, STORAGE.artifacts, {})[this.activeWorkspace] || null;
       const body = {
+        requestId: detail.requestId,
         command: detail.command,
         requestedWorkspace: detail.workspace || null,
         activeWorkspace: this.activeWorkspace,
@@ -790,6 +757,7 @@
       this.stage("resolver.returned", { requestId: detail.requestId, httpStatus: response.status, status: result.status, capability: result.capability });
       if (!response.ok) throw new Error(result.message || `Nexus content service failed (${response.status}).`);
       if (result.schema !== "nexus.content.result.v2" || !result.artifact) throw new Error("Nexus received an invalid content result contract.");
+      if (result.requestId !== detail.requestId) throw new Error("Nexus rejected a content result owned by another request.");
       return result;
     }
 
@@ -831,6 +799,7 @@
         })
         : providerRequest;
       resultRequest.then(async (result) => {
+        if (!this.pending.has(detail.requestId)) return;
         this.activeWorkspace = result.workspace || this.activeWorkspace;
         this.currentResult = result;
         this.render(result, detail);

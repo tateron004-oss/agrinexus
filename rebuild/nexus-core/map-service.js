@@ -13,6 +13,9 @@ const COUNTRY_CODES = Object.freeze({
   rwanda: "rw",
   tanzania: "tz",
   uganda: "ug",
+  "united states": "us",
+  usa: "us",
+  "u.s.": "us",
   "south africa": "za"
 });
 

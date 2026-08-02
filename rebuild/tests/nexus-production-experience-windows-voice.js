@@ -6,12 +6,25 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium, request: playwrightRequest } = require("playwright");
 
-const BASE_URL = process.env.NEXUS_PRODUCTION_REPAIR_BASE_URL || "http://127.0.0.1:4391";
-const LIVE_URL = process.env.NEXUS_LIVE_PROVIDER_BASE_URL || "https://agrinexus-platform.onrender.com";
-const OUTPUT = path.resolve(process.env.NEXUS_PRODUCTION_VOICE_OUTPUT || "output/nexus-production-experience-voice");
+const BASE_URL = process.env.NEXUS_PRODUCTION_REPAIR_BASE_URL || "https://nexus-genesis-certified.onrender.com";
+const LIVE_URL = process.env.NEXUS_LIVE_PROVIDER_BASE_URL || "https://nexus-genesis-certified.onrender.com";
+const SESSION_ID = process.env.NEXUS_PRODUCTION_SESSION_ID || "session-1";
+const OUTPUT = path.resolve(process.env.NEXUS_PRODUCTION_VOICE_OUTPUT || `output/nexus-production-experience-voice/${SESSION_ID}`);
 const turns = [
+  { id: "nairobi-weather", command: "Nexus, show me the current weather in Nairobi, Kenya with the live source.", capability: "weather" },
+  { id: "united-states-map", command: "Nexus, show the United States on a fresh map.", capability: "map" },
   { id: "maize-images", command: "Nexus, research maize diseases in Kenya. Show me pictures of common symptoms and explain how to tell them apart.", capability: "images" },
-  { id: "nairobi-route", command: "Nexus, show me a map of Nairobi, Kenya and give me directions to Nakuru.", capability: "map" },
+  { id: "agriculture-open", command: "Nexus, open Agriculture Help.", capability: "workspace", workspace: "agriculture" },
+  { id: "agriculture-reopen-visible", command: "Nexus, open Agriculture Help again and keep it synchronized with this request.", capability: "workspace", workspace: "agriculture" },
+  { id: "health-open", command: "Nexus, open Health and Chronic Care.", capability: "workspace", workspace: "health" },
+  { id: "telehealth-open", command: "Nexus, open Telehealth Intake.", capability: "workspace", workspace: "telehealth" },
+  { id: "mobile-clinic-open", command: "Nexus, open Mobile Clinic.", capability: "workspace", workspace: "mobile-clinic" },
+  { id: "pharmacy-open", command: "Nexus, open Pharmacy Support.", capability: "workspace", workspace: "pharmacy" },
+  { id: "learning-open", command: "Nexus, open Learning and Literacy.", capability: "workspace", workspace: "learning" },
+  { id: "workforce-open", command: "Nexus, open Jobs and Workforce.", capability: "workspace", workspace: "workforce" },
+  { id: "marketplace-open", command: "Nexus, open AgriTrade Marketplace.", capability: "workspace", workspace: "marketplace" },
+  { id: "reminders-open", command: "Nexus, open Reminders.", capability: "workspace", workspace: "reminders" },
+  { id: "offline-open", command: "Nexus, open Offline Queue.", capability: "workspace", workspace: "offline" },
   { id: "farming-resume", command: "Nexus, help me create a resume for someone with five years of farming experience.", capability: "resume" },
   { id: "resume-follow-up", command: "Add three years coordinating harvest crews to the work experience.", capability: "resume" },
   { id: "pharmacist-card", command: "Create a visual list of questions I should ask my pharmacist about a new blood pressure medicine.", capability: "question-card" },
@@ -90,7 +103,7 @@ function commandOverlap(expected, actual) {
 async function main() {
   assert.equal(process.platform, "win32", "Physical Windows voice certification requires Windows.");
   fs.mkdirSync(OUTPUT, { recursive: true });
-  const evidence = { schema: "nexus.production-experience.windows-voice.v1", localExperience: BASE_URL, liveProvider: LIVE_URL, startedAt: new Date().toISOString(), turns: [], foundation: {}, passed: false };
+  const evidence = { schema: "nexus.production-experience.windows-voice.v2", sessionId: SESSION_ID, productionService: BASE_URL, liveProvider: LIVE_URL, startedAt: new Date().toISOString(), turns: [], foundation: {}, passed: false };
   let sessionEvidence = null;
   const liveApi = await playwrightRequest.newContext({
     baseURL: LIVE_URL,
@@ -186,7 +199,7 @@ async function main() {
       try {
         const response = await fetch("/api/capability/content", {
           method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ command: "Nexus capability authentication readiness check" })
+          body: JSON.stringify({ requestId: "production-capability-readiness-voice", command: "Nexus capability authentication readiness check" })
         });
         return response.status === 200;
       } catch { return false; }
@@ -285,11 +298,15 @@ async function main() {
       fs.writeFileSync(path.join(OUTPUT, "evidence.json"), `${JSON.stringify(evidence, null, 2)}\n`);
       assert.equal(proof.result.status, "ready", `${test.id}: capability failed`);
       assert.equal(proof.result.capability, test.capability, `${test.id}: wrong goal`);
+      assert.equal(proof.result.requestId, proof.result.receipt && proof.result.receipt.requestId, `${test.id}: request receipt mismatch`);
+      if (test.workspace) assert.equal(proof.result.workspace, test.workspace, `${test.id}: visible workspace mismatch`);
       assert.ok(proof.visibleText.length >= 70, `${test.id}: empty visual shell`);
       assert.equal(proof.spinner, 0, `${test.id}: stalled spinner`);
       assert.equal(proof.realtime.connectionState, "connected", `${test.id}: continuous Realtime listening was lost`);
       if (test.capability === "images") assert.ok(proof.images >= 1 && proof.links >= 1);
       if (test.capability === "map") assert.ok(proof.map >= 1 && proof.links >= 1);
+      if (test.capability === "weather") assert.ok(proof.links >= 1 && /Nairobi|°C|rain chance/i.test(proof.visibleText));
+      if (test.capability === "workspace") assert.ok(proof.controls.length >= 2, `${test.id}: application shell was not populated`);
       if (test.capability === "resume") assert.ok(proof.controls.length >= 5);
       if (test.id === "resume-follow-up") assert.ok(proof.controls.some(field => /harvest crews/i.test(field.value)));
       if (test.capability === "question-card") assert.ok(proof.links >= 3);

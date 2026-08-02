@@ -153,8 +153,11 @@ async function main() {
   assert.equal(transcriptTimers, 0, "Application transcripts must not schedule a second synthetic workspace route.");
   assert.ok(transcriptStages.some((stage) => stage.type === "transcript.application-route-shielded"));
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
-  assert.equal(healthFallback.status, "ready");
-  assert.deepEqual(healthFallback.artifact.fields.map((field) => field.label), ["Blood pressure or reading", "When measured", "Symptoms or notes"]);
+  assert.equal(healthFallback, null, "Provider deadlines must never fabricate a ready application.");
+  const healthResult = {
+    schema: "nexus.content.result.v2", requestId: "health-1", status: "ready", capability: "intake", operation: "open", workspace: "health",
+    artifact: { ...artifact("form", "Health & Chronic Care"), fields: [{ id: "reading", label: "Blood pressure or reading", type: "text", value: "" }] }
+  };
   let persistedInput;
   const storedArtifacts = new Map();
   const immutableController = new NexusContentPopulationController({
@@ -175,13 +178,13 @@ async function main() {
         querySelector() { return null; }
       };
     }
-  }, healthFallback);
+  }, healthResult);
   assert.doesNotThrow(() => persistedInput());
   assert.equal(immutableController.currentResult.artifact.fields[0].value, "145 over 92");
-  assert.equal(healthFallback.artifact.fields[0].value, "");
+  assert.equal(healthResult.artifact.fields[0].value, "");
   assert.equal(applicationDeadlineFallback({ requestId: "provider-1", workspace: "health", command: "Nexus, create a provider card for my doctor." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "images-1", workspace: "agriculture", command: "Nexus, show maize disease pictures." }), null);
-  assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }).status, "ready");
+  assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "resume-1", workspace: "workforce", command: "Nexus, help me create a résumé." }), null);
   const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
   assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
@@ -260,9 +263,7 @@ async function main() {
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
   const recipeFallback = applicationDeadlineFallback({ workspace: "live-knowledge", command: "Nexus, show sources for an apple pie recipe with ingredients and steps.", requestId: "recipe-fallback" });
-  assert.equal(recipeFallback.capability, "search");
-  assert.match(recipeFallback.artifact.sections.map((section) => section.heading).join(" "), /Ingredients.*Steps/);
-  assert.match(recipeFallback.artifact.links[0].url, /^https:\/\/www\.usda\.gov\//);
+  assert.equal(recipeFallback, null, "Static recipes must not masquerade as live source retrieval.");
   assert.match(renderArtifactMarkup({ requestId: "recipe", status: "ready", capability: "search", operation: "search", workspace: "live-knowledge", artifact: { ...artifact("list", "Recipe"), links: [{ label: "Open source", url: "https://www.usda.gov/" }] } }), /evidence-source-link/);
   assert.match(renderArtifactMarkup({ requestId: "resume", status: "ready", capability: "resume", operation: "create", workspace: "workforce", artifact: { ...artifact("form", "Resume"), fields: [{ id: "experience", label: "Experience", type: "textarea", value: "Team lead" }] } }), /Work experience/);
   assert.equal(alignApplicationResultWorkspace({ workspace: "live-knowledge", capability: "resume" }, { command: "help me create a resume" }).workspace, "workforce");
