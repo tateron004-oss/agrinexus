@@ -199,19 +199,6 @@
     return normalize(match?.[1]);
   }
 
-  function realtimeRouteCallLifecycle(receipt) {
-    if (receipt?.type !== "realtime.data-message") return null;
-    let message;
-    try { message = JSON.parse(receipt.detail?.data || "{}"); } catch { return null; }
-    if (message.type === "response.output_item.added" && message.item?.type === "function_call" && message.item?.name === "route_nexus_command") {
-      return Object.freeze({ state: "started", id: normalize(message.item.call_id || message.item.id) });
-    }
-    if (message.type === "response.function_call_arguments.done" && message.name === "route_nexus_command") {
-      return Object.freeze({ state: "finished", id: normalize(message.call_id || message.item_id) });
-    }
-    return null;
-  }
-
   function reconcileAssistantLocation(receipt, documentObject, windowObject = globalObject) {
     const confirmed = assistantLocationConfirmation(receipt);
     if (!confirmed) return false;
@@ -469,7 +456,6 @@
       this.currentResult = null;
       this.pending = new Map();
       this.guidedRouteShields = new Map();
-      this.pendingRealtimeRoutes = new Set();
       this.stages = [];
       this.transcriptTimer = null;
       this.lastOpenCommand = "";
@@ -487,7 +473,7 @@
       this.installed = true;
       this.window.addEventListener("nexus.clean.workspace.open", this.onOpenCapture, true);
       this.window.addEventListener("nexus.clean.workspace.acknowledged", this.onAcknowledgementCapture, true);
-      this.window.addEventListener("nexus.clean.receipt", this.onReceipt, true);
+      this.window.addEventListener("nexus.clean.receipt", this.onReceipt);
       this.document.addEventListener("input", this.onGuidedFieldInput, true);
       this.document.addEventListener("click", this.onWorkflowButtonClick, true);
       return this;
@@ -585,17 +571,6 @@
 
     onReceipt(event) {
       const receipt = event.detail || {};
-      const routeLifecycle = realtimeRouteCallLifecycle(receipt);
-      if (routeLifecycle?.state === "started" && routeLifecycle.id) this.pendingRealtimeRoutes.add(routeLifecycle.id);
-      if (routeLifecycle?.state === "finished") {
-        if (routeLifecycle.id) this.pendingRealtimeRoutes.delete(routeLifecycle.id);
-        else this.pendingRealtimeRoutes.clear();
-      }
-      if (receipt.type === "transcript.final" && this.pendingRealtimeRoutes.size && isApplicationRouteCommand(receipt.detail?.transcript)) {
-        event.stopImmediatePropagation?.();
-        this.stage("conversation.transcript-route-coalesced", { command: normalize(receipt.detail?.transcript), pendingRouteCalls: this.pendingRealtimeRoutes.size });
-        return;
-      }
       if (reconcileAssistantLocation(receipt, this.document, this.window)) {
         this.stage("voice-form.assistant-confirmation-reconciled", { field: "location", value: assistantLocationConfirmation(receipt) });
       }
@@ -853,7 +828,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, realtimeRouteCallLifecycle, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
