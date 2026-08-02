@@ -121,6 +121,19 @@ async function main() {
     assert.equal(resolverCalls, 0, "explicit recipe source search must bypass the conversational resolver deadline");
   }
 
+  {
+    let resolverCalls = 0;
+    const service = createContentActionService({
+      goalResolver: { async resolve() { resolverCalls += 1; throw new Error("resolver must not delay an explicitly named application"); } }
+    });
+    const telehealth = await service.execute({ command: "Nexus, begin a telehealth intake.", requestedWorkspace: "telehealth" });
+    assert.equal(telehealth.status, "ready");
+    assert.equal(telehealth.workspace, "telehealth");
+    assert.equal(telehealth.capability, "workspace");
+    assert.ok(telehealth.artifact.fields.length >= 3);
+    assert.equal(resolverCalls, 0, "an explicitly named application must render before the transaction deadline");
+  }
+
   console.log("Nexus provider fetch retry tests passed.");
 }
 

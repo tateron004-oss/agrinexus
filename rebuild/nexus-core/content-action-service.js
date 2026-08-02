@@ -145,7 +145,7 @@ function applicationWorkspaceArtifact(workspace) {
 
 function explicitApplicationWorkspace(command) {
   const value = clean(command, 1000).toLowerCase();
-  if (!/\b(open|show|display|reopen|return to|go to)\b/.test(value)) return "";
+  if (!/\b(open|show|display|reopen|return to|go to|begin|start)\b/.test(value)) return "";
   const aliases = [
     ["mobile-clinic", /\bmobile clinic\b/], ["telehealth", /\btelehealth(?: intake)?\b/],
     ["agriculture", /\bagriculture help\b/], ["health", /\bhealth (?:and|&) chronic care\b|\bchronic care\b/],
