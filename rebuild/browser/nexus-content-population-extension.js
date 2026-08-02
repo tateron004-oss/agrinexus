@@ -467,11 +467,11 @@
     const items = (artifact.items || []).map((item) => {
       const source = safeUrl(item.sourceUrl);
       const image = safeUrl(item.imageUrl);
-      return `<article data-nexus-item="${escapeMarkup(item.id)}">${image ? `<img src="${escapeMarkup(image)}" alt="${escapeMarkup(item.title || "Result image")}" loading="lazy">` : ""}<h3>${escapeMarkup(item.title || "Result")}</h3>${item.description ? `<p>${escapeMarkup(item.description)}</p>` : ""}${(item.metadata || []).length ? `<p class="nexus-content-meta">${item.metadata.map(escapeMarkup).join(" · ")}</p>` : ""}${source ? `<a href="${escapeMarkup(source)}" target="_blank" rel="noopener noreferrer">Open source${item.sourceName ? ` · ${escapeMarkup(item.sourceName)}` : ""}</a>` : ""}</article>`;
+      return `<article data-nexus-item="${escapeMarkup(item.id)}">${image ? `<img src="${escapeMarkup(image)}" alt="${escapeMarkup(item.title || "Result image")}" loading="lazy">` : ""}<h3>${escapeMarkup(item.title || "Result")}</h3>${item.description ? `<p>${escapeMarkup(item.description)}</p>` : ""}${(item.metadata || []).length ? `<p class="nexus-content-meta">${item.metadata.map(escapeMarkup).join(" · ")}</p>` : ""}${source ? `<a class="evidence-source-link" href="${escapeMarkup(source)}" target="_blank" rel="noopener noreferrer">Open source${item.sourceName ? ` · ${escapeMarkup(item.sourceName)}` : ""}</a>` : ""}</article>`;
     }).join("");
     const links = (artifact.links || []).map((link) => {
       const url = safeUrl(link.url);
-      return url ? `<a href="${escapeMarkup(url)}" target="_blank" rel="noopener noreferrer">${escapeMarkup(link.label || "Open source")}</a>` : "";
+      return url ? `<a class="evidence-source-link" href="${escapeMarkup(url)}" target="_blank" rel="noopener noreferrer">${escapeMarkup(link.label || "Open source")}</a>` : "";
     }).join("");
     const mediaUrl = safeUrl(artifact.media && artifact.media.embedUrl);
     const routePreview = artifact.media && artifact.media.kind === "map" ? routePreviewMarkup(artifact.media) : "";

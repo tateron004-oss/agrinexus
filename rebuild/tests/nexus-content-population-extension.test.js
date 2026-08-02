@@ -223,6 +223,7 @@ async function main() {
   assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
+  assert.match(renderArtifactMarkup({ requestId: "recipe", status: "ready", capability: "search", operation: "search", workspace: "live-knowledge", artifact: { ...artifact("list", "Recipe"), links: [{ label: "Open source", url: "https://www.usda.gov/" }] } }), /evidence-source-link/);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
