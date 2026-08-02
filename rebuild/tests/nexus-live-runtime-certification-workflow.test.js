@@ -21,7 +21,11 @@ assert.match(workflow, /nexus-release-certification-controller\.js verify-deploy
 assert.match(workflow, /nexus-windows-physical-certification\.spec\.js/);
 assert.match(workflow, /nexus-windows-voice-form-entry\.spec\.js/);
 assert.match(workflow, /nexus-windows-stability-certification\.ps1/);
-assert.doesNotMatch(workflow, /RENDER_DEPLOY_HOOK_URL/);
+assert.match(workflow, /deploy-exact-release:/);
+assert.match(workflow, /needs: deploy-exact-release/);
+assert.match(workflow, /RENDER_DEPLOY_HOOK_URL: \$\{\{ secrets\.RENDER_DEPLOY_HOOK_URL \}\}/);
+assert.match(workflow, /node scripts\/nexus-render-deploy\.js/);
+assert.match(workflow, /runs-on: ubuntu-latest/);
 for (const requiredPath of ["server.js", "rebuild/production-certification-adapter.js", "rebuild/browser/**"]) {
   assert.ok(workflow.includes(`- "${requiredPath}"`), `canonical trigger must include ${requiredPath}`);
 }

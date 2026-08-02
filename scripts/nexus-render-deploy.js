@@ -13,8 +13,17 @@ function validatedDeployHook(value) {
   return url;
 }
 
-async function triggerDeploy({ hookUrl, fetchImpl = fetch }) {
+function validatedReleaseSha(value) {
+  const releaseSha = String(value || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{7,40}$/.test(releaseSha)) {
+    throw new Error("NEXUS_EXPECTED_DEPLOYMENT_SHA must be a Git commit SHA");
+  }
+  return releaseSha;
+}
+
+async function triggerDeploy({ hookUrl, releaseSha, fetchImpl = fetch }) {
   const url = validatedDeployHook(hookUrl);
+  url.searchParams.set("ref", validatedReleaseSha(releaseSha));
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { accept: "application/json" },
@@ -27,7 +36,10 @@ async function triggerDeploy({ hookUrl, fetchImpl = fetch }) {
 }
 
 async function main() {
-  const result = await triggerDeploy({ hookUrl: process.env.RENDER_DEPLOY_HOOK_URL });
+  const result = await triggerDeploy({
+    hookUrl: process.env.RENDER_DEPLOY_HOOK_URL,
+    releaseSha: process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA
+  });
   console.log(`Render deployment accepted (HTTP ${result.status}); exact release verification is next.`);
 }
 
@@ -38,4 +50,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { triggerDeploy, validatedDeployHook };
+module.exports = { triggerDeploy, validatedDeployHook, validatedReleaseSha };

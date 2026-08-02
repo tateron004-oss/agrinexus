@@ -31,8 +31,53 @@ env:
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:
+  deploy-exact-release:
+    name: Deploy and verify exact Render release
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Bind deployment to runtime sources
+        shell: bash
+        run: |
+          RUNTIME_SHA="$(git log -1 --format=%H -- rebuild/browser/nexus-clean.bundle.js)"
+          DEPLOYMENT_SHA="$(git log -1 --format=%H -- server.js rebuild/production-certification-adapter.js rebuild/production-capability-bridge-server.js rebuild/browser rebuild/nexus-core)"
+          test -n "$RUNTIME_SHA"
+          test -n "$DEPLOYMENT_SHA"
+          echo "NEXUS_EXPECTED_RELEASE_SHA=$DEPLOYMENT_SHA" >> "$GITHUB_ENV"
+          echo "NEXUS_EXPECTED_DEPLOYMENT_SHA=$DEPLOYMENT_SHA" >> "$GITHUB_ENV"
+          echo "NEXUS_EXPECTED_RUNTIME_SOURCE_SHA=$RUNTIME_SHA" >> "$GITHUB_ENV"
+      - name: Verify deployment automation contract
+        run: |
+          node scripts/nexus-protected-foundation-guard.js
+          node rebuild/tests/nexus-render-deployment-orchestration.test.js
+      - name: Trigger exact Render commit
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: node scripts/nexus-render-deploy.js
+      - name: Verify exact deployed release and bundle
+        env:
+          NEXUS_DEPLOYMENT_TIMEOUT_MS: "900000"
+        run: |
+          node scripts/nexus-production-certification-preflight.js
+          node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Publish deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-render-deployment-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/nexus-release-certification/
+          if-no-files-found: warn
+          retention-days: 90
+
   canonical-user-journey:
     name: Complete physical voice user-mode certification
+    needs: deploy-exact-release
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 240
     steps:

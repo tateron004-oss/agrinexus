@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { triggerDeploy, validatedDeployHook } = require("../../scripts/nexus-render-deploy");
+const { triggerDeploy, validatedDeployHook, validatedReleaseSha } = require("../../scripts/nexus-render-deploy");
 
 const workflow = fs.readFileSync(".github/workflows/nexus-render-deploy.yml", "utf8");
 
@@ -16,11 +16,14 @@ assert.doesNotMatch(workflow, /https:\/\/api\.render\.com\/deploy\/[A-Za-z0-9_-]
 assert.throws(() => validatedDeployHook(""), /not configured/);
 assert.throws(() => validatedDeployHook("http://api.render.com/deploy/test"), /official/);
 assert.throws(() => validatedDeployHook("https://example.com/deploy/test"), /official/);
+assert.throws(() => validatedReleaseSha("latest"), /Git commit SHA/);
+assert.equal(validatedReleaseSha("919309BEFD2AC49B0F16D7E85D32C629AD5F8801"), "919309befd2ac49b0f16d7e85d32c629ad5f8801");
 
 (async () => {
   let request;
   const result = await triggerDeploy({
     hookUrl: "https://api.render.com/deploy/example-secret",
+    releaseSha: "919309befd2ac49b0f16d7e85d32c629ad5f8801",
     fetchImpl: async (url, options) => {
       request = { url: String(url), options };
       return { ok: true, status: 201 };
@@ -29,6 +32,7 @@ assert.throws(() => validatedDeployHook("https://example.com/deploy/test"), /off
   assert.deepEqual(result, { accepted: true, status: 201 });
   assert.equal(request.options.method, "POST");
   assert.equal(request.options.redirect, "error");
+  assert.equal(new URL(request.url).searchParams.get("ref"), "919309befd2ac49b0f16d7e85d32c629ad5f8801");
   console.log("Nexus Render deployment orchestration: PASS");
 })().catch((error) => {
   console.error(error.stack || error.message);
