@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -47,6 +47,20 @@ async function main() {
   assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "maps", editableDocument), true);
   assert.equal(shouldShieldGuidedFieldRoute("Nexus, record blood pressure is 140 over 90.", "health", editableDocument), false);
   assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "agriculture", editableDocument), false);
+  const staleMapAnchor = {
+    dataset: {},
+    href: "https://leafletjs.com",
+    getAttribute(name) { return name === "href" ? this.href || null : null; },
+    setAttribute(name, value) { if (name === "href") this.href = value; },
+    removeAttribute(name) { if (name === "href") this.href = ""; }
+  };
+  const mapSurface = { querySelectorAll() { return [staleMapAnchor]; } };
+  const mapDocument = { getElementById(id) { return id === "nexus-map-surface" ? mapSurface : null; } };
+  assert.equal(synchronizeHiddenMapLinks("live-knowledge", mapDocument), 1);
+  assert.equal(staleMapAnchor.href, "");
+  assert.equal(staleMapAnchor.dataset.nexusHiddenMapHref, "https://leafletjs.com");
+  assert.equal(synchronizeHiddenMapLinks("maps", mapDocument), 1);
+  assert.equal(staleMapAnchor.href, "https://leafletjs.com");
   let restoreShield;
   assert.equal(shieldApplicationRouteFromGuidedEntry("Nexus, start a digital literacy course.", editableDocument, (restore) => { restoreShield = restore; }), true);
   assert.equal(editableWorkspace.hidden, true);

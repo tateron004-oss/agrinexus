@@ -170,6 +170,25 @@
     });
   }
 
+  function synchronizeHiddenMapLinks(workspace, documentObject) {
+    const mapSurface = documentObject?.getElementById?.("nexus-map-surface");
+    if (!mapSurface) return 0;
+    const anchors = [...(mapSurface.querySelectorAll?.("a") || [])];
+    let changed = 0;
+    for (const anchor of anchors) {
+      if (normalize(workspace).toLowerCase() === "maps" && anchor.dataset?.nexusHiddenMapHref) {
+        anchor.setAttribute?.("href", anchor.dataset.nexusHiddenMapHref);
+        delete anchor.dataset.nexusHiddenMapHref;
+        changed += 1;
+      } else if (normalize(workspace).toLowerCase() !== "maps" && anchor.getAttribute?.("href")) {
+        anchor.dataset.nexusHiddenMapHref = anchor.getAttribute("href");
+        anchor.removeAttribute?.("href");
+        changed += 1;
+      }
+    }
+    return changed;
+  }
+
   function canonicalCommandKey(command) {
     return normalize(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -494,6 +513,10 @@
 
     onReceipt(event) {
       const receipt = event.detail || {};
+      if (receipt.type === "workspace.visible") {
+        const changed = synchronizeHiddenMapLinks(receipt.detail?.workspace, this.document);
+        if (changed) this.stage("workspace.hidden-map-links-synchronized", { workspace: receipt.detail?.workspace, changed });
+      }
       if ((receipt.type === "voice-form.updated" || receipt.type === "voice-form.corrected") && this.guidedRouteShields.size) {
         const [requestId, shield] = this.guidedRouteShields.entries().next().value;
         this.guidedRouteShields.delete(requestId);
@@ -741,7 +764,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
