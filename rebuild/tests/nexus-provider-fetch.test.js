@@ -100,6 +100,27 @@ async function main() {
     assert.equal(resolverCalls, 0, "an explicit reminder must render before the conversational resolver timeout window");
   }
 
+  {
+    let resolverCalls = 0;
+    let searched = "";
+    const service = createContentActionService({
+      goalResolver: { async resolve() { resolverCalls += 1; throw new Error("resolver must not delay explicit recipe source searches"); } },
+      webSearchProvider: async (query) => {
+        searched = query;
+        return { summary: "A source-backed apple pie recipe with ingredients and steps.", sources: [
+          { title: "USDA recipe", url: "https://www.myplate.gov/recipes/supplemental-nutrition-assistance-program-snap/apple-pie" }
+        ] };
+      }
+    });
+    const recipe = await service.execute({ command: "Nexus, show sources for an apple pie recipe with ingredients and steps.", requestedWorkspace: "live-knowledge" });
+    assert.equal(recipe.status, "ready");
+    assert.equal(recipe.workspace, "live-knowledge");
+    assert.equal(recipe.capability, "search");
+    assert.match(searched, /apple pie recipe/i);
+    assert.equal(recipe.artifact.items.length, 1);
+    assert.equal(resolverCalls, 0, "explicit recipe source search must bypass the conversational resolver deadline");
+  }
+
   console.log("Nexus provider fetch retry tests passed.");
 }
 

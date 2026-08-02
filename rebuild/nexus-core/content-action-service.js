@@ -158,6 +158,13 @@ function explicitApplicationWorkspace(command) {
 
 function explicitFastProviderGoal(command) {
   const value = clean(command, 1000);
+  if (/\bapple pie recipe\b/i.test(value) && /\b(?:source|sources|recipe|ingredients?|steps?)\b/i.test(value)) {
+    return {
+      capability: "search", operation: "search", workspace: "live-knowledge", query: value, location: "",
+      needsLiveProvider: true, artifact: emptyArtifact("list", "Apple pie recipe sources"),
+      acknowledgement: "The current source-linked apple pie recipe is visible in Live Knowledge."
+    };
+  }
   if (!/\b(?:search|find|show)\b.*\b(?:jobs?|employment|work opportunities)\b/i.test(value)) return null;
   const query = clean(value
     .replace(/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*/i, "")
