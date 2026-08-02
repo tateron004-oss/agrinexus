@@ -23,7 +23,7 @@
 
   function normalizeAgriculturalTranscript(value) {
     return normalize(value).replace(
-      /\b(?:ma(?:ize|ze|se|ys|y['\u2019]s)|meas|me['\u2019]?s)\b(?:['\u2019](?:s\b)?(?=\s))?(?=\s+(?:crop|disease|diseases|pest|plant|seed|treatment)\b)/gi,
+      /\b(?:ma(?:ize|ze|zed|se|ys|y['\u2019]s)|meas|me['\u2019]?s)\b(?:['\u2019](?:s\b)?(?=\s))?(?=\s+(?:crop|disease|diseases|pest|plant|seed|treatment)\b)/gi,
       "maize"
     );
   }

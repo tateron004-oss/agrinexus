@@ -23,6 +23,7 @@ assert.equal(isDirectApplicationCommand("Nexus sell 50 bags of maize."), true);
 assert.equal(isDirectApplicationCommand("How are you today?"), false);
 assert.equal(normalizeAgriculturalTranscript("Nexus, show pictures of possible Mays diseases."), "Nexus, show pictures of possible maize diseases.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, show me pictures of possible meas diseases."), "Nexus, show me pictures of possible maize diseases.");
+assert.equal(normalizeAgriculturalTranscript("Nexus, show me pictures of possible mazed diseases."), "Nexus, show me pictures of possible maize diseases.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Mays' treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Maze's treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, reset the map to Mays Landing."), "Nexus, reset the map to Mays Landing.");
@@ -48,6 +49,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 }))).transcript, "Nexus, show pictures of possible maize diseases.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag-meas", transcript: "Nexus, show me pictures of possible meas diseases."
+}))).transcript, "Nexus, show me pictures of possible maize diseases.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag-mazed", transcript: "Nexus, show me pictures of possible mazed diseases."
 }))).transcript, "Nexus, show me pictures of possible maize diseases.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-edit", transcript: "Nexus, set queued request to find Mays' treatment guidance."
