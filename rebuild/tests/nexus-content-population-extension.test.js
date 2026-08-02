@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -52,6 +52,20 @@ async function main() {
     command: "Nexus, sell fifty bags of maize."
   });
   assert.equal(staleMarketplaceDetail.workspace, "marketplace");
+  const locationReceipt = {
+    type: "realtime.data-message",
+    detail: { data: JSON.stringify({ type: "response.output_audio_transcript.done", transcript: "Got it. I've set the location to Nakuru, Kenya. What are you noticing?" }) }
+  };
+  assert.equal(assistantLocationConfirmation(locationReceipt), "Nakuru, Kenya");
+  const locationField = {
+    name: "location", id: "location", value: "Naivasha, Kenya.",
+    getAttribute(name) { return name === "aria-label" ? "Location" : null; },
+    dispatchEvent() { return true; }
+  };
+  assert.equal(reconcileAssistantLocation(locationReceipt, {
+    getElementById() { return { hidden: false, querySelectorAll() { return [locationField]; } }; }
+  }, { Event: class { constructor(type) { this.type = type; } } }), true);
+  assert.equal(locationField.value, "Nakuru, Kenya");
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "health",
     command: "Nexus, set symptoms or notes to no symptoms."

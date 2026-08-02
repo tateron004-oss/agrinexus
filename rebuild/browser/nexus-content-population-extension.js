@@ -189,6 +189,35 @@
     return changed;
   }
 
+  function assistantLocationConfirmation(receipt) {
+    if (receipt?.type !== "realtime.data-message") return "";
+    let message;
+    try { message = JSON.parse(receipt.detail?.data || "{}"); } catch { return ""; }
+    if (!["response.output_audio_transcript.done", "response.content_part.done"].includes(message.type)) return "";
+    const transcript = normalize(message.transcript || message.part?.transcript);
+    const match = transcript.match(/\b(?:i(?:'ve| have)\s+)?set\s+(?:the\s+)?location\s+to\s+(.+?)(?=\.\s|[!?]|$)/i);
+    return normalize(match?.[1]);
+  }
+
+  function reconcileAssistantLocation(receipt, documentObject, windowObject = globalObject) {
+    const confirmed = assistantLocationConfirmation(receipt);
+    if (!confirmed) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden) return false;
+    const field = [...(workspace.querySelectorAll?.("input, textarea") || [])].find((control) => {
+      const identity = normalize([control.name, control.id, control.getAttribute?.("aria-label")].filter(Boolean).join(" ")).toLowerCase();
+      return /\blocation\b/.test(identity);
+    });
+    if (!field || normalize(field.value).toLowerCase() === confirmed.toLowerCase()) return false;
+    field.value = confirmed;
+    const EventConstructor = windowObject?.Event;
+    if (EventConstructor && field.dispatchEvent) {
+      field.dispatchEvent(new EventConstructor("input", { bubbles: true }));
+      field.dispatchEvent(new EventConstructor("change", { bubbles: true }));
+    }
+    return true;
+  }
+
   function canonicalCommandKey(command) {
     return normalize(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -542,6 +571,9 @@
 
     onReceipt(event) {
       const receipt = event.detail || {};
+      if (reconcileAssistantLocation(receipt, this.document, this.window)) {
+        this.stage("voice-form.assistant-confirmation-reconciled", { field: "location", value: assistantLocationConfirmation(receipt) });
+      }
       if (receipt.type === "workspace.visible") {
         const changed = synchronizeHiddenMapLinks(receipt.detail?.workspace, this.document);
         if (changed) this.stage("workspace.hidden-map-links-synchronized", { workspace: receipt.detail?.workspace, changed });
@@ -796,7 +828,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
