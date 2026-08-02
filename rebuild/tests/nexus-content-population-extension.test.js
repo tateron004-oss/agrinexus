@@ -99,6 +99,11 @@ async function main() {
   assert.equal(queuedAgricultureField.value, "find maize treatment guidance.");
   const queuedDirectionsField = { name: "queuedRequest", value: "find the maze entrance" };
   assert.equal(normalizeGuidedFieldValue(queuedDirectionsField), "find the maze entrance");
+  const learningTopicField = { name: "topic", value: "phishing emails safety." };
+  assert.equal(normalizeGuidedFieldValue(learningTopicField), "phishing email safety.");
+  assert.equal(learningTopicField.value, "phishing email safety.");
+  const learningInboxField = { name: "topic", value: "organizing emails safely" };
+  assert.equal(normalizeGuidedFieldValue(learningInboxField), "organizing emails safely");
   assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
