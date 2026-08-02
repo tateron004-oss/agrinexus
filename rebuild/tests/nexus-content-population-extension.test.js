@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, realtimeRouteCallLifecycle, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -66,6 +66,25 @@ async function main() {
     getElementById() { return { hidden: false, querySelectorAll() { return [locationField]; } }; }
   }, { Event: class { constructor(type) { this.type = type; } } }), true);
   assert.equal(locationField.value, "Nakuru, Kenya");
+  const routeStarted = { type: "realtime.data-message", detail: { data: JSON.stringify({
+    type: "response.output_item.added", item: { id: "item-route", type: "function_call", name: "route_nexus_command", call_id: "call-route" }
+  }) } };
+  const routeFinished = { type: "realtime.data-message", detail: { data: JSON.stringify({
+    type: "response.function_call_arguments.done", name: "route_nexus_command", call_id: "call-route"
+  }) } };
+  assert.deepEqual(realtimeRouteCallLifecycle(routeStarted), { state: "started", id: "call-route" });
+  assert.deepEqual(realtimeRouteCallLifecycle(routeFinished), { state: "finished", id: "call-route" });
+  const realtimeCoalescingController = new NexusContentPopulationController({ windowObject: { dispatchEvent() {} }, documentObject: {} });
+  realtimeCoalescingController.stage = () => {};
+  realtimeCoalescingController.onReceipt({ detail: routeStarted });
+  let transcriptStopped = false;
+  realtimeCoalescingController.onReceipt({
+    detail: { type: "transcript.final", detail: { transcript: "Nexus, help me create a resume." } },
+    stopImmediatePropagation() { transcriptStopped = true; }
+  });
+  assert.equal(transcriptStopped, true);
+  realtimeCoalescingController.onReceipt({ detail: routeFinished });
+  assert.equal(realtimeCoalescingController.pendingRealtimeRoutes.size, 0);
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "health",
     command: "Nexus, set symptoms or notes to no symptoms."
