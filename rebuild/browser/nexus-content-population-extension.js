@@ -238,6 +238,17 @@
       || /\b(create|make)\b.*\b(provider|doctor|physician)\b.*\b(card|summary)\b/i.test(normalizedCommand);
   }
 
+  function canonicalProtectedWorkspace(command) {
+    const value = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (/\b(weather|forecast|apple pie recipe|pilot evidence|evidence dashboard|source directory)\b/.test(value)) return "live-knowledge";
+    if (/\b(picture|pictures|image|images|photo|photos)\b/.test(value) && /\b(maize|maze|mase|mays|disease|crop|plant|pest)\b/.test(value)) return "agriculture";
+    if (/\b(resume|curriculum vitae|cv)\b/.test(value)) return "workforce";
+    if (/\b(provider|doctor|physician|contact card)\b/.test(value)) return "health";
+    if (/\bplay\b.*\b(music|song|stevie wonder)\b/.test(value)) return "music";
+    if (/\b(plan|reset)\b.*\b(map|route|directions)\b/.test(value)) return "maps";
+    return null;
+  }
+
   function canonicalizeLeadingSpokenNumber(value) {
     const input = normalize(value);
     if (!input || /^[-+]?\d/.test(input)) return input;
@@ -489,6 +500,15 @@
     onOpenCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtensionExclusive || !detail.requestId || !normalize(detail.command || detail.utterance)) return;
+      const canonicalWorkspace = canonicalProtectedWorkspace(detail.command || detail.utterance);
+      if (!detail.contentExtensionCanonicalRoute && canonicalWorkspace && canonicalWorkspace !== normalize(detail.workspace).toLowerCase()) {
+        event.stopImmediatePropagation();
+        this.stage("workspace.specialized-route-canonicalized", { requestId: detail.requestId, from: detail.workspace, to: canonicalWorkspace, command: normalize(detail.command || detail.utterance) });
+        this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
+          detail: Object.freeze({ ...detail, workspace: canonicalWorkspace, contentExtensionCanonicalRoute: true })
+        }));
+        return;
+      }
       if (shouldShieldGuidedFieldRoute(detail.command || detail.utterance, detail.workspace, this.document)) {
         event.stopImmediatePropagation();
         const workspace = this.document.getElementById("nexus-workspace");
@@ -772,7 +792,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

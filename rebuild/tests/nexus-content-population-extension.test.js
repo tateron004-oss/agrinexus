@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeHiddenMapLinks } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -35,6 +35,10 @@ async function main() {
   assert.equal(canonicalCommandKey("Nexus, start a digital literacy course."), canonicalCommandKey("start a digital literacy course"));
   assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
   assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
+  assert.equal(canonicalProtectedWorkspace("Next, show an apple pie recipe with ingredients, steps, and sources."), "live-knowledge");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show me pictures of possible Mase diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
+  assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "marketplace",
