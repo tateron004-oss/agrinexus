@@ -262,7 +262,7 @@
       return canonical;
     }
     if (/\bqueuedrequest\b|\bqueued request\b/.test(identity)) {
-      const canonical = value.replace(/\bmaze\b(?=\s+(?:crop|disease|pest|plant|seed|treatment)\b)/i, "maize");
+      const canonical = value.replace(/\bma(?:ze|se)\b(?=\s+(?:crop|disease|pest|plant|seed|treatment)\b)/i, "maize");
       if (canonical !== value) field.value = canonical;
       return canonical;
     }
