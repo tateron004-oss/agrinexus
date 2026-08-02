@@ -107,6 +107,8 @@ async function main() {
   assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
   assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
+  assert.equal(inputTypeForField({ id: "time", label: "Date and time", type: "date" }), "text");
+  assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);

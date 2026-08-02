@@ -277,8 +277,9 @@
   function inputTypeForField(field) {
     const requested = normalize(field?.type).toLowerCase();
     if (!["text", "number", "date", "email", "tel"].includes(requested)) return "text";
-    if (requested !== "number") return requested;
     const identity = normalize(`${field?.id || ""} ${field?.label || ""}`).toLowerCase();
+    if (requested === "date" && /\bdate and time\b/.test(identity)) return "text";
+    if (requested !== "number") return requested;
     return /\b(quantity|amount|dose|dosage|weight|distance|area|volume|length|height|width|depth|duration|time per week)\b/.test(identity)
       ? "text"
       : "number";
