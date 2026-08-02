@@ -36,7 +36,7 @@ async function main() {
     "open Reminders", "Offline Queue"
   ]) assert.ok(physical.includes(phrase), `Physical production contract is missing ${phrase}.`);
   assert.match(workflow, /NEXUS_PRODUCTION_SESSION_ID/);
-  assert.match(workflow, /1\.\.3/);
+  assert.match(workflow, /for \/L %%I in \(1,1,3\)/);
 
   const weatherGoal = {
     capability: "weather", operation: "search", workspace: "live-knowledge", query: "weather in Nairobi, Kenya",

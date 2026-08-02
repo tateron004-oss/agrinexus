@@ -119,16 +119,16 @@ jobs:
           node scripts/nexus-production-certification-preflight.js
           node scripts/nexus-release-certification-controller.js verify-deployment
       - name: Require three fresh uncached production capability sessions
-        shell: powershell
+        shell: cmd
         env:
           NEXUS_PRODUCTION_REPAIR_BASE_URL: https://nexus-genesis-certified.onrender.com
           NEXUS_LIVE_PROVIDER_BASE_URL: https://nexus-genesis-certified.onrender.com
         run: |
-          1..3 | ForEach-Object {
-            $env:NEXUS_PRODUCTION_SESSION_ID = "session-$_"
+          for /L %%I in (1,1,3) do (
+            set "NEXUS_PRODUCTION_SESSION_ID=session-%%I"
             node rebuild/tests/nexus-production-experience-windows-voice.js
-            if ($LASTEXITCODE -ne 0) { throw "Production capability session $_ failed." }
-          }
+            if errorlevel 1 exit /b 1
+          )
       - name: Run every physical voice application journey
         shell: cmd
         env:
