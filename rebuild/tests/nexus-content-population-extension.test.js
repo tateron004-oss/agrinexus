@@ -110,11 +110,14 @@ async function main() {
     setAttribute(name, value) { if (name === "href") this.href = value; },
     removeAttribute(name) { if (name === "href") this.href = ""; }
   };
-  const mapSurface = { querySelectorAll() { return [staleMapAnchor]; } };
+  const mapSurface = { hidden: true, querySelectorAll() { return [staleMapAnchor]; } };
   const mapDocument = { getElementById(id) { return id === "nexus-map-surface" ? mapSurface : null; } };
   assert.equal(synchronizeHiddenMapLinks("live-knowledge", mapDocument), 1);
   assert.equal(staleMapAnchor.href, "");
   assert.equal(staleMapAnchor.dataset.nexusHiddenMapHref, "https://leafletjs.com");
+  assert.equal(synchronizeHiddenMapLinks("maps", mapDocument), 0);
+  assert.equal(staleMapAnchor.href, "");
+  mapSurface.hidden = false;
   assert.equal(synchronizeHiddenMapLinks("maps", mapDocument), 1);
   assert.equal(staleMapAnchor.href, "https://leafletjs.com");
   let restoreShield;

@@ -192,14 +192,15 @@
   function synchronizeHiddenMapLinks(workspace, documentObject) {
     const mapSurface = documentObject?.getElementById?.("nexus-map-surface");
     if (!mapSurface) return 0;
+    const mapIsVisible = normalize(workspace).toLowerCase() === "maps" && mapSurface.hidden !== true;
     const anchors = [...(mapSurface.querySelectorAll?.("a") || [])];
     let changed = 0;
     for (const anchor of anchors) {
-      if (normalize(workspace).toLowerCase() === "maps" && anchor.dataset?.nexusHiddenMapHref) {
+      if (mapIsVisible && anchor.dataset?.nexusHiddenMapHref) {
         anchor.setAttribute?.("href", anchor.dataset.nexusHiddenMapHref);
         delete anchor.dataset.nexusHiddenMapHref;
         changed += 1;
-      } else if (normalize(workspace).toLowerCase() !== "maps" && anchor.getAttribute?.("href")) {
+      } else if (!mapIsVisible && anchor.getAttribute?.("href")) {
         anchor.dataset.nexusHiddenMapHref = anchor.getAttribute("href");
         anchor.removeAttribute?.("href");
         changed += 1;
