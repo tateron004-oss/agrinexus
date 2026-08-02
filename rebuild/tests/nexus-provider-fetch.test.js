@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { createProviderFetch } = require("../nexus-core/provider-fetch");
 const { createVisualDataService } = require("../nexus-core/visual-data-service");
+const { createContentActionService } = require("../nexus-core/content-action-service");
 
 async function main() {
   {
@@ -84,6 +85,19 @@ async function main() {
     assert.equal(weather.status, "live-weather-ready");
     assert.equal(weather.location, "Nairobi, Kenya");
     assert.equal(calls, 3, "the live weather path should recover from one transient provider failure");
+  }
+
+  {
+    let resolverCalls = 0;
+    const service = createContentActionService({
+      goalResolver: { async resolve() { resolverCalls += 1; throw new Error("resolver must not own explicit reminder drafts"); } }
+    });
+    const reminder = await service.execute({ command: "Nexus, remind me tonight at 8 PM to check my blood pressure.", requestedWorkspace: "reminders" });
+    assert.equal(reminder.status, "ready");
+    assert.equal(reminder.workspace, "reminders");
+    assert.equal(reminder.capability, "reminder");
+    assert.equal(reminder.artifact.fields.find((field) => field.id === "when").value, "tonight");
+    assert.equal(resolverCalls, 0, "an explicit reminder must render before the conversational resolver timeout window");
   }
 
   console.log("Nexus provider fetch retry tests passed.");

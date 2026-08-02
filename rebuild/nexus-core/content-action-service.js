@@ -170,6 +170,12 @@ function explicitFastProviderGoal(command) {
   };
 }
 
+function explicitFastDraftGoal(context = {}) {
+  return /\b(remind|reminder)\b/i.test(clean(context.command, 4000))
+    ? localResilienceGoal(context)
+    : null;
+}
+
 function outputText(payload) {
   if (clean(payload && payload.output_text, 200000)) return payload.output_text;
   for (const item of payload && payload.output || []) {
@@ -841,13 +847,14 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
     try {
       const explicitWorkspace = explicitApplicationWorkspace(request.command);
       const fastProviderGoal = explicitFastProviderGoal(request.command);
+      const fastDraftGoal = explicitFastDraftGoal(request);
       goal = explicitWorkspace
         ? {
           capability: "workspace", operation: "open", workspace: explicitWorkspace, query: clean(request.command), location: "",
           needsLiveProvider: false, artifact: applicationWorkspaceArtifact(explicitWorkspace),
           acknowledgement: `${APPLICATION_WORKSPACES[explicitWorkspace][0]} is visibly open and synchronized with this request.`
         }
-        : fastProviderGoal || normalizeGoalRoute(await resolver.resolve(request));
+        : fastProviderGoal || fastDraftGoal || normalizeGoalRoute(await resolver.resolve(request));
     } catch (error) {
       goal = localResilienceGoal(request);
       if (!goal) {
