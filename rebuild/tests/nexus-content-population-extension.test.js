@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { renderArtifactMarkup } = require("../browser/nexus-content-population-extension");
+const { renderArtifactMarkup, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -23,6 +23,15 @@ async function main() {
   assert.match(browserSource, /previousArtifact/);
   assert.match(browserSource, /visibleFields/);
   assert.match(browserSource, /recentConversation|history/);
+  const editableWorkspace = {
+    hidden: false,
+    querySelectorAll() { return [{ readOnly: false, type: "text" }]; }
+  };
+  const editableDocument = { getElementById() { return editableWorkspace; } };
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), true);
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, find a mobile clinic in Kenya.", editableDocument), false);
+  editableWorkspace.hidden = true;
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), false);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");

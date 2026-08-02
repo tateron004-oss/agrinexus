@@ -59,6 +59,15 @@
     return [action, ...context].filter(Boolean).join(". ");
   }
 
+  function shouldYieldTranscriptToGuidedEntry(command, documentObject) {
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden) return false;
+    const editableFields = [...(workspace.querySelectorAll?.("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") || [])]
+      .filter((field) => !field.readOnly && field.type !== "hidden");
+    if (!editableFields.length) return false;
+    return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
+  }
+
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
     const label = `${escapeMarkup(field.label || "Field")}${field.required ? " *" : ""}`;
@@ -214,6 +223,10 @@
       if (receipt.type !== "transcript.final") return;
       const command = normalize(receipt.detail && receipt.detail.transcript);
       if (!command) return;
+      if (shouldYieldTranscriptToGuidedEntry(command, this.document)) {
+        this.stage("transcript.yielded-to-guided-entry", { command, workspace: this.activeWorkspace });
+        return;
+      }
       if (this.transcriptTimer) this.window.clearTimeout(this.transcriptTimer);
       this.transcriptTimer = this.window.setTimeout(() => {
         if (this.lastOpenCommand === command && Date.now() - this.lastOpenAt < 900) return;
@@ -394,7 +407,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
