@@ -862,7 +862,10 @@
       const { shell, appSurface } = this.surface(result.workspace || this.activeWorkspace);
       if (!shell || !appSurface) throw new Error("The visible Nexus workspace is unavailable.");
       const protectedMapSurface = this.document.getElementById("nexus-map-surface");
-      if (protectedMapSurface && result.workspace === "maps" && result.capability !== "map") protectedMapSurface.hidden = true;
+      if (protectedMapSurface && result.workspace === "maps" && result.capability !== "map") {
+        protectedMapSurface.hidden = true;
+        synchronizeHiddenMapLinks("listings", this.document);
+      }
       if (["music", "media-control"].includes(result.capability)) {
         for (const audio of this.document.querySelectorAll("audio, video")) audio.pause?.();
         const protectedFrame = this.document.getElementById("nexus-music-frame");

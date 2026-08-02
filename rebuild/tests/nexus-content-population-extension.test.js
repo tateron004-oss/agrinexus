@@ -29,6 +29,7 @@ async function main() {
   assert.match(browserSource, /previousArtifact/);
   assert.match(browserSource, /visibleFields/);
   assert.match(browserSource, /recentConversation|history/);
+  assert.match(browserSource, /protectedMapSurface\.hidden\s*=\s*true;\s*synchronizeHiddenMapLinks\("listings", this\.document\)/s);
   const editableWorkspace = {
     hidden: false,
     querySelectorAll() { return [{ readOnly: false, type: "text" }]; }
