@@ -23,6 +23,18 @@
     ])
   });
 
+  const DEADLINE_FALLBACK_FIELDS = Object.freeze({
+    agriculture: Object.freeze([["subject", "Crop or livestock"], ["location", "Location"], ["observation", "What are you seeing?"]]),
+    health: Object.freeze([["reading", "Blood pressure or reading"], ["measuredAt", "When measured"], ["symptoms", "Symptoms or notes"]]),
+    telehealth: Object.freeze([["reason", "Reason for visit"], ["preferredDate", "Preferred date"], ["provider", "Care provider"]]),
+    "mobile-clinic": Object.freeze([["location", "Location"], ["careNeeded", "Care needed"], ["travelDistance", "Travel distance"]]),
+    pharmacy: Object.freeze([["medication", "Medication"], ["requestType", "Request type"], ["pharmacy", "Pharmacy or location"]]),
+    learning: Object.freeze([["topic", "Topic or skill"], ["level", "Learning level"], ["language", "Language"]]),
+    marketplace: Object.freeze([["product", "Product"], ["quantity", "Quantity"], ["location", "Location"]]),
+    reminders: Object.freeze([["reminder", "Reminder"], ["time", "Date and time"], ["repeat", "Repeat"]]),
+    offline: Object.freeze([["queuedRequest", "Queued request"], ["connectionStatus", "Connection status"], ["syncPriority", "Sync priority"]])
+  });
+
   function normalize(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
@@ -56,6 +68,25 @@
     if (capability === "map") return "map";
     if (capability === "search") return "evidence";
     return "application";
+  }
+
+  function applicationDeadlineFallback(detail) {
+    const workspace = normalize(detail && detail.workspace);
+    const command = normalize(detail && (detail.command || detail.utterance));
+    const fieldDefinitions = DEADLINE_FALLBACK_FIELDS[workspace];
+    if (!fieldDefinitions) return null;
+    if (workspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(command)) return null;
+    if (workspace === "health" && /\b(provider|doctor|contact card)\b/i.test(command)) return null;
+    const requestId = normalize(detail && detail.requestId) || `deadline-${Date.now()}`;
+    return Object.freeze({
+      schema: "nexus.content.result.v2", requestId, status: "ready", capability: "intake", operation: "open", workspace,
+      acknowledgement: `${APP_NAMES[workspace] || workspace} is ready.`,
+      artifact: Object.freeze({
+        kind: "form", title: APP_NAMES[workspace] || workspace, description: "Editable workspace ready while live enrichment continues.",
+        fields: Object.freeze(fieldDefinitions.map(([id, label]) => Object.freeze({ id, label, type: "text", value: "" }))),
+        sections: Object.freeze([]), items: Object.freeze([]), links: Object.freeze([]), media: Object.freeze({ state: "unavailable" })
+      })
+    });
   }
 
   function workflowButtonCommand(label, fields = []) {
@@ -151,10 +182,11 @@
   }
 
   class NexusContentPopulationController {
-    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject) } = {}) {
+    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500 } = {}) {
       this.window = windowObject;
       this.document = documentObject;
       this.fetch = fetchImpl;
+      this.providerDeadlineMs = providerDeadlineMs;
       this.activeWorkspace = null;
       this.currentResult = null;
       this.pending = new Map();
@@ -322,7 +354,24 @@
       this.activeWorkspace = detail.workspace || this.activeWorkspace || "live-knowledge";
       this.pending.set(detail.requestId, { detail });
       this.stage("conversation.received", { requestId: detail.requestId, command: detail.command, workspace: this.activeWorkspace });
-      Promise.resolve(this.provider(detail)).then(async (result) => {
+      const providerRequest = Promise.resolve(this.provider(detail));
+      const deadlineFallback = applicationDeadlineFallback(detail);
+      const resultRequest = deadlineFallback && this.providerDeadlineMs >= 0
+        ? new Promise((resolve, reject) => {
+          const deadlineTimer = this.window.setTimeout(() => {
+            this.stage("provider.deadline-fallback", { requestId: detail.requestId, workspace: this.activeWorkspace, deadlineMs: this.providerDeadlineMs });
+            resolve(deadlineFallback);
+          }, this.providerDeadlineMs);
+          providerRequest.then((result) => {
+            this.window.clearTimeout(deadlineTimer);
+            resolve(result);
+          }, (error) => {
+            this.window.clearTimeout(deadlineTimer);
+            reject(error);
+          });
+        })
+        : providerRequest;
+      resultRequest.then(async (result) => {
         this.activeWorkspace = result.workspace || this.activeWorkspace;
         this.currentResult = result;
         this.render(result, detail);
@@ -430,7 +479,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
