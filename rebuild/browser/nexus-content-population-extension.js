@@ -205,8 +205,9 @@
   }
 
   function alignApplicationResultWorkspace(result, detail) {
-    const requestedWorkspace = normalize(detail?.workspace).toLowerCase();
-    if (!result || !requestedWorkspace || !APP_NAMES[requestedWorkspace] || !isApplicationRouteCommand(detail?.command || detail?.utterance)) return result;
+    const command = detail?.command || detail?.utterance;
+    const requestedWorkspace = canonicalProtectedWorkspace(command) || normalize(detail?.workspace).toLowerCase();
+    if (!result || !requestedWorkspace || !APP_NAMES[requestedWorkspace] || !isApplicationRouteCommand(command)) return result;
     if (normalize(result.workspace).toLowerCase() === requestedWorkspace) return result;
     return Object.freeze({ ...result, workspace: requestedWorkspace });
   }
@@ -244,6 +245,7 @@
     if (/\b(picture|pictures|image|images|photo|photos)\b/.test(value) && /\b(maize|maze|mase|mays|disease|crop|plant|pest)\b/.test(value)) return "agriculture";
     if (/\b(resume|curriculum vitae|cv)\b/.test(value)) return "workforce";
     if (/\b(provider|doctor|physician|contact card)\b/.test(value)) return "health";
+    if (/\b(sell|listing|marketplace)\b/.test(value) && /\b(bag|bags|maize|crop|produce|product)\b/.test(value)) return "marketplace";
     if (/\bplay\b.*\b(music|song|stevie wonder)\b/.test(value)) return "music";
     if (/\b(plan|reset)\b.*\b(map|route|directions)\b/.test(value)) return "maps";
     return null;
@@ -583,7 +585,7 @@
         const requestId = globalObject.crypto?.randomUUID?.() || `content-${Date.now()}`;
         this.open(Object.freeze({
           requestId, transactionId: `content-follow-up-${requestId}`,
-          workspace: this.activeWorkspace || "live-knowledge", command,
+          workspace: canonicalProtectedWorkspace(command) || this.activeWorkspace || "live-knowledge", command,
           utterance: command, parameters: {}, contentExtensionExclusive: true, contentExtensionSynthetic: true
         }));
       }, 150);
@@ -720,13 +722,15 @@
       const form = surface.querySelector("[data-nexus-visible-form]");
       if (form) {
         const persist = () => {
-          for (const field of result.artifact.fields || []) {
+          const fields = (result.artifact.fields || []).map((field) => {
             const control = form.elements.namedItem(field.id);
-            if (control) field.value = control.type === "checkbox" ? String(control.checked) : control.value;
-          }
-          this.currentResult = result;
+            if (!control) return field;
+            return Object.freeze({ ...field, value: control.type === "checkbox" ? String(control.checked) : control.value });
+          });
+          const artifact = Object.freeze({ ...result.artifact, fields: Object.freeze(fields) });
+          this.currentResult = Object.freeze({ ...result, artifact });
           const artifacts = readJson(this.window.localStorage, STORAGE.artifacts, {});
-          artifacts[result.workspace || this.activeWorkspace] = result.artifact;
+          artifacts[result.workspace || this.activeWorkspace] = artifact;
           this.window.localStorage.setItem(STORAGE.artifacts, JSON.stringify(artifacts));
         };
         form.addEventListener("input", persist);

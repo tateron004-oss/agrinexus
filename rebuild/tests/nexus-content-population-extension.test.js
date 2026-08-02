@@ -38,6 +38,7 @@ async function main() {
   assert.equal(canonicalProtectedWorkspace("Next, show an apple pie recipe with ingredients, steps, and sources."), "live-knowledge");
   assert.equal(canonicalProtectedWorkspace("Nexus, show me pictures of possible Mase diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
+  assert.equal(canonicalProtectedWorkspace("Nexus, sell fifty bags of maize."), "marketplace");
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
@@ -46,6 +47,11 @@ async function main() {
   });
   assert.equal(alignedMarketplace.workspace, "marketplace");
   assert.equal(alignedMarketplace.artifact, marketplaceResult.artifact);
+  const staleMarketplaceDetail = alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "workforce",
+    command: "Nexus, sell fifty bags of maize."
+  });
+  assert.equal(staleMarketplaceDetail.workspace, "marketplace");
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "health",
     command: "Nexus, set symptoms or notes to no symptoms."
@@ -116,6 +122,30 @@ async function main() {
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
   assert.equal(healthFallback.status, "ready");
   assert.deepEqual(healthFallback.artifact.fields.map((field) => field.label), ["Blood pressure or reading", "When measured", "Symptoms or notes"]);
+  let persistedInput;
+  const storedArtifacts = new Map();
+  const immutableController = new NexusContentPopulationController({
+    windowObject: {
+      localStorage: {
+        getItem(key) { return storedArtifacts.get(key) || null; },
+        setItem(key, value) { storedArtifacts.set(key, value); }
+      }
+    },
+    documentObject: {}
+  });
+  immutableController.bindArtifact({
+    querySelector(selector) {
+      if (selector !== "[data-nexus-visible-form]") return null;
+      return {
+        elements: { namedItem() { return { type: "text", value: "145 over 92" }; } },
+        addEventListener(type, handler) { if (type === "input") persistedInput = handler; },
+        querySelector() { return null; }
+      };
+    }
+  }, healthFallback);
+  assert.doesNotThrow(() => persistedInput());
+  assert.equal(immutableController.currentResult.artifact.fields[0].value, "145 over 92");
+  assert.equal(healthFallback.artifact.fields[0].value, "");
   assert.equal(applicationDeadlineFallback({ requestId: "provider-1", workspace: "health", command: "Nexus, create a provider card for my doctor." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "images-1", workspace: "agriculture", command: "Nexus, show maize disease pictures." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }).status, "ready");
