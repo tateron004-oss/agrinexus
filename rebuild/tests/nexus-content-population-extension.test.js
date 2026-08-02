@@ -154,6 +154,15 @@ async function main() {
   assert.match(locationMarkup, />County \/ area</);
   assert.match(locationMarkup, /aria-label="Location"/);
 
+  const clinicMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-3", status: "ready", capability: "listings", operation: "search", workspace: "mobile-clinic",
+    artifact: { ...artifact("list", "Mobile clinics"), items: [{ id: "clinic-1", title: "Nakuru clinic" }] }
+  });
+  assert.match(clinicMarkup, /data-nexus-visible-form/);
+  assert.match(clinicMarkup, /aria-label="Location"/);
+  assert.match(clinicMarkup, /aria-label="Care needed"/);
+  assert.match(clinicMarkup, /aria-label="Travel distance"/);
+
   console.log("Nexus open capability-layer unit acceptance: PASS (novel music, listings, sources, résumé context, form rendering, truthful failure)");
 }
 

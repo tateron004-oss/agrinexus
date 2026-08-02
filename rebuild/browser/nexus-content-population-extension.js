@@ -15,6 +15,14 @@
     "live-knowledge": "Live Knowledge / Internet"
   });
 
+  const REQUIRED_WORKSPACE_FIELDS = Object.freeze({
+    "mobile-clinic": Object.freeze([
+      Object.freeze({ id: "location", label: "Location", type: "text", value: "" }),
+      Object.freeze({ id: "careNeeded", label: "Care needed", type: "text", value: "" }),
+      Object.freeze({ id: "travelDistance", label: "Travel distance", type: "text", value: "" })
+    ])
+  });
+
   function normalize(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
@@ -84,6 +92,16 @@
     return `<label for="${id}">${label}<input id="${id}" name="${id}" type="${type}" aria-label="${accessibleLabel}" value="${value}"${field.required ? " required" : ""}></label>`;
   }
 
+  function workspaceFields(result, artifact) {
+    const fields = [...(artifact.fields || [])];
+    for (const required of REQUIRED_WORKSPACE_FIELDS[result && result.workspace] || []) {
+      const present = fields.some((field) => normalize(field.id).toLowerCase() === required.id.toLowerCase()
+        || normalize(field.label).toLowerCase() === required.label.toLowerCase());
+      if (!present) fields.push({ ...required });
+    }
+    return fields;
+  }
+
   function routePreviewMarkup(media = {}) {
     const coordinates = (media.route && Array.isArray(media.route.coordinates) ? media.route.coordinates : [])
       .map(point => [Number(point && point[0]), Number(point && point[1])])
@@ -107,8 +125,9 @@
     const failure = status === "failed" && result.recovery
       ? `<aside class="nexus-content-recovery" role="alert"><h3>What Nexus can do next</h3><p>${escapeMarkup(result.recovery.message || "The provider did not complete the request.")}</p>${(result.recovery.nextActions || []).length ? `<ul>${result.recovery.nextActions.map((item) => `<li>${escapeMarkup(item)}</li>`).join("")}</ul>` : ""}</aside>`
       : "";
-    const fields = (artifact.fields || []).length
-      ? `<form class="nexus-content-form" data-nexus-visible-form data-nexus-printable-card>${artifact.fields.map(fieldMarkup).join("")}<div class="nexus-content-actions"><button type="button" data-content-action="save">Save visible draft</button><button type="button" data-content-action="print">Print</button></div></form>`
+    const editableFields = workspaceFields(result, artifact);
+    const fields = editableFields.length
+      ? `<form class="nexus-content-form" data-nexus-visible-form data-nexus-printable-card>${editableFields.map(fieldMarkup).join("")}<div class="nexus-content-actions"><button type="button" data-content-action="save">Save visible draft</button><button type="button" data-content-action="print">Print</button></div></form>`
       : "";
     const sections = (artifact.sections || []).map((section) => `<section class="nexus-content-section"><h3>${escapeMarkup(section.heading || "Details")}</h3>${section.body ? `<p>${escapeMarkup(section.body)}</p>` : ""}${(section.items || []).length ? `<ul>${section.items.map((item) => `<li>${escapeMarkup(item)}</li>`).join("")}</ul>` : ""}</section>`).join("");
     const items = (artifact.items || []).map((item) => {
@@ -262,6 +281,8 @@
       const appSurface = this.document.getElementById("nexus-app-surface");
       if (shell) {
         shell.hidden = false; shell.dataset.populated = "false"; shell.dataset.workspace = workspace || "live-knowledge";
+        shell.dataset.guidedEntryProcess = workspace || "live-knowledge";
+        shell.dataset.document = `${workspace || "live-knowledge"}-active-document`;
         this.document.body.classList.add("nexus-workspace-open");
       }
       if (appSurface) appSurface.hidden = false;
