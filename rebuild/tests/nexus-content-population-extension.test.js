@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { applicationDeadlineFallback, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { applicationDeadlineFallback, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -44,6 +44,37 @@ async function main() {
   assert.equal(careNeededField.value, "blood pressure screening.");
   assert.equal(outcomeKind("search", "workforce"), "application");
   assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of maize diseases.", "agriculture"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, help me create a résumé.", "workforce"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, create a provider card for my doctor.", "health"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, sell 50 bags of maize.", "marketplace"), false);
+  const certificationOwnership = [
+    ["agriculture", "Nexus, help with my maize crop in Kenya.", false],
+    ["health", "Nexus, record my blood pressure 140 over 90.", false],
+    ["telehealth", "Nexus, begin a telehealth intake.", false],
+    ["mobile-clinic", "Nexus, find a mobile clinic in Kenya.", false],
+    ["pharmacy", "Nexus, open pharmacy support.", false],
+    ["learning", "Nexus, start a digital literacy course.", false],
+    ["workforce", "Nexus, search for farming jobs in Kenya.", false],
+    ["marketplace", "Nexus, sell 50 bags of maize.", false],
+    ["maps", "Nexus, plan a route from Nairobi to Nakuru.", true],
+    ["music", "Nexus, play Stevie Wonder.", true],
+    ["reminders", "Nexus, remind me tonight at 8 PM to check my blood pressure.", false],
+    ["offline", "Nexus, show my offline queue.", false],
+    ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", true],
+    ["maps", "Nexus, reset the map and show Mombasa, Kenya.", true],
+    ["agriculture", "Nexus, show me pictures of possible maize diseases.", true],
+    ["workforce", "Nexus, help me create a résumé.", true],
+    ["live-knowledge", "Nexus, show an apple pie recipe with ingredients, steps, and sources.", true],
+    ["health", "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", true],
+    ["live-knowledge", "Nexus, open the pilot evidence dashboard.", true]
+  ];
+  for (const [workspace, command, expectedYield] of certificationOwnership) {
+    assert.equal(shouldYieldToProtectedRenderer(command, workspace), expectedYield, `${workspace}: ${command}`);
+  }
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
   assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");

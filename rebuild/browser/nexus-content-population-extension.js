@@ -111,6 +111,21 @@
     return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
   }
 
+  function shouldYieldToProtectedRenderer(command, workspace = "") {
+    const normalizedCommand = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const normalizedWorkspace = normalize(workspace).toLowerCase();
+    if (["maps", "music", "live-knowledge"].includes(normalizedWorkspace)) return true;
+    if (normalizedWorkspace === "agriculture" && /\b(image|images|picture|pictures|photo|photos)\b/i.test(normalizedCommand)) return true;
+    if (normalizedWorkspace === "workforce" && /\b(resume|curriculum vitae|cv)\b/i.test(normalizedCommand)) return true;
+    if (normalizedWorkspace === "health" && /\b(provider|doctor|physician|contact card)\b/i.test(normalizedCommand)) return true;
+    return /\b(weather|forecast|pilot evidence|evidence dashboard|apple pie recipe)\b/i.test(normalizedCommand)
+      || /\b(show|display)\b.*\b(image|images|picture|pictures|photo|photos|source|sources|evidence)\b/i.test(normalizedCommand)
+      || /\b(plan|show|reset)\b.*\b(map|route|directions|mombasa|nairobi|nakuru)\b/i.test(normalizedCommand)
+      || /\bplay\b.*\b(music|song|stevie wonder)\b/i.test(normalizedCommand)
+      || /\b(create|make|help)\b.*\b(resume|curriculum vitae|cv)\b/i.test(normalizedCommand)
+      || /\b(create|make)\b.*\b(provider|doctor|physician)\b.*\b(card|summary)\b/i.test(normalizedCommand);
+  }
+
   function normalizeGuidedFieldValue(field) {
     if (!field) return "";
     const identity = normalize(field.name || field.id || field.getAttribute?.("aria-label")).toLowerCase();
@@ -281,6 +296,10 @@
     onOpenCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtensionExclusive || !detail.requestId || !normalize(detail.command || detail.utterance)) return;
+      if (shouldYieldToProtectedRenderer(detail.command || detail.utterance, detail.workspace)) {
+        this.stage("workspace.yielded-to-protected-renderer", { requestId: detail.requestId, workspace: detail.workspace, command: normalize(detail.command || detail.utterance) });
+        return;
+      }
       event.stopImmediatePropagation();
       const exclusive = Object.freeze({ ...detail, command: normalize(detail.command || detail.utterance), contentExtensionExclusive: true });
       this.open(exclusive);
@@ -302,6 +321,10 @@
       if (!command) return;
       if (shouldYieldTranscriptToGuidedEntry(command, this.document)) {
         this.stage("transcript.yielded-to-guided-entry", { command, workspace: this.activeWorkspace });
+        return;
+      }
+      if (shouldYieldToProtectedRenderer(command)) {
+        this.stage("transcript.yielded-to-protected-renderer", { command });
         return;
       }
       if (this.transcriptTimer) this.window.clearTimeout(this.transcriptTimer);
@@ -504,7 +527,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, escapeMarkup, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
