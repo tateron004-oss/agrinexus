@@ -82,7 +82,28 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
 
     for (const journey of journeys) {
       const before = await page.evaluate(() => window.__transactionEvidence.receipts.length);
+      await page.waitForTimeout(900);
       await injectSpokenCommand(page, journey.command);
+      const transcriptMatched = async () => page.evaluate(({ before, command }) => {
+        const tokens = value => new Set(String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(token => token.length >= 3));
+        const expected = tokens(command);
+        return window.__transactionEvidence.receipts.slice(before).some(item => {
+          if (item.type !== "transcript.final") return false;
+          const actual = tokens(item.detail?.transcript);
+          const overlap = [...expected].filter(token => actual.has(token)).length;
+          return overlap / Math.max(1, Math.min(expected.size, actual.size)) >= 0.45;
+        });
+      }, { before, command: journey.command });
+      let heard = false;
+      try {
+        await expect.poll(transcriptMatched, { timeout: 35000 }).toBe(true);
+        heard = true;
+      } catch {}
+      if (!heard) {
+        await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime?.snapshot().state.state), { timeout: 30000 }).toBe("connected");
+        await injectSpokenCommand(page, journey.command);
+        await expect.poll(transcriptMatched, { timeout: 45000 }).toBe(true);
+      }
       const receipt = await expect.poll(() => page.evaluate(({ before, workspace }) => {
         return window.__transactionEvidence.receipts.slice(before).find(item => item.type === "workspace.visible" && item.detail?.workspace === workspace) || null;
       }, { before, workspace: journey.workspace }), { timeout: 90000 }).not.toBeNull().then(() => page.evaluate(({ before, workspace }) => window.__transactionEvidence.receipts.slice(before).find(item => item.type === "workspace.visible" && item.detail?.workspace === workspace), { before, workspace: journey.workspace }));
@@ -112,7 +133,7 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
       await expect.poll(() => page.evaluate(({ before }) => window.__transactionEvidence.receipts.slice(before).some(item => item.type === "conversation.return-to-listening"), { before }), { timeout: 60000 }).toBe(true);
       const screenshot = path.join(OUTPUT, `${String(evidence.turns.length + 1).padStart(2, "0")}-${journey.id}.png`);
       await page.screenshot({ path: screenshot, fullPage: true });
-      evidence.turns.push({ ...journey, requestId: receipt.detail.requestId || null, transactionId: receipt.detail.transactionId, screenshot, passed: true });
+      evidence.turns.push({ ...journey, requestId: receipt.detail.requestId || receipt.detail.transactionId, transactionId: receipt.detail.transactionId, screenshot, passed: true });
       if (!journey.keepOpen) {
         await page.locator("#nexus-workspace-close").click();
         await expect(page.locator("#nexus-workspace")).toBeHidden();
@@ -122,6 +143,15 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
     expect(new Set(evidence.turns.map(turn => turn.transactionId)).size).toBe(evidence.turns.length);
     expect(await page.evaluate(() => window.__transactionEvidence.errors)).toEqual([]);
     evidence.passed = true;
+  } catch (error) {
+    evidence.failure = {
+      name: error.name,
+      message: error.message,
+      receipts: await page.evaluate(() => window.__transactionEvidence?.receipts?.slice(-80) || []).catch(() => []),
+      errors: await page.evaluate(() => window.__transactionEvidence?.errors || []).catch(() => [])
+    };
+    await page.screenshot({ path: path.join(OUTPUT, "failure.png"), fullPage: true }).catch(() => {});
+    throw error;
   } finally {
     evidence.finishedAt = new Date().toISOString();
     fs.writeFileSync(path.join(OUTPUT, "evidence.json"), `${JSON.stringify(evidence, null, 2)}\n`);
