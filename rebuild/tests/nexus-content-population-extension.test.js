@@ -278,6 +278,20 @@ async function main() {
   assert.match(renderArtifactMarkup({ requestId: "resume", status: "ready", capability: "resume", operation: "create", workspace: "workforce", artifact: { ...artifact("form", "Resume"), fields: [{ id: "experience", label: "Experience", type: "textarea", value: "Team lead" }] } }), /Work experience/);
   assert.equal(alignApplicationResultWorkspace({ workspace: "live-knowledge", capability: "resume" }, { command: "help me create a resume" }).workspace, "workforce");
   assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show bicycle repair shops near Windhoek, Namibia, on the map.", "maps"), false);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show bicycle repair shops near Windhoek, Namibia, on the map."), false);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show driving directions from Windhoek to Swakopmund.", "maps"), true);
+  let placeDiscoveryStopped = false;
+  let placeDiscoveryRoute = null;
+  const placeDiscoveryController = new NexusContentPopulationController({ windowObject: {}, documentObject: null, fetchImpl: null });
+  placeDiscoveryController.open = (detail) => { placeDiscoveryRoute = detail; };
+  placeDiscoveryController.onOpenCapture({
+    detail: { requestId: "windhoek-listings", workspace: "maps", command: "Nexus, show bicycle repair shops near Windhoek, Namibia, on the map." },
+    stopImmediatePropagation() { placeDiscoveryStopped = true; }
+  });
+  assert.equal(placeDiscoveryStopped, true);
+  assert.equal(placeDiscoveryRoute.contentExtensionExclusive, true);
+  assert.equal(placeDiscoveryRoute.workspace, "maps");
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of maize diseases.", "agriculture"), true);
