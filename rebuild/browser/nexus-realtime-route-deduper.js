@@ -61,13 +61,17 @@
           transcripts.set(latestInputItemId, normalize(message.transcript));
           return;
         }
-        if (message.type !== "response.output_item.added" || message.item?.type !== "function_call" || message.item?.name !== "route_nexus_command") return;
+        const routeStarted = message.type === "response.output_item.added" && message.item?.type === "function_call" && message.item?.name === "route_nexus_command";
+        const routeArgumentsCompleted = message.type === "response.function_call_arguments.done" && message.name === "route_nexus_command";
+        if (!routeStarted && !routeArgumentsCompleted) return;
         const transcript = transcripts.get(latestInputItemId) || "";
         if (!isDirectApplicationCommand(transcript) || channel.readyState !== "open") return;
-        if (message.response_id) cancelledResponseIds.add(normalize(message.response_id));
-        channel.send(JSON.stringify({ type: "response.cancel", ...(message.response_id ? { response_id: message.response_id } : {}) }));
+        const responseId = normalize(message.response_id);
+        if (responseId && cancelledResponseIds.has(responseId)) return;
+        if (responseId) cancelledResponseIds.add(responseId);
+        if (routeStarted) channel.send(JSON.stringify({ type: "response.cancel", ...(responseId ? { response_id: responseId } : {}) }));
         windowObject.dispatchEvent?.(new windowObject.CustomEvent("nexus.realtime.route-deduplicated", {
-          detail: Object.freeze({ command: normalize(transcript), capability: isDirectResumeCommand(transcript) ? "resume" : "application", responseId: normalize(message.response_id) })
+          detail: Object.freeze({ command: normalize(transcript), capability: isDirectResumeCommand(transcript) ? "resume" : "application", responseId })
         }));
       });
       channel.addEventListener = function addNormalizedRealtimeListener(type, listener, options) {

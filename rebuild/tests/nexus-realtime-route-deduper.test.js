@@ -102,4 +102,22 @@ receive({
 });
 assert.equal(coreMessageCount, beforeCancelledCompletion);
 
+sent.length = 0;
+receive({ type: "conversation.item.input_audio_transcription.delta", item_id: "input-4", delta: "Nexus," });
+receive({
+  type: "response.output_item.added",
+  response_id: "response-4",
+  item: { type: "function_call", name: "route_nexus_command", call_id: "call-4" }
+});
+receive({ type: "conversation.item.input_audio_transcription.delta", item_id: "input-4", delta: " record my blood pressure one hundred and forty over ninety." });
+const beforeLateOwnership = coreMessageCount;
+receive({
+  type: "response.function_call_arguments.done",
+  response_id: "response-4",
+  name: "route_nexus_command",
+  arguments: "{ \"command\": \"record my blood pressure 140 over 90\" }"
+});
+assert.deepEqual(sent, []);
+assert.equal(coreMessageCount, beforeLateOwnership);
+
 console.log("Nexus realtime route deduper: PASS");
