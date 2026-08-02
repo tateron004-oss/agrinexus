@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXUS_CLEAN_BASE_URL: https://agrinexus-platform.onrender.com/certification
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:
