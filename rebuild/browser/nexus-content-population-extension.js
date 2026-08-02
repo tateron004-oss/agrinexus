@@ -70,8 +70,9 @@
 
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
-    const accessibleLabel = escapeMarkup(field.label || "Field");
-    const label = `${accessibleLabel}${field.required ? " *" : ""}`;
+    const visibleLabel = String(field.label || "Field");
+    const accessibleLabel = escapeMarkup(field.accessibleLabel || (/^county\s*\/\s*area$/i.test(visibleLabel) ? "Location" : visibleLabel));
+    const label = `${escapeMarkup(visibleLabel)}${field.required ? " *" : ""}`;
     const value = escapeMarkup(field.value || "");
     if (field.type === "textarea") return `<label for="${id}">${label}<textarea id="${id}" name="${id}" aria-label="${accessibleLabel}"${field.required ? " required" : ""}>${value}</textarea></label>`;
     if (field.type === "select") {

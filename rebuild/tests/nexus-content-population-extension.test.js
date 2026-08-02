@@ -147,6 +147,13 @@ async function main() {
   assert.doesNotMatch(markup, /aria-label="Main concern \*"/);
   assert.doesNotMatch(markup, /<script/i);
 
+  const locationMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-2", status: "ready", capability: "intake", operation: "create", workspace: "agriculture",
+    artifact: { ...artifact("form", "Maize Crop Help Intake"), fields: [{ id: "county", label: "County / area", type: "text", value: "Nakuru, Kenya." }] }
+  });
+  assert.match(locationMarkup, />County \/ area</);
+  assert.match(locationMarkup, /aria-label="Location"/);
+
   console.log("Nexus open capability-layer unit acceptance: PASS (novel music, listings, sources, résumé context, form rendering, truthful failure)");
 }
 
