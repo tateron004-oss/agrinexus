@@ -67,6 +67,7 @@ async function main() {
   }, { Event: class { constructor(type) { this.type = type; } } }), true);
   assert.equal(locationField.value, "Nakuru, Kenya");
   assert.equal(normalizeAgriculturalFieldValue("find Mays' treatment guidance."), "find maize treatment guidance.");
+  assert.equal(normalizeAgriculturalFieldValue("find Maze's treatment guidance."), "find maize treatment guidance.");
   const queuedRequestField = {
     name: "queuedRequest", id: "queuedRequest", value: "find Mays' treatment guidance.",
     getAttribute(name) { return name === "aria-label" ? "Queued request" : null; },
