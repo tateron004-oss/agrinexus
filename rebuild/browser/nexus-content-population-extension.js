@@ -151,6 +151,25 @@
     return /\b(add|append|enter|record|put|set|change|replace|correct|undo|revert|read|review|repeat|save|store|keep|reopen|restore|load|continue|submit|send|share|apply|publish|confirm|approve|cancel)\b/i.test(normalize(command));
   }
 
+  function shouldShieldGuidedFieldRoute(command, requestedWorkspace, documentObject) {
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() === normalize(requestedWorkspace).toLowerCase()) return false;
+    if (!shouldYieldTranscriptToGuidedEntry(command, documentObject)) return false;
+    const commandKey = canonicalCommandKey(command);
+    const fields = [...(workspace.querySelectorAll?.("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") || [])]
+      .filter((field) => !field.readOnly && field.type !== "hidden");
+    return fields.some((field) => {
+      const identities = [
+        field.getAttribute?.("aria-label"),
+        field.labels?.[0]?.textContent,
+        field.closest?.("label")?.textContent,
+        field.name,
+        field.id
+      ].map(canonicalCommandKey).filter(Boolean);
+      return identities.some((identity) => commandKey.includes(identity));
+    });
+  }
+
   function canonicalCommandKey(command) {
     return normalize(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -368,6 +387,7 @@
       this.activeWorkspace = null;
       this.currentResult = null;
       this.pending = new Map();
+      this.guidedRouteShields = new Map();
       this.stages = [];
       this.transcriptTimer = null;
       this.lastOpenCommand = "";
@@ -443,6 +463,17 @@
     onOpenCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtensionExclusive || !detail.requestId || !normalize(detail.command || detail.utterance)) return;
+      if (shouldShieldGuidedFieldRoute(detail.command || detail.utterance, detail.workspace, this.document)) {
+        event.stopImmediatePropagation();
+        const workspace = this.document.getElementById("nexus-workspace");
+        this.guidedRouteShields.set(detail.requestId, Object.freeze({
+          requestId: detail.requestId,
+          requestedWorkspace: detail.workspace,
+          activeWorkspace: workspace?.dataset?.workspace || this.activeWorkspace || "current-form"
+        }));
+        this.stage("workspace.redundant-route-shielded", { requestId: detail.requestId, workspace: detail.workspace, command: normalize(detail.command || detail.utterance) });
+        return;
+      }
       if (shouldYieldToProtectedRenderer(detail.command || detail.utterance, detail.workspace)) {
         this.stage("workspace.yielded-to-protected-renderer", { requestId: detail.requestId, workspace: detail.workspace, command: normalize(detail.command || detail.utterance) });
         return;
@@ -463,6 +494,23 @@
 
     onReceipt(event) {
       const receipt = event.detail || {};
+      if ((receipt.type === "voice-form.updated" || receipt.type === "voice-form.corrected") && this.guidedRouteShields.size) {
+        const [requestId, shield] = this.guidedRouteShields.entries().next().value;
+        this.guidedRouteShields.delete(requestId);
+        this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+          detail: Object.freeze({
+            requestId,
+            acknowledgementId: `guided-entry-${requestId}`,
+            workspace: shield.activeWorkspace,
+            visible: true,
+            populated: true,
+            outcomeVerified: true,
+            outcomeKind: "guided-entry",
+            contentExtension: true
+          })
+        }));
+        this.stage("workspace.redundant-route-resolved", { requestId, requestedWorkspace: shield.requestedWorkspace, workspace: shield.activeWorkspace, receiptType: receipt.type });
+      }
       if (receipt.type !== "transcript.final") return;
       const command = normalize(receipt.detail && receipt.detail.transcript);
       if (!command) return;
@@ -693,7 +741,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

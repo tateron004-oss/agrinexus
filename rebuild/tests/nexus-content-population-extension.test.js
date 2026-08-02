@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, applicationDeadlineFallback, canonicalCommandKey, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeGuidedFieldValue, outcomeKind, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -36,6 +36,17 @@ async function main() {
   assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
   assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
   editableWorkspace.hidden = false;
+  editableWorkspace.dataset = { workspace: "agriculture" };
+  editableWorkspace.querySelectorAll = () => [{
+    readOnly: false,
+    type: "text",
+    name: "location",
+    id: "location",
+    getAttribute(name) { return name === "aria-label" ? "Location" : null; }
+  }];
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "maps", editableDocument), true);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, record blood pressure is 140 over 90.", "health", editableDocument), false);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "agriculture", editableDocument), false);
   let restoreShield;
   assert.equal(shieldApplicationRouteFromGuidedEntry("Nexus, start a digital literacy course.", editableDocument, (restore) => { restoreShield = restore; }), true);
   assert.equal(editableWorkspace.hidden, true);
