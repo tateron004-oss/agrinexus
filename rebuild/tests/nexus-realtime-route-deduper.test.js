@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { routeCommand } = require("../nexus-core/router");
-const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
+const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
 
 const indexSource = fs.readFileSync(path.resolve(__dirname, "../browser/index.html"), "utf8");
 assert.ok(indexSource.indexOf("nexus-realtime-route-deduper.js") < indexSource.indexOf("nexus-clean.bundle.js"));
@@ -28,6 +28,8 @@ assert.equal(normalizeAgriculturalTranscript("Nexus, reset the map to Mays Landi
 assert.equal(normalizeMarketplaceTranscript("Nexus sell fifty bags of maize."), "Nexus sell 50 bags of maize.");
 assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of maize."), "Nexus, sell 25 crates of maize.");
 assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
+assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonight at 7:30 p.m."), "Nexus, change date and time to tonight at 7:30 p.m.");
+assert.equal(normalizeFieldEditTranscript("The date and time changed to tonight."), "The date and time changed to tonight.");
 assert.equal(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 assert.equal(normalizeRecipeTranscript("Next, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
 assert.equal(routeCommand(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "connected").workspace, "live-knowledge");
@@ -38,6 +40,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-edit", transcript: "Nexus, set queued request to find Mays' treatment guidance."
 }))).transcript, "Nexus, set queued request to find Mays' treatment guidance.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-reminder-edit", transcript: "Nexus, changed date and time to tonight at 7:30 p.m."
+}))).transcript, "Nexus, change date and time to tonight at 7:30 p.m.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-market", transcript: "Nexus sell fifty bags of maize."
 }))).transcript, "Nexus sell 50 bags of maize.");

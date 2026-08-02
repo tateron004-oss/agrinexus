@@ -46,6 +46,13 @@
     );
   }
 
+  function normalizeFieldEditTranscript(value) {
+    return normalize(value).replace(
+      /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i,
+      "$1change"
+    );
+  }
+
   function normalizeRecipeTranscript(value) {
     const command = normalize(value);
     const request = command.replace(/^(?:(?:(?:hey|hello)\s+)?nexus\b|next\b)[\s,;:.-]*/i, "");
@@ -57,9 +64,13 @@
     let message;
     try { message = JSON.parse(String(value || "")); } catch { return value; }
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
-    if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(normalize(message.transcript))) return value;
-    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(message.transcript)));
-    return transcript === normalize(message.transcript) ? value : JSON.stringify({ ...message, transcript });
+    const originalTranscript = normalize(message.transcript);
+    const fieldEditTranscript = normalizeFieldEditTranscript(originalTranscript);
+    if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(fieldEditTranscript)) {
+      return fieldEditTranscript === originalTranscript ? value : JSON.stringify({ ...message, transcript: fieldEditTranscript });
+    }
+    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(originalTranscript)));
+    return transcript === originalTranscript ? value : JSON.stringify({ ...message, transcript });
   }
 
   function install(windowObject = globalObject) {
@@ -129,7 +140,7 @@
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData });
+  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);
