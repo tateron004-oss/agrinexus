@@ -70,16 +70,17 @@
 
   function fieldMarkup(field) {
     const id = escapeMarkup(field.id || field.label);
-    const label = `${escapeMarkup(field.label || "Field")}${field.required ? " *" : ""}`;
+    const accessibleLabel = escapeMarkup(field.label || "Field");
+    const label = `${accessibleLabel}${field.required ? " *" : ""}`;
     const value = escapeMarkup(field.value || "");
-    if (field.type === "textarea") return `<label for="${id}">${label}<textarea id="${id}" name="${id}"${field.required ? " required" : ""}>${value}</textarea></label>`;
+    if (field.type === "textarea") return `<label for="${id}">${label}<textarea id="${id}" name="${id}" aria-label="${accessibleLabel}"${field.required ? " required" : ""}>${value}</textarea></label>`;
     if (field.type === "select") {
       const options = (field.options || []).map((option) => `<option${String(option) === String(field.value) ? " selected" : ""}>${escapeMarkup(option)}</option>`).join("");
-      return `<label for="${id}">${label}<select id="${id}" name="${id}">${options}</select></label>`;
+      return `<label for="${id}">${label}<select id="${id}" name="${id}" aria-label="${accessibleLabel}">${options}</select></label>`;
     }
-    if (field.type === "checkbox") return `<label class="nexus-content-checkbox"><input id="${id}" name="${id}" type="checkbox"${String(field.value).toLowerCase() === "true" ? " checked" : ""}>${label}</label>`;
+    if (field.type === "checkbox") return `<label class="nexus-content-checkbox"><input id="${id}" name="${id}" type="checkbox" aria-label="${accessibleLabel}"${String(field.value).toLowerCase() === "true" ? " checked" : ""}>${label}</label>`;
     const type = ["text", "number", "date", "email", "tel"].includes(field.type) ? field.type : "text";
-    return `<label for="${id}">${label}<input id="${id}" name="${id}" type="${type}" value="${value}"${field.required ? " required" : ""}></label>`;
+    return `<label for="${id}">${label}<input id="${id}" name="${id}" type="${type}" aria-label="${accessibleLabel}" value="${value}"${field.required ? " required" : ""}></label>`;
   }
 
   function routePreviewMarkup(media = {}) {

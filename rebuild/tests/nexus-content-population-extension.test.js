@@ -143,6 +143,8 @@ async function main() {
   });
   assert.match(markup, /data-nexus-visible-form/);
   assert.match(markup, /Main concern/);
+  assert.match(markup, /aria-label="Main concern"/);
+  assert.doesNotMatch(markup, /aria-label="Main concern \*"/);
   assert.doesNotMatch(markup, /<script/i);
 
   console.log("Nexus open capability-layer unit acceptance: PASS (novel music, listings, sources, résumé context, form rendering, truthful failure)");
