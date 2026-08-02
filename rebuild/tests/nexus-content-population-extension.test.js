@@ -262,6 +262,7 @@ async function main() {
   assert.equal(inputTypeForField({ id: "time", label: "Date and time", type: "date" }), "text");
   assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
   assert.equal(outcomeKind("search", "workforce"), "application");
+  assert.equal(outcomeKind("listings", "maps"), "map");
   const readyResult = (capability, artifact) => ({ status: "ready", capability, artifact });
   assert.equal(validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "https://sources.example/crop" }] })), true);
   assert.throws(() => validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "" }] })), /Every image result/);
