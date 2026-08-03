@@ -71,6 +71,13 @@
       );
   }
 
+  function normalizeApplicationReopenTranscript(value) {
+    return normalize(value).replace(
+      /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*reopen\s+agriculture\s+help)(?:\s+and\s+keep\s+(?:the\s+)?visible\s+work\s*space\s+synchronized)\.?$/i,
+      "$1."
+    );
+  }
+
   function normalizeWakeTranscript(value) {
     const command = normalize(value).replace(/^nexust\b/i, "Nexus");
     if (!/^next(?:est)?\b/i.test(command) || !/\bpilot evidence dashboard\b/i.test(command)) return command;
@@ -90,11 +97,12 @@
     if (message.type !== "conversation.item.input_audio_transcription.completed") return value;
     const originalTranscript = normalize(message.transcript);
     const wakeTranscript = normalizeWakeTranscript(originalTranscript);
-    const fieldEditTranscript = normalizeFieldEditTranscript(wakeTranscript);
+    const applicationReopenTranscript = normalizeApplicationReopenTranscript(wakeTranscript);
+    const fieldEditTranscript = normalizeFieldEditTranscript(applicationReopenTranscript);
     if (/^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:set|change|correct|update|add|replace)\b/i.test(fieldEditTranscript)) {
       return fieldEditTranscript === originalTranscript ? value : JSON.stringify({ ...message, transcript: fieldEditTranscript });
     }
-    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(wakeTranscript)));
+    const transcript = normalizeRecipeTranscript(normalizeMarketplaceTranscript(normalizeAgriculturalTranscript(applicationReopenTranscript)));
     return transcript === originalTranscript ? value : JSON.stringify({ ...message, transcript });
   }
 
@@ -165,7 +173,7 @@
     return true;
   }
 
-  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript });
+  const exported = Object.freeze({ install, isDirectApplicationCommand, isDirectResumeCommand, normalize, normalizeAgriculturalTranscript, normalizeApplicationReopenTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject?.document) install(globalObject);
 })(typeof window !== "undefined" ? window : globalThis);

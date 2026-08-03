@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { routeCommand } = require("../nexus-core/router");
-const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript } = require("../browser/nexus-realtime-route-deduper");
+const { install, isDirectApplicationCommand, isDirectResumeCommand, normalizeAgriculturalTranscript, normalizeApplicationReopenTranscript, normalizeFieldEditTranscript, normalizeMarketplaceTranscript, normalizeRecipeTranscript, normalizeRealtimeMessageData, normalizeWakeTranscript } = require("../browser/nexus-realtime-route-deduper");
 
 const indexSource = fs.readFileSync(path.resolve(__dirname, "../browser/index.html"), "utf8");
 assert.ok(indexSource.indexOf("nexus-realtime-route-deduper.js") < indexSource.indexOf("nexus-clean.bundle.js"));
@@ -39,6 +39,8 @@ assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rauntate
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rontate."), "Nexus, set resumeFullName to Ron Tate.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Jane Tate."), "Nexus, set resumeFullName to Jane Tate.");
 assert.equal(normalizeFieldEditTranscript("The date and time changed to tonight."), "The date and time changed to tonight.");
+assert.equal(normalizeApplicationReopenTranscript("Nexus: reopen agriculture help and keep the visible work space synchronized."), "Nexus: reopen agriculture help.");
+assert.equal(normalizeApplicationReopenTranscript("Nexus, reopen this resume draft."), "Nexus, reopen this resume draft.");
 assert.equal(normalizeWakeTranscript("Nextest, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
 assert.equal(normalizeWakeTranscript("Next, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
 assert.equal(normalizeWakeTranscript("Nexust, open pharmacy support."), "Nexus, open pharmacy support.");
@@ -72,6 +74,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-name-collapsed", transcript: "Nexus, set resumeFullName to Rontate."
 }))).transcript, "Nexus, set resumeFullName to Ron Tate.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-agriculture-reopen", transcript: "Nexus: reopen agriculture help and keep the visible work space synchronized."
+}))).transcript, "Nexus: reopen agriculture help.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-pilot-wake", transcript: "Nextest, open the pilot evidence dashboard."
 }))).transcript, "Nexus, open the pilot evidence dashboard.");
