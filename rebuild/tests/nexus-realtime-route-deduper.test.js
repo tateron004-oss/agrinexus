@@ -49,6 +49,9 @@ assert.equal(normalizeApplicationReopenTranscript("Nexus, reopen this resume dra
 assert.equal(normalizeWakeTranscript("Nextest, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
 assert.equal(normalizeWakeTranscript("Next, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
 assert.equal(normalizeWakeTranscript("Nexust, open pharmacy support."), "Nexus, open pharmacy support.");
+assert.equal(normalizeWakeTranscript("Nexus started digital literacy course."), "Nexus start a digital literacy course.");
+assert.equal(normalizeWakeTranscript("Nexus, started a digital literacy course."), "Nexus, start a digital literacy course.");
+assert.equal(normalizeWakeTranscript("Nexus started working yesterday."), "Nexus started working yesterday.");
 assert.equal(normalizeWakeTranscript("Nextest, open my private notes."), "Nextest, open my private notes.");
 assert.equal(normalizeWakeTranscript("Next, open my private notes."), "Next, open my private notes.");
 assert.equal(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
@@ -91,6 +94,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-agriculture-reopen", transcript: "Nexus: reopen agriculture help and keep the visible work space synchronized."
 }))).transcript, "Nexus: reopen agriculture help.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-learning-started", transcript: "Nexus started digital literacy course."
+}))).transcript, "Nexus start a digital literacy course.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-pilot-wake", transcript: "Nextest, open the pilot evidence dashboard."
 }))).transcript, "Nexus, open the pilot evidence dashboard.");
