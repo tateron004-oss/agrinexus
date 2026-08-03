@@ -366,6 +366,14 @@
     return Boolean(workspace && workspace.hidden !== true && normalize(workspace.dataset?.workspace).toLowerCase() === "workforce" && resume);
   }
 
+  function isFalseVerifiedSourceDirectory(detail) {
+    return detail?.contentExtension !== true
+      && detail?.outcomeKind === "source-directory"
+      && detail?.outcomeVerified === true
+      && Number(detail?.evidenceSourceCount || 0) === 0
+      && detail?.evidenceLinksVisible !== true;
+  }
+
   function canonicalProtectedWorkspace(command) {
     const value = normalizeMarketplaceSpeechDrift(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     if (/\b(weather|forecast|apple pie recipe|pilot evidence|evidence dashboard|source directory)\b/.test(value)) return "live-knowledge";
@@ -671,6 +679,22 @@
     onAcknowledgementCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtension === true) return;
+      if (isFalseVerifiedSourceDirectory(detail)) {
+        event.stopImmediatePropagation();
+        this.stage("renderer.zero-source-verification-blocked", { requestId: detail.requestId, workspace: detail.workspace || "live-knowledge" });
+        this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.acknowledged", {
+          detail: Object.freeze({
+            ...detail,
+            contentExtension: true,
+            populated: false,
+            outcomeVerified: false,
+            evidenceSourceCount: 0,
+            evidenceLinksVisible: false,
+            recovery: Object.freeze({ state: "provider-unverified", message: "No visible source evidence was returned for this request.", retryable: true })
+          })
+        }));
+        return;
+      }
       if (detail.requestId && this.pending.has(detail.requestId)) {
         event.stopImmediatePropagation();
         this.stage("renderer.premature-acknowledgement-blocked", { requestId: detail.requestId });
@@ -1042,7 +1066,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
