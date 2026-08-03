@@ -58,6 +58,10 @@
     return normalize(value)
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i, "$1change")
       .replace(
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)had(?=\s+.+\s+to\s+(?:work\s+)?experience\.?$)/i,
+        "$1add"
+      )
+      .replace(
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+symptoms\s+or\s+notes\s+to\s+)notes\.?$/i,
         "$1no symptoms."
       )
