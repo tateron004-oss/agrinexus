@@ -56,6 +56,7 @@ assert.equal(normalizeWakeTranscript("Nexust, open pharmacy support."), "Nexus, 
 assert.equal(normalizeWakeTranscript("Nexus started digital literacy course."), "Nexus start a digital literacy course.");
 assert.equal(normalizeWakeTranscript("Nexus, started a digital literacy course."), "Nexus, start a digital literacy course.");
 assert.equal(normalizeWakeTranscript("Nexus started working yesterday."), "Nexus started working yesterday.");
+assert.equal(normalizeWakeTranscript("Nextest, open Agriculture Help."), "Nexus, open Agriculture Help.");
 assert.equal(normalizeWakeTranscript("Nextest, open my private notes."), "Nextest, open my private notes.");
 assert.equal(normalizeWakeTranscript("Next, open my private notes."), "Next, open my private notes.");
 assert.equal(normalizeRecipeTranscript("Nexus, show an apple pie recipe with ingredients, steps, and sources."), "Nexus, show sources for an apple pie recipe with ingredients and steps.");
@@ -74,6 +75,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag-mazed", transcript: "Nexus, show me pictures of possible mazed diseases."
 }))).transcript, "Nexus, show me pictures of possible maize diseases.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-agriculture-wake-drift", transcript: "Nextest, open Agriculture Help."
+}))).transcript, "Nexus, open Agriculture Help.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-edit", transcript: "Nexus, set queued request to find Mays' treatment guidance."
 }))).transcript, "Nexus, set queued request to find Mays' treatment guidance.");

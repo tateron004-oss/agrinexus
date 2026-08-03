@@ -94,6 +94,7 @@
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)started\s+(?:a\s+)?(?=digital\s+literacy\s+course\b)/i,
         "$1start a "
       );
+    if (/^nextest\b[\s,;:.-]*open\s+agriculture\s+help\.?$/i.test(command)) return command.replace(/^nextest\b/i, "Nexus");
     if (!/^next(?:est)?\b/i.test(command) || !/\bpilot evidence dashboard\b/i.test(command)) return command;
     return command.replace(/^next(?:est)?\b/i, "Nexus");
   }
