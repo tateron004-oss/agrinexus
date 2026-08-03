@@ -36,6 +36,7 @@ assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonig
 assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to notes."), "Nexus, set symptoms or notes to no symptoms.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to mild dizziness."), "Nexus, set symptoms or notes to mild dizziness.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rauntate."), "Nexus, set resumeFullName to Ron Tate.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rontate."), "Nexus, set resumeFullName to Ron Tate.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Jane Tate."), "Nexus, set resumeFullName to Jane Tate.");
 assert.equal(normalizeFieldEditTranscript("The date and time changed to tonight."), "The date and time changed to tonight.");
 assert.equal(normalizeWakeTranscript("Nextest, open the pilot evidence dashboard."), "Nexus, open the pilot evidence dashboard.");
@@ -67,6 +68,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 }))).transcript, "Nexus, set symptoms or notes to no symptoms.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-name", transcript: "Nexus, set resumeFullName to Rauntate."
+}))).transcript, "Nexus, set resumeFullName to Ron Tate.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-name-collapsed", transcript: "Nexus, set resumeFullName to Rontate."
 }))).transcript, "Nexus, set resumeFullName to Ron Tate.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-pilot-wake", transcript: "Nextest, open the pilot evidence dashboard."

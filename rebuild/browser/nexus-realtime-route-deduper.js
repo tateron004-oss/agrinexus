@@ -64,6 +64,10 @@
       .replace(
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+r[eé]sum[eé]\s*full\s*name\s+to\s+)rauntate\.?$/i,
         "$1Ron Tate."
+      )
+      .replace(
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+r\S*sum\S*\s*full\s*name\s+to\s+)rontate\.?$/i,
+        "$1Ron Tate."
       );
   }
 
