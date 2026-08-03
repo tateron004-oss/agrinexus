@@ -45,6 +45,7 @@ assert.equal(reminder.parameters.timing, "tomorrow morning");
 assert.equal(reminder.parameters.task, "to check my blood pressure");
 
 assert.equal(locationFromWeatherCommand("Could you show me the forecast for Mombasa, Kenya please?"), "Mombasa, Kenya");
+assert.equal(extractIntentAndParameters("Nexus, show today's live weather in: Nairobi, Kenya.").parameters.location, "Nairobi, Kenya");
 assert.equal(musicSearchFromCommand("Nexus, could you play Kenyan music please?"), "Kenyan");
 assert.equal(visualIntent("Would you help me create a résumé?"), "resume");
 assert.equal(visualIntent("Please show pictures of maize disease."), "agriculture-images");
