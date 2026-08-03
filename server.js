@@ -6032,19 +6032,55 @@ function envGroupConfigured(group = [], env = process.env) {
   return group.filter(Boolean).every(name => Boolean(env[name]));
 }
 
+function providerAccountLiveExecutionStatus(item = {}, env = process.env) {
+  const channelByAccountId = {
+    "voice-phone-provider": "phone",
+    "sms-provider": "sms",
+    "whatsapp-messaging": "whatsapp"
+  };
+  const channel = channelByAccountId[item.id];
+  if (channel) {
+    const status = nexusGlobalCommunicationsChannelStatus(channel, env);
+    return {
+      configured: status.configured,
+      connected: status.canExecuteNow,
+      realExecutionEnabled: status.canExecuteNow,
+      statusLabel: status.canExecuteNow ? "Live confirmed execution available" : status.status,
+      unavailableReason: status.canExecuteNow
+        ? ""
+        : status.flagEnabled
+          ? "Provider credentials or sender configuration are incomplete."
+          : `${status.flagName}=true is required before confirmed execution.`,
+      requiresConfirmation: true
+    };
+  }
+  const globallyEnabled = env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED === "true";
+  const accountEnabled = env[`NEXUS_${String(item.id || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
+  return {
+    configured: null,
+    connected: null,
+    realExecutionEnabled: globallyEnabled && accountEnabled,
+    statusLabel: globallyEnabled && accountEnabled ? "Real execution enabled" : "Real execution disabled",
+    unavailableReason: "",
+    requiresConfirmation: true
+  };
+}
+
 function providerAccountApiAccessStatus(env = process.env) {
   const globalExecutionEnabled = env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED === "true";
   const items = PROVIDER_ACCOUNT_API_ACCESS_REGISTRY.map(item => {
-    const configured = (item.configuredWhenAnyPresent || []).some(group => envGroupConfigured(group, env));
-    const connected = configured && env.NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED === "true";
-    const realExecutionEnabled = connected && globalExecutionEnabled && env[`NEXUS_${item.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
+    const liveStatus = providerAccountLiveExecutionStatus(item, env);
+    const configured = liveStatus.configured ?? (item.configuredWhenAnyPresent || []).some(group => envGroupConfigured(group, env));
+    const connected = Boolean(liveStatus.connected ?? (configured && env.NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED === "true"));
+    const legacyExecutionEnabled = connected && globalExecutionEnabled && env[`NEXUS_${item.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
+    const realExecutionEnabled = Boolean(liveStatus.realExecutionEnabled || legacyExecutionEnabled);
     const missingCredential = item.apiKeyOrTokenRequired && !configured;
     const statuses = [
-      realExecutionEnabled ? "Real execution enabled" : "Real execution disabled",
+      realExecutionEnabled ? liveStatus.statusLabel : "Real execution disabled",
       connected ? "Account connected" : "Account not connected",
       configured ? "Credential configured" : "API credential missing",
       item.businessVerificationRequired ? "Provider review required" : "Provider review optional",
-      "Simulation only"
+      realExecutionEnabled ? "Explicit confirmation required" : "Simulation available"
     ];
     return {
       id: item.id,
@@ -6063,16 +6099,21 @@ function providerAccountApiAccessStatus(env = process.env) {
       simulationAvailable: true,
       realExecutionEnabled,
       safeNextSetupStep: configured
-        ? "Complete provider review, callback validation, consent, audit, and final execution gate before enabling real actions."
+        ? realExecutionEnabled
+          ? "Use the live provider through its explicit confirmation and audit gates."
+          : "Complete provider review, callback validation, consent, audit, and final execution gate before enabling real actions."
         : `Configure a provider account and set required environment placeholders such as ${item.environmentVariablesRequired.slice(0, 3).join(", ")}.`,
       unavailableReason: realExecutionEnabled
         ? ""
+        : liveStatus.unavailableReason
+        ? liveStatus.unavailableReason
         : missingCredential
         ? "API credential missing"
         : connected
         ? "Real execution disabled"
         : "Account not connected",
       statuses,
+      requiresConfirmation: liveStatus.requiresConfirmation,
       secretValuesExposed: false,
       noExternalApiCall: true,
       noExecutionAuthorized: true
@@ -6082,7 +6123,9 @@ function providerAccountApiAccessStatus(env = process.env) {
     id: "provider-account-api-access",
     title: "Provider Accounts & API Access",
     generatedAt: new Date().toISOString(),
-    defaultPosture: "Simulation only. Account/API status is visible, but real execution is disabled.",
+    defaultPosture: items.some(item => item.realExecutionEnabled)
+      ? "Live provider capabilities are enabled only where configured; recipient, consent, confirmation, provider receipt, and audit gates remain required."
+      : "Provider capabilities remain simulation-only until their credentials and explicit execution gates are enabled.",
     noSecretsExposed: true,
     noExternalApiCalls: true,
     noExecutionAuthorized: true,
@@ -6189,7 +6232,8 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
     const matchingProviders = item.providerIds.map(id => providerById.get(id)).filter(Boolean);
     const configured = Boolean(account.configured || matchingProviders.some(provider => !["needs-credentials", "not-configured", "missing"].includes(String(provider.status || "").toLowerCase())));
     const connected = Boolean(account.connected || matchingProviders.some(provider => connectedStatuses.has(String(provider.status || "").toLowerCase())));
-    const realExecutionDisabled = !Boolean(account.realExecutionEnabled);
+    const realExecutionEnabled = Boolean(account.realExecutionEnabled);
+    const realExecutionDisabled = !realExecutionEnabled;
     return {
       id: item.id,
       label: item.label,
@@ -6201,18 +6245,21 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
       simulationSupported: true,
       confirmationRequired: item.confirmationRequired,
       permissionRequired: item.permissionRequired,
+      realExecutionEnabled,
       realExecutionDisabled,
       actionQueueCompatible: true,
-      unavailableReason: connected ? "Real execution disabled until final gate, audit, consent, and provider approval are active." : "Provider account or credential is not connected.",
+      unavailableReason: realExecutionEnabled ? "" : connected ? "Real execution disabled until final gate, audit, consent, and provider approval are active." : "Provider account or credential is not connected.",
       safeNextStep: connected
-        ? "Review permission, final confirmation, audit, and provider policy before enabling any real handoff."
+        ? realExecutionEnabled
+          ? "Use the live provider through explicit permission, confirmation, provider receipt, and audit."
+          : "Review permission, final confirmation, audit, and provider policy before enabling any real handoff."
         : "Connect the provider account/API credential and validate webhook/callback policy before real use.",
       statusLabels: [
         connected ? "connected" : configured ? "configured-not-connected" : "not configured",
-        "simulation supported",
+        realExecutionEnabled ? "live provider execution available" : "simulation supported",
         item.permissionRequired ? "permission required" : "permission not required",
         item.confirmationRequired ? "confirmation required" : "confirmation not required",
-        "real execution disabled"
+        realExecutionEnabled ? "provider receipt required" : "real execution disabled"
       ],
       secretValuesExposed: false,
       noExternalApiCall: true,
@@ -6222,7 +6269,9 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
   return {
     id: "production-provider-readiness",
     title: "Production Provider Readiness",
-    defaultPosture: "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
+    defaultPosture: items.some(item => item.realExecutionEnabled)
+      ? "Configured provider lanes can execute after their permission, consent, confirmation, receipt, and audit gates pass; unavailable lanes remain safely disabled."
+      : "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
     noSecretsExposed: true,
     noExternalApiCalls: true,
     noExecutionAuthorized: true,
@@ -6231,6 +6280,7 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
       configured: items.filter(item => item.configured).length,
       connected: items.filter(item => item.connected).length,
       simulationSupported: items.filter(item => item.simulationSupported).length,
+      realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
       realExecutionDisabled: items.filter(item => item.realExecutionDisabled).length
     },
     items
