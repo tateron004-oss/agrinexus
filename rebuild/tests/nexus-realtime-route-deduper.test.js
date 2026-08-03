@@ -28,6 +28,8 @@ assert.equal(normalizeAgriculturalTranscript("Nexus, find Mays' treatment guidan
 assert.equal(normalizeAgriculturalTranscript("Nexus, find Maze's treatment guidance."), "Nexus, find maize treatment guidance.");
 assert.equal(normalizeAgriculturalTranscript("Nexus, reset the map to Mays Landing."), "Nexus, reset the map to Mays Landing.");
 assert.equal(normalizeMarketplaceTranscript("Nexus sell fifty bags of maize."), "Nexus sell 50 bags of maize.");
+assert.equal(normalizeMarketplaceTranscript("Nexus shall fifty bags of maize."), "Nexus sell 50 bags of maize.");
+assert.equal(normalizeMarketplaceTranscript("Nexus shall we review fifty bags of maize?"), "Nexus shall we review fifty bags of maize?");
 assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of maize."), "Nexus, sell 25 crates of maize.");
 assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
 assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonight at 7:30 p.m."), "Nexus, change date and time to tonight at 7:30 p.m.");
@@ -77,6 +79,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 }))).transcript, "Nexus, open pharmacy support.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-market", transcript: "Nexus sell fifty bags of maize."
+}))).transcript, "Nexus sell 50 bags of maize.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-market-drift", transcript: "Nexus shall fifty bags of maize."
 }))).transcript, "Nexus sell 50 bags of maize.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-recipe", transcript: "Nexus, show an apple pie recipe with ingredients, steps, and sources."
@@ -140,6 +145,19 @@ assert.equal(dispatched[0].type, "nexus.realtime.route-deduplicated");
 
 receive({ type: "conversation.item.input_audio_transcription.completed", item_id: "input-ag", transcript: "Nexus, show possible Mays diseases." });
 assert.equal(JSON.parse(coreData).transcript, "Nexus, show possible maize diseases.");
+
+sent.length = 0;
+receive({ type: "conversation.item.input_audio_transcription.completed", item_id: "input-market-drift", transcript: "Nexus shall fifty bags of maize." });
+receive({
+  type: "response.function_call_arguments.done",
+  response_id: "response-market-drift",
+  call_id: "call-market-drift",
+  name: "route_nexus_command",
+  arguments: "{ \"command\": \"help with maize\" }"
+});
+assert.equal(sent[0].type, "conversation.item.create");
+assert.equal(JSON.parse(sent[0].item.output).code, "duplicate-route-coalesced");
+assert.equal(dispatched.at(-1).detail.command, "Nexus sell 50 bags of maize.");
 
 sent.length = 0;
 receive({ type: "conversation.item.input_audio_transcription.completed", item_id: "input-2", transcript: "Nexus, set resume full name to Ron Tate." });

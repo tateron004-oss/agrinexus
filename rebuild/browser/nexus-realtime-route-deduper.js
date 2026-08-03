@@ -39,7 +39,11 @@
       seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
       sixty: 60, seventy: 70, eighty: 80, ninety: 90
     });
-    return normalize(value).replace(
+    const command = normalize(value).replace(
+      /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)(?:shall|shale|shell)(?=\s+(?:(?:\d+(?:\.\d+)?)|(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))*)\s+(?:bags?|sacks?|kg|kilograms?|tons?|crates?|units?)\s+(?:of\s+)?(?:maize|corn|crop|produce)\b)/i,
+      "$1sell"
+    );
+    return command.replace(
       /(\bnexus\b[\s,;:.-]*sell\s+)([a-z]+)(?:[- ]([a-z]+))?(?=\s+(?:bags?|sacks?|kg|kilograms?|tons?|crates?|units?)\b)/i,
       (match, prefix, first, second) => {
         const left = numbers[first.toLowerCase()];
