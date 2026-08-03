@@ -35,6 +35,8 @@ assert.equal(normalizeMarketplaceTranscript("Nexus, sell twenty-five crates of m
 assert.equal(normalizeMarketplaceTranscript("Nexus, change quantity to twenty bags."), "Nexus, change quantity to twenty bags.");
 assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonight at 7:30 p.m."), "Nexus, change date and time to tonight at 7:30 p.m.");
 assert.equal(normalizeFieldEditTranscript("nexus.setLocation to Nakuru, Kenya."), "nexus.set location to Nakuru, Kenya.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set topic, or skill to phishing email safety."), "Nexus, set topic or skill to phishing email safety.");
+assert.equal(normalizeFieldEditTranscript("Nexus, discuss topic, or skill choices."), "Nexus, discuss topic, or skill choices.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set locale to English."), "Nexus, set locale to English.");
 assert.equal(normalizeFieldEditTranscript("Nexus, had supervised a team of eight employees to experience."), "Nexus, add supervised a team of eight employees to experience.");
 assert.equal(normalizeFieldEditTranscript("Nexus, ad supervised a team of eight employees to experience."), "Nexus, add supervised a team of eight employees to experience.");
@@ -87,6 +89,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-location-collapsed", transcript: "nexus.setLocation to Nakuru, Kenya."
 }))).transcript, "nexus.set location to Nakuru, Kenya.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-learning-label-punctuation", transcript: "Nexus, set topic, or skill to phishing email safety."
+}))).transcript, "Nexus, set topic or skill to phishing email safety.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-experience-drift", transcript: "Nexus, ad supervised a team of eight employees to experience."
 }))).transcript, "Nexus, add supervised a team of eight employees to experience.");

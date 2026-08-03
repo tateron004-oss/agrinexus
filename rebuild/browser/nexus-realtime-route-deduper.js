@@ -57,6 +57,7 @@
   function normalizeFieldEditTranscript(value) {
     return normalize(value)
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)setlocation\b/i, "$1set location")
+      .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+topic),\s*or\s+skill(?=\s+to\s+)/i, "$1 or skill")
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i, "$1change")
       .replace(
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)(?:had|ad)(?=\s+.+\s+to\s+(?:work\s+)?experience\.?$)/i,
