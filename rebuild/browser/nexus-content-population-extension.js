@@ -306,7 +306,7 @@
   }
 
   function recoverOfflineQueuedRequestTranscript(command, documentObject, windowObject = globalObject) {
-    const match = normalize(command).match(/\b(?:set|change|replace|correct)\s+(?:the\s+)?cued\s+request\s+to\s+(.+?)[.!?]?$/i);
+    const match = normalize(command).match(/\b(?:set|sent|change|replace|correct)\s+(?:the\s+)?(?:cued|queued)\s+request\s+to\s+(.+?)[.!?]?$/i);
     if (!match) return false;
     const workspace = documentObject?.getElementById?.("nexus-workspace");
     if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() !== "offline") return false;

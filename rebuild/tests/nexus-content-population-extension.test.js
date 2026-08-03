@@ -169,6 +169,10 @@ async function main() {
   }, { Event: TestEvent, CustomEvent: TestCustomEvent, dispatchEvent(event) { recoveredReceipts.push(event); } }), true);
   assert.equal(recoveredQueuedField.value, "find maize treatment guidance");
   assert.equal(recoveredReceipts[0].detail.type, "voice-form.corrected");
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus sent queued request to find maize treatment guidance.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }, { Event: TestEvent, CustomEvent: TestCustomEvent, dispatchEvent(event) { recoveredReceipts.push(event); } }), true);
+  assert.equal(recoveredQueuedField.value, "find maize treatment guidance");
   assert.equal(recoverOfflineQueuedRequestTranscript("Nexus, set care needed to screening.", {
     getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
   }), false);
