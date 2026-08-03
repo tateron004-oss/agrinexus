@@ -377,7 +377,7 @@
   function canonicalProtectedWorkspace(command) {
     const value = normalizeMarketplaceSpeechDrift(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     if (/\b(weather|forecast|apple pie recipe|pilot evidence|evidence dashboard|source directory)\b/.test(value)) return "live-knowledge";
-    if (/\b(picture|pictures|image|images|photo|photos)\b/.test(value) && /\b(maize|maized|maze|mace|mase|mased|mays|disease|diseases|crop|plant|pest)\b/.test(value)) return "agriculture";
+    if (/\b(picture|pictures|image|images|photo|photos)\b/.test(value) && /\b(maize|maized|maze|mage|mace|mase|mased|mays|disease|diseases|crop|plant|pest)\b/.test(value)) return "agriculture";
     if (/\b(resume|curriculum vitae|cv)\b/.test(value)) return "workforce";
     if (/\b(provider|doctor|physician|contact card)\b/.test(value)) return "health";
     if (/\b(sell|listing|marketplace)\b/.test(value) && /\b(bag|bags|maize|crop|produce|product)\b/.test(value)) return "marketplace";
