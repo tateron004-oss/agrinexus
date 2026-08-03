@@ -297,6 +297,22 @@ async function main() {
   assert.equal(applicationDeadlineFallback({ requestId: "images-1", workspace: "agriculture", command: "Nexus, show maize disease pictures." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }), null);
   assert.equal(applicationDeadlineFallback({ requestId: "resume-1", workspace: "workforce", command: "Nexus, help me create a résumé." }), null);
+  let providerAttempts = 0;
+  const retryController = new NexusContentPopulationController({
+    windowObject: { setTimeout, clearTimeout, dispatchEvent() {} },
+    documentObject: {},
+    fetchImpl: null,
+    providerRetryDelayMs: 0,
+    providerHardDeadlineMs: 100
+  });
+  retryController.provider = async () => {
+    providerAttempts += 1;
+    if (providerAttempts === 1) return new Promise(() => {});
+    return { schema: "nexus.content.result.v2", requestId: "retry-1", status: "ready", workspace: "agriculture", capability: "intake", artifact: artifact("form", "Agriculture Help") };
+  };
+  const verifiedRetry = await retryController.providerWithVerifiedRetry({ requestId: "retry-1", workspace: "agriculture" }, null);
+  assert.equal(providerAttempts, 2);
+  assert.equal(verifiedRetry.requestId, "retry-1");
   const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
   assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
   assert.equal(careNeededField.value, "blood pressure screening.");

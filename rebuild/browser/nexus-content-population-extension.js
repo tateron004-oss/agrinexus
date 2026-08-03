@@ -622,11 +622,13 @@
   }
 
   class NexusContentPopulationController {
-    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500 } = {}) {
+    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500, providerRetryDelayMs = 2500, providerHardDeadlineMs = 7000 } = {}) {
       this.window = windowObject;
       this.document = documentObject;
       this.fetch = fetchImpl;
       this.providerDeadlineMs = providerDeadlineMs;
+      this.providerRetryDelayMs = providerRetryDelayMs;
+      this.providerHardDeadlineMs = providerHardDeadlineMs;
       this.activeWorkspace = null;
       this.currentResult = null;
       this.pending = new Map();
@@ -925,6 +927,57 @@
       return result;
     }
 
+    providerWithVerifiedRetry(detail, controller) {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        let retryStarted = false;
+        let failures = 0;
+        let lastError = null;
+        let retryTimer = null;
+        let deadlineTimer = null;
+        const clearTimers = () => {
+          if (retryTimer !== null) this.window.clearTimeout?.(retryTimer);
+          if (deadlineTimer !== null) this.window.clearTimeout?.(deadlineTimer);
+        };
+        const failIfComplete = () => {
+          if (!settled && retryStarted && failures >= 2) {
+            settled = true;
+            clearTimers();
+            reject(lastError || new Error("Nexus content providers did not return a verified result."));
+          }
+        };
+        const attempt = (kind) => {
+          Promise.resolve(this.provider(detail, controller?.signal)).then((result) => {
+            if (settled) return;
+            settled = true;
+            clearTimers();
+            this.stage("provider.verified-response", { requestId: detail.requestId, attempt: kind });
+            resolve(result);
+          }, (error) => {
+            if (settled) return;
+            failures += 1;
+            lastError = error;
+            this.stage("provider.attempt-failed", { requestId: detail.requestId, attempt: kind, message: normalize(error?.message) });
+            failIfComplete();
+          });
+        };
+        retryTimer = this.window.setTimeout(() => {
+          if (settled) return;
+          retryStarted = true;
+          this.stage("provider.verified-retry", { requestId: detail.requestId, delayMs: this.providerRetryDelayMs });
+          attempt("retry");
+        }, this.providerRetryDelayMs);
+        deadlineTimer = this.window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          clearTimers();
+          controller?.abort?.("provider-hard-deadline");
+          reject(lastError || new Error("Nexus content providers did not return a verified result before the visible-outcome deadline."));
+        }, this.providerHardDeadlineMs);
+        attempt("primary");
+      });
+    }
+
     open(detail) {
       if (protectedWorkspaceOwnsCommand(detail.command, this.document)) {
         this.stage("protected-renderer.duplicate-content-route-suppressed", { requestId: detail.requestId, workspace: "workforce", command: normalize(detail.command) });
@@ -956,7 +1009,7 @@
       this.activeWorkspace = detail.workspace || this.activeWorkspace || "live-knowledge";
       this.pending.set(detail.requestId, { detail, commandKey, controller });
       this.stage("conversation.received", { requestId: detail.requestId, command: detail.command, workspace: this.activeWorkspace });
-      const providerRequest = Promise.resolve(this.provider(detail, controller?.signal));
+      const providerRequest = this.providerWithVerifiedRetry(detail, controller);
       const deadlineFallback = applicationDeadlineFallback(detail);
       const resultRequest = deadlineFallback && this.providerDeadlineMs >= 0
         ? new Promise((resolve, reject) => {
