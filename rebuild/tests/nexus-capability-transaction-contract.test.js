@@ -113,6 +113,18 @@ async function main() {
   assert.equal(resume.artifact.fields.find(field => field.id === "experience").label, "Work experience");
   assert.equal(resume.artifact.fields.find(field => field.id === "skills").label, "Skills");
 
+  let agricultureResolverCalls = 0;
+  const agricultureService = createContentActionService({
+    goalResolver: { async resolve() { agricultureResolverCalls += 1; throw new Error("Explicit crop-help forms must not wait for the conversational resolver."); } }
+  });
+  const agriculture = await agricultureService.execute({ command: "Nexus, help with my maize crop in Kenya." });
+  assert.equal(agricultureResolverCalls, 0);
+  assert.equal(agriculture.status, "ready");
+  assert.equal(agriculture.workspace, "agriculture");
+  assert.equal(agriculture.capability, "form");
+  assert.equal(agriculture.artifact.fields.find(field => field.id === "crop-or-livestock").value, "maize");
+  assert.equal(agriculture.artifact.fields.find(field => field.id === "location").value, "Kenya");
+
   console.log("Nexus capability transaction contract: PASS (request isolation, truthful providers, typed receipts, synchronized applications, production physical matrix)");
 }
 

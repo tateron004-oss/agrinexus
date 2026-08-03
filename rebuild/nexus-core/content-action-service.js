@@ -181,6 +181,7 @@ function explicitFastDraftGoal(context = {}) {
   const command = clean(context.command, 4000);
   return /\b(remind|reminder)\b/i.test(command)
     || /\b(?:resume|curriculum vitae|cv)\b/i.test(command)
+    || /\bhelp\b.*\b(?:crop|livestock)\b/i.test(command)
     || /\b(?:marketplace|list for sale)\b/i.test(command)
     || /\b(?:sell|selling)\s+\d+(?:\.\d+)?\s*(?:bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\b/i.test(command)
     ? localResilienceGoal(context)
@@ -454,6 +455,19 @@ function localResilienceGoal(context = {}) {
       { id: "education", label: "Education and training", type: "textarea", value: "", required: false, options: [] }
     ];
     return base("resume", "create", "workforce", command, artifact, "The editable résumé is visible and ready for your next change.");
+  }
+  if (/\bhelp\b.*\b(?:crop|livestock)\b/i.test(command)) {
+    const crop = clean(/\b(?:my\s+)?([a-z][a-z-]*)\s+crop\b/i.exec(command)?.[1] || "", 120);
+    const livestock = clean(/\b(?:my\s+)?([a-z][a-z-]*)\s+livestock\b/i.exec(command)?.[1] || "", 120);
+    const location = clean(/\bin\s+([a-z][a-z .'-]*?)(?:[.!?]|$)/i.exec(command)?.[1] || "", 180);
+    const artifact = emptyArtifact("form", "Agriculture Help");
+    artifact.description = "An editable Agriculture Help request populated only with the details supplied in this conversation.";
+    artifact.fields = [
+      { id: "crop-or-livestock", label: "Crop or livestock", type: "text", value: crop || livestock, required: true, options: [] },
+      { id: "location", label: "Location", type: "text", value: location, required: true, options: [] },
+      { id: "question-or-observation", label: "Question or observation", type: "textarea", value: command, required: false, options: [] }
+    ];
+    return base("form", "create", "agriculture", command, artifact, "The populated Agriculture Help request is visible and synchronized with this request.");
   }
   if (/\b(question|questions|checklist)\b/i.test(command) && /\b(pharmacist|medicine|medication|prescription|drug|clinician|doctor)\b/i.test(command)) {
     const artifact = emptyArtifact("card", "Medication conversation question card");
