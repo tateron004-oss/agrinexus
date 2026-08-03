@@ -48,6 +48,7 @@ async function main() {
   assert.equal(canonicalProtectedWorkspace("Nexus: Show pictures of possible Mased diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MACE diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MAGE diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MAEsd diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
   assert.equal(canonicalProtectedWorkspace("Nexus, sell fifty bags of maize."), "marketplace");
   assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall fifty bags of maize."), "Nexus sell fifty bags of maize.");
@@ -260,7 +261,7 @@ async function main() {
   recoveryController.open = (detail) => { recoveredImageRoute = detail; };
   recoveryController.onReceipt({ detail: {
     type: "transcript.final",
-    detail: { transcript: "Nexus: Show pictures of possible Mased diseases." }
+    detail: { transcript: "Nexus, show pictures of possible MAEsd diseases." }
   } });
   assert.equal(recoveredImageRoute.workspace, "agriculture", "A stale visible workspace must not suppress canonical image-route recovery.");
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
