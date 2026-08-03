@@ -89,6 +89,18 @@ async function main() {
   assert.equal(workforce.artifact.items.length, 1);
   assert.equal(workforce.artifact.items[0].sourceUrl, "https://www.ilo.org/");
 
+  let marketplaceResolverCalls = 0;
+  const marketplaceService = createContentActionService({
+    goalResolver: { async resolve() { marketplaceResolverCalls += 1; throw new Error("Explicit marketplace drafts must not wait for the conversational resolver."); } }
+  });
+  const marketplace = await marketplaceService.execute({ command: "Nexus, sell 50 bags of maize." });
+  assert.equal(marketplaceResolverCalls, 0);
+  assert.equal(marketplace.status, "ready");
+  assert.equal(marketplace.workspace, "marketplace");
+  assert.equal(marketplace.capability, "marketplace-draft");
+  assert.equal(marketplace.artifact.fields.find(field => field.id === "item").value, "maize");
+  assert.equal(marketplace.artifact.fields.find(field => field.id === "quantity").value, "50 bags");
+
   console.log("Nexus capability transaction contract: PASS (request isolation, truthful providers, typed receipts, synchronized applications, production physical matrix)");
 }
 

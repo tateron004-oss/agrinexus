@@ -178,7 +178,10 @@ function explicitFastProviderGoal(command) {
 }
 
 function explicitFastDraftGoal(context = {}) {
-  return /\b(remind|reminder)\b/i.test(clean(context.command, 4000))
+  const command = clean(context.command, 4000);
+  return /\b(remind|reminder)\b/i.test(command)
+    || /\b(?:marketplace|list for sale)\b/i.test(command)
+    || /\b(?:sell|selling)\s+\d+(?:\.\d+)?\s*(?:bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\b/i.test(command)
     ? localResilienceGoal(context)
     : null;
 }
@@ -478,10 +481,16 @@ function localResilienceGoal(context = {}) {
   }
   if (/\b(marketplace|listing|list for sale|seller|buyer|sell|selling)\b/i.test(command)) {
     const amount = /\b(\d+(?:\.\d+)?)\s*(bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\b/i.exec(command);
+    const item = clean(
+      /\b\d+(?:\.\d+)?\s*(?:bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\s+(?:of\s+)?([a-z][a-z\s'-]*?)(?:[.!?]|$)/i.exec(command)?.[1]
+      || /\b(?:sell|selling|list(?:ing)?(?:\s+for\s+sale)?)\s+([a-z][a-z\s'-]*?)(?:[.!?]|$)/i.exec(command)?.[1]
+      || "",
+      180
+    );
     const artifact = emptyArtifact("draft", "Editable marketplace draft");
     artifact.description = "A visible marketplace draft. Review every detail before publishing or contacting anyone.";
     artifact.fields = [
-      { id: "item", label: "Item or service", type: "text", value: "", required: true, options: [] },
+      { id: "item", label: "Item or service", type: "text", value: item, required: true, options: [] },
       { id: "quantity", label: "Quantity", type: "text", value: amount ? [amount[1], amount[2]].filter(Boolean).join(" ") : "", required: true, options: [] },
       { id: "price", label: "Price and currency", type: "text", value: "", required: false, options: [] },
       { id: "location", label: "Location", type: "text", value: "", required: true, options: [] },
