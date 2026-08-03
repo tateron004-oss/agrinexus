@@ -679,6 +679,11 @@
     onAcknowledgementCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtension === true) return;
+      if (detail.requestId && this.pending.has(detail.requestId)) {
+        event.stopImmediatePropagation();
+        this.stage("renderer.premature-acknowledgement-blocked", { requestId: detail.requestId });
+        return;
+      }
       if (isFalseVerifiedSourceDirectory(detail)) {
         event.stopImmediatePropagation();
         this.stage("renderer.zero-source-verification-blocked", { requestId: detail.requestId, workspace: detail.workspace || "live-knowledge" });
@@ -694,10 +699,6 @@
           })
         }));
         return;
-      }
-      if (detail.requestId && this.pending.has(detail.requestId)) {
-        event.stopImmediatePropagation();
-        this.stage("renderer.premature-acknowledgement-blocked", { requestId: detail.requestId });
       }
     }
 

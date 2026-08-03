@@ -78,6 +78,15 @@ async function main() {
   assert.equal(replacementAcknowledgement.outcomeVerified, false);
   assert.equal(replacementAcknowledgement.populated, false);
   assert.equal(replacementAcknowledgement.recovery.state, "provider-unverified");
+  let pendingBlocked = false;
+  replacementAcknowledgement = null;
+  truthController.pending.set("pending-sources", { detail: { requestId: "pending-sources" } });
+  truthController.onAcknowledgementCapture({
+    detail: { requestId: "pending-sources", workspace: "live-knowledge", outcomeKind: "source-directory", outcomeVerified: true, populated: true, evidenceSourceCount: 0, evidenceLinksVisible: false },
+    stopImmediatePropagation() { pendingBlocked = true; }
+  });
+  assert.equal(pendingBlocked, true);
+  assert.equal(replacementAcknowledgement, null, "The pending source renderer must finish instead of receiving an early synthetic failure.");
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
