@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -128,6 +128,22 @@ async function main() {
     getElementById() { return { hidden: false, querySelectorAll() { return [queuedRequestField]; } }; }
   }, { Event: class { constructor(type) { this.type = type; } } }), true);
   assert.equal(queuedRequestField.value, "find maize treatment guidance.");
+  const recoveredQueuedField = {
+    name: "queuedRequest", id: "queuedRequest", value: "", readOnly: false,
+    getAttribute(name) { return name === "aria-label" ? "Queued request" : null; },
+    dispatchEvent() { return true; }
+  };
+  const recoveredReceipts = [];
+  class TestEvent { constructor(type) { this.type = type; } }
+  class TestCustomEvent extends TestEvent { constructor(type, options) { super(type); this.detail = options.detail; } }
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus: set cued request to find maze treatment guidance.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }, { Event: TestEvent, CustomEvent: TestCustomEvent, dispatchEvent(event) { recoveredReceipts.push(event); } }), true);
+  assert.equal(recoveredQueuedField.value, "find maize treatment guidance");
+  assert.equal(recoveredReceipts[0].detail.type, "voice-form.corrected");
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus, set care needed to screening.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }), false);
   assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
     workspace: "health",
     command: "Nexus, set symptoms or notes to no symptoms."

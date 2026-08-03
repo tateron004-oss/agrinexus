@@ -294,6 +294,33 @@
     return true;
   }
 
+  function recoverOfflineQueuedRequestTranscript(command, documentObject, windowObject = globalObject) {
+    const match = normalize(command).match(/\b(?:set|change|replace|correct)\s+(?:the\s+)?cued\s+request\s+to\s+(.+?)[.!?]?$/i);
+    if (!match) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() !== "offline") return false;
+    const field = [...(workspace.querySelectorAll?.("input:not([disabled]), textarea:not([disabled])") || [])].find((candidate) => {
+      const identity = normalize([candidate.name, candidate.id, candidate.getAttribute?.("aria-label")].filter(Boolean).join(" ")).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      return identity.includes("queuedrequest");
+    });
+    if (!field || field.readOnly) return false;
+    const value = normalizeAgriculturalFieldValue(match[1]);
+    if (!value) return false;
+    field.value = value;
+    const EventConstructor = windowObject?.Event;
+    if (EventConstructor && field.dispatchEvent) {
+      field.dispatchEvent(new EventConstructor("input", { bubbles: true }));
+      field.dispatchEvent(new EventConstructor("change", { bubbles: true }));
+    }
+    const CustomEventConstructor = windowObject?.CustomEvent;
+    if (CustomEventConstructor && windowObject?.dispatchEvent) {
+      windowObject.dispatchEvent(new CustomEventConstructor("nexus.clean.receipt", {
+        detail: Object.freeze({ schema: "nexus.runtime.receipt.v1", type: "voice-form.corrected", detail: Object.freeze({ field: "queuedRequest", label: "Queued request", value, source: "offline-cued-request-recovery" }), at: new Date().toISOString() })
+      }));
+    }
+    return true;
+  }
+
   function canonicalCommandKey(command) {
     return normalizeMarketplaceSpeechDrift(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -754,6 +781,10 @@
         this.stage("transcript.unscoped-preworkspace-ignored", { command });
         return;
       }
+      if (recoverOfflineQueuedRequestTranscript(command, this.document, this.window)) {
+        this.stage("voice-form.offline-cued-request-recovered", { command });
+        return;
+      }
       const applicationRoute = isApplicationRouteCommand(command);
       const canonicalWorkspace = canonicalProtectedWorkspace(command);
       const visibleWorkspace = normalize(workspace).toLowerCase();
@@ -1075,7 +1106,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
