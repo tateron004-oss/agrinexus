@@ -524,7 +524,7 @@
       return canonical;
     }
     if (/\btopic\b|\btopic or skill\b/.test(identity)) {
-      const canonical = value.replace(/\b(?:phishing emails|fishing emails?) safety\b/i, "phishing email safety");
+      const canonical = value.replace(/\b(?:phishing e-?mails?|fishing e-?mails?) safety\b/i, "phishing email safety");
       if (canonical !== value) field.value = canonical;
       return canonical;
     }
