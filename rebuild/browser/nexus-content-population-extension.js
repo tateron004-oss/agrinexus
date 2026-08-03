@@ -755,7 +755,15 @@
         return;
       }
       const applicationRoute = isApplicationRouteCommand(command);
-      if (applicationRoute && shieldApplicationRouteFromGuidedEntry(command, this.document)) {
+      const canonicalWorkspace = canonicalProtectedWorkspace(command);
+      const visibleWorkspace = normalize(workspace).toLowerCase();
+      const recoversMismatchedWorkspace = Boolean(
+        applicationRoute
+        && canonicalWorkspace === "agriculture"
+        && visibleWorkspace === "maps"
+        && /\b(picture|pictures|image|images|photo|photos)\b/i.test(command)
+      );
+      if (!recoversMismatchedWorkspace && applicationRoute && shieldApplicationRouteFromGuidedEntry(command, this.document)) {
         this.stage("transcript.application-route-shielded", { command, workspace: this.activeWorkspace });
         return;
       }
@@ -763,7 +771,7 @@
         this.stage("transcript.yielded-to-guided-entry", { command, workspace: this.activeWorkspace });
         return;
       }
-      if (shouldYieldToProtectedRenderer(command)) {
+      if (!recoversMismatchedWorkspace && shouldYieldToProtectedRenderer(command)) {
         this.stage("transcript.yielded-to-protected-renderer", { command });
         return;
       }
@@ -773,7 +781,7 @@
         const requestId = globalObject.crypto?.randomUUID?.() || `content-${Date.now()}`;
         this.open(Object.freeze({
           requestId, transactionId: `content-follow-up-${requestId}`,
-          workspace: canonicalProtectedWorkspace(command) || this.activeWorkspace || "live-knowledge", command,
+          workspace: canonicalWorkspace || this.activeWorkspace || "live-knowledge", command,
           utterance: command, parameters: {}, contentExtensionExclusive: true, contentExtensionSynthetic: true
         }));
       }, 150);

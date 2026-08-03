@@ -198,6 +198,23 @@ async function main() {
   } });
   assert.equal(transcriptTimers, 0, "Application transcripts must not schedule a second synthetic workspace route.");
   assert.ok(transcriptStages.some((stage) => stage.type === "transcript.application-route-shielded"));
+  let recoveredImageRoute = null;
+  const staleMapsWorkspace = { hidden: false, dataset: { workspace: "maps" }, querySelectorAll() { return []; } };
+  const recoveryController = new NexusContentPopulationController({
+    windowObject: {
+      dispatchEvent() {},
+      setTimeout(callback) { callback(); return 1; },
+      clearTimeout() {}
+    },
+    documentObject: { getElementById() { return staleMapsWorkspace; } },
+    fetchImpl: null
+  });
+  recoveryController.open = (detail) => { recoveredImageRoute = detail; };
+  recoveryController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus: Show pictures of possible Mased diseases." }
+  } });
+  assert.equal(recoveredImageRoute.workspace, "agriculture", "A stale visible workspace must not suppress canonical image-route recovery.");
   const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
   assert.equal(healthFallback, null, "Provider deadlines must never fabricate a ready application.");
   const healthResult = {
