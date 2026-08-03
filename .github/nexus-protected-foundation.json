@@ -15,10 +15,10 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "348f4fde948c0106f73949354bd09b51fc341072",
-    "recoveryBranch": "recovery/pre-restart-safe-auth-2026-07-27",
-    "file": "server.js",
-    "purpose": "Restart-safe signed authentication for the physical Windows voice acceptance gate"
+    "baseCommit": "3bfe5a7944ef4c1f33c2e9c50e0f4a4b07213017",
+    "recoveryBranch": "recovery/pre-guided-entry-route-isolation-2026-08-03",
+    "file": "rebuild/browser/nexus-clean.bundle.js",
+    "purpose": "Guided Entry route isolation for spoken field edits within the active workspace"
   },
   "protectedFiles": {
     "server.js": "6c0c2277ee04167919ec868343a12a9aa9be3267",
@@ -36,7 +36,7 @@
     "rebuild/tests/nexus-windows-physical-certification.spec.js": "788aa5fe86c7bc25642ebe2e2d15c061903e06c7",
     ".github/workflows/nexus-release-certification-v2.yml": "69606917d9b42b7fffe19d07d4dab3c9e784d997",
     "rebuild/browser/nexus-clean-entry.js": "5e36041329daa1cf3b452565f84dba01fe61366f",
-    "rebuild/browser/nexus-clean.bundle.js": "c193725a3e1f629394f7e4b953d3dde4b61e7959",
+    "rebuild/browser/nexus-clean.bundle.js": "a4f2f36403f51ebce7ae7005d94315ca917b619f",
     "rebuild/nexus-core/browser-runtime.js": "abec4e6d12b9c1ce8129dc17830653e308f657a4",
     "rebuild/nexus-core/certification-identity.js": "ef899b8a1f207c3b4cee2d16cfa929d487ebff89",
     "rebuild/nexus-core/guided-entry-transcript-normalizer.js": "49f16570df7ae8286af5381ef645bd1267cf1527",

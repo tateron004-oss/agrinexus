@@ -172,7 +172,7 @@
 
   function shouldShieldGuidedFieldRoute(command, requestedWorkspace, documentObject) {
     const workspace = documentObject?.getElementById?.("nexus-workspace");
-    if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() === normalize(requestedWorkspace).toLowerCase()) return false;
+    if (!workspace || workspace.hidden) return false;
     if (!shouldYieldTranscriptToGuidedEntry(command, documentObject)) return false;
     const commandKey = canonicalCommandKey(command);
     const fields = [...(workspace.querySelectorAll?.("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") || [])]

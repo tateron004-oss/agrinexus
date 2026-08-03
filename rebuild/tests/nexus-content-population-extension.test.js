@@ -192,7 +192,18 @@ async function main() {
   }];
   assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "maps", editableDocument), true);
   assert.equal(shouldShieldGuidedFieldRoute("Nexus, record blood pressure is 140 over 90.", "health", editableDocument), false);
-  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "agriculture", editableDocument), false);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "agriculture", editableDocument), true);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set queued request to find maize treatment guidance.", "offline", {
+    getElementById() {
+      return {
+        hidden: false,
+        dataset: { workspace: "offline" },
+        querySelectorAll() {
+          return [{ readOnly: false, type: "text", name: "queuedRequest", id: "queuedRequest", getAttribute: () => "Queued request", labels: [], closest: () => null }];
+        }
+      };
+    }
+  }), true);
   const staleMapAnchor = {
     dataset: {},
     href: "https://leafletjs.com",

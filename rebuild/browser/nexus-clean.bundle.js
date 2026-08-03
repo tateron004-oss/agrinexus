@@ -742,6 +742,22 @@
         describeVisualReference,
         isVisualFollowUp
       } = require_visual_context();
+      var EXPLICIT_WORKSPACE_NAMES = Object.freeze([
+        ["mobile-clinic", /\bmobile clinic\b/i],
+        ["telehealth", /\btelehealth(?: intake)?\b/i],
+        ["agriculture", /\bagriculture help\b/i],
+        ["health", /\bhealth (?:and|&) chronic care\b|\bchronic care\b/i],
+        ["pharmacy", /\bpharmacy support\b/i],
+        ["learning", /\blearning (?:and|&) literacy\b/i],
+        ["workforce", /\bjobs? (?:and|&) workforce\b/i],
+        ["marketplace", /\bagritrade marketplace\b/i],
+        ["reminders", /\breminders?\b/i],
+        ["offline", /\boffline queue\b/i]
+      ]);
+      function explicitlySelectsWorkspace(utterance, workflow) {
+        if (!workflow || !/\b(open|show|display|reopen|return to|go to|begin|start)\b/i.test(utterance)) return false;
+        return EXPLICIT_WORKSPACE_NAMES.some(([candidate, pattern]) => candidate === workflow && pattern.test(utterance));
+      }
       function routeCommand(command, connectionState, context = null) {
         if (connectionState !== "connected") {
           return Object.freeze({
@@ -752,7 +768,8 @@
         }
         const resolution = extractIntentAndParameters(command);
         const visualFollowUp = isVisualFollowUp(resolution.utterance, context);
-        const contextual = (visualFollowUp || isContextualFollowUp(resolution.utterance, context)) && (!resolution.workflow || resolution.workflow === context.activeWorkspace || hasReferentialCue(resolution.utterance));
+        const explicitWorkspaceSelection = explicitlySelectsWorkspace(resolution.utterance, resolution.workflow);
+        const contextual = (visualFollowUp || isContextualFollowUp(resolution.utterance, context)) && (!resolution.workflow || resolution.workflow === context.activeWorkspace || !explicitWorkspaceSelection && hasReferentialCue(resolution.utterance));
         const match = contextual ? context.activeWorkspace : resolution.workflow || (isInternetAnswerQuestion(resolution.utterance) ? "live-knowledge" : null);
         const contextualUtterance = contextual ? normalizeContextualUtterance(resolution.utterance) : resolution.utterance;
         const extracted = contextual ? extractParameters(match, contextualUtterance) : resolution.parameters;
@@ -778,7 +795,7 @@
         }
         return /^(?:how|what|why|when|where|who|which)\b/i.test(text) || /^(?:tell me about|explain|show me how|teach me how|walk me through)\b/i.test(text);
       }
-      module.exports = { ROUTES, isInternetAnswerQuestion, routeCommand };
+      module.exports = { ROUTES, explicitlySelectsWorkspace, isInternetAnswerQuestion, routeCommand };
     }
   });
 
