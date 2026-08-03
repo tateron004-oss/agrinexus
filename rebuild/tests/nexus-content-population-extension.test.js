@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -61,6 +61,27 @@ async function main() {
   };
   assert.equal(protectedWorkspaceOwnsCommand("Nexus, help me create a resume.", protectedResumeDocument), true);
   assert.equal(protectedWorkspaceOwnsCommand("Nexus, search for farming jobs.", protectedResumeDocument), false);
+  const resumeNameField = {
+    name: "name", id: "name", value: "Rontate.", readOnly: false,
+    getAttribute(name) { return name === "aria-label" ? "Résumé full name" : null; },
+    dispatchEvent() { return true; }
+  };
+  const resumeNameDocument = {
+    getElementById(id) { return id === "nexus-workspace" ? { hidden: false, dataset: { workspace: "workforce" }, querySelectorAll() { return [resumeNameField]; } } : null; },
+    querySelector(selector) { return selector === '.resume-builder[data-nexus-visual="resume"]' ? {} : null; }
+  };
+  assert.equal(preserveSpacedResumeName(
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Rontate." } },
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Tate" } },
+    resumeNameDocument,
+    { Event: class { constructor(type) { this.type = type; } } }
+  ), true);
+  assert.equal(resumeNameField.value, "Ron Tate");
+  assert.equal(preserveSpacedResumeName(
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Taylor" } },
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Tate" } },
+    resumeNameDocument
+  ), false);
   assert.equal(isFalseVerifiedSourceDirectory({ outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 0, evidenceLinksVisible: false }), true);
   assert.equal(isFalseVerifiedSourceDirectory({ outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 2, evidenceLinksVisible: true }), false);
   assert.equal(isFalseVerifiedSourceDirectory({ contentExtension: true, outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 0 }), false);

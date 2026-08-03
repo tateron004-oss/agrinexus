@@ -321,6 +321,32 @@
     return true;
   }
 
+  function preserveSpacedResumeName(receipt, previousReceipt, documentObject, windowObject = globalObject) {
+    if (!previousReceipt || !["voice-form.updated", "voice-form.corrected"].includes(receipt?.type)) return false;
+    const identity = normalize([receipt.detail?.field, receipt.detail?.label].filter(Boolean).join(" ")).toLowerCase();
+    if (!/\bname\b/.test(identity)) return false;
+    const previousValue = normalize(previousReceipt.detail?.value);
+    const currentValue = normalize(receipt.detail?.value);
+    if (!/\s/.test(previousValue) || /\s/.test(currentValue)) return false;
+    const canonical = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    if (!currentValue || canonical(previousValue) !== canonical(currentValue)) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    const resume = documentObject?.querySelector?.('.resume-builder[data-nexus-visual="resume"]');
+    if (!workspace || workspace.hidden || normalize(workspace.dataset?.workspace).toLowerCase() !== "workforce" || !resume) return false;
+    const field = [...(workspace.querySelectorAll?.("input:not([disabled]), textarea:not([disabled])") || [])].find((candidate) => {
+      const candidateIdentity = normalize([candidate.name, candidate.id, candidate.getAttribute?.("aria-label")].filter(Boolean).join(" ")).toLowerCase();
+      return /\bname\b/.test(candidateIdentity);
+    });
+    if (!field || field.readOnly) return false;
+    field.value = previousValue;
+    const EventConstructor = windowObject?.Event;
+    if (EventConstructor && field.dispatchEvent) {
+      field.dispatchEvent(new EventConstructor("input", { bubbles: true }));
+      field.dispatchEvent(new EventConstructor("change", { bubbles: true }));
+    }
+    return true;
+  }
+
   function canonicalCommandKey(command) {
     return normalizeMarketplaceSpeechDrift(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -739,8 +765,14 @@
       if (receipt.type === "voice-form.updated" || receipt.type === "voice-form.corrected") {
         if (this.guidedFieldWorkspace && workspace !== this.guidedFieldWorkspace) this.guidedFieldReceipts.clear();
         this.guidedFieldWorkspace = workspace;
-        this.guidedFieldReceipts.set(normalize(receipt.detail?.field).toLowerCase(), receipt);
-        synchronizeGuidedFieldReceipt(receipt, this.document, this.window);
+        const fieldKey = normalize(receipt.detail?.field).toLowerCase();
+        const previousReceipt = this.guidedFieldReceipts.get(fieldKey);
+        if (preserveSpacedResumeName(receipt, previousReceipt, this.document, this.window)) {
+          this.stage("voice-form.resume-name-spacing-preserved", { field: receipt.detail?.field, value: previousReceipt.detail?.value });
+        } else {
+          this.guidedFieldReceipts.set(fieldKey, receipt);
+          synchronizeGuidedFieldReceipt(receipt, this.document, this.window);
+        }
       }
       if (reconcileAgriculturalFieldEdit(receipt, this.document, this.window)) {
         this.stage("voice-form.agricultural-value-reconciled", { field: receipt.detail?.field, value: normalizeAgriculturalFieldValue(receipt.detail?.value) });
@@ -1106,7 +1138,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
