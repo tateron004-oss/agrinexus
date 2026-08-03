@@ -63,6 +63,10 @@
         "$1add"
       )
       .replace(
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+)restan(?=\s+for\s+visit\s+to\s+)/i,
+        "$1reason"
+      )
+      .replace(
         /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*set\s+symptoms\s+or\s+notes\s+to\s+)notes\.?$/i,
         "$1no symptoms."
       )

@@ -38,6 +38,8 @@ assert.equal(normalizeFieldEditTranscript("nexus.setLocation to Nakuru, Kenya.")
 assert.equal(normalizeFieldEditTranscript("Nexus, set locale to English."), "Nexus, set locale to English.");
 assert.equal(normalizeFieldEditTranscript("Nexus, had supervised a team of eight employees to experience."), "Nexus, add supervised a team of eight employees to experience.");
 assert.equal(normalizeFieldEditTranscript("Nexus, I had supervised a team before."), "Nexus, I had supervised a team before.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set restan for visit to blood pressure review."), "Nexus, set reason for visit to blood pressure review.");
+assert.equal(normalizeFieldEditTranscript("Nexus, set restaurant for visit to Nakuru."), "Nexus, set restaurant for visit to Nakuru.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to notes."), "Nexus, set symptoms or notes to no symptoms.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set symptoms or notes to mild dizziness."), "Nexus, set symptoms or notes to mild dizziness.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set resumeFullName to Rauntate."), "Nexus, set resumeFullName to Ron Tate.");
@@ -82,6 +84,9 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-experience-drift", transcript: "Nexus, had supervised a team of eight employees to experience."
 }))).transcript, "Nexus, add supervised a team of eight employees to experience.");
+assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-telehealth-reason-drift", transcript: "Nexus, set restan for visit to blood pressure review."
+}))).transcript, "Nexus, set reason for visit to blood pressure review.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-symptoms-edit", transcript: "Nexus, set symptoms or notes to notes."
 }))).transcript, "Nexus, set symptoms or notes to no symptoms.");
