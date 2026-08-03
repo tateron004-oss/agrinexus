@@ -37,6 +37,8 @@ assert.equal(normalizeFieldEditTranscript("Nexus, changed date and time to tonig
 assert.equal(normalizeFieldEditTranscript("nexus.setLocation to Nakuru, Kenya."), "nexus.set location to Nakuru, Kenya.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set locale to English."), "Nexus, set locale to English.");
 assert.equal(normalizeFieldEditTranscript("Nexus, had supervised a team of eight employees to experience."), "Nexus, add supervised a team of eight employees to experience.");
+assert.equal(normalizeFieldEditTranscript("Nexus, ad supervised a team of eight employees to experience."), "Nexus, add supervised a team of eight employees to experience.");
+assert.equal(normalizeFieldEditTranscript("Nexus, ad campaign performance to notes."), "Nexus, ad campaign performance to notes.");
 assert.equal(normalizeFieldEditTranscript("Nexus, I had supervised a team before."), "Nexus, I had supervised a team before.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set restan for visit to blood pressure review."), "Nexus, set reason for visit to blood pressure review.");
 assert.equal(normalizeFieldEditTranscript("Nexus, set restaurant for visit to Nakuru."), "Nexus, set restaurant for visit to Nakuru.");
@@ -82,7 +84,7 @@ assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-location-collapsed", transcript: "nexus.setLocation to Nakuru, Kenya."
 }))).transcript, "nexus.set location to Nakuru, Kenya.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
-  type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-experience-drift", transcript: "Nexus, had supervised a team of eight employees to experience."
+  type: "conversation.item.input_audio_transcription.completed", item_id: "input-resume-experience-drift", transcript: "Nexus, ad supervised a team of eight employees to experience."
 }))).transcript, "Nexus, add supervised a team of eight employees to experience.");
 assert.equal(JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
   type: "conversation.item.input_audio_transcription.completed", item_id: "input-telehealth-reason-drift", transcript: "Nexus, set restan for visit to blood pressure review."

@@ -59,7 +59,7 @@
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)setlocation\b/i, "$1set location")
       .replace(/^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)changed\b/i, "$1change")
       .replace(
-        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)had(?=\s+.+\s+to\s+(?:work\s+)?experience\.?$)/i,
+        /^((?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*)(?:had|ad)(?=\s+.+\s+to\s+(?:work\s+)?experience\.?$)/i,
         "$1add"
       )
       .replace(
