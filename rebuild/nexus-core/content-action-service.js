@@ -180,6 +180,7 @@ function explicitFastProviderGoal(command) {
 function explicitFastDraftGoal(context = {}) {
   const command = clean(context.command, 4000);
   return /\b(remind|reminder)\b/i.test(command)
+    || /\b(?:resume|curriculum vitae|cv)\b/i.test(command)
     || /\b(?:marketplace|list for sale)\b/i.test(command)
     || /\b(?:sell|selling)\s+\d+(?:\.\d+)?\s*(?:bags?|sacks?|crates?|tons?|kilograms?|kg|units?)?\b/i.test(command)
     ? localResilienceGoal(context)

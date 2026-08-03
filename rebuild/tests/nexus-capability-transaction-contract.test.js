@@ -101,6 +101,18 @@ async function main() {
   assert.equal(marketplace.artifact.fields.find(field => field.id === "item").value, "maize");
   assert.equal(marketplace.artifact.fields.find(field => field.id === "quantity").value, "50 bags");
 
+  let resumeResolverCalls = 0;
+  const resumeService = createContentActionService({
+    goalResolver: { async resolve() { resumeResolverCalls += 1; throw new Error("Explicit résumé drafts must not wait for the conversational resolver."); } }
+  });
+  const resume = await resumeService.execute({ command: "Nexus, help me create a resume." });
+  assert.equal(resumeResolverCalls, 0);
+  assert.equal(resume.status, "ready");
+  assert.equal(resume.workspace, "workforce");
+  assert.equal(resume.capability, "resume");
+  assert.equal(resume.artifact.fields.find(field => field.id === "experience").label, "Work experience");
+  assert.equal(resume.artifact.fields.find(field => field.id === "skills").label, "Skills");
+
   console.log("Nexus capability transaction contract: PASS (request isolation, truthful providers, typed receipts, synchronized applications, production physical matrix)");
 }
 
