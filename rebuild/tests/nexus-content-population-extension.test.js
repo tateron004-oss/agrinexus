@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeAcknowledgedWorkspaceIdentity, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -109,6 +109,13 @@ async function main() {
   });
   assert.equal(pendingBlocked, true);
   assert.equal(replacementAcknowledgement, null, "The pending source renderer must finish instead of receiving an early synthetic failure.");
+  const mapWorkspace = { hidden: false, dataset: { workspace: "marketplace", document: "", guidedEntryProcess: "" } };
+  const identityMapDocument = { getElementById(id) { return id === "nexus-workspace" ? mapWorkspace : null; } };
+  assert.equal(synchronizeAcknowledgedWorkspaceIdentity({ workspace: "maps", visible: true, populated: true, outcomeVerified: true }, identityMapDocument), true);
+  assert.equal(mapWorkspace.dataset.workspace, "maps");
+  assert.equal(mapWorkspace.dataset.document, "maps-active-document");
+  assert.equal(mapWorkspace.dataset.guidedEntryProcess, "maps");
+  assert.equal(synchronizeAcknowledgedWorkspaceIdentity({ workspace: "maps", visible: true, populated: true, outcomeVerified: false }, identityMapDocument), false);
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {

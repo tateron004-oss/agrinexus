@@ -209,6 +209,17 @@
     return changed;
   }
 
+  function synchronizeAcknowledgedWorkspaceIdentity(detail, documentObject) {
+    if (!detail || detail.contentExtension === true || detail.visible !== true || detail.populated !== true || detail.outcomeVerified !== true) return false;
+    const identity = normalize(detail.workspace).toLowerCase();
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    if (!identity || !workspace || workspace.hidden === true) return false;
+    workspace.dataset.workspace = identity;
+    if (!workspace.dataset.document) workspace.dataset.document = `${identity}-active-document`;
+    if (!workspace.dataset.guidedEntryProcess) workspace.dataset.guidedEntryProcess = identity;
+    return true;
+  }
+
   function assistantLocationConfirmation(receipt) {
     if (receipt?.type !== "realtime.data-message") return "";
     let message;
@@ -753,6 +764,9 @@
         }));
         return;
       }
+      if (synchronizeAcknowledgedWorkspaceIdentity(detail, this.document)) {
+        this.stage("workspace.semantic-identity-synchronized", { requestId: detail.requestId, workspace: detail.workspace });
+      }
     }
 
     onReceipt(event) {
@@ -1138,7 +1152,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeAcknowledgedWorkspaceIdentity, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {
