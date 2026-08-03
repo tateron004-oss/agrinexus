@@ -344,6 +344,9 @@ async function main() {
   const learningTopicField = { name: "topic", value: "phishing emails safety." };
   assert.equal(normalizeGuidedFieldValue(learningTopicField), "phishing email safety.");
   assert.equal(learningTopicField.value, "phishing email safety.");
+  const learningSpeechDriftField = { name: "topic", value: "fishing email safety." };
+  assert.equal(normalizeGuidedFieldValue(learningSpeechDriftField), "phishing email safety.");
+  assert.equal(learningSpeechDriftField.value, "phishing email safety.");
   const learningInboxField = { name: "topic", value: "organizing emails safely" };
   assert.equal(normalizeGuidedFieldValue(learningInboxField), "organizing emails safely");
   const synchronizedEvents = [];
