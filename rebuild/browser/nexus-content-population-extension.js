@@ -359,6 +359,13 @@
       || /\b(create|make)\b.*\b(provider|doctor|physician)\b.*\b(card|summary)\b/i.test(normalizedCommand);
   }
 
+  function protectedWorkspaceOwnsCommand(command, documentObject) {
+    if (canonicalProtectedWorkspace(command) !== "workforce" || !/(?:\b(?:resume|curriculum vitae|cv)\b|r[eé]sum[eé])/i.test(normalize(command))) return false;
+    const workspace = documentObject?.getElementById?.("nexus-workspace");
+    const resume = documentObject?.querySelector?.('.resume-builder[data-nexus-visual="resume"]');
+    return Boolean(workspace && workspace.hidden !== true && normalize(workspace.dataset?.workspace).toLowerCase() === "workforce" && resume);
+  }
+
   function canonicalProtectedWorkspace(command) {
     const value = normalizeMarketplaceSpeechDrift(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     if (/\b(weather|forecast|apple pie recipe|pilot evidence|evidence dashboard|source directory)\b/.test(value)) return "live-knowledge";
@@ -809,6 +816,10 @@
     }
 
     open(detail) {
+      if (protectedWorkspaceOwnsCommand(detail.command, this.document)) {
+        this.stage("protected-renderer.duplicate-content-route-suppressed", { requestId: detail.requestId, workspace: "workforce", command: normalize(detail.command) });
+        return;
+      }
       const commandKey = canonicalCommandKey(detail.command);
       const duplicate = [...this.pending.values()].find((entry) => entry.commandKey && entry.commandKey === commandKey);
       if (duplicate) {
@@ -854,6 +865,12 @@
         : providerRequest;
       resultRequest.then(async (result) => {
         if (!this.pending.has(detail.requestId) || this.activeRequestId !== detail.requestId) return;
+        if (protectedWorkspaceOwnsCommand(detail.command, this.document)) {
+          this.pending.delete(detail.requestId);
+          if (this.activeRequestId === detail.requestId) this.activeRequestId = "";
+          this.stage("protected-renderer.delayed-content-result-suppressed", { requestId: detail.requestId, workspace: "workforce" });
+          return;
+        }
         this.activeWorkspace = result.workspace || this.activeWorkspace;
         this.currentResult = result;
         this.render(result, detail);
@@ -863,6 +880,12 @@
       }).catch((error) => {
         if (controller?.signal?.aborted || this.activeRequestId !== detail.requestId) {
           this.stage("request.stale-suppressed", { requestId: detail.requestId, message: normalize(error.message) });
+          return;
+        }
+        if (protectedWorkspaceOwnsCommand(detail.command, this.document)) {
+          this.pending.delete(detail.requestId);
+          if (this.activeRequestId === detail.requestId) this.activeRequestId = "";
+          this.stage("protected-renderer.delayed-content-failure-suppressed", { requestId: detail.requestId, workspace: "workforce", message: normalize(error.message) });
           return;
         }
         this.fail(error, detail);
@@ -1019,7 +1042,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

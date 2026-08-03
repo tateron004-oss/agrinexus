@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -53,6 +53,12 @@ async function main() {
   assert.equal(isApplicationRouteCommand("Nexus shall fifty bags of maize."), true);
   assert.equal(canonicalCommandKey("Nexus shall fifty bags of maize."), canonicalCommandKey("sell fifty bags of maize"));
   assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall review the maize report."), "Nexus shall review the maize report.");
+  const protectedResumeDocument = {
+    getElementById(id) { return id === "nexus-workspace" ? { hidden: false, dataset: { workspace: "workforce" } } : null; },
+    querySelector(selector) { return selector === '.resume-builder[data-nexus-visual="resume"]' ? {} : null; }
+  };
+  assert.equal(protectedWorkspaceOwnsCommand("Nexus, help me create a resume.", protectedResumeDocument), true);
+  assert.equal(protectedWorkspaceOwnsCommand("Nexus, search for farming jobs.", protectedResumeDocument), false);
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
