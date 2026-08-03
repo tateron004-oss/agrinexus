@@ -295,12 +295,19 @@
   }
 
   function canonicalCommandKey(command) {
-    return normalize(command)
+    return normalizeMarketplaceSpeechDrift(command)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/^(?:hey\s+|hello\s+)?nexus(?:t)?\b[\s,;:.-]*/i, "")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+  }
+
+  function normalizeMarketplaceSpeechDrift(command) {
+    const value = normalize(command);
+    return /^(?:(?:hey|hello)\s+)?nexus\b[\s,;:.-]*(?:shall|shale|shell)\s+(?:(?:\d+(?:\.\d+)?)|(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)(?:[- ](?:and\s+)?(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand))*)\s+(?:bags?|sacks?|crates?|tons?|kilograms?|kg|units?)\s+(?:of\s+)?(?:maize|corn|crop|produce)\b/i.test(value)
+      ? value.replace(/\b(?:shall|shale|shell)\b/i, "sell")
+      : value;
   }
 
   function isApplicationRouteCommand(command) {
@@ -353,7 +360,7 @@
   }
 
   function canonicalProtectedWorkspace(command) {
-    const value = normalize(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const value = normalizeMarketplaceSpeechDrift(command).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     if (/\b(weather|forecast|apple pie recipe|pilot evidence|evidence dashboard|source directory)\b/.test(value)) return "live-knowledge";
     if (/\b(picture|pictures|image|images|photo|photos)\b/.test(value) && /\b(maize|maized|maze|mase|mased|mays|disease|diseases|crop|plant|pest)\b/.test(value)) return "agriculture";
     if (/\b(resume|curriculum vitae|cv)\b/.test(value)) return "workforce";
@@ -624,12 +631,13 @@
     onOpenCapture(event) {
       const detail = event.detail || {};
       if (detail.contentExtensionExclusive || !detail.requestId || !normalize(detail.command || detail.utterance)) return;
-      const canonicalWorkspace = canonicalProtectedWorkspace(detail.command || detail.utterance);
+      const routeCommand = normalizeMarketplaceSpeechDrift(detail.command || detail.utterance);
+      const canonicalWorkspace = canonicalProtectedWorkspace(routeCommand);
       if (!detail.contentExtensionCanonicalRoute && canonicalWorkspace && canonicalWorkspace !== normalize(detail.workspace).toLowerCase()) {
         event.stopImmediatePropagation();
-        this.stage("workspace.specialized-route-canonicalized", { requestId: detail.requestId, from: detail.workspace, to: canonicalWorkspace, command: normalize(detail.command || detail.utterance) });
+        this.stage("workspace.specialized-route-canonicalized", { requestId: detail.requestId, from: detail.workspace, to: canonicalWorkspace, command: routeCommand });
         this.window.dispatchEvent(new CustomEvent("nexus.clean.workspace.open", {
-          detail: Object.freeze({ ...detail, workspace: canonicalWorkspace, contentExtensionCanonicalRoute: true })
+          detail: Object.freeze({ ...detail, workspace: canonicalWorkspace, command: routeCommand, utterance: routeCommand, contentExtensionCanonicalRoute: true })
         }));
         return;
       }
@@ -703,7 +711,7 @@
         this.stage("workspace.redundant-route-resolved", { requestId, requestedWorkspace: shield.requestedWorkspace, workspace: shield.activeWorkspace, receiptType: receipt.type });
       }
       if (receipt.type !== "transcript.final") return;
-      const command = normalize(receipt.detail && receipt.detail.transcript);
+      const command = normalizeMarketplaceSpeechDrift(receipt.detail && receipt.detail.transcript);
       if (!command) return;
       if (/\b(save|store|keep)\b.*\b(draft|form|resume|r[eé]sum[eé]|changes|information)\b/i.test(command)) {
         for (const fieldReceipt of this.guidedFieldReceipts.values()) {
@@ -1011,7 +1019,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

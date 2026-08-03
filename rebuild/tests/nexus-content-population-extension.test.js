@@ -11,7 +11,7 @@ const {
   normalizeGoalRoute,
   normalizeWebSearchPayload
 } = require("../nexus-core/content-action-service");
-const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
 
 function artifact(kind, title) {
   return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
@@ -48,6 +48,11 @@ async function main() {
   assert.equal(canonicalProtectedWorkspace("Nexus: Show pictures of possible Mased diseases."), "agriculture");
   assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
   assert.equal(canonicalProtectedWorkspace("Nexus, sell fifty bags of maize."), "marketplace");
+  assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall fifty bags of maize."), "Nexus sell fifty bags of maize.");
+  assert.equal(canonicalProtectedWorkspace("Nexus shall fifty bags of maize."), "marketplace");
+  assert.equal(isApplicationRouteCommand("Nexus shall fifty bags of maize."), true);
+  assert.equal(canonicalCommandKey("Nexus shall fifty bags of maize."), canonicalCommandKey("sell fifty bags of maize"));
+  assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall review the maize report."), "Nexus shall review the maize report.");
   assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
   const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
   const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
@@ -298,6 +303,17 @@ async function main() {
   assert.equal(placeDiscoveryStopped, true);
   assert.equal(placeDiscoveryRoute.contentExtensionExclusive, true);
   assert.equal(placeDiscoveryRoute.workspace, "maps");
+  let driftRoute = null;
+  const driftController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent(event) { driftRoute = event.detail; } }, documentObject: null, fetchImpl: null
+  });
+  driftController.onOpenCapture({
+    detail: { requestId: "marketplace-drift", workspace: "agriculture", command: "Nexus shall fifty bags of maize." },
+    stopImmediatePropagation() {}
+  });
+  assert.equal(driftRoute.workspace, "marketplace");
+  assert.equal(driftRoute.command, "Nexus sell fifty bags of maize.");
+  assert.equal(driftRoute.contentExtensionCanonicalRoute, true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
   assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of maize diseases.", "agriculture"), true);
