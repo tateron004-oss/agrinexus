@@ -35,7 +35,7 @@ async function verifyProductionIdentity({ baseUrl, deployedReleaseSha, runtimeSo
   let lastFailure = "identity-unavailable";
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${String(baseUrl).replace(/\/+$/, "")}/api/certification/identity`, {
+      const response = await fetch(`${String(baseUrl).replace(/\/+$/, "")}/certification/api/certification/identity`, {
         headers: { "cache-control": "no-cache" }
       });
       if (new URL(response.url).origin !== CANONICAL_PRODUCTION_ORIGIN) {
