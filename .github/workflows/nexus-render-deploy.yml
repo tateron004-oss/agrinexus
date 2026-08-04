@@ -29,7 +29,8 @@ jobs:
         run: node rebuild/tests/nexus-render-deployment-orchestration.test.js
       - name: Trigger existing Render service
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_AGRINEXUS_PLATFORM_SERVICE_ID: ${{ secrets.RENDER_AGRINEXUS_PLATFORM_SERVICE_ID }}
         run: node scripts/nexus-render-deploy.js
       - name: Verify exact deployed release
         env:
