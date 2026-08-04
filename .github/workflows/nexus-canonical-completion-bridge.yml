@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
   NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 

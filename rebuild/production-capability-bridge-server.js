@@ -220,17 +220,6 @@ async function handler(request, response) {
     try { return new URL(String(request.headers.referer || "")).pathname.startsWith("/certification"); }
     catch { return false; }
   })();
-  if (request.method === "GET" && url.pathname === "/health") {
-    return json(response, 200, {
-      ok: true,
-      service: "nexus-production-capability-bridge",
-      schema: "nexus.production.health.v1"
-    });
-  }
-  if (request.method === "GET" && url.pathname === "/api/certification/identity") {
-    try { return await proxyCertificationRequest(request, response); }
-    catch (error) { return json(response, 502, { error: "certification-runtime-unavailable", message: error.message }); }
-  }
   if (url.pathname === "/certification" || url.pathname.startsWith("/certification/") ||
       (certificationReferer && url.pathname.startsWith("/api/"))) {
     try { return await proxyCertificationRequest(request, response); }

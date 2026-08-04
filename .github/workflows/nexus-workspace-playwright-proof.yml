@@ -11,7 +11,7 @@ on:
       base_url:
         description: Deployed Nexus URL to verify
         required: true
-        default: https://agrinexus-platform.onrender.com
+        default: https://nexus-genesis-certified.onrender.com
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
+      NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://nexus-genesis-certified.onrender.com' }}
     steps:
       - name: Check out exact repository state
         uses: actions/checkout@v4

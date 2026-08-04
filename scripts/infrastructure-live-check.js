@@ -3,7 +3,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
-const liveBase = (process.env.LIVE_BASE_URL || "https://agrinexus-platform.onrender.com").replace(/\/$/, "");
+const liveBase = (process.env.LIVE_BASE_URL || "https://nexus-genesis-certified.onrender.com").replace(/\/$/, "");
 const providerBase = (process.env.PROVIDER_ENGINE_BASE_URL || "https://agrinexus-provider-engines.onrender.com").replace(/\/$/, "");
 const loginEmail = process.env.LIVE_TEST_EMAIL || "admin@agrinexus.org";
 const loginPassword = process.env.LIVE_TEST_PASSWORD || "Admin2026!";

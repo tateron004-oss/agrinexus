@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
-  NEXUS_CLEAN_BASE_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
 
 concurrency:
   group: nexus-windows-physical-certification
@@ -92,10 +92,10 @@ jobs:
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $health = Invoke-RestMethod -Uri "$env:NEXUS_CANONICAL_PRODUCTION_URL/health" -TimeoutSec 30
-          if ($health.ok -ne $true -or $health.service -ne "nexus-production-capability-bridge" -or $health.schema -ne "nexus.production.health.v1") {
-            throw "Render did not return the canonical AgriNexus production health contract."
+          if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
+            throw "Render did not return the certified Nexus Genesis health contract."
           }
-          Write-Host "Canonical AgriNexus production runtime verified."
+          Write-Host "Certified Nexus Genesis production runtime verified."
       - name: Verify exact deployed release
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node scripts/nexus-release-certification-controller.js verify-deployment

@@ -1,6 +1,6 @@
 "use strict";
 
-const CANONICAL_PRODUCTION_URL = "https://agrinexus-platform.onrender.com";
+const CANONICAL_PRODUCTION_URL = "https://nexus-genesis-certified.onrender.com";
 
 const LIFECYCLE = Object.freeze([
   "open", "execute", "verify-outcome", "follow-up", "correct",
