@@ -32,7 +32,7 @@
     "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
-    ".github/workflows/nexus-clean-windows-certification.yml": "a658d945e760c51a014fde5155e49a26403f0206",
+    ".github/workflows/nexus-clean-windows-certification.yml": "89587312e9767ff7994fb9bafbd4fa465390b334",
     "rebuild/tests/nexus-windows-physical-certification.spec.js": "788aa5fe86c7bc25642ebe2e2d15c061903e06c7",
     ".github/workflows/nexus-release-certification-v2.yml": "79223f88146b457e596fadc490aac3e02381d4e2",
     "rebuild/browser/nexus-clean-entry.js": "5e36041329daa1cf3b452565f84dba01fe61366f",
@@ -42,12 +42,12 @@
     "rebuild/nexus-core/guided-entry-transcript-normalizer.js": "49f16570df7ae8286af5381ef645bd1267cf1527",
     "rebuild/nexus-core/universal-guided-entry-engine.js": "099a83297109f3e0ce316bc0d218f5f7679f5910",
     "rebuild/server.js": "c90c0b1ef74ca4e642a9abba7bf2f3d30bfb9b4d",
-    "rebuild/tests/nexus-release-certification-controller.test.js": "4109c0d04d8b8a906a639cdb3978401c934a9c7b",
+    "rebuild/tests/nexus-release-certification-controller.test.js": "fc007486c9a8f1f60656b914d487c2c113170453",
     "rebuild/tests/nexus-runtime-e2e.test.js": "feea1eb9189126915c273a32a4736f00c82b7675",
     "rebuild/tests/nexus-universal-guided-entry-engine.test.js": "417945e47d8e6fc9574e88ac2328d9165a5ee872",
     "rebuild/tests/nexus-voice-form-entry.test.js": "567e6db8cd502d0bfa3cdc3551ae6a7e27e9b28d",
     "scripts/nexus-certification-evidence.js": "01186db292770e5923a7c4b04dd971673d53e592",
-    "scripts/nexus-release-certification-controller.js": "585ea0020bafbaac83bb37e0ef70d4b4bd6f989c",
+    "scripts/nexus-release-certification-controller.js": "8a2c6bb73fa71178040d48d147466112bcb8015c",
     "scripts/nexus-windows-certification-reset.ps1": "d12e365875938ef9781351c2b3dc9e5ba25a0644",
     "scripts/nexus-windows-stability-certification.ps1": "7df7f9967fccb25376232e2cd63813598e49ee51"
   }

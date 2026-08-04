@@ -28,7 +28,7 @@ function sameCommit(expected, actual) {
 
 async function fetchIdentity(baseUrl) {
   baseUrl = requireCanonicalProductionUrl(baseUrl, "certification target");
-  const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/certification/api/certification/identity`, {
+  const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/certification/identity`, {
     headers: { "cache-control": "no-cache" }
   });
   if (new URL(response.url).origin !== CANONICAL_PRODUCTION_ORIGIN) {

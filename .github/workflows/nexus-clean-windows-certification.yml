@@ -84,7 +84,7 @@ jobs:
       - name: Verify Render production runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          $health = Invoke-RestMethod -Uri "$env:NEXUS_CANONICAL_PRODUCTION_URL/certification/health" -TimeoutSec 30
+          $health = Invoke-RestMethod -Uri "$env:NEXUS_CANONICAL_PRODUCTION_URL/health" -TimeoutSec 30
           if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
             throw "Render did not return the certified Nexus Genesis health contract."
           }

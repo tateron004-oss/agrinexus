@@ -15,8 +15,8 @@ assert.throws(() => requireCanonicalProductionUrl(`${CANONICAL_PRODUCTION_URL}/c
 const controllerSource = fs.readFileSync("scripts/nexus-release-certification-controller.js", "utf8");
 const preflightSource = fs.readFileSync("scripts/nexus-production-certification-preflight.js", "utf8");
 for (const source of [controllerSource, preflightSource]) {
-  assert.match(source, /\/certification\/api\/certification\/identity/);
-  assert.doesNotMatch(source, /replace\(\/\\\/\+\$\/[^\n]*\)\/api\/certification\/identity/);
+  assert.match(source, /\/api\/certification\/identity/);
+  assert.doesNotMatch(source, /\/certification\/api\/certification\/identity/);
 }
 
 const expected = {

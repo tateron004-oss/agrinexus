@@ -48,6 +48,17 @@ for (const name of ["form", "clean"]) {
   );
 }
 
+assert.match(
+  contents.clean,
+  /NEXUS_CANONICAL_PRODUCTION_URL\/health/,
+  "clean certification must probe the health route exposed by the Nexus Genesis runtime"
+);
+assert.doesNotMatch(
+  contents.clean,
+  /NEXUS_CANONICAL_PRODUCTION_URL\/certification\/health/,
+  "clean certification must not probe the unrelated adapter-prefixed health route"
+);
+
 assert.match(contents.canonical, /Complete physical voice user-mode certification/);
 assert.match(contents.canonical, /nexus-production-certification-preflight\.js/);
 assert.match(
