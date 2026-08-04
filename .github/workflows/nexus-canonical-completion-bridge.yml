@@ -63,3 +63,4 @@ jobs:
 # GitHub connector push-event cachebuster: 2026-08-04 production completion.
 
 # Nexus Certified target restoration deployment trigger: 2026-08-04.
+# Protected bundle rebuild deployment trigger: 2026-08-04.
