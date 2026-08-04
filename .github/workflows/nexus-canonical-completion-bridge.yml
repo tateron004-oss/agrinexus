@@ -47,4 +47,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexus-clean-windows-certification.yml --ref rebuild/nexus-genesis-clean-foundation
 
-# Triggered after bridge installation so GitHub evaluates the workflow from an existing branch revision.
+# Re-triggered after the unified production-execution audit so Render must prove
+# the exact Nexus Genesis release before physical Windows certification starts.
