@@ -455,11 +455,11 @@
       "use strict";
       var WORKFLOW_RULES = Object.freeze([
         ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom (?:in|out) to)\b/i],
-        ["reminders", /\b(remind|reminder)\b/i],
+        ["reminders", /\b(remind|reminders?)\b/i],
+        ["pharmacy", /\b(pharmac(?:y|ies)|pharmacist|prescription|medication support)\b/i],
         ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
-        ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
+        ["telehealth", /\b(telehealth|doctor|clinician|video[- ]visit|provider handoff)\b/i],
         ["mobile-clinic", /\b(mobile clinic|clinic visit)\b/i],
-        ["pharmacy", /\b(pharmacy|pharmacist|prescription|medication support)\b/i],
         ["offline", /\b(offline|sync|queue)\b/i],
         ["workforce", /(?:\b(job|jobs|work|career|employment|resume|cv)\b|résumé)/i],
         ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
@@ -481,6 +481,9 @@
       function detectWorkflow(text) {
         if (providerCardRequest(text)) return "health";
         if (/\bweather for my field\b/i.test(text)) return "agriculture";
+        if (/\b(?:offline|sync|queue)\b/i.test(text)) return "offline";
+        if (/\bsearch\b/i.test(text) && /\b(?:source|sources|web|internet)\b/i.test(text)) return "live-knowledge";
+        if (/\b(?:maize|corn|wheat|rice|coffee|tea|crop|livestock|farm|agricultur(?:e|al))\b/i.test(text) && /\b(?:disease|pest|symptom|soil|field|image|images|picture|pictures|photo|photos|research)\b/i.test(text)) return "agriculture";
         const liveKnowledgeRule = WORKFLOW_RULES.find(([workflow]) => workflow === "live-knowledge");
         if (liveKnowledgeRule[1].test(text)) return "live-knowledge";
         const match = WORKFLOW_RULES.find(([, pattern]) => pattern.test(text));
@@ -594,8 +597,8 @@
   var require_conversation_context = __commonJS({
     "rebuild/nexus-core/conversation-context.js"(exports, module) {
       "use strict";
-      var CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|there|it|all of|whole of|go back|take me back|zoom|change|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
-      var REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|there|it|what about|how about|use that|use the same)\b/i;
+      var CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|their|there|it|all of|whole of|go back|take me back|zoom|add|set|change|correct|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
+      var REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|their|there|it|add|set|correct|what about|how about|use that|use the same)\b/i;
       function cloneParameters(value = {}) {
         return Object.freeze({ ...value });
       }
@@ -663,9 +666,9 @@
   var require_visual_context = __commonJS({
     "rebuild/nexus-core/visual-context.js"(exports, module) {
       "use strict";
-      var VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
+      var VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|their|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
       var VISUAL_QUESTION_CUES = /^(?:what|why|where|which|who|how|can|could|would|does|do|is|are)\b/i;
-      var VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
+      var VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|create|put|add|close|reopen|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
       function compactText(value, limit = 180) {
         return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
       }
