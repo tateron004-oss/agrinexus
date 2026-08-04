@@ -9,7 +9,7 @@ const { CANONICAL_PRODUCTION_URL, requireCanonicalProductionUrl } = require("../
 assert.equal(sameCommit("1e328c28abcdef", "1e328c2"), true);
 assert.equal(sameCommit("1e328c28", "deadbee"), false);
 assert.equal(requireCanonicalProductionUrl(CANONICAL_PRODUCTION_URL), CANONICAL_PRODUCTION_URL);
-assert.throws(() => requireCanonicalProductionUrl("https://agrinexus-platform.onrender.com"), /CANONICAL_HOST_MISMATCH/);
+assert.throws(() => requireCanonicalProductionUrl("https://nexus-genesis-certified.onrender.com"), /CANONICAL_HOST_MISMATCH/);
 assert.throws(() => requireCanonicalProductionUrl(`${CANONICAL_PRODUCTION_URL}/certification`), /CANONICAL_HOST_MISMATCH/);
 
 const controllerSource = fs.readFileSync("scripts/nexus-release-certification-controller.js", "utf8");

@@ -1148,6 +1148,10 @@
           if (audio.error || Number(audio.readyState) < 1) throw new Error("The requested music source could not be loaded for playback.");
           try { await audio.play(); } catch (error) { throw new Error(`The requested music source could not start playback: ${normalize(error.message)}`); }
           if (audio.paused) throw new Error("The requested music source remained paused instead of playing.");
+          const initialTime = Number(audio.currentTime || 0);
+          await new Promise((resolve) => this.window.setTimeout(resolve, 900));
+          if (audio.paused || Number(audio.readyState) < 2 || Number(audio.currentTime || 0) <= initialTime) throw new Error("The requested music source did not produce advancing playback.");
+          this.stage("media.playback-verified", { requestId: detail.requestId, initialTime, currentTime: Number(audio.currentTime || 0), readyState: Number(audio.readyState || 0) });
         }
       } else {
         const hasApplicationContent = root.querySelectorAll("input, textarea, select").length > 0

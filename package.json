@@ -4,6 +4,9 @@
   "description": "Full-stack AgriNexus working prototype with built-in Node server and JSON persistence.",
   "main": "server.js",
   "scripts": {
+    "qa:nexus-production-capability-registry": "node rebuild/tests/nexus-production-capability-registry.test.js",
+    "qa:nexus-production-lifecycle-routing": "node rebuild/tests/nexus-production-lifecycle-routing.test.js",
+    "qa:nexus-production-completion-foundation": "npm run qa:nexus-production-capability-registry && npm run qa:nexus-production-lifecycle-routing && node rebuild/tests/nexus-generalized-intent-parameters.test.js && node rebuild/tests/nexus-multiturn-context.test.js && node rebuild/tests/nexus-runtime-e2e.test.js && node scripts/nexus-protected-foundation-guard.js",
     "qa:nexus-music-call-production-execution": "node scripts/nexus-music-call-production-execution-qa.js",
     "qa:nexus-browser-action-controller": "node scripts/nexus-browser-action-controller-qa.js",
     "certify:nexus": "node scripts/certify-nexus.js",

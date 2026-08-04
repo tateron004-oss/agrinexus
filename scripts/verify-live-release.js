@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const liveBase = (process.env.LIVE_BASE_URL || "https://nexus-genesis-certified.onrender.com").replace(/\/$/, "");
+const liveBase = (process.env.LIVE_BASE_URL || "https://agrinexus-platform.onrender.com").replace(/\/$/, "");
 
 function read(path) {
   return fs.readFileSync(path, "utf8");

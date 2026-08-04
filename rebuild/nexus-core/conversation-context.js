@@ -1,7 +1,7 @@
 "use strict";
 
-const CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|there|it|all of|whole of|go back|take me back|zoom|change|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
-const REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|there|it|what about|how about|use that|use the same)\b/i;
+const CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|their|there|it|all of|whole of|go back|take me back|zoom|add|set|change|correct|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
+const REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|their|there|it|add|set|correct|what about|how about|use that|use the same)\b/i;
 
 function cloneParameters(value = {}) {
   return Object.freeze({ ...value });

@@ -35,7 +35,7 @@
     };
   }
 
-  function handleLocalLifecycle(command) {
+  async function handleLocalLifecycle(command) {
     const value = clean(command).toLowerCase();
     const surface = ensureSurface();
     const audio = surface.querySelector("#nexus-capability-audio");
@@ -59,15 +59,49 @@
       return { ...previous, acknowledgement: "The previous result is visible again.", localLifecycleAction: true };
     }
     if (/\b(?:pause|stop)\b.*\b(?:music|audio|song|speaking)\b|^\s*(?:nexus,?\s*)?(?:pause|stop)\s*$/.test(value)) {
-      if (audio) { audio.pause(); if (/\bstop\b/.test(value)) audio.currentTime = 0; }
+      if (!audio || !audio.src) {
+        return localResult("media-control", /\bstop\b/.test(value) ? "stop" : "pause", "", {
+          status: "failed",
+          recovery: { message: "No active music player is available to control.", nextActions: ["Ask Nexus to play music first."] }
+        });
+      }
+      audio.pause();
+      if (/\bstop\b/.test(value)) audio.currentTime = 0;
+      if (!audio.paused || (/\bstop\b/.test(value) && Number(audio.currentTime) > 0.05)) {
+        return localResult("media-control", /\bstop\b/.test(value) ? "stop" : "pause", "", {
+          status: "failed",
+          recovery: { message: "The visible music player did not confirm the requested playback state.", nextActions: ["Use the visible media control and retry."] }
+        });
+      }
       if (/\bspeaking\b/.test(value)) windowObject.speechSynthesis?.cancel();
       stage("media.paused", { stopped: /\bstop\b/.test(value) });
       return localResult("media-control", /\bstop\b/.test(value) ? "stop" : "pause", /\bstop\b/.test(value) ? "Playback is stopped." : "Playback is paused.");
     }
     if (/\bresume\b.*\b(?:music|audio|song|speaking)\b|^\s*(?:nexus,?\s*)?resume\s*$/.test(value)) {
-      if (audio) audio.play().catch(() => {});
-      stage("media.resumed", {});
-      return localResult("media-control", "resume", "Playback resumed when permitted by the browser.");
+      if (!audio || !audio.src) {
+        return localResult("media-control", "resume", "", {
+          status: "failed",
+          recovery: { message: "No paused music player is available to resume.", nextActions: ["Ask Nexus to play music first."] }
+        });
+      }
+      const initialTime = Number(audio.currentTime || 0);
+      try {
+        await audio.play();
+        await new Promise(resolve => windowObject.setTimeout(resolve, 900));
+      } catch (error) {
+        return localResult("media-control", "resume", "", {
+          status: "failed",
+          recovery: { message: `Playback could not resume: ${clean(error.message || "browser playback was blocked", 300)}`, nextActions: ["Use the visible Play control and retry."] }
+        });
+      }
+      if (audio.paused || Number(audio.readyState) < 2 || Number(audio.currentTime || 0) <= initialTime) {
+        return localResult("media-control", "resume", "", {
+          status: "failed",
+          recovery: { message: "The music player did not produce advancing playback after resume.", nextActions: ["Use the visible Play control and retry."] }
+        });
+      }
+      stage("media.resumed", { initialTime, currentTime: Number(audio.currentTime || 0), readyState: Number(audio.readyState || 0) });
+      return localResult("media-control", "resume", "Playback resumed and the player is advancing.");
     }
     if (/\b(increase|larger|bigger)\b.*\b(text|font)\b|\bmake this screen easier to read\b/.test(value)) {
       const frame = surface.querySelector(".nexus-capability-frame");
@@ -373,6 +407,13 @@
       if (audio.paused) {
         result.acknowledgement = "I found authorized music choices and opened a playable source. Use the visible Play control if your browser blocked autoplay.";
         result.artifact.media.state = "ready";
+      } else {
+        const initialTime = Number(audio.currentTime || 0);
+        await new Promise(resolve => windowObject.setTimeout(resolve, 900));
+        if (audio.paused || Number(audio.readyState) < 2 || Number(audio.currentTime || 0) <= initialTime) {
+          throw new Error("The requested music source did not produce advancing playback.");
+        }
+        stage("media.playback-verified", { requestId, initialTime, currentTime: Number(audio.currentTime || 0), readyState: Number(audio.readyState || 0) });
       }
     }
     const styles = getComputedStyle(root);
@@ -389,7 +430,7 @@
 
   async function executeCapability(command, options = {}) {
     if (!options.retry) {
-      const lifecycle = handleLocalLifecycle(command);
+      const lifecycle = await handleLocalLifecycle(command);
       if (lifecycle) return lifecycle;
     }
     const requestId = `production-capability-${Date.now()}-${++state.requestSequence}`;
