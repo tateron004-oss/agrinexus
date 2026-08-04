@@ -7,8 +7,8 @@ const workflow = fs.readFileSync(".github/workflows/nexus-live-runtime-certifica
 
 assert.match(workflow, /workflow_dispatch:/);
 assert.match(workflow, /group: nexus-windows-physical-certification\s+cancel-in-progress: false/);
-assert.match(workflow, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/agrinexus-platform\.onrender\.com/);
-assert.doesNotMatch(workflow, /nexus-genesis-certified\.onrender\.com/);
+assert.match(workflow, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
+assert.doesNotMatch(workflow, /agrinexus-platform\.onrender\.com/);
 assert.match(workflow, /shell: cmd/);
 assert.match(workflow, /git log -1 --format\^=%%H -- rebuild\/browser\/nexus-clean\.bundle\.js/);
 assert.match(workflow, /set "DEPLOYMENT_SHA=%GITHUB_SHA%"/);

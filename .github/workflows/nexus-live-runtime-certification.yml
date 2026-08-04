@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:
@@ -58,8 +58,7 @@ jobs:
           node rebuild/tests/nexus-render-deployment-orchestration.test.js
       - name: Trigger exact Render commit
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_AGRINEXUS_PLATFORM_SERVICE_ID: ${{ secrets.RENDER_AGRINEXUS_PLATFORM_SERVICE_ID }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: node scripts/nexus-render-deploy.js
       - name: Verify exact deployed release and bundle
         env:

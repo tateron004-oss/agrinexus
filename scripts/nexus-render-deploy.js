@@ -1,7 +1,17 @@
 "use strict";
 
-const CANONICAL_SERVICE_NAME = "agrinexus-platform";
-const CANONICAL_SERVICE_URL = "https://agrinexus-platform.onrender.com";
+function validatedDeployHook(value) {
+  let url;
+  try {
+    url = new URL(String(value || ""));
+  } catch {
+    throw new Error("RENDER_DEPLOY_HOOK_URL is not configured as a valid HTTPS GitHub Actions secret");
+  }
+  if (url.protocol !== "https:" || url.hostname !== "api.render.com" || !url.pathname.startsWith("/deploy/")) {
+    throw new Error("RENDER_DEPLOY_HOOK_URL must be an official https://api.render.com/deploy/... hook");
+  }
+  return url;
+}
 
 function validatedReleaseSha(value) {
   const releaseSha = String(value || "").trim().toLowerCase();
@@ -11,65 +21,26 @@ function validatedReleaseSha(value) {
   return releaseSha;
 }
 
-function requiredSecret(value, name) {
-  const secret = String(value || "").trim();
-  if (!secret) throw new Error(`${name} is required for canonical Render API deployment`);
-  return secret;
-}
-
-function normalizedServiceUrl(service) {
-  return String(service?.serviceDetails?.url || service?.url || "").replace(/\/+$/, "");
-}
-
-function assertCanonicalService(service, expectedServiceId) {
-  const failures = [];
-  if (String(service?.id || "") !== expectedServiceId) failures.push("service-id");
-  if (String(service?.name || "") !== CANONICAL_SERVICE_NAME) failures.push("service-name");
-  if (normalizedServiceUrl(service) !== CANONICAL_SERVICE_URL) failures.push("service-url");
-  if (failures.length) {
-    throw new Error(`RENDER_CANONICAL_SERVICE_MISMATCH: ${failures.join(", ")}`);
-  }
-}
-
-async function renderRequest(path, { apiKey, fetchImpl, method = "GET", body }) {
-  const response = await fetchImpl(`https://api.render.com/v1${path}`, {
-    method,
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${apiKey}`,
-      ...(body ? { "content-type": "application/json" } : {})
-    },
-    redirect: "error",
-    ...(body ? { body: JSON.stringify(body) } : {})
-  });
-  if (!response.ok) throw new Error(`Render API ${method} ${path} returned HTTP ${response.status}`);
-  return response.json();
-}
-
-async function deployCanonicalService({ apiKey, serviceId, releaseSha, fetchImpl = fetch }) {
-  apiKey = requiredSecret(apiKey, "RENDER_API_KEY");
-  serviceId = requiredSecret(serviceId, "RENDER_AGRINEXUS_PLATFORM_SERVICE_ID");
-  releaseSha = validatedReleaseSha(releaseSha);
-
-  const service = await renderRequest(`/services/${encodeURIComponent(serviceId)}`, { apiKey, fetchImpl });
-  assertCanonicalService(service, serviceId);
-
-  const deployment = await renderRequest(`/services/${encodeURIComponent(serviceId)}/deploys`, {
-    apiKey,
-    fetchImpl,
+async function triggerDeploy({ hookUrl, releaseSha, fetchImpl = fetch }) {
+  const url = validatedDeployHook(hookUrl);
+  url.searchParams.set("ref", validatedReleaseSha(releaseSha));
+  const response = await fetchImpl(url, {
     method: "POST",
-    body: { clearCache: "do_not_clear", commitId: releaseSha }
+    headers: { accept: "application/json" },
+    redirect: "error"
   });
-  return { accepted: true, serviceId, serviceName: service.name, releaseSha, deploymentId: deployment?.id || null };
+  if (!response.ok) {
+    throw new Error(`Render deploy hook returned HTTP ${response.status}`);
+  }
+  return { accepted: true, status: response.status };
 }
 
 async function main() {
-  const result = await deployCanonicalService({
-    apiKey: process.env.RENDER_API_KEY,
-    serviceId: process.env.RENDER_AGRINEXUS_PLATFORM_SERVICE_ID,
+  const result = await triggerDeploy({
+    hookUrl: process.env.RENDER_DEPLOY_HOOK_URL,
     releaseSha: process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA
   });
-  console.log(`Render deployment ${result.deploymentId || "accepted"} bound to ${result.serviceName} (${result.serviceId}) at ${result.releaseSha}.`);
+  console.log(`Render deployment accepted (HTTP ${result.status}); exact release verification is next.`);
 }
 
 if (require.main === module) {
@@ -79,12 +50,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = {
-  CANONICAL_SERVICE_NAME,
-  CANONICAL_SERVICE_URL,
-  assertCanonicalService,
-  deployCanonicalService,
-  normalizedServiceUrl,
-  requiredSecret,
-  validatedReleaseSha
-};
+module.exports = { triggerDeploy, validatedDeployHook, validatedReleaseSha };
