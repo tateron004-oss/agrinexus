@@ -88,6 +88,55 @@ async function main() {
   }
 
   {
+    let calls = 0;
+    let releaseGeocode;
+    const geocodeBarrier = new Promise((resolve) => { releaseGeocode = resolve; });
+    const service = createVisualDataService({
+      fetchImpl: async (url) => {
+        calls += 1;
+        if (String(url).includes("geocoding-api")) {
+          await geocodeBarrier;
+          return { ok: true, status: 200, headers: { get: () => null }, async json() { return { results: [{ name: "Nairobi", country: "Kenya", latitude: -1.28, longitude: 36.82 }] }; } };
+        }
+        return { ok: true, status: 200, headers: { get: () => null }, async json() { return { current: { temperature_2m: 21 }, daily: {} }; } };
+      }
+    });
+    const first = service.weather("Show weather in Nairobi, Kenya");
+    const second = service.weather("Show weather in Nairobi, Kenya");
+    releaseGeocode();
+    assert.equal(await first, await second);
+    assert.equal(calls, 2, "concurrent weather requests for one location must share one provider journey");
+    await service.weather("Show weather in Nairobi, Kenya");
+    assert.equal(calls, 2, "fresh verified weather should be served from the short-lived cache");
+  }
+
+  {
+    let clock = 0;
+    let rateLimited = false;
+    const service = createVisualDataService({
+      now: () => clock,
+      weatherCacheTtlMs: 100,
+      weatherStaleTtlMs: 1_000,
+      fetchImpl: async (url) => {
+        if (rateLimited) return { ok: false, status: 429, headers: { get: () => "0" }, body: { cancel: async () => {} } };
+        if (String(url).includes("geocoding-api")) return { ok: true, status: 200, headers: { get: () => null }, async json() { return { results: [{ name: "Nairobi", country: "Kenya", latitude: -1.28, longitude: 36.82 }] }; } };
+        return { ok: true, status: 200, headers: { get: () => null }, async json() { return { current: { temperature_2m: 21 }, daily: {} }; } };
+      }
+    });
+    const live = await service.weather("Show weather in Nairobi, Kenya");
+    clock = 200;
+    rateLimited = true;
+    const recovered = await service.weather("Show weather in Nairobi, Kenya");
+    assert.equal(live.sourceName, "Open-Meteo");
+    assert.equal(recovered.status, "live-weather-cached");
+    assert.equal(recovered.temperatureC, 21);
+    assert.equal(recovered.cacheAgeMs, 200);
+    clock = 1_200;
+    await assert.rejects(() => service.weather("Show weather in Nairobi, Kenya"), /429/,
+      "expired weather must fail closed instead of presenting stale data");
+  }
+
+  {
     let resolverCalls = 0;
     const service = createContentActionService({
       goalResolver: { async resolve() { resolverCalls += 1; throw new Error("resolver must not own explicit reminder drafts"); } }
