@@ -65,4 +65,14 @@ const populationExtension = fs.readFileSync("rebuild/browser/nexus-content-popul
 assert.match(populationExtension, /media\.playback-verified/);
 assert.match(populationExtension, /music source did not produce advancing playback/);
 
+for (const workflowPath of [
+  ".github/workflows/nexus-clean-windows-certification.yml",
+  ".github/workflows/nexus-windows-real-device-acceptance.yml"
+]) {
+  const workflow = fs.readFileSync(workflowPath, "utf8");
+  assert.match(workflow, /nexus-production-capability-bridge/);
+  assert.match(workflow, /nexus\.production\.health\.v1/);
+  assert.doesNotMatch(workflow, /nexus-genesis-clean-voice|nexus\.clean\.health\.v1/);
+}
+
 console.log("Nexus production capability registry: PASS (13 lanes, complete lifecycle contract)");

@@ -48,8 +48,8 @@ jobs:
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $health = Invoke-RestMethod -Uri "$env:NEXUS_CANONICAL_PRODUCTION_URL/health" -TimeoutSec 30
-          if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
-            throw "Production did not return the current Nexus Genesis health contract."
+          if ($health.ok -ne $true -or $health.service -ne "nexus-production-capability-bridge" -or $health.schema -ne "nexus.production.health.v1") {
+            throw "Production did not return the canonical AgriNexus health contract."
           }
 
       - name: Install exact dependencies and Chrome driver
