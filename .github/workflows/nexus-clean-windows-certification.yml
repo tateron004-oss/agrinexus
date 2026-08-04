@@ -14,6 +14,7 @@ permissions:
 
 env:
   NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
 
 concurrency:
   group: nexus-windows-physical-certification

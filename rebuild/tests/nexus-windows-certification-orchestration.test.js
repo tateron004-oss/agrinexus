@@ -59,6 +59,16 @@ assert.match(
   /NEXUS_CANONICAL_PRODUCTION_URL\/health/,
   "clean certification must probe the health route exposed by the Nexus Genesis runtime"
 );
+assert.match(
+  contents.clean,
+  /NEXUS_CLEAN_BASE_URL: https:\/\/nexus-genesis-certified\.onrender\.com/,
+  "clean physical application certification must target Nexus Genesis production"
+);
+assert.doesNotMatch(
+  contents.clean,
+  /NEXUS_CLEAN_BASE_URL: http:\/\/127\.0\.0\.1:4317/,
+  "clean physical application certification must not fall back to the local test server"
+);
 assert.doesNotMatch(
   contents.clean,
   /NEXUS_CANONICAL_PRODUCTION_URL\/certification\/health/,
