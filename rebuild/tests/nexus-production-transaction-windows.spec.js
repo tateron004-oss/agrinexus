@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 const BASE_URL = productionUrlFromEnv();
+const EXPECTED_RELEASE_SHA = process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA;
 const SESSION_ID = process.env.NEXUS_TRANSACTION_SESSION || "session-1";
 const OUTPUT = path.resolve("output", "nexus-production-transactions", SESSION_ID);
 const journeys = [
@@ -78,7 +79,8 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
   try {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
     const identity = await page.evaluate(async () => (await fetch("/api/certification/identity", { cache: "no-store" })).json());
-    expect(identity.releaseSha).toBe(process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA);
+    expect(EXPECTED_RELEASE_SHA, "Canonical production certification requires an expected release SHA.").toMatch(/^[a-f0-9]{40}$/);
+    expect(identity.releaseSha).toBe(EXPECTED_RELEASE_SHA);
     await page.locator("#nexus-orb").click();
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime?.snapshot().state.state), { timeout: 60000 }).toBe("connected");
     await expect.poll(() => page.evaluate(() => Boolean(window.NEXUS_CLEAN_CONFIG?.certification)), { timeout: 10000 }).toBe(true);

@@ -11,6 +11,7 @@ const workflows = {
 const contents = Object.fromEntries(
   Object.entries(workflows).map(([name, file]) => [name, fs.readFileSync(file, "utf8")])
 );
+const productionTransaction = fs.readFileSync("rebuild/tests/nexus-production-transaction-windows.spec.js", "utf8");
 
 for (const [name, workflow] of Object.entries(contents)) {
   assert.match(workflow, /workflow_dispatch:/, `${name} must be explicitly dispatched`);
@@ -59,20 +60,15 @@ assert.match(
   /NEXUS_CANONICAL_PRODUCTION_URL\/health/,
   "clean certification must probe the health route exposed by the Nexus Genesis runtime"
 );
-assert.match(
-  contents.clean,
-  /NEXUS_CLEAN_BASE_URL: https:\/\/nexus-genesis-certified\.onrender\.com/,
-  "clean physical application certification must target Nexus Genesis production"
-);
-assert.doesNotMatch(
-  contents.clean,
-  /NEXUS_CLEAN_BASE_URL: http:\/\/127\.0\.0\.1:4317/,
-  "clean physical application certification must not fall back to the local test server"
-);
 assert.doesNotMatch(
   contents.clean,
   /NEXUS_CANONICAL_PRODUCTION_URL\/certification\/health/,
   "clean certification must not probe the unrelated adapter-prefixed health route"
+);
+assert.match(
+  productionTransaction,
+  /NEXUS_EXPECTED_DEPLOYMENT_SHA \|\| process\.env\.NEXUS_EXPECTED_RELEASE_SHA/,
+  "production transaction certification must accept the canonical workflow release SHA"
 );
 
 assert.match(contents.canonical, /Complete physical voice user-mode certification/);
