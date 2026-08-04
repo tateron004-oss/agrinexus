@@ -487,7 +487,7 @@
         return match ? match[0] : null;
       }
       function locationAfterPreposition(text) {
-        const match = /\b(?:in|near|around|for|at)\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
+        const match = /\b(?:in|near|around|for|at)\s*[:;,.-]?\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
         return cleanText(match && match[1]);
       }
       function extractBloodPressure(text) {
