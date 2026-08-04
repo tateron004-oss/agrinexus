@@ -2,6 +2,12 @@ name: Nexus clean Windows certification
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - rebuild/nexus-genesis-clean-foundation
+    paths:
+      - .github/workflows/nexus-canonical-completion-bridge.yml
+      - .github/workflows/nexus-clean-windows-certification.yml
 
 permissions:
   contents: read

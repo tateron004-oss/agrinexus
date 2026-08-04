@@ -27,13 +27,19 @@ assert.match(
   "canonical certification must auto-queue for the protected release branch"
 );
 
-for (const name of ["legacy", "form", "clean"]) {
+for (const name of ["legacy", "form"]) {
   assert.doesNotMatch(
     contents[name],
     /^\s{2}push:/m,
     `${name} diagnostic workflow must remain manual-only`
   );
 }
+
+assert.match(
+  contents.clean,
+  /^\s{2}push:\s*$[\s\S]*?branches:\s*$[\s\S]*?- rebuild\/nexus-genesis-clean-foundation\s*$[\s\S]*?paths:\s*$[\s\S]*?- \.github\/workflows\/nexus-canonical-completion-bridge\.yml\s*$[\s\S]*?- \.github\/workflows\/nexus-clean-windows-certification\.yml/m,
+  "clean certification must launch directly from the canonical branch handoff"
+);
 
 for (const name of ["form", "clean"]) {
   assert.match(

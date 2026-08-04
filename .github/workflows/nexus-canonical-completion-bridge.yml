@@ -51,3 +51,4 @@ jobs:
 # the exact Nexus Genesis release before physical Windows certification starts.
 # Route-correction publication trigger: 2026-08-04.
 # Bundle-repair certification handoff trigger: 2026-08-04.
+# Direct branch handoff trigger: 2026-08-04.

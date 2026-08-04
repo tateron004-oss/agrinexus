@@ -32,7 +32,7 @@
     "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
-    ".github/workflows/nexus-clean-windows-certification.yml": "89587312e9767ff7994fb9bafbd4fa465390b334",
+    ".github/workflows/nexus-clean-windows-certification.yml": "580bd0f54d881648c5b8eb3fbdbcad4575c5b098",
     "rebuild/tests/nexus-windows-physical-certification.spec.js": "788aa5fe86c7bc25642ebe2e2d15c061903e06c7",
     ".github/workflows/nexus-release-certification-v2.yml": "79223f88146b457e596fadc490aac3e02381d4e2",
     "rebuild/browser/nexus-clean-entry.js": "5e36041329daa1cf3b452565f84dba01fe61366f",
