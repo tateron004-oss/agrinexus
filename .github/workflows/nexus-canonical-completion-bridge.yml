@@ -1,0 +1,48 @@
+name: Nexus canonical completion bridge
+
+on:
+  push:
+    branches:
+      - rebuild/nexus-genesis-clean-foundation
+    paths:
+      - .github/workflows/nexus-canonical-completion-bridge.yml
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nexus-canonical-completion-bridge
+  cancel-in-progress: false
+
+env:
+  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+  NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+  NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
+
+jobs:
+  deploy-and-dispatch:
+    name: Deploy exact canonical release and dispatch certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify protected foundation and canonical controller
+        run: |
+          node scripts/nexus-protected-foundation-guard.js
+          node rebuild/tests/nexus-release-certification-controller.test.js
+      - name: Deploy exact release to canonical Render service
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: node scripts/nexus-render-deploy.js
+      - name: Verify exact canonical deployment
+        env:
+          NEXUS_DEPLOYMENT_TIMEOUT_MS: "900000"
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Dispatch canonical Windows certification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nexus-clean-windows-certification.yml --ref rebuild/nexus-genesis-clean-foundation
