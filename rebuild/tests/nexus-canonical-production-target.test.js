@@ -26,4 +26,16 @@ for (const name of certificationFiles) {
   assert.ok(!source.includes(forbiddenHost), `${name} must not target the retired production host`);
 }
 
+const completionBridge = fs.readFileSync(path.join(workflowDirectory, "nexus-canonical-completion-bridge.yml"), "utf8");
+for (const productionTrigger of [
+  ".github/workflows/nexus-clean-windows-certification.yml",
+  ".github/nexus-protected-foundation.json",
+  "rebuild/production-capability-bridge-server.js",
+  "rebuild/browser/**",
+  "rebuild/nexus-core/**",
+  "rebuild/tests/**"
+]) {
+  assert.ok(completionBridge.includes(`- ${productionTrigger}`), `completion bridge must deploy changes to ${productionTrigger}`);
+}
+
 console.log(`Nexus canonical production target: PASS (${certificationFiles.length} workflows)`);

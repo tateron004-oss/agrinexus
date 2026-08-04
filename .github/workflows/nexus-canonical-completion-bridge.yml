@@ -6,6 +6,14 @@ on:
       - rebuild/nexus-genesis-clean-foundation
     paths:
       - .github/workflows/nexus-canonical-completion-bridge.yml
+      - .github/workflows/nexus-clean-windows-certification.yml
+      - .github/nexus-protected-foundation.json
+      - package.json
+      - rebuild/production-capability-bridge-server.js
+      - rebuild/browser/**
+      - rebuild/nexus-core/**
+      - rebuild/tests/**
+      - scripts/nexus-*.js
 
 permissions:
   actions: write
