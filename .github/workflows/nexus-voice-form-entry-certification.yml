@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+
 concurrency:
   group: nexus-windows-physical-certification
   cancel-in-progress: false
@@ -35,7 +38,6 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 25
     env:
-      NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
       NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
       NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
     steps:
@@ -52,6 +54,9 @@ jobs:
       - name: Certify production voice-assisted form entry
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npx playwright test rebuild/tests/nexus-windows-voice-form-entry.spec.js --workers=1 --reporter=line
+      - name: Verify rendered production capability outcomes
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
       - name: Reverify protected foundation
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"

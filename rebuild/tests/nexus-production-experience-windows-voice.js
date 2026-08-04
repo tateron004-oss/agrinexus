@@ -6,8 +6,9 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium, request: playwrightRequest } = require("playwright");
 
-const BASE_URL = process.env.NEXUS_PRODUCTION_REPAIR_BASE_URL || "https://nexus-genesis-certified.onrender.com";
-const LIVE_URL = process.env.NEXUS_LIVE_PROVIDER_BASE_URL || "https://nexus-genesis-certified.onrender.com";
+const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
+const BASE_URL = productionUrlFromEnv();
+const LIVE_URL = BASE_URL;
 const SESSION_ID = process.env.NEXUS_PRODUCTION_SESSION_ID || "session-1";
 const OUTPUT = path.resolve(process.env.NEXUS_PRODUCTION_VOICE_OUTPUT || `output/nexus-production-experience-voice/${SESSION_ID}`);
 const turns = [

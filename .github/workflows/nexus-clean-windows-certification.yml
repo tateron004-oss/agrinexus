@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+
 concurrency:
   group: nexus-windows-physical-certification
   cancel-in-progress: false
@@ -45,7 +48,6 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 35
     env:
-      NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
       NEXUS_PROTECTED_BASELINE: 0e3ce5b6
       NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
       NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
@@ -82,7 +84,7 @@ jobs:
       - name: Verify Render production runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 30
+          $health = Invoke-RestMethod -Uri "$env:NEXUS_CANONICAL_PRODUCTION_URL/health" -TimeoutSec 30
           if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
             throw "Render did not return the certified Nexus Genesis health contract."
           }
@@ -96,6 +98,10 @@ jobs:
           npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
           if ($LASTEXITCODE -ne 0) {
             throw "Render production voice certification failed with exit code $LASTEXITCODE."
+          }
+          npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
+          if ($LASTEXITCODE -ne 0) {
+            throw "Rendered production capability verification failed with exit code $LASTEXITCODE."
           }
       - name: Reverify protected foundation
         if: always()

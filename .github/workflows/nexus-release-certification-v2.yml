@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
   NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
@@ -66,6 +66,9 @@ jobs:
       - name: Run physical voice and application lane
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+      - name: Verify rendered production capability outcomes
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
       - name: Create authoritative evidence summary
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"

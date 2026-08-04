@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+
 concurrency:
   group: nexus-windows-physical-certification
   cancel-in-progress: false
@@ -21,8 +24,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 100
     env:
-      NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
-      NEXUS_EXPECTED_RELEASE_SHA: 6aadc254bd2cd6ca98fe7ff77ba63e8f3d22d7fb
+      NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
       NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +43,9 @@ jobs:
       - name: Run all general-question prompts through voice
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: npx playwright test rebuild/tests/nexus-general-questions-physical-voice.spec.js --workers=1 --reporter=line
+      - name: Verify rendered images, populated lists, audible music, maps, and documents
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
       - name: Reverify protected foundation
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"

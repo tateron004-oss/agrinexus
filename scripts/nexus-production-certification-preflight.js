@@ -1,5 +1,11 @@
 "use strict";
 
+const {
+  CANONICAL_PRODUCTION_ORIGIN,
+  productionUrlFromEnv,
+  requireCanonicalProductionUrl
+} = require("./nexus-canonical-production-target");
+
 function normalizeSha(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -24,6 +30,7 @@ function compareProductionIdentity(identity, { deployedReleaseSha, runtimeSource
 }
 
 async function verifyProductionIdentity({ baseUrl, deployedReleaseSha, runtimeSourceSha, timeoutMs = 12 * 60 * 1000, intervalMs = 15000 }) {
+  baseUrl = requireCanonicalProductionUrl(baseUrl, "production preflight target");
   const deadline = Date.now() + timeoutMs;
   let lastFailure = "identity-unavailable";
   while (Date.now() < deadline) {
@@ -31,6 +38,9 @@ async function verifyProductionIdentity({ baseUrl, deployedReleaseSha, runtimeSo
       const response = await fetch(`${String(baseUrl).replace(/\/+$/, "")}/api/certification/identity`, {
         headers: { "cache-control": "no-cache" }
       });
+      if (new URL(response.url).origin !== CANONICAL_PRODUCTION_ORIGIN) {
+        throw new Error(`CANONICAL_HOST_MISMATCH: production response resolved to ${response.url}`);
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const identity = await response.json();
       const failures = compareProductionIdentity(identity, { deployedReleaseSha, runtimeSourceSha });
@@ -46,7 +56,7 @@ async function verifyProductionIdentity({ baseUrl, deployedReleaseSha, runtimeSo
 
 async function main() {
   const identity = await verifyProductionIdentity({
-    baseUrl: process.env.NEXUS_CLEAN_BASE_URL,
+    baseUrl: productionUrlFromEnv(),
     deployedReleaseSha: process.env.NEXUS_EXPECTED_DEPLOYMENT_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA,
     runtimeSourceSha: process.env.NEXUS_EXPECTED_RUNTIME_SOURCE_SHA || process.env.NEXUS_EXPECTED_RELEASE_SHA,
     timeoutMs: Number(process.env.NEXUS_DEPLOYMENT_TIMEOUT_MS || 12 * 60 * 1000),

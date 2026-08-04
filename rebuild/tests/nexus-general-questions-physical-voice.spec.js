@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "https://nexus-genesis-certified.onrender.com";
+const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
+const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-general-questions-voice");
 
 const turns = [
