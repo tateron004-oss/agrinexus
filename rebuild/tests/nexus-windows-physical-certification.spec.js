@@ -35,8 +35,8 @@ function speak(text) {
     "Add-Type -AssemblyName System.Speech",
     `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
     "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$v.Volume=90",
-    "$v.Rate=-1",
+    "$v.Volume=100",
+    "$v.Rate=-2",
     "$v.Speak($t)",
     "$v.Dispose()"
   ].join(";");
@@ -114,6 +114,37 @@ async function deliverCommand(page, text, lane) {
   return injectSpokenCommand(page, prompt);
 }
 
+async function transcriptMatches(page, before, expectedText, timeout = 25000) {
+  const matched = () => page.evaluate(({ before, expectedText }) => {
+    const tokens = (value) => new Set(String(value || "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter((token) => token.length >= 3));
+    const expected = tokens(expectedText);
+    return window.__cleanEvidence.receipts.slice(before).some((item) => {
+      if (item.type !== "transcript.final") return false;
+      const actual = tokens(item.detail?.transcript);
+      const overlap = [...expected].filter((token) => actual.has(token)).length;
+      return overlap / Math.max(1, expected.size) >= 0.6;
+    });
+  }, { before, expectedText });
+  try {
+    await expect.poll(matched, { timeout }).toBe(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function deliverAcousticCommand(page, text, before) {
+  const seed = Math.max(1, Number(process.env.NEXUS_PROMPT_ROTATION_SEED || 1));
+  const prompt = rotatePrompt(text, seed);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await speak(prompt);
+    if (await transcriptMatches(page, before, prompt)) return prompt;
+    await page.waitForTimeout(1200);
+  }
+  throw new Error(`PHYSICAL_ACOUSTIC_TRANSCRIPT_MISMATCH: speaker-to-microphone path did not capture: ${prompt}`);
+}
+
 function rotatePrompt(text, seed) {
   const request = String(text).replace(/^Nexus,\s*/i, "").replace(/[.]$/, "");
   const lowered = request.charAt(0).toLowerCase() + request.slice(1);
@@ -178,6 +209,15 @@ test("new Genesis build passes every application through physical voice", async 
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
+    const nativeGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = (constraints = {}) => {
+      if (!constraints.audio) return nativeGetUserMedia(constraints);
+      const audio = typeof constraints.audio === "object" ? constraints.audio : {};
+      return nativeGetUserMedia({
+        ...constraints,
+        audio: { ...audio, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    };
     const recordSpeechSource = (source, detail = {}) => {
       window.__cleanEvidence.speechSources.push({ source, detail, at: Date.now() });
       if (source === "browser-speech-synthesis") {
@@ -213,7 +253,8 @@ test("new Genesis build passes every application through physical voice", async 
       return receipts.some((item) => item.type === "audio.remote-attached");
     }), { timeout: 60000 }).toBe(true);
 
-    await speak("Nexus, say physical voice calibration complete.");
+    const calibrationBefore = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+    await deliverAcousticCommand(page, "Nexus, say physical voice calibration complete.", calibrationBefore);
     await expect.poll(() => page.evaluate(() => {
       const receipts = window.__cleanEvidence.receipts;
       return receipts.some((item) => item.type === "conversation.return-to-listening");
@@ -240,7 +281,8 @@ test("new Genesis build passes every application through physical voice", async 
       const { app, workspace, command, visual } = journey;
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await deliverCommand(page, command, lane);
+      if (lane === "physical-acoustic") await deliverAcousticCommand(page, command, before);
+      else await deliverCommand(page, command, lane);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
         const visible = window.__cleanEvidence.receipts.slice(before)
           .filter((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
@@ -268,7 +310,8 @@ test("new Genesis build passes every application through physical voice", async 
       if (journey.edit) {
         const [editCommand, fieldLabel, expectedValue] = journey.edit;
         const beforeEdit = await page.evaluate(() => window.__cleanEvidence.receipts.length);
-        await deliverCommand(page, editCommand, lane);
+        if (lane === "physical-acoustic") await deliverAcousticCommand(page, editCommand, beforeEdit);
+        else await deliverCommand(page, editCommand, lane);
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
           .some((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit }), { timeout: 30000 }).toBe(true);
         await expect(page.getByLabel(requiredFieldLabel(fieldLabel))).toHaveValue(expectedValue);

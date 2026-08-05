@@ -36,6 +36,8 @@ assert.match(physical, /deterministic-pcm/);
 assert.match(physical, /NEXUS_PROMPT_ROTATION_SEED/);
 assert.match(physical, /return speak\(prompt\)/);
 assert.match(physical, /return injectSpokenCommand\(page, prompt\)/);
+assert.match(physical, /PHYSICAL_ACOUSTIC_TRANSCRIPT_MISMATCH/);
+assert.match(physical, /echoCancellation: false/);
 
 const stability = fs.readFileSync("scripts/nexus-windows-stability-certification.ps1", "utf8");
 for (const required of [
