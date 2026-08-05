@@ -1,0 +1,75 @@
+name: Nexus golden production restore
+
+on:
+  push:
+    branches:
+      - nexus-certification-control-2026-08-05
+    paths:
+      - .github/workflows/nexus-golden-production-restore.yml
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nexus-golden-production-restore
+  cancel-in-progress: true
+
+env:
+  NEXUS_GOLDEN_SHA: 501a1e06d3006765a17508b9287bb010400d3431
+  NEXUS_EXPECTED_RELEASE_SHA: 501a1e06d3006765a17508b9287bb010400d3431
+  NEXUS_EXPECTED_DEPLOYMENT_SHA: 501a1e06d3006765a17508b9287bb010400d3431
+  NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+
+jobs:
+  restore:
+    name: Deploy and verify unchanged golden release
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact golden release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.NEXUS_GOLDEN_SHA }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prove exact unchanged golden checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${NEXUS_GOLDEN_SHA}"
+          node scripts/nexus-protected-foundation-guard.js
+          test -z "$(git status --porcelain)"
+
+      - name: Deploy exact golden commit to Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: node scripts/nexus-render-deploy.js
+
+      - name: Verify exact golden production identity
+        env:
+          NEXUS_DEPLOYMENT_TIMEOUT_MS: "900000"
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+
+      - name: Reverify golden checkout remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${NEXUS_GOLDEN_SHA}"
+          node scripts/nexus-protected-foundation-guard.js
+          test -z "$(git status --porcelain)"
+
+      - name: Disable this one-shot restore workflow
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api --method PUT \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/nexus-golden-production-restore.yml/disable" \
+            --silent
