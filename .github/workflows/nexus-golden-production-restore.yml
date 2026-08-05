@@ -49,7 +49,23 @@ jobs:
       - name: Deploy exact golden commit to Render
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: node scripts/nexus-render-deploy.js
+        shell: bash
+        run: |
+          node <<'NODE'
+          (async () => {
+            const hook = new URL(process.env.RENDER_DEPLOY_HOOK_URL || "");
+            if (hook.protocol !== "https:" || hook.hostname !== "api.render.com" || !hook.pathname.startsWith("/deploy/")) {
+              throw new Error("Render deploy hook is not the configured official deployment endpoint.");
+            }
+            hook.searchParams.set("ref", process.env.NEXUS_GOLDEN_SHA);
+            const response = await fetch(hook, { method: "POST", headers: { accept: "application/json" }, redirect: "error" });
+            if (!response.ok) throw new Error(`Render deploy hook returned HTTP ${response.status}`);
+            console.log(`Render accepted exact golden SHA ${process.env.NEXUS_GOLDEN_SHA}.`);
+          })().catch((error) => {
+            console.error(error.message);
+            process.exitCode = 1;
+          });
+          NODE
 
       - name: Verify exact golden production identity
         env:
