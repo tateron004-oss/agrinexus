@@ -412,7 +412,24 @@ function resultEnvelope(goal, artifact, extra = {}) {
   });
 }
 
-function normalizeGoalRoute(goal) {
+function normalizeGoalRoute(goal, context = {}) {
+  const command = clean(context.command, 4000);
+  const artifact = goal && goal.artifact;
+  const hasGeneratedAnswer = Boolean(artifact && (
+    clean(artifact.description, 2000)
+    || (Array.isArray(artifact.sections) && artifact.sections.some((section) => clean(section && section.body, 2000) || (section && section.items || []).length))
+  ));
+  const explicitlyNeedsLiveResearch = /\b(?:current|latest|today|now|recent|live|internet|web|online|source|sources|citation|citations|evidence|research|find|search|look up|website|link|links)\b/i.test(command);
+  const ordinaryExplanation = /^(?:nexus[, ]+)?(?:what|why|how|explain|describe|compare|teach|tell|give me|help me understand)\b/i.test(command);
+  // The goal resolver already returns a complete structured artifact. Ordinary
+  // explanations must render that current-turn artifact directly instead of
+  // starting a second Responses API web-search call. Two serial AI calls can
+  // exceed the single 90-second browser transaction even when each call is
+  // individually bounded and retryable. Explicitly current or sourced requests
+  // continue through live research.
+  if (goal && goal.capability === "search" && ordinaryExplanation && hasGeneratedAnswer && !explicitlyNeedsLiveResearch) {
+    return { ...goal, capability: "document", operation: "create", needsLiveProvider: false };
+  }
   const mapGoalText = clean(`${goal && goal.query || ""} ${goal && goal.location || ""} ${goal && goal.artifact && goal.artifact.title || ""}`, 2000);
   const discoversPlaces = /\b(?:shops?|stores?|business(?:es)?|services?|venues?|sellers?|suppliers?|clinics?|hospitals?|pharmacies|restaurants?|cafes?|hotels?|markets?|garages?)\b/i.test(mapGoalText);
   const requestsRoute = /\b(?:route|directions?|navigate|navigation)\b|\bfrom\b.+\bto\b/i.test(mapGoalText);
@@ -926,7 +943,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
           needsLiveProvider: false, artifact: applicationWorkspaceArtifact(explicitWorkspace),
           acknowledgement: `${APPLICATION_WORKSPACES[explicitWorkspace][0]} is visibly open and synchronized with this request.`
         }
-        : fastProviderGoal || fastDraftGoal || normalizeGoalRoute(await resolver.resolve(request));
+        : fastProviderGoal || fastDraftGoal || normalizeGoalRoute(await resolver.resolve(request), request);
     } catch (error) {
       goal = localResilienceGoal(request);
       if (!goal) {

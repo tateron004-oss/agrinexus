@@ -489,6 +489,18 @@ async function main() {
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show the United States on a fresh map", artifact: artifact("map", "United States") }).capability, "map");
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show driving directions from Windhoek to Swakopmund", artifact: artifact("map", "Route") }).capability, "map");
   assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps" }).capability, "map");
+  const staticExplanation = normalizeGoalRoute({
+    capability: "search", operation: "search", workspace: "live-knowledge", needsLiveProvider: true,
+    query: "difference between weather and climate",
+    artifact: { ...artifact("document", "Weather and climate"), sections: [{ heading: "Difference", body: "Weather is short-term; climate is the long-term pattern.", items: [] }] }
+  }, { command: "What is the difference between weather and climate?" });
+  assert.equal(staticExplanation.capability, "document", "a complete ordinary explanation must not trigger a second serial AI request");
+  assert.equal(staticExplanation.needsLiveProvider, false);
+  const sourcedExplanation = normalizeGoalRoute({
+    capability: "search", operation: "search", workspace: "live-knowledge", needsLiveProvider: true,
+    query: "weather and climate sources", artifact: artifact("list", "Weather and climate sources")
+  }, { command: "Research the current evidence about weather and climate and show sources." });
+  assert.equal(sourcedExplanation.capability, "search", "explicit live research must retain the source-backed provider path");
 
   const normalizedSources = normalizeWebSearchPayload({ output: [
     { type: "web_search_call", action: { type: "search", sources: [{ type: "url", url: "https://energy.gov.bb/policy" }] } },
