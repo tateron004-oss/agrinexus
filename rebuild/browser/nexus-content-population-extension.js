@@ -621,8 +621,10 @@
     return `<section class="nexus-content-result" data-nexus-content-result-id="${resultId}" data-nexus-content-artifact="${escapeMarkup(artifact.kind || "status")}" data-result-status="${escapeMarkup(status)}"><article class="nexus-content-card"><p class="nexus-content-meta">${escapeMarkup(result.capability || "workspace")} · ${escapeMarkup(result.operation || "open")}</p><h2>${escapeMarkup(artifact.title || "Nexus result")}</h2>${description}</article>${failure}${fields}${sections}${items ? `<div class="nexus-content-list">${items}</div>` : ""}${links ? `<nav class="nexus-content-actions" aria-label="Result links">${links}</nav>` : ""}${media}</section>`;
   }
 
+  const PRODUCTION_RESPONSE_ALLOWANCE_MS = 90_000;
+
   class NexusContentPopulationController {
-    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500, providerRetryDelayMs = 2500, providerHardDeadlineMs = 90000 } = {}) {
+    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500, providerRetryDelayMs = 2500, providerHardDeadlineMs = PRODUCTION_RESPONSE_ALLOWANCE_MS } = {}) {
       this.window = windowObject;
       this.document = documentObject;
       this.fetch = fetchImpl;
@@ -1209,7 +1211,7 @@
     }
   }
 
-  const exported = Object.freeze({ APP_NAMES, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeAcknowledgedWorkspaceIdentity, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
+  const exported = Object.freeze({ APP_NAMES, PRODUCTION_RESPONSE_ALLOWANCE_MS, NexusContentPopulationController, STORAGE, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, escapeMarkup, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalize, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, safeUrl, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeAcknowledgedWorkspaceIdentity, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract, workflowButtonCommand });
   if (typeof module !== "undefined" && module.exports) module.exports = exported;
   if (globalObject && globalObject.document) {
     const install = () => {

@@ -13,7 +13,9 @@ const {
 const { createVisualContext } = require("../nexus-core/visual-context");
 const { NexusGuidedEntryTransactionController } = require("../nexus-core/guided-entry-transaction-controller");
 
-function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
+const PRODUCTION_RESPONSE_ALLOWANCE_MS = 90_000;
+
+function createWorkspaceAdapter({ windowObject = window, timeoutMs = PRODUCTION_RESPONSE_ALLOWANCE_MS } = {}) {
   return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     const timer = setTimeout(() => {
@@ -1243,6 +1245,7 @@ if (typeof document !== "undefined") {
 }
 
 module.exports = {
+  PRODUCTION_RESPONSE_ALLOWANCE_MS,
   createWorkspaceAdapter,
   createRemoteAudioUnlock,
   renderWorkspace,

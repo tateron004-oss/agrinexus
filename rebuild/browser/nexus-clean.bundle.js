@@ -2279,7 +2279,8 @@ ${content}`
       } = require_experience_profile();
       var { createVisualContext } = require_visual_context();
       var { NexusGuidedEntryTransactionController } = require_guided_entry_transaction_controller();
-      function createWorkspaceAdapter({ windowObject = window, timeoutMs = 9e4 } = {}) {
+      var PRODUCTION_RESPONSE_ALLOWANCE_MS = 9e4;
+      function createWorkspaceAdapter({ windowObject = window, timeoutMs = PRODUCTION_RESPONSE_ALLOWANCE_MS } = {}) {
         return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
           const timer = setTimeout(() => {
@@ -3438,6 +3439,7 @@ ${content}`
         }
       }
       module.exports = {
+        PRODUCTION_RESPONSE_ALLOWANCE_MS,
         createWorkspaceAdapter,
         createRemoteAudioUnlock,
         renderWorkspace,
