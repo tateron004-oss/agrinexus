@@ -21,6 +21,7 @@ env:
   NEXUS_EXPECTED_DEPLOYMENT_SHA: 501a1e06d3006765a17508b9287bb010400d3431
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
   NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
 
 jobs:
   restore:
