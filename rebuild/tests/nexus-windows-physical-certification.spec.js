@@ -232,11 +232,23 @@ test("new Genesis build passes every application through physical voice", async 
       return microphone.active === true || microphone.trackState === "live" ||
         receipts.some((item) => item.type === "audio.local-attached" || item.type === "microphone.acquired");
     }), { timeout: 30000, message: "Physical microphone input must be live" }).toBe(true);
-    await expect.poll(() => page.locator("#nexus-audio").evaluate((audio) => ({
-      attached: Boolean(audio.srcObject || audio.currentSrc || audio.src),
-      muted: audio.muted,
-      volume: audio.volume
-    })), { timeout: 30000 }).toMatchObject({ attached: true, muted: false });
+    await expect.poll(() => page.evaluate(() => {
+      const audio = document.querySelector("#nexus-audio");
+      const receipts = window.__cleanEvidence.receipts;
+      const attached = Boolean(audio && (audio.srcObject || audio.currentSrc || audio.src));
+      const htmlMediaOutput = attached && audio.muted === false;
+      const webAudioOutput = attached && receipts.some((item) => item.type === "audio.web-audio-attached");
+      return {
+        attached,
+        outputRouteVerified: htmlMediaOutput || webAudioOutput,
+        volume: audio && audio.volume
+      };
+    }), {
+      timeout: 30000,
+      message: "Remote speaker output must use the unmuted HTML media path or verified Web Audio path"
+    }).toMatchObject({ attached: true, outputRouteVerified: true });
+    // The HTML route requires muted: false; Web Audio intentionally mutes that
+    // element to prevent duplicate playback while its gain path owns output.
     expect(await page.locator("#nexus-audio").evaluate((audio) => audio.volume)).toBeGreaterThan(0);
     await expect.poll(() => page.evaluate(() =>
       Boolean(window.NexusCleanRuntime.certificationAudio)
