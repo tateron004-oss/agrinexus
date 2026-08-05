@@ -30,15 +30,24 @@ const journeys = [
 ];
 
 function speak(text) {
+  const wavPath = path.join(os.tmpdir(), `nexus-acoustic-${process.pid}-${Date.now()}.wav`);
   const encoded = Buffer.from(text, "utf16le").toString("base64");
+  const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
   const script = [
     "Add-Type -AssemblyName System.Speech",
+    "Add-Type -AssemblyName System.Windows.Forms",
     `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
+    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
     "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
     "$v.Volume=100",
     "$v.Rate=-2",
+    "$v.SetOutputToWaveFile($p)",
     "$v.Speak($t)",
-    "$v.Dispose()"
+    "$v.Dispose()",
+    "$player=New-Object System.Media.SoundPlayer $p",
+    "$player.PlaySync()",
+    "$player.Dispose()",
+    "Remove-Item -Force $p"
   ].join(";");
   return new Promise((resolve, reject) => {
     const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
