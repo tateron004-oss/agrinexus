@@ -22,8 +22,7 @@ function normalizeSha(value) {
 function sameCommit(expected, actual) {
   expected = normalizeSha(expected);
   actual = normalizeSha(actual);
-  return expected.length >= 7 && actual.length >= 7 &&
-    (expected === actual || expected.startsWith(actual) || actual.startsWith(expected));
+  return /^[a-f0-9]{40}$/.test(expected) && /^[a-f0-9]{40}$/.test(actual) && expected === actual;
 }
 
 async function fetchIdentity(baseUrl) {
@@ -54,6 +53,9 @@ async function verifyDeployment({
   timeoutMs = 12 * 60 * 1000,
   intervalMs = 15000
 }) {
+  if (!/^[a-f0-9]{40}$/.test(normalizeSha(expectedSha))) {
+    throw new Error("INVALID_EXPECTED_RELEASE_SHA: exact 40-character Git SHA required");
+  }
   fs.mkdirSync(outputDir, { recursive: true });
   const expectedBundle = sha256File(bundlePath);
   const startedAt = new Date().toISOString();

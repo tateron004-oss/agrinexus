@@ -149,7 +149,9 @@ test(`production transaction receipts are visible and isolated (${SESSION_ID})`,
         await expect(player.first()).toBeVisible();
         const audio = page.locator("#nexus-content-music-player[src]");
         if (await audio.count()) {
-          await expect.poll(() => audio.evaluate(node => !node.error && node.readyState >= 1 && !node.paused), { timeout: 20000 }).toBe(true);
+          await expect.poll(() => audio.evaluate(node =>
+            !node.error && node.readyState >= 1 && !node.paused && !node.muted && node.volume > 0
+          ), { timeout: 20000 }).toBe(true);
         }
         await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
       } else {

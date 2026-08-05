@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("node:assert"); const fs=require("node:fs"); const path=require("node:path");
-const root=path.resolve(__dirname,".."); const base=String(process.env.NEXUS_PRODUCTION_BASE_URL||"https://nexus-genesis-certified.onrender.com").replace(/\/$/,"");
+const root=path.resolve(__dirname,".."); const base=String(process.env.NEXUS_PRODUCTION_BASE_URL||"https://agrinexus-platform.onrender.com").replace(/\/$/,"");
 const server=fs.readFileSync(path.join(root,"server.js"),"utf8"); const app=fs.readFileSync(path.join(root,"public","app.js"),"utf8"); const sw=fs.readFileSync(path.join(root,"public","sw.js"),"utf8");
 const web=(server.match(/AGRINEXUS_WEB_BUILD_VERSION = "([^"]+)"/)||[])[1]; const pwa=(server.match(/AGRINEXUS_PWA_CACHE_VERSION = "([^"]+)"/)||[])[1]; assert(web&&pwa,"local production markers must exist"); assert(app.includes(`AGRINEXUS_BUILD_VERSION = "${web}"`),"app build marker must match server"); assert(sw.includes(`CACHE_NAME = "${pwa}"`),"service worker cache marker must match server");
 async function get(route){const res=await fetch(`${base}${route}`,{headers:{accept:"application/json,text/html"}}); const text=await res.text(); assert(res.ok,`${route} returned ${res.status}`); let json=null; try{json=JSON.parse(text);}catch{} return {status:res.status,json,text};}

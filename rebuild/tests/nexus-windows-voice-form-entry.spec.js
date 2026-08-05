@@ -3,8 +3,9 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 
-const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
+const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-voice-form-certification");
 
 function experienceField(page) {

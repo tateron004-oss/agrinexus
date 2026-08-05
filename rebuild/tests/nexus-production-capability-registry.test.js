@@ -13,7 +13,7 @@ const {
 const { ROUTES } = require("../nexus-core/router");
 const lifecycleJourneys = require("./fixtures/nexus-production-lifecycle-journeys");
 
-assert.equal(CANONICAL_PRODUCTION_URL, "https://nexus-genesis-certified.onrender.com");
+assert.equal(CANONICAL_PRODUCTION_URL, "https://agrinexus-platform.onrender.com");
 assert.deepEqual(LIFECYCLE, ["open", "execute", "verify-outcome", "follow-up", "correct", "save", "close", "reopen", "verify-persistence"]);
 assert.equal(PRODUCTION_CAPABILITY_REGISTRY.length, 13);
 assert.equal(new Set(PRODUCTION_CAPABILITY_REGISTRY.map((entry) => entry.id)).size, PRODUCTION_CAPABILITY_REGISTRY.length);
