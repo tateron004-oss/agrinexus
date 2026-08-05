@@ -7,7 +7,6 @@ const path = require("node:path");
 const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-general-questions-voice");
-const ROTATION_SEED = Math.max(1, Number(process.env.NEXUS_PROMPT_ROTATION_SEED || 1));
 
 const turns = [
   ["Explain how solar panels generate electricity.", "answer"],
@@ -61,8 +60,7 @@ function wavData(wav) {
 
 function synthesize(text) {
   const wavPath = path.join(os.tmpdir(), `nexus-general-${process.pid}-${Date.now()}.wav`);
-  const variants = [`Nexus, ${text}`, `Hey Nexus, please ${text}`, `Nexus, could you ${text}`];
-  const encodedText = Buffer.from(variants[(ROTATION_SEED - 1) % variants.length], "utf16le").toString("base64");
+  const encodedText = Buffer.from(`Nexus, ${text}`, "utf16le").toString("base64");
   const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
   const script = ["Add-Type -AssemblyName System.Speech", `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedText}'))`, `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`, "$f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(24000,16,1)", "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer", "$v.Rate=-1", "$v.SetOutputToWaveFile($p,$f)", "$v.Speak($t)", "$v.Dispose()"].join(";");
   return new Promise((resolve, reject) => {

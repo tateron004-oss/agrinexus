@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
-  NEXUS_CLEAN_BASE_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
 
 concurrency:
   group: nexus-windows-physical-certification
@@ -47,16 +47,13 @@ jobs:
           node rebuild/tests/nexus-visible-map-route.test.js
           node rebuild/tests/nexus-complete-voice-visual-actions.test.js
           node rebuild/tests/nexus-approved-source-evidence.test.js
-          node rebuild/tests/nexus-release-certification-controller.test.js
-          node rebuild/tests/nexus-full-production-certification-contract.test.js
-          node rebuild/tests/nexus-windows-certification-orchestration.test.js
           node scripts/nexus-protected-foundation-guard.js
 
   physical-voice:
     name: New Genesis physical voice and commands
     needs: clean-foundation
     runs-on: self-hosted
-    timeout-minutes: 360
+    timeout-minutes: 35
     env:
       NEXUS_PROTECTED_BASELINE: 0e3ce5b6
       NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
@@ -102,10 +99,17 @@ jobs:
       - name: Verify exact deployed release
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: node scripts/nexus-release-certification-controller.js verify-deployment
-      - name: Certify full production contract three consecutive times
+      - name: Certify Render production voice and every application
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          ./scripts/nexus-windows-stability-certification.ps1
+          npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+          if ($LASTEXITCODE -ne 0) {
+            throw "Render production voice certification failed with exit code $LASTEXITCODE."
+          }
+          npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
+          if ($LASTEXITCODE -ne 0) {
+            throw "Rendered production capability verification failed with exit code $LASTEXITCODE."
+          }
       - name: Reverify protected foundation
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"

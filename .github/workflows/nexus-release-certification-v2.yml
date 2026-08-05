@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
   NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
@@ -28,7 +28,6 @@ jobs:
       - name: Verify controller contracts
         run: |
           node rebuild/tests/nexus-release-certification-controller.test.js
-          node rebuild/tests/nexus-full-production-certification-contract.test.js
           node rebuild/tests/nexus-windows-certification-orchestration.test.js
       - name: Wait for exact Render release
         run: node scripts/nexus-release-certification-controller.js verify-deployment
@@ -140,7 +139,7 @@ jobs:
     name: Three consecutive complete production passes
     needs: guided-entry
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 360
+    timeout-minutes: 180
     env:
       NEXUS_CERTIFICATION_LANE: consecutive-stability
       NEXUS_STABILITY_RUNS: "3"

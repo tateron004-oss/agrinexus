@@ -1,6 +1,6 @@
 "use strict";
 
-const CANONICAL_PRODUCTION_URL = "https://agrinexus-platform.onrender.com";
+const CANONICAL_PRODUCTION_URL = "https://nexus-genesis-certified.onrender.com";
 const CANONICAL_PRODUCTION_ORIGIN = new URL(CANONICAL_PRODUCTION_URL).origin;
 
 function normalizeUrl(value) {
