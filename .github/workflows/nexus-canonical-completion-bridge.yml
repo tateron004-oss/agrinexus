@@ -18,6 +18,7 @@ on:
 permissions:
   actions: write
   contents: read
+  statuses: write
 
 concurrency:
   group: nexus-canonical-completion-bridge
@@ -109,6 +110,13 @@ jobs:
 
           echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
           echo "run_url=${run_url}" >> "${GITHUB_OUTPUT}"
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${expected_sha}" \
+            -f state=pending \
+            -f context=nexus/windows-certification-dispatch \
+            -f target_url="${run_url}" \
+            -f description="Exact-SHA Windows certification run ${run_id}"
           {
             echo "### Exact-SHA Windows certification dispatched"
             echo "- SHA: \`${expected_sha}\`"
