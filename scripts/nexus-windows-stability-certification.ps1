@@ -17,6 +17,8 @@ $summary = [ordered]@{
 
 try {
   for ($attempt = 1; $attempt -le $runs; $attempt++) {
+    $env:NEXUS_PROMPT_ROTATION_SEED = "$attempt"
+    $summary.completedPasses = 0
     & ".\scripts\nexus-windows-certification-reset.ps1"
     & node scripts/nexus-release-certification-controller.js verify-deployment
     if ($LASTEXITCODE -ne 0) {
@@ -27,9 +29,30 @@ try {
     if ($LASTEXITCODE -ne 0) {
       throw "Physical voice failed during stability attempt $attempt."
     }
+    & node rebuild/tests/nexus-provider-fetch.test.js
+    if ($LASTEXITCODE -ne 0) {
+      throw "Provider resilience and truthful failure checks failed during stability attempt $attempt. Streak reset to zero."
+    }
+    & node rebuild/tests/nexus-approved-source-evidence.test.js
+    if ($LASTEXITCODE -ne 0) {
+      throw "Source verification failed during stability attempt $attempt. Streak reset to zero."
+    }
+    & npx playwright test rebuild/tests/nexus-general-questions-physical-voice.spec.js --workers=1 --reporter=line
+    if ($LASTEXITCODE -ne 0) {
+      throw "Unfamiliar general questions failed during stability attempt $attempt. Streak reset to zero."
+    }
+    $env:NEXUS_TRANSACTION_SESSION = "stability-$attempt"
+    & npx playwright test rebuild/tests/nexus-production-transaction-windows.spec.js --workers=1 --reporter=line
+    if ($LASTEXITCODE -ne 0) {
+      throw "Rendered and audible production outcomes failed during stability attempt $attempt. Streak reset to zero."
+    }
     & npx playwright test rebuild/tests/nexus-windows-voice-form-entry.spec.js --workers=1 --reporter=line
     if ($LASTEXITCODE -ne 0) {
       throw "Guided Entry failed during stability attempt $attempt."
+    }
+    & node scripts/nexus-protected-foundation-guard.js
+    if ($LASTEXITCODE -ne 0) {
+      throw "Protected foundation failed after stability attempt $attempt. Streak reset to zero."
     }
 
     $attemptPath = Join-Path $stabilityRoot "attempt-$attempt"
@@ -38,7 +61,9 @@ try {
       "output\nexus-clean-windows-certification",
       "output\nexus-voice-form-certification",
       "output\nexus-release-certification",
-      "output\nexus-windows-real-device"
+      "output\nexus-windows-real-device",
+      "output\nexus-production-transactions",
+      "output\nexus-general-questions-voice"
     )) {
       if (Test-Path $source) {
         Copy-Item -Path $source -Destination $attemptPath -Recurse -Force
@@ -53,6 +78,7 @@ try {
     $summary | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $stabilityRoot "summary.json")
   }
 } catch {
+  $summary.completedPasses = 0
   $summary.attempts += [ordered]@{
     attempt = $summary.completedPasses + 1
     passed = $false
