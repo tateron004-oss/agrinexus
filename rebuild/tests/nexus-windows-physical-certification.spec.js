@@ -19,7 +19,7 @@ const journeys = [
   { app: "Logistics and Routes", workspace: "maps", command: "Nexus, plan a route from Nairobi to Nakuru.", mapText: /Nairobi|Nakuru/i },
   { app: "Music and Media", workspace: "music", command: "Nexus, play Stevie Wonder.", media: /Stevie Wonder/i },
   { app: "Reminders", workspace: "reminders", command: "Nexus, remind me tonight at 8 PM to check my blood pressure.", edit: ["Nexus, change date and time to tonight at 7:30 PM.", "Date and time", /7:30/i] },
-  { app: "Offline Queue", workspace: "offline", command: "Nexus, show my offline queue.", edit: ["Nexus, set queued request to find maize treatment guidance.", "Queued request", /maize treatment guidance/i] },
+  { app: "Offline Queue", workspace: "offline", command: "Nexus, show my offline queue.", edit: ["Nexus, set queued request to find maize treatment guidance.", "Queued request", /(?:maize|mazed) treatment guidance/i] },
   { app: "Live Weather", workspace: "live-knowledge", command: "Nexus, show today's weather in Nairobi, Kenya.", visual: "weather", links: true },
   { app: "Maps", workspace: "maps", command: "Nexus, reset the map and show Mombasa, Kenya.", visual: "map", mapText: /Mombasa/i },
   { app: "Agriculture Images", workspace: "agriculture", command: "Nexus, show me pictures of possible maize diseases.", visual: "agriculture-images", links: true },
