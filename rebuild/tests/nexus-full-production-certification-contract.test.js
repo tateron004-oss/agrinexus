@@ -39,6 +39,7 @@ assert.match(physical, /audio\.remote-attached/);
 assert.match(physical, /muted: false/);
 assert.match(physical, /audio\.volume/);
 assert.match(physical, /echoCancellation: false/);
+require("./nexus-physical-certification-drift.test");
 
 const stability = fs.readFileSync("scripts/nexus-windows-stability-certification.ps1", "utf8");
 for (const required of [

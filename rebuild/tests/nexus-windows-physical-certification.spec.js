@@ -4,30 +4,10 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
+const { JOURNEYS: journeys, fieldIdentityMatches } = require("./nexus-physical-journey-contract");
 
 const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-clean-windows-certification");
-const journeys = [
-  { app: "Agriculture Help", workspace: "agriculture", command: "Nexus, help with my maize crop in Kenya.", edit: ["Nexus, set location to Nakuru, Kenya.", "Location", /Nakuru/i] },
-  { app: "Health and Chronic Care", workspace: "health", command: "Nexus, record my blood pressure 140 over 90.", edit: ["Nexus, set symptoms or notes to no symptoms.", "Symptoms or notes", /no symptoms/i] },
-  { app: "Telehealth Intake", workspace: "telehealth", command: "Nexus, begin a telehealth intake.", edit: ["Nexus, set reason for visit to blood pressure review.", "Reason for visit", /blood pressure review/i] },
-  { app: "Mobile Clinic", workspace: "mobile-clinic", command: "Nexus, find a mobile clinic in Kenya.", edit: ["Nexus, set care needed to blood pressure screening.", "Care needed", /blood pressure screening/i] },
-  { app: "Pharmacy Support", workspace: "pharmacy", command: "Nexus, open pharmacy support.", edit: ["Nexus, set medication to metformin.", "Medication", /metformin/i] },
-  { app: "Learning and Literacy", workspace: "learning", command: "Nexus, start a digital literacy course.", edit: ["Nexus, set topic or skill to phishing email safety.", "Topic or skill", /phishing email safety/i] },
-  { app: "Jobs and Workforce", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." },
-  { app: "AgriTrade Marketplace", workspace: "marketplace", command: "Nexus, sell 50 bags of maize.", edit: ["Nexus, change quantity to 20 bags.", "Quantity", /20 bags/i] },
-  { app: "Logistics and Routes", workspace: "maps", command: "Nexus, plan a route from Nairobi to Nakuru.", mapText: /Nairobi|Nakuru/i },
-  { app: "Music and Media", workspace: "music", command: "Nexus, play Stevie Wonder.", media: /Stevie Wonder/i },
-  { app: "Reminders", workspace: "reminders", command: "Nexus, remind me tonight at 8 PM to check my blood pressure.", edit: ["Nexus, change date and time to tonight at 7:30 PM.", "Date and time", /7:30/i] },
-  { app: "Offline Queue", workspace: "offline", command: "Nexus, show my offline queue.", edit: ["Nexus, set queued request to find maize treatment guidance.", "Queued request", /(?:maize|mazed) treatment guidance/i] },
-  { app: "Live Weather", workspace: "live-knowledge", command: "Nexus, show today's weather in Nairobi, Kenya.", visual: "weather", links: true },
-  { app: "Maps", workspace: "maps", command: "Nexus, reset the map and show Mombasa, Kenya.", visual: "map", mapText: /Mombasa/i },
-  { app: "Agriculture Images", workspace: "agriculture", command: "Nexus, show me pictures of possible maize diseases.", visual: "agriculture-images", links: true },
-  { app: "Résumé Builder", workspace: "workforce", command: "Nexus, help me create a résumé.", visual: "resume", edit: ["Nexus, set résumé full name to Ron Tate.", "Résumé full name", /Ron Tate/i], controls: ["[data-resume-action='print']", "[data-resume-action='download']"] },
-  { app: "Internet Sources and Recipe", workspace: "live-knowledge", command: "Nexus, show an apple pie recipe with ingredients, steps, and sources.", visual: "evidence", links: true },
-  { app: "Provider Contact Card", workspace: "health", command: "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", visual: "provider-card", controls: ["[data-provider-card-action='read']", "[data-provider-card-action='print']"] },
-  { app: "Pilot Evidence", workspace: "live-knowledge", command: "Nexus, open the pilot evidence dashboard.", visual: "pilot-dashboard" }
-];
 
 function synthesizePcm(text) {
   const wavPath = path.join(os.tmpdir(), `nexus-command-${process.pid}-${Date.now()}.wav`);
@@ -62,9 +42,26 @@ function synthesizePcm(text) {
   });
 }
 
-function requiredFieldLabel(label) {
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escaped}\\s*\\*?$`, "i");
+async function editableFieldLocator(page, contract) {
+  const controls = page.locator("#nexus-workspace input, #nexus-workspace textarea, #nexus-workspace select");
+  const index = await controls.evaluateAll((elements, expected) => {
+    const normalize = (value) => String(value || "").normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const semanticIdentity = normalize(expected.identity);
+    const compatibleLabels = expected.labels.map(normalize);
+    const identities = (element) => [
+      element.dataset.nexusField,
+      element.dataset.field,
+      element.dataset.fieldKey,
+      element.id,
+      element.name
+    ].map(normalize).filter(Boolean);
+    const semanticIndex = elements.findIndex((element) => identities(element).includes(semanticIdentity));
+    if (semanticIndex >= 0) return semanticIndex;
+    return elements.findIndex((element) => compatibleLabels.includes(normalize(element.getAttribute("aria-label"))));
+  }, contract);
+  expect(index, `Visible field ${contract.identity} must match semantic identity or a declared compatible label`).toBeGreaterThanOrEqual(0);
+  return controls.nth(index);
 }
 
 function readWaveData(wav) {
@@ -294,15 +291,25 @@ test("new Genesis build passes every application through physical voice", async 
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
       await expect(page.locator("#nexus-status")).toHaveText("Listening");
       if (journey.edit) {
-        const [editCommand, fieldLabel, expectedValue] = journey.edit;
+        const { command: editCommand, field: fieldContract } = journey.edit;
         const beforeEdit = await page.evaluate(() => window.__cleanEvidence.receipts.length);
         const deliveredEditPrompt = rotatePrompt(editCommand, seed);
         await deliverCommand(page, editCommand, lane);
         expect(await transcriptMatches(page, beforeEdit, deliveredEditPrompt, 30000),
           `Realtime must produce a final transcript for: ${deliveredEditPrompt}`).toBe(true);
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
-          .some((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit }), { timeout: 30000 }).toBe(true);
-        await expect(page.getByLabel(requiredFieldLabel(fieldLabel))).toHaveValue(expectedValue);
+          .find((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected") || null, { beforeEdit }), {
+          timeout: 60000,
+          message: `Current turn must produce a verified field-update receipt for ${fieldContract.identity}`
+        }).not.toBeNull();
+        const currentReceipt = await page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .find((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit });
+        expect(fieldIdentityMatches(currentReceipt?.detail?.field || currentReceipt?.detail?.label, fieldContract),
+          `Update receipt must identify semantic field ${fieldContract.identity}`).toBe(true);
+        expect(String(currentReceipt?.detail?.value || "")).toMatch(fieldContract.expectedValue);
+        const visibleField = await editableFieldLocator(page, fieldContract);
+        await expect(visibleField).toBeVisible();
+        await expect(visibleField).toHaveValue(fieldContract.expectedValue);
         await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
           .some((item) => item.type === "conversation.return-to-listening"), { beforeEdit }), { timeout: 60000 }).toBe(true);
         await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
