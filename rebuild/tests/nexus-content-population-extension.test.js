@@ -544,6 +544,20 @@ async function main() {
   assert.match(openAIRequest.input, /cooperative's books/);
   assert.match(openAIRequest.input, /Amina's résumé/);
 
+  const unrelatedContext = require("../nexus-core/content-action-service").compactResolverContext({
+    command: "Explain how solar panels generate electricity.",
+    previousArtifact: { ...artifact("document", "Prior research"), description: "x".repeat(100000), sections: [{ heading: "Long", body: "y".repeat(100000), items: [] }] },
+    history: Array.from({ length: 30 }, (_, index) => ({ role: "user", content: `turn ${index} ${"z".repeat(2000)}` }))
+  });
+  assert.equal(unrelatedContext.previousArtifact, null, "an independent question must not resend a massive unrelated artifact");
+  assert.ok(JSON.stringify(unrelatedContext).length < 5000, "resolver context must remain bounded across sequential turns");
+  const followupContext = require("../nexus-core/content-action-service").compactResolverContext({
+    command: "Turn that into a five-step plan.",
+    previousArtifact: { ...artifact("document", "Crop rotation"), description: "d".repeat(10000), sections: [{ heading: "Details", body: "b".repeat(10000), items: Array(20).fill("item") }] }
+  });
+  assert.equal(followupContext.previousArtifact.title, "Crop rotation");
+  assert.ok(JSON.stringify(followupContext).length < 10000, "follow-up context must preserve meaning without resending the full rendered workspace");
+
   let stalledCalls = 0;
   const recoveredResolver = createOpenAIGoalResolver({
     apiKey: "test-key",

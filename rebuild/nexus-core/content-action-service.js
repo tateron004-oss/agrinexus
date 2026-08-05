@@ -201,6 +201,34 @@ function outputText(payload) {
   return "";
 }
 
+function compactResolverContext(context = {}) {
+  const command = clean(context.command, 4000);
+  const refersToPrevious = /\b(?:it|that|this|those|them|previous|above|again|another|change|revise|add|remove|fill|complete|review|update|replace|save|close|reopen|show supporting sources|turn that)\b/i.test(command);
+  const previous = refersToPrevious && context.previousArtifact && typeof context.previousArtifact === "object"
+    ? normalizeArtifact(context.previousArtifact)
+    : null;
+  const previousArtifact = previous ? {
+    kind: previous.kind,
+    title: clean(previous.title, 180),
+    description: clean(previous.description, 600),
+    fields: previous.fields.slice(0, 20).map((field) => ({ id: field.id, label: field.label, type: field.type, value: clean(field.value, 800), required: field.required, options: field.options.slice(0, 12) })),
+    sections: previous.sections.slice(0, 6).map((section) => ({ heading: section.heading, body: clean(section.body, 800), items: section.items.slice(0, 8).map((item) => clean(item, 240)) })),
+    items: previous.items.slice(0, 8).map((item) => ({ id: item.id, title: item.title, description: clean(item.description, 400), sourceName: item.sourceName, sourceUrl: item.sourceUrl })),
+    links: previous.links.slice(0, 8)
+  } : null;
+  return {
+    command,
+    requestedWorkspace: clean(context.requestedWorkspace, 120),
+    activeWorkspace: clean(context.activeWorkspace, 120),
+    previousArtifact,
+    visibleFields: (Array.isArray(context.visibleFields) ? context.visibleFields : []).slice(0, 30).map((field) => ({ id: clean(field && field.id, 80), value: clean(field && field.value, 1000) })),
+    recentConversation: (Array.isArray(context.history) ? context.history : []).slice(-6).map((turn) => ({
+      role: clean(turn && turn.role, 30),
+      content: clean(turn && (turn.content || turn.text || turn.message), 500)
+    })).filter((turn) => turn.content)
+  };
+}
+
 async function fetchOpenAICompletion({
   fetchImpl,
   url = "https://api.openai.com/v1/responses",
@@ -265,14 +293,7 @@ function createOpenAIGoalResolver({
             "If a request is underspecified, build the most useful editable draft and leave unknown fields blank instead of inventing personal facts.",
             "Medical artifacts organize the user's questions and information; do not diagnose or prescribe. Question cards must include medication-safety language, urgent warning guidance, and reputable references without substituting for a pharmacist or prescriber."
           ].join("\n"),
-          input: JSON.stringify({
-            command: clean(context.command, 4000),
-            requestedWorkspace: clean(context.requestedWorkspace, 120),
-            activeWorkspace: clean(context.activeWorkspace, 120),
-            previousArtifact: context.previousArtifact || null,
-            visibleFields: context.visibleFields || [],
-            recentConversation: Array.isArray(context.history) ? context.history.slice(-12) : []
-          }),
+          input: JSON.stringify(compactResolverContext(context)),
           text: {
             verbosity: "low",
             format: { type: "json_schema", name: "nexus_content_goal", strict: true, schema: GOAL_SCHEMA }
@@ -1034,7 +1055,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
 }
 
 module.exports = {
-  CAPABILITIES, GOAL_SCHEMA, clean, createContentActionService, createOpenAIGoalResolver,
+  CAPABILITIES, GOAL_SCHEMA, clean, compactResolverContext, createContentActionService, createOpenAIGoalResolver,
   createOpenAIWebSearchProvider, emptyArtifact, fetchOpenAICompletion, normalizeArtifact, normalizeWebSearchPayload,
   normalizeGoalRoute, outputText, resultEnvelope, safeHttpUrl
 };
