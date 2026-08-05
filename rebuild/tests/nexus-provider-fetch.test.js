@@ -3,9 +3,42 @@
 const assert = require("node:assert/strict");
 const { createProviderFetch } = require("../nexus-core/provider-fetch");
 const { createVisualDataService } = require("../nexus-core/visual-data-service");
-const { createContentActionService } = require("../nexus-core/content-action-service");
+const { createContentActionService, createOpenAIExplanationResolver, isOrdinaryExplanation } = require("../nexus-core/content-action-service");
 
 async function main() {
+  {
+    assert.equal(isOrdinaryExplanation("What is the difference between weather and climate?"), true);
+    assert.equal(isOrdinaryExplanation("What is the weather forecast for Nairobi this week? Show sources."), false);
+    let requestBody;
+    const explanationResolver = createOpenAIExplanationResolver({
+      apiKey: "test-key",
+      fetchImpl: async (_url, init) => {
+        requestBody = JSON.parse(init.body);
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return { output: [{ content: [{ type: "output_text", text: JSON.stringify({
+              title: "Weather and climate",
+              summary: "Weather describes short-term atmospheric conditions, while climate describes long-term patterns.",
+              keyPoints: ["Weather can change within hours or days.", "Climate is measured across decades."]
+            }) }] }] };
+          }
+        };
+      }
+    });
+    const service = createContentActionService({
+      goalResolver: { async resolve() { throw new Error("the universal goal schema must not own ordinary explanations"); } },
+      explanationResolver
+    });
+    const answer = await service.execute({ command: "What is the difference between weather and climate?" });
+    assert.equal(answer.status, "ready");
+    assert.equal(answer.capability, "document");
+    assert.match(answer.artifact.description, /short-term atmospheric conditions/i);
+    assert.deepEqual(Object.keys(requestBody.text.format.schema.properties), ["title", "summary", "keyPoints"], "ordinary explanations must use the compact answer contract");
+    assert.equal(JSON.stringify(requestBody).includes("media"), false, "the explanation request must not carry the universal media/map/form schema");
+  }
+
   {
     let calls = 0;
     const providerFetch = createProviderFetch({

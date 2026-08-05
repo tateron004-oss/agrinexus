@@ -13,6 +13,16 @@ const OPERATIONS = Object.freeze(["open", "create", "search", "play", "stop", "u
 const OPENAI_COMPLETION_ATTEMPT_TIMEOUT_MS = 35_000;
 const OPENAI_COMPLETION_MAX_ATTEMPTS = 2;
 const OPENAI_TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+const EXPLANATION_SCHEMA = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "summary", "keyPoints"],
+  properties: {
+    title: { type: "string" },
+    summary: { type: "string" },
+    keyPoints: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 6 }
+  }
+});
 
 function clean(value, limit = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
@@ -309,6 +319,50 @@ function createOpenAIGoalResolver({
         throw new Error("The conversational goal resolver returned an invalid goal contract.");
       }
       return goal;
+    }
+  });
+}
+
+function isOrdinaryExplanation(command) {
+  const value = clean(command, 4000);
+  const asksForLiveEvidence = /\b(?:current|latest|today|now|recent|live|internet|web|online|source|sources|citation|citations|evidence|research|find|search|look up|website|link|links|forecast|price|prices|news|opportunit(?:y|ies)|jobs?)\b/i.test(value);
+  return !asksForLiveEvidence && /^(?:(?:hey[\s,]+)?nexus[\s,;:.-]*)?(?:please\s+|could you\s+|can you\s+)?(?:what|why|how|explain|describe|compare|teach|tell|give me|help me understand)\b/i.test(value);
+}
+
+function createOpenAIExplanationResolver({
+  fetchImpl = globalThis.fetch,
+  apiKey = process.env.OPENAI_API_KEY,
+  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini",
+  attemptTimeoutMs = 20_000,
+  maxAttempts = 2,
+  sleepImpl
+} = {}) {
+  return Object.freeze({
+    async resolve(command) {
+      if (!apiKey) throw new Error("The conversational explanation provider is not configured (OPENAI_API_KEY is missing).");
+      const response = await fetchOpenAICompletion({ fetchImpl, attemptTimeoutMs, maxAttempts, sleepImpl, init: {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          reasoning: { effort: "low" },
+          store: false,
+          instructions: "Answer the user's ordinary educational question directly in clear, accurate, plain language. Do not claim live research, citations, or real-world execution. Return a concise title, a useful summary, and two to six key points.",
+          input: clean(command, 4000),
+          text: { verbosity: "low", format: { type: "json_schema", name: "nexus_explanation", strict: true, schema: EXPLANATION_SCHEMA } }
+        })
+      } });
+      if (!response.ok) throw new Error(`The conversational explanation provider failed (${response.status}).`);
+      const text = outputText(await response.json());
+      if (!text) throw new Error("The conversational explanation provider returned no answer.");
+      const answer = JSON.parse(text);
+      if (!clean(answer.summary) || !Array.isArray(answer.keyPoints) || answer.keyPoints.length < 2) {
+        throw new Error("The conversational explanation provider returned an invalid answer contract.");
+      }
+      const artifact = emptyArtifact("document", clean(answer.title, 180) || "Nexus explanation");
+      artifact.description = clean(answer.summary, 4000);
+      artifact.sections = [{ heading: "Key points", body: "", items: answer.keyPoints.map((item) => clean(item, 1000)).filter(Boolean).slice(0, 6) }];
+      return { capability: "document", operation: "create", workspace: "live-knowledge", query: clean(command), location: "", needsLiveProvider: false, artifact, acknowledgement: "The current explanation is visible." };
     }
   });
 }
@@ -610,9 +664,10 @@ function localResilienceGoal(context = {}) {
   return null;
 }
 
-function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null, webSearchProvider = null, publicMusicProvider = true } = {}) {
+function createContentActionService({ fetchImpl = globalThis.fetch, musicProvider = null, goalResolver = null, explanationResolver = null, webSearchProvider = null, publicMusicProvider = true } = {}) {
   const providerFetch = createProviderFetch({ fetchImpl });
   const resolver = goalResolver || createOpenAIGoalResolver({ fetchImpl });
+  const explanation = explanationResolver || (!goalResolver ? createOpenAIExplanationResolver({ fetchImpl }) : null);
   const liveWebSearch = webSearchProvider || createOpenAIWebSearchProvider({ fetchImpl });
 
   async function publicMusic(goal) {
@@ -964,7 +1019,9 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
           needsLiveProvider: false, artifact: applicationWorkspaceArtifact(explicitWorkspace),
           acknowledgement: `${APPLICATION_WORKSPACES[explicitWorkspace][0]} is visibly open and synchronized with this request.`
         }
-        : fastProviderGoal || fastDraftGoal || normalizeGoalRoute(await resolver.resolve(request), request);
+        : fastProviderGoal || fastDraftGoal || (explanation && isOrdinaryExplanation(request.command)
+          ? await explanation.resolve(request.command)
+          : normalizeGoalRoute(await resolver.resolve(request), request));
     } catch (error) {
       goal = localResilienceGoal(request);
       if (!goal) {
@@ -1055,7 +1112,7 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
 }
 
 module.exports = {
-  CAPABILITIES, GOAL_SCHEMA, clean, compactResolverContext, createContentActionService, createOpenAIGoalResolver,
+  CAPABILITIES, EXPLANATION_SCHEMA, GOAL_SCHEMA, clean, compactResolverContext, createContentActionService, createOpenAIExplanationResolver, createOpenAIGoalResolver,
   createOpenAIWebSearchProvider, emptyArtifact, fetchOpenAICompletion, normalizeArtifact, normalizeWebSearchPayload,
-  normalizeGoalRoute, outputText, resultEnvelope, safeHttpUrl
+  isOrdinaryExplanation, normalizeGoalRoute, outputText, resultEnvelope, safeHttpUrl
 };
