@@ -622,7 +622,7 @@
   }
 
   class NexusContentPopulationController {
-    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500, providerRetryDelayMs = 2500, providerHardDeadlineMs = 7000 } = {}) {
+    constructor({ windowObject = globalObject, documentObject = globalObject.document, fetchImpl = globalObject.fetch?.bind(globalObject), providerDeadlineMs = 5500, providerRetryDelayMs = 2500, providerHardDeadlineMs = 90000 } = {}) {
       this.window = windowObject;
       this.document = documentObject;
       this.fetch = fetchImpl;

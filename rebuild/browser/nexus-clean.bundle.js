@@ -2279,7 +2279,7 @@ ${content}`
       } = require_experience_profile();
       var { createVisualContext } = require_visual_context();
       var { NexusGuidedEntryTransactionController } = require_guided_entry_transaction_controller();
-      function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
+      function createWorkspaceAdapter({ windowObject = window, timeoutMs = 9e4 } = {}) {
         return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
           const timer = setTimeout(() => {
