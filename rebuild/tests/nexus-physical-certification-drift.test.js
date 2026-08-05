@@ -68,6 +68,10 @@ for (const seed of [1, 2, 3]) {
 }
 
 const physicalSource = fs.readFileSync("rebuild/tests/nexus-windows-physical-certification.spec.js", "utf8");
+const cleanEntrySource = fs.readFileSync("rebuild/browser/nexus-clean-entry.js", "utf8");
+assert.match(cleanEntrySource, /name="name" aria-label="Résumé full name"/, "résumé semantic identity must match production markup");
+const resumeContract = JOURNEYS.find((journey) => journey.app === "Résumé Builder").edit.field;
+assert.equal(resumeContract.identity, "name", "résumé journey must consume the production field identity");
 for (const proof of [
   /workspace\.visible.*outcomeVerified/s,
   /data-populated.*true/,

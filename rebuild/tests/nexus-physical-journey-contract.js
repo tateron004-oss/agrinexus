@@ -22,7 +22,7 @@ const JOURNEYS = Object.freeze([
   { app: "Live Weather", workspace: "live-knowledge", command: "Nexus, show today's weather in Nairobi, Kenya.", visual: "weather", links: true },
   { app: "Maps", workspace: "maps", command: "Nexus, reset the map and show Mombasa, Kenya.", visual: "map", mapText: /Mombasa/i },
   { app: "Agriculture Images", workspace: "agriculture", command: "Nexus, show me pictures of possible maize diseases.", visual: "agriculture-images", links: true },
-  { app: "Résumé Builder", workspace: "workforce", command: "Nexus, help me create a résumé.", visual: "resume", edit: { command: "Nexus, set résumé full name to Ron Tate.", field: field("fullName", ["Résumé full name", "Full name"], /Ron Tate/i) }, controls: ["[data-resume-action='print']", "[data-resume-action='download']"] },
+  { app: "Résumé Builder", workspace: "workforce", command: "Nexus, help me create a résumé.", visual: "resume", edit: { command: "Nexus, set résumé full name to Ron Tate.", field: field("name", ["Résumé full name", "Full name"], /Ron Tate/i) }, controls: ["[data-resume-action='print']", "[data-resume-action='download']"] },
   { app: "Internet Sources and Recipe", workspace: "live-knowledge", command: "Nexus, show an apple pie recipe with ingredients, steps, and sources.", visual: "evidence", links: true },
   { app: "Provider Contact Card", workspace: "health", command: "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", visual: "provider-card", controls: ["[data-provider-card-action='read']", "[data-provider-card-action='print']"] },
   { app: "Pilot Evidence", workspace: "live-knowledge", command: "Nexus, open the pilot evidence dashboard.", visual: "pilot-dashboard" }
