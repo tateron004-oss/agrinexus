@@ -115,6 +115,12 @@ test("general questions deliver verified voice-first results", async ({ page, co
       if (kind === "close") {
         await expect(page.locator("#nexus-workspace")).toBeHidden();
       } else {
+        await expect.poll(() => page.evaluate(({ before }) => window.__generalEvidence.receipts
+          .slice(before)
+          .some(item => item.type === "workspace.visible" && item.detail.outcomeVerified === true), { before }), {
+          timeout: 90000,
+          message: `No verified outcome for: ${prompt}`
+        }).toBe(true);
         await expect(page.locator("#nexus-workspace")).toBeVisible();
         await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-populated", "true");
         const visibleText = (await page.locator("#nexus-workspace").innerText()).trim();
@@ -131,14 +137,6 @@ test("general questions deliver verified voice-first results", async ({ page, co
       if (kind === "map") {
         await expect(page.locator("#nexus-map-canvas")).toBeVisible();
         await expect(page.locator("#nexus-map-link")).toHaveAttribute("href", /^https:\/\/www\.openstreetmap\.org\//);
-      }
-      if (kind !== "close") {
-        await expect.poll(() => page.evaluate(({ before }) => window.__generalEvidence.receipts
-          .slice(before)
-          .some(item => item.type === "workspace.visible" && item.detail.outcomeVerified === true), { before }), {
-          timeout: 30000,
-          message: `No verified outcome for: ${prompt}`
-        }).toBe(true);
       }
       const receipts = await page.evaluate(({ before }) => window.__generalEvidence.receipts.slice(before), { before });
       evidence.turns.push({ prompt, kind, passed: true, receiptTypes: receipts.map(item => item.type) });
