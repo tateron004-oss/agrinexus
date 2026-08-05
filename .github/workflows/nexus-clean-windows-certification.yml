@@ -8,6 +8,10 @@ on:
     paths:
       - .github/workflows/nexus-canonical-completion-bridge.yml
       - .github/workflows/nexus-clean-windows-certification.yml
+      - .github/nexus-protected-foundation.json
+      - rebuild/tests/nexus-full-production-certification-contract.test.js
+      - rebuild/tests/nexus-windows-physical-certification.spec.js
+      - scripts/nexus-windows-stability-certification.ps1
 
 permissions:
   contents: read

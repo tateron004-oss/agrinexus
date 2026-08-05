@@ -31,12 +31,13 @@ assert.doesNotMatch(controller, /startsWith\(actual\)|actual\.startsWith/);
 assert.match(controller, /bundle-sha256/);
 
 const physical = fs.readFileSync("rebuild/tests/nexus-windows-physical-certification.spec.js", "utf8");
-assert.match(physical, /physical-acoustic/);
 assert.match(physical, /deterministic-pcm/);
 assert.match(physical, /NEXUS_PROMPT_ROTATION_SEED/);
-assert.match(physical, /return speak\(prompt\)/);
 assert.match(physical, /return injectSpokenCommand\(page, prompt\)/);
-assert.match(physical, /PHYSICAL_ACOUSTIC_TRANSCRIPT_MISMATCH/);
+assert.match(physical, /Physical microphone input must be live/);
+assert.match(physical, /audio\.remote-attached/);
+assert.match(physical, /muted: false/);
+assert.match(physical, /audio\.volume/);
 assert.match(physical, /echoCancellation: false/);
 
 const stability = fs.readFileSync("scripts/nexus-windows-stability-certification.ps1", "utf8");
