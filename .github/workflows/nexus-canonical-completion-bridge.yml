@@ -51,9 +51,72 @@ jobs:
           NEXUS_DEPLOYMENT_TIMEOUT_MS: "900000"
         run: node scripts/nexus-release-certification-controller.js verify-deployment
       - name: Dispatch canonical Windows certification
+        id: certification-dispatch
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run nexus-clean-windows-certification.yml --ref rebuild/nexus-genesis-clean-foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          workflow="nexus-clean-windows-certification.yml"
+          branch="rebuild/nexus-genesis-clean-foundation"
+          expected_sha="${NEXUS_EXPECTED_RELEASE_SHA}"
+          dispatched_at="$(date -u +%s)"
+
+          gh workflow run "${workflow}" --ref "${branch}"
+
+          run_evidence=""
+          for attempt in $(seq 1 30); do
+            runs_json="$(gh run list \
+              --workflow "${workflow}" \
+              --event workflow_dispatch \
+              --commit "${expected_sha}" \
+              --limit 20 \
+              --json databaseId,url,headSha,event,createdAt,status)"
+
+            run_evidence="$(RUNS_JSON="${runs_json}" EXPECTED_SHA="${expected_sha}" DISPATCHED_AT="${dispatched_at}" node <<'NODE'
+          const runs = JSON.parse(process.env.RUNS_JSON || "[]");
+          const expectedSha = process.env.EXPECTED_SHA;
+          const dispatchedAt = Number(process.env.DISPATCHED_AT || 0);
+          const match = runs.find((run) => (
+            run.headSha === expectedSha
+            && run.event === "workflow_dispatch"
+            && Number.isInteger(run.databaseId)
+            && run.databaseId > 0
+            && typeof run.url === "string"
+            && /^https:\/\/github\.com\//.test(run.url)
+            && Math.floor(Date.parse(run.createdAt) / 1000) >= dispatchedAt - 5
+          ));
+          if (match) {
+            process.stdout.write(JSON.stringify(match));
+          }
+          NODE
+            )"
+
+            if [[ -n "${run_evidence}" ]]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [[ -z "${run_evidence}" ]]; then
+            echo "Certification dispatch could not be verified for exact SHA ${expected_sha}." >&2
+            exit 1
+          fi
+
+          run_id="$(RUN_EVIDENCE="${run_evidence}" node -p 'JSON.parse(process.env.RUN_EVIDENCE).databaseId')"
+          run_url="$(RUN_EVIDENCE="${run_evidence}" node -p 'JSON.parse(process.env.RUN_EVIDENCE).url')"
+
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+          echo "run_url=${run_url}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Exact-SHA Windows certification dispatched"
+            echo "- SHA: \`${expected_sha}\`"
+            echo "- Run ID: \`${run_id}\`"
+            echo "- Run: ${run_url}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          echo "Verified certification run ${run_id}: ${run_url}"
 
 # Re-triggered after the unified production-execution audit so Render must prove
 # the exact Nexus Genesis release before physical Windows certification starts.
