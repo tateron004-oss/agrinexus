@@ -10,6 +10,9 @@ const CAPABILITIES = Object.freeze([
 ]);
 
 const OPERATIONS = Object.freeze(["open", "create", "search", "play", "stop", "update", "review", "list"]);
+const OPENAI_COMPLETION_ATTEMPT_TIMEOUT_MS = 35_000;
+const OPENAI_COMPLETION_MAX_ATTEMPTS = 2;
+const OPENAI_TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 function clean(value, limit = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
@@ -198,15 +201,50 @@ function outputText(payload) {
   return "";
 }
 
+async function fetchOpenAICompletion({
+  fetchImpl,
+  url = "https://api.openai.com/v1/responses",
+  init,
+  attemptTimeoutMs = OPENAI_COMPLETION_ATTEMPT_TIMEOUT_MS,
+  maxAttempts = OPENAI_COMPLETION_MAX_ATTEMPTS,
+  sleepImpl = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutError = new Error(`The OpenAI content provider did not complete attempt ${attempt} within ${attemptTimeoutMs}ms.`);
+    const timer = setTimeout(() => controller.abort(timeoutError), attemptTimeoutMs);
+    try {
+      const response = await Promise.race([
+        fetchImpl(url, { ...init, signal: controller.signal }),
+        new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(controller.signal.reason || timeoutError), { once: true }))
+      ]);
+      if (!OPENAI_TRANSIENT_STATUS.has(Number(response && response.status)) || attempt === maxAttempts) return response;
+      if (response.body && typeof response.body.cancel === "function") await response.body.cancel().catch(() => {});
+      lastError = new Error(`The OpenAI content provider returned a transient ${response.status} response.`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts) throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+    await sleepImpl(Math.min(1_000, 250 * (2 ** (attempt - 1))));
+  }
+  throw lastError || new Error("The OpenAI content provider did not complete.");
+}
+
 function createOpenAIGoalResolver({
   fetchImpl = globalThis.fetch,
   apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini"
+  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini",
+  attemptTimeoutMs = OPENAI_COMPLETION_ATTEMPT_TIMEOUT_MS,
+  maxAttempts = OPENAI_COMPLETION_MAX_ATTEMPTS,
+  sleepImpl
 } = {}) {
   return Object.freeze({
     async resolve(context = {}) {
       if (!apiKey) throw new Error("The conversational goal resolver is not configured (OPENAI_API_KEY is missing).");
-      const response = await fetchImpl("https://api.openai.com/v1/responses", {
+      const response = await fetchOpenAICompletion({ fetchImpl, attemptTimeoutMs, maxAttempts, sleepImpl, init: {
         method: "POST",
         headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +278,7 @@ function createOpenAIGoalResolver({
             format: { type: "json_schema", name: "nexus_content_goal", strict: true, schema: GOAL_SCHEMA }
           }
         })
-      });
+      } });
       if (!response.ok) throw new Error(`The conversational goal resolver failed (${response.status}).`);
       const payload = await response.json();
       const text = outputText(payload);
@@ -280,11 +318,14 @@ function normalizeWebSearchPayload(payload) {
 function createOpenAIWebSearchProvider({
   fetchImpl = globalThis.fetch,
   apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini"
+  model = process.env.NEXUS_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.4-mini",
+  attemptTimeoutMs = OPENAI_COMPLETION_ATTEMPT_TIMEOUT_MS,
+  maxAttempts = OPENAI_COMPLETION_MAX_ATTEMPTS,
+  sleepImpl
 } = {}) {
   return async function openAIWebSearch(query) {
     if (!apiKey) throw new Error("The live web-search provider is not configured (OPENAI_API_KEY is missing).");
-    const response = await fetchImpl("https://api.openai.com/v1/responses", {
+    const response = await fetchOpenAICompletion({ fetchImpl, attemptTimeoutMs, maxAttempts, sleepImpl, init: {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
@@ -297,7 +338,7 @@ function createOpenAIWebSearchProvider({
         instructions: "Search the live web for the current request. Prefer primary, governmental, academic, institutional, and otherwise reputable sources. Give a short factual orientation with source citations. Do not claim an action beyond search.",
         input: clean(query, 4000)
       })
-    });
+    } });
     if (!response.ok) throw new Error(`The live web-search provider failed (${response.status}).`);
     const normalized = normalizeWebSearchPayload(await response.json());
     if (!normalized.sources.length) throw new Error("The live web-search provider returned no visible source links.");
@@ -977,6 +1018,6 @@ function createContentActionService({ fetchImpl = globalThis.fetch, musicProvide
 
 module.exports = {
   CAPABILITIES, GOAL_SCHEMA, clean, createContentActionService, createOpenAIGoalResolver,
-  createOpenAIWebSearchProvider, emptyArtifact, normalizeArtifact, normalizeWebSearchPayload,
+  createOpenAIWebSearchProvider, emptyArtifact, fetchOpenAICompletion, normalizeArtifact, normalizeWebSearchPayload,
   normalizeGoalRoute, outputText, resultEnvelope, safeHttpUrl
 };

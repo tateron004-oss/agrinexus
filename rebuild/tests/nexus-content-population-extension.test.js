@@ -532,6 +532,35 @@ async function main() {
   assert.match(openAIRequest.input, /cooperative's books/);
   assert.match(openAIRequest.input, /Amina's résumé/);
 
+  let stalledCalls = 0;
+  const recoveredResolver = createOpenAIGoalResolver({
+    apiKey: "test-key",
+    model: "gpt-5.4-mini",
+    attemptTimeoutMs: 10,
+    sleepImpl: async () => {},
+    fetchImpl: async (_url, options) => {
+      stalledCalls += 1;
+      if (stalledCalls === 1) return new Promise(() => {});
+      assert.equal(options.signal.aborted, false);
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { output_text: JSON.stringify({
+            capability: "document", operation: "create", workspace: "live-knowledge",
+            query: "Explain how solar panels generate electricity", location: "", needsLiveProvider: false,
+            artifact: { ...artifact("document", "How solar panels generate electricity"), sections: [{ heading: "Explanation", body: "Photovoltaic cells convert light into direct-current electricity; an inverter converts it to alternating current.", items: [] }] },
+            acknowledgement: "The solar-panel explanation is visible."
+          }) };
+        }
+      };
+    }
+  });
+  const recoveredGoal = await recoveredResolver.resolve({ command: "Explain how solar panels generate electricity." });
+  assert.equal(stalledCalls, 2, "a stalled OpenAI completion should be bounded and retried within the production allowance");
+  assert.equal(recoveredGoal.capability, "document");
+  assert.match(recoveredGoal.artifact.sections[0].body, /photovoltaic cells/i);
+
   const providerQueries = [];
   const goals = [
     { capability: "music", operation: "play", workspace: "music", query: "Mulatu Astatke Ethiopian jazz", location: "", needsLiveProvider: true, artifact: artifact("media", "Music"), acknowledgement: "Music is visible." },
