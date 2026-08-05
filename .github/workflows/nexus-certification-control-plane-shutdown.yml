@@ -1,0 +1,132 @@
+name: Nexus certification control-plane shutdown
+
+on:
+  push:
+    branches:
+      - nexus-certification-control-2026-08-05
+    paths:
+      - .github/workflows/nexus-certification-control-plane-shutdown.yml
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nexus-certification-control-plane-shutdown
+  cancel-in-progress: true
+
+jobs:
+  shutdown:
+    name: Cancel queue and disable Windows certification workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Cancel every queued or running certification job
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          current_run="${GITHUB_RUN_ID}"
+          statuses=(queued in_progress requested waiting pending)
+
+          for status in "${statuses[@]}"; do
+            gh api --method GET --paginate \
+              "repos/${repo}/actions/runs?status=${status}&per_page=100" \
+              --jq '.workflow_runs[] | [.id, .name, .status] | @tsv' |
+            while IFS=$'\t' read -r run_id run_name run_status; do
+              [[ -n "${run_id}" ]] || continue
+              [[ "${run_id}" == "${current_run}" ]] && continue
+              echo "Cancelling ${run_id}: ${run_name} (${run_status})"
+              gh api --method POST "repos/${repo}/actions/runs/${run_id}/cancel" \
+                --silent || true
+            done
+          done
+
+      - name: Disable all Windows certification workflow entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          obsolete_workflows=(
+            nexus-clean-windows-certification.yml
+            nexus-release-certification-v2.yml
+            nexus-live-runtime-certification.yml
+            nexus-general-questions-voice.yml
+            nexus-voice-form-entry-certification.yml
+            nexus-windows-real-device-acceptance.yml
+            nexus-production-voice-certification.yml
+            apply-approved-activation-matrix.yml
+            apply-workspace-entity-parser-repair.yml
+            restore-approved-nexus-runtime.yml
+          )
+
+          for workflow in "${obsolete_workflows[@]}"; do
+            workflow_id="$(gh api --method GET --paginate \
+              "repos/${repo}/actions/workflows?per_page=100" \
+              --jq ".workflows[] | select(.path | endswith(\"/${workflow}\")) | .id" |
+              head -n 1)"
+            if [[ -z "${workflow_id}" ]]; then
+              echo "Workflow is not registered; nothing to disable: ${workflow}"
+              continue
+            fi
+            echo "Disabling ${workflow} (${workflow_id})"
+            gh api --method PUT \
+              "repos/${repo}/actions/workflows/${workflow_id}/disable" --silent
+          done
+
+      - name: Verify the Windows queue is empty and entry points are disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          current_run="${GITHUB_RUN_ID}"
+          deadline=$((SECONDS + 180))
+
+          while (( SECONDS < deadline )); do
+            active="$({
+              for status in queued in_progress requested waiting pending; do
+                gh api --method GET --paginate \
+                  "repos/${repo}/actions/runs?status=${status}&per_page=100" \
+                  --jq '.workflow_runs[] | [.id, .name, .status] | @tsv'
+              done
+            } | awk -F '\t' -v current="${current_run}" '$1 != current')"
+
+            if [[ -z "${active}" ]]; then
+              break
+            fi
+
+            echo "Waiting for cancellation to settle:"
+            echo "${active}"
+            sleep 5
+          done
+
+          if [[ -n "${active:-}" ]]; then
+            echo "Actions queue did not drain within 180 seconds." >&2
+            exit 1
+          fi
+
+          clean_state="$(gh api --method GET --paginate \
+            "repos/${repo}/actions/workflows?per_page=100" \
+            --jq '.workflows[] | select(.path | endswith("/nexus-clean-windows-certification.yml")) | .state' |
+            head -n 1)"
+
+          if [[ "${clean_state}" != "disabled_manually" ]]; then
+            echo "Legacy clean-Windows certification is not disabled: ${clean_state:-missing}." >&2
+            exit 1
+          fi
+
+          echo "Certification queue is empty and Windows workflow entry points are disabled."
+
+      - name: Disable this one-shot shutdown workflow
+        if: success()
+        shell: bash
+        run: |
+          gh api --method PUT \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/nexus-certification-control-plane-shutdown.yml/disable" \
+            --silent
