@@ -132,9 +132,15 @@ test("general questions deliver verified voice-first results", async ({ page, co
         await expect(page.locator("#nexus-map-canvas")).toBeVisible();
         await expect(page.locator("#nexus-map-link")).toHaveAttribute("href", /^https:\/\/www\.openstreetmap\.org\//);
       }
+      if (kind !== "close") {
+        await expect.poll(() => page.evaluate(({ before }) => window.__generalEvidence.receipts
+          .slice(before)
+          .some(item => item.type === "workspace.visible" && item.detail.outcomeVerified === true), { before }), {
+          timeout: 30000,
+          message: `No verified outcome for: ${prompt}`
+        }).toBe(true);
+      }
       const receipts = await page.evaluate(({ before }) => window.__generalEvidence.receipts.slice(before), { before });
-      const visible = receipts.filter(item => item.type === "workspace.visible");
-      if (kind !== "close") expect(visible.some(item => item.detail.outcomeVerified === true), `No verified outcome for: ${prompt}`).toBe(true);
       evidence.turns.push({ prompt, kind, passed: true, receiptTypes: receipts.map(item => item.type) });
     }
     await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
