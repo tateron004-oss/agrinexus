@@ -234,7 +234,7 @@ test("new Genesis build passes every application through physical voice", async 
     }), { timeout: 30000, message: "Physical microphone input must be live" }).toBe(true);
     await expect.poll(() => page.evaluate(() => {
       const audio = document.querySelector("#nexus-audio");
-      const receipts = window.__cleanEvidence.receipts;
+      const receipts = window.NexusCleanRuntime.snapshot().receipts;
       const attached = Boolean(audio && (audio.srcObject || audio.currentSrc || audio.src));
       const htmlMediaOutput = attached && audio.muted === false;
       const webAudioOutput = attached && receipts.some((item) => item.type === "audio.web-audio-attached");
