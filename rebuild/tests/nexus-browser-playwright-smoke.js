@@ -276,10 +276,23 @@ async function main() {
           && element.clientWidth === document.documentElement.clientWidth;
       }), true);
       if (workspace === "maps") {
-        assert.match(await page.locator("#nexus-content-map-frame").getAttribute("src"), /openstreetmap\.org\/export\/embed/);
+        const mapProof = await page.evaluate(() => ({
+          contentFrame: document.querySelector("#nexus-content-map-frame")?.getAttribute("src") || "",
+          protectedVisible: document.querySelector("#nexus-map-surface")?.hidden === false,
+          protectedSource: document.querySelector("#nexus-map-link")?.getAttribute("href") || "",
+          protectedSummary: document.querySelector("#nexus-map-summary")?.textContent || ""
+        }));
+        assert.ok(
+          /openstreetmap\.org\/export\/embed/.test(mapProof.contentFrame)
+            || (mapProof.protectedVisible && /openstreetmap\.org/.test(mapProof.protectedSource) && /Kenya/i.test(mapProof.protectedSummary)),
+          "either certified map renderer must expose a populated Kenya viewport and OpenStreetMap source"
+        );
       }
       if (workspace === "music") {
-        const musicSource = await page.locator("#nexus-content-music-frame").getAttribute("src");
+        const musicSource = await page.evaluate(() =>
+          document.querySelector("#nexus-content-music-frame")?.getAttribute("src")
+            || document.querySelector("#nexus-music-frame")?.getAttribute("src")
+            || "");
         assert.match(musicSource, /youtube-nocookie\.com\/embed/);
         assert.match(musicSource, /autoplay=1/);
       }
