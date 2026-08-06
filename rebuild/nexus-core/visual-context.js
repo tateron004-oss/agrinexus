@@ -1,8 +1,8 @@
 "use strict";
 
-const VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
+const VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|their|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
 const VISUAL_QUESTION_CUES = /^(?:what|why|where|which|who|how|can|could|would|does|do|is|are)\b/i;
-const VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
+const VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|create|put|add|close|reopen|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
 
 function compactText(value, limit = 180) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);

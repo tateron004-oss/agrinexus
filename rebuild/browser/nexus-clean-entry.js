@@ -13,7 +13,9 @@ const {
 const { createVisualContext } = require("../nexus-core/visual-context");
 const { NexusGuidedEntryTransactionController } = require("../nexus-core/guided-entry-transaction-controller");
 
-function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8000 } = {}) {
+const PRODUCTION_RESPONSE_ALLOWANCE_MS = 90_000;
+
+function createWorkspaceAdapter({ windowObject = window, timeoutMs = PRODUCTION_RESPONSE_ALLOWANCE_MS } = {}) {
   return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     const timer = setTimeout(() => {
@@ -657,6 +659,10 @@ function renderWorkspace({ workspace, command, documentObject = document }) {
     const encodedQuery = encodeURIComponent(query);
     musicFrame.src = musicPlaybackUrl(command);
     musicLink.href = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+    if (appSurface) {
+      appSurface.hidden = false;
+      appSurface.innerHTML = `<section class="app-request" data-nexus-music-summary><h3>${escapeMarkup(query)}</h3><p>Music playback is ready in the visible media player.</p></section>`;
+    }
   }
   const rendered = workspace === "maps"
     ? Boolean(mapCanvas)
@@ -1023,16 +1029,6 @@ function boot() {
     if (receipt.type === "transcript.final") {
       caption.textContent = receipt.detail.transcript || "";
       caption.hidden = !preferences.captions;
-      const transcript = receipt.detail.transcript || "";
-      if (!isDraftReopenCommand(transcript) && visibleFormFields().length > 0) {
-        guidedEntryController?.execute(transcript, {
-          requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
-        }).then((formResult) => {
-          if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
-            runtime.speakText(formResult.readback, "voice-form-readback");
-          }
-        });
-      }
     }
     if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
     window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -1083,6 +1079,16 @@ function boot() {
     realtime,
     audioElement: audio,
     openWorkspace: createWorkspaceAdapter(),
+    interceptCommand: async (command, options = {}) => {
+      if (isDraftReopenCommand(command) || visibleFormFields().length === 0) return { handled: false };
+      const formResult = await guidedEntryController?.execute(command, {
+        requestId: options.requestId || crypto.randomUUID()
+      });
+      if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+        runtime.speakText(formResult.readback, "voice-form-readback");
+      }
+      return formResult || { handled: false };
+    },
     onReceipt
   });
   guidedEntryController = new NexusGuidedEntryTransactionController({
@@ -1239,6 +1245,7 @@ if (typeof document !== "undefined") {
 }
 
 module.exports = {
+  PRODUCTION_RESPONSE_ALLOWANCE_MS,
   createWorkspaceAdapter,
   createRemoteAudioUnlock,
   renderWorkspace,

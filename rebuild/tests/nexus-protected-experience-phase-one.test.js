@@ -160,6 +160,9 @@ assert.equal(renderWorkspace({
 assert.equal(mapElements["nexus-workspace"].dataset.workspace, "music");
 assert.equal(mapElements["nexus-workspace"].dataset.populated, "true");
 assert.equal(mapElements["nexus-music-surface"].hidden, false);
+assert.equal(mapElements["nexus-app-surface"].hidden, false);
+assert.match(mapElements["nexus-app-surface"].innerHTML, /Kenyan soul/i);
+assert.match(mapElements["nexus-app-surface"].innerHTML, /Music playback is ready/i);
 assert.match(mapElements["nexus-music-frame"].src, /youtube-nocookie\.com\/embed/);
 assert.match(mapElements["nexus-music-frame"].src, /autoplay=1/);
 assert.doesNotMatch(mapElements["nexus-music-frame"].src, /listType=search/);

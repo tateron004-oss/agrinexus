@@ -1,20 +1,17 @@
 name: Nexus deterministic release certification
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
   group: nexus-deterministic-release-certification
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
-  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://agrinexus-platform.onrender.com
   NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 

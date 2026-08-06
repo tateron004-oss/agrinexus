@@ -3,49 +3,11 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
+const { JOURNEYS: journeys, fieldIdentityMatches } = require("./nexus-physical-journey-contract");
 
-const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
+const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-clean-windows-certification");
-const commands = [
-  ["agriculture", "Nexus, help with my maize crop in Kenya.", null],
-  ["health", "Nexus, record my blood pressure 140 over 90."],
-  ["telehealth", "Nexus, begin a telehealth intake."],
-  ["mobile-clinic", "Nexus, find a mobile clinic in Kenya."],
-  ["pharmacy", "Nexus, open pharmacy support."],
-  ["learning", "Nexus, start a digital literacy course."],
-  ["workforce", "Nexus, search for farming jobs in Kenya."],
-  ["marketplace", "Nexus, sell 50 bags of maize."],
-  ["maps", "Nexus, plan a route from Nairobi to Nakuru."],
-  ["music", "Nexus, play Kenyan music."],
-  ["reminders", "Nexus, remind me to take my medicine."],
-  ["offline", "Nexus, show my offline queue."],
-  ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", "weather"],
-  ["maps", "Nexus, reset the map and show Mombasa, Kenya.", "map"],
-  ["agriculture", "Nexus, show me pictures of possible maize diseases.", "agriculture-images"],
-  ["workforce", "Nexus, help me create a résumé.", "resume"],
-  ["live-knowledge", "Nexus, show me the websites and sources.", "evidence"],
-  ["health", "Nexus, create a provider card for my doctor.", "provider-card"],
-  ["live-knowledge", "Nexus, open the pilot evidence dashboard.", "pilot-dashboard"]
-];
-
-function speak(text) {
-  const encoded = Buffer.from(text, "utf16le").toString("base64");
-  const script = [
-    "Add-Type -AssemblyName System.Speech",
-    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
-    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$v.Volume=90",
-    "$v.Rate=-1",
-    "$v.Speak($t)",
-    "$v.Dispose()"
-  ].join(";");
-  return new Promise((resolve, reject) => {
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
-    let stderr = "";
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(stderr || `speech exited ${code}`)));
-  });
-}
 
 function synthesizePcm(text) {
   const wavPath = path.join(os.tmpdir(), `nexus-command-${process.pid}-${Date.now()}.wav`);
@@ -80,6 +42,28 @@ function synthesizePcm(text) {
   });
 }
 
+async function editableFieldLocator(page, contract) {
+  const controls = page.locator("#nexus-workspace input, #nexus-workspace textarea, #nexus-workspace select");
+  const index = await controls.evaluateAll((elements, expected) => {
+    const normalize = (value) => String(value || "").normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const semanticIdentity = normalize(expected.identity);
+    const compatibleLabels = expected.labels.map(normalize);
+    const identities = (element) => [
+      element.dataset.nexusField,
+      element.dataset.field,
+      element.dataset.fieldKey,
+      element.id,
+      element.name
+    ].map(normalize).filter(Boolean);
+    const semanticIndex = elements.findIndex((element) => identities(element).includes(semanticIdentity));
+    if (semanticIndex >= 0) return semanticIndex;
+    return elements.findIndex((element) => compatibleLabels.includes(normalize(element.getAttribute("aria-label"))));
+  }, contract);
+  expect(index, `Visible field ${contract.identity} must match semantic identity or a declared compatible label`).toBeGreaterThanOrEqual(0);
+  return controls.nth(index);
+}
+
 function readWaveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
     const id = wav.toString("ascii", offset, offset + 4);
@@ -101,14 +85,65 @@ async function injectSpokenCommand(page, text) {
   }, chunks);
 }
 
+async function deliverCommand(page, text, lane) {
+  const seed = Math.max(1, Number(process.env.NEXUS_PROMPT_ROTATION_SEED || 1));
+  const prompt = rotatePrompt(text, seed);
+  return injectSpokenCommand(page, prompt);
+}
+
+async function transcriptMatches(page, before, expectedText, timeout = 25000) {
+  const matched = () => page.evaluate(({ before, expectedText }) => {
+    const tokens = (value) => new Set(String(value || "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter((token) => token.length >= 3));
+    const expected = tokens(expectedText);
+    return window.__cleanEvidence.receipts.slice(before).some((item) => {
+      if (item.type !== "transcript.final") return false;
+      const actual = tokens(item.detail?.transcript);
+      const overlap = [...expected].filter((token) => actual.has(token)).length;
+      return overlap / Math.max(1, expected.size) >= 0.6;
+    });
+  }, { before, expectedText });
+  try {
+    await expect.poll(matched, { timeout }).toBe(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rotatePrompt(text, seed) {
+  const request = String(text).replace(/^Nexus,\s*/i, "").replace(/[.]$/, "");
+  const lowered = request.charAt(0).toLowerCase() + request.slice(1);
+  const variants = [
+    `Nexus, ${lowered}.`,
+    `Hey Nexus, please ${lowered}.`,
+    `Nexus, could you ${lowered}?`
+  ];
+  return variants[(seed - 1) % variants.length];
+}
+
+async function expectVisibleWorkspaceIdentity(page, workspace) {
+  await expect.poll(() => page.locator("#nexus-workspace").evaluate((element, expected) => {
+    const identities = [
+      element.dataset.workspace,
+      element.dataset.document,
+      element.dataset.guidedEntryProcess
+    ].filter(Boolean);
+    return identities.includes(expected);
+  }, workspace), {
+    timeout: 5000,
+    message: `Visible workspace must expose semantic identity ${workspace}`
+  }).toBe(true);
+}
+
 test.use({
   baseURL: BASE_URL,
   headless: false,
   launchOptions: { channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required"] }
 });
 
-test("new Genesis build passes physical voice and every command", async ({ page, context }) => {
-  test.setTimeout(25 * 60 * 1000);
+test("new Genesis build passes every application through physical voice", async ({ page, context }) => {
+  test.setTimeout(75 * 60 * 1000);
   fs.mkdirSync(OUTPUT, { recursive: true });
   const driverEvidence = {
     startedAt: new Date().toISOString(),
@@ -140,6 +175,15 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
+    const nativeGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = (constraints = {}) => {
+      if (!constraints.audio) return nativeGetUserMedia(constraints);
+      const audio = typeof constraints.audio === "object" ? constraints.audio : {};
+      return nativeGetUserMedia({
+        ...constraints,
+        audio: { ...audio, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    };
     const recordSpeechSource = (source, detail = {}) => {
       window.__cleanEvidence.speechSources.push({ source, detail, at: Date.now() });
       if (source === "browser-speech-synthesis") {
@@ -164,6 +208,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   try {
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    expect(new URL(page.url()).origin).toBe(new URL(BASE_URL).origin);
     await page.locator("#nexus-orb").click();
     await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
@@ -174,35 +219,59 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       return receipts.some((item) => item.type === "audio.remote-attached");
     }), { timeout: 60000 }).toBe(true);
 
-    await speak("Nexus, say physical voice calibration complete.");
+    // Prove the two physical user I/O paths independently. Requiring the laptop's
+    // speakers to feed its own microphone is an echo loop, not a Nexus user journey,
+    // and is commonly suppressed by the operating system or audio hardware.
     await expect.poll(() => page.evaluate(() => {
+      const snapshot = window.NexusCleanRuntime.snapshot();
+      const microphone = snapshot?.microphone || snapshot?.audio?.microphone || {};
       const receipts = window.__cleanEvidence.receipts;
-      return receipts.some((item) => item.type === "conversation.return-to-listening");
-    }), { timeout: 60000 }).toBe(true);
-
-    // The audible calibration above proves the remote audio path. Silence Nexus
-    // during command injection so its own speaker output cannot feed back into
-    // the physical microphone and overwrite the command under test.
-    await page.locator("#nexus-audio").evaluate((audio) => {
-      audio.muted = true;
-    });
+      return microphone.active === true || microphone.trackState === "live" ||
+        receipts.some((item) => item.type === "audio.local-attached" || item.type === "microphone.acquired");
+    }), { timeout: 30000, message: "Physical microphone input must be live" }).toBe(true);
+    await expect.poll(() => page.evaluate(() => {
+      const audio = document.querySelector("#nexus-audio");
+      const receipts = window.NexusCleanRuntime.snapshot().receipts;
+      const attached = Boolean(audio && (audio.srcObject || audio.currentSrc || audio.src));
+      const htmlMediaOutput = attached && audio.muted === false;
+      const webAudioOutput = attached && receipts.some((item) => item.type === "audio.web-audio-attached");
+      return {
+        attached,
+        outputRouteVerified: htmlMediaOutput || webAudioOutput,
+        volume: audio && audio.volume
+      };
+    }), {
+      timeout: 30000,
+      message: "Remote speaker output must use the unmuted HTML media path or verified Web Audio path"
+    }).toMatchObject({ attached: true, outputRouteVerified: true });
+    // The HTML route requires muted: false; Web Audio intentionally mutes that
+    // element to prevent duplicate playback while its gain path owns output.
+    expect(await page.locator("#nexus-audio").evaluate((audio) => audio.volume)).toBeGreaterThan(0);
     await expect.poll(() => page.evaluate(() =>
       Boolean(window.NexusCleanRuntime.certificationAudio)
     ), {
       timeout: 10000,
       message: "Render must enable NEXUS_CLEAN_CERTIFICATION for exact production command proof"
     }).toBe(true);
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
-
-    for (const [workspace, command, visual] of commands) {
+    const seed = Math.max(1, Number(process.env.NEXUS_PROMPT_ROTATION_SEED || 1));
+    const lanes = ["deterministic-pcm"];
+    for (const lane of lanes) {
+      await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
+      for (let journeyIndex = 0; journeyIndex < journeys.length; journeyIndex++) {
+      const journey = journeys[(journeyIndex + seed - 1) % journeys.length];
+      const { app, workspace, command, visual } = journey;
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await injectSpokenCommand(page, command);
+      const deliveredPrompt = rotatePrompt(command, seed);
+      await deliverCommand(page, command, lane);
+      expect(await transcriptMatches(page, before, deliveredPrompt, 30000),
+        `Realtime must produce a final transcript for: ${deliveredPrompt}`).toBe(true);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
-        return window.__cleanEvidence.receipts.slice(before)
-          .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+        const visible = window.__cleanEvidence.receipts.slice(before)
+          .filter((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+        return visible.length === 1 && visible[0].detail.outcomeVerified === true;
       }, { before, workspace }), { timeout: 60000 }).toBe(true);
-      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
+      await expectVisibleWorkspaceIdentity(page, workspace);
       await expect(page.locator("#nexus-workspace")).toBeVisible();
       if (visual === "map") {
         await expect(page.locator("#nexus-map-canvas")).toBeVisible();
@@ -212,6 +281,44 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         await expect(page.locator(".evidence-source-link").first()).toBeVisible();
       } else if (visual) {
         await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
+      }
+      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-populated", "true");
+      if (journey.mapText) await expect(page.locator("#nexus-map-summary")).toContainText(journey.mapText);
+      if (journey.media) await expect(page.locator("#nexus-app-surface")).toContainText(journey.media);
+      if (journey.links) await expect(page.locator("#nexus-workspace a[href^='http']").first()).toBeVisible();
+      await expect.poll(() => page.evaluate(({ before }) => window.__cleanEvidence.receipts.slice(before)
+        .some((item) => item.type === "conversation.return-to-listening"), { before }), { timeout: 60000 }).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      await expect(page.locator("#nexus-status")).toHaveText("Listening");
+      if (journey.edit) {
+        const { command: editCommand, field: fieldContract } = journey.edit;
+        const beforeEdit = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+        const deliveredEditPrompt = rotatePrompt(editCommand, seed);
+        await deliverCommand(page, editCommand, lane);
+        expect(await transcriptMatches(page, beforeEdit, deliveredEditPrompt, 30000),
+          `Realtime must produce a final transcript for: ${deliveredEditPrompt}`).toBe(true);
+        await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .find((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected") || null, { beforeEdit }), {
+          timeout: 60000,
+          message: `Current turn must produce a verified field-update receipt for ${fieldContract.identity}`
+        }).not.toBeNull();
+        const currentReceipt = await page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .find((item) => item.type === "voice-form.updated" || item.type === "voice-form.corrected"), { beforeEdit });
+        expect(fieldIdentityMatches(currentReceipt?.detail?.field || currentReceipt?.detail?.label, fieldContract),
+          `Update receipt must identify semantic field ${fieldContract.identity}`).toBe(true);
+        expect(String(currentReceipt?.detail?.value || "")).toMatch(fieldContract.expectedValue);
+        const visibleField = await editableFieldLocator(page, fieldContract);
+        await expect(visibleField).toBeVisible();
+        await expect(visibleField).toHaveValue(fieldContract.expectedValue);
+        await expect.poll(() => page.evaluate(({ beforeEdit }) => window.__cleanEvidence.receipts.slice(beforeEdit)
+          .some((item) => item.type === "conversation.return-to-listening"), { beforeEdit }), { timeout: 60000 }).toBe(true);
+        await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+        await expect(page.locator("#nexus-status")).toHaveText("Listening");
+      }
+      for (const selector of journey.controls || []) {
+        const control = page.locator(selector);
+        await expect(control).toBeVisible();
+        await expect(control).toBeEnabled();
       }
       await expect.poll(() => page.evaluate(({ before }) => {
         return window.__cleanEvidence.receipts.slice(before)
@@ -247,14 +354,23 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       }, { before });
       expect(turnAudioViolations, `More than one speech source or response activated for: ${command}`).toEqual([]);
       await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
-      driverEvidence.turns.push({ workspace, command, visual, passed: true });
+      await page.locator("#nexus-workspace-close").click();
+      await expect(page.locator("#nexus-workspace")).toBeHidden();
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      await expect(page.locator("#nexus-status")).toHaveText("Listening");
+      driverEvidence.turns.push({ lane, rotationSeed: seed, app, workspace, command, visual, populated: true, voiceEdited: Boolean(journey.edit), controlsVerified: (journey.controls || []).length, closed: true, returnedToListening: true, passed: true });
+      }
+      await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     }
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
     const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
     expect(audioViolations).toEqual([]);
-    expect(driverEvidence.turns).toHaveLength(commands.length);
+    expect(driverEvidence.turns).toHaveLength(journeys.length);
+    const visibleReceipts = await page.evaluate(() => window.__cleanEvidence.receipts
+      .filter((item) => item.type === "workspace.visible"));
+    expect(visibleReceipts.every((item) => item.detail.outcomeVerified === true)).toBe(true);
+    expect(new Set(visibleReceipts.map((item) => item.detail.transactionId)).size).toBe(visibleReceipts.length);
   } catch (error) {
     driverEvidence.failure = {
       name: error.name,

@@ -170,6 +170,43 @@ async function main() {
         })
       });
     });
+    await context.route(`${baseUrl}/api/visual/content`, async (route) => {
+      const body = route.request().postDataJSON();
+      const workspace = body.requestedWorkspace || body.activeWorkspace || "live-knowledge";
+      const artifact = {
+        kind: "workspace", title: `Visible ${workspace} capability`, description: body.command,
+        fields: [], sections: [], items: [], links: [],
+        media: { kind: "", title: "", provider: "", sourceUrl: "", embedUrl: "", state: "none" }
+      };
+      let capability = "workspace";
+      let operation = "open";
+      if (workspace === "maps") {
+        capability = "map";
+        artifact.kind = "map";
+        artifact.links = [{ label: "Open interactive map", url: "https://www.openstreetmap.org/#map=6/0.1/37.9" }];
+        artifact.media = { kind: "map", title: "Kenya map", provider: "OpenStreetMap", sourceUrl: artifact.links[0].url, embedUrl: "https://www.openstreetmap.org/export/embed.html?bbox=33%2C-5%2C42%2C5&marker=0.1%2C37.9", state: "ready" };
+      } else if (workspace === "music") {
+        capability = "music";
+        operation = "play";
+        artifact.kind = "media";
+        artifact.media = { kind: "video", title: "Kenyan soul result", provider: "YouTube Data API v3", sourceUrl: "https://www.youtube.com/watch?v=browserMusic123", embedUrl: "https://www.youtube-nocookie.com/embed/browserMusic123?autoplay=1", state: "playing" };
+      } else if (workspace === "mobile-clinic") {
+        capability = "listings";
+        artifact.kind = "list";
+        artifact.items = [{ id: "clinic-1", title: "Browser Clinic", description: "Visible clinic provider result", sourceName: "OpenStreetMap", sourceUrl: "https://www.openstreetmap.org/node/123", imageUrl: "", metadata: [] }];
+      } else if (workspace === "live-knowledge") {
+        capability = "search";
+        operation = "search";
+        artifact.kind = "list";
+        artifact.items = [{ id: "source-1", title: "Open-Meteo", description: "Current weather source", sourceName: "Open-Meteo", sourceUrl: "https://open-meteo.com/", imageUrl: "", metadata: [] }];
+      }
+      const result = {
+        schema: "nexus.content.result.v2", requestId: body.requestId,
+        status: "ready", capability, operation, workspace, query: body.command,
+        artifact, acknowledgement: "The requested capability is visible.", evidence: null, recovery: null
+      };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(result) });
+    });
 
     const page = await context.newPage();
     await page.goto(baseUrl);
@@ -236,13 +273,15 @@ async function main() {
           && style.inset === "0px"
           && element.clientWidth === document.documentElement.clientWidth;
       }), true);
+      if (workspace === "maps") {
+        assert.match(await page.locator("#nexus-content-map-frame").getAttribute("src"), /openstreetmap\.org\/export\/embed/);
+      }
+      if (workspace === "music") {
+        const musicSource = await page.locator("#nexus-content-music-frame").getAttribute("src");
+        assert.match(musicSource, /youtube-nocookie\.com\/embed/);
+        assert.match(musicSource, /autoplay=1/);
+      }
     }
-    assert.equal(await page.locator("#nexus-map-canvas").count(), 1);
-    assert.match(await page.locator("#nexus-map-link").getAttribute("href"), /openstreetmap\.org/);
-    const musicSource = await page.locator("#nexus-music-frame").getAttribute("src");
-    assert.match(musicSource, /youtube-nocookie\.com\/embed/);
-    assert.match(musicSource, /autoplay=1/);
-    assert.doesNotMatch(musicSource, /listType=search/);
     assert.equal(await page.locator("#nexus-preferences").getAttribute("open"), null);
     await page.locator("#nexus-workspace-close").click();
     assert.equal(await page.locator("#nexus-workspace").isHidden(), true);

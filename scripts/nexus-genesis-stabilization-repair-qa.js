@@ -146,8 +146,8 @@ async function mockOpenMeteoWeatherResult() {
       OPENAI_API_KEY: "",
       NEXUS_OPENAI_NATIVE_ENABLED: "false",
       NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "",
-      NEXUS_WEATHER_PROVIDER_ENABLED: "",
-      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "",
+      NEXUS_WEATHER_PROVIDER_ENABLED: "false",
+      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "false",
       PUBLIC_BASE_URL: base
     },
     stdio: "ignore",

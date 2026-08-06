@@ -220,7 +220,7 @@ const output = [
   "# Do not commit this file. Paste each block into the matching Render service.",
   "# Replace DATABASE_URL and OPENAI_API_KEY before production use.",
   "",
-  block("agrinexus-platform", shared),
+  block("nexus-genesis-certified", shared),
   "",
   block("agrinexus-provider-engines", providerOnly),
   ""

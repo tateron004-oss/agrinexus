@@ -2,11 +2,11 @@
 
 const WORKFLOW_RULES = Object.freeze([
   ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom (?:in|out) to)\b/i],
-  ["reminders", /\b(remind|reminder)\b/i],
+  ["reminders", /\b(remind|reminders?)\b/i],
+  ["pharmacy", /\b(pharmac(?:y|ies)|pharmacist|prescription|medication support)\b/i],
   ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
-  ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
+  ["telehealth", /\b(telehealth|doctor|clinician|video[- ]visit|provider handoff)\b/i],
   ["mobile-clinic", /\b(mobile clinic|clinic visit)\b/i],
-  ["pharmacy", /\b(pharmacy|pharmacist|prescription|medication support)\b/i],
   ["offline", /\b(offline|sync|queue)\b/i],
   ["workforce", /(?:\b(job|jobs|work|career|employment|resume|cv)\b|résumé)/i],
   ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
@@ -40,7 +40,15 @@ function providerCardRequest(text) {
 
 function detectWorkflow(text) {
   if (providerCardRequest(text)) return "health";
+  if (/\b(?:guided entry|rpm|rtm|remote patient monitoring|remote therapeutic monitoring)\b/i.test(text)) return "health";
+  if (/\b(?:upload|uploads|uploaded file|select (?:a|the) file)\b/i.test(text)) return "live-knowledge";
+  if (/\b(?:document|documents|form|forms|resume|résumé|cv|report)\b/i.test(text)
+    && /\b(?:open|list|new|create|edit|editable|save|reopen|close)\b/i.test(text)) return "workforce";
   if (/\bweather for my field\b/i.test(text)) return "agriculture";
+  if (/\b(?:offline|sync|queue)\b/i.test(text)) return "offline";
+  if (/\b(?:search|find)\b/i.test(text) && /\b(?:source|sources|web|internet)\b/i.test(text)) return "live-knowledge";
+  if (/\b(?:maize|corn|wheat|rice|coffee|tea|crop|livestock|farm|agricultur(?:e|al))\b/i.test(text)
+    && /\b(?:disease|pest|symptom|soil|field|image|images|picture|pictures|photo|photos|research)\b/i.test(text)) return "agriculture";
   const liveKnowledgeRule = WORKFLOW_RULES.find(([workflow]) => workflow === "live-knowledge");
   if (liveKnowledgeRule[1].test(text)) return "live-knowledge";
   const match = WORKFLOW_RULES.find(([, pattern]) => pattern.test(text));
@@ -48,7 +56,7 @@ function detectWorkflow(text) {
 }
 
 function locationAfterPreposition(text) {
-  const match = /\b(?:in|near|around|for|at)\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
+  const match = /\b(?:in|near|around|for|at)\s*[:;,.-]?\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
   return cleanText(match && match[1]);
 }
 

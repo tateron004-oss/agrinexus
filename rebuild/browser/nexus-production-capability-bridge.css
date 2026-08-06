@@ -1,0 +1,178 @@
+#nexus-capability-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  padding: clamp(.6rem, 2vw, 1.5rem);
+  background: rgba(2, 9, 15, .82);
+  backdrop-filter: blur(18px) saturate(125%);
+  color: #f5fbff;
+}
+
+#nexus-capability-surface[hidden] { display: none !important; }
+
+.nexus-capability-frame {
+  width: min(1180px, 100%);
+  height: min(92vh, 980px);
+  margin: auto;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid rgba(119, 235, 195, .34);
+  border-radius: 1.4rem;
+  background: linear-gradient(145deg, #071823 0%, #0a2028 55%, #0b171f 100%);
+  box-shadow: 0 2rem 7rem rgba(0, 0, 0, .58), inset 0 1px rgba(255,255,255,.08);
+}
+
+.nexus-capability-frame > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgba(164, 238, 214, .17);
+  background: rgba(6, 22, 30, .94);
+}
+
+.nexus-capability-frame h1,
+.nexus-capability-frame h2,
+.nexus-capability-frame h3 { color: #f8fdff; line-height: 1.25; }
+.nexus-capability-frame h1 { margin: .18rem 0 0; font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+.nexus-capability-frame h2 { margin: 0 0 .45rem; font-size: 1.18rem; }
+.nexus-capability-frame h3 { margin: 0 0 .45rem; font-size: 1.06rem; }
+.nexus-capability-frame p,
+.nexus-capability-frame li,
+.nexus-capability-frame label { color: #e6f2f5; line-height: 1.58; }
+
+.nexus-capability-kicker {
+  color: #7bf0bf;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+#nexus-capability-body {
+  min-height: 0;
+  overflow: auto;
+  padding: clamp(.8rem, 2.5vw, 1.5rem);
+  scrollbar-color: #4db88d #0b1c24;
+  overscroll-behavior: contain;
+}
+
+.nexus-capability-result,
+.nexus-capability-progress { display: grid; gap: 1rem; }
+
+.nexus-capability-progress {
+  min-height: 15rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 1.2rem;
+  border: 1px solid rgba(113, 224, 186, .24);
+  border-radius: 1rem;
+  background: #0d2530;
+}
+
+.nexus-capability-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: .22rem solid rgba(130, 238, 202, .25);
+  border-top-color: #77edbb;
+  border-radius: 50%;
+  animation: nexus-capability-spin .85s linear infinite;
+}
+
+@keyframes nexus-capability-spin { to { transform: rotate(360deg); } }
+
+.nexus-capability-summary,
+.nexus-capability-section,
+.nexus-capability-item,
+.nexus-capability-recovery,
+[data-nexus-capability-form] {
+  box-sizing: border-box;
+  border: 1px solid rgba(145, 223, 199, .2);
+  border-radius: 1rem;
+  background: #0c2530;
+  color: #f3fafc;
+  padding: 1rem;
+  box-shadow: 0 .55rem 1.8rem rgba(0,0,0,.18);
+}
+
+.nexus-capability-recovery { border-left: .38rem solid #ff9c8f; background: #2d1c23; }
+.nexus-capability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: .9rem; }
+.nexus-capability-item { display: grid; align-content: start; gap: .7rem; }
+.nexus-capability-item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .72rem; background: #06151d; }
+.nexus-capability-image-link { display: block; border-radius: .72rem; overflow: hidden; }
+.nexus-capability-muted { color: #b5cbd1 !important; font-size: .9rem; }
+
+.nexus-capability-frame a { color: #80e9ff; text-decoration-color: rgba(128,233,255,.65); text-underline-offset: .2em; overflow-wrap: anywhere; }
+.nexus-capability-frame a:hover,
+.nexus-capability-frame a:focus-visible { color: #c0f5ff; }
+
+.nexus-capability-actions { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+.nexus-capability-frame button,
+.nexus-capability-actions a {
+  appearance: none;
+  border: 1px solid rgba(123, 240, 191, .48);
+  border-radius: .7rem;
+  background: #123743;
+  color: #f6ffff;
+  padding: .66rem .9rem;
+  font: inherit;
+  font-weight: 720;
+  cursor: pointer;
+}
+.nexus-capability-frame button:hover,
+.nexus-capability-frame button:focus-visible,
+.nexus-capability-actions a:hover,
+.nexus-capability-actions a:focus-visible { outline: 3px solid rgba(119, 237, 187, .45); outline-offset: 2px; background: #19505a; }
+
+[data-nexus-capability-form] { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: .85rem; }
+[data-nexus-capability-form] label { display: grid; align-content: start; gap: .35rem; font-weight: 720; }
+[data-nexus-capability-form] input,
+[data-nexus-capability-form] textarea,
+[data-nexus-capability-form] select {
+  width: 100%; box-sizing: border-box; border: 1px solid #66838c; border-radius: .65rem; background: #061922; color: #ffffff; padding: .72rem; font: inherit;
+}
+[data-nexus-capability-form] textarea { min-height: 7rem; resize: vertical; }
+.nexus-capability-check { grid-template-columns: auto 1fr; align-items: center; }
+.nexus-capability-check input { width: auto; }
+[data-nexus-capability-form] .nexus-capability-actions { grid-column: 1 / -1; }
+
+#nexus-capability-map,
+#nexus-capability-media { width: 100%; min-height: clamp(22rem, 55vh, 40rem); border: 1px solid rgba(145,223,199,.28); border-radius: 1rem; background: #06151d; }
+#nexus-capability-audio { width: 100%; min-height: 3.5rem; }
+#nexus-capability-map .leaflet-control-zoom a,
+#nexus-capability-map .leaflet-control-attribution {
+  background: #0c2530;
+  color: #e6f2f5;
+}
+#nexus-capability-map .leaflet-control-attribution a { color: #80e9ff; }
+
+@media (max-width: 650px) {
+  #nexus-capability-surface { padding: 0; }
+  .nexus-capability-frame { width: 100%; height: 100dvh; border-radius: 0; border-inline: 0; }
+  .nexus-capability-progress { grid-template-columns: auto 1fr; }
+  .nexus-capability-progress > button { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) { .nexus-capability-spinner { animation-duration: 1.8s; } }
+
+@media print {
+  body > *:not(#nexus-capability-surface) { display: none !important; }
+  #nexus-capability-surface { position: static; padding: 0; background: #fff; color: #000; }
+  .nexus-capability-frame { width: 100%; height: auto; border: 0; box-shadow: none; background: #fff; color: #000; }
+  .nexus-capability-frame > header button,
+  .nexus-capability-actions { display: none !important; }
+  #nexus-capability-body { overflow: visible; }
+  .nexus-capability-summary,
+  .nexus-capability-section,
+  .nexus-capability-item,
+  [data-nexus-capability-form] { break-inside: avoid; color: #000; background: #fff; box-shadow: none; }
+  .nexus-capability-frame h1,
+  .nexus-capability-frame h2,
+  .nexus-capability-frame h3,
+  .nexus-capability-frame p,
+  .nexus-capability-frame li,
+  .nexus-capability-frame label { color: #000; }
+}

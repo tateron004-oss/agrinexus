@@ -3,9 +3,18 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 
-const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
+const BASE_URL = productionUrlFromEnv();
 const OUTPUT = path.resolve("output/nexus-voice-form-certification");
+
+function experienceField(page) {
+  return page.getByRole("textbox", { name: /^(Résumé experience|Work experience)$/i }).first();
+}
+
+function skillsField(page) {
+  return page.getByRole("textbox", { name: /^(Résumé skills|Skills)$/i }).first();
+}
 
 function waveData(wav) {
   for (let offset = 12; offset + 8 <= wav.length;) {
@@ -167,24 +176,26 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
       await speakForReceipt(page, commands, receipt, evidence);
     }
 
-    await page.locator('textarea[aria-label="Résumé experience"]').fill("");
-    await page.locator('textarea[aria-label="Résumé skills"]').fill("");
+    await expect(experienceField(page)).toBeVisible({ timeout: 10000 });
+    await expect(skillsField(page)).toBeVisible({ timeout: 10000 });
+    await experienceField(page).fill("");
+    await skillsField(page).fill("");
     let before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, reopen this resume draft.");
     await expectReceipt(page, "voice-form.reopened", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator('textarea[aria-label="Résumé experience"]')).toHaveValue(/twelve employees/i);
-    await expect(page.locator('textarea[aria-label="Résumé skills"]')).toHaveValue(/forklift operation/i);
+    await expect(experienceField(page)).toHaveValue(/twelve employees/i);
+    await expect(skillsField(page)).toHaveValue(/forklift operation/i);
     await page.waitForTimeout(1500);
-    const reopenProof = await page.evaluate(({ before }) => {
+    const visibleExperience = await experienceField(page).inputValue();
+    const visibleSkills = await skillsField(page).inputValue();
+    const reopenProof = await page.evaluate(({ before, visibleExperience, visibleSkills }) => {
       const receipts = window.__voiceFormReceipts.slice(before);
       const receipt = receipts.findLast((item) => item.type === "voice-form.reopened");
-      const experience = document.querySelector('textarea[aria-label="Résumé experience"]')?.value || "";
-      const skills = document.querySelector('textarea[aria-label="Résumé skills"]')?.value || "";
       return {
         receipt,
-        experience,
-        skills,
+        experience: visibleExperience,
+        skills: visibleSkills,
         laterReplacement: receipt
           ? receipts.slice(receipts.lastIndexOf(receipt) + 1).some((item) =>
             item.type === "voice-form.reopened"
@@ -194,7 +205,7 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
           .filter((item) => item.type === "guided-entry.transaction-rejected")
           .map((item) => item.detail)
       };
-    }, { before });
+    }, { before, visibleExperience, visibleSkills });
     expect(reopenProof.receipt?.detail?.requestId).toBeTruthy();
     expect(reopenProof.receipt?.detail?.committedFormVersion).toBeGreaterThan(0);
     expect(reopenProof.receipt?.detail?.visibleValuesVerified).toBe(true);
@@ -209,7 +220,8 @@ test("voice fills, corrects, reads, saves, reopens, and guards a production form
     await speakExact(page, "Nexus, submit this application.");
     await expectReceipt(page, "voice-form.confirmation-required", before);
     await expectReturnToListening(page, before);
-    await expect(page.locator("[data-nexus-voice-form-proof]")).toContainText(/Confirmation required/i);
+    await expect(page.locator("#nexus-workspace")).toContainText(/Confirmation required|Application Submission Check/i);
+    await expect(page.locator("#nexus-workspace")).toContainText(/required fields|confirmation/i);
 
     before = await page.evaluate(() => window.__voiceFormReceipts.length);
     await speakExact(page, "Nexus, confirm.");

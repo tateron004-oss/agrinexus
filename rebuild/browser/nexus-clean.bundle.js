@@ -455,11 +455,11 @@
       "use strict";
       var WORKFLOW_RULES = Object.freeze([
         ["maps", /\b(map|maps|route|directions|navigate|location|take me(?: back)? to|go(?: back)? to|zoom (?:in|out) to)\b/i],
-        ["reminders", /\b(remind|reminder)\b/i],
+        ["reminders", /\b(remind|reminders?)\b/i],
+        ["pharmacy", /\b(pharmac(?:y|ies)|pharmacist|prescription|medication support)\b/i],
         ["health", /\b(health|blood pressure|diabetes|hypertension|weight|medicine)\b/i],
-        ["telehealth", /\b(telehealth|doctor|clinician|video visit)\b/i],
+        ["telehealth", /\b(telehealth|doctor|clinician|video[- ]visit|provider handoff)\b/i],
         ["mobile-clinic", /\b(mobile clinic|clinic visit)\b/i],
-        ["pharmacy", /\b(pharmacy|pharmacist|prescription|medication support)\b/i],
         ["offline", /\b(offline|sync|queue)\b/i],
         ["workforce", /(?:\b(job|jobs|work|career|employment|resume|cv)\b|résumé)/i],
         ["marketplace", /\b(sell|buy|buyer|market|marketplace|trade)\b/i],
@@ -480,14 +480,20 @@
       }
       function detectWorkflow(text) {
         if (providerCardRequest(text)) return "health";
+        if (/\b(?:guided entry|rpm|rtm|remote patient monitoring|remote therapeutic monitoring)\b/i.test(text)) return "health";
+        if (/\b(?:upload|uploads|uploaded file|select (?:a|the) file)\b/i.test(text)) return "live-knowledge";
+        if (/\b(?:document|documents|form|forms|resume|résumé|cv|report)\b/i.test(text) && /\b(?:open|list|new|create|edit|editable|save|reopen|close)\b/i.test(text)) return "workforce";
         if (/\bweather for my field\b/i.test(text)) return "agriculture";
+        if (/\b(?:offline|sync|queue)\b/i.test(text)) return "offline";
+        if (/\b(?:search|find)\b/i.test(text) && /\b(?:source|sources|web|internet)\b/i.test(text)) return "live-knowledge";
+        if (/\b(?:maize|corn|wheat|rice|coffee|tea|crop|livestock|farm|agricultur(?:e|al))\b/i.test(text) && /\b(?:disease|pest|symptom|soil|field|image|images|picture|pictures|photo|photos|research)\b/i.test(text)) return "agriculture";
         const liveKnowledgeRule = WORKFLOW_RULES.find(([workflow]) => workflow === "live-knowledge");
         if (liveKnowledgeRule[1].test(text)) return "live-knowledge";
         const match = WORKFLOW_RULES.find(([, pattern]) => pattern.test(text));
         return match ? match[0] : null;
       }
       function locationAfterPreposition(text) {
-        const match = /\b(?:in|near|around|for|at)\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
+        const match = /\b(?:in|near|around|for|at)\s*[:;,.-]?\s+([a-z][a-z .'-]*(?:,\s*[a-z][a-z .'-]*)?)$/i.exec(text);
         return cleanText(match && match[1]);
       }
       function extractBloodPressure(text) {
@@ -594,8 +600,8 @@
   var require_conversation_context = __commonJS({
     "rebuild/nexus-core/conversation-context.js"(exports, module) {
       "use strict";
-      var CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|there|it|all of|whole of|go back|take me back|zoom|change|update|replace|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
-      var REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|there|it|what about|how about|use that|use the same)\b/i;
+      var CONTEXTUAL_CUES = /\b(?:again|also|instead|next|previous|same|that|those|them|their|there|it|file|result|report|form|lesson|session|all of|whole of|go back|take me back|zoom|add|enter|fill|validate|extract|explain|set|change|correct|update|replace|save|close|reopen|mark|move to|make it|show me|open it|use that|use the|what about|how about|and then|now|tell me more|continue)\b/i;
+      var REFERENTIAL_CUES = /\b(?:again|instead|previous|same|that|those|them|their|there|it|add|set|correct|what about|how about|use that|use the same)\b/i;
       function cloneParameters(value = {}) {
         return Object.freeze({ ...value });
       }
@@ -663,9 +669,9 @@
   var require_visual_context = __commonJS({
     "rebuild/nexus-core/visual-context.js"(exports, module) {
       "use strict";
-      var VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
+      var VISUAL_REFERENCE_CUES = /\b(?:this|that|these|those|their|it|one|ones|item|result|card|list|map|marker|route|image|picture|link|source|website|screen|page|view|chart|reading|document|section|course|job|listing|reminder|queue|track|first|second|third|fourth|fifth|last|previous|next)\b/i;
       var VISUAL_QUESTION_CUES = /^(?:what|why|where|which|who|how|can|could|would|does|do|is|are)\b/i;
-      var VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
+      var VISUAL_ACTION_CUES = /\b(?:show|tell|open|close|create|put|add|close|reopen|expand|collapse|zoom|move|pan|return|back|next|previous|compare|explain|read|select|choose|use|change|update|replace|remove|print|share|save|play|pause)\b/i;
       function compactText(value, limit = 180) {
         return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
       }
@@ -742,6 +748,22 @@
         describeVisualReference,
         isVisualFollowUp
       } = require_visual_context();
+      var EXPLICIT_WORKSPACE_NAMES = Object.freeze([
+        ["mobile-clinic", /\bmobile clinic\b/i],
+        ["telehealth", /\btelehealth(?: intake)?\b/i],
+        ["agriculture", /\bagriculture help\b/i],
+        ["health", /\bhealth (?:and|&) chronic care\b|\bchronic care\b/i],
+        ["pharmacy", /\bpharmacy support\b/i],
+        ["learning", /\blearning (?:and|&) literacy\b/i],
+        ["workforce", /\bjobs? (?:and|&) workforce\b/i],
+        ["marketplace", /\bagritrade marketplace\b/i],
+        ["reminders", /\breminders?\b/i],
+        ["offline", /\boffline queue\b/i]
+      ]);
+      function explicitlySelectsWorkspace(utterance, workflow) {
+        if (!workflow || !/\b(open|show|display|reopen|return to|go to|begin|start)\b/i.test(utterance)) return false;
+        return EXPLICIT_WORKSPACE_NAMES.some(([candidate, pattern]) => candidate === workflow && pattern.test(utterance));
+      }
       function routeCommand(command, connectionState, context = null) {
         if (connectionState !== "connected") {
           return Object.freeze({
@@ -752,7 +774,8 @@
         }
         const resolution = extractIntentAndParameters(command);
         const visualFollowUp = isVisualFollowUp(resolution.utterance, context);
-        const contextual = (visualFollowUp || isContextualFollowUp(resolution.utterance, context)) && (!resolution.workflow || resolution.workflow === context.activeWorkspace || hasReferentialCue(resolution.utterance));
+        const explicitWorkspaceSelection = explicitlySelectsWorkspace(resolution.utterance, resolution.workflow);
+        const contextual = (visualFollowUp || isContextualFollowUp(resolution.utterance, context)) && (!resolution.workflow || resolution.workflow === context.activeWorkspace || !explicitWorkspaceSelection && hasReferentialCue(resolution.utterance));
         const match = contextual ? context.activeWorkspace : resolution.workflow || (isInternetAnswerQuestion(resolution.utterance) ? "live-knowledge" : null);
         const contextualUtterance = contextual ? normalizeContextualUtterance(resolution.utterance) : resolution.utterance;
         const extracted = contextual ? extractParameters(match, contextualUtterance) : resolution.parameters;
@@ -778,7 +801,7 @@
         }
         return /^(?:how|what|why|when|where|who|which)\b/i.test(text) || /^(?:tell me about|explain|show me how|teach me how|walk me through)\b/i.test(text);
       }
-      module.exports = { ROUTES, isInternetAnswerQuestion, routeCommand };
+      module.exports = { ROUTES, explicitlySelectsWorkspace, isInternetAnswerQuestion, routeCommand };
     }
   });
 
@@ -987,15 +1010,26 @@
         rememberCompletedTurn
       } = require_conversation_context();
       var DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
+      var TRANSIENT_REALTIME_ERROR_CODES = /* @__PURE__ */ new Set([
+        "server_error",
+        "rate_limit_exceeded",
+        "service_unavailable",
+        "timeout",
+        "temporarily_unavailable"
+      ]);
       var NexusBrowserRuntime = class {
         constructor({
           foundation,
           realtime,
           audioElement,
           openWorkspace,
+          interceptCommand = null,
           onReceipt = () => {
           },
-          instructions = DEFAULT_INSTRUCTIONS
+          instructions = DEFAULT_INSTRUCTIONS,
+          realtimeRetryLimit = 2,
+          realtimeRetryDelayMs = 350,
+          schedule = (callback, delay) => setTimeout(callback, delay)
         } = {}) {
           if (!foundation || typeof foundation.start !== "function") throw new Error("A voice foundation is required.");
           if (!realtime || typeof realtime.send !== "function") throw new Error("A Realtime connector is required.");
@@ -1005,8 +1039,12 @@
           this.realtime = realtime;
           this.audioElement = audioElement;
           this.openWorkspace = openWorkspace;
+          this.interceptCommand = typeof interceptCommand === "function" ? interceptCommand : null;
           this.onReceipt = onReceipt;
           this.instructions = instructions;
+          this.realtimeRetryLimit = Math.max(0, Number(realtimeRetryLimit) || 0);
+          this.realtimeRetryDelayMs = Math.max(0, Number(realtimeRetryDelayMs) || 0);
+          this.schedule = schedule;
           this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
           this.started = false;
           this.unsubscribe = null;
@@ -1017,8 +1055,13 @@
           this.responseActive = false;
           this.responseRequestPending = false;
           this.deferredResponse = null;
+          this.lastResponseRequest = null;
+          this.responseRetryCount = 0;
+          this.responseRetryTimer = null;
           this.completedResponseKeys = /* @__PURE__ */ new Set();
           this.visualRoutes = /* @__PURE__ */ new Map();
+          this.visibleWorkspaceTransactions = /* @__PURE__ */ new Set();
+          this.commandInterceptions = /* @__PURE__ */ new Map();
           this.conversationContext = createConversationContext();
           this.requestTransaction = new NexusRequestTransaction({
             execute: (resolution) => this.openWorkspace({
@@ -1159,6 +1202,7 @@ ${content}`
             return false;
           }
           this.responseRequestPending = true;
+          this.lastResponseRequest = { event: { ...event }, reason };
           this.realtime.send({ type: "response.create", ...event });
           this.receipt("conversation.response-requested", { reason });
           return true;
@@ -1196,6 +1240,8 @@ ${content}`
           this.activeResponseId = null;
           this.responseActive = false;
           this.responseRequestPending = false;
+          this.responseRetryCount = 0;
+          this.clearResponseRetry();
           this.receipt("audio.owner-released", {
             owner: "realtime",
             responseId,
@@ -1230,20 +1276,16 @@ ${content}`
           if (!event || typeof event.type !== "string") return null;
           if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
             const args = JSON.parse(event.arguments || "{}");
-            return this.route(args.command, event.call_id);
+            return this.handleCommand(args.command, event.call_id);
           }
           if (event.type === "conversation.item.input_audio_transcription.completed") {
             const transcript = event.transcript || "";
             this.receipt("transcript.final", { transcript });
             const wakePhrase = detectWakePhrase(transcript);
             if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-            const resolution = routeCommand(
-              transcript,
-              this.foundation.machine.snapshot().state,
-              this.conversationContext
-            );
-            if (resolution.accepted) {
-              this.route(transcript).catch((error) => {
+            const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state, this.conversationContext);
+            if (resolution.accepted || this.interceptCommand) {
+              this.handleCommand(transcript).catch((error) => {
                 this.receipt("workspace.route-failed", {
                   name: error.name,
                   message: error.message,
@@ -1310,34 +1352,103 @@ ${content}`
               this.responseActive = false;
               this.responseRequestPending = false;
             }
+            const errorCode = String(detail.code || detail.type || "unknown").toLowerCase();
+            if (TRANSIENT_REALTIME_ERROR_CODES.has(errorCode) && this.lastResponseRequest && this.responseRetryCount < this.realtimeRetryLimit) {
+              this.activeResponseId = null;
+              this.responseActive = false;
+              this.responseRequestPending = false;
+              this.responseRetryCount += 1;
+              const retry = this.lastResponseRequest;
+              this.receipt("realtime.response-retry-scheduled", {
+                code: errorCode,
+                attempt: this.responseRetryCount,
+                limit: this.realtimeRetryLimit,
+                reason: retry.reason
+              });
+              this.clearResponseRetry();
+              this.responseRetryTimer = this.schedule(() => {
+                this.responseRetryTimer = null;
+                if (!this.started || this.responseActive || this.responseRequestPending) return;
+                this.responseRequestPending = true;
+                this.realtime.send({ type: "response.create", ...retry.event });
+                this.receipt("realtime.response-retried", {
+                  code: errorCode,
+                  attempt: this.responseRetryCount,
+                  reason: retry.reason
+                });
+              }, this.realtimeRetryDelayMs * this.responseRetryCount);
+            }
             this.receipt("realtime.error", {
-              code: detail.code || "unknown",
+              code: errorCode,
               message: detail.message || "Realtime voice request failed."
             });
           }
           return null;
+        }
+        commandKey(command) {
+          return String(command || "").toLocaleLowerCase().replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "").replace(/[?.!]+$/g, "").replace(/\s+/g, " ").trim();
+        }
+        async handleCommand(command, callId = null) {
+          const key = this.commandKey(command);
+          let interception = key && this.commandInterceptions.get(key);
+          if (!interception) {
+            interception = Promise.resolve(this.interceptCommand?.(command, {
+              requestId: callId || void 0
+            })).then((result) => result || { handled: false });
+            if (key) {
+              this.commandInterceptions.set(key, interception);
+              setTimeout(() => {
+                if (this.commandInterceptions.get(key) === interception) this.commandInterceptions.delete(key);
+              }, 15e3);
+            }
+          }
+          const owned = await interception;
+          if (!owned.handled) return this.route(command, callId);
+          this.receipt("command.consumed-by-guided-entry", {
+            command,
+            action: owned.action || null,
+            requestId: owned.requestId || null
+          });
+          if (callId) {
+            this.realtime.send({
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: callId,
+                output: JSON.stringify(owned)
+              }
+            });
+            this.requestResponse({}, "guided-entry-result", { defer: true });
+          }
+          return owned;
         }
         async route(command, callId = null) {
           const state = this.foundation.machine.snapshot().state;
           const resolution = routeCommand(command, state, this.conversationContext);
           let result = resolution;
           if (resolution.accepted) {
-            const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+            const routeKey = this.commandKey(resolution.command);
             let visualRoute = this.visualRoutes.get(routeKey);
             if (!visualRoute) {
               visualRoute = this.requestTransaction.run(resolution).then((routed) => {
                 const acknowledgement = routed.acknowledgement;
-                this.receipt("workspace.visible", {
-                  workspace: resolution.workspace,
-                  transactionId: routed.transactionId,
-                  acknowledgementId: acknowledgement.id || null,
-                  outcomeKind: acknowledgement.outcomeKind || null,
-                  outcomeVerified: acknowledgement.outcomeVerified === true,
-                  evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-                  evidenceStatus: acknowledgement.evidenceStatus || null,
-                  evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
-                  evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
-                });
+                if (routed.outcome?.verified === true && !this.visibleWorkspaceTransactions.has(routed.transactionId)) {
+                  this.visibleWorkspaceTransactions.add(routed.transactionId);
+                  if (this.visibleWorkspaceTransactions.size > 64) {
+                    this.visibleWorkspaceTransactions.delete(this.visibleWorkspaceTransactions.values().next().value);
+                  }
+                  this.receipt("workspace.visible", {
+                    workspace: routed.workspace,
+                    transactionId: routed.transactionId,
+                    acknowledgementId: acknowledgement.id || null,
+                    outcomeKind: acknowledgement.outcomeKind || null,
+                    outcomeVerified: true,
+                    evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+                    evidenceStatus: acknowledgement.evidenceStatus || null,
+                    evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+                    evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+                  });
+                }
                 this.conversationContext = rememberCompletedTurn(this.conversationContext, routed);
                 this.receipt("conversation.context-advanced", {
                   workspace: routed.workspace,
@@ -1349,14 +1460,14 @@ ${content}`
                   previousTransactionId: routed.previousTransactionId || null
                 });
                 return routed;
-              }).catch((error) => {
-                this.visualRoutes.delete(routeKey);
-                throw error;
+              }).finally(() => {
+                setTimeout(() => {
+                  if (this.visualRoutes.get(routeKey) === visualRoute) {
+                    this.visualRoutes.delete(routeKey);
+                  }
+                }, 15e3);
               });
               this.visualRoutes.set(routeKey, visualRoute);
-              setTimeout(() => {
-                if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
-              }, 15e3);
             }
             result = await visualRoute;
           }
@@ -1377,8 +1488,13 @@ ${content}`
           if (this.responseFallbackTimer) clearTimeout(this.responseFallbackTimer);
           this.responseFallbackTimer = null;
         }
+        clearResponseRetry() {
+          if (this.responseRetryTimer) clearTimeout(this.responseRetryTimer);
+          this.responseRetryTimer = null;
+        }
         stop(reason = "user-stop") {
           this.clearResponseFallback();
+          this.clearResponseRetry();
           this.foundation.stop(reason);
           if (this.unsubscribe) this.unsubscribe();
           this.unsubscribe = null;
@@ -1389,8 +1505,12 @@ ${content}`
           this.responseActive = false;
           this.responseRequestPending = false;
           this.deferredResponse = null;
+          this.lastResponseRequest = null;
+          this.responseRetryCount = 0;
           this.completedResponseKeys.clear();
           this.visualRoutes.clear();
+          this.visibleWorkspaceTransactions.clear();
+          this.commandInterceptions.clear();
           this.conversationContext = clearConversationContext();
           this.receipt("runtime.closed", { reason });
         }
@@ -1548,7 +1668,7 @@ ${content}`
         if (!original) return Object.freeze({ original, normalized: "", changed: false, rules: Object.freeze([]) });
         const aliases = fieldAliases(fields, schema);
         const wake = original.match(
-          /^(?:(hey|hello)\s*[,;:!?.-]*\s*)?(nexus|next(?:\s+(?:us|is))?)\b[\s,;:!?.-]*/i
+          /^(?:(hey|hello)\s*[,;:!?.-]*\s*)?(nexus|next(?:\s+(?:us|is))?|next(?:us|is))\b[\s,;:!?.-]*/i
         );
         if (!wake) return Object.freeze({ original, normalized: original, changed: false, rules: Object.freeze([]) });
         let remainder = clean(original.slice(wake[0].length));
@@ -2214,7 +2334,8 @@ ${content}`
       } = require_experience_profile();
       var { createVisualContext } = require_visual_context();
       var { NexusGuidedEntryTransactionController } = require_guided_entry_transaction_controller();
-      function createWorkspaceAdapter({ windowObject = window, timeoutMs = 8e3 } = {}) {
+      var PRODUCTION_RESPONSE_ALLOWANCE_MS = 9e4;
+      function createWorkspaceAdapter({ windowObject = window, timeoutMs = PRODUCTION_RESPONSE_ALLOWANCE_MS } = {}) {
         return ({ workspace, command, utterance, parameters, visualContext, visualReference, transactionId }) => new Promise((resolve, reject) => {
           const requestId = crypto.randomUUID();
           const timer = setTimeout(() => {
@@ -2819,6 +2940,10 @@ ${content}`
           const encodedQuery = encodeURIComponent(query);
           musicFrame.src = musicPlaybackUrl(command);
           musicLink.href = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+          if (appSurface) {
+            appSurface.hidden = false;
+            appSurface.innerHTML = `<section class="app-request" data-nexus-music-summary><h3>${escapeMarkup(query)}</h3><p>Music playback is ready in the visible media player.</p></section>`;
+          }
         }
         const rendered = workspace === "maps" ? Boolean(mapCanvas) : workspace === "music" ? Boolean(musicFrame && musicFrame.src) : workspace === "live-knowledge" ? Boolean(evidenceSurface) : renderAppSurface({ workspace, command, appSurface });
         host.dataset.populated = rendered ? "true" : "false";
@@ -3160,16 +3285,6 @@ ${content}`
           if (receipt.type === "transcript.final") {
             caption.textContent = receipt.detail.transcript || "";
             caption.hidden = !preferences.captions;
-            const transcript = receipt.detail.transcript || "";
-            if (!isDraftReopenCommand(transcript) && visibleFormFields().length > 0) {
-              guidedEntryController?.execute(transcript, {
-                requestId: receipt.detail.requestId || receipt.detail.itemId || crypto.randomUUID()
-              }).then((formResult) => {
-                if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
-                  runtime.speakText(formResult.readback, "voice-form-readback");
-                }
-              });
-            }
           }
           if (receipt.type === "conversation.return-to-listening") replayControl.disabled = false;
           window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: receipt }));
@@ -3220,6 +3335,16 @@ ${content}`
           realtime,
           audioElement: audio,
           openWorkspace: createWorkspaceAdapter(),
+          interceptCommand: async (command, options = {}) => {
+            if (isDraftReopenCommand(command) || visibleFormFields().length === 0) return { handled: false };
+            const formResult = await guidedEntryController?.execute(command, {
+              requestId: options.requestId || crypto.randomUUID()
+            });
+            if (formResult?.handled && formResult.action === "readback" && formResult.readback) {
+              runtime.speakText(formResult.readback, "voice-form-readback");
+            }
+            return formResult || { handled: false };
+          },
           onReceipt
         });
         guidedEntryController = new NexusGuidedEntryTransactionController({
@@ -3369,6 +3494,7 @@ ${content}`
         }
       }
       module.exports = {
+        PRODUCTION_RESPONSE_ALLOWANCE_MS,
         createWorkspaceAdapter,
         createRemoteAudioUnlock,
         renderWorkspace,

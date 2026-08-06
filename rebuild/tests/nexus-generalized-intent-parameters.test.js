@@ -5,6 +5,7 @@ const { extractIntentAndParameters } = require("../nexus-core/intent-parameter-e
 const { routeCommand } = require("../nexus-core/router");
 const { locationFromWeatherCommand } = require("../nexus-core/visual-data-service");
 const { musicSearchFromCommand, visualIntent } = require("../browser/nexus-clean-entry");
+const { normalizeRealtimeMessageData } = require("../browser/nexus-realtime-route-deduper");
 
 const paraphrases = [
   ["maps", ["Show me a map of Mombasa, Kenya", "Could you open Mombasa on the map please", "I want to see the city of Mombasa on the map", "Open up a map of Kenya", "Open the map to see all of Kenya", "Show the whole of Nigeria on the map", "Zoom out to view all of Ghana", "Show me a map of Abuja, Nigeria", "Take me back to Nairobi, Kenya", "Plan a route from Nairobi to Nakuru", "Where is Accra on the map"]],
@@ -44,9 +45,19 @@ assert.equal(reminder.parameters.timing, "tomorrow morning");
 assert.equal(reminder.parameters.task, "to check my blood pressure");
 
 assert.equal(locationFromWeatherCommand("Could you show me the forecast for Mombasa, Kenya please?"), "Mombasa, Kenya");
+assert.equal(extractIntentAndParameters("Nexus, show today's live weather in: Nairobi, Kenya.").parameters.location, "Nairobi, Kenya");
 assert.equal(musicSearchFromCommand("Nexus, could you play Kenyan music please?"), "Kenyan");
 assert.equal(visualIntent("Would you help me create a résumé?"), "resume");
 assert.equal(visualIntent("Please show pictures of maize disease."), "agriculture-images");
 assert.equal(visualIntent("Create a summary for my physician."), "provider-card");
+
+const sourceLabeledImageTranscript = JSON.parse(normalizeRealtimeMessageData(JSON.stringify({
+  type: "conversation.item.input_audio_transcription.completed",
+  transcript: "Nexus, show source-labeled pictures of possible maize diseases."
+}))).transcript;
+assert.equal(sourceLabeledImageTranscript, "Nexus, show pictures of possible maize diseases.");
+const sourceLabeledImageRoute = routeCommand(sourceLabeledImageTranscript, "connected");
+assert.equal(sourceLabeledImageRoute.workspace, "agriculture");
+assert.equal(sourceLabeledImageRoute.parameters.action, "images");
 
 console.log(`Nexus generalized intent and parameters: PASS (${paraphrases.reduce((sum, item) => sum + item[1].length, 0)} paraphrases across ${paraphrases.length} workflows)`);

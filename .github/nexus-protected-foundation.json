@@ -1,12 +1,13 @@
 {
   "baseline": {
-    "commit": "0e3ce5b6",
-    "runtime": "nexus-behavior-502",
-    "cache": "agrinexus-pwa-v447",
-    "certification": "production certification #101"
+    "commit": "501a1e06",
+    "sourceCommit": "36620d7b",
+    "runtime": "nexus-genesis-certified-full-production",
+    "priorBaseline": "0e3ce5b6 / nexus-behavior-502 / agrinexus-pwa-v447",
+    "certification": "deterministic Windows production certification: physical voice, all applications, Guided Entry, and three consecutive complete passes"
   },
   "genesisProductionCertification": {
-    "service": "https://nexus-genesis-certified.onrender.com",
+    "service": "https://agrinexus-platform.onrender.com",
     "commit": "2edcbbcd52a8b1a7c92cb99d154a537b8091303b",
     "workflowRun": 30512522817,
     "applicationLanes": 20,
@@ -14,13 +15,13 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "348f4fde948c0106f73949354bd09b51fc341072",
-    "recoveryBranch": "recovery/pre-restart-safe-auth-2026-07-27",
-    "file": "server.js",
-    "purpose": "Restart-safe signed authentication for the physical Windows voice acceptance gate"
+    "baseCommit": "3bfe5a7944ef4c1f33c2e9c50e0f4a4b07213017",
+    "recoveryBranch": "recovery/pre-guided-entry-route-isolation-2026-08-03",
+    "file": "rebuild/browser/nexus-clean.bundle.js",
+    "purpose": "Guided Entry route isolation for spoken field edits within the active workspace"
   },
   "protectedFiles": {
-    "server.js": "33ff74e7cb2dfa6ef4c37748ede8dd42d72ed28b",
+    "server.js": "6c0c2277ee04167919ec868343a12a9aa9be3267",
     "public/app.js": "db86840a7306f18b0fc07c842612afbda175a4d4",
     "public/index.html": "08abe641e234c54578dfb2060ac9d2a2f39fe685",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
@@ -28,10 +29,26 @@
     "public/nexus-genesis-voice-runtime-manager.js": "2a928e4c518ac2bf7dddc672f8b34b97b94b00d3",
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",
-    "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",
+    "scripts/certify-nexus.js": "48c770bb1821a0fd07eb0c55039c8edc09c7d8c9",
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
-    ".github/workflows/nexus-clean-windows-certification.yml": "6e0eed2b58cd4acc52819af1400ae1d50ddbac7e",
-    "rebuild/tests/nexus-windows-physical-certification.spec.js": "e7fb968e827d43324fc862a5526664dd7569bd08"
+    ".github/workflows/nexus-clean-windows-certification.yml": "b3bedfaa5b00f6f5f3cf0cec9cb7271e8ca68f92",
+    "rebuild/tests/nexus-windows-physical-certification.spec.js": "f2df64ae17914b18de3d0f0d2547295eb5433349",
+    ".github/workflows/nexus-release-certification-v2.yml": "28065b7e7117cd88b1596240b561389d76ceb5c5",
+    "rebuild/browser/nexus-clean-entry.js": "d97befce1d25e5d8a9abb9afc07a58aae8332f4c",
+    "rebuild/browser/nexus-clean.bundle.js": "013736735667ecb4a0de163f4a4a552c5ae40d13",
+    "rebuild/nexus-core/browser-runtime.js": "af1130463daef3e0d623c58bf1f2c4081328bc60",
+    "rebuild/nexus-core/certification-identity.js": "ef899b8a1f207c3b4cee2d16cfa929d487ebff89",
+    "rebuild/nexus-core/guided-entry-transcript-normalizer.js": "49f16570df7ae8286af5381ef645bd1267cf1527",
+    "rebuild/nexus-core/universal-guided-entry-engine.js": "099a83297109f3e0ce316bc0d218f5f7679f5910",
+    "rebuild/server.js": "c90c0b1ef74ca4e642a9abba7bf2f3d30bfb9b4d",
+    "rebuild/tests/nexus-release-certification-controller.test.js": "e90fb2c9e5203bbca955e72de9c1b8ebf993e41d",
+    "rebuild/tests/nexus-runtime-e2e.test.js": "feea1eb9189126915c273a32a4736f00c82b7675",
+    "rebuild/tests/nexus-universal-guided-entry-engine.test.js": "417945e47d8e6fc9574e88ac2328d9165a5ee872",
+    "rebuild/tests/nexus-voice-form-entry.test.js": "567e6db8cd502d0bfa3cdc3551ae6a7e27e9b28d",
+    "scripts/nexus-certification-evidence.js": "01186db292770e5923a7c4b04dd971673d53e592",
+    "scripts/nexus-release-certification-controller.js": "e8708fc32c2ab95331bf8b326d31bed59ba2d738",
+    "scripts/nexus-windows-certification-reset.ps1": "d12e365875938ef9781351c2b3dc9e5ba25a0644",
+    "scripts/nexus-windows-stability-certification.ps1": "d509957a9d4e63a52a437cdff5aa104762a4421d"
   }
 }

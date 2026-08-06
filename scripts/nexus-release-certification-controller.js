@@ -6,6 +6,11 @@ const {
   CERTIFICATION_CONTRACT_VERSION,
   sha256File
 } = require("../rebuild/nexus-core/certification-identity");
+const {
+  CANONICAL_PRODUCTION_ORIGIN,
+  productionUrlFromEnv,
+  requireCanonicalProductionUrl
+} = require("./nexus-canonical-production-target");
 
 const outputDir = path.resolve("output/nexus-release-certification");
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -17,14 +22,17 @@ function normalizeSha(value) {
 function sameCommit(expected, actual) {
   expected = normalizeSha(expected);
   actual = normalizeSha(actual);
-  return expected.length >= 7 && actual.length >= 7 &&
-    (expected === actual || expected.startsWith(actual) || actual.startsWith(expected));
+  return /^[a-f0-9]{40}$/.test(expected) && /^[a-f0-9]{40}$/.test(actual) && expected === actual;
 }
 
 async function fetchIdentity(baseUrl) {
+  baseUrl = requireCanonicalProductionUrl(baseUrl, "certification target");
   const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/certification/identity`, {
     headers: { "cache-control": "no-cache" }
   });
+  if (new URL(response.url).origin !== CANONICAL_PRODUCTION_ORIGIN) {
+    throw new Error(`CANONICAL_HOST_MISMATCH: identity response resolved to ${response.url}`);
+  }
   if (!response.ok) throw new Error(`identity endpoint returned HTTP ${response.status}`);
   return response.json();
 }
@@ -45,6 +53,9 @@ async function verifyDeployment({
   timeoutMs = 12 * 60 * 1000,
   intervalMs = 15000
 }) {
+  if (!/^[a-f0-9]{40}$/.test(normalizeSha(expectedSha))) {
+    throw new Error("INVALID_EXPECTED_RELEASE_SHA: exact 40-character Git SHA required");
+  }
   fs.mkdirSync(outputDir, { recursive: true });
   const expectedBundle = sha256File(bundlePath);
   const startedAt = new Date().toISOString();
@@ -97,7 +108,7 @@ async function main() {
     throw new Error("Usage: node scripts/nexus-release-certification-controller.js verify-deployment");
   }
   await verifyDeployment({
-    baseUrl: process.env.NEXUS_CLEAN_BASE_URL,
+    baseUrl: productionUrlFromEnv(),
     expectedSha: process.env.NEXUS_EXPECTED_RELEASE_SHA,
     bundlePath: process.env.NEXUS_EXPECTED_BUNDLE || "rebuild/browser/nexus-clean.bundle.js",
     timeoutMs: Number(process.env.NEXUS_DEPLOYMENT_TIMEOUT_MS || 12 * 60 * 1000),

@@ -88,7 +88,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install && node rebuild/scripts/build-browser.js
-    startCommand: npm start
+    startCommand: node rebuild/production-capability-bridge-server.js
     healthCheckPath: /api/healthz
     autoDeploy: true
     disk:

@@ -1,0 +1,702 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const {
+  GOAL_SCHEMA,
+  createContentActionService,
+  createOpenAIGoalResolver,
+  emptyArtifact,
+  normalizeGoalRoute,
+  normalizeWebSearchPayload
+} = require("../nexus-core/content-action-service");
+const { NexusContentPopulationController, alignApplicationResultWorkspace, applicationDeadlineFallback, assistantLocationConfirmation, canonicalCommandKey, canonicalProtectedWorkspace, canonicalizeLeadingSpokenNumber, inputTypeForField, isApplicationRouteCommand, isFalseVerifiedSourceDirectory, normalizeAgriculturalFieldValue, normalizeGuidedFieldValue, normalizeMarketplaceSpeechDrift, outcomeKind, preserveSpacedResumeName, protectedWorkspaceOwnsCommand, reconcileAgriculturalFieldEdit, reconcileAssistantLocation, recoverOfflineQueuedRequestTranscript, renderArtifactMarkup, shieldApplicationRouteFromGuidedEntry, shouldIgnoreUnscopedTranscript, shouldShieldGuidedFieldRoute, shouldYieldToProtectedRenderer, shouldYieldTranscriptToGuidedEntry, synchronizeAcknowledgedWorkspaceIdentity, synchronizeGuidedFieldReceipt, synchronizeHiddenMapLinks, validateReadyArtifactContract } = require("../browser/nexus-content-population-extension");
+
+function artifact(kind, title) {
+  return { ...emptyArtifact(kind, title), description: `Visible ${title}` };
+}
+
+async function main() {
+  const hiddenWorkspaceDocument = { getElementById() { return { hidden: true }; } };
+  const visibleWorkspaceDocument = { getElementById() { return { hidden: false }; } };
+  assert.equal(shouldIgnoreUnscopedTranscript("Ja.", hiddenWorkspaceDocument), true);
+  assert.equal(shouldIgnoreUnscopedTranscript("Physical problems", hiddenWorkspaceDocument), true);
+  assert.equal(shouldIgnoreUnscopedTranscript("Nexus, help with my maize crop.", hiddenWorkspaceDocument), false);
+  assert.equal(shouldIgnoreUnscopedTranscript("show me the second result", visibleWorkspaceDocument), false);
+  const browserSource = fs.readFileSync(path.resolve(__dirname, "..", "browser", "nexus-content-population-extension.js"), "utf8");
+  assert.doesNotMatch(browserSource, /function\s+planContentAction|extractMarketplace|extractMusicQuery|pharmacist question card/i);
+  assert.match(browserSource, /previousArtifact/);
+  assert.match(browserSource, /visibleFields/);
+  assert.match(browserSource, /recentConversation|history/);
+  assert.match(browserSource, /protectedMapSurface\.hidden\s*=\s*true;\s*synchronizeHiddenMapLinks\("listings", this\.document\)/s);
+  const editableWorkspace = {
+    hidden: false,
+    querySelectorAll() { return [{ readOnly: false, type: "text" }]; }
+  };
+  const editableDocument = { getElementById() { return editableWorkspace; } };
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), true);
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, find a mobile clinic in Kenya.", editableDocument), false);
+  editableWorkspace.hidden = true;
+  assert.equal(shouldYieldTranscriptToGuidedEntry("Nexus, set care needed to blood pressure screening.", editableDocument), false);
+  assert.equal(canonicalCommandKey("Nexus, start a digital literacy course."), canonicalCommandKey("start a digital literacy course"));
+  assert.equal(canonicalCommandKey("Nexust, open pharmacy support."), canonicalCommandKey("Nexus, open pharmacy support."));
+  assert.equal(isApplicationRouteCommand("Nexus, start a digital literacy course."), true);
+  assert.equal(isApplicationRouteCommand("Nexus, set topic or skill to phishing email safety."), false);
+  assert.equal(canonicalProtectedWorkspace("Next, show an apple pie recipe with ingredients, steps, and sources."), "live-knowledge");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show me pictures of possible Mase diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus: Show pictures of possible Mased diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MACE diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MAGE diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, show pictures of possible MAEsd diseases."), "agriculture");
+  assert.equal(canonicalProtectedWorkspace("Nexus, set resume full name to Ron Tate."), "workforce");
+  assert.equal(canonicalProtectedWorkspace("Nexus, sell fifty bags of maize."), "marketplace");
+  assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall fifty bags of maize."), "Nexus sell fifty bags of maize.");
+  assert.equal(canonicalProtectedWorkspace("Nexus shall fifty bags of maize."), "marketplace");
+  assert.equal(isApplicationRouteCommand("Nexus shall fifty bags of maize."), true);
+  assert.equal(canonicalCommandKey("Nexus shall fifty bags of maize."), canonicalCommandKey("sell fifty bags of maize"));
+  assert.equal(normalizeMarketplaceSpeechDrift("Nexus shall review the maize report."), "Nexus shall review the maize report.");
+  const protectedResumeDocument = {
+    getElementById(id) { return id === "nexus-workspace" ? { hidden: false, dataset: { workspace: "workforce" } } : null; },
+    querySelector(selector) { return selector === '.resume-builder[data-nexus-visual="resume"]' ? {} : null; }
+  };
+  assert.equal(protectedWorkspaceOwnsCommand("Nexus, help me create a resume.", protectedResumeDocument), true);
+  assert.equal(protectedWorkspaceOwnsCommand("Nexus, search for farming jobs.", protectedResumeDocument), false);
+  const resumeNameField = {
+    name: "name", id: "name", value: "Rontate.", readOnly: false,
+    getAttribute(name) { return name === "aria-label" ? "Résumé full name" : null; },
+    dispatchEvent() { return true; }
+  };
+  const resumeNameDocument = {
+    getElementById(id) { return id === "nexus-workspace" ? { hidden: false, dataset: { workspace: "workforce" }, querySelectorAll() { return [resumeNameField]; } } : null; },
+    querySelector(selector) { return selector === '.resume-builder[data-nexus-visual="resume"]' ? {} : null; }
+  };
+  assert.equal(preserveSpacedResumeName(
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Rontate." } },
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Tate" } },
+    resumeNameDocument,
+    { Event: class { constructor(type) { this.type = type; } } }
+  ), true);
+  assert.equal(resumeNameField.value, "Ron Tate");
+  assert.equal(preserveSpacedResumeName(
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Taylor" } },
+    { type: "voice-form.updated", detail: { field: "name", label: "Résumé full name", value: "Ron Tate" } },
+    resumeNameDocument
+  ), false);
+  assert.equal(isFalseVerifiedSourceDirectory({ outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 0, evidenceLinksVisible: false }), true);
+  assert.equal(isFalseVerifiedSourceDirectory({ outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 2, evidenceLinksVisible: true }), false);
+  assert.equal(isFalseVerifiedSourceDirectory({ contentExtension: true, outcomeKind: "source-directory", outcomeVerified: true, evidenceSourceCount: 0 }), false);
+  let blockedZeroSource = false;
+  let replacementAcknowledgement = null;
+  const truthController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent(event) { if (event.type === "nexus.clean.workspace.acknowledged") replacementAcknowledgement = event.detail; } },
+    documentObject: null,
+    fetchImpl: null
+  });
+  truthController.onAcknowledgementCapture({
+    detail: { requestId: "zero-source", workspace: "live-knowledge", outcomeKind: "source-directory", outcomeVerified: true, populated: true, evidenceSourceCount: 0, evidenceLinksVisible: false },
+    stopImmediatePropagation() { blockedZeroSource = true; }
+  });
+  assert.equal(blockedZeroSource, true);
+  assert.equal(replacementAcknowledgement.outcomeVerified, false);
+  assert.equal(replacementAcknowledgement.populated, false);
+  assert.equal(replacementAcknowledgement.recovery.state, "provider-unverified");
+  let pendingBlocked = false;
+  replacementAcknowledgement = null;
+  truthController.pending.set("pending-sources", { detail: { requestId: "pending-sources" } });
+  truthController.onAcknowledgementCapture({
+    detail: { requestId: "pending-sources", workspace: "live-knowledge", outcomeKind: "source-directory", outcomeVerified: true, populated: true, evidenceSourceCount: 0, evidenceLinksVisible: false },
+    stopImmediatePropagation() { pendingBlocked = true; }
+  });
+  assert.equal(pendingBlocked, true);
+  assert.equal(replacementAcknowledgement, null, "The pending source renderer must finish instead of receiving an early synthetic failure.");
+  const mapWorkspace = { hidden: false, dataset: { workspace: "marketplace", document: "", guidedEntryProcess: "" } };
+  const identityMapDocument = { getElementById(id) { return id === "nexus-workspace" ? mapWorkspace : null; } };
+  assert.equal(synchronizeAcknowledgedWorkspaceIdentity({ workspace: "maps", visible: true, populated: true, outcomeVerified: true }, identityMapDocument), true);
+  assert.equal(mapWorkspace.dataset.workspace, "maps");
+  assert.equal(mapWorkspace.dataset.document, "maps-active-document");
+  assert.equal(mapWorkspace.dataset.guidedEntryProcess, "maps");
+  assert.equal(synchronizeAcknowledgedWorkspaceIdentity({ workspace: "maps", visible: true, populated: true, outcomeVerified: false }, identityMapDocument), false);
+  assert.equal(canonicalProtectedWorkspace("Nexus, set care needed to screening."), null);
+  const marketplaceResult = { schema: "nexus.content.result.v2", workspace: "workforce", artifact: { title: "Maize Sale Draft" } };
+  const alignedMarketplace = alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "marketplace",
+    command: "Nexus sell fifty bags of maize."
+  });
+  assert.equal(alignedMarketplace.workspace, "marketplace");
+  assert.equal(alignedMarketplace.artifact, marketplaceResult.artifact);
+  const staleMarketplaceDetail = alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "workforce",
+    command: "Nexus, sell fifty bags of maize."
+  });
+  assert.equal(staleMarketplaceDetail.workspace, "marketplace");
+  const locationReceipt = {
+    type: "realtime.data-message",
+    detail: { data: JSON.stringify({ type: "response.output_audio_transcript.done", transcript: "Got it. I've set the location to Nakuru, Kenya. What are you noticing?" }) }
+  };
+  assert.equal(assistantLocationConfirmation(locationReceipt), "Nakuru, Kenya");
+  const locationField = {
+    name: "location", id: "location", value: "Naivasha, Kenya.",
+    getAttribute(name) { return name === "aria-label" ? "Location" : null; },
+    dispatchEvent() { return true; }
+  };
+  assert.equal(reconcileAssistantLocation(locationReceipt, {
+    getElementById() { return { hidden: false, querySelectorAll() { return [locationField]; } }; }
+  }, { Event: class { constructor(type) { this.type = type; } } }), true);
+  assert.equal(locationField.value, "Nakuru, Kenya");
+  assert.equal(normalizeAgriculturalFieldValue("find Mays' treatment guidance."), "find maize treatment guidance.");
+  assert.equal(normalizeAgriculturalFieldValue("find Maze's treatment guidance."), "find maize treatment guidance.");
+  const queuedRequestField = {
+    name: "queuedRequest", id: "queuedRequest", value: "find Mays' treatment guidance.",
+    getAttribute(name) { return name === "aria-label" ? "Queued request" : null; },
+    dispatchEvent() { return true; }
+  };
+  assert.equal(reconcileAgriculturalFieldEdit({
+    type: "voice-form.updated", detail: { field: "queuedRequest", label: "Queued request", value: "find Mays' treatment guidance." }
+  }, {
+    getElementById() { return { hidden: false, querySelectorAll() { return [queuedRequestField]; } }; }
+  }, { Event: class { constructor(type) { this.type = type; } } }), true);
+  assert.equal(queuedRequestField.value, "find maize treatment guidance.");
+  const recoveredQueuedField = {
+    name: "queuedRequest", id: "queuedRequest", value: "", readOnly: false,
+    getAttribute(name) { return name === "aria-label" ? "Queued request" : null; },
+    dispatchEvent() { return true; }
+  };
+  const recoveredReceipts = [];
+  class TestEvent { constructor(type) { this.type = type; } }
+  class TestCustomEvent extends TestEvent { constructor(type, options) { super(type); this.detail = options.detail; } }
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus: set cued request to find maze treatment guidance.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }, { Event: TestEvent, CustomEvent: TestCustomEvent, dispatchEvent(event) { recoveredReceipts.push(event); } }), true);
+  assert.equal(recoveredQueuedField.value, "find maize treatment guidance");
+  assert.equal(recoveredReceipts[0].detail.type, "voice-form.corrected");
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus sent queued request to find maize treatment guidance.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }, { Event: TestEvent, CustomEvent: TestCustomEvent, dispatchEvent(event) { recoveredReceipts.push(event); } }), true);
+  assert.equal(recoveredQueuedField.value, "find maize treatment guidance");
+  assert.equal(recoverOfflineQueuedRequestTranscript("Nexus, set care needed to screening.", {
+    getElementById() { return { hidden: false, dataset: { workspace: "offline" }, querySelectorAll() { return [recoveredQueuedField]; } }; }
+  }), false);
+  assert.equal(alignApplicationResultWorkspace(marketplaceResult, {
+    workspace: "health",
+    command: "Nexus, set symptoms or notes to no symptoms."
+  }), marketplaceResult);
+  editableWorkspace.hidden = false;
+  editableWorkspace.dataset = { workspace: "agriculture" };
+  editableWorkspace.querySelectorAll = () => [{
+    readOnly: false,
+    type: "text",
+    name: "location",
+    id: "location",
+    getAttribute(name) { return name === "aria-label" ? "Location" : null; }
+  }];
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "maps", editableDocument), true);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, record blood pressure is 140 over 90.", "health", editableDocument), false);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set location to Nakuru, Kenya.", "agriculture", editableDocument), true);
+  assert.equal(shouldShieldGuidedFieldRoute("Nexus, set queued request to find maize treatment guidance.", "offline", {
+    getElementById() {
+      return {
+        hidden: false,
+        dataset: { workspace: "offline" },
+        querySelectorAll() {
+          return [{ readOnly: false, type: "text", name: "queuedRequest", id: "queuedRequest", getAttribute: () => "Queued request", labels: [], closest: () => null }];
+        }
+      };
+    }
+  }), true);
+  const staleMapAnchor = {
+    dataset: {},
+    href: "https://leafletjs.com",
+    getAttribute(name) { return name === "href" ? this.href || null : null; },
+    setAttribute(name, value) { if (name === "href") this.href = value; },
+    removeAttribute(name) { if (name === "href") this.href = ""; }
+  };
+  const mapSurface = { hidden: true, querySelectorAll() { return [staleMapAnchor]; } };
+  const mapDocument = { getElementById(id) { return id === "nexus-map-surface" ? mapSurface : null; } };
+  assert.equal(synchronizeHiddenMapLinks("live-knowledge", mapDocument), 1);
+  assert.equal(staleMapAnchor.href, "");
+  assert.equal(staleMapAnchor.dataset.nexusHiddenMapHref, "https://leafletjs.com");
+  assert.equal(synchronizeHiddenMapLinks("maps", mapDocument), 0);
+  assert.equal(staleMapAnchor.href, "");
+  mapSurface.hidden = false;
+  assert.equal(synchronizeHiddenMapLinks("maps", mapDocument), 1);
+  assert.equal(staleMapAnchor.href, "https://leafletjs.com");
+  let restoreShield;
+  assert.equal(shieldApplicationRouteFromGuidedEntry("Nexus, start a digital literacy course.", editableDocument, (restore) => { restoreShield = restore; }), true);
+  assert.equal(editableWorkspace.hidden, true);
+  restoreShield();
+  assert.equal(editableWorkspace.hidden, false);
+  const coalescedEvents = [];
+  const coalescingController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent(event) { coalescedEvents.push(event); } },
+    documentObject: null,
+    fetchImpl: null
+  });
+  coalescingController.activeWorkspace = "learning";
+  coalescingController.pending.set("route-tool-call", {
+    detail: { requestId: "route-tool-call", workspace: "learning", command: "start a digital literacy course" },
+    commandKey: canonicalCommandKey("start a digital literacy course")
+  });
+  coalescingController.open({ requestId: "final-transcript", workspace: "learning", command: "Nexus, start a digital literacy course." });
+  assert.deepEqual([...coalescingController.pending.keys()], ["route-tool-call"]);
+  assert.equal(coalescedEvents.at(-1).detail.requestId, "final-transcript");
+  assert.equal(coalescedEvents.at(-1).detail.outcomeVerified, false);
+  let transcriptTimers = 0;
+  const transcriptStages = [];
+  const transcriptController = new NexusContentPopulationController({
+    windowObject: {
+      dispatchEvent(event) { transcriptStages.push(event.detail); },
+      setTimeout() { transcriptTimers += 1; return transcriptTimers; },
+      clearTimeout() {}
+    },
+    documentObject: editableDocument,
+    fetchImpl: null
+  });
+  transcriptController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus, sell 50 bags of maize." }
+  } });
+  assert.equal(transcriptTimers, 0, "Application transcripts must not schedule a second synthetic workspace route.");
+  assert.ok(transcriptStages.some((stage) => stage.type === "transcript.application-route-shielded"));
+  let recoveredImageRoute = null;
+  const staleMapsWorkspace = { hidden: false, dataset: { workspace: "maps" }, querySelectorAll() { return []; } };
+  const recoveryController = new NexusContentPopulationController({
+    windowObject: {
+      dispatchEvent() {},
+      setTimeout(callback) { callback(); return 1; },
+      clearTimeout() {}
+    },
+    documentObject: { getElementById() { return staleMapsWorkspace; } },
+    fetchImpl: null
+  });
+  recoveryController.open = (detail) => { recoveredImageRoute = detail; };
+  recoveryController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus, show pictures of possible MAEsd diseases." }
+  } });
+  assert.equal(recoveredImageRoute.workspace, "agriculture", "A stale visible workspace must not suppress canonical image-route recovery.");
+  const healthFallback = applicationDeadlineFallback({ requestId: "health-1", workspace: "health", command: "Nexus, record my blood pressure 140 over 90." });
+  assert.equal(healthFallback, null, "Provider deadlines must never fabricate a ready application.");
+  const healthResult = {
+    schema: "nexus.content.result.v2", requestId: "health-1", status: "ready", capability: "intake", operation: "open", workspace: "health",
+    artifact: { ...artifact("form", "Health & Chronic Care"), fields: [{ id: "reading", label: "Blood pressure or reading", type: "text", value: "" }] }
+  };
+  let persistedInput;
+  const storedArtifacts = new Map();
+  const immutableController = new NexusContentPopulationController({
+    windowObject: {
+      localStorage: {
+        getItem(key) { return storedArtifacts.get(key) || null; },
+        setItem(key, value) { storedArtifacts.set(key, value); }
+      }
+    },
+    documentObject: {}
+  });
+  immutableController.bindArtifact({
+    querySelector(selector) {
+      if (selector !== "[data-nexus-visible-form]") return null;
+      return {
+        elements: { namedItem() { return { type: "text", value: "145 over 92" }; } },
+        addEventListener(type, handler) { if (type === "input") persistedInput = handler; },
+        querySelector() { return null; }
+      };
+    }
+  }, healthResult);
+  assert.doesNotThrow(() => persistedInput());
+  assert.equal(immutableController.currentResult.artifact.fields[0].value, "145 over 92");
+  assert.equal(healthResult.artifact.fields[0].value, "");
+  assert.equal(applicationDeadlineFallback({ requestId: "provider-1", workspace: "health", command: "Nexus, create a provider card for my doctor." }), null);
+  assert.equal(applicationDeadlineFallback({ requestId: "images-1", workspace: "agriculture", command: "Nexus, show maize disease pictures." }), null);
+  assert.equal(applicationDeadlineFallback({ requestId: "jobs-1", workspace: "workforce", command: "Nexus, search for farming jobs in Kenya." }), null);
+  assert.equal(applicationDeadlineFallback({ requestId: "resume-1", workspace: "workforce", command: "Nexus, help me create a résumé." }), null);
+  let providerAttempts = 0;
+  const retryController = new NexusContentPopulationController({
+    windowObject: { setTimeout, clearTimeout, dispatchEvent() {} },
+    documentObject: {},
+    fetchImpl: null,
+    providerRetryDelayMs: 0,
+    providerHardDeadlineMs: 100
+  });
+  retryController.provider = async () => {
+    providerAttempts += 1;
+    if (providerAttempts === 1) return new Promise(() => {});
+    return { schema: "nexus.content.result.v2", requestId: "retry-1", status: "ready", workspace: "agriculture", capability: "intake", artifact: artifact("form", "Agriculture Help") };
+  };
+  const verifiedRetry = await retryController.providerWithVerifiedRetry({ requestId: "retry-1", workspace: "agriculture" }, null);
+  assert.equal(providerAttempts, 2);
+  assert.equal(verifiedRetry.requestId, "retry-1");
+  const careNeededField = { name: "careNeeded", value: "blood pressures screening." };
+  assert.equal(normalizeGuidedFieldValue(careNeededField), "blood pressure screening.");
+  assert.equal(careNeededField.value, "blood pressure screening.");
+  assert.equal(canonicalizeLeadingSpokenNumber("twenty bags."), "20 bags.");
+  assert.equal(canonicalizeLeadingSpokenNumber("one hundred and twenty-five kilograms"), "125 kilograms");
+  assert.equal(canonicalizeLeadingSpokenNumber("two point five liters"), "2.5 liters");
+  assert.equal(canonicalizeLeadingSpokenNumber("maize in twenty bags"), "maize in twenty bags");
+  const quantityField = { name: "quantity", value: "twenty bags." };
+  assert.equal(normalizeGuidedFieldValue(quantityField), "20 bags.");
+  assert.equal(quantityField.value, "20 bags.");
+  const doseField = { id: "dose", value: "two point five milliliters" };
+  assert.equal(normalizeGuidedFieldValue(doseField), "2.5 milliliters");
+  const productField = { name: "product", value: "twenty bags of maize" };
+  assert.equal(normalizeGuidedFieldValue(productField), "twenty bags of maize");
+  const queuedAgricultureField = { name: "queuedRequest", value: "find maze treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgricultureField), "find maize treatment guidance.");
+  assert.equal(queuedAgricultureField.value, "find maize treatment guidance.");
+  const queuedAgricultureVariantField = { name: "queuedRequest", value: "find Mase treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgricultureVariantField), "find maize treatment guidance.");
+  assert.equal(queuedAgricultureVariantField.value, "find maize treatment guidance.");
+  const queuedAgriculturePluralSoundField = { name: "queuedRequest", value: "find Mays treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgriculturePluralSoundField), "find maize treatment guidance.");
+  assert.equal(queuedAgriculturePluralSoundField.value, "find maize treatment guidance.");
+  const queuedAgriculturePossessiveSoundField = { name: "queuedRequest", value: "find me's treatment guidance." };
+  assert.equal(normalizeGuidedFieldValue(queuedAgriculturePossessiveSoundField), "find maize treatment guidance.");
+  assert.equal(queuedAgriculturePossessiveSoundField.value, "find maize treatment guidance.");
+  const queuedDirectionsField = { name: "queuedRequest", value: "find the maze entrance" };
+  assert.equal(normalizeGuidedFieldValue(queuedDirectionsField), "find the maze entrance");
+  const learningTopicField = { name: "topic", value: "phishing emails safety." };
+  assert.equal(normalizeGuidedFieldValue(learningTopicField), "phishing email safety.");
+  assert.equal(learningTopicField.value, "phishing email safety.");
+  const learningSpeechDriftField = { name: "topic", value: "fishing email safety." };
+  assert.equal(normalizeGuidedFieldValue(learningSpeechDriftField), "phishing email safety.");
+  assert.equal(learningSpeechDriftField.value, "phishing email safety.");
+  const learningHyphenatedEmailField = { name: "topic", value: "phishing e-mail safety." };
+  assert.equal(normalizeGuidedFieldValue(learningHyphenatedEmailField), "phishing email safety.");
+  assert.equal(learningHyphenatedEmailField.value, "phishing email safety.");
+  const learningInboxField = { name: "topic", value: "organizing emails safely" };
+  assert.equal(normalizeGuidedFieldValue(learningInboxField), "organizing emails safely");
+  const synchronizedEvents = [];
+  const synchronizedExperience = {
+    name: "experience",
+    id: "experience",
+    value: "Supervised a team of eight employees.",
+    getAttribute(name) { return name === "aria-label" ? "Work experience" : null; },
+    dispatchEvent(event) { synchronizedEvents.push(event.type); }
+  };
+  const synchronizedWorkspace = {
+    hidden: false,
+    querySelectorAll() { return [synchronizedExperience]; }
+  };
+  assert.equal(synchronizeGuidedFieldReceipt({
+    type: "voice-form.corrected",
+    detail: { field: "experience", value: "Supervised a team of twelve employees." }
+  }, { getElementById() { return synchronizedWorkspace; } }, { Event: class Event { constructor(type) { this.type = type; } } }), true);
+  assert.equal(synchronizedExperience.value, "Supervised a team of twelve employees.");
+  assert.deepEqual(synchronizedEvents, ["input", "change"]);
+  synchronizedWorkspace.dataset = { workspace: "workforce" };
+  synchronizedExperience.type = "textarea";
+  synchronizedExperience.readOnly = false;
+  const persistenceController = new NexusContentPopulationController({
+    windowObject: { Event: class Event { constructor(type) { this.type = type; } }, dispatchEvent() {} },
+    documentObject: { getElementById() { return synchronizedWorkspace; } },
+    fetchImpl: null
+  });
+  persistenceController.onReceipt({ detail: {
+    type: "voice-form.corrected",
+    detail: { field: "experience", value: "Supervised a team of twelve employees." }
+  } });
+  synchronizedExperience.value = "Supervised a team of eight employees.";
+  persistenceController.onReceipt({ detail: {
+    type: "transcript.final",
+    detail: { transcript: "Nexus, save this resume draft." }
+  } });
+  assert.equal(synchronizedExperience.value, "Supervised a team of twelve employees.");
+  assert.equal(inputTypeForField({ id: "quantity", label: "Quantity", type: "number" }), "text");
+  assert.equal(inputTypeForField({ id: "dose", label: "Dose", type: "number" }), "text");
+  assert.equal(inputTypeForField({ id: "householdSize", label: "Household size", type: "number" }), "number");
+  assert.equal(inputTypeForField({ id: "time", label: "Date and time", type: "date" }), "text");
+  assert.equal(inputTypeForField({ id: "preferredDate", label: "Preferred date", type: "date" }), "date");
+  assert.equal(outcomeKind("search", "workforce"), "application");
+  assert.equal(outcomeKind("listings", "maps"), "map");
+  const readyResult = (capability, artifact) => ({ status: "ready", capability, artifact });
+  assert.equal(validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "https://sources.example/crop" }] })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("images", { items: [{ imageUrl: "https://images.example/crop.jpg", sourceUrl: "" }] })), /Every image result/);
+  assert.equal(validateReadyArtifactContract(readyResult("search", { items: [{ sourceUrl: "https://sources.example/result" }] })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("listings", { items: [{ title: "Unverified listing" }] })), /Every live list result/);
+  assert.equal(validateReadyArtifactContract(readyResult("map", { media: { kind: "map", embedUrl: "https://www.openstreetmap.org/export/embed.html", sourceUrl: "https://www.openstreetmap.org/", route: { focus: { lat: 39.8, lon: -98.6 } } } })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("map", { media: { kind: "map", embedUrl: "https://www.openstreetmap.org/export/embed.html", sourceUrl: "https://www.openstreetmap.org/", route: {} } })), /verified viewport/);
+  assert.equal(validateReadyArtifactContract(readyResult("music", { media: { kind: "audio", state: "playing", embedUrl: "https://audio.example/preview.m4a", sourceUrl: "https://music.example/track" } })), true);
+  assert.throws(() => validateReadyArtifactContract(readyResult("music", { media: { kind: "audio", state: "playing", embedUrl: "", sourceUrl: "https://music.example/track" } })), /playable, source-bound/);
+  assert.equal(outcomeKind("search", "live-knowledge"), "evidence");
+  const recipeFallback = applicationDeadlineFallback({ workspace: "live-knowledge", command: "Nexus, show sources for an apple pie recipe with ingredients and steps.", requestId: "recipe-fallback" });
+  assert.equal(recipeFallback, null, "Static recipes must not masquerade as live source retrieval.");
+  assert.match(renderArtifactMarkup({ requestId: "recipe", status: "ready", capability: "search", operation: "search", workspace: "live-knowledge", artifact: { ...artifact("list", "Recipe"), links: [{ label: "Open source", url: "https://www.usda.gov/" }] } }), /evidence-source-link/);
+  assert.match(renderArtifactMarkup({ requestId: "resume", status: "ready", capability: "resume", operation: "create", workspace: "workforce", artifact: { ...artifact("form", "Resume"), fields: [{ id: "experience", label: "Experience", type: "textarea", value: "Team lead" }] } }), /Work experience/);
+  assert.equal(alignApplicationResultWorkspace({ workspace: "live-knowledge", capability: "resume" }, { command: "help me create a resume" }).workspace, "workforce");
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, plan a route from Nairobi to Nakuru.", "maps"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show bicycle repair shops near Windhoek, Namibia, on the map.", "maps"), false);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show bicycle repair shops near Windhoek, Namibia, on the map."), false);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show driving directions from Windhoek to Swakopmund.", "maps"), true);
+  let placeDiscoveryStopped = false;
+  let placeDiscoveryRoute = null;
+  const placeDiscoveryController = new NexusContentPopulationController({ windowObject: {}, documentObject: null, fetchImpl: null });
+  placeDiscoveryController.open = (detail) => { placeDiscoveryRoute = detail; };
+  placeDiscoveryController.onOpenCapture({
+    detail: { requestId: "windhoek-listings", workspace: "maps", command: "Nexus, show bicycle repair shops near Windhoek, Namibia, on the map." },
+    stopImmediatePropagation() { placeDiscoveryStopped = true; }
+  });
+  assert.equal(placeDiscoveryStopped, true);
+  assert.equal(placeDiscoveryRoute.contentExtensionExclusive, true);
+  assert.equal(placeDiscoveryRoute.workspace, "maps");
+  let driftRoute = null;
+  const driftController = new NexusContentPopulationController({
+    windowObject: { dispatchEvent(event) { driftRoute = event.detail; } }, documentObject: null, fetchImpl: null
+  });
+  driftController.onOpenCapture({
+    detail: { requestId: "marketplace-drift", workspace: "agriculture", command: "Nexus shall fifty bags of maize." },
+    stopImmediatePropagation() {}
+  });
+  assert.equal(driftRoute.workspace, "marketplace");
+  assert.equal(driftRoute.command, "Nexus sell fifty bags of maize.");
+  assert.equal(driftRoute.contentExtensionCanonicalRoute, true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, play Stevie Wonder.", "music"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show today's weather in Nairobi.", "live-knowledge"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of maize diseases.", "agriculture"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, show pictures of possible lmazed diseases."), false);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, help me create a résumé.", "workforce"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, create a provider card for my doctor.", "health"), true);
+  assert.equal(shouldYieldToProtectedRenderer("Nexus, sell 50 bags of maize.", "marketplace"), false);
+  assert.equal(isApplicationRouteCommand("Nexus, show an apple pie recipe with ingredients, steps, and sources."), false);
+  const certificationOwnership = [
+    ["agriculture", "Nexus, help with my maize crop in Kenya.", false],
+    ["health", "Nexus, record my blood pressure 140 over 90.", false],
+    ["telehealth", "Nexus, begin a telehealth intake.", false],
+    ["mobile-clinic", "Nexus, find a mobile clinic in Kenya.", false],
+    ["pharmacy", "Nexus, open pharmacy support.", false],
+    ["learning", "Nexus, start a digital literacy course.", false],
+    ["workforce", "Nexus, search for farming jobs in Kenya.", false],
+    ["marketplace", "Nexus, sell 50 bags of maize.", false],
+    ["maps", "Nexus, plan a route from Nairobi to Nakuru.", true],
+    ["music", "Nexus, play Stevie Wonder.", true],
+    ["reminders", "Nexus, remind me tonight at 8 PM to check my blood pressure.", false],
+    ["offline", "Nexus, show my offline queue.", false],
+    ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", true],
+    ["maps", "Nexus, reset the map and show Mombasa, Kenya.", true],
+    ["agriculture", "Nexus, show me pictures of possible maize diseases.", true],
+    ["workforce", "Nexus, help me create a résumé.", true],
+    ["live-knowledge", "Nexus, show an apple pie recipe with ingredients, steps, and sources.", false],
+    ["health", "Nexus, create a provider card for my doctor about blood pressure 140 over 90.", true],
+    ["live-knowledge", "Nexus, open the pilot evidence dashboard.", true]
+  ];
+  for (const [workspace, command, expectedYield] of certificationOwnership) {
+    assert.equal(shouldYieldToProtectedRenderer(command, workspace), expectedYield, `${workspace}: ${command}`);
+  }
+  assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("resume"), true);
+  assert.deepEqual(GOAL_SCHEMA.properties.capability.enum.includes("images"), true);
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "search", workspace: "maps" }).capability, "listings");
+  const mappedListings = normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show bicycle repair shops near Windhoek, Namibia on the map", location: "Windhoek, Namibia", artifact: artifact("map", "Bicycle repair shops") });
+  assert.equal(mappedListings.capability, "listings");
+  assert.equal(mappedListings.operation, "search");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show the United States on a fresh map", artifact: artifact("map", "United States") }).capability, "map");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps", query: "show driving directions from Windhoek to Swakopmund", artifact: artifact("map", "Route") }).capability, "map");
+  assert.equal(normalizeGoalRoute({ capability: "map", operation: "open", workspace: "maps" }).capability, "map");
+  const staticExplanation = normalizeGoalRoute({
+    capability: "search", operation: "search", workspace: "live-knowledge", needsLiveProvider: true,
+    query: "difference between weather and climate",
+    artifact: { ...artifact("document", "Weather and climate"), sections: [{ heading: "Difference", body: "Weather is short-term; climate is the long-term pattern.", items: [] }] }
+  }, { command: "What is the difference between weather and climate?" });
+  assert.equal(staticExplanation.capability, "document", "a complete ordinary explanation must not trigger a second serial AI request");
+  assert.equal(staticExplanation.needsLiveProvider, false);
+  const sourcedExplanation = normalizeGoalRoute({
+    capability: "search", operation: "search", workspace: "live-knowledge", needsLiveProvider: true,
+    query: "weather and climate sources", artifact: artifact("list", "Weather and climate sources")
+  }, { command: "Research the current evidence about weather and climate and show sources." });
+  assert.equal(sourcedExplanation.capability, "search", "explicit live research must retain the source-backed provider path");
+
+  const normalizedSources = normalizeWebSearchPayload({ output: [
+    { type: "web_search_call", action: { type: "search", sources: [{ type: "url", url: "https://energy.gov.bb/policy" }] } },
+    { type: "message", content: [{ type: "output_text", text: "Current policy orientation.", annotations: [{ type: "url_citation", title: "Regulator", url: "https://fairtradingcommission.gov.bb/renewables" }] }] }
+  ] });
+  assert.equal(normalizedSources.sources.length, 2);
+  assert.match(normalizedSources.sources[0].title, /energy\.gov\.bb/);
+
+  let openAIRequest;
+  const resolver = createOpenAIGoalResolver({
+    apiKey: "test-key",
+    model: "gpt-5.6-sol",
+    fetchImpl: async (_url, options) => {
+      openAIRequest = JSON.parse(options.body);
+      return {
+        ok: true,
+        async json() {
+          return { output_text: JSON.stringify({
+            capability: "resume", operation: "update", workspace: "workforce",
+            query: "Add cooperative bookkeeping experience", location: "", needsLiveProvider: false,
+            artifact: { ...artifact("document", "Amina's résumé"), sections: [{ heading: "Experience", body: "Cooperative bookkeeper", items: ["Managed weekly records"] }] },
+            acknowledgement: "The revised résumé is visible."
+          }) };
+        }
+      };
+    }
+  });
+  const resolved = await resolver.resolve({
+    command: "Work my two seasons keeping the cooperative's books into it",
+    activeWorkspace: "workforce",
+    previousArtifact: artifact("document", "Amina's résumé"),
+    visibleFields: [{ id: "name", value: "Amina" }],
+    history: [{ role: "user", content: "Make me a résumé for a warehouse role" }]
+  });
+  assert.equal(resolved.capability, "resume");
+  assert.equal(openAIRequest.model, "gpt-5.6-sol");
+  assert.equal(openAIRequest.text.format.type, "json_schema");
+  assert.equal(openAIRequest.text.format.strict, true);
+  assert.match(openAIRequest.instructions, /whole conversation/i);
+  assert.match(openAIRequest.instructions, /Use listings when the goal is to discover businesses/i);
+  assert.match(openAIRequest.input, /cooperative's books/);
+  assert.match(openAIRequest.input, /Amina's résumé/);
+
+  const unrelatedContext = require("../nexus-core/content-action-service").compactResolverContext({
+    command: "Explain how solar panels generate electricity.",
+    previousArtifact: { ...artifact("document", "Prior research"), description: "x".repeat(100000), sections: [{ heading: "Long", body: "y".repeat(100000), items: [] }] },
+    history: Array.from({ length: 30 }, (_, index) => ({ role: "user", content: `turn ${index} ${"z".repeat(2000)}` }))
+  });
+  assert.equal(unrelatedContext.previousArtifact, null, "an independent question must not resend a massive unrelated artifact");
+  assert.ok(JSON.stringify(unrelatedContext).length < 5000, "resolver context must remain bounded across sequential turns");
+  const followupContext = require("../nexus-core/content-action-service").compactResolverContext({
+    command: "Turn that into a five-step plan.",
+    previousArtifact: { ...artifact("document", "Crop rotation"), description: "d".repeat(10000), sections: [{ heading: "Details", body: "b".repeat(10000), items: Array(20).fill("item") }] }
+  });
+  assert.equal(followupContext.previousArtifact.title, "Crop rotation");
+  assert.ok(JSON.stringify(followupContext).length < 10000, "follow-up context must preserve meaning without resending the full rendered workspace");
+
+  let stalledCalls = 0;
+  const recoveredResolver = createOpenAIGoalResolver({
+    apiKey: "test-key",
+    model: "gpt-5.4-mini",
+    attemptTimeoutMs: 10,
+    sleepImpl: async () => {},
+    fetchImpl: async (_url, options) => {
+      stalledCalls += 1;
+      if (stalledCalls === 1) return new Promise(() => {});
+      assert.equal(options.signal.aborted, false);
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { output_text: JSON.stringify({
+            capability: "document", operation: "create", workspace: "live-knowledge",
+            query: "Explain how solar panels generate electricity", location: "", needsLiveProvider: false,
+            artifact: { ...artifact("document", "How solar panels generate electricity"), sections: [{ heading: "Explanation", body: "Photovoltaic cells convert light into direct-current electricity; an inverter converts it to alternating current.", items: [] }] },
+            acknowledgement: "The solar-panel explanation is visible."
+          }) };
+        }
+      };
+    }
+  });
+  const recoveredGoal = await recoveredResolver.resolve({ command: "Explain how solar panels generate electricity." });
+  assert.equal(stalledCalls, 2, "a stalled OpenAI completion should be bounded and retried within the production allowance");
+  assert.equal(recoveredGoal.capability, "document");
+  assert.match(recoveredGoal.artifact.sections[0].body, /photovoltaic cells/i);
+
+  const providerQueries = [];
+  const goals = [
+    { capability: "music", operation: "play", workspace: "music", query: "Mulatu Astatke Ethiopian jazz", location: "", needsLiveProvider: true, artifact: artifact("media", "Music"), acknowledgement: "Music is visible." },
+    { capability: "music", operation: "play", workspace: "music", query: "Mariya Takeuchi Japanese city pop", location: "", needsLiveProvider: true, artifact: artifact("media", "Music"), acknowledgement: "Music is visible." },
+    { capability: "listings", operation: "search", workspace: "marketplace", query: "seed suppliers", location: "Huye, Rwanda", needsLiveProvider: true, artifact: artifact("list", "Seed suppliers"), acknowledgement: "Listings are visible." },
+    { capability: "map", operation: "open", workspace: "maps", query: "bicycle repair shops", location: "Windhoek, Namibia", needsLiveProvider: true, artifact: artifact("map", "Bicycle repair shops on the map"), acknowledgement: "Listings are visible." },
+    { capability: "search", operation: "search", workspace: "live-knowledge", query: "recent soil restoration evidence in the Sahel", location: "", needsLiveProvider: true, artifact: artifact("list", "Sources"), acknowledgement: "Sources are visible." }
+  ];
+  const service = createContentActionService({
+    goalResolver: { async resolve() { return goals.shift(); } },
+    fetchImpl: async (url) => {
+      providerQueries.push(String(url));
+      return { ok: true, async json() { return [{ place_id: 9, osm_id: 42, osm_type: "node", name: "Huye Seed Cooperative", display_name: "Huye Seed Cooperative, Rwanda", type: "shop", category: "commercial" }]; } };
+    },
+    musicProvider: {
+      async getMusicMediaSourceResultAsync({ mediaRequest }) {
+        providerQueries.push(mediaRequest);
+        const id = mediaRequest.includes("Mulatu") ? "ethiopia123" : "citypop456";
+        return { sourceStatus: "source-result-available", sourceName: "YouTube Data API v3", sourceUrl: `https://www.youtube.com/watch?v=${id}`, resultSummary: `YouTube video found: ${mediaRequest}` };
+      }
+    }
+  });
+  const firstMusic = await service.execute({ command: "Surprise me with some horn-led music from Addis" });
+  const secondMusic = await service.execute({ command: "Different direction—something glossy from 1980s Japan" });
+  assert.match(firstMusic.artifact.media.embedUrl, /ethiopia123/);
+  assert.match(secondMusic.artifact.media.embedUrl, /citypop456/);
+  assert.notEqual(firstMusic.query, secondMusic.query);
+  const places = await service.execute({ command: "Who nearby might sell improved bean seed?" });
+  assert.equal(places.artifact.items[0].title, "Huye Seed Cooperative");
+  assert.match(providerQueries.find((query) => query.includes("nominatim")), /seed\+suppliers.*Huye/i);
+  const mappedPlaces = await service.execute({ command: "Show bicycle repair shops near Windhoek, Namibia, on the map." });
+  assert.equal(mappedPlaces.capability, "listings");
+  assert.equal(mappedPlaces.status, "ready");
+  assert.match(providerQueries.find((query) => query.includes("bicycle+repair+shops")), /Windhoek/i);
+  const sources = await service.execute({ command: "Show me another reputable angle on that" }, {
+    research: async ({ question }) => ({
+      id: "evr_sahel", status: "cross-source-verified", verified: true, summary: "Cross-checked evidence.",
+      sources: [{ id: "S1", title: "FAO source", organization: "fao.org", url: "https://www.fao.org/example", retrievedAt: "2026-07-31" }, { id: "S2", title: "World Bank source", organization: "worldbank.org", url: "https://www.worldbank.org/example", retrievedAt: "2026-07-31" }],
+      question
+    })
+  });
+  assert.equal(sources.evidence.verified, true);
+  assert.equal(sources.artifact.items.length, 2);
+
+  let publicMusicCalls = 0;
+  const publicMusicService = createContentActionService({
+    goalResolver: { async resolve() { return { capability: "music", operation: "play", workspace: "music", query: "Play desert blues by Tinariwen", location: "", needsLiveProvider: true, artifact: artifact("media", "Tinariwen"), acknowledgement: "Playing." }; } },
+    fetchImpl: async () => ({ ok: true, async json() { publicMusicCalls += 1; return publicMusicCalls === 1 ? { results: [] } : { results: [{ trackName: "Track", artistName: "Tinariwen", previewUrl: "https://audio.example/preview.m4a", trackViewUrl: "https://music.example/track" }] }; } })
+  });
+  const publicMusic = await publicMusicService.execute({ command: "Try some desert blues" });
+  assert.equal(publicMusicCalls, 2);
+  assert.equal(publicMusic.artifact.media.kind, "audio");
+
+  const failureService = createContentActionService({
+    goalResolver: { async resolve() { return { capability: "music", operation: "play", workspace: "music", query: "Cape Verdean morna", location: "", needsLiveProvider: true, artifact: artifact("media", "Morna"), acknowledgement: "Playing." }; } },
+    musicProvider: { async getMusicMediaSourceResultAsync() { return { sourceStatus: "source-result-unavailable", resultSummary: "YouTube credentials are unavailable." }; } },
+    publicMusicProvider: false
+  });
+  const failure = await failureService.execute({ command: "Put on morna from Cabo Verde" });
+  assert.equal(failure.status, "failed");
+  assert.match(failure.recovery.message, /credentials are unavailable/i);
+  assert.doesNotMatch(failure.acknowledgement, /playing/i);
+
+  const markup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-1", status: "ready", capability: "intake", operation: "create", workspace: "telehealth",
+    artifact: { ...artifact("form", "Visible intake"), fields: [{ id: "concern", label: "Main concern", type: "textarea", value: "", required: true, options: [] }] }
+  });
+  assert.match(markup, /data-nexus-visible-form/);
+  assert.match(markup, /Main concern/);
+  assert.match(markup, /aria-label="Main concern"/);
+  assert.doesNotMatch(markup, /aria-label="Main concern \*"/);
+  assert.doesNotMatch(markup, /<script/i);
+
+  const locationMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-2", status: "ready", capability: "intake", operation: "create", workspace: "agriculture",
+    artifact: { ...artifact("form", "Maize Crop Help Intake"), fields: [{ id: "county", label: "County / area", type: "text", value: "Nakuru, Kenya." }] }
+  });
+  assert.match(locationMarkup, />County \/ area</);
+  assert.match(locationMarkup, /aria-label="Location"/);
+
+  const quantityMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-quantity", status: "ready", capability: "marketplace", operation: "create", workspace: "marketplace",
+    artifact: { ...artifact("form", "Marketplace listing"), fields: [{ id: "quantity", label: "Quantity", type: "number", value: "50", required: true, options: [] }] }
+  });
+  assert.match(quantityMarkup, /name="quantity" type="text"/);
+  assert.doesNotMatch(quantityMarkup, /name="quantity" type="number"/);
+
+  const clinicMarkup = renderArtifactMarkup({
+    schema: "nexus.content.result.v2", requestId: "render-3", status: "ready", capability: "listings", operation: "search", workspace: "mobile-clinic",
+    artifact: { ...artifact("list", "Mobile clinics"), items: [{ id: "clinic-1", title: "Nakuru clinic" }] }
+  });
+  assert.match(clinicMarkup, /data-nexus-visible-form/);
+  assert.match(clinicMarkup, /aria-label="Location"/);
+  assert.match(clinicMarkup, /aria-label="Care needed"/);
+  assert.match(clinicMarkup, /aria-label="Travel distance"/);
+
+  const requiredEditFields = [
+    ["agriculture", "Location"], ["health", "Symptoms or notes"], ["telehealth", "Reason for visit"],
+    ["pharmacy", "Medication"], ["learning", "Topic or skill"], ["marketplace", "Quantity"],
+    ["reminders", "Date and time"], ["offline", "Queued request"]
+  ];
+  for (const [workspace, label] of requiredEditFields) {
+    const genericMarkup = renderArtifactMarkup({
+      schema: "nexus.content.result.v2", requestId: `generic-${workspace}`, status: "ready", capability: "workspace", operation: "open", workspace,
+      artifact: artifact("workspace", `${workspace} workspace`)
+    });
+    assert.ok(genericMarkup.includes(`aria-label="${label}"`), `${workspace} must retain ${label}`);
+  }
+
+  console.log("Nexus open capability-layer unit acceptance: PASS (novel music, listings, sources, résumé context, form rendering, truthful failure)");
+}
+
+main().catch((error) => { console.error(error); process.exitCode = 1; });

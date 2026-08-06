@@ -16,6 +16,13 @@ const {
 } = require("./conversation-context");
 
 const DEFAULT_INSTRUCTIONS = createPresenceInstructions(DEFAULT_EXPERIENCE_PREFERENCES);
+const TRANSIENT_REALTIME_ERROR_CODES = new Set([
+  "server_error",
+  "rate_limit_exceeded",
+  "service_unavailable",
+  "timeout",
+  "temporarily_unavailable"
+]);
 
 class NexusBrowserRuntime {
   constructor({
@@ -23,8 +30,12 @@ class NexusBrowserRuntime {
     realtime,
     audioElement,
     openWorkspace,
+    interceptCommand = null,
     onReceipt = () => {},
-    instructions = DEFAULT_INSTRUCTIONS
+    instructions = DEFAULT_INSTRUCTIONS,
+    realtimeRetryLimit = 2,
+    realtimeRetryDelayMs = 350,
+    schedule = (callback, delay) => setTimeout(callback, delay)
   } = {}) {
     if (!foundation || typeof foundation.start !== "function") throw new Error("A voice foundation is required.");
     if (!realtime || typeof realtime.send !== "function") throw new Error("A Realtime connector is required.");
@@ -34,8 +45,12 @@ class NexusBrowserRuntime {
     this.realtime = realtime;
     this.audioElement = audioElement;
     this.openWorkspace = openWorkspace;
+    this.interceptCommand = typeof interceptCommand === "function" ? interceptCommand : null;
     this.onReceipt = onReceipt;
     this.instructions = instructions;
+    this.realtimeRetryLimit = Math.max(0, Number(realtimeRetryLimit) || 0);
+    this.realtimeRetryDelayMs = Math.max(0, Number(realtimeRetryDelayMs) || 0);
+    this.schedule = schedule;
     this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
     this.started = false;
     this.unsubscribe = null;
@@ -46,8 +61,13 @@ class NexusBrowserRuntime {
     this.responseActive = false;
     this.responseRequestPending = false;
     this.deferredResponse = null;
+    this.lastResponseRequest = null;
+    this.responseRetryCount = 0;
+    this.responseRetryTimer = null;
     this.completedResponseKeys = new Set();
     this.visualRoutes = new Map();
+    this.visibleWorkspaceTransactions = new Set();
+    this.commandInterceptions = new Map();
     this.conversationContext = createConversationContext();
     this.requestTransaction = new NexusRequestTransaction({
       execute: (resolution) => this.openWorkspace({
@@ -192,6 +212,7 @@ class NexusBrowserRuntime {
       return false;
     }
     this.responseRequestPending = true;
+    this.lastResponseRequest = { event: { ...event }, reason };
     this.realtime.send({ type: "response.create", ...event });
     this.receipt("conversation.response-requested", { reason });
     return true;
@@ -232,6 +253,8 @@ class NexusBrowserRuntime {
     this.activeResponseId = null;
     this.responseActive = false;
     this.responseRequestPending = false;
+    this.responseRetryCount = 0;
+    this.clearResponseRetry();
     this.receipt("audio.owner-released", {
       owner: "realtime",
       responseId,
@@ -270,20 +293,16 @@ class NexusBrowserRuntime {
 
     if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
       const args = JSON.parse(event.arguments || "{}");
-      return this.route(args.command, event.call_id);
+      return this.handleCommand(args.command, event.call_id);
     }
     if (event.type === "conversation.item.input_audio_transcription.completed") {
       const transcript = event.transcript || "";
       this.receipt("transcript.final", { transcript });
       const wakePhrase = detectWakePhrase(transcript);
       if (wakePhrase) this.receipt("conversation.wake-phrase", { phrase: wakePhrase });
-      const resolution = routeCommand(
-        transcript,
-        this.foundation.machine.snapshot().state,
-        this.conversationContext
-      );
-      if (resolution.accepted) {
-        this.route(transcript).catch((error) => {
+      const resolution = routeCommand(transcript, this.foundation.machine.snapshot().state, this.conversationContext);
+      if (resolution.accepted || this.interceptCommand) {
+        this.handleCommand(transcript).catch((error) => {
           this.receipt("workspace.route-failed", {
             name: error.name,
             message: error.message,
@@ -354,12 +373,82 @@ class NexusBrowserRuntime {
         this.responseActive = false;
         this.responseRequestPending = false;
       }
+      const errorCode = String(detail.code || detail.type || "unknown").toLowerCase();
+      if (TRANSIENT_REALTIME_ERROR_CODES.has(errorCode) && this.lastResponseRequest && this.responseRetryCount < this.realtimeRetryLimit) {
+        this.activeResponseId = null;
+        this.responseActive = false;
+        this.responseRequestPending = false;
+        this.responseRetryCount += 1;
+        const retry = this.lastResponseRequest;
+        this.receipt("realtime.response-retry-scheduled", {
+          code: errorCode,
+          attempt: this.responseRetryCount,
+          limit: this.realtimeRetryLimit,
+          reason: retry.reason
+        });
+        this.clearResponseRetry();
+        this.responseRetryTimer = this.schedule(() => {
+          this.responseRetryTimer = null;
+          if (!this.started || this.responseActive || this.responseRequestPending) return;
+          this.responseRequestPending = true;
+          this.realtime.send({ type: "response.create", ...retry.event });
+          this.receipt("realtime.response-retried", {
+            code: errorCode,
+            attempt: this.responseRetryCount,
+            reason: retry.reason
+          });
+        }, this.realtimeRetryDelayMs * this.responseRetryCount);
+      }
       this.receipt("realtime.error", {
-        code: detail.code || "unknown",
+        code: errorCode,
         message: detail.message || "Realtime voice request failed."
       });
     }
     return null;
+  }
+
+  commandKey(command) {
+    return String(command || "")
+      .toLocaleLowerCase()
+      .replace(/^(?:hey\s+|hello\s+)?nexus\b[\s,;:.-]*/i, "")
+      .replace(/[?.!]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async handleCommand(command, callId = null) {
+    const key = this.commandKey(command);
+    let interception = key && this.commandInterceptions.get(key);
+    if (!interception) {
+      interception = Promise.resolve(this.interceptCommand?.(command, {
+        requestId: callId || undefined
+      })).then((result) => result || { handled: false });
+      if (key) {
+        this.commandInterceptions.set(key, interception);
+        setTimeout(() => {
+          if (this.commandInterceptions.get(key) === interception) this.commandInterceptions.delete(key);
+        }, 15000);
+      }
+    }
+    const owned = await interception;
+    if (!owned.handled) return this.route(command, callId);
+    this.receipt("command.consumed-by-guided-entry", {
+      command,
+      action: owned.action || null,
+      requestId: owned.requestId || null
+    });
+    if (callId) {
+      this.realtime.send({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: callId,
+          output: JSON.stringify(owned)
+        }
+      });
+      this.requestResponse({}, "guided-entry-result", { defer: true });
+    }
+    return owned;
   }
 
   async route(command, callId = null) {
@@ -367,22 +456,28 @@ class NexusBrowserRuntime {
     const resolution = routeCommand(command, state, this.conversationContext);
     let result = resolution;
     if (resolution.accepted) {
-      const routeKey = resolution.command.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+      const routeKey = this.commandKey(resolution.command);
       let visualRoute = this.visualRoutes.get(routeKey);
       if (!visualRoute) {
         visualRoute = this.requestTransaction.run(resolution).then((routed) => {
           const acknowledgement = routed.acknowledgement;
-          this.receipt("workspace.visible", {
-            workspace: resolution.workspace,
-            transactionId: routed.transactionId,
-            acknowledgementId: acknowledgement.id || null,
-            outcomeKind: acknowledgement.outcomeKind || null,
-            outcomeVerified: acknowledgement.outcomeVerified === true,
-            evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
-            evidenceStatus: acknowledgement.evidenceStatus || null,
-            evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
-            evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
-          });
+          if (routed.outcome?.verified === true && !this.visibleWorkspaceTransactions.has(routed.transactionId)) {
+            this.visibleWorkspaceTransactions.add(routed.transactionId);
+            if (this.visibleWorkspaceTransactions.size > 64) {
+              this.visibleWorkspaceTransactions.delete(this.visibleWorkspaceTransactions.values().next().value);
+            }
+            this.receipt("workspace.visible", {
+              workspace: routed.workspace,
+              transactionId: routed.transactionId,
+              acknowledgementId: acknowledgement.id || null,
+              outcomeKind: acknowledgement.outcomeKind || null,
+              outcomeVerified: true,
+              evidenceReceiptId: acknowledgement.evidenceReceiptId || null,
+              evidenceStatus: acknowledgement.evidenceStatus || null,
+              evidenceSourceCount: acknowledgement.evidenceSourceCount || 0,
+              evidenceLinksVisible: acknowledgement.evidenceLinksVisible === true
+            });
+          }
           this.conversationContext = rememberCompletedTurn(this.conversationContext, routed);
           this.receipt("conversation.context-advanced", {
             workspace: routed.workspace,
@@ -394,14 +489,14 @@ class NexusBrowserRuntime {
             previousTransactionId: routed.previousTransactionId || null
           });
           return routed;
-        }).catch((error) => {
-          this.visualRoutes.delete(routeKey);
-          throw error;
+        }).finally(() => {
+          setTimeout(() => {
+            if (this.visualRoutes.get(routeKey) === visualRoute) {
+              this.visualRoutes.delete(routeKey);
+            }
+          }, 15000);
         });
         this.visualRoutes.set(routeKey, visualRoute);
-        setTimeout(() => {
-          if (this.visualRoutes.get(routeKey) === visualRoute) this.visualRoutes.delete(routeKey);
-        }, 15000);
       }
       result = await visualRoute;
     }
@@ -424,8 +519,14 @@ class NexusBrowserRuntime {
     this.responseFallbackTimer = null;
   }
 
+  clearResponseRetry() {
+    if (this.responseRetryTimer) clearTimeout(this.responseRetryTimer);
+    this.responseRetryTimer = null;
+  }
+
   stop(reason = "user-stop") {
     this.clearResponseFallback();
+    this.clearResponseRetry();
     this.foundation.stop(reason);
     if (this.unsubscribe) this.unsubscribe();
     this.unsubscribe = null;
@@ -436,8 +537,12 @@ class NexusBrowserRuntime {
     this.responseActive = false;
     this.responseRequestPending = false;
     this.deferredResponse = null;
+    this.lastResponseRequest = null;
+    this.responseRetryCount = 0;
     this.completedResponseKeys.clear();
     this.visualRoutes.clear();
+    this.visibleWorkspaceTransactions.clear();
+    this.commandInterceptions.clear();
     this.conversationContext = clearConversationContext();
     this.receipt("runtime.closed", { reason });
   }

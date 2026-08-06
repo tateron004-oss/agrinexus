@@ -16,6 +16,9 @@ const WEATHER_PROVIDER_CANDIDATES = Object.freeze([
 
 const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+const NOMINATIM_GEOCODING_URL = "https://nominatim.openstreetmap.org/search";
+const MET_NORWAY_FORECAST_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
+const weatherResultCache = new Map();
 
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -154,12 +157,105 @@ function normalizeOpenMeteoWeatherPayload({ locationText, geocodingPayload, fore
 }
 
 async function fetchJson(fetchImpl, url) {
-  const response = await fetchImpl(url, { method: "GET", signal: AbortSignal.timeout(8000) });
+  const response = await fetchImpl(url, {
+    method: "GET",
+    headers: { "user-agent": "NexusGenesis/1.0 weather-resilience" },
+    signal: AbortSignal.timeout(8000)
+  });
   if (!response || response.ok !== true) {
     const status = response && typeof response.status !== "undefined" ? `http-${response.status}` : "http-error";
     throw new Error(status);
   }
   return response.json();
+}
+
+function retryableWeatherError(error) {
+  return /http-(429|5\d\d)|fetch|timeout|network/i.test(String(error && error.message || error || ""));
+}
+
+async function fetchJsonWithRetry(fetchImpl, url, env = process.env) {
+  const attempts = Math.max(1, Number(env.NEXUS_WEATHER_RETRY_ATTEMPTS || 2));
+  const wait = typeof env.NEXUS_WEATHER_WAIT_IMPL === "function"
+    ? env.NEXUS_WEATHER_WAIT_IMPL
+    : delay => new Promise(resolve => setTimeout(resolve, delay));
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetchJson(fetchImpl, url);
+    } catch (error) {
+      lastError = error;
+      if (!retryableWeatherError(error) || attempt === attempts) break;
+      await wait(Math.min(1000, 150 * (2 ** (attempt - 1))));
+    }
+  }
+  throw lastError;
+}
+
+function weatherCacheKey(request = {}) {
+  return normalizeLocationText(request.locationText).toLowerCase();
+}
+
+function readCachedWeather(request, env = process.env) {
+  const cached = weatherResultCache.get(weatherCacheKey(request));
+  const ttlMs = Math.max(1000, Number(env.NEXUS_WEATHER_CACHE_TTL_MS || 600000));
+  return cached && Date.now() - cached.storedAt <= ttlMs ? cached.result : null;
+}
+
+function cacheWeather(request, result) {
+  if (result && result.sourceStatus === "source-result-available") {
+    weatherResultCache.set(weatherCacheKey(request), { storedAt: Date.now(), result });
+  }
+  return result;
+}
+
+function normalizeMetNorwayWeatherPayload({ locationText, geocodingPayload, forecastPayload }) {
+  const location = Array.isArray(geocodingPayload) && geocodingPayload[0] ? geocodingPayload[0] : {};
+  const instant = forecastPayload?.properties?.timeseries?.[0];
+  const details = instant?.data?.instant?.details || {};
+  const symbol = instant?.data?.next_1_hours?.summary?.symbol_code || instant?.data?.next_6_hours?.summary?.symbol_code || "conditions available";
+  const city = hasText(location.display_name) ? location.display_name.split(",")[0] : normalizeLocationText(locationText);
+  const temperature = typeof details.air_temperature === "number" ? `${Math.round(details.air_temperature)} C` : "temperature unavailable";
+  const wind = typeof details.wind_speed === "number" ? `${Math.round(details.wind_speed * 3.6)} km/h wind` : "wind unavailable";
+  const retrievedAt = new Date().toISOString();
+  return normalizeSourceResult({
+    sourceResultId: `weather-met-norway-${city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "location"}`,
+    requestType: "weather",
+    providerName: WEATHER_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "MET Norway Locationforecast",
+    sourceCategory: "weather",
+    sourceUrl: "https://api.met.no/weatherapi/locationforecast/2.0/documentation",
+    query: `current weather for ${normalizeLocationText(locationText)}`,
+    resultSummary: `Current weather for ${city}: ${String(symbol).replace(/_/g, " ")}, about ${temperature}, with ${wind}.`,
+    rawResultAvailable: true,
+    retrievedAt,
+    lastUpdated: instant?.time || retrievedAt,
+    freshnessStatus: "fresh",
+    confidenceLevel: "medium",
+    limitationNotes: "Read-only MET Norway result geocoded by OpenStreetMap Nominatim. Verify directly for operational decisions.",
+    evidenceStatus: "source-backed",
+    sourceStatus: "source-result-available"
+  });
+}
+
+async function runMetNorwayFallbackLookup(request = {}, env = process.env) {
+  const query = buildWeatherSourceQuery(request);
+  const fetchImpl = typeof env.NEXUS_WEATHER_FETCH_IMPL === "function" ? env.NEXUS_WEATHER_FETCH_IMPL : globalThis.fetch;
+  if (!hasText(query.locationText) || typeof fetchImpl !== "function") return null;
+  const geocodingUrl = new URL(NOMINATIM_GEOCODING_URL);
+  geocodingUrl.searchParams.set("q", query.locationText);
+  geocodingUrl.searchParams.set("format", "jsonv2");
+  geocodingUrl.searchParams.set("limit", "1");
+  const geocodingPayload = await fetchJsonWithRetry(fetchImpl, geocodingUrl, env);
+  const location = Array.isArray(geocodingPayload) ? geocodingPayload[0] : null;
+  const latitude = Number(location?.lat);
+  const longitude = Number(location?.lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error("fallback-location-not-found");
+  const forecastUrl = new URL(MET_NORWAY_FORECAST_URL);
+  forecastUrl.searchParams.set("lat", String(latitude));
+  forecastUrl.searchParams.set("lon", String(longitude));
+  const forecastPayload = await fetchJsonWithRetry(fetchImpl, forecastUrl, env);
+  return normalizeMetNorwayWeatherPayload({ locationText: query.locationText, geocodingPayload, forecastPayload });
 }
 
 async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
@@ -182,7 +278,7 @@ async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
     geocodingUrl.searchParams.set("count", "1");
     geocodingUrl.searchParams.set("language", "en");
     geocodingUrl.searchParams.set("format", "json");
-    const geocodingPayload = await fetchJson(fetchImpl, geocodingUrl);
+    const geocodingPayload = await fetchJsonWithRetry(fetchImpl, geocodingUrl, env);
     const location = Array.isArray(geocodingPayload.results) && geocodingPayload.results[0] ? geocodingPayload.results[0] : null;
     if (!location || typeof location.latitude !== "number" || typeof location.longitude !== "number") {
       return buildOpenMeteoProviderErrorResult(query.locationText, "location-not-found");
@@ -193,10 +289,16 @@ async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
     forecastUrl.searchParams.set("longitude", String(location.longitude));
     forecastUrl.searchParams.set("current", "temperature_2m,weather_code,wind_speed_10m");
     forecastUrl.searchParams.set("timezone", "auto");
-    const forecastPayload = await fetchJson(fetchImpl, forecastUrl);
-    return normalizeOpenMeteoWeatherPayload({ locationText: query.locationText, geocodingPayload, forecastPayload });
+    const forecastPayload = await fetchJsonWithRetry(fetchImpl, forecastUrl, env);
+    return cacheWeather(request, normalizeOpenMeteoWeatherPayload({ locationText: query.locationText, geocodingPayload, forecastPayload }));
   } catch (error) {
-    return buildOpenMeteoProviderErrorResult(query.locationText, error && error.message ? error.message : "source-error");
+    try {
+      return cacheWeather(request, await runMetNorwayFallbackLookup(request, env));
+    } catch (fallbackError) {
+      const cached = readCachedWeather(request, env);
+      if (cached) return cached;
+      return buildOpenMeteoProviderErrorResult(query.locationText, `all-providers-failed: ${error?.message || "source-error"}; ${fallbackError?.message || "fallback-error"}`);
+    }
   }
 }
 
@@ -262,6 +364,8 @@ module.exports = Object.freeze({
   WEATHER_PROVIDER_CANDIDATES,
   OPEN_METEO_GEOCODING_URL,
   OPEN_METEO_FORECAST_URL,
+  NOMINATIM_GEOCODING_URL,
+  MET_NORWAY_FORECAST_URL,
   buildWeatherSourceQuery,
   resolveWeatherProviderConfig,
   isOpenMeteoPublicProviderConfigured,
@@ -269,6 +373,8 @@ module.exports = Object.freeze({
   buildWeatherProviderUnavailableResult,
   buildOpenMeteoProviderErrorResult,
   normalizeOpenMeteoWeatherPayload,
+  normalizeMetNorwayWeatherPayload,
+  runMetNorwayFallbackLookup,
   runOpenMeteoReadOnlyLookup,
   getWeatherSourceResult,
   getWeatherSourceResultAsync
