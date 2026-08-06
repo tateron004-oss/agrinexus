@@ -11,8 +11,8 @@ assert.equal(sameCommit(fullSha, fullSha), true);
 assert.equal(sameCommit(fullSha, fullSha.slice(0, 12)), false);
 assert.equal(sameCommit(fullSha, "deadbee"), false);
 assert.equal(requireCanonicalProductionUrl(CANONICAL_PRODUCTION_URL), CANONICAL_PRODUCTION_URL);
-assert.equal(CANONICAL_PRODUCTION_URL, "https://agrinexus-platform.onrender.com");
-assert.throws(() => requireCanonicalProductionUrl("https://nexus-genesis-certified.onrender.com"), /CANONICAL_HOST_MISMATCH/);
+assert.equal(CANONICAL_PRODUCTION_URL, "https://nexus-genesis-certified.onrender.com");
+assert.throws(() => requireCanonicalProductionUrl("https://agrinexus-platform.onrender.com"), /CANONICAL_HOST_MISMATCH/);
 assert.throws(() => requireCanonicalProductionUrl("https://example.com"), /CANONICAL_HOST_MISMATCH/);
 assert.throws(() => requireCanonicalProductionUrl(`${CANONICAL_PRODUCTION_URL}/certification`), /CANONICAL_HOST_MISMATCH/);
 

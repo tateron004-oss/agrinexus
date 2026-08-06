@@ -10,7 +10,7 @@ The web app can only listen while the page is open, secure, and microphone permi
 - visible always-on wake listener
 - wake phrases: `Nexus`, `Hey Nexus`, `Agri`, `Hey AgriNexus`
 - Chrome/page-independent command capture
-- command handoff to `https://agrinexus-platform.onrender.com/api/agent/command`
+- command handoff to `https://nexus-genesis-certified.onrender.com/api/agent/command`
 - browser launch when the user says a wake phrase
 - spoken acknowledgement through native Windows text-to-speech
 - privacy guard: visible console, stop phrase, no hidden listening

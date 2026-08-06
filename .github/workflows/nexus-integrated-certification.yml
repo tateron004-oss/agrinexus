@@ -2,6 +2,17 @@ name: Nexus integrated release certification
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - rebuild/nexus-integrated-certification-2026-08-05
+    paths:
+      - ".github/workflows/nexus-integrated-certification.yml"
+      - ".github/nexus-protected-foundation.json"
+      - "server.js"
+      - "rebuild/browser/**"
+      - "rebuild/nexus-core/**"
+      - "rebuild/tests/**"
+      - "scripts/**"
 
 permissions:
   contents: read
@@ -11,8 +22,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NEXUS_CANONICAL_PRODUCTION_URL: https://agrinexus-platform.onrender.com
-  NEXUS_CLEAN_BASE_URL: https://agrinexus-platform.onrender.com
+  NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:

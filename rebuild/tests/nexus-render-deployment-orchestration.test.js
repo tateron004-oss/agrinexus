@@ -4,10 +4,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { triggerDeploy, validatedDeployHook, validatedReleaseSha } = require("../../scripts/nexus-render-deploy");
 
-const workflow = fs.readFileSync(".github/workflows/nexus-live-runtime-certification.yml", "utf8");
+const workflow = fs.readFileSync(".github/workflows/nexus-integrated-certification.yml", "utf8");
 
 assert.match(workflow, /workflow_dispatch:/);
-assert.doesNotMatch(workflow, /^\s{2}push:/m);
+assert.match(workflow, /^\s{2}push:/m);
+assert.match(workflow, /rebuild\/nexus-integrated-certification-2026-08-05/);
 assert.match(workflow, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
 assert.match(workflow, /RENDER_DEPLOY_HOOK_URL: \$\{\{ secrets\.RENDER_DEPLOY_HOOK_URL \}\}/);
 assert.match(workflow, /nexus-release-certification-controller\.js verify-deployment/);

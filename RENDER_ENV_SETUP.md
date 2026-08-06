@@ -3,7 +3,7 @@
 AgriNexus deploys as two Render web services:
 
 - `agrinexus-provider-engines`: receives provider workflow events.
-- `agrinexus-platform`: serves the browser app and sends events to provider engines.
+- `nexus-genesis-certified`: serves the browser app and sends events to provider engines.
 
 ## Generate Values
 
@@ -38,7 +38,7 @@ That command creates `LIVE_ENGINE_CONNECTION_REPORT.md`, which lists every engin
 In Render, open each service, go to **Environment**, and paste the matching block:
 
 - Paste the `agrinexus-provider-engines` block into the provider service.
-- Paste the `agrinexus-platform` block into the platform service.
+- Paste the `nexus-genesis-certified` block into the platform service.
 
 Replace these before calling it production:
 

@@ -1,6 +1,6 @@
 # AgriNexus Live Keys To Add Now
 
-Use this as the short Render checklist. Add these to the `agrinexus-platform` web service environment.
+Use this as the short Render checklist. Add these to the `nexus-genesis-certified` web service environment.
 
 ## Already Connected Or Previously Added
 
@@ -56,7 +56,7 @@ Use these only after Twilio confirms the sender/WhatsApp/messaging service value
 1. Add `MAPBOX_ACCESS_TOKEN` or `OPENROUTESERVICE_API_KEY`.
 2. Add Paystack or Flutterwave payment keys.
 3. Add Twilio SMS/WhatsApp sender values.
-4. Redeploy `agrinexus-platform`.
+4. Redeploy `nexus-genesis-certified`.
 5. Run the hosted live service check.
 
 ## Important

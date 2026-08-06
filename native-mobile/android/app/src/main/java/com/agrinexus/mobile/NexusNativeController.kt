@@ -15,7 +15,7 @@ import java.util.Locale
 
 class NexusNativeController(private val activity: Activity, private val webView: WebView) {
     private var tts: TextToSpeech? = null
-    private val appUrl = "https://agrinexus-platform.onrender.com"
+    private val appUrl = "https://nexus-genesis-certified.onrender.com"
     private var selectedLanguageTag = "en-US"
 
     fun load() {

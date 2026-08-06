@@ -4,7 +4,7 @@ import UIKit
 import WebKit
 
 final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
-    private let appURL = URL(string: "https://agrinexus-platform.onrender.com")!
+    private let appURL = URL(string: "https://nexus-genesis-certified.onrender.com")!
     private var webView: WKWebView!
     private let voiceRuntime = NexusVoiceRuntime()
 

@@ -1,5 +1,5 @@
 param(
-  [string]$PlatformUrl = "https://agrinexus-platform.onrender.com",
+  [string]$PlatformUrl = "https://nexus-genesis-certified.onrender.com",
   [string]$UserName = "Ron",
   [string]$Email = $env:AGRINEXUS_EMAIL,
   [string]$Password = $env:AGRINEXUS_PASSWORD,

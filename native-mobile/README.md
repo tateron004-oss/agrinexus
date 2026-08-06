@@ -19,7 +19,7 @@ The web platform already contains the Nexus brain, workflows, OpenAI voice path,
 
 ## Current Production URL
 
-`https://agrinexus-platform.onrender.com`
+`https://nexus-genesis-certified.onrender.com`
 
 Change this value in:
 
@@ -61,7 +61,7 @@ The iOS shell uses `SFSpeechRecognizer`, `AVAudioEngine`, and `WKWebView` to rou
 The shared architecture can be checked at:
 
 ```text
-https://agrinexus-platform.onrender.com/api/native/voice-architecture
+https://nexus-genesis-certified.onrender.com/api/native/voice-architecture
 ```
 
 That response reports native permissions, always-on wake readiness, realtime streaming readiness, and deeper provider data readiness.

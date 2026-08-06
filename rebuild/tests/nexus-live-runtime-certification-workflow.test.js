@@ -3,13 +3,13 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const workflow = fs.readFileSync(".github/workflows/nexus-live-runtime-certification.yml", "utf8");
-assert.match(workflow, /NEXUS_CLEAN_BASE_URL: https:\/\/agrinexus-platform\.onrender\.com/);
-assert.doesNotMatch(workflow, /nexus-genesis-certified\.onrender\.com/);
+const workflow = fs.readFileSync(".github/workflows/nexus-integrated-certification.yml", "utf8");
+assert.match(workflow, /NEXUS_CLEAN_BASE_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
+assert.doesNotMatch(workflow, /agrinexus-platform\.onrender\.com/);
 
 assert.match(workflow, /workflow_dispatch:/);
 assert.match(workflow, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
-assert.match(workflow, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/agrinexus-platform\.onrender\.com/);
+assert.match(workflow, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
 assert.match(workflow, /shell: cmd/);
 assert.match(workflow, /git log -1 --format\^=%%H -- rebuild\/browser\/nexus-clean\.bundle\.js/);
 assert.match(workflow, /set "DEPLOYMENT_SHA=%GITHUB_SHA%"/);
@@ -33,6 +33,7 @@ assert.match(workflow, /npx playwright install --with-deps chromium/);
 assert.match(workflow, /nexus-browser-playwright-smoke\.js/);
 assert.match(workflow, /nexus-content-population-browser\.test\.js/);
 assert.ok(workflow.indexOf("nexus-content-population-browser.test.js") < workflow.indexOf("node scripts/nexus-render-deploy.js"), "preproduction browser proof must precede deployment");
-assert.doesNotMatch(workflow, /^\s{2}push:/m, "integrated certification must never auto-dispatch");
+assert.match(workflow, /^\s{2}push:/m, "integrated certification must dispatch only from its isolated branch");
+assert.match(workflow, /rebuild\/nexus-integrated-certification-2026-08-05/);
 
 console.log("Nexus live-runtime certification workflow: PASS");

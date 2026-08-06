@@ -12,7 +12,7 @@ const {
 assert.equal(productionUrlFromEnv({}), CANONICAL_PRODUCTION_URL);
 assert.equal(productionUrlFromEnv({ NEXUS_CANONICAL_PRODUCTION_URL: CANONICAL_PRODUCTION_URL }), CANONICAL_PRODUCTION_URL);
 assert.throws(
-  () => productionUrlFromEnv({ NEXUS_CLEAN_BASE_URL: "https://nexus-genesis-certified.onrender.com" }),
+  () => productionUrlFromEnv({ NEXUS_CLEAN_BASE_URL: "https://agrinexus-platform.onrender.com" }),
   /CANONICAL_HOST_MISMATCH/
 );
 assert.throws(() => requireCanonicalProductionUrl("https://example.com"), /CANONICAL_HOST_MISMATCH/);
@@ -20,15 +20,16 @@ assert.throws(() => requireCanonicalProductionUrl("https://example.com"), /CANON
 const workflowDirectory = path.resolve(".github/workflows");
 const certificationFiles = fs.readdirSync(workflowDirectory)
   .filter(name => /certification|acceptance|proof|deploy/.test(name) && name.endsWith(".yml"));
-const forbiddenHost = "nexus-genesis-certified.onrender.com";
+const forbiddenHost = "agrinexus-platform.onrender.com";
 for (const name of certificationFiles) {
   const source = fs.readFileSync(path.join(workflowDirectory, name), "utf8");
   assert.ok(!source.includes(forbiddenHost), `${name} must not target the retired production host`);
 }
 
-const integrated = fs.readFileSync(path.join(workflowDirectory, "nexus-live-runtime-certification.yml"), "utf8");
+const integrated = fs.readFileSync(path.join(workflowDirectory, "nexus-integrated-certification.yml"), "utf8");
 assert.match(integrated, /workflow_dispatch:/);
-assert.doesNotMatch(integrated, /^\s{2}push:/m);
+assert.match(integrated, /^\s{2}push:/m);
+assert.match(integrated, /rebuild\/nexus-integrated-certification-2026-08-05/);
 assert.match(integrated, /node scripts\/nexus-render-deploy\.js/);
 
 console.log(`Nexus canonical production target: PASS (${certificationFiles.length} workflows)`);

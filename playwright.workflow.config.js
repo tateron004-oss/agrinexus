@@ -1,7 +1,7 @@
 const { defineConfig } = require("@playwright/test");
 
 const baseURL = process.env.NEXUS_PLAYWRIGHT_BASE_URL
-  || "https://agrinexus-platform.onrender.com";
+  || "https://nexus-genesis-certified.onrender.com";
 const wsEndpoint = process.env.NEXUS_PLAYWRIGHT_WS_ENDPOINT || "";
 
 module.exports = defineConfig({

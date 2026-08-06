@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const BASE_URL = process.env.NEXUS_LIVE_BASE_URL || "https://agrinexus-platform.onrender.com";
+const BASE_URL = process.env.NEXUS_LIVE_BASE_URL || "https://nexus-genesis-certified.onrender.com";
 const OUTPUT = path.resolve("output/nexus-windows-real-device");
 const VIRTUAL_DEVICE = /virtual|vb-audio|cable input|cable output|stereo mix|voicemeeter|blackhole|loopback|fake/i;
 

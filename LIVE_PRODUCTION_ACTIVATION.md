@@ -64,7 +64,7 @@ If it reports unresolved values, fix those first.
 Paste the platform block into:
 
 ```text
-agrinexus-platform -> Environment
+nexus-genesis-certified -> Environment
 ```
 
 Paste matching provider keys into:
@@ -94,7 +94,7 @@ BILLING_PROVIDER_API_KEY
 Redeploy in this order:
 
 1. `agrinexus-provider-engines`
-2. `agrinexus-platform`
+2. `nexus-genesis-certified`
 
 ## 7. Verify Live Status
 

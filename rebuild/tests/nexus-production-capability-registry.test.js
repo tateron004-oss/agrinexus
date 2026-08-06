@@ -13,7 +13,7 @@ const {
 const { ROUTES } = require("../nexus-core/router");
 const lifecycleJourneys = require("./fixtures/nexus-production-lifecycle-journeys");
 
-assert.equal(CANONICAL_PRODUCTION_URL, "https://agrinexus-platform.onrender.com");
+assert.equal(CANONICAL_PRODUCTION_URL, "https://nexus-genesis-certified.onrender.com");
 assert.deepEqual(LIFECYCLE, ["open", "execute", "verify-outcome", "follow-up", "correct", "save", "close", "reopen", "verify-persistence"]);
 assert.equal(PRODUCTION_CAPABILITY_REGISTRY.length, 21);
 assert.equal(new Set(PRODUCTION_CAPABILITY_REGISTRY.map((entry) => entry.id)).size, PRODUCTION_CAPABILITY_REGISTRY.length);
@@ -73,9 +73,9 @@ assert.match(populationExtension, /music source did not produce advancing playba
 const cleanCompatibility = fs.readFileSync(".github/workflows/nexus-clean-windows-certification.yml", "utf8");
 assert.match(cleanCompatibility, /nexus-genesis-clean-voice/);
 assert.match(cleanCompatibility, /nexus\.clean\.health\.v1/);
-const integratedWorkflow = fs.readFileSync(".github/workflows/nexus-live-runtime-certification.yml", "utf8");
+const integratedWorkflow = fs.readFileSync(".github/workflows/nexus-integrated-certification.yml", "utf8");
 assert.match(integratedWorkflow, /nexus-production-certification-preflight\.js/);
 assert.match(integratedWorkflow, /nexus-release-certification-controller\.js verify-deployment/);
-assert.match(integratedWorkflow, /https:\/\/agrinexus-platform\.onrender\.com/);
+assert.match(integratedWorkflow, /https:\/\/nexus-genesis-certified\.onrender\.com/);
 
 console.log("Nexus production capability registry: PASS (21 lanes, complete lifecycle contract)");

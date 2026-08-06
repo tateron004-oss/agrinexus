@@ -3,8 +3,8 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const canonical = "https://agrinexus-platform.onrender.com";
-const forbidden = "https://nexus-genesis-certified.onrender.com";
+const canonical = "https://nexus-genesis-certified.onrender.com";
+const forbidden = "https://agrinexus-platform.onrender.com";
 const activeTargetFiles = [
   ".github/workflows/nexus-clean-windows-certification.yml",
   ".github/workflows/nexus-release-certification-v2.yml",

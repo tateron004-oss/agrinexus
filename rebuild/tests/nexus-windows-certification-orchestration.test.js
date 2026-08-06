@@ -14,10 +14,10 @@ for (const file of files) {
   if (/^\s{2}workflow_dispatch:\s*$/m.test(source)) manualEntries.push(file);
 }
 
-assert.deepEqual(manualEntries, ["nexus-live-runtime-certification.yml"], "there must be exactly one certification entry point");
+assert.deepEqual(manualEntries, ["nexus-integrated-certification.yml"], "there must be exactly one certification entry point");
 assert.deepEqual(physicalOwners.sort(), [
   "nexus-clean-windows-certification.yml",
-  "nexus-live-runtime-certification.yml",
+  "nexus-integrated-certification.yml",
   "nexus-release-certification-v2.yml"
 ].sort(), "only the integrated workflow and its non-dispatchable protected compatibility workflows may reference the runner");
 
@@ -27,9 +27,9 @@ for (const file of ["nexus-clean-windows-certification.yml", "nexus-release-cert
   assert.doesNotMatch(source, /^\s{2}(?:push|workflow_dispatch):/m, `${file} must not dispatch itself`);
 }
 
-const canonical = fs.readFileSync(`${workflowDir}/nexus-live-runtime-certification.yml`, "utf8");
+const canonical = fs.readFileSync(`${workflowDir}/nexus-integrated-certification.yml`, "utf8");
 assert.match(canonical, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
-assert.match(canonical, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/agrinexus-platform\.onrender\.com/);
+assert.match(canonical, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
 assert.match(canonical, /nexus-release-certification-controller\.js verify-deployment/);
 assert.match(canonical, /nexus-windows-stability-certification\.ps1/);
 assert.match(canonical, /NEXUS_STABILITY_RUNS: "3"/);

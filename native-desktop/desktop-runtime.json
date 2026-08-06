@@ -25,9 +25,9 @@
   "wakePhrases": ["Nexus", "Hey Nexus", "Agri", "Hey AgriNexus", "Good morning Nexus"],
   "stopPhrases": ["Nexus stop", "stop listening", "be quiet", "pause nexus"],
   "handoff": {
-    "api": "https://agrinexus-platform.onrender.com/api/agent/command",
-    "architectureApi": "https://agrinexus-platform.onrender.com/api/native/voice-architecture",
-    "realtimeStatusApi": "https://agrinexus-platform.onrender.com/api/voice/realtime/status",
+    "api": "https://nexus-genesis-certified.onrender.com/api/agent/command",
+    "architectureApi": "https://nexus-genesis-certified.onrender.com/api/native/voice-architecture",
+    "realtimeStatusApi": "https://nexus-genesis-certified.onrender.com/api/voice/realtime/status",
     "inputMode": "native",
     "outputMode": "voice",
     "opensBrowser": true,

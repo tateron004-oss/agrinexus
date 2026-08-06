@@ -13,7 +13,7 @@ async function main() {
   const extension = read("rebuild/browser/nexus-content-population-extension.js");
   const server = read("rebuild/production-capability-bridge-server.js");
   const physical = read("rebuild/tests/nexus-production-transaction-windows.spec.js");
-  const workflow = read(".github/workflows/nexus-live-runtime-certification.yml");
+  const workflow = read(".github/workflows/nexus-integrated-certification.yml");
 
   assert.doesNotMatch(extension, /Editable workspace ready while live enrichment continues/i);
   assert.match(extension, /function applicationDeadlineFallback\(detail\)\s*{\s*void detail;\s*return null;/);
