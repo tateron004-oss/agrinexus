@@ -48,7 +48,9 @@ jobs:
       - name: Run complete integrated freeze gate three times
         run: node scripts/nexus-integrated-freeze-gate.js
       - name: Install pinned preproduction Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.61.1
+          npx playwright install --with-deps chromium
       - name: Run real preproduction browser gauntlet
         run: |
           node rebuild/tests/nexus-browser-playwright-smoke.js

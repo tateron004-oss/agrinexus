@@ -29,6 +29,8 @@ assert.match(workflow, /RENDER_DEPLOY_HOOK_URL: \$\{\{ secrets\.RENDER_DEPLOY_HO
 assert.match(workflow, /node scripts\/nexus-render-deploy\.js/);
 assert.match(workflow, /runs-on: ubuntu-latest/);
 assert.match(workflow, /node scripts\/nexus-integrated-freeze-gate\.js/);
+assert.match(workflow, /npm install --no-save --no-package-lock playwright@1\.61\.1/);
+assert.match(workflow, /npx playwright install --with-deps chromium/);
 assert.match(workflow, /npx playwright install --with-deps chromium/);
 assert.match(workflow, /nexus-browser-playwright-smoke\.js/);
 assert.match(workflow, /nexus-content-population-browser\.test\.js/);
