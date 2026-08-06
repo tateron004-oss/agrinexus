@@ -48,13 +48,16 @@ function installRendererOutcomeVerifier(windowObject = window) {
     },
     capture(surface, resultId) {
       const { contract, host, root } = this.resolve(surface, resultId);
+      const style = root ? windowObject.getComputedStyle?.(root) : null;
+      const visible = Boolean(root && !root.hidden && style?.display !== "none" && style?.visibility !== "hidden");
       return {
         owner: contract.owner,
         exists: Boolean(root),
+        visible,
         resultId: resultId || null,
         status: root?.dataset.resultStatus || null,
         artifactKind: root?.dataset.artifactKind || root?.dataset.nexusContentArtifact || null,
-        visibleText: String(root?.innerText || "").replace(/\s+/g, " ").trim().slice(0, 6000),
+        visibleText: String(root?.innerText || root?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 6000),
         itemCount: root?.querySelectorAll("[data-nexus-item]").length || 0,
         imageCount: root ? [...root.querySelectorAll("img[src]")].filter(image => image.naturalWidth > 0 && image.naturalHeight > 0).length : 0,
         linkCount: root?.querySelectorAll("a[href]").length || 0,

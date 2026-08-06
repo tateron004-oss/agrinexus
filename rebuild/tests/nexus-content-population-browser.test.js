@@ -145,7 +145,7 @@ async function main() {
         const resultId = window.NexusRendererOutcomeVerifier.currentResultId(rendererSurface);
         if (!resultId || resultId === previousId) return false;
         const proof = window.NexusRendererOutcomeVerifier.capture(rendererSurface, resultId);
-        return proof.exists && new RegExp(pattern, "i").test(proof.visibleText);
+        return proof.exists && proof.visible && new RegExp(pattern, "i").test(proof.visibleText);
       }, { previousId: beforeId, pattern: titlePattern, rendererSurface }, { timeout: 10000 });
       await page.waitForFunction(() => window.NexusContentPopulation.snapshot().pending.length === 0);
     }

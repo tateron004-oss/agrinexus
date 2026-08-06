@@ -16,6 +16,7 @@ const browserContext = { document: {} };
 browserContext.window = browserContext;
 vm.runInNewContext(`(${installRendererOutcomeVerifier.toString()})()`, browserContext);
 assert.equal(typeof browserContext.NexusRendererOutcomeVerifier?.currentResultId, "function", "serialized browser installer did not initialize the verifier");
+assert.match(installRendererOutcomeVerifier.toString(), /innerText \|\| root\?\.textContent/, "shared verifier must retain deterministic DOM text fallback");
 
 const certificationFiles = [
   "nexus-browser-playwright-smoke.js",
