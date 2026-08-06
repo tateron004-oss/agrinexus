@@ -175,7 +175,8 @@ async function main() {
       const workspace = body.requestedWorkspace || body.activeWorkspace || "live-knowledge";
       const artifact = {
         kind: "workspace", title: `Visible ${workspace} capability`, description: body.command,
-        fields: [], sections: [], items: [], links: [],
+        fields: [{ id: "request", label: "Request", type: "text", value: body.command, required: false, options: [] }],
+        sections: [], items: [], links: [],
         media: { kind: "", title: "", provider: "", sourceUrl: "", embedUrl: "", state: "none" }
       };
       let capability = "workspace";
@@ -184,7 +185,7 @@ async function main() {
         capability = "map";
         artifact.kind = "map";
         artifact.links = [{ label: "Open interactive map", url: "https://www.openstreetmap.org/#map=6/0.1/37.9" }];
-        artifact.media = { kind: "map", title: "Kenya map", provider: "OpenStreetMap", sourceUrl: artifact.links[0].url, embedUrl: "https://www.openstreetmap.org/export/embed.html?bbox=33%2C-5%2C42%2C5&marker=0.1%2C37.9", state: "ready" };
+        artifact.media = { kind: "map", title: "Kenya map", provider: "OpenStreetMap", sourceUrl: artifact.links[0].url, embedUrl: "https://www.openstreetmap.org/export/embed.html?bbox=33%2C-5%2C42%2C5&marker=0.1%2C37.9", state: "ready", route: { focus: { lat: 0.1, lon: 37.9 } } };
       } else if (workspace === "music") {
         capability = "music";
         operation = "play";
