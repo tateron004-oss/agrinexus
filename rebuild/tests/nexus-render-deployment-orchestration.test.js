@@ -9,7 +9,8 @@ const workflow = fs.readFileSync(".github/workflows/nexus-integrated-certificati
 assert.match(workflow, /workflow_dispatch:/);
 assert.match(workflow, /^\s{2}push:/m);
 assert.match(workflow, /rebuild\/nexus-integrated-certification-2026-08-05/);
-assert.match(workflow, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
+assert.match(workflow, /group: nexus-integrated-physical-certification[\s\S]*?cancel-in-progress: false/);
+assert.doesNotMatch(workflow, /cancel-in-progress: true/, "deployment retries must not cancel the certification owner");
 assert.match(workflow, /RENDER_DEPLOY_HOOK_URL: \$\{\{ secrets\.RENDER_DEPLOY_HOOK_URL \}\}/);
 assert.match(workflow, /nexus-release-certification-controller\.js verify-deployment/);
 assert.doesNotMatch(workflow, /https:\/\/api\.render\.com\/deploy\/[A-Za-z0-9_-]+/);

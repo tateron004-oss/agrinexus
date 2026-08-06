@@ -28,7 +28,8 @@ for (const file of ["nexus-clean-windows-certification.yml", "nexus-release-cert
 }
 
 const canonical = fs.readFileSync(`${workflowDir}/nexus-integrated-certification.yml`, "utf8");
-assert.match(canonical, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
+assert.match(canonical, /group: nexus-integrated-physical-certification[\s\S]*?cancel-in-progress: false/);
+assert.doesNotMatch(canonical, /cancel-in-progress: true/, "the sole physical owner must run to completion");
 assert.match(canonical, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
 assert.match(canonical, /nexus-release-certification-controller\.js verify-deployment/);
 assert.match(canonical, /nexus-windows-stability-certification\.ps1/);

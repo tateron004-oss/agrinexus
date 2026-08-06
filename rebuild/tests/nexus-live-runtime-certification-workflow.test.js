@@ -8,7 +8,8 @@ assert.match(workflow, /NEXUS_CLEAN_BASE_URL: https:\/\/nexus-genesis-certified\
 assert.doesNotMatch(workflow, /agrinexus-platform\.onrender\.com/);
 
 assert.match(workflow, /workflow_dispatch:/);
-assert.match(workflow, /group: nexus-integrated-physical-certification\s+cancel-in-progress: true/);
+assert.match(workflow, /group: nexus-integrated-physical-certification[\s\S]*?cancel-in-progress: false/);
+assert.doesNotMatch(workflow, /cancel-in-progress: true/, "certification repairs must queue instead of cancelling the active physical owner");
 assert.match(workflow, /NEXUS_CANONICAL_PRODUCTION_URL: https:\/\/nexus-genesis-certified\.onrender\.com/);
 assert.match(workflow, /shell: cmd/);
 assert.match(workflow, /git log -1 --format\^=%%H -- rebuild\/browser\/nexus-clean\.bundle\.js/);

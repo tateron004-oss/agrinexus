@@ -19,7 +19,9 @@ permissions:
 
 concurrency:
   group: nexus-integrated-physical-certification
-  cancel-in-progress: true
+  # Never cancel the sole certification owner mid-flight. Later dispatches queue
+  # behind it so deployment and the Windows 3/3 streak can reach a conclusion.
+  cancel-in-progress: false
 
 env:
   NEXUS_CANONICAL_PRODUCTION_URL: https://nexus-genesis-certified.onrender.com
