@@ -143,7 +143,7 @@ async function main() {
       await page.evaluate((value) => window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: { type: "transcript.final", detail: { transcript: value } } })), command);
       await page.waitForFunction(({ previousId, pattern, rendererSurface }) => {
         const resultId = window.NexusRendererOutcomeVerifier.currentResultId(rendererSurface);
-        if (!resultId || resultId === previousId) return false;
+        if (!resultId || (window.NexusRendererOutcomeVerifier.requiresResultChange(rendererSurface) && resultId === previousId)) return false;
         const proof = window.NexusRendererOutcomeVerifier.capture(rendererSurface, resultId);
         return proof.exists && proof.visible && new RegExp(pattern, "i").test(proof.visibleText);
       }, { previousId: beforeId, pattern: titlePattern, rendererSurface }, { timeout: 10000 });

@@ -4,14 +4,16 @@ const RENDERER_OUTCOME_CONTRACT = Object.freeze({
   "production-capability": Object.freeze({
     owner: "protected-capability-bridge",
     rootAttribute: "data-nexus-capability-result",
-    surfaceId: "nexus-capability-surface"
+    surfaceId: "nexus-capability-surface",
+    resultIdentity: "transaction"
   }),
   "content-population": Object.freeze({
     owner: "content-population-extension",
     rootAttribute: "data-nexus-content-result-id",
-    surfaceId: "nexus-app-surface"
+    surfaceId: "nexus-app-surface",
+    resultIdentity: "transaction"
   }),
-  "protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface" })
+  "protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface", resultIdentity: "stable-artifact" })
 });
 
 function contractForSurface(surface) {
@@ -23,15 +25,20 @@ function contractForSurface(surface) {
 /* This is the only certification helper allowed to know renderer-private DOM attributes. */
 function installRendererOutcomeVerifier(windowObject = window) {
   const contracts = Object.freeze({
-    "production-capability": Object.freeze({ owner: "protected-capability-bridge", rootAttribute: "data-nexus-capability-result", surfaceId: "nexus-capability-surface" }),
-    "content-population": Object.freeze({ owner: "content-population-extension", rootAttribute: "data-nexus-content-result-id", surfaceId: "nexus-app-surface" })
-    ,"protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface" })
+    "production-capability": Object.freeze({ owner: "protected-capability-bridge", rootAttribute: "data-nexus-capability-result", surfaceId: "nexus-capability-surface", resultIdentity: "transaction" }),
+    "content-population": Object.freeze({ owner: "content-population-extension", rootAttribute: "data-nexus-content-result-id", surfaceId: "nexus-app-surface", resultIdentity: "transaction" })
+    ,"protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface", resultIdentity: "stable-artifact" })
   });
   function escape(value) {
     if (windowObject.CSS && typeof windowObject.CSS.escape === "function") return windowObject.CSS.escape(String(value));
     return String(value).replace(/["\\]/g, "\\$&");
   }
   windowObject.NexusRendererOutcomeVerifier = Object.freeze({
+    requiresResultChange(surface) {
+      const contract = contracts[surface];
+      if (!contract) throw new Error(`Unregistered certification renderer surface: ${surface}`);
+      return contract.resultIdentity === "transaction";
+    },
     currentResultId(surface) {
       if (surface === "production-capability") return windowObject.NexusProductionCapabilityBridge?.snapshot()?.currentResult?.requestId || null;
       if (surface === "content-population") return windowObject.NexusContentPopulation?.snapshot()?.currentResult?.requestId || null;

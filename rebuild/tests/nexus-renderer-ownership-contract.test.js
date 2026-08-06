@@ -9,13 +9,18 @@ const { RENDERER_OUTCOME_CONTRACT, contractForSurface, installRendererOutcomeVer
 assert.deepEqual(Object.keys(RENDERER_OUTCOME_CONTRACT).sort(), ["content-population", "production-capability", "protected-workspace"]);
 for (const surface of Object.keys(RENDERER_OUTCOME_CONTRACT)) {
   const contract = contractForSurface(surface);
-  assert.ok(contract.owner && contract.rootAttribute && contract.surfaceId, `${surface}: incomplete renderer contract`);
+  assert.ok(contract.owner && contract.rootAttribute && contract.surfaceId && contract.resultIdentity, `${surface}: incomplete renderer contract`);
 }
+assert.equal(contractForSurface("production-capability").resultIdentity, "transaction");
+assert.equal(contractForSurface("content-population").resultIdentity, "transaction");
+assert.equal(contractForSurface("protected-workspace").resultIdentity, "stable-artifact");
 
 const browserContext = { document: {} };
 browserContext.window = browserContext;
 vm.runInNewContext(`(${installRendererOutcomeVerifier.toString()})()`, browserContext);
 assert.equal(typeof browserContext.NexusRendererOutcomeVerifier?.currentResultId, "function", "serialized browser installer did not initialize the verifier");
+assert.equal(browserContext.NexusRendererOutcomeVerifier.requiresResultChange("production-capability"), true);
+assert.equal(browserContext.NexusRendererOutcomeVerifier.requiresResultChange("protected-workspace"), false);
 assert.match(installRendererOutcomeVerifier.toString(), /innerText \|\| root\?\.textContent/, "shared verifier must retain deterministic DOM text fallback");
 
 const certificationFiles = [
