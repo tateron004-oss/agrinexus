@@ -10,7 +10,8 @@ const RENDERER_OUTCOME_CONTRACT = Object.freeze({
     owner: "content-population-extension",
     rootAttribute: "data-nexus-content-result-id",
     surfaceId: "nexus-app-surface"
-  })
+  }),
+  "protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface" })
 });
 
 function contractForSurface(surface) {
@@ -24,6 +25,7 @@ function installRendererOutcomeVerifier(windowObject) {
   const contracts = Object.freeze({
     "production-capability": Object.freeze({ owner: "protected-capability-bridge", rootAttribute: "data-nexus-capability-result", surfaceId: "nexus-capability-surface" }),
     "content-population": Object.freeze({ owner: "content-population-extension", rootAttribute: "data-nexus-content-result-id", surfaceId: "nexus-app-surface" })
+    ,"protected-workspace": Object.freeze({ owner: "protected-workspace-renderer", rootAttribute: "data-nexus-visual", surfaceId: "nexus-app-surface" })
   });
   function escape(value) {
     if (windowObject.CSS && typeof windowObject.CSS.escape === "function") return windowObject.CSS.escape(String(value));
@@ -33,6 +35,7 @@ function installRendererOutcomeVerifier(windowObject) {
     currentResultId(surface) {
       if (surface === "production-capability") return windowObject.NexusProductionCapabilityBridge?.snapshot()?.currentResult?.requestId || null;
       if (surface === "content-population") return windowObject.NexusContentPopulation?.snapshot()?.currentResult?.requestId || null;
+      if (surface === "protected-workspace") return windowObject.document.querySelector("[data-nexus-visual]")?.getAttribute("data-nexus-visual") || null;
       throw new Error(`Unregistered certification renderer surface: ${surface}`);
     },
     resolve(surface, resultId) {

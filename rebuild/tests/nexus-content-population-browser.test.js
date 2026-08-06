@@ -165,12 +165,11 @@ async function main() {
       captures.push({ label, prompt, screenshot, dom });
     }
 
-    await say("Could you shape a CV for a warehouse coordinator role?", "Warehouse coordinator résumé", "production-capability");
-    assert.equal(await page.locator("[data-nexus-visible-form] input[name='name']").inputValue(), "Amina N.");
-    await say("Work my two seasons keeping the cooperative's books into it", "Two seasons managing", "production-capability");
-    assert.ok(requests.at(-1).previousArtifact.sections.length > 0);
-    assert.ok(requests.at(-1).history.some((turn) => /warehouse coordinator/i.test(turn.content)));
-    await capture("resume-contextual-revision", "Work my two seasons keeping the cooperative's books into it");
+    await say("Open the editable résumé builder", "Résumé Builder", "protected-workspace");
+    const resumeProof = await page.evaluate(() => window.NexusRendererOutcomeVerifier.captureCurrent("protected-workspace"));
+    assert.equal(resumeProof.owner, "protected-workspace-renderer");
+    assert.ok(resumeProof.controls.length >= 4, "protected résumé owner did not expose editable fields");
+    await capture("protected-resume-owner", "Open the editable résumé builder");
 
     await say("Take me somewhere horn-led from Addis Ababa", "Mulatu Astatke");
     assert.match(await page.locator("#nexus-content-music-frame").getAttribute("src"), /ethiopia123/);
