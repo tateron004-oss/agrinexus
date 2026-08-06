@@ -38,5 +38,6 @@ for (const name of certificationFiles) {
 
 const contentJourney = fs.readFileSync(path.join(__dirname, "nexus-content-population-browser.test.js"), "utf8");
 assert.match(contentJourney, /R\(\?:é\|e\)sum\(\?:é\|e\) Builder/, "résumé owner proof must accept certified diacritic variants");
+assert.match(contentJourney, /requiresResultChange\(rendererSurface\)/, "browser journey must honor each renderer's registered identity semantics");
 
 console.log("Nexus renderer ownership contract: PASS (one authoritative verifier, no private-selector bypasses)");
