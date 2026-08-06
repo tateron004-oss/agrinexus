@@ -30,4 +30,7 @@ for (const name of certificationFiles) {
   assert.doesNotMatch(source, forbidden, `${name} bypasses the authoritative renderer verifier`);
 }
 
+const contentJourney = fs.readFileSync(path.join(__dirname, "nexus-content-population-browser.test.js"), "utf8");
+assert.match(contentJourney, /R\(\?:é\|e\)sum\(\?:é\|e\) Builder/, "résumé owner proof must accept certified diacritic variants");
+
 console.log("Nexus renderer ownership contract: PASS (one authoritative verifier, no private-selector bypasses)");

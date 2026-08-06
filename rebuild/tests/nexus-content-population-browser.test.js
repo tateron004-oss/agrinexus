@@ -165,7 +165,7 @@ async function main() {
       captures.push({ label, prompt, screenshot, dom });
     }
 
-    await say("Open the editable résumé builder", "Résumé Builder", "protected-workspace");
+    await say("Open the editable résumé builder", "R(?:é|e)sum(?:é|e) Builder", "protected-workspace");
     const resumeProof = await page.evaluate(() => window.NexusRendererOutcomeVerifier.captureCurrent("protected-workspace"));
     assert.equal(resumeProof.owner, "protected-workspace-renderer");
     assert.ok(resumeProof.controls.length >= 4, "protected résumé owner did not expose editable fields");
