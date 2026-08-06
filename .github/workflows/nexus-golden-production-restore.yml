@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${NEXUS_GOLDEN_SHA}"
           node scripts/nexus-protected-foundation-guard.js
-          test -z "$(git status --porcelain)"
+          git diff --exit-code
 
       - name: Deploy exact golden commit to Render
         env:
@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${NEXUS_GOLDEN_SHA}"
           node scripts/nexus-protected-foundation-guard.js
-          test -z "$(git status --porcelain)"
+          git diff --exit-code
 
       - name: Disable this one-shot restore workflow
         if: success()
