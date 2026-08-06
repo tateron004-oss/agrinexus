@@ -1,5 +1,8 @@
 name: Nexus integrated release certification
 
+# A committed workflow revision guarantees GitHub emits the integrated release
+# event even when the publishing App suppresses same-credential automation.
+
 on:
   workflow_dispatch:
   push:
