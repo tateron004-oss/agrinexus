@@ -204,7 +204,8 @@ async function main() {
       const result = {
         schema: "nexus.content.result.v2", requestId: body.requestId,
         status: "ready", capability, operation, workspace, query: body.command,
-        artifact, acknowledgement: "The requested capability is visible.", evidence: null, recovery: null
+        artifact, acknowledgement: "The requested capability is visible.", evidence: null, recovery: null,
+        receipt: { requestId: body.requestId, capability, workspace, providerSucceeded: true }
       };
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(result) });
     });
