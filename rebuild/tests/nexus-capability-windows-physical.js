@@ -6,6 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium } = require("playwright");
+const { installRendererOutcomeVerifier } = require("../nexus-core/renderer-outcome-contract");
 const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 
 const BASE_URL = productionUrlFromEnv();
@@ -211,7 +212,8 @@ async function main() {
         if (!acknowledgement || !acknowledgement.contentExtension) return;
         window.__physical.acknowledgements.push(acknowledgement);
         const resultId = acknowledgement.visualContext && acknowledgement.visualContext.surfaceId;
-        const root = resultId ? document.querySelector(`#nexus-app-surface [data-nexus-content-result-id="${CSS.escape(resultId)}"]`) : null;
+        const proof = resultId ? window.NexusRendererOutcomeVerifier.capture("content-population", resultId) : null;
+        const root = resultId ? window.NexusRendererOutcomeVerifier.resolve("content-population", resultId).root : null;
         const shell = document.getElementById("nexus-workspace");
         if (!root) return;
         window.__physical.ackProofs.push({
@@ -247,6 +249,7 @@ async function main() {
         };
       }
     });
+    await page.addInitScript(installRendererOutcomeVerifier);
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
     await page.locator("#nexus-orb").click();
     await poll(() => page.evaluate(() => window.NexusCleanRuntime && window.NexusCleanRuntime.snapshot().state.state === "connected"), "Realtime did not connect", 60000);

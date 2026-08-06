@@ -6,6 +6,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { once } = require("node:events");
 const { chromium } = require("playwright");
+const { installRendererOutcomeVerifier } = require("../nexus-core/renderer-outcome-contract");
 
 const browserRoot = path.resolve(__dirname, "..", "browser");
 const contentTypes = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
@@ -121,6 +122,7 @@ async function main() {
       window.__contentAcks = [];
       window.addEventListener("nexus.clean.workspace.acknowledged", (event) => { if (event.detail?.contentExtension) window.__contentAcks.push(event.detail); });
     });
+    await context.addInitScript(installRendererOutcomeVerifier);
     await context.route(`${baseUrl}/api/voice/session`, (route) => route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ sessionId: "rt-content", clientSecret: "ek-content" }) }));
     await context.route("https://api.openai.com/v1/realtime/calls", (route) => route.fulfill({ status: 200, contentType: "application/sdp", body: "answer" }));
     await context.route(`${baseUrl}/api/visual/content`, async (route) => {
@@ -136,14 +138,15 @@ async function main() {
     await page.locator("#nexus-orb").click();
     await page.waitForFunction(() => window.NexusCleanRuntime?.snapshot().state.state === "connected");
 
-    async function say(command, titlePattern) {
-      const beforeId = await page.locator("[data-nexus-content-result-id]").getAttribute("data-nexus-content-result-id").catch(() => null);
+    async function say(command, titlePattern, rendererSurface = "content-population") {
+      const beforeId = await page.evaluate((surface) => window.NexusRendererOutcomeVerifier.currentResultId(surface), rendererSurface);
       await page.evaluate((value) => window.dispatchEvent(new CustomEvent("nexus.clean.receipt", { detail: { type: "transcript.final", detail: { transcript: value } } })), command);
-      await page.waitForFunction(({ previousId, pattern }) => {
-        const root = document.querySelector("[data-nexus-content-result-id]");
-        const text = document.querySelector("#nexus-app-surface")?.textContent || "";
-        return root && root.getAttribute("data-nexus-content-result-id") !== previousId && new RegExp(pattern, "i").test(text);
-      }, { previousId: beforeId, pattern: titlePattern }, { timeout: 10000 });
+      await page.waitForFunction(({ previousId, pattern, rendererSurface }) => {
+        const resultId = window.NexusRendererOutcomeVerifier.currentResultId(rendererSurface);
+        if (!resultId || resultId === previousId) return false;
+        const proof = window.NexusRendererOutcomeVerifier.capture(rendererSurface, resultId);
+        return proof.exists && new RegExp(pattern, "i").test(proof.visibleText);
+      }, { previousId: beforeId, pattern: titlePattern, rendererSurface }, { timeout: 10000 });
       await page.waitForFunction(() => window.NexusContentPopulation.snapshot().pending.length === 0);
     }
 
@@ -162,9 +165,9 @@ async function main() {
       captures.push({ label, prompt, screenshot, dom });
     }
 
-    await say("Could you shape a CV for a warehouse coordinator role?", "Warehouse coordinator résumé");
+    await say("Could you shape a CV for a warehouse coordinator role?", "Warehouse coordinator résumé", "production-capability");
     assert.equal(await page.locator("[data-nexus-visible-form] input[name='name']").inputValue(), "Amina N.");
-    await say("Work my two seasons keeping the cooperative's books into it", "Two seasons managing");
+    await say("Work my two seasons keeping the cooperative's books into it", "Two seasons managing", "production-capability");
     assert.ok(requests.at(-1).previousArtifact.sections.length > 0);
     assert.ok(requests.at(-1).history.some((turn) => /warehouse coordinator/i.test(turn.content)));
     await capture("resume-contextual-revision", "Work my two seasons keeping the cooperative's books into it");

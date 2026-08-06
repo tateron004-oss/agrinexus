@@ -14,6 +14,7 @@ const tests = Object.freeze([
   "rebuild/tests/nexus-complete-voice-visual-actions.test.js",
   "rebuild/tests/nexus-approved-source-evidence.test.js",
   "rebuild/tests/nexus-production-capability-registry.test.js",
+  "rebuild/tests/nexus-renderer-ownership-contract.test.js",
   "rebuild/tests/nexus-production-lifecycle-routing.test.js",
   "rebuild/tests/nexus-capability-transaction-contract.test.js",
   "rebuild/tests/nexus-provider-fetch.test.js",

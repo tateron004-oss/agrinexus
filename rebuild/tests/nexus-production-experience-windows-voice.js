@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium, request: playwrightRequest } = require("playwright");
+const { installRendererOutcomeVerifier } = require("../nexus-core/renderer-outcome-contract");
 
 const { productionUrlFromEnv } = require("../../scripts/nexus-canonical-production-target");
 const BASE_URL = productionUrlFromEnv();
@@ -185,6 +186,7 @@ async function main() {
         status: String(event && event.status || ""), toolName: String(event && event.toolName || ""), turnCount: Number(event && event.turnCount || 0), at: new Date().toISOString()
       });
     });
+    await page.addInitScript(installRendererOutcomeVerifier);
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
     const localLoginStatus = await page.evaluate(async credentials => (await fetch("/api/login", {
       method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(credentials)
@@ -278,7 +280,7 @@ async function main() {
       const proof = await page.evaluate(() => {
         const snapshot = window.NexusProductionCapabilityBridge.snapshot();
         const result = snapshot.currentResult;
-        const root = result && document.querySelector(`[data-nexus-capability-result="${CSS.escape(result.requestId)}"]`);
+        const root = result && window.NexusRendererOutcomeVerifier.resolve("production-capability", result.requestId).root;
         const status = window.NexusGenesisRealtimeClientStatus && window.NexusGenesisRealtimeClientStatus();
         return {
           result, visibleText: String(root && root.innerText || "").replace(/\s+/g, " ").trim().slice(0, 5000),

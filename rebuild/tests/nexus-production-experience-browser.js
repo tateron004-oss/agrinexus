@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
+const { installRendererOutcomeVerifier } = require("../nexus-core/renderer-outcome-contract");
 
 const BASE_URL = process.env.NEXUS_PRODUCTION_REPAIR_BASE_URL || "http://127.0.0.1:4391";
 const OUTPUT = path.resolve(process.env.NEXUS_PRODUCTION_REPAIR_OUTPUT || "output/nexus-production-experience-repair");
@@ -47,6 +48,7 @@ async function main() {
       window.__productionRepairStages = [];
       window.addEventListener("nexus.capability.stage", event => window.__productionRepairStages.push(event.detail));
     });
+    await page.addInitScript(installRendererOutcomeVerifier);
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
     await page.getByLabel("Password").fill("User2026!");
     const loginNavigation = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 5000 }).catch(() => null);
@@ -69,7 +71,8 @@ async function main() {
       const startedAt = Date.now();
       const result = await page.evaluate(command => window.NexusProductionCapabilityBridge.execute(command), test.command);
       const proof = await page.evaluate(({ beforeStages, resultId }) => {
-        const root = document.querySelector(`[data-nexus-capability-result="${CSS.escape(resultId)}"]`);
+        const resolved = window.NexusRendererOutcomeVerifier.resolve("production-capability", resultId);
+        const root = resolved.root;
         const surface = document.getElementById("nexus-capability-surface");
         const samples = [...root.querySelectorAll("h1,h2,h3,p,li,label,a,button,input,textarea,select")].filter(element => {
           const style = getComputedStyle(element);
