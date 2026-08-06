@@ -3,13 +3,19 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { RENDERER_OUTCOME_CONTRACT, contractForSurface } = require("../nexus-core/renderer-outcome-contract");
+const vm = require("node:vm");
+const { RENDERER_OUTCOME_CONTRACT, contractForSurface, installRendererOutcomeVerifier } = require("../nexus-core/renderer-outcome-contract");
 
 assert.deepEqual(Object.keys(RENDERER_OUTCOME_CONTRACT).sort(), ["content-population", "production-capability", "protected-workspace"]);
 for (const surface of Object.keys(RENDERER_OUTCOME_CONTRACT)) {
   const contract = contractForSurface(surface);
   assert.ok(contract.owner && contract.rootAttribute && contract.surfaceId, `${surface}: incomplete renderer contract`);
 }
+
+const browserContext = { document: {} };
+browserContext.window = browserContext;
+vm.runInNewContext(`(${installRendererOutcomeVerifier.toString()})()`, browserContext);
+assert.equal(typeof browserContext.NexusRendererOutcomeVerifier?.currentResultId, "function", "serialized browser installer did not initialize the verifier");
 
 const certificationFiles = [
   "nexus-browser-playwright-smoke.js",

@@ -21,7 +21,7 @@ function contractForSurface(surface) {
 }
 
 /* This is the only certification helper allowed to know renderer-private DOM attributes. */
-function installRendererOutcomeVerifier(windowObject) {
+function installRendererOutcomeVerifier(windowObject = window) {
   const contracts = Object.freeze({
     "production-capability": Object.freeze({ owner: "protected-capability-bridge", rootAttribute: "data-nexus-capability-result", surfaceId: "nexus-capability-surface" }),
     "content-population": Object.freeze({ owner: "content-population-extension", rootAttribute: "data-nexus-content-result-id", surfaceId: "nexus-app-surface" })
