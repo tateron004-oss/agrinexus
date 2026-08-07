@@ -6,7 +6,7 @@ const PREFIXES = Object.freeze({
   artifact: "art", document: "doc", version: "ver", consent: "cns", memory: "mem",
   notification: "ntf", sync: "syn", webhook: "whk", modelVersion: "mdl",
   prediction: "prd", evidence: "evd", verification: "vfy"
-  , record: "rec", recordVersion: "rvn", workspaceMigration: "wsm"
+  , record: "rec", recordVersion: "rvn", workspaceMigration: "wsm", deletionRequest: "del", backupEvidence: "bkp"
 });
 
 function createId(kind) {

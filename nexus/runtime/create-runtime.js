@@ -25,6 +25,7 @@ const { RecordRepository } = require("../data/record-repository.js");
 const { WorkspaceMigrationRepository } = require("../apps/migration-repository.js");
 const { DeviceRepository } = require("../devices/repository.js");
 const { NotificationRepository } = require("../notifications/repository.js");
+const { DataLifecycleRepository } = require("../security/data-lifecycle-repository.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -49,6 +50,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const workspaceMigrations = new WorkspaceMigrationRepository(db);
   const devices = new DeviceRepository(db);
   const notifications = new NotificationRepository(db);
+  const dataLifecycle = new DataLifecycleRepository(db);
   const applications = new ApplicationRegistry(defaultApplicationManifests());
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors, verifier });
@@ -56,7 +58,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, audit }) : null;
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, devices, notifications, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, devices, notifications, dataLifecycle, applications,
     engine, planner, agent,
     async close() { await adapter.close(); } });
 }
