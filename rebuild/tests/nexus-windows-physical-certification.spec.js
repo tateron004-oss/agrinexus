@@ -1,0 +1,292 @@
+const { test, expect } = require("@playwright/test");
+const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
+const OUTPUT = path.resolve("output/nexus-clean-windows-certification");
+const commands = [
+  ["agriculture", "Nexus, help with my maize crop in Kenya.", null],
+  ["health", "Nexus, record my blood pressure 140 over 90."],
+  ["telehealth", "Nexus, begin a telehealth intake."],
+  ["mobile-clinic", "Nexus, find a mobile clinic in Kenya."],
+  ["pharmacy", "Nexus, open pharmacy support."],
+  ["learning", "Nexus, start a digital literacy course."],
+  ["workforce", "Nexus, search for farming jobs in Kenya."],
+  ["marketplace", "Nexus, sell 50 bags of maize."],
+  ["maps", "Nexus, plan a route from Nairobi to Nakuru."],
+  ["music", "Nexus, play Kenyan music."],
+  ["reminders", "Nexus, remind me to take my medicine."],
+  ["offline", "Nexus, show my offline queue."],
+  ["live-knowledge", "Nexus, show today's weather in Nairobi, Kenya.", "weather"],
+  ["maps", "Nexus, reset the map and show Mombasa, Kenya.", "map"],
+  ["agriculture", "Nexus, show me pictures of possible maize diseases.", "agriculture-images"],
+  ["workforce", "Nexus, help me create a résumé.", "resume"],
+  ["live-knowledge", "Nexus, show me the websites and sources.", "evidence"],
+  ["health", "Nexus, create a provider card for my doctor.", "provider-card"],
+  ["live-knowledge", "Nexus, open the pilot evidence dashboard.", "pilot-dashboard"]
+];
+
+function speak(text) {
+  const encoded = Buffer.from(text, "utf16le").toString("base64");
+  const script = [
+    "Add-Type -AssemblyName System.Speech",
+    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
+    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
+    "$v.Volume=90",
+    "$v.Rate=-1",
+    "$v.Speak($t)",
+    "$v.Dispose()"
+  ].join(";");
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(stderr || `speech exited ${code}`)));
+  });
+}
+
+function synthesizePcm(text) {
+  const wavPath = path.join(os.tmpdir(), `nexus-command-${process.pid}-${Date.now()}.wav`);
+  const encodedText = Buffer.from(text, "utf16le").toString("base64");
+  const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
+  const script = [
+    "Add-Type -AssemblyName System.Speech",
+    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedText}'))`,
+    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
+    "$f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(24000,16,1)",
+    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
+    "$v.Rate=-1",
+    "$v.SetOutputToWaveFile($p,$f)",
+    "$v.Speak($t)",
+    "$v.Dispose()"
+  ].join(";");
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("exit", (code) => {
+      if (code !== 0) return reject(new Error(stderr || `speech synthesis exited ${code}`));
+      try {
+        const wav = fs.readFileSync(wavPath);
+        resolve(readWaveData(wav));
+      } catch (error) {
+        reject(error);
+      } finally {
+        fs.rmSync(wavPath, { force: true });
+      }
+    });
+  });
+}
+
+function readWaveData(wav) {
+  for (let offset = 12; offset + 8 <= wav.length;) {
+    const id = wav.toString("ascii", offset, offset + 4);
+    const size = wav.readUInt32LE(offset + 4);
+    if (id === "data") return wav.subarray(offset + 8, offset + 8 + size);
+    offset += 8 + size + (size % 2);
+  }
+  throw new Error("Synthesized WAV contains no PCM data.");
+}
+
+async function injectSpokenCommand(page, text) {
+  const pcm = await synthesizePcm(text);
+  const chunks = [];
+  for (let offset = 0; offset < pcm.length; offset += 16384) {
+    chunks.push(pcm.subarray(offset, offset + 16384).toString("base64"));
+  }
+  await page.evaluate((audioChunks) => {
+    window.NexusCleanRuntime.certificationAudio.send(audioChunks);
+  }, chunks);
+}
+
+test.use({
+  baseURL: BASE_URL,
+  headless: false,
+  launchOptions: { channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required"] }
+});
+
+test("new Genesis build passes physical voice and every command", async ({ page, context }) => {
+  test.setTimeout(25 * 60 * 1000);
+  fs.mkdirSync(OUTPUT, { recursive: true });
+  const driverEvidence = {
+    startedAt: new Date().toISOString(),
+    console: [],
+    failedRequests: [],
+    httpFailures: [],
+    turns: [],
+    failure: null
+  };
+  page.on("console", (message) => {
+    driverEvidence.console.push({ type: message.type(), text: message.text() });
+  });
+  page.on("requestfailed", (request) => {
+    driverEvidence.failedRequests.push({
+      method: request.method(),
+      url: request.url(),
+      failure: request.failure()?.errorText || "unknown"
+    });
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      driverEvidence.httpFailures.push({
+        method: response.request().method(),
+        url: response.url(),
+        status: response.status()
+      });
+    }
+  });
+  await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
+  await page.addInitScript(() => {
+    window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
+    const recordSpeechSource = (source, detail = {}) => {
+      window.__cleanEvidence.speechSources.push({ source, detail, at: Date.now() });
+      if (source === "browser-speech-synthesis") {
+        window.__cleanEvidence.audioViolations.push({
+          reason: "browser-speech-started-during-realtime-certification",
+          source,
+          detail,
+          at: Date.now()
+        });
+      }
+    };
+    if (window.speechSynthesis) {
+      const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+      window.speechSynthesis.speak = (utterance) => {
+        recordSpeechSource("browser-speech-synthesis", { text: String(utterance?.text || "") });
+        return originalSpeak(utterance);
+      };
+    }
+    window.addEventListener("nexus.clean.receipt", (event) => window.__cleanEvidence.receipts.push(event.detail));
+    window.addEventListener("error", (event) => window.__cleanEvidence.errors.push(String(event.message)));
+    window.addEventListener("unhandledrejection", (event) => window.__cleanEvidence.errors.push(String(event.reason)));
+  });
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.locator("#nexus-orb").click();
+    await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
+    await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
+      timeout: 60000
+    }).toBe("connected");
+    await expect.poll(() => page.evaluate(() => {
+      const receipts = window.__cleanEvidence.receipts;
+      return receipts.some((item) => item.type === "audio.remote-attached");
+    }), { timeout: 60000 }).toBe(true);
+
+    await speak("Nexus, say physical voice calibration complete.");
+    await expect.poll(() => page.evaluate(() => {
+      const receipts = window.__cleanEvidence.receipts;
+      return receipts.some((item) => item.type === "conversation.return-to-listening");
+    }), { timeout: 60000 }).toBe(true);
+
+    // The audible calibration above proves the remote audio path. Silence Nexus
+    // during command injection so its own speaker output cannot feed back into
+    // the physical microphone and overwrite the command under test.
+    await page.locator("#nexus-audio").evaluate((audio) => {
+      audio.muted = true;
+    });
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(window.NexusCleanRuntime.certificationAudio)
+    ), {
+      timeout: 10000,
+      message: "Render must enable NEXUS_CLEAN_CERTIFICATION for exact production command proof"
+    }).toBe(true);
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
+
+    for (const [workspace, command, visual] of commands) {
+      const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+      await page.waitForTimeout(500);
+      await injectSpokenCommand(page, command);
+      await expect.poll(() => page.evaluate(({ before, workspace }) => {
+        return window.__cleanEvidence.receipts.slice(before)
+          .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+      }, { before, workspace }), { timeout: 60000 }).toBe(true);
+      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
+      await expect(page.locator("#nexus-workspace")).toBeVisible();
+      if (visual === "map") {
+        await expect(page.locator("#nexus-map-canvas")).toBeVisible();
+        await expect(page.locator("#nexus-map-summary")).toContainText(/Mombasa/i);
+        await expect(page.locator("#nexus-map-link")).toHaveAttribute("href", /^https:\/\/www\.openstreetmap\.org\//);
+      } else if (visual === "evidence") {
+        await expect(page.locator(".evidence-source-link").first()).toBeVisible();
+      } else if (visual) {
+        await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
+      }
+      await expect.poll(() => page.evaluate(({ before }) => {
+        return window.__cleanEvidence.receipts.slice(before)
+          .some((item) => item.type === "conversation.return-to-listening");
+      }, { before }), { timeout: 60000 }).toBe(true);
+      if (visual === "provider-card") {
+        await expect.poll(() => page.evaluate(({ before }) => {
+          return window.__cleanEvidence.receipts.slice(before)
+            .some((item) => item.type === "audio.owner-released");
+        }, { before }), { timeout: 60000 }).toBe(true);
+        const beforeRead = await page.evaluate(() => window.__cleanEvidence.receipts.length);
+        await page.locator('[data-provider-card-action="read"]').click();
+        await expect.poll(() => page.evaluate(({ beforeRead }) => {
+          return window.__cleanEvidence.receipts.slice(beforeRead).some((item) =>
+            item.type === "conversation.response-requested" &&
+            item.detail.reason === "provider-card-read"
+          );
+        }, { beforeRead }), { timeout: 10000 }).toBe(true);
+        await expect.poll(() => page.evaluate(({ beforeRead }) => {
+          return window.__cleanEvidence.receipts.slice(beforeRead)
+            .some((item) => item.type === "conversation.return-to-listening");
+        }, { beforeRead }), { timeout: 60000 }).toBe(true);
+      }
+      const turnAudioViolations = await page.evaluate(({ before }) => {
+        const receipts = window.__cleanEvidence.receipts.slice(before);
+        return [
+          ...window.__cleanEvidence.audioViolations,
+          ...receipts.filter((item) =>
+            item.type === "audio.exclusive-owner-violation" ||
+            item.type === "audio.exclusive-response-blocked"
+          )
+        ];
+      }, { before });
+      expect(turnAudioViolations, `More than one speech source or response activated for: ${command}`).toEqual([]);
+      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      driverEvidence.turns.push({ workspace, command, visual, passed: true });
+    }
+    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
+    const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
+    expect(browserErrors).toEqual([]);
+    const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
+    expect(audioViolations).toEqual([]);
+    expect(driverEvidence.turns).toHaveLength(commands.length);
+  } catch (error) {
+    driverEvidence.failure = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    };
+    throw error;
+  } finally {
+    driverEvidence.finishedAt = new Date().toISOString();
+    driverEvidence.page = await page.evaluate(() => ({
+      url: location.href,
+      status: document.getElementById("nexus-status")?.textContent || null,
+      microphonePermission: null,
+      snapshot: window.NexusCleanRuntime?.snapshot?.() || null,
+      browserErrors: window.__cleanEvidence?.errors || []
+    })).catch((error) => ({ unavailable: error.message }));
+    if (driverEvidence.page && !driverEvidence.page.unavailable) {
+      driverEvidence.page.microphonePermission = await page.evaluate(async () => {
+        try {
+          return (await navigator.permissions.query({ name: "microphone" })).state;
+        } catch (error) {
+          return `unavailable:${error.message}`;
+        }
+      });
+    }
+    fs.writeFileSync(
+      path.join(OUTPUT, "certification.json"),
+      `${JSON.stringify(driverEvidence, null, 2)}\n`
+    );
+    await page.screenshot({
+      path: path.join(OUTPUT, driverEvidence.failure ? "failure.png" : "final.png"),
+      fullPage: true
+    }).catch(() => {});
+  }
+});

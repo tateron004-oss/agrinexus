@@ -1,0 +1,26 @@
+name: Nexus managed-cloud document gate
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  documents:
+    name: Managed-cloud document and form contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify Guided Entry and durable form behavior
+        run: |
+          node rebuild/tests/nexus-guided-entry-transaction-controller.test.js
+          node rebuild/tests/nexus-voice-form-entry.test.js
+          node rebuild/tests/nexus-universal-guided-entry-engine.test.js
+          node scripts/nexus-protected-foundation-guard.js

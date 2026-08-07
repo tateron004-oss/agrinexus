@@ -97,6 +97,37 @@ self.addEventListener("message", event => {
   }
 });
 
+self.addEventListener("sync", event => {
+  if (event.tag !== "nexus-authoritative-sync") return;
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true })
+    .then(clients => clients.forEach(client => client.postMessage({ type: "NEXUS_FLUSH_AUTHORITATIVE_SYNC" }))));
+});
+
+self.addEventListener("push", event => {
+  event.waitUntil((async () => {
+    let payload = {};
+    try { payload = event.data?.json?.() || {}; } catch { payload = { body: event.data?.text?.() || "" }; }
+    if (!payload.receiptId || !payload.title) return;
+    await self.registration.showNotification(payload.title, {
+      body: payload.body || "Nexus has an update.",
+      icon: "/icons/agri-nexus-192.png",
+      badge: "/icons/agri-nexus-192.png",
+      tag: payload.tag || payload.receiptId,
+      data: { url: payload.url || "/", receiptId: payload.receiptId }
+    });
+  })());
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async clients => {
+    const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+    const existing = clients.find(client => client.url === target);
+    if (existing) return existing.focus();
+    return self.clients.openWindow(target);
+  }));
+});
+
 self.addEventListener("fetch", event => {
   if (!isCacheableApplicationRequest(event.request)) return;
   const url = new URL(event.request.url);

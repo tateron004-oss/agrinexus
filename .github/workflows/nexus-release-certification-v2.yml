@@ -1,0 +1,115 @@
+name: Nexus managed-cloud release certification
+
+on:
+  workflow_call:
+    inputs:
+      enforce_release:
+        description: Deploy and certify the exact candidate in production
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      NEXUS_RENDER_DEPLOY_HOOK_URL:
+        required: false
+  workflow_dispatch:
+    inputs:
+      enforce_release:
+        description: Deploy and certify this exact SHA on Nexus Certified
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-managed-cloud-release
+  cancel-in-progress: false
+
+env:
+  NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
+  NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+  NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
+
+jobs:
+  foundation:
+    name: Foundation gate
+    uses: ./.github/workflows/nexus-clean-windows-certification.yml
+
+  documents:
+    name: Document gate
+    uses: ./.github/workflows/nexus-voice-form-entry-certification.yml
+
+  release-contract:
+    name: Managed-cloud release contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify release identity and evidence contracts
+        run: |
+          node rebuild/tests/nexus-release-certification-controller.test.js
+          node rebuild/tests/nexus-certification-appliance-state.test.js
+          node scripts/nexus-protected-foundation-guard.js
+
+  deploy-exact-release:
+    name: Deploy exact frozen release
+    if: inputs.enforce_release == true
+    needs:
+      - foundation
+      - documents
+      - release-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require managed deploy credential
+        env:
+          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
+        run: test -n "$DEPLOY_HOOK"
+      - name: Request exact-SHA Render deployment
+        env:
+          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          node -e 'const u=new URL(process.env.DEPLOY_HOOK);u.searchParams.set("ref",process.env.NEXUS_EXPECTED_RELEASE_SHA);fetch(u,{method:"POST"}).then(r=>{if(!r.ok)throw new Error(`deploy hook returned ${r.status}`);console.log(`Requested exact release ${process.env.NEXUS_EXPECTED_RELEASE_SHA}`)}).catch(e=>{console.error(e);process.exit(1)})'
+
+  production-certification:
+    name: Managed-cloud production identity and outcomes
+    if: inputs.enforce_release == true
+    needs: deploy-exact-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXUS_CERTIFICATION_LANE: managed-cloud-production
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Wait for and verify exact production release
+        run: node scripts/nexus-release-certification-controller.js verify-deployment
+      - name: Verify production HTTP and visible outcome contracts
+        run: |
+          node rebuild/tests/nexus-http-e2e.test.js
+          node rebuild/tests/nexus-complete-voice-visual-actions.test.js
+          node rebuild/tests/nexus-approved-source-evidence.test.js
+          node scripts/nexus-protected-foundation-guard.js
+      - name: Create authoritative evidence summary
+        if: always()
+        env:
+          NEXUS_CERTIFICATION_OUTCOME: ${{ job.status }}
+        run: node scripts/nexus-certification-evidence.js
+      - name: Publish managed-cloud evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-managed-cloud-certification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: error
+          retention-days: 90

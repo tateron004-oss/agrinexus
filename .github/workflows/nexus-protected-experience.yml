@@ -1,0 +1,63 @@
+name: Nexus Protected Experience
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - rebuild/nexus-genesis-clean-foundation
+  workflow_dispatch:
+    inputs:
+      enforce_release:
+        description: Enforce every evidence-backed release certification status
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-protected-experience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  protected-experience-contract:
+    name: Protected experience contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Validate manifest and certified foundation
+        run: node scripts/nexus-protected-experience-gate.js
+
+  deterministic-production-certification:
+    name: Deterministic production certification
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'agent/certify-nexus-')
+    uses: ./.github/workflows/nexus-release-certification-v2.yml
+
+  release-certification:
+    name: Release certification
+    if: github.event_name == 'workflow_dispatch' && inputs.enforce_release == true
+    needs: protected-experience-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Block incomplete Genesis experience
+        run: node scripts/nexus-protected-experience-gate.js --release
+

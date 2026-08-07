@@ -1,0 +1,7 @@
+{
+  "schema": "nexus.certification.dispatch.v1",
+  "releaseBaseSha": "ec002ac2398555b6beff7750acda7b56cc633427",
+  "canonicalHost": "https://nexus-genesis-certified.onrender.com",
+  "requiredConsecutivePasses": 3,
+  "purpose": "Trigger the GitHub-native exact-release deployment and physical certification control plane."
+}

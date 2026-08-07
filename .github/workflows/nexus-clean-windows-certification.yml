@@ -1,0 +1,39 @@
+name: Nexus managed-cloud foundation gate
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Managed-cloud foundation contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify committed production bundle
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.28.1
+          node rebuild/scripts/build-browser.js
+          git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
+      - name: Run foundation and integrated application contracts
+        run: |
+          node rebuild/tests/nexus-core.test.js
+          node rebuild/tests/nexus-voice-foundation.test.js
+          node rebuild/tests/nexus-runtime-e2e.test.js
+          node rebuild/tests/nexus-http-e2e.test.js
+          node rebuild/tests/nexus-browser-shell.test.js
+          node rebuild/tests/nexus-generalized-intent-parameters.test.js
+          node rebuild/tests/nexus-request-transaction.test.js
+          node rebuild/tests/nexus-visible-map-route.test.js
+          node rebuild/tests/nexus-complete-voice-visual-actions.test.js
+          node rebuild/tests/nexus-approved-source-evidence.test.js
+          node test/nexus/kernel-contracts.test.js
+          node scripts/nexus-protected-foundation-guard.js

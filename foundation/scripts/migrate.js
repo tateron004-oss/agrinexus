@@ -1,5 +1,5 @@
 const { loadEnvFile } = require("../src/runtime/env-file");
-const { readConfig, validateConfig } = require("../src/config");
+const { readConfig, validateConfig, assertProductionConfig } = require("../src/config");
 const { createDatabaseRuntime, createOfflineDatabaseRuntime } = require("../src/runtime/database");
 const { runMigrations } = require("../src/runtime/migrations");
 const { createPostgresAdapter } = require("../src/runtime/postgres-adapter");
@@ -7,6 +7,7 @@ const { createPostgresAdapter } = require("../src/runtime/postgres-adapter");
 async function main() {
   loadEnvFile();
   const config = readConfig();
+  assertProductionConfig(config);
   const warnings = validateConfig(config);
   for (const warning of warnings) console.warn(`Warning: ${warning}`);
 

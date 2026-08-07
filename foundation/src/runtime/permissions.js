@@ -9,7 +9,12 @@ const rolePermissions = {
     "trade:write",
     "ai:run",
     "maps:read",
-    "system:read"
+    "system:read",
+    "platform:read",
+    "tasks:read",
+    "tasks:write",
+    "tasks:approve",
+    "tasks:execute"
   ],
   field_agent: [
     "core:read",
@@ -17,14 +22,23 @@ const rolePermissions = {
     "workforce:read",
     "trade:write",
     "maps:read",
-    "system:read"
+    "system:read",
+    "platform:read",
+    "tasks:read",
+    "tasks:write",
+    "tasks:execute"
   ],
   health_operator: [
     "core:read",
     "health:write",
     "ai:run",
     "maps:read",
-    "system:read"
+    "system:read",
+    "platform:read",
+    "tasks:read",
+    "tasks:write",
+    "tasks:approve",
+    "tasks:execute"
   ]
 };
 

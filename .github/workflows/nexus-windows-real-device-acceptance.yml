@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: Protected Nexus production URL
+        description: Current Nexus Genesis production URL
         required: true
-        default: https://agrinexus-platform.onrender.com
+        default: https://nexus-genesis-certified.onrender.com
 
 permissions:
   contents: read
@@ -25,11 +25,8 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     env:
-      NEXUS_LIVE_BASE_URL: ${{ inputs.base_url || 'https://agrinexus-platform.onrender.com' }}
-      NEXUS_PLAYWRIGHT_EMAIL: ${{ secrets.NEXUS_PLAYWRIGHT_EMAIL }}
-      NEXUS_PLAYWRIGHT_PASSWORD: ${{ secrets.NEXUS_PLAYWRIGHT_PASSWORD }}
+      NEXUS_CLEAN_BASE_URL: ${{ inputs.base_url || 'https://nexus-genesis-certified.onrender.com' }}
       NEXUS_PROTECTED_BASELINE: 0e3ce5b6
-      NEXUS_EXPECTED_RUNTIME: nexus-behavior-502
     steps:
       - name: Check out protected release
         uses: actions/checkout@v4
@@ -50,12 +47,12 @@ jobs:
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: ./scripts/nexus-windows-real-device-preflight.ps1
 
-      - name: Verify live protected runtime
+      - name: Verify live Genesis runtime
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
-          $health = Invoke-RestMethod -Uri "$env:NEXUS_LIVE_BASE_URL/api/healthz" -TimeoutSec 30
-          if ($health.webBuild -ne $env:NEXUS_EXPECTED_RUNTIME) {
-            throw "Production runtime is $($health.webBuild); expected $env:NEXUS_EXPECTED_RUNTIME."
+          $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 30
+          if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
+            throw "Production did not return the current Nexus Genesis health contract."
           }
 
       - name: Install exact dependencies and Chrome driver
@@ -64,9 +61,9 @@ jobs:
           npm ci
           npm install --no-save --no-package-lock @playwright/test@1.61.1
 
-      - name: Run acoustic end-to-end acceptance
+      - name: Run current Genesis acoustic end-to-end acceptance
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: npx playwright test tests/playwright/nexus-windows-real-device-acceptance.spec.js --workers=1 --reporter=line
+        run: npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
 
       - name: Reverify protected files after acceptance
         if: always()
