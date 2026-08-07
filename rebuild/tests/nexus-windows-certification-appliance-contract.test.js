@@ -28,6 +28,8 @@ for (const required of [
 assert.match(appliance, /FileMode\]::CreateNew/, "exclusive certification ownership must be atomic");
 assert.match(appliance, /FileShare\]::None/, "active lock must not be shareable");
 assert.match(appliance, /Remove-Item -Force \$lockPath/, "stale and released locks must be recoverable");
+assert.match(appliance, /exactReleaseQuery = "ref=\$\(\[System\.Uri\]::EscapeDataString\(\$ReleaseSha\)\)"/, "Render deployment must request the exact frozen release SHA");
+assert.match(appliance, /\[System\.UriBuilder\]::new/, "deploy-hook query handling must preserve the secret hook URL safely");
 assert.match(appliance, /while \(-not \$ledger\.certified\)/, "controller must continue until its durable ledger certifies");
 assert.match(appliance, /classification -eq "nexus"/, "a genuine Nexus failure must reject the release");
 assert.match(state, /classification === "nexus"\) ledger\.consecutivePasses = 0/, "only a Nexus failure resets physical progress");
