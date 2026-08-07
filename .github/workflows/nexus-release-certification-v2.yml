@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - rebuild/nexus-genesis-clean-foundation
+  pull_request:
+    branches:
+      - rebuild/nexus-genesis-clean-foundation
 
 permissions:
   contents: read
@@ -15,7 +18,7 @@ concurrency:
 
 env:
   NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
-  NEXUS_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+  NEXUS_EXPECTED_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:
@@ -36,10 +39,10 @@ jobs:
           }
           $builder = [System.UriBuilder]::new($hook)
           $existingQuery = $builder.Query.TrimStart("?")
-          $exactRef = "ref=$([System.Uri]::EscapeDataString('${{ github.sha }}'))"
+          $exactRef = "ref=$([System.Uri]::EscapeDataString($env:NEXUS_EXPECTED_RELEASE_SHA))"
           $builder.Query = if ($existingQuery) { "$existingQuery&$exactRef" } else { $exactRef }
           Invoke-WebRequest -Method Post -Uri $builder.Uri -TimeoutSec 30 -UseBasicParsing | Out-Null
-          Write-Host "Requested exact Render release ${{ github.sha }}."
+          Write-Host "Requested exact Render release $env:NEXUS_EXPECTED_RELEASE_SHA."
 
   release-identity:
     name: Exact deployed release identity
@@ -195,3 +198,4 @@ jobs:
             test-results/
           if-no-files-found: error
           retention-days: 90
+
