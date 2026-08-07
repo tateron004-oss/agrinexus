@@ -13,5 +13,13 @@ class ObservabilityRepository {
       event.taskId||null,event.component,event.eventType,event.outcome,event.durationMs??null,event.provider||null,
       event.costMicros??null,event.releaseSha||RELEASE_SHA,metadata]);
   }
+  async summary({tenantId,windowMinutes=60}) {
+    const minutes=Math.min(Math.max(Number(windowMinutes)||60,1),10080);
+    const result=await this.db.query(`select component,event_type,outcome,count(*)::int as count,
+      coalesce(round(avg(duration_ms))::int,0) as average_duration_ms,coalesce(sum(cost_micros),0)::bigint as cost_micros
+      from nexus_observability_events where tenant_id=$1 and occurred_at>=now()-make_interval(mins=>$2)
+      group by component,event_type,outcome order by component,event_type,outcome`,[tenantId,minutes]);
+    return {windowMinutes:minutes,series:result.rows||result};
+  }
 }
 module.exports=Object.freeze({ObservabilityRepository});

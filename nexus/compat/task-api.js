@@ -3,6 +3,8 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 
 function createTaskApi(engine) {
   return Object.freeze({
+    async list(request) { return respond(() => engine.tasks.list({ tenantId: request.context.tenantId,
+      ownerId: request.context.userId, state: request.query?.state, limit: request.query?.limit })); },
     async create(request) {
       return respond(async () => engine.create({
         command: createCommand({ correlationId: request.context.requestId, tenantId: request.context.tenantId,

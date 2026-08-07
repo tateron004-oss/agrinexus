@@ -43,3 +43,9 @@ test("observability persists release identity and redacts sensitive metadata",as
   await events.record({traceId:"trace",correlationId:"correlation",component:"tools",eventType:"tool.completed",outcome:"verified",metadata:{token:"secret",safe:"ok"}});
   assert.equal(db.calls[0].params[13].token,"[REDACTED]");assert.equal(db.calls[0].params[13].safe,"ok");assert.ok(db.calls[0].params[12]);
 });
+
+test("observability summaries are tenant-scoped and bounded",async()=>{
+  const db=fakeDb([{rows:[{component:"worker",count:2}]}]);const events=new ObservabilityRepository(db);
+  const summary=await events.summary({tenantId:"tenant",windowMinutes:99999});
+  assert.equal(summary.windowMinutes,10080);assert.match(db.calls[0].sql,/tenant_id=\$1/);assert.equal(db.calls[0].params[0],"tenant");
+});

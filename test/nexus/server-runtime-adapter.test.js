@@ -35,3 +35,23 @@ test("task endpoints require an authenticated Nexus user before database access"
   await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/tasks"), capture.send);
   assert.equal(capture.result.status, 401); assert.equal(runtimeCreated, false);
 });
+
+test("authenticated users see only their tenant-owned task status", async () => {
+  let listInput; const capture = responseCapture();
+  const runtime = { engine: { tasks: { list: async input => { listInput = input; return [{ taskId: "task-1", state: "running" }]; } } },
+    applications: { list: () => [] }, workspaceMigrations: {}, observability: {} };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/tasks?state=running&limit=10"), capture.send);
+  assert.equal(capture.result.status, 200); assert.deepEqual(listInput, { tenantId: "tenant-1", ownerId: "user-1", state: "running", limit: "10" });
+});
+
+test("workspace cutover and observability status are authenticated and permission governed", async () => {
+  const runtime = { engine: { tasks: {} }, applications: { list: () => [{ applicationId: "maps" }] },
+    workspaceMigrations: { status: async id => ({ workspace_id: id, state: "authoritative" }) },
+    observability: { summary: async input => ({ ...input, series: [] }) } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "admin-1", tenantId: "tenant-1", permissions: ["observability:read"] }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const workspaces = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/workspaces"), workspaces.send);
+  assert.equal(workspaces.result.body.workspaces[0].migration.state, "authoritative");
+  const telemetry = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/observability/summary?windowMinutes=15"), telemetry.send);
+  assert.equal(telemetry.result.status, 200); assert.equal(telemetry.result.body.windowMinutes, "15");
+});

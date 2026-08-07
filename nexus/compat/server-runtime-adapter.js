@@ -24,7 +24,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     try {
       const active = await runtime(); const api = createTaskApi(active.engine); const context = requestContext(req, user);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
-      const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {} };
+      const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
+        query: Object.fromEntries(url.searchParams.entries()) };
       let result = null;
       if (url.pathname === "/api/nexus/runtime/commands" && req.method === "POST") {
         if (!active.agent) { send(res, 503, { error: "The authoritative planning provider is unavailable; no phrase-specific fallback was used.", code: "planning_provider_unavailable" }); return true; }
@@ -32,6 +33,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel, locale: request.locale, text: body.text }, context });
         send(res, planned.action === "clarify" ? 200 : 201, planned); return true;
       } else if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "POST") result = await api.create(request);
+      else if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "GET") result = await api.list(request);
+      else if (url.pathname === "/api/nexus/runtime/observability/summary" && req.method === "GET") {
+        if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
+        send(res, 200, await active.observability.summary({ tenantId: context.tenantId, windowMinutes: request.query.windowMinutes })); return true;
+      } else if (url.pathname === "/api/nexus/runtime/workspaces" && req.method === "GET") {
+        const statuses = await Promise.all(active.applications.list().map(async application => ({ ...application,
+          migration: await active.workspaceMigrations.status(application.applicationId) })));
+        send(res, 200, { authoritative: true, workspaces: statuses }); return true;
+      }
       else {
         const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(transition|steps\/([^/]+)\/(approve|execute)))?$/);
         if (!match) { send(res, 404, { error: "Authoritative runtime route not found." }); return true; }
