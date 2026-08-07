@@ -4,12 +4,19 @@ const crypto = require("crypto");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
+const { registerLegacyTools, createLegacyExecutors, verifyLegacyOutcome } = require("./legacy-provider-adapter.js");
+const { permissionsForRoles } = require("../../foundation/src/runtime/permissions.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
-  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
+  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth,
+  registerToolsFn = registerLegacyTools, resolveIdentityFn = resolveAuthoritativeIdentity } = {}) {
   let runtimePromise = null;
   async function runtime() {
-    if (!runtimePromise) runtimePromise = Promise.resolve().then(() => createRuntimeFn({ env, logger })).catch(error => { runtimePromise = null; throw error; });
+    if (!runtimePromise) runtimePromise = Promise.resolve().then(async () => {
+      const active = await createRuntimeFn({ env, logger, executors: createLegacyExecutors({ env }), verifier: verifyLegacyOutcome });
+      await registerToolsFn({ registry: active.tools, env });
+      return active;
+    }).catch(error => { runtimePromise = null; throw error; });
     return runtimePromise;
   }
   async function status() {
@@ -22,7 +29,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
-      const active = await runtime(); const api = createTaskApi(active.engine); const context = requestContext(req, user);
+      const active = await runtime();
+      const identity = await resolveIdentityFn(active, user);
+      if (!identity) { send(res, 403, { error: "The signed-in account is not provisioned in the authoritative identity store.", code: "authoritative_identity_required" }); return true; }
+      const api = createTaskApi(active.engine); const context = requestContext(req, identity);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {} };
       let result = null;
@@ -47,9 +57,42 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   return Object.freeze({ handle, status });
 }
 
-function requestContext(req, user) {
-  const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
-  return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()), tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
+async function resolveAuthoritativeIdentity(runtime, user) {
+  const email = String(user?.email || "").trim().toLowerCase();
+  if (!email) return null;
+  const result = await runtime.db.query(`select u.id,u.tenant_id,u.email,
+    coalesce(array_remove(array_agg(distinct r.code),null),'{}') as roles
+    from users u left join user_roles ur on ur.user_id=u.id
+    left join roles r on r.id=ur.role_id and r.tenant_id=u.tenant_id
+    where lower(u.email)=lower($1) and u.status='active'
+    group by u.id,u.tenant_id,u.email order by u.tenant_id limit 2`, [email]);
+  const rows = result.rows || result;
+  if (rows.length !== 1) return null;
+  const roles = stringArray(rows[0].roles);
+  return { id: rows[0].id, tenantId: rows[0].tenant_id, email: rows[0].email,
+    roles, permissions: permissionsForRoles(roles) };
 }
 
-module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext });
+function requestContext(req, user) {
+  const roles = new Set(stringArray(user.roles || user.role));
+  const permissions = new Set(stringArray(user.permissions));
+  return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()),
+    tenantId: requiredIdentity(user.tenantId, "tenantId"), userId: requiredIdentity(user.id, "userId"),
+    roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role),
+    can: permission => permissions.has("*") || permissions.has(permission) });
+}
+
+function stringArray(value) {
+  if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+  if (value && typeof value === "object") return Object.entries(value).filter(([, allowed]) => allowed).map(([name]) => name);
+  return [];
+}
+
+function requiredIdentity(value, field) {
+  const normalized = String(value || "").trim();
+  if (!normalized) throw new Error(`Authoritative ${field} is required.`);
+  return normalized;
+}
+
+module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, resolveAuthoritativeIdentity, stringArray });
