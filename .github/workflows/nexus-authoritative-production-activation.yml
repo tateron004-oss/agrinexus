@@ -1,0 +1,124 @@
+name: Activate authoritative Nexus production system
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/nexus-authoritative-production-activation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-authoritative-production-activation
+  cancel-in-progress: false
+
+env:
+  NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
+  PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
+  EXPECTED_RELEASE_SHA: ${{ github.sha }}
+
+jobs:
+  converge:
+    name: Verify unified candidate before deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          node test/nexus/system-convergence.test.js
+          node scripts/nexus-protected-foundation-guard.js
+
+  deploy:
+    name: Deploy exact unified candidate without certification
+    needs: converge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require managed deploy credential
+        env:
+          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
+        run: test -n "$DEPLOY_HOOK"
+      - name: Request exact-SHA Render deployment
+        env:
+          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          node - <<'NODE'
+          const url = new URL(process.env.DEPLOY_HOOK);
+          url.searchParams.set("ref", process.env.EXPECTED_RELEASE_SHA);
+          fetch(url, { method: "POST" }).then(response => {
+            if (!response.ok) throw new Error(`Render deploy hook returned ${response.status}`);
+            console.log(`Requested unified Nexus release ${process.env.EXPECTED_RELEASE_SHA}`);
+          }).catch(error => { console.error(error); process.exit(1); });
+          NODE
+
+  activate:
+    name: Prove durable runtime and live providers
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Wait for exact authoritative runtime
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const base = process.env.NEXUS_BASE_URL;
+          const providerBase = process.env.PROVIDER_BASE_URL;
+          const expected = process.env.EXPECTED_RELEASE_SHA;
+          const deadline = Date.now() + 30 * 60 * 1000;
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+          async function json(url) {
+            const response = await fetch(url, { headers: { accept: "application/json", "cache-control": "no-cache" } });
+            const text = await response.text();
+            let body; try { body = JSON.parse(text); } catch { body = { raw: text.slice(0, 500) }; }
+            return { ok: response.ok, status: response.status, body };
+          }
+          let evidence;
+          while (Date.now() < deadline) {
+            try {
+              const [runtime, health, integrations, providers] = await Promise.all([
+                json(`${base}/api/nexus/runtime/status`),
+                json(`${base}/api/healthz`),
+                json(`${base}/api/integrations`),
+                json(`${providerBase}/healthz`)
+              ]);
+              evidence = { expectedReleaseSha: expected, checkedAt: new Date().toISOString(), runtime, health, integrations, providers };
+              const runtimeReady = runtime.ok && runtime.body?.ok === true && runtime.body?.pgvector === true &&
+                runtime.body?.migrationsCurrent === true && runtime.body?.releaseSha === expected;
+              const healthReady = health.ok && health.body?.ok === true && health.body?.strictLiveMode === true &&
+                health.body?.checks?.database === "connected";
+              const providerReady = providers.ok && providers.body?.ok === true;
+              const integrationsReady = integrations.ok && integrations.body?.ok === true &&
+                Array.isArray(integrations.body?.liveGaps) && integrations.body.liveGaps.length === 0;
+              if (runtimeReady && healthReady && providerReady && integrationsReady) break;
+            } catch (error) {
+              evidence = { expectedReleaseSha: expected, checkedAt: new Date().toISOString(), error: error.message };
+            }
+            await sleep(15000);
+          }
+          fs.mkdirSync("output", { recursive: true });
+          fs.writeFileSync("output/nexus-authoritative-activation.json", JSON.stringify(evidence, null, 2));
+          const runtimeReady = evidence?.runtime?.ok && evidence.runtime.body?.ok === true &&
+            evidence.runtime.body?.pgvector === true && evidence.runtime.body?.migrationsCurrent === true &&
+            evidence.runtime.body?.releaseSha === expected;
+          const healthReady = evidence?.health?.ok && evidence.health.body?.ok === true &&
+            evidence.health.body?.strictLiveMode === true && evidence.health.body?.checks?.database === "connected";
+          const providerReady = evidence?.providers?.ok && evidence.providers.body?.ok === true;
+          const integrationsReady = evidence?.integrations?.ok && evidence.integrations.body?.ok === true &&
+            Array.isArray(evidence.integrations.body?.liveGaps) && evidence.integrations.body.liveGaps.length === 0;
+          if (!(runtimeReady && healthReady && providerReady && integrationsReady)) {
+            console.error("Unified production activation did not reach ready state; certification remains held.");
+            process.exit(1);
+          }
+          NODE
+      - name: Publish activation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-authoritative-activation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: error
+          retention-days: 90
