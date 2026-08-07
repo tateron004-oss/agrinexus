@@ -10,7 +10,11 @@ function readConfig(env = process.env) {
     database: {
       url: env.DATABASE_URL || "",
       ssl: env.DATABASE_SSL === "true",
-      migrationsDir: env.MIGRATIONS_DIR || path.join(__dirname, "..", "migrations")
+      migrationsDir: env.MIGRATIONS_DIR || path.join(__dirname, "..", "migrations"),
+      poolMax: Number(env.DATABASE_POOL_MAX || 20),
+      idleTimeoutMs: Number(env.DATABASE_IDLE_TIMEOUT_MS || 30000),
+      connectionTimeoutMs: Number(env.DATABASE_CONNECTION_TIMEOUT_MS || 10000),
+      statementTimeoutMs: Number(env.DATABASE_STATEMENT_TIMEOUT_MS || 60000)
     },
     auth: {
       sessionSecret: env.SESSION_SECRET || "dev-only-session-secret-change-me",
@@ -58,4 +62,22 @@ function validateConfig(config) {
   return warnings;
 }
 
-module.exports = { readConfig, validateConfig };
+function assertProductionConfig(config) {
+  if (config.app.nodeEnv !== "production") return config;
+  const errors = [];
+  if (!config.database.url) errors.push("DATABASE_URL is required in production.");
+  if (!config.auth.sessionSecret || config.auth.sessionSecret.includes("dev-only") || config.auth.sessionSecret.length < 32) {
+    errors.push("SESSION_SECRET must be a production secret of at least 32 characters.");
+  }
+  if (!config.auth.passwordPepper || config.auth.passwordPepper.length < 16) {
+    errors.push("PASSWORD_PEPPER must be set to at least 16 characters in production.");
+  }
+  if (errors.length) {
+    const error = new Error(`Unsafe production configuration:\n- ${errors.join("\n- ")}`);
+    error.code = "UNSAFE_PRODUCTION_CONFIG";
+    throw error;
+  }
+  return config;
+}
+
+module.exports = { readConfig, validateConfig, assertProductionConfig };
