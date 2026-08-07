@@ -14,6 +14,8 @@ const { AccessControl } = require("../identity/access-control.js");
 const { ArtifactRepository } = require("../storage/artifact-repository.js");
 const { SyncRepository } = require("../sync/repository.js");
 const { ObservabilityRepository } = require("../observability/event-repository.js");
+const { ModelGovernanceRepository } = require("../models/repository.js");
+const { OutcomeRepository } = require("../verification/outcome-repository.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, logger = console } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -32,10 +34,12 @@ function createRuntime({ env = process.env, executors = {}, verifier, logger = c
   const artifacts = new ArtifactRepository(db);
   const sync = new SyncRepository(db);
   const observability = new ObservabilityRepository(db);
+  const models = new ModelGovernanceRepository(db);
+  const outcomes = new OutcomeRepository(db);
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors, verifier });
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, engine,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, engine,
     async close() { await adapter.close(); } });
 }
 

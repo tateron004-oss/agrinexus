@@ -4,7 +4,8 @@ const PREFIXES = Object.freeze({
   command: "cmd", conversation: "cnv", message: "msg", event: "evt", task: "tsk",
   step: "stp", attempt: "atm", job: "job", toolCall: "tlc", receipt: "rcp",
   artifact: "art", document: "doc", version: "ver", consent: "cns", memory: "mem",
-  notification: "ntf", sync: "syn", webhook: "whk"
+  notification: "ntf", sync: "syn", webhook: "whk", modelVersion: "mdl",
+  prediction: "prd", evidence: "evd", verification: "vfy"
 });
 
 function createId(kind) {
