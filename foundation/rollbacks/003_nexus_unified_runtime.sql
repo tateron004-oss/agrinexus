@@ -1,0 +1,19 @@
+-- Destructive emergency rollback. Back up, drain workers, and verify recovery first.
+drop table if exists nexus_inbox;
+drop table if exists nexus_outbox;
+drop table if exists nexus_sync_operations;
+drop table if exists nexus_notifications;
+drop table if exists nexus_webhook_events;
+drop table if exists nexus_document_versions;
+drop table if exists nexus_documents;
+drop table if exists nexus_job_attempts;
+drop table if exists nexus_worker_jobs;
+drop table if exists nexus_audit_events;
+drop table if exists nexus_memory_items;
+drop table if exists nexus_tool_executions;
+drop table if exists nexus_consents;
+drop table if exists nexus_task_steps;
+drop table if exists nexus_tool_definitions;
+drop table if exists nexus_tasks;
+drop table if exists nexus_messages;
+drop table if exists nexus_conversations;
