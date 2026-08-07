@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: nexus-deterministic-release-certification
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
