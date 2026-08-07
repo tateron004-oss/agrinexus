@@ -10,6 +10,10 @@ const { AuditRepository } = require("../audit/repository.js");
 const { MemoryRepository } = require("../memory/repository.js");
 const { JobRepository } = require("../workers/job-repository.js");
 const { AuthoritativeTaskEngine } = require("./authoritative-task-engine.js");
+const { AccessControl } = require("../identity/access-control.js");
+const { ArtifactRepository } = require("../storage/artifact-repository.js");
+const { SyncRepository } = require("../sync/repository.js");
+const { ObservabilityRepository } = require("../observability/event-repository.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, logger = console } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -24,10 +28,15 @@ function createRuntime({ env = process.env, executors = {}, verifier, logger = c
   const audit = new AuditRepository(db);
   const memory = new MemoryRepository(db);
   const jobs = new JobRepository(db);
+  const access = new AccessControl(db);
+  const artifacts = new ArtifactRepository(db);
+  const sync = new SyncRepository(db);
+  const observability = new ObservabilityRepository(db);
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors, verifier });
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, engine, async close() { await adapter.close(); } });
+    audit, memory, jobs, access, artifacts, sync, observability, engine,
+    async close() { await adapter.close(); } });
 }
 
 module.exports = Object.freeze({ createRuntime });
