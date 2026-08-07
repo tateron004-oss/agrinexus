@@ -19,8 +19,31 @@ env:
   NEXUS_EXPECTED_BUNDLE: rebuild/browser/nexus-clean.bundle.js
 
 jobs:
+  deploy-exact-release:
+    name: Deploy exact frozen release
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    steps:
+      - name: Invoke secure Render deploy hook for exact SHA
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $hook = [Environment]::GetEnvironmentVariable("NEXUS_RENDER_DEPLOY_HOOK_URL", "User")
+          if (-not $hook) {
+            $hook = [Environment]::GetEnvironmentVariable("NEXUS_RENDER_DEPLOY_HOOK_URL", "Machine")
+          }
+          if (-not $hook) {
+            throw "Secure Render deploy hook is unavailable to the Windows control plane."
+          }
+          $builder = [System.UriBuilder]::new($hook)
+          $existingQuery = $builder.Query.TrimStart("?")
+          $exactRef = "ref=$([System.Uri]::EscapeDataString('${{ github.sha }}'))"
+          $builder.Query = if ($existingQuery) { "$existingQuery&$exactRef" } else { $exactRef }
+          Invoke-WebRequest -Method Post -Uri $builder.Uri -TimeoutSec 30 -UseBasicParsing | Out-Null
+          Write-Host "Requested exact Render release ${{ github.sha }}."
+
   release-identity:
     name: Exact deployed release identity
+    needs: deploy-exact-release
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
