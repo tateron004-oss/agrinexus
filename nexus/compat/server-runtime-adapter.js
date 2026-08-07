@@ -15,7 +15,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     return runtimePromise;
   }
   async function status() {
-    try { return await checkHealthFn(await runtime()); }
+    try { const active = await runtime(); await active.ready; return await checkHealthFn(active); }
     catch (error) { return { ok: false, authoritative: true, durable: false, code: error.code || "authoritative_runtime_unavailable", message: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development" }; }
   }
   async function handle(req, res, url, send) {
@@ -24,7 +24,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
-      const active = await runtime(); const api = createTaskApi(active.engine); const controls = createControlApi(active); const context = requestContext(req, user);
+      const active = await runtime(); await active.ready; const api = createTaskApi(active.engine); const controls = createControlApi(active); const context = requestContext(req, user);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
         query: Object.fromEntries(url.searchParams.entries()) };

@@ -27,8 +27,9 @@ const { DeviceRepository } = require("../devices/repository.js");
 const { NotificationRepository } = require("../notifications/repository.js");
 const { DataLifecycleRepository } = require("../security/data-lifecycle-repository.js");
 const { ScheduleRepository } = require("../schedules/repository.js");
+const { createProviderCatalog } = require("../tools/provider-catalog.js");
 
-function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console } = {}) {
+function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
   const adapter = createPostgresAdapter(config);
   if (!adapter) throw new Error("PostgreSQL is required for the authoritative Nexus runtime.");
@@ -54,14 +55,17 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const dataLifecycle = new DataLifecycleRepository(db);
   const schedules = new ScheduleRepository(db);
   const applications = new ApplicationRegistry(defaultApplicationManifests());
+  const providers = createProviderCatalog({ env, fetchFn });
+  const governedExecutors = Object.assign({}, providers.executors, executors);
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
-    audit, executors, verifier });
+    audit, executors: governedExecutors, verifier: verifier || (input => providers.verify(input)) });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, audit }) : null;
+  const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, devices, notifications, dataLifecycle, schedules, applications,
-    engine, planner, agent,
+    engine, planner, agent, providers, ready,
     async close() { await adapter.close(); } });
 }
 

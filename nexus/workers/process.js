@@ -4,6 +4,7 @@ const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createLogger } = require("../observability/logger.js");
 const { createHandlers } = require("./handlers.js");
 const { NexusWorker } = require("./worker.js");
+const { createNotificationProviders } = require("../notifications/provider-catalog.js");
 
 loadEnvFile();
 const logger = createLogger({ service: "nexus-worker" });
@@ -13,9 +14,12 @@ let stopping = false;
 
 async function main() {
   runtime = createRuntime({ logger });
+  await runtime.ready;
   const health = await checkRuntimeHealth(runtime);
   if (!health.ok) throw new Error("Nexus worker refuses to start before pgvector and migrations are ready.");
-  const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers: createHandlers({ runtime }), logger });
+  const deliveryProviders=createNotificationProviders();
+  const handlers=createHandlers({ runtime,deliveryProviders });
+  const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, logger });
   logger.info("worker.started", { workerId, health, registeredHandlers: Object.keys(handlers) });
   while (!stopping) {
     const result = await worker.runOne();
