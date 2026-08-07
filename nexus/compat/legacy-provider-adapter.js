@@ -15,11 +15,13 @@ const LEGACY_TOOL_DESCRIPTORS = Object.freeze([
     forceUnavailable: true, status: env => providers.offlineSync.status(env) })
 ]);
 
-async function registerLegacyTools({ registry, env = process.env }) {
+async function registerLegacyTools({ registry, env = process.env, migrationStatus = async () => ({state:"legacy"}) }) {
   const registered = [];
   for (const descriptor of LEGACY_TOOL_DESCRIPTORS) {
+    const migration=await migrationStatus(descriptor.domain === "offline" ? "offline-queue" : descriptor.domain);
     const providerState = descriptor.status(env);
-    const live = !descriptor.forceUnavailable && providerState.enabled && !(providerState.missingConfig || []).length;
+    const retired=migration.state==="authoritative"||migration.state==="retired";
+    const live = !retired && !descriptor.forceUnavailable && providerState.enabled && !(providerState.missingConfig || []).length;
     registered.push(await registry.register({
       toolId: descriptor.toolId, description: descriptor.description, domain: descriptor.domain,
       implementation: descriptor.implementation, availability: live ? "available" : "unavailable",
@@ -27,7 +29,8 @@ async function registerLegacyTools({ registry, env = process.env }) {
       confirmationRequired: descriptor.confirmationRequired, verificationMethod: descriptor.verificationMethod,
       dataClassification: descriptor.domain === "documents" ? "sensitive" : "internal",
       metadata: { compatibilityAdapter: true, authoritativeState: false,
-        migrationState: descriptor.forceUnavailable ? "awaiting_durable_port" : "stateless_adapter",
+        migrationState: retired ? "retired" : descriptor.forceUnavailable ? "awaiting_durable_port" : "stateless_adapter",
+        legacyWriteAllowed: false,
         providerState: sanitizeStatus(providerState) }
     }));
   }
