@@ -84,7 +84,7 @@ services:
         sync: false
 
   - type: web
-    name: agrinexus-platform
+    name: nexus-genesis-certified
     env: node
     plan: starter
     buildCommand: npm install && node rebuild/scripts/build-browser.js
@@ -236,7 +236,7 @@ services:
       - key: PHONE_PROVIDER
         value: twilio
       - key: PUBLIC_BASE_URL
-        value: https://agrinexus-platform.onrender.com
+        value: https://nexus-genesis-certified.onrender.com
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN

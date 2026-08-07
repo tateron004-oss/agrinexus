@@ -38,6 +38,7 @@ const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provid
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
+const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const {
   isUsableEnvValue,
   loadLocalEnvFiles
@@ -82,6 +83,11 @@ const genesisVoiceGuestSessions = new Map();
 const rateBuckets = new Map();
 const phoneAudioCache = new Map();
 const spotifyOAuthStates = new Map();
+const authoritativeNexusRuntime = createServerRuntimeAdapter({
+  resolveUser: async req => currentUser(req, await readDb()),
+  readJson: readBody,
+  logger: console
+});
 
 function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
@@ -48916,6 +48922,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
+    if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
     return serveStatic(req, res, url);
   } catch (error) {
