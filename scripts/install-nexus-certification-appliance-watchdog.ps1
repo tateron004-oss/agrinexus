@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $IsWindows -and $env:OS -ne "Windows_NT") { throw "The watchdog can only be installed on Windows." }
 if (-not $ReleaseSha) { $ReleaseSha = (& git rev-parse HEAD).Trim() }
-$script = (Resolve-Path ".\scripts\nexus-windows-certification-appliance.ps1").Path
+$script = (Resolve-Path ".\scripts\nexus-certification-appliance-watchdog.ps1").Path
 $arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$script`" -ReleaseSha $ReleaseSha"
 if ($SkipDeploy) { $arguments += " -SkipDeploy" }
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments -WorkingDirectory (Get-Location).Path
@@ -17,3 +17,5 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 Register-ScheduledTask -TaskName "NexusCertificationAppliance" -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
 Start-ScheduledTask -TaskName "NexusCertificationAppliance"
 Write-Host "Nexus certification appliance watchdog installed and started for $ReleaseSha."
+Write-Host "Watchdog status: $(Join-Path $env:LOCALAPPDATA 'NexusCertification\watchdog\status.json')"
+Write-Host "Watchdog log: $(Join-Path $env:LOCALAPPDATA 'NexusCertification\watchdog\watchdog.log')"
