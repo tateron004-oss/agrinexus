@@ -84,10 +84,11 @@ services:
         sync: false
 
   - type: web
-    name: agrinexus-platform
+    name: nexus-genesis-certified
     env: node
-    plan: free
+    plan: starter
     buildCommand: npm install && node rebuild/scripts/build-browser.js
+    preDeployCommand: node foundation/scripts/migrate.js
     startCommand: npm start
     healthCheckPath: /api/healthz
     autoDeploy: true
@@ -171,7 +172,11 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: nexus-postgres
+          property: connectionPoolString
+      - key: DATABASE_SSL
+        value: "false"
       - key: SESSION_SECRET
         sync: false
       - key: PASSWORD_PEPPER
@@ -231,7 +236,7 @@ services:
       - key: PHONE_PROVIDER
         value: twilio
       - key: PUBLIC_BASE_URL
-        value: https://agrinexus-platform.onrender.com
+        value: https://nexus-genesis-certified.onrender.com
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
@@ -410,3 +415,43 @@ services:
         sync: false
       - key: SATELLITE_WEBHOOK_URL
         sync: false
+
+  - type: worker
+    name: nexus-background-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node nexus/workers/process.js
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexus-postgres
+          property: connectionPoolString
+      - key: DATABASE_SSL
+        value: "false"
+      - key: DATABASE_POOL_MAX
+        value: "10"
+      - key: DATABASE_STATEMENT_TIMEOUT_MS
+        value: "60000"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PASSWORD_PEPPER
+        generateValue: true
+      - key: NEXUS_WORKER_POLL_MS
+        value: "2000"
+
+databases:
+  - name: nexus-postgres
+    plan: basic-1gb
+    region: oregon
+    postgresMajorVersion: "17"
+    databaseName: nexus
+    user: nexus
+    diskSizeGB: 15
+    storageAutoscalingEnabled: true
+    connectionPool: pgbouncer
+    ipAllowList: []

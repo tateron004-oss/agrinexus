@@ -1,16 +1,10 @@
 const crypto = require("node:crypto");
 
 const PREFIXES = Object.freeze({
-  command: "cmd",
-  conversation: "cnv",
-  event: "evt",
-  task: "tsk",
-  step: "stp",
-  attempt: "atm",
-  toolCall: "tlc",
-  receipt: "rcp",
-  artifact: "art",
-  consent: "cns"
+  command: "cmd", conversation: "cnv", message: "msg", event: "evt", task: "tsk",
+  step: "stp", attempt: "atm", job: "job", toolCall: "tlc", receipt: "rcp",
+  artifact: "art", document: "doc", version: "ver", consent: "cns", memory: "mem",
+  notification: "ntf", sync: "syn", webhook: "whk"
 });
 
 function createId(kind) {

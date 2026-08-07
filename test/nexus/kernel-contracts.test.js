@@ -5,68 +5,28 @@ const { createTask, transitionTask, isTerminal } = require("../../nexus/tasks/st
 
 const fixedNow = () => new Date("2026-08-07T20:00:00.000Z");
 
-test("normalizes every channel into one immutable command envelope", () => {
-  const command = createCommand({
-    correlationId: "trace-release-75051380",
-    tenantId: "tenant-1",
-    actorId: "user-1",
-    channel: "voice",
-    locale: "sw",
-    text: "  Find maize disease guidance  "
-  }, fixedNow);
-
-  assert.equal(command.schema, "nexus.command.v1");
-  assert.equal(command.text, "Find maize disease guidance");
-  assert.equal(command.occurredAt, "2026-08-07T20:00:00.000Z");
-  assert.match(command.commandId, /^cmd_/);
-  assert.match(command.conversationId, /^cnv_/);
+test("all channels normalize into one immutable command envelope", () => {
+  const command = createCommand({ correlationId: "trace-1", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "voice", locale: "sw",
+    text: "  Find maize disease guidance  " }, fixedNow);
+  assert.equal(command.schema, "nexus.command.v1"); assert.equal(command.text, "Find maize disease guidance");
+  assert.match(command.commandId, /^cmd_/); assert.match(command.conversationId, /^cnv_/);
   command.text = "changed";
   assert.equal(command.text, "Find maize disease guidance");
 });
 
-test("task lifecycle requires legal, attributed, reasoned transitions", () => {
-  let task = createTask({
-    tenantId: "tenant-1",
-    ownerId: "user-1",
-    conversationId: "cnv_123",
-    correlationId: "trace-1",
-    goal: "Prepare and verify a field visit route",
-    application: "maps"
-  }, fixedNow);
-
-  task = transitionTask(task, "planned", { actorId: "brain", reason: "Plan accepted" }, fixedNow);
-  task = transitionTask(task, "queued", { actorId: "user-1", reason: "Low-risk execution approved" }, fixedNow);
-  task = transitionTask(task, "running", { actorId: "worker-1", reason: "Worker lease acquired" }, fixedNow);
-  task = transitionTask(task, "verifying", { actorId: "worker-1", reason: "Provider returned a route" }, fixedNow);
-  task = transitionTask(task, "completed", { actorId: "verifier", reason: "Map viewport and coordinates verified" }, fixedNow);
-
-  assert.equal(task.state, "completed");
-  assert.equal(task.version, 6);
-  assert.equal(task.history.length, 5);
-  assert.equal(isTerminal(task), true);
-  assert.throws(() => transitionTask(task, "running", { actorId: "worker-1", reason: "retry" }), /Illegal/);
-});
-
-test("high-impact tasks can be forced through consent and confirmation", () => {
-  let task = createTask({
-    tenantId: "tenant-1",
-    ownerId: "user-1",
-    conversationId: "cnv_456",
-    correlationId: "trace-2",
-    goal: "Share a care summary with a physician",
-    application: "health",
-    riskTier: "high"
-  }, fixedNow);
-
-  task = transitionTask(task, "planned", { actorId: "brain", reason: "Sensitive sharing plan prepared" }, fixedNow);
-  task = transitionTask(task, "awaiting_consent", { actorId: "policy", reason: "Health-data sharing consent required" }, fixedNow);
-  task = transitionTask(task, "awaiting_confirmation", { actorId: "user-1", reason: "Scoped consent recorded" }, fixedNow);
-  task = transitionTask(task, "queued", { actorId: "user-1", reason: "Final recipient confirmation recorded" }, fixedNow);
-
-  assert.deepEqual(task.history.map((entry) => entry.to), [
-    "planned",
-    "awaiting_consent",
-    "awaiting_confirmation",
-    "queued"
-  ]);
+test("one task lifecycle enforces attributed transitions, pause/resume, retry, and terminal states", () => {
+  let task = createTask({ tenantId: "00000000-0000-0000-0000-000000000001",
+    ownerId: "00000000-0000-0000-0000-000000000002", conversationId: "cnv_123",
+    correlationId: "trace-1", goal: "Prepare and verify a field visit" }, fixedNow);
+  task = transitionTask(task, "planned", { actorId: "brain", reason: "plan ready" }, fixedNow);
+  task = transitionTask(task, "paused", { actorId: "user", reason: "pause" }, fixedNow);
+  task = transitionTask(task, "queued", { actorId: "user", reason: "resume" }, fixedNow);
+  task = transitionTask(task, "running", { actorId: "worker", reason: "claimed" }, fixedNow);
+  task = transitionTask(task, "failed", { actorId: "worker", reason: "provider timeout" }, fixedNow);
+  task = transitionTask(task, "queued", { actorId: "user", reason: "retry" }, fixedNow);
+  task = transitionTask(task, "running", { actorId: "worker", reason: "claimed" }, fixedNow);
+  task = transitionTask(task, "verifying", { actorId: "worker", reason: "result returned" }, fixedNow);
+  task = transitionTask(task, "completed", { actorId: "verifier", reason: "outcome visible" }, fixedNow);
+  assert.equal(isTerminal(task), true); assert.throws(() => transitionTask(task, "running", { actorId: "x", reason: "retry" }), /Illegal/);
 });

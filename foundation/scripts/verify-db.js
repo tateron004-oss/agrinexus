@@ -28,8 +28,18 @@ async function main() {
   try {
     const migrations = await db.query("select name from schema_migrations order by name");
     const migrationNames = (migrations.rows || []).map(row => row.name);
-    for (const expected of ["001_initial_schema.sql", "002_seed_demo.sql"]) {
+    for (const expected of ["001_initial_schema.sql", "002_seed_demo.sql", "003_nexus_unified_runtime.sql"]) {
       if (!migrationNames.includes(expected)) throw new Error(`Migration not applied: ${expected}`);
+    }
+
+    const nexus = await db.query(`select
+      exists(select 1 from pg_extension where extname='vector') as pgvector,
+      to_regclass('public.nexus_tasks') is not null as tasks,
+      to_regclass('public.nexus_memory_items') is not null as memory,
+      to_regclass('public.nexus_worker_jobs') is not null as jobs,
+      to_regclass('public.nexus_audit_events') is not null as audit`);
+    if (!Object.values(nexus.rows[0]).every(Boolean)) {
+      throw new Error(`Nexus durability verification failed: ${JSON.stringify(nexus.rows[0])}`);
     }
 
     const counts = {};
@@ -58,7 +68,8 @@ async function main() {
       ok: true,
       migrations: migrationNames,
       counts,
-      demoUser: demo.rows[0]
+      demoUser: demo.rows[0],
+      nexus: nexus.rows[0]
     }, null, 2));
   } finally {
     if (adapter.close) await adapter.close();

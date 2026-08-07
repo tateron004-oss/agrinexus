@@ -502,7 +502,7 @@ async function main() {
   }
 }
 
-main().catch(error => {
+main().catch(async error => {
   const finish = async () => {
     let diagnostics = null;
     try {
@@ -538,5 +538,5 @@ main().catch(error => {
     }));
     process.exitCode = 1;
   };
-  finish();
+  await finish();
 });

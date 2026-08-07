@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { describeFoundation } = require("../src/app");
-const { readConfig, validateConfig } = require("../src/config");
+const { readConfig, validateConfig, assertProductionConfig } = require("../src/config");
 const { listMigrationFiles } = require("../src/runtime/migrations");
 const { hashPasswordForDev, verifyPasswordForDev } = require("../src/modules/auth/passwords");
 const { createSessionToken, verifySessionToken } = require("../src/modules/auth/sessions");
@@ -30,8 +30,15 @@ if (missingModules.length) throw new Error(`Missing foundation modules: ${missin
 
 const config = readConfig();
 const warnings = validateConfig(config);
+let productionGuarded = false;
+try {
+  assertProductionConfig(readConfig({ NODE_ENV: "production" }));
+} catch (error) {
+  productionGuarded = error.code === "UNSAFE_PRODUCTION_CONFIG";
+}
+if (!productionGuarded) throw new Error("Unsafe production config was not rejected.");
 const migrations = listMigrationFiles(config.database.migrationsDir);
-if (migrations.length < 2) throw new Error("Expected initial and seed migrations.");
+if (migrations.length < 3) throw new Error("Expected initial, seed, and authoritative platform migrations.");
 
 const passwordHash = hashPasswordForDev("Prototype2026!", { pepper: "test", salt: "1234567890abcdef" });
 if (!verifyPasswordForDev("Prototype2026!", passwordHash, { pepper: "test" })) {

@@ -7,14 +7,20 @@ function loadPg() {
 }
 
 class PostgresAdapter {
-  constructor({ connectionString, ssl = false, pool }) {
+  constructor({ connectionString, ssl = false, pool, poolMax = 20, idleTimeoutMs = 30000,
+    connectionTimeoutMs = 10000, statementTimeoutMs = 60000 }) {
     const pg = loadPg();
     if (!pg && !pool) {
       throw new Error("The pg package is not installed. Install it before using DATABASE_URL migrations.");
     }
     this.pool = pool || new pg.Pool({
       connectionString,
-      ssl: ssl ? { rejectUnauthorized: false } : false
+      ssl: ssl ? { rejectUnauthorized: false } : false,
+      max: poolMax,
+      idleTimeoutMillis: idleTimeoutMs,
+      connectionTimeoutMillis: connectionTimeoutMs,
+      statement_timeout: statementTimeoutMs,
+      application_name: "agrinexus-foundation"
     });
   }
 
@@ -50,7 +56,11 @@ function createPostgresAdapter(config) {
   if (!config.database.url) return null;
   return new PostgresAdapter({
     connectionString: config.database.url,
-    ssl: config.database.ssl
+    ssl: config.database.ssl,
+    poolMax: config.database.poolMax,
+    idleTimeoutMs: config.database.idleTimeoutMs,
+    connectionTimeoutMs: config.database.connectionTimeoutMs,
+    statementTimeoutMs: config.database.statementTimeoutMs
   });
 }
 
