@@ -1,7 +1,8 @@
 {
   "schema": "nexus.certification.dispatch.v1",
-  "releaseBaseSha": "ec002ac2398555b6beff7750acda7b56cc633427",
+  "releaseBaseSha": "65ffc29de7a7e99cf66641f553901f302b125644",
   "canonicalHost": "https://nexus-genesis-certified.onrender.com",
   "requiredConsecutivePasses": 3,
-  "purpose": "Trigger the GitHub-native exact-release deployment and physical certification control plane."
+  "attempt": "continuous-until-certified",
+  "purpose": "Deploy this immutable candidate and run complete production certification; physical voice acceptance remains required for final 3/3 status."
 }
