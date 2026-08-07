@@ -42,6 +42,9 @@ jobs:
     name: Deterministic production certification
     if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'agent/certify-nexus-')
     uses: ./.github/workflows/nexus-release-certification-v2.yml
+    with:
+      enforce_release: true
+    secrets: inherit
 
   release-certification:
     name: Release certification
@@ -60,4 +63,3 @@ jobs:
 
       - name: Block incomplete Genesis experience
         run: node scripts/nexus-protected-experience-gate.js --release
-
