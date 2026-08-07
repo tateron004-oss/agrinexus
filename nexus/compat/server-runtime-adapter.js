@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
+const { createWorkspaceTaskAdapter } = require("./workspace-task-adapter.js");
 const { registerLegacyTools, createLegacyExecutors, verifyLegacyOutcome } = require("./legacy-provider-adapter.js");
 const { permissionsForRoles } = require("../../foundation/src/runtime/permissions.js");
 
@@ -32,11 +33,19 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       const active = await runtime();
       const identity = await resolveIdentityFn(active, user);
       if (!identity) { send(res, 403, { error: "The signed-in account is not provisioned in the authoritative identity store.", code: "authoritative_identity_required" }); return true; }
-      const api = createTaskApi(active.engine); const context = requestContext(req, identity);
+      const api = createTaskApi(active.engine); const workspaceApi = createWorkspaceTaskAdapter({ engine: active.engine });
+      const context = requestContext(req, identity);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {} };
       let result = null;
       if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "POST") result = await api.create(request);
+      else if (url.pathname === "/api/nexus/runtime/workspaces" && req.method === "GET") {
+        result = { status: 200, body: { authoritative: true, workspaces: workspaceApi.list() } };
+      }
+      else if (url.pathname.match(/^\/api\/nexus\/runtime\/workspaces\/([^/]+)\/tasks$/) && req.method === "POST") {
+        const workspaceId = decodeURIComponent(url.pathname.match(/^\/api\/nexus\/runtime\/workspaces\/([^/]+)\/tasks$/)[1]);
+        result = await workspaceApi.create({ context, workspaceId, body, channel: request.channel, locale: request.locale });
+      }
       else {
         const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(transition|steps\/([^/]+)\/(approve|execute)))?$/);
         if (!match) { send(res, 404, { error: "Authoritative runtime route not found." }); return true; }
