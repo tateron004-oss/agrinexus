@@ -17,11 +17,13 @@ class AuthoritativeTaskEngine {
     if (!Array.isArray(steps) || !steps.length) throw new NexusRuntimeError("steps_required", "At least one task step is required.");
     await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
     const normalized = [];
+    const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));
     for (const raw of steps) {
       const tool = raw.toolId ? await this.tools.get(raw.toolId) : null;
       if (raw.toolId && !tool) throw new NexusRuntimeError("unknown_tool", `Tool ${raw.toolId} is not registered.`);
-      normalized.push({ stepId: raw.stepId || createId("step"), title: required(raw.title, "Step title"),
-        toolId: raw.toolId || null, input: raw.input || {}, dependsOn: raw.dependsOn || [], state: "pending",
+      const clientId = String(raw.clientStepId || raw.stepId || `step_${normalized.length + 1}`);
+      normalized.push({ stepId: stepIds.get(clientId), title: required(raw.title, "Step title"),
+        toolId: raw.toolId || null, input: raw.input || {}, dependsOn: (raw.dependsOn || []).map(id => stepIds.get(String(id)) || String(id)), state: "pending",
         confirmationRequired: Boolean(tool?.confirmation_required),
         idempotencyKey: raw.idempotencyKey || `${command.tenantId}:${createId("step")}` });
     }

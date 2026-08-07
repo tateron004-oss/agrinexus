@@ -26,7 +26,12 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {} };
       let result = null;
-      if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "POST") result = await api.create(request);
+      if (url.pathname === "/api/nexus/runtime/commands" && req.method === "POST") {
+        if (!active.agent) { send(res, 503, { error: "The authoritative planning provider is unavailable; no phrase-specific fallback was used.", code: "planning_provider_unavailable" }); return true; }
+        const planned = await active.agent.command({ input: { correlationId: request.context.requestId,
+          conversationId: body.conversationId, taskId: body.taskId, channel: request.channel, locale: request.locale, text: body.text }, context });
+        send(res, planned.action === "clarify" ? 200 : 201, planned); return true;
+      } else if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "POST") result = await api.create(request);
       else {
         const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(transition|steps\/([^/]+)\/(approve|execute)))?$/);
         if (!match) { send(res, 404, { error: "Authoritative runtime route not found." }); return true; }

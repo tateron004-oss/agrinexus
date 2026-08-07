@@ -16,8 +16,13 @@ const { SyncRepository } = require("../sync/repository.js");
 const { ObservabilityRepository } = require("../observability/event-repository.js");
 const { ModelGovernanceRepository } = require("../models/repository.js");
 const { OutcomeRepository } = require("../verification/outcome-repository.js");
+const { ApplicationRegistry } = require("../apps/registry.js");
+const { defaultApplicationManifests } = require("../apps/default-manifests.js");
+const { OpenEndedPlanner } = require("../brain/planner.js");
+const { AgentService } = require("./agent-service.js");
+const { OpenAiPlanningModel } = require("../brain/openai-planning-model.js");
 
-function createRuntime({ env = process.env, executors = {}, verifier, logger = console } = {}) {
+function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console } = {}) {
   const config = assertProductionConfig(readConfig(env));
   const adapter = createPostgresAdapter(config);
   if (!adapter) throw new Error("PostgreSQL is required for the authoritative Nexus runtime.");
@@ -36,10 +41,15 @@ function createRuntime({ env = process.env, executors = {}, verifier, logger = c
   const observability = new ObservabilityRepository(db);
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
+  const applications = new ApplicationRegistry(defaultApplicationManifests());
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors, verifier });
+  const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
+  const agent = planner ? new AgentService({ planner, engine, tasks, audit }) : null;
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, engine,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, applications,
+    engine, planner, agent,
     async close() { await adapter.close(); } });
 }
 
