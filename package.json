@@ -18,6 +18,7 @@
     "qa:call": "node scripts/qa-suite.js call",
     "qa:provider": "node scripts/qa-suite.js provider",
     "qa:native": "node scripts/qa-suite.js native",
+    "qa:nexus-system-convergence": "node --test test/nexus/system-convergence.test.js",
     "qa:voice": "node scripts/qa-suite.js voice",
     "qa:nexus-trust-chain-trace": "node scripts/nexus-trust-chain-trace-qa.js",
     "qa:nexus-conversation-acknowledgement": "node scripts/nexus-conversation-acknowledgement-qa.js",
