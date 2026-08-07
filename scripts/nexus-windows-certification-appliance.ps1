@@ -72,7 +72,11 @@ try {
 
   if (-not $SkipDeploy) {
     if (-not $env:NEXUS_RENDER_DEPLOY_HOOK_URL) { throw "NEXUS_RENDER_DEPLOY_HOOK_URL is required to deploy the frozen SHA. Use -SkipDeploy only when that SHA is already live." }
-    Invoke-WebRequest -Method Post -Uri $env:NEXUS_RENDER_DEPLOY_HOOK_URL -TimeoutSec 30 -UseBasicParsing | Out-Null
+    $deployHookBuilder = [System.UriBuilder]::new($env:NEXUS_RENDER_DEPLOY_HOOK_URL)
+    $existingDeployQuery = $deployHookBuilder.Query.TrimStart("?")
+    $exactReleaseQuery = "ref=$([System.Uri]::EscapeDataString($ReleaseSha))"
+    $deployHookBuilder.Query = if ($existingDeployQuery) { "$existingDeployQuery&$exactReleaseQuery" } else { $exactReleaseQuery }
+    Invoke-WebRequest -Method Post -Uri $deployHookBuilder.Uri -TimeoutSec 30 -UseBasicParsing | Out-Null
   }
 
   & npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
