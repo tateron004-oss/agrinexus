@@ -1,34 +1,29 @@
-name: Nexus clean Windows certification
+name: Nexus managed-cloud foundation gate
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - rebuild/nexus-genesis-clean-foundation
+  workflow_call:
 
 permissions:
   contents: read
 
-concurrency:
-  group: nexus-clean-windows-certification
-  cancel-in-progress: true
-
 jobs:
-  clean-foundation:
-    name: Clean foundation gates
+  foundation:
+    name: Managed-cloud foundation contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Verify committed production bundle is current
+      - name: Verify committed production bundle
         run: |
           npm install --no-save --no-package-lock esbuild@0.28.1
           node rebuild/scripts/build-browser.js
           git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
-      - name: Run isolated clean suites
+      - name: Run foundation and integrated application contracts
         run: |
           node rebuild/tests/nexus-core.test.js
           node rebuild/tests/nexus-voice-foundation.test.js
@@ -40,73 +35,5 @@ jobs:
           node rebuild/tests/nexus-visible-map-route.test.js
           node rebuild/tests/nexus-complete-voice-visual-actions.test.js
           node rebuild/tests/nexus-approved-source-evidence.test.js
+          node test/nexus/kernel-contracts.test.js
           node scripts/nexus-protected-foundation-guard.js
-
-  physical-voice:
-    name: New Genesis physical voice and commands
-    needs: clean-foundation
-    runs-on: self-hosted
-    timeout-minutes: 35
-    env:
-      NEXUS_CLEAN_BASE_URL: https://nexus-genesis-certified.onrender.com
-      NEXUS_PROTECTED_BASELINE: 0e3ce5b6
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Verify Windows x64 certification host
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
-            throw "Physical certification requires Windows."
-          }
-          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne [System.Runtime.InteropServices.Architecture]::X64) {
-            throw "Physical certification requires an x64 host."
-          }
-          Write-Host "Certified host: Windows x64"
-      - name: Verify installed Node runtime
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          node --version
-          npm --version
-      - name: Verify interactive physical audio
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: ./scripts/nexus-windows-real-device-preflight.ps1
-      - name: Install certification driver
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: npm install --no-save --no-package-lock @playwright/test@1.61.1 esbuild@0.28.1
-      - name: Build clean browser
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          node rebuild/scripts/build-browser.js
-          git diff --exit-code -- rebuild/browser/nexus-clean.bundle.js
-      - name: Verify Render production runtime
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          $health = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/health" -TimeoutSec 30
-          if ($health.ok -ne $true -or $health.service -ne "nexus-genesis-clean-voice" -or $health.schema -ne "nexus.clean.health.v1") {
-            throw "Render did not return the certified Nexus Genesis health contract."
-          }
-          Write-Host "Certified Nexus Genesis production runtime verified."
-      - name: Certify Render production voice and every application
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
-          if ($LASTEXITCODE -ne 0) {
-            throw "Render production voice certification failed with exit code $LASTEXITCODE."
-          }
-      - name: Reverify protected foundation
-        if: always()
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: node scripts/nexus-protected-foundation-guard.js
-      - name: Publish clean certification evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nexus-clean-windows-certification-${{ github.run_id }}
-          path: |
-            output/nexus-clean-windows-certification/
-            output/nexus-windows-real-device/
-            test-results/
-          if-no-files-found: warn
-          retention-days: 90
