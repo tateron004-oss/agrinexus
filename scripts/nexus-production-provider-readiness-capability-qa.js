@@ -43,6 +43,7 @@ const surfaceBody = extractFunction(app, "a100CapabilitySurfaceHtml");
   "simulationSupported: true",
   "confirmationRequired",
   "permissionRequired",
+  "realExecutionEnabled",
   "realExecutionDisabled",
   "actionQueueCompatible: true",
   "secretValuesExposed: false",
@@ -93,7 +94,8 @@ const surfaceBody = extractFunction(app, "a100CapabilitySurfaceHtml");
 
 assert(readinessStatusBody.includes("providerAccountApiAccess.items"), "readiness should derive account/API state without duplicating secrets.");
 assert(readinessStatusBody.includes("runtimeProviders(db)") || server.includes("productionProviderReadinessStatus(runtimeProviders(db), providerAccountApiAccess)"), "config should derive readiness from runtime providers.");
-assert(readinessStatusBody.includes("!Boolean(account.realExecutionEnabled)"), "real execution should remain disabled unless the account/API gate explicitly allows it.");
+assert(readinessStatusBody.includes("Boolean(account.realExecutionEnabled)"), "real execution should mirror the account/API lane's verified live gate.");
+assert(readinessStatusBody.includes("items.some(item => item.realExecutionEnabled)"), "readiness posture should become capability-aware when a provider lane is live.");
 assert(readinessStatusBody.includes("Provider account or credential is not connected."), "unconfigured provider state should be honest.");
 assert(readinessStatusBody.includes("Real execution disabled until final gate"), "connected providers should still require final execution gates.");
 
