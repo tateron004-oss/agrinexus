@@ -1,6 +1,6 @@
 {
   "schema": "nexus.certification.dispatch.v1",
-  "releaseBaseSha": "6b025eb886e9c9e09fe87adb88d0c3544050d0bd",
+  "releaseBaseSha": "a9fde876148bc92fd948364ee5c29165093c6e0c",
   "canonicalHost": "https://nexus-genesis-certified.onrender.com",
   "requiredConsecutivePasses": 3,
   "attempt": "continuous-until-certified",
