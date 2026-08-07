@@ -37,13 +37,6 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        shell: bash
-        run: |
-          protected_pattern='^(server\.js|public/(app\.js|index\.html|styles\.css|sw\.js|nexus-genesis-voice-runtime-manager\.js|nexus-openai-realtime-agent\.js|vendor/nexus-openai-realtime-agent\.bundle\.mjs)|scripts/(certify-nexus\.js|qa-suite\.js))$'
-          changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
-          violations="$(printf '%s\n' "$changed" | grep -E "$protected_pattern" || true)"
-          if [[ -n "$violations" ]]; then
-            echo "Protected Nexus paths changed:"
-            printf '%s\n' "$violations"
-            exit 1
-          fi
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: node scripts/nexus-protected-diff-guard.js
