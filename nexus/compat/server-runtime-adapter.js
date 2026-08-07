@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
+const { createControlApi } = require("./control-api.js");
+const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -22,7 +24,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
-      const active = await runtime(); const api = createTaskApi(active.engine); const context = requestContext(req, user);
+      const active = await runtime(); const api = createTaskApi(active.engine); const controls = createControlApi(active); const context = requestContext(req, user);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
         query: Object.fromEntries(url.searchParams.entries()) };
@@ -42,6 +44,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           migration: await active.workspaceMigrations.status(application.applicationId) })));
         send(res, 200, { authoritative: true, workspaces: statuses }); return true;
       }
+      else if (url.pathname === "/api/nexus/runtime/devices" && req.method === "POST") result = await controls.registerDevice(request);
+      else if (/^\/api\/nexus\/runtime\/devices\/[^/]+$/.test(url.pathname) && req.method === "DELETE") { request.params.deviceId=decodeURIComponent(url.pathname.split("/").pop()); result=await controls.revokeDevice(request); }
+      else if (url.pathname === "/api/nexus/runtime/schedules" && req.method === "POST") result = await controls.createSchedule(request);
+      else if (url.pathname === "/api/nexus/runtime/notifications" && req.method === "POST") result = await controls.createNotification(request);
+      else if (url.pathname === "/api/nexus/runtime/privacy/deletions" && req.method === "POST") result = await controls.requestDeletion(request);
       else {
         const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(transition|steps\/([^/]+)\/(approve|execute)))?$/);
         if (!match) { send(res, 404, { error: "Authoritative runtime route not found." }); return true; }
@@ -55,7 +62,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       send(res, result.status, result.body);
     } catch (error) {
       logger.error?.("authoritative.runtime.request_failed", { code: error.code || error.name, requestId: req.headers["x-request-id"] || "" });
-      send(res, 503, { error: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", code: error.code || "authoritative_runtime_unavailable" });
+      if (error instanceof NexusRuntimeError) send(res, error.status, { error: error.message, code: error.code, details: error.details });
+      else send(res, 503, { error: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", code: error.code || "authoritative_runtime_unavailable" });
     }
     return true;
   }
