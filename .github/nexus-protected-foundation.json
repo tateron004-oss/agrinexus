@@ -21,10 +21,10 @@
   },
   "protectedFiles": {
     "server.js": "e23abe0e469f5ff2ef2d2fe916ea4ebc2362d22d",
-    "public/app.js": "db86840a7306f18b0fc07c842612afbda175a4d4",
-    "public/index.html": "08abe641e234c54578dfb2060ac9d2a2f39fe685",
+    "public/app.js": "f3880fb02b0ddd0b7ed1d6c8232e9049a25385b6",
+    "public/index.html": "880b99423654af7c5ed9ae029327ef28c5bf0a90",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
-    "public/sw.js": "754b9ad12d200e94b338eb7e6aa950dc3f9cf393",
+    "public/sw.js": "b3935a6391cad4d141093a38eadc6680dcb21d5c",
     "public/nexus-genesis-voice-runtime-manager.js": "2a928e4c518ac2bf7dddc672f8b34b97b94b00d3",
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",

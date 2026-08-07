@@ -29,6 +29,7 @@ const { DataLifecycleRepository } = require("../security/data-lifecycle-reposito
 const { ScheduleRepository } = require("../schedules/repository.js");
 const { createProviderCatalog } = require("../tools/provider-catalog.js");
 const { WorkspaceCutoverPolicy } = require("../apps/cutover-policy.js");
+const { DeviceTokenVault } = require("../security/device-token-vault.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -52,6 +53,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const records = new RecordRepository(db);
   const workspaceMigrations = new WorkspaceMigrationRepository(db);
   const devices = new DeviceRepository(db);
+  const deviceTokens = env.NEXUS_DEVICE_TOKEN_KEY ? new DeviceTokenVault(env.NEXUS_DEVICE_TOKEN_KEY) : null;
   const notifications = new NotificationRepository(db);
   const dataLifecycle = new DataLifecycleRepository(db);
   const schedules = new ScheduleRepository(db);
@@ -66,7 +68,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const agent = planner ? new AgentService({ planner, engine, tasks, audit }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, providers, ready,
     async close() { await adapter.close(); } });
 }
