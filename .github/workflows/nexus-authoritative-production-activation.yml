@@ -50,6 +50,7 @@ jobs:
       - name: Wait for exact authoritative runtime
         run: |
           node - <<'NODE'
+          (async () => {
           const fs = require("fs");
           const base = process.env.NEXUS_BASE_URL;
           const providerBase = process.env.PROVIDER_BASE_URL;
@@ -96,9 +97,9 @@ jobs:
           const integrationsReady = evidence?.integrations?.ok && evidence.integrations.body?.ok === true &&
             Array.isArray(evidence.integrations.body?.liveGaps) && evidence.integrations.body.liveGaps.length === 0;
           if (!(runtimeReady && healthReady && providerReady && integrationsReady)) {
-            console.error("Unified production activation did not reach ready state; certification remains held.");
-            process.exit(1);
+            throw new Error("Unified production activation did not reach ready state; certification remains held.");
           }
+          })().catch(error => { console.error(error); process.exit(1); });
           NODE
       - name: Publish activation evidence
         if: always()
