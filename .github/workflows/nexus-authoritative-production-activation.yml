@@ -34,26 +34,12 @@ jobs:
           node scripts/nexus-protected-foundation-guard.js
 
   deploy:
-    name: Deploy exact unified candidate without certification
+    name: Hold for Render exact-main auto-deployment
     needs: converge
     runs-on: ubuntu-latest
     steps:
-      - name: Require managed deploy credential
-        env:
-          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
-        run: test -n "$DEPLOY_HOOK"
-      - name: Request exact-SHA Render deployment
-        env:
-          DEPLOY_HOOK: ${{ secrets.NEXUS_RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          node - <<'NODE'
-          const url = new URL(process.env.DEPLOY_HOOK);
-          url.searchParams.set("ref", process.env.EXPECTED_RELEASE_SHA);
-          fetch(url, { method: "POST" }).then(response => {
-            if (!response.ok) throw new Error(`Render deploy hook returned ${response.status}`);
-            console.log(`Requested unified Nexus release ${process.env.EXPECTED_RELEASE_SHA}`);
-          }).catch(error => { console.error(error); process.exit(1); });
-          NODE
+      - name: Record exact candidate expected from managed delivery
+        run: echo "Waiting for Render auto-deploy of ${EXPECTED_RELEASE_SHA}; certification remains held."
 
   activate:
     name: Prove durable runtime and live providers
