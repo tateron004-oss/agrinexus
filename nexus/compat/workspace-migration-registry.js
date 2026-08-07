@@ -1,7 +1,7 @@
 const WORKSPACES = Object.freeze([
   "agriculture", "health", "chronic-care", "telehealth", "mobile-clinic", "pharmacy",
   "learning", "workforce", "marketplace", "maps", "music-media", "documents", "reminders",
-  "offline-queue", "live-knowledge"
+  "offline-queue", "live-knowledge", "provider-contact"
 ]);
 
 function createWorkspaceMigrationRegistry() {

@@ -12,6 +12,11 @@ class NexusWorker {
     }
     try {
       const result = await handler({ job, heartbeat: () => this.jobs.heartbeat({ jobId: job.job_id, workerId: this.workerId }) });
+      if (result?.receipt?.verification?.verified !== true) {
+        const error = new Error(`Job ${job.job_id} returned without a verified execution receipt.`);
+        error.code = "unverified_worker_outcome";
+        throw error;
+      }
       return { claimed: true, completed: true, job: await this.jobs.complete({ jobId: job.job_id, workerId: this.workerId }), result };
     } catch (cause) {
       const error = { code: cause.code || "job_failed", message: cause.message || "Job failed" };

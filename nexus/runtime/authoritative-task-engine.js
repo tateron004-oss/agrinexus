@@ -63,7 +63,7 @@ class AuthoritativeTaskEngine {
     if (!tool) throw new NexusRuntimeError("unknown_tool", `Tool ${step.tool_id} is not registered.`, 409);
     authorize(context, tool, step);
     const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: step.idempotency_key });
-    if (previous) return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+    if (previous) return verifiedDuplicate(previous);
     if (["completed", "cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
     const executor = this.executors[tool.tool_id];
     if (tool.availability !== "available" || typeof executor !== "function") {
@@ -77,7 +77,7 @@ class AuthoritativeTaskEngine {
     }
     const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
       toolId: tool.tool_id, actorId: context.userId, idempotencyKey: step.idempotency_key, request: step.input });
-    if (started.duplicate) return { execution: started.execution, duplicate: true, receipt: started.execution.receipt || null };
+    if (started.duplicate) return verifiedDuplicate(started.execution);
     try {
       const result = await withTimeout(Promise.resolve(executor({ input: step.input, context, taskId, stepId,
         idempotencyKey: step.idempotency_key })), tool.timeout_ms);
@@ -117,6 +117,17 @@ function required(value, name) { if (!String(value || "").trim()) throw new Nexu
 function makeReceipt(executionId, taskId, stepId, toolId, key, state, verification) {
   return { schema: "nexus.receipt.v1", receiptId: createId("receipt"), executionId, taskId, stepId,
     toolId, idempotencyKey: key, state, verification, occurredAt: new Date().toISOString() };
+}
+function verifiedDuplicate(execution) {
+  if (execution?.state === "completed" && execution?.receipt?.verification?.verified === true) {
+    return { execution, duplicate: true, receipt: execution.receipt };
+  }
+  if (execution?.state === "failed") {
+    throw new NexusRuntimeError("previous_execution_failed", "The prior idempotent execution failed and must be retried through the task recovery path.", 409,
+      { executionId: execution.execution_id });
+  }
+  throw new NexusRuntimeError("execution_in_progress", "The idempotent execution exists but has no verified completion receipt.", 409,
+    { executionId: execution?.execution_id || null, state: execution?.state || "unknown" });
 }
 function withTimeout(promise, ms = 30000) {
   let timer; const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new NexusRuntimeError("tool_timeout", `Tool exceeded ${ms}ms.`, 504)), ms); });

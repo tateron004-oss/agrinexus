@@ -2,7 +2,8 @@ const { loadEnvFile } = require("../../foundation/src/runtime/env-file.js");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createLogger } = require("../observability/logger.js");
-const handlers = require("./handlers.js");
+const { registerLegacyTools, createLegacyExecutors, verifyLegacyOutcome } = require("../compat/legacy-provider-adapter.js");
+const { createHandlers } = require("./handlers.js");
 const { NexusWorker } = require("./worker.js");
 
 loadEnvFile();
@@ -12,9 +13,11 @@ let runtime;
 let stopping = false;
 
 async function main() {
-  runtime = createRuntime({ logger });
+  runtime = createRuntime({ logger, executors: createLegacyExecutors(), verifier: verifyLegacyOutcome });
   const health = await checkRuntimeHealth(runtime);
   if (!health.ok) throw new Error("Nexus worker refuses to start before pgvector and migrations are ready.");
+  await registerLegacyTools({ registry: runtime.tools });
+  const handlers = createHandlers({ runtime });
   const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, logger });
   logger.info("worker.started", { workerId, health, registeredHandlers: Object.keys(handlers) });
   while (!stopping) {

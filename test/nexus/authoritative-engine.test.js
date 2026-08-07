@@ -62,3 +62,17 @@ test("canonical engine isolates tenants and never simulates disconnected tools",
   await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId }), "tool_unavailable");
   await expectCode(() => engine.requiredStep({ tenantId: "00000000-0000-0000-0000-000000000099", taskId: task.taskId, stepId: task.steps[0].stepId }), "step_not_found");
 });
+
+test("idempotent execution never reports false success without a verified receipt", async () => {
+  const { engine, store } = fixture();
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "worker", text: "Save report" });
+  const task = await engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] });
+  await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: task.steps[0].stepId, actorId: command.actorId, approved: true });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
+  store.execution = { execution_id: "tlc_running", idempotency_key: store.steps[0].idempotency_key, state: "running", receipt: null };
+  await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId }), "execution_in_progress");
+  store.execution.state = "failed";
+  await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId }), "previous_execution_failed");
+  assert.equal(store.calls, 0);
+});
