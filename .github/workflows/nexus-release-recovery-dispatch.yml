@@ -1,0 +1,36 @@
+name: Recover and dispatch Nexus release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/nexus-release-recovery-dispatch.yml
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nexus-release-recovery-dispatch
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Re-enable and dispatch exact Nexus release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable canonical release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/nexus-release-certification-v2.yml/enable"
+      - name: Dispatch exact frozen production candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run nexus-release-certification-v2.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref release/nexus-657fa717 \
+            --field enforce_release=true
+      - name: Record dispatched candidate
+        run: echo "Dispatched 657fa7171228c6e28e63d24e684a1bfe750d66fe"
