@@ -22,10 +22,10 @@ class TaskRepository {
         const step = steps[index]; assertId("step", step.stepId);
         await trx.query(`insert into nexus_task_steps
           (step_id, tenant_id, task_id, sequence, title, tool_id, depends_on, state, input,
-           confirmation_state, idempotency_key) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [
+          confirmation_state, idempotency_key, fallback_tool_ids) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
           step.stepId, task.tenantId, task.taskId, index + 1, step.title, step.toolId || null,
           step.dependsOn || [], step.state || "pending", step.input || {},
-          step.confirmationRequired ? "required" : "not_required", step.idempotencyKey
+          step.confirmationRequired ? "required" : "not_required", step.idempotencyKey, step.fallbackToolIds || []
         ]);
       }
       return { ...task, steps };

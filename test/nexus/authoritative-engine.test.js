@@ -35,6 +35,18 @@ function fixture() {
   return { engine, store };
 }
 
+test("canonical engine self-corrects through an explicit governed fallback with separate receipts", async () => {
+  const { engine, store } = fixture();
+  engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: false, consent_scope: null, timeout_ms: 1000 });
+  engine.executors["provider.primary"] = async () => { throw new Error("provider outage"); };
+  engine.executors["provider.backup"] = async () => ({ persisted: true });
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.backup"], confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  engine.verifier = async ({ result }) => ({ verified: result.persisted === true, method: "provider_receipt" });
+  const result = await engine.execute({ context: { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false }, taskId: "tsk", stepId: "stp_1" });
+  assert.equal(result.receipt.verification.selectedTool, "provider.backup"); assert.equal(result.receipt.verification.fallbackAttempt, 1);
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }

@@ -23,7 +23,7 @@ class AuthoritativeTaskEngine {
       if (raw.toolId && !tool) throw new NexusRuntimeError("unknown_tool", `Tool ${raw.toolId} is not registered.`);
       const clientId = String(raw.clientStepId || raw.stepId || `step_${normalized.length + 1}`);
       normalized.push({ stepId: stepIds.get(clientId), title: required(raw.title, "Step title"),
-        toolId: raw.toolId || null, input: raw.input || {}, dependsOn: (raw.dependsOn || []).map(id => stepIds.get(String(id)) || String(id)), state: "pending",
+        toolId: raw.toolId || null, fallbackToolIds: raw.fallbackToolIds || [], input: raw.input || {}, dependsOn: (raw.dependsOn || []).map(id => stepIds.get(String(id)) || String(id)), state: "pending",
         confirmationRequired: Boolean(tool?.confirmation_required),
         idempotencyKey: raw.idempotencyKey || `${command.tenantId}:${createId("step")}` });
     }
@@ -61,46 +61,43 @@ class AuthoritativeTaskEngine {
   async execute({ context, taskId, stepId }) {
     const step = await this.requiredStep({ tenantId: context.tenantId, taskId, stepId });
     if (!step.tool_id) throw new NexusRuntimeError("step_has_no_tool", "Step has no executable tool.", 409);
-    const tool = await this.tools.get(step.tool_id);
-    if (!tool) throw new NexusRuntimeError("unknown_tool", `Tool ${step.tool_id} is not registered.`, 409);
-    authorize(context, tool, step);
-    const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: step.idempotency_key });
-    if (previous) return { execution: previous, duplicate: true, receipt: previous.receipt || null };
     if (["completed", "cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
-    const executor = this.executors[tool.tool_id];
-    if (tool.availability !== "available" || typeof executor !== "function") {
-      throw new NexusRuntimeError("tool_unavailable", `Tool ${tool.tool_id} is unavailable; nothing was executed.`, 503,
-        { availability: tool.availability, executorConfigured: typeof executor === "function" });
-    }
-    if (tool.consent_scope) {
-      const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId,
-        scope: tool.consent_scope, taskId });
-      if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403);
-    }
-    const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
-      toolId: tool.tool_id, actorId: context.userId, idempotencyKey: step.idempotency_key, request: step.input });
-    if (started.duplicate) return { execution: started.execution, duplicate: true, receipt: started.execution.receipt || null };
-    try {
+    const candidates = [step.tool_id, ...(step.fallback_tool_ids || [])]; let lastError = null;
+    for (const [attempt, toolId] of candidates.entries()) {
+      const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
+      if (!tool || tool.availability !== "available" || typeof executor !== "function") { lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} is unavailable.`, 503); continue; }
+      authorize(context, tool, step);
+      if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
+        if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
+      const key = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
+      const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
+      if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+      const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
+        toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
+      if (started.duplicate) { lastError = new NexusRuntimeError("prior_attempt_failed", `Prior ${toolId} attempt did not complete.`, 409); continue; }
+      try {
       const result = await withTimeout(Promise.resolve(executor({ input: step.input, context, taskId, stepId,
-        idempotencyKey: step.idempotency_key })), tool.timeout_ms);
+        idempotencyKey: key })), tool.timeout_ms);
       const verification = await this.verifier({ tool, result, context, taskId, stepId });
       if (!verification?.verified) throw new NexusRuntimeError("outcome_unverified", "Tool result could not be verified.", 502, { verification });
       const receipt = makeReceipt(started.execution.execution_id, taskId, stepId, tool.tool_id,
-        step.idempotency_key, "completed", verification);
+        key, "completed", { ...verification, selectedTool: toolId, fallbackAttempt: attempt });
       const execution = await this.executions.finish({ tenantId: context.tenantId,
         executionId: started.execution.execution_id, stepId, successful: true, response: result, receipt, verified: true });
       const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
       await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
         correlationId: task.correlationId, taskId, eventType: "tool.completed", outcome: "verified", metadata: receipt });
       return { execution, duplicate: false, receipt };
-    } catch (cause) {
+      } catch (cause) {
       const error = { code: cause.code || "execution_failed", message: cause.message || "Execution failed" };
       const receipt = makeReceipt(started.execution.execution_id, taskId, stepId, tool.tool_id,
-        step.idempotency_key, "failed", { verified: false, error });
+        key, "failed", { verified: false, error, selectedTool: toolId, fallbackAttempt: attempt });
       await this.executions.finish({ tenantId: context.tenantId, executionId: started.execution.execution_id,
         stepId, successful: false, error, receipt, verified: false });
-      throw cause;
+        lastError = cause;
+      }
     }
+    throw lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
   }
 
   async requiredStep(input) {
