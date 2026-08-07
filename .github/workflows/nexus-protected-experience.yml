@@ -38,6 +38,11 @@ jobs:
       - name: Validate manifest and certified foundation
         run: node scripts/nexus-protected-experience-gate.js
 
+  deterministic-production-certification:
+    name: Deterministic production certification
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'agent/certify-nexus-')
+    uses: ./.github/workflows/nexus-release-certification-v2.yml
+
   release-certification:
     name: Release certification
     if: github.event_name == 'workflow_dispatch' && inputs.enforce_release == true
@@ -55,3 +60,4 @@ jobs:
 
       - name: Block incomplete Genesis experience
         run: node scripts/nexus-protected-experience-gate.js --release
+
