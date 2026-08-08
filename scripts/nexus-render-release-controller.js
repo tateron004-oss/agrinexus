@@ -256,7 +256,6 @@ async function fetchDeployDiagnostics(client, service, deploy, { attempts = 5, r
       limit: "100"
     });
     query.append("resource", service.id);
-    query.append("type", "build");
     const collected = new Map();
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const result = await client.request(`/logs?${query}`);
