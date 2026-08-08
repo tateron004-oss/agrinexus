@@ -1,61 +1,62 @@
-name: Nexus 21-objective production acceptance
+name: Nexus unified production release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       expected_release_sha:
-        description: Exact deployed main SHA to certify
-        required: true
+        description: Exact main SHA to deploy and certify
+        required: false
         type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: nexus-21-objective-production-acceptance
+  group: nexus-unified-production-release
   cancel-in-progress: false
 
 env:
+  EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
   NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
   PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
-  EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
-  NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
 
 jobs:
-  contract:
-    name: Lock complete acceptance contract
+  deploy-activate-accept:
+    name: Deploy, activate, and establish exact-SHA acceptance
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.expected_release_sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: |
+      - name: Require machine deployment control
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          test -n "$RENDER_API_KEY" || { echo "RENDER_API_KEY is not installed" >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE_SHA"
+      - name: Validate unified release contracts
+        run: |
           node test/nexus/system-convergence.test.js
           node test/nexus/production-acceptance-gate.test.js
           node test/nexus/production-acceptance-repository.test.js
           node test/nexus/server-runtime-adapter.test.js
+          node test/nexus/render-release-controller.test.js
           node scripts/nexus-protected-foundation-guard.js
-
-  production:
-    name: Three consecutive exact-SHA production passes
-    needs: contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.expected_release_sha || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Run three-pass streak
+      - name: Deploy exact SHA to the canonical Render topology
+        id: render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: node scripts/nexus-render-release-controller.js
+      - name: Establish three consecutive production passes
         run: |
           set -euo pipefail
-          mkdir -p output
           for pass in 1 2 3; do
             echo "Starting exact-SHA production acceptance pass ${pass}/3"
             NEXUS_PASS_NUMBER="$pass" node scripts/nexus-21-objective-production-acceptance.js
@@ -64,14 +65,14 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const reports=[1,2,3].map(n=>JSON.parse(fs.readFileSync(`output/nexus-21-objective-pass-${n}.json`)));
-          if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established. Certification remains incomplete.');
+          if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established.');
           fs.writeFileSync('output/nexus-21-objective-streak.json',JSON.stringify({certificationComplete:true,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
           NODE
-      - name: Publish acceptance evidence
+      - name: Publish unified release evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-21-objective-production-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+          name: nexus-unified-production-release-${{ github.run_id }}-${{ github.run_attempt }}
           path: output/
           if-no-files-found: error
-          retention-days: 180
+          retention-days: 90
