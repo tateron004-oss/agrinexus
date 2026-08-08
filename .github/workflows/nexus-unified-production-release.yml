@@ -49,6 +49,8 @@ jobs:
           node test/nexus/system-convergence.test.js
           node test/nexus/production-acceptance-gate.test.js
           node test/nexus/production-acceptance-repository.test.js
+          node test/nexus/production-evidence-producer.test.js
+          node test/nexus/production-evidence-probes.test.js
           node test/nexus/worker-release-heartbeat.test.js
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
@@ -58,6 +60,15 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: node scripts/nexus-render-release-controller.js
+      - name: Produce, compile, and record exact-release production probes
+        env:
+          NEXUS_PROBE_FILE: output/nexus-production-probes.json
+          NEXUS_PROOF_FILE: output/nexus-production-proof.json
+          NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
+        run: |
+          node scripts/nexus-run-production-evidence-probes.js
+          node scripts/nexus-compile-production-evidence.js
+          node scripts/nexus-record-production-proof.js
       - name: Establish three consecutive production passes
         run: |
           set -euo pipefail
