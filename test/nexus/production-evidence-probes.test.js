@@ -21,3 +21,12 @@ test("database evidence remains a genuine exact-release production observation",
   assert.deepEqual(result.facts, { connected: true, pgvector: true, migrationsCurrent: true });
   assert.deepEqual(result.receipts, ["https://production/api/healthz status=200"]);
 });
+
+test("task-engine evidence requires a durable completed lifecycle on the exact release", () => {
+  const sha = "d".repeat(40);
+  const probe = { url: "https://production/api/nexus/runtime/production-acceptance/probes/task-engine",
+    status: 200, ok: true, body: { ok: true, releaseSha: sha, durable: true, state: "cancelled", steps: 1 } };
+  const result = component("taskEngine", sha, [probe], { durableTask: true, lifecycleState: "cancelled", stepCount: 1 });
+  assert.equal(result.passed, true);
+  assert.equal(component("taskEngine", sha, [{ ...probe, body: { ...probe.body, releaseSha: "e".repeat(40) } }], {}).passed, false);
+});

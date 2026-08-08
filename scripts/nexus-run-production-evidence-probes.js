@@ -10,6 +10,12 @@ async function get(url, headers = {}) {
   try { body = JSON.parse(text); } catch { body = { raw: text.slice(0, 500) }; }
   return { url, status: response.status, ok: response.ok, body };
 }
+async function post(url, headers, body) {
+  const response = await fetch(url, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+  const text = await response.text(); let parsed;
+  try { parsed = JSON.parse(text); } catch { parsed = { raw: text.slice(0, 500) }; }
+  return { url, status: response.status, ok: response.ok, body: parsed };
+}
 function receipt(probe) { return `${probe.url} status=${probe.status}`; }
 function component(component, releaseSha, probes, facts = {}) {
   const passed = probes.every(probe => probe.ok || (component === "worker" && probe.status === 503)) &&
@@ -23,9 +29,10 @@ async function run(env = process.env) {
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const headers = { authorization: `Bearer ${token}` };
-  const [runtime, health, integrations, provider, acceptance] = await Promise.all([
+  const [runtime, health, integrations, provider, acceptance, taskEngine] = await Promise.all([
     get(`${base}/api/nexus/runtime/status`), get(`${base}/api/healthz`), get(`${base}/api/integrations`),
-    get(`${providerBase}/healthz`), get(`${base}/api/nexus/runtime/production-acceptance`, headers)
+    get(`${providerBase}/healthz`), get(`${base}/api/nexus/runtime/production-acceptance`, headers),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha })
   ]);
   if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
@@ -33,6 +40,11 @@ async function run(env = process.env) {
   const databaseReady = health.ok && health.body?.ok === true && health.body?.releaseSha === releaseSha &&
     health.body?.checks?.database === "connected" && health.body?.pgvector === true && health.body?.migrationsCurrent === true;
   const componentProbes = [
+    component("taskEngine", releaseSha, [taskEngine], {
+      durableTask: taskEngine.body?.durable === true,
+      lifecycleState: taskEngine.body?.state,
+      stepCount: taskEngine.body?.steps
+    }),
     component("database", releaseSha, [health], {
       connected: health.body?.checks?.database === "connected",
       pgvector: health.body?.pgvector === true,
@@ -44,10 +56,11 @@ async function run(env = process.env) {
     component("testing", releaseSha, [runtime, health], { exactSha: releaseSha }),
     component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
   ];
-  componentProbes[0].passed = databaseReady;
-  componentProbes[1].passed = workerReady;
-  componentProbes[2].passed = providerReady;
-  componentProbes[5].passed = componentProbes[5].passed && health.body?.strictLiveMode === true;
+  componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
+  componentProbes[1].passed = databaseReady;
+  componentProbes[2].passed = workerReady;
+  componentProbes[3].passed = providerReady;
+  componentProbes[6].passed = componentProbes[6].passed && health.body?.strictLiveMode === true;
   const output = env.NEXUS_PROBE_FILE || path.join("output", "nexus-production-probes.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ releaseSha, source: "unified-release-live-probe", componentProbes, workspaceProbes: [] }, null, 2));
@@ -57,4 +70,4 @@ async function run(env = process.env) {
   return componentProbes;
 }
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = Object.freeze({ component, run });
+module.exports = Object.freeze({ component, run, post });
