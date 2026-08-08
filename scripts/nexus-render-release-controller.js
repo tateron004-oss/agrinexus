@@ -23,22 +23,30 @@ function required(value, name) {
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-function createClient({ apiKey, fetchImpl = fetch }) {
+function createClient({ apiKey, fetchImpl = fetch, maxAttempts = 4, retryMs = 1000 }) {
   async function request(path, { method = "GET", body } = {}) {
-    const response = await fetchImpl(`${API}${path}`, {
-      method,
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${apiKey}`,
-        ...(body === undefined ? {} : { "content-type": "application/json" })
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) })
-    });
-    const text = await response.text();
-    let value;
-    try { value = text ? JSON.parse(text) : null; } catch { value = { raw: text.slice(0, 500) }; }
-    if (!response.ok) throw new Error(`Render ${method} ${path} returned ${response.status}: ${JSON.stringify(value)}`);
-    return value;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await fetchImpl(`${API}${path}`, {
+          method,
+          headers: {
+            accept: "application/json",
+            authorization: `Bearer ${apiKey}`,
+            ...(body === undefined ? {} : { "content-type": "application/json" })
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) })
+        });
+        const text = await response.text();
+        let value;
+        try { value = text ? JSON.parse(text) : null; } catch { value = { raw: text.slice(0, 500) }; }
+        if (response.ok) return value;
+        const retryable = response.status === 429 || response.status >= 500;
+        if (!retryable || attempt === maxAttempts) throw new Error(`Render ${method} ${path} returned ${response.status}: ${JSON.stringify(value)}`);
+      } catch (error) {
+        if (attempt === maxAttempts || /^Render .* returned (?!429|5\d\d)/.test(error.message)) throw error;
+      }
+      await sleep(retryMs * attempt);
+    }
   }
   return { request };
 }

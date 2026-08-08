@@ -10,6 +10,21 @@ test("release controller refuses every non-canonical Nexus host", async () => {
   );
 });
 
+test("Render client retries transient network failures without hiding permanent API errors", async () => {
+  const { createClient } = require("../../scripts/nexus-render-release-controller.js");
+  let attempts = 0;
+  const client = createClient({ apiKey: "test", retryMs: 0, fetchImpl: async () => {
+    attempts += 1;
+    if (attempts < 3) throw new TypeError("fetch failed");
+    return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true }) };
+  } });
+  assert.deepEqual(await client.request("/services"), { ok: true });
+  assert.equal(attempts, 3);
+
+  const permanent = createClient({ apiKey: "test", retryMs: 0, fetchImpl: async () => ({ ok: false, status: 401, text: async () => "{}" }) });
+  await assert.rejects(permanent.request("/services"), /returned 401/);
+});
+
 test("service discovery rejects missing and duplicate canonical services", async () => {
   await assert.rejects(resolveUniqueService({ request: async () => [] }, "web"), /found 0/);
   await assert.rejects(resolveUniqueService({ request: async () => [{ service: { name: "web" } }, { service: { name: "web" } }] }, "web"), /found 2/);
