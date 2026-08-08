@@ -1,0 +1,46 @@
+{
+  "schema": "nexus.path-1-dependency-map.v1",
+  "baselineSha": "348fbe9d63da875a8ab88ecc0f22e8403aa271ef",
+  "mode": "inventory-only",
+  "runtimeMutationAuthorized": false,
+  "removalAuthorized": false,
+  "shared": {
+    "applicationManifests": "nexus/apps/default-manifests.js",
+    "migrationRegistry": "nexus/compat/workspace-migration-registry.js",
+    "migrationRepository": "nexus/apps/migration-repository.js",
+    "cutoverPolicy": "nexus/apps/cutover-policy.js",
+    "serverAdapter": "nexus/compat/server-runtime-adapter.js",
+    "recordStorage": "nexus/data/record-repository.js",
+    "databaseSchema": "foundation/migrations/007_nexus_workspace_records.sql",
+    "browserEntry": "rebuild/browser/nexus-clean-entry.js",
+    "requestContract": "rebuild/nexus-core/request-transaction.js",
+    "productionEvidence": "nexus/acceptance/repository.js",
+    "protectedFoundation": ".github/nexus-protected-foundation.json",
+    "protectedExperience": ".github/nexus-protected-experience.json"
+  },
+  "workspaces": {
+    "agriculture": { "manifestId": "agriculture", "browserRoute": "agriculture", "capabilities": ["knowledge.search", "agriculture.assess", "weather.read", "maps.view"] },
+    "health": { "manifestId": "health", "browserRoute": "health", "capabilities": ["health.intake", "health.record", "health.predict", "telehealth.prepare"] },
+    "chronic-care": { "manifestId": null, "browserRoute": "health", "capabilities": [], "gap": "No distinct authoritative application manifest; relationship to the protected Health and Chronic Care route must be resolved additively." },
+    "telehealth": { "manifestId": "telehealth", "browserRoute": "telehealth", "capabilities": ["telehealth.prepare", "documents.form", "communications.schedule"] },
+    "mobile-clinic": { "manifestId": "mobile-clinic", "browserRoute": "mobile-clinic", "capabilities": ["clinic.find", "maps.route", "communications.schedule"] },
+    "pharmacy": { "manifestId": "pharmacy", "browserRoute": "pharmacy", "capabilities": ["pharmacy.find", "medication.educate", "communications.contact"] },
+    "learning": { "manifestId": "learning", "browserRoute": "learning", "capabilities": ["learning.plan", "knowledge.search", "documents.create"] },
+    "workforce": { "manifestId": "workforce", "browserRoute": "workforce", "capabilities": ["jobs.search", "resume.create", "documents.create"] },
+    "marketplace": { "manifestId": "marketplace", "browserRoute": "marketplace", "capabilities": ["marketplace.search", "marketplace.list", "logistics.plan"] },
+    "maps": { "manifestId": "maps", "browserRoute": "maps", "capabilities": ["maps.view", "maps.route", "location.read"] },
+    "music-media": { "manifestId": "music-media", "browserRoute": "music", "capabilities": ["media.search", "media.play", "images.search", "video.play"], "legacyAlias": "music" },
+    "documents": { "manifestId": "documents", "browserRoute": "documents", "capabilities": ["documents.create", "documents.form", "documents.save", "files.read"], "compatibilityTool": "legacy.documents.analyze" },
+    "reminders": { "manifestId": "reminders", "browserRoute": "reminders", "capabilities": ["reminders.schedule", "calendar.read", "calendar.write"], "compatibilityTool": "legacy.reminders.create", "gap": "Legacy write tool remains force-disabled pending a durable port." },
+    "offline-queue": { "manifestId": "offline-queue", "browserRoute": "offline", "capabilities": ["offline.sync", "tasks.resume"], "legacyAlias": "offline", "compatibilityTool": "legacy.offline.queue", "gap": "Legacy write tool remains force-disabled pending a durable port." },
+    "live-knowledge": { "manifestId": "live-knowledge", "browserRoute": "live-knowledge", "capabilities": ["knowledge.search", "weather.read", "images.search", "sources.render"] }
+  },
+  "unmappedAuthoritativeApplications": ["communications", "operations"],
+  "findings": [
+    "chronic-care is governed by migration policy but lacks a distinct authoritative application manifest",
+    "protected experience aliases music and offline differ from authoritative migration IDs",
+    "communications and operations have authoritative manifests but are not governed as user workspaces",
+    "reminders and offline legacy write tools are intentionally unavailable pending durable ports"
+  ],
+  "nextGate": "Resolve each finding additively and prove contract, tenant isolation, durable write, receipt, and browser outcome before any workspace cutover."
+}
