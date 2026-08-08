@@ -25,6 +25,31 @@ async function getJson(url, headers = {}) {
   return { ok: response.ok, status: response.status, body };
 }
 
+function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function fetchEvidence({ base, providerBase, headers }) {
+  const [runtime, health, integrations, providers, acceptance] = await Promise.all([
+    getJson(`${base}/api/nexus/runtime/status`), getJson(`${base}/api/healthz`),
+    getJson(`${base}/api/integrations`), getJson(`${providerBase}/healthz`),
+    getJson(`${base}/api/nexus/runtime/production-acceptance`, headers)
+  ]);
+  return { runtime, health, integrations, providers, acceptance };
+}
+
+async function waitForReleaseConvergence({ base, providerBase, expectedSha, headers, timeoutMs = 300000, pollMs = 5000 }) {
+  const deadline = Date.now() + timeoutMs;
+  let evidence;
+  do {
+    evidence = await fetchEvidence({ base, providerBase, headers });
+    const runtimeSha = evidence.runtime.body?.releaseSha;
+    const acceptanceSha = evidence.acceptance.body?.releaseSha;
+    if (runtimeSha === expectedSha && evidence.acceptance.ok && acceptanceSha === expectedSha) return evidence;
+    if (Date.now() >= deadline) return evidence;
+    console.log(`Waiting for exact release cutover: runtime=${runtimeSha || "unavailable"} acceptance=${evidence.acceptance.status}/${acceptanceSha || "unavailable"}`);
+    await delay(pollMs);
+  } while (true);
+}
+
 function objective(id, passed, evidence, detail) {
   return { id, passed: passed === true, evidence: Array.isArray(evidence) ? evidence : [evidence].filter(Boolean), detail };
 }
@@ -75,11 +100,7 @@ async function run(env = process.env) {
   const providerBase = required(env.PROVIDER_BASE_URL, "PROVIDER_BASE_URL is required").replace(/\/$/, "");
   const expectedSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA is required");
   const headers = env.NEXUS_ACCEPTANCE_TOKEN ? { authorization: `Bearer ${env.NEXUS_ACCEPTANCE_TOKEN}` } : {};
-  const [runtime, health, integrations, providers, acceptance] = await Promise.all([
-    getJson(`${base}/api/nexus/runtime/status`), getJson(`${base}/api/healthz`),
-    getJson(`${base}/api/integrations`), getJson(`${providerBase}/healthz`),
-    getJson(`${base}/api/nexus/runtime/production-acceptance`, headers)
-  ]);
+  const { runtime, health, integrations, providers, acceptance } = await waitForReleaseConvergence({ base, providerBase, expectedSha, headers });
   const report = evaluate({ expectedSha, runtime, health, integrations, providers, acceptance });
   report.endpoints = { runtime: runtime.status, health: health.status, integrations: integrations.status, providers: providers.status, acceptance: acceptance.status };
   const output = env.NEXUS_ACCEPTANCE_OUTPUT || path.join("output", `nexus-21-objective-pass-${env.NEXUS_PASS_NUMBER || "1"}.json`);
@@ -94,4 +115,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = Object.freeze({ OBJECTIVES, evaluate, run });
+module.exports = Object.freeze({ OBJECTIVES, evaluate, fetchEvidence, waitForReleaseConvergence, run });
