@@ -149,6 +149,54 @@ function validateService(service, expectedType) {
   if (repo && !/tateron004-oss\/agrinexus(?:\.git)?$/i.test(repo)) throw new Error(`${service.name} is connected to unexpected repository ${repo}`);
 }
 
+async function reconcileServiceConfiguration(client, service) {
+  const configurations = {
+    "nexus-genesis-certified": {
+      rootDir: "",
+      autoDeploy: "no",
+      serviceDetails: {
+        runtime: "node",
+        plan: "starter",
+        healthCheckPath: "/api/healthz",
+        preDeployCommand: "node foundation/scripts/migrate.js",
+        envSpecificDetails: {
+          buildCommand: "npm install && node rebuild/scripts/build-browser.js",
+          startCommand: "npm start"
+        }
+      }
+    },
+    "nexus-background-worker": {
+      rootDir: "",
+      autoDeploy: "no",
+      serviceDetails: {
+        runtime: "node",
+        plan: "starter",
+        maxShutdownDelaySeconds: 60,
+        envSpecificDetails: {
+          buildCommand: "npm install",
+          startCommand: "node nexus/workers/process.js"
+        }
+      }
+    },
+    "agrinexus-provider-engines": {
+      rootDir: "",
+      autoDeploy: "no",
+      serviceDetails: {
+        runtime: "node",
+        healthCheckPath: "/healthz",
+        envSpecificDetails: {
+          buildCommand: "npm install",
+          startCommand: "npm run provider-engines"
+        }
+      }
+    }
+  };
+  const configuration = required(configurations[service.name], `canonical configuration for ${service.name}`);
+  const updated = unwrapService(await client.request(`/services/${service.id}`, { method: "PATCH", body: configuration }));
+  if (updated?.name && updated.name !== service.name) throw new Error(`Render updated unexpected service ${updated.name}`);
+  return { ...service, ...updated };
+}
+
 async function installAcceptanceToken(client, serviceId, token) {
   await client.request(`/services/${serviceId}/env-vars/NEXUS_ACCEPTANCE_TOKEN`, { method: "PUT", body: { value: token } });
 }
@@ -203,8 +251,13 @@ async function run(env = process.env, options = {}) {
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
-  const services = [web, worker, provider];
-  await installAcceptanceToken(client, web.id, token);
+  const services = [];
+  for (const service of [web, worker, provider]) {
+    const reconciled = await reconcileServiceConfiguration(client, service);
+    validateService(reconciled, service === worker ? "background_worker" : "web_service");
+    services.push(reconciled);
+  }
+  await installAcceptanceToken(client, services[0].id, token);
   exportWorkflowSecret(token, env);
   const deployments = [];
   for (const service of services) deployments.push(await deployExactSha(client, service, releaseSha, options));
@@ -216,4 +269,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
