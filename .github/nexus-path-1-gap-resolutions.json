@@ -1,0 +1,15 @@
+{
+  "schema": "nexus.path-1-gap-resolutions.v1",
+  "mode": "additive-contracts-only",
+  "runtimeCutoverAuthorized": false,
+  "removalAuthorized": false,
+  "resolutions": {
+    "chronic-care-manifest": { "state": "resolved-by-shared-authority", "workspaceId": "chronic-care", "manifestId": "health", "browserRoute": "health", "reason": "Health and Chronic Care is one protected experience while retaining distinct migration evidence for chronic-care." },
+    "music-alias": { "state": "resolved-by-alias", "workspaceId": "music-media", "aliases": ["music"], "browserRoute": "music" },
+    "offline-alias": { "state": "resolved-by-alias", "workspaceId": "offline-queue", "aliases": ["offline"], "browserRoute": "offline" },
+    "reminders-durable-port": { "state": "contracted-not-cut-over", "workspaceId": "reminders", "port": "schedules", "path": "/api/nexus/runtime/schedules", "persistence": "nexus_schedules" },
+    "offline-durable-port": { "state": "contracted-not-cut-over", "workspaceId": "offline-queue", "port": "sync", "path": "/api/nexus/runtime/sync/push", "persistence": "nexus_sync_operations" },
+    "internal-manifests": { "state": "resolved-as-non-workspace-applications", "applicationIds": ["communications", "operations"] }
+  },
+  "nextGate": "Collect all five production proofs per workspace before activating any authoritative migration record."
+}
