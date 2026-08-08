@@ -45,18 +45,25 @@ async function resolveUniqueService(client, name) {
   return services[0];
 }
 
-async function copyRequiredEnvValue(client, serviceId, key) {
-  const result = await client.request(`/services/${serviceId}/env-vars?limit=100`);
-  const entries = Array.isArray(result) ? result : result?.envVars || [];
-  const match = entries.map(item => item?.envVar || item).find(item => item?.key === key);
-  return required(match?.value, `${key} on nexus-genesis-certified`);
+async function resolveDatabaseConnection(client) {
+  const result = await client.request("/postgres?name=nexus-postgres&limit=100");
+  const databases = (Array.isArray(result) ? result : result?.postgres || [])
+    .map(item => item?.postgres || item)
+    .filter(database => database?.name === "nexus-postgres");
+  if (databases.length !== 1) throw new Error(`Expected exactly one Render database named nexus-postgres; found ${databases.length}`);
+  const connection = await client.request(`/postgres/${databases[0].id}/connection-info`);
+  return required(connection?.internalConnectionPoolString || connection?.internalConnectionString, "nexus-postgres internal connection");
 }
 
-async function provisionBackgroundWorker(client, web) {
+async function installEnvValue(client, serviceId, key, value) {
+  await client.request(`/services/${serviceId}/env-vars/${encodeURIComponent(key)}`, { method: "PUT", body: { value } });
+}
+
+async function provisionBackgroundWorker(client, web, databaseUrl) {
   validateService(web, "web_service");
   const ownerId = required(web.ownerId || web.owner?.id, "Render workspace ID");
   const repo = required(web.repo || web.repoUrl, "nexus-genesis-certified repository");
-  const databaseUrl = await copyRequiredEnvValue(client, web.id, "DATABASE_URL");
+  required(databaseUrl, "nexus-postgres internal connection");
   const created = await client.request("/services", {
     method: "POST",
     body: {
@@ -92,14 +99,14 @@ async function provisionBackgroundWorker(client, web) {
   return unwrapService(created);
 }
 
-async function resolveOrProvisionWorker(client, web) {
+async function resolveOrProvisionWorker(client, web, databaseUrl) {
   const result = await client.request("/services?name=nexus-background-worker&limit=100");
   const workers = (Array.isArray(result) ? result : result?.services || [])
     .map(unwrapService)
     .filter(service => service?.name === "nexus-background-worker");
   if (workers.length > 1) throw new Error(`Expected exactly one Render service named nexus-background-worker; found ${workers.length}`);
   if (workers.length === 1) return workers[0];
-  await provisionBackgroundWorker(client, web);
+  await provisionBackgroundWorker(client, web, databaseUrl);
   return resolveUniqueService(client, "nexus-background-worker");
 }
 
@@ -160,8 +167,11 @@ async function run(env = process.env, options = {}) {
   validateService(web, "web_service");
   const provider = await resolveUniqueService(client, "agrinexus-provider-engines");
   validateService(provider, "web_service");
-  const worker = await resolveOrProvisionWorker(client, web);
+  const databaseUrl = await resolveDatabaseConnection(client);
+  await installEnvValue(client, web.id, "DATABASE_URL", databaseUrl);
+  const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
+  await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
   const services = [web, worker, provider];
   await installAcceptanceToken(client, web.id, token);
   exportWorkflowSecret(token, env);
@@ -175,4 +185,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, resolveDatabaseConnection, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
