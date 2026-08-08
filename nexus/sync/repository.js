@@ -33,8 +33,8 @@ class SyncRepository {
   async resolve({tenantId,userId,deviceId,syncId,resolution,expectedServerVersion}) {
     if(!["accept-server","retry-client"].includes(resolution)) throw new Error("Unsupported conflict resolution.");
     const result=await this.db.query(`update nexus_sync_operations set
-      state=case when $5='accept-server' then 'rejected' else 'pending' end,
-      conflict=conflict || jsonb_build_object('resolution',$5,'expectedServerVersion',$6,'resolvedAt',now())
+      state=case when $5::text='accept-server' then 'rejected' else 'pending' end,
+      conflict=conflict || jsonb_build_object('resolution',$5::text,'expectedServerVersion',$6::integer,'resolvedAt',now())
       where tenant_id=$1 and user_id=$2 and device_id=$3 and sync_id=$4 and state='conflict'
       returning *`,[tenantId,userId,deviceId,syncId,resolution,expectedServerVersion??null]);
     const row=(result.rows||result)[0]; if(!row) throw new Error("Sync conflict unavailable or already resolved."); return row;
