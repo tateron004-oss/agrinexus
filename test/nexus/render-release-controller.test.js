@@ -150,7 +150,8 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
     throw new Error(`Unexpected request ${path}`);
   } };
   const deployExactSha = async (_client, service) => ({ serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha });
-  await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" }, { client, deployExactShaImpl: deployExactSha, outputDir: null });
+  await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" },
+    { client, deployExactShaImpl: deployExactSha, outputDir: null, captureRuntimeDiagnostics: false });
   assert.deepEqual(writes.find(write => write.path.endsWith("/NEXUS_RELEASE_SHA")), {
     path: "/services/srv-worker/env-vars/NEXUS_RELEASE_SHA",
     value: releaseSha

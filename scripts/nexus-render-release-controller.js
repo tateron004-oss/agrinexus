@@ -387,7 +387,13 @@ async function run(env = process.env, options = {}) {
   const deployments = [];
   const deploy = options.deployExactShaImpl || deployExactSha;
   deployments.push(...await Promise.all(services.map(service => deploy(client, service, releaseSha, options))));
-  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments };
+  const workerDeployment = deployments.find(item => item.serviceId === worker.id);
+  const workerDiagnostics = options.captureRuntimeDiagnostics === false ? [] :
+    await fetchDeployDiagnostics(client, worker, workerDeployment || {}, {
+      attempts: options.runtimeDiagnosticAttempts || 5,
+      retryMs: options.retryMs || 2000
+    });
+  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments, workerDiagnostics };
   const outputDir = options.outputDir === undefined ? "output" : options.outputDir;
   if (outputDir) {
     fs.mkdirSync(outputDir, { recursive: true });
