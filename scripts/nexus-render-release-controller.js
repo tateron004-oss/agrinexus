@@ -229,7 +229,38 @@ function deployFailureDetails(value) {
   return JSON.stringify(details);
 }
 
-async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 45 * 60 * 1000 } = {}) {
+function sanitizeDiagnostic(value) {
+  return String(value || "")
+    .replace(/(postgres(?:ql)?:\/\/)[^\s@]+@/gi, "$1***@")
+    .replace(/(authorization\s*[:=]\s*bearer\s+)[^\s]+/gi, "$1***")
+    .replace(/((?:api[_-]?key|token|secret|password)\s*[:=]\s*)[^\s,;]+/gi, "$1***")
+    .slice(0, 1000);
+}
+
+async function fetchDeployDiagnostics(client, service) {
+  const ownerId = service.ownerId || service.owner?.id;
+  if (!ownerId) return [];
+  try {
+    const query = new URLSearchParams({
+      ownerId,
+      resource: service.id,
+      type: "build",
+      direction: "backward",
+      limit: "100"
+    });
+    const result = await client.request(`/logs?${query}`);
+    const logs = Array.isArray(result?.logs) ? result.logs : [];
+    return logs.slice(0, 25).map(log => ({
+      timestamp: log.timestamp || log.time || null,
+      level: log.level || null,
+      message: sanitizeDiagnostic(log.message || log.text || log.log || JSON.stringify(log))
+    }));
+  } catch (error) {
+    return [{ timestamp: null, level: "diagnostic_error", message: sanitizeDiagnostic(error.message) }];
+  }
+}
+
+async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 45 * 60 * 1000, diagnosticsDir = "output" } = {}) {
   const reusable = await resolveReusableDeploy(client, service, releaseSha);
   const created = reusable || await client.request(`/services/${service.id}/deploys`, {
     method: "POST", body: { commitId: releaseSha, clearCache: "do_not_clear" }
@@ -250,7 +281,20 @@ async function deployExactSha(client, service, releaseSha, { pollMs = 15000, tim
       return { serviceId: service.id, serviceName: service.name, deployId: id, status, commit: commit || releaseSha };
     }
     if (TERMINAL_FAILURE.has(status)) {
-      throw new Error(`${service.name} deploy ${id} failed: ${deployFailureDetails(current)}`);
+      const diagnostics = await fetchDeployDiagnostics(client, service);
+      const failure = {
+        serviceId: service.id,
+        serviceName: service.name,
+        deployId: id,
+        ...JSON.parse(deployFailureDetails(current)),
+        diagnostics
+      };
+      if (diagnosticsDir) {
+        fs.mkdirSync(diagnosticsDir, { recursive: true });
+        fs.writeFileSync(`${diagnosticsDir}/nexus-render-failure-${service.name}.json`, JSON.stringify(failure, null, 2));
+      }
+      const diagnosticTail = diagnostics.map(item => item.message).filter(Boolean).slice(0, 5);
+      throw new Error(`${service.name} deploy ${id} failed: ${JSON.stringify({ ...failure, diagnostics: diagnosticTail })}`);
     }
     await sleep(pollMs);
     current = await client.request(`/services/${service.id}/deploys/${id}`);
