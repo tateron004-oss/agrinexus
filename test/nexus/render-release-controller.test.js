@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, resolveDatabaseConnection, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { resolveUniqueService, validateService, resolveOrProvisionDatabase, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -48,11 +48,29 @@ test("existing worker is reused and duplicates fail closed", async () => {
 test("worker provisioning and database discovery fail closed", async () => {
   const web = { id: "srv-web", name: "nexus-genesis-certified", type: "web_service", ownerId: "tea-owner", branch: "main", repo: "https://github.com/tateron004-oss/agrinexus" };
   await assert.rejects(provisionBackgroundWorker({ request: async () => [] }, web), /internal connection/);
-  await assert.rejects(resolveDatabaseConnection({ request: async () => [] }), /found 0/);
+  await assert.rejects(resolveOrProvisionDatabase({ request: async path => path === "/postgres?name=nexus-postgres&limit=100" ? [{ postgres: { name: "nexus-postgres" } }, { postgres: { name: "nexus-postgres" } }] : null }, web), /found 2/);
   const client = { request: async path => path.startsWith("/postgres?")
-    ? [{ postgres: { id: "dpg-1", name: "nexus-postgres" } }]
+    ? [{ postgres: { id: "dpg-1", name: "nexus-postgres", status: "available" } }]
     : { internalConnectionPoolString: "postgres://pooled-private" } };
-  assert.equal(await resolveDatabaseConnection(client), "postgres://pooled-private");
+  assert.equal(await resolveOrProvisionDatabase(client, web), "postgres://pooled-private");
+});
+
+test("missing database is provisioned from the Genesis workspace", async () => {
+  const calls = [];
+  const web = { id: "srv-web", name: "nexus-genesis-certified", ownerId: "tea-owner" };
+  const client = { request: async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path.startsWith("/postgres?")) return [];
+    if (path === "/postgres" && options.method === "POST") return { id: "dpg-1", name: "nexus-postgres", status: "creating" };
+    if (path === "/postgres/dpg-1") return { id: "dpg-1", name: "nexus-postgres", status: "available" };
+    if (path.endsWith("/connection-info")) return { internalConnectionPoolString: "postgres://pooled-private" };
+    throw new Error(`Unexpected request ${path}`);
+  } };
+  assert.equal(await resolveOrProvisionDatabase(client, web, { pollMs: 0, timeoutMs: 100 }), "postgres://pooled-private");
+  const creation = calls.find(call => call.path === "/postgres" && call.options.method === "POST");
+  assert.equal(creation.options.body.ownerId, "tea-owner");
+  assert.equal(creation.options.body.plan, "basic_1gb");
+  assert.equal(creation.options.body.connectionPool, "pgbouncer");
 });
 
 test("exact deploy polls to live and enforces commit identity", async () => {

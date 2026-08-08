@@ -45,13 +45,44 @@ async function resolveUniqueService(client, name) {
   return services[0];
 }
 
-async function resolveDatabaseConnection(client) {
+function unwrapPostgres(item) { return item?.postgres || item; }
+
+async function resolveOrProvisionDatabase(client, web, { pollMs = 15000, timeoutMs = 20 * 60 * 1000 } = {}) {
   const result = await client.request("/postgres?name=nexus-postgres&limit=100");
   const databases = (Array.isArray(result) ? result : result?.postgres || [])
-    .map(item => item?.postgres || item)
+    .map(unwrapPostgres)
     .filter(database => database?.name === "nexus-postgres");
-  if (databases.length !== 1) throw new Error(`Expected exactly one Render database named nexus-postgres; found ${databases.length}`);
-  const connection = await client.request(`/postgres/${databases[0].id}/connection-info`);
+  if (databases.length > 1) throw new Error(`Expected exactly one Render database named nexus-postgres; found ${databases.length}`);
+  let database = databases[0];
+  if (!database) {
+    const ownerId = required(web.ownerId || web.owner?.id, "Render workspace ID");
+    database = unwrapPostgres(await client.request("/postgres", {
+      method: "POST",
+      body: {
+        name: "nexus-postgres",
+        ownerId,
+        plan: "basic_1gb",
+        region: "oregon",
+        version: "17",
+        databaseName: "nexus",
+        databaseUser: "nexus",
+        diskSizeGB: 15,
+        enableDiskAutoscaling: true,
+        connectionPool: "pgbouncer",
+        ipAllowList: []
+      }
+    }));
+  }
+  const id = required(database?.id, "nexus-postgres ID");
+  const deadline = Date.now() + timeoutMs;
+  while (String(database?.status || "").toLowerCase() !== "available") {
+    const status = String(database?.status || "").toLowerCase();
+    if (["unavailable", "recovery_failed", "suspended"].includes(status)) throw new Error(`nexus-postgres entered terminal status ${status}`);
+    if (Date.now() >= deadline) throw new Error(`nexus-postgres did not become available within ${timeoutMs}ms`);
+    await sleep(pollMs);
+    database = unwrapPostgres(await client.request(`/postgres/${id}`));
+  }
+  const connection = await client.request(`/postgres/${id}/connection-info`);
   return required(connection?.internalConnectionPoolString || connection?.internalConnectionString, "nexus-postgres internal connection");
 }
 
@@ -167,7 +198,7 @@ async function run(env = process.env, options = {}) {
   validateService(web, "web_service");
   const provider = await resolveUniqueService(client, "agrinexus-provider-engines");
   validateService(provider, "web_service");
-  const databaseUrl = await resolveDatabaseConnection(client);
+  const databaseUrl = await resolveOrProvisionDatabase(client, web, options);
   await installEnvValue(client, web.id, "DATABASE_URL", databaseUrl);
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
@@ -185,4 +216,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, resolveDatabaseConnection, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
