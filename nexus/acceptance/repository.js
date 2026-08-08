@@ -1,6 +1,7 @@
 "use strict";
 
 const { createId } = require("../contracts/identifiers.js");
+const { storedProofsComplete } = require("../apps/workspace-evidence-contract.js");
 
 const COMPONENTS = Object.freeze([
   "taskEngine", "database", "semanticMemory", "worker", "tools", "voice", "documents",
@@ -60,7 +61,7 @@ class ProductionAcceptanceRepository {
       const row = migrations.get(workspaceId) || {};
       const proofs = row.proofs || {};
       return { workspaceId, state: row.state || "legacy", releaseSha: row.release_sha || null,
-        proofsComplete: ["contract","tenant-isolation","durable-write","receipt","browser-outcome"].every(key => Boolean(proofs[key])) };
+        proofsComplete: row.release_sha === releaseSha && storedProofsComplete(proofs, releaseSha) };
     });
     const components = Object.fromEntries(COMPONENTS.map(name => [name, external(name)]));
     components.database = { ready: health.ok === true, productionEvidence: health.ok === true,
