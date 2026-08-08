@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, resolveOrProvisionDatabase, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -18,6 +18,28 @@ test("service discovery rejects missing and duplicate canonical services", async
 test("service validation rejects stale branch and repository", () => {
   assert.throws(() => validateService({ name: "web", type: "web_service", branch: "old" }, "web_service"), /expected main/);
   assert.throws(() => validateService({ name: "web", type: "web_service", branch: "main", repo: "https://github.com/example/other" }, "web_service"), /unexpected repository/);
+});
+
+test("canonical services are reconciled to root production entry points", async () => {
+  const calls = [];
+  const client = { request: async (path, options) => { calls.push({ path, options }); return { id: "srv-web", name: "nexus-genesis-certified" }; } };
+  await reconcileServiceConfiguration(client, { id: "srv-web", name: "nexus-genesis-certified" });
+  const body = calls[0].options.body;
+  assert.equal(calls[0].path, "/services/srv-web");
+  assert.equal(calls[0].options.method, "PATCH");
+  assert.equal(body.rootDir, "");
+  assert.equal(body.serviceDetails.envSpecificDetails.startCommand, "npm start");
+  assert.equal(body.serviceDetails.preDeployCommand, "node foundation/scripts/migrate.js");
+  assert.equal(body.serviceDetails.healthCheckPath, "/api/healthz");
+});
+
+test("worker and provider configuration use their canonical processes", async () => {
+  const bodies = [];
+  const client = { request: async (path, options) => { bodies.push(options.body); return {}; } };
+  await reconcileServiceConfiguration(client, { id: "srv-worker", name: "nexus-background-worker" });
+  await reconcileServiceConfiguration(client, { id: "srv-provider", name: "agrinexus-provider-engines" });
+  assert.equal(bodies[0].serviceDetails.envSpecificDetails.startCommand, "node nexus/workers/process.js");
+  assert.equal(bodies[1].serviceDetails.envSpecificDetails.startCommand, "npm run provider-engines");
 });
 
 test("missing worker is provisioned from Genesis and rediscovered", async () => {
