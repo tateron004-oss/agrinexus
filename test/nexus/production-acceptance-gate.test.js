@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { OBJECTIVES, evaluate } = require("../../scripts/nexus-21-objective-production-acceptance.js");
+const { OBJECTIVES, evaluate, waitForReleaseConvergence } = require("../../scripts/nexus-21-objective-production-acceptance.js");
 
 test("acceptance contract contains every one of the 21 objectives exactly once", () => {
   assert.equal(OBJECTIVES.length, 21);
@@ -24,4 +24,25 @@ test("every pass remains bound to one exact production SHA", () => {
   const result = evaluate({ expectedSha: "expected", runtime: { ok: true, body: { ok: true, releaseSha: "other", pgvector: true, migrationsCurrent: true } }, health: { ok: true, body: {} }, integrations: { ok: true, body: { liveGaps: [] } }, providers: { ok: true, body: { ok: true } }, acceptance: { ok: true, body: { releaseSha: "other", components: {}, workspaces: [] } } });
   assert.equal(result.objectives.find(x => x.id === "consolidated_brain").passed, false);
   assert.equal(result.objectives.find(x => x.id === "managed_delivery").passed, false);
+});
+
+test("acceptance waits through Render cutover until runtime and authorization agree on the exact SHA", async () => {
+  const originalFetch = global.fetch;
+  let round = 0;
+  global.fetch = async url => {
+    const currentRound = Math.floor(round++ / 5);
+    const isAcceptance = String(url).includes("production-acceptance");
+    const body = currentRound === 0
+      ? (isAcceptance ? { error: "unauthorized" } : { ok: true, releaseSha: "old" })
+      : { ok: true, releaseSha: "expected" };
+    return { ok: currentRound > 0 || !isAcceptance, status: currentRound === 0 && isAcceptance ? 401 : 200, text: async () => JSON.stringify(body) };
+  };
+  try {
+    const evidence = await waitForReleaseConvergence({ base: "https://nexus.example", providerBase: "https://provider.example", expectedSha: "expected", headers: { authorization: "Bearer test" }, timeoutMs: 100, pollMs: 0 });
+    assert.equal(evidence.runtime.body.releaseSha, "expected");
+    assert.equal(evidence.acceptance.status, 200);
+    assert.equal(evidence.acceptance.body.releaseSha, "expected");
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
