@@ -58,3 +58,12 @@ test("offline-sync evidence requires durable conflict recovery and cleanup", () 
   assert.equal(record.passed, true);
   assert.equal(record.facts.conflictRecovery, true);
 });
+
+test("identity evidence requires same-tenant authorization and cross-tenant denial", () => {
+  const sha = "e".repeat(40);
+  const probe = { url: "https://production/identity", status: 200, ok: true,
+    body: { ok: true, releaseSha: sha, tenantIsolation: true, sameTenantAuthorized: true, crossTenantDenied: true } };
+  const record = component("identity", sha, [probe], { tenantIsolation: true });
+  assert.equal(record.passed, true);
+  assert.equal(record.facts.tenantIsolation, true);
+});
