@@ -28,7 +28,7 @@
     "public/nexus-genesis-voice-runtime-manager.js": "2a928e4c518ac2bf7dddc672f8b34b97b94b00d3",
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",
-    "scripts/certify-nexus.js": "293690104722f7e28e750cff227d959f4338dcb1",
+    "scripts/certify-nexus.js": "d2cff238bf2ba907ff4f7eef451482d4d0e4366a",
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
     ".github/workflows/nexus-clean-windows-certification.yml": "b3eca0b4ddfa6be8fe15b08dc688c534e73965f6",

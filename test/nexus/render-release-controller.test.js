@@ -1,7 +1,14 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, deployExactSha } = require("../../scripts/nexus-render-release-controller.js");
+const { resolveUniqueService, validateService, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+
+test("release controller refuses every non-canonical Nexus host", async () => {
+  await assert.rejects(
+    run({ RENDER_API_KEY: "test", EXPECTED_RELEASE_SHA: "sha-1", NEXUS_BASE_URL: "https://agrinexus-platform.onrender.com" }),
+    /Refusing non-canonical Nexus production host/
+  );
+});
 
 test("service discovery rejects missing and duplicate canonical services", async () => {
   await assert.rejects(resolveUniqueService({ request: async () => [] }, "web"), /found 0/);

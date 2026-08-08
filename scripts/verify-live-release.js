@@ -1,6 +1,8 @@
 const fs = require("fs");
 
-const liveBase = (process.env.LIVE_BASE_URL || "https://agrinexus-platform.onrender.com").replace(/\/$/, "");
+const canonicalLiveBase = "https://nexus-genesis-certified.onrender.com";
+const liveBase = (process.env.LIVE_BASE_URL || canonicalLiveBase).replace(/\/$/, "");
+if (liveBase !== canonicalLiveBase) throw new Error(`Refusing non-canonical Nexus production host: ${liveBase}`);
 
 function read(path) {
   return fs.readFileSync(path, "utf8");

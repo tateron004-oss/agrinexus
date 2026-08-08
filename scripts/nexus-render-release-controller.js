@@ -5,6 +5,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 
 const API = "https://api.render.com/v1";
+const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
 const TERMINAL_SUCCESS = new Set(["live", "succeeded"]);
 const TERMINAL_FAILURE = new Set(["build_failed", "update_failed", "canceled", "cancelled", "deactivated"]);
 
@@ -91,6 +92,10 @@ function exportWorkflowSecret(token, env = process.env) {
 async function run(env = process.env, options = {}) {
   const apiKey = required(env.RENDER_API_KEY, "RENDER_API_KEY");
   const releaseSha = required(env.EXPECTED_RELEASE_SHA || env.GITHUB_SHA, "EXPECTED_RELEASE_SHA");
+  const nexusBaseUrl = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
+  if (nexusBaseUrl !== CANONICAL_NEXUS_BASE_URL) {
+    throw new Error(`Refusing non-canonical Nexus production host: ${nexusBaseUrl}`);
+  }
   const client = options.client || createClient({ apiKey, fetchImpl: options.fetchImpl });
   const token = crypto.randomBytes(48).toString("base64url");
   const definitions = [
@@ -117,4 +122,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { createClient, resolveUniqueService, validateService, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, deployExactSha, run };
