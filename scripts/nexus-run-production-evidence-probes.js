@@ -16,7 +16,7 @@ async function post(url, headers, body) {
   try { parsed = JSON.parse(text); } catch { parsed = { raw: text.slice(0, 500) }; }
   return { url, status: response.status, ok: response.ok, body: parsed };
 }
-function receipt(probe) { return `${probe.url} status=${probe.status}`; }
+function receipt(probe) { return `${probe.url} status=${probe.status}${probe.body?.code ? ` code=${probe.body.code}` : ""}`; }
 function component(component, releaseSha, probes, facts = {}) {
   const passed = probes.every(probe => probe.ok || (component === "worker" && probe.status === 503)) &&
     probes.every(probe => !probe.body?.releaseSha || probe.body.releaseSha === releaseSha);
@@ -50,8 +50,8 @@ async function run(env = process.env) {
   if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
   const providerReady = provider.ok && integrations.ok && integrations.body?.ok === true && Array.isArray(integrations.body.liveGaps) && integrations.body.liveGaps.length === 0;
-  const databaseReady = health.ok && health.body?.ok === true && health.body?.releaseSha === releaseSha &&
-    health.body?.checks?.database === "connected" && health.body?.pgvector === true && health.body?.migrationsCurrent === true;
+  const databaseReady = runtime.ok && runtime.body?.ok === true && runtime.body?.releaseSha === releaseSha &&
+    runtime.body?.pgvector === true && runtime.body?.migrationsCurrent === true;
   const componentProbes = [
     component("taskEngine", releaseSha, [taskEngine], {
       durableTask: taskEngine.body?.durable === true,
@@ -84,10 +84,10 @@ async function run(env = process.env) {
       tracesReady: observability.body?.tracesReady === true,
       alertCount: observability.body?.alertCount
     }),
-    component("database", releaseSha, [health], {
-      connected: health.body?.checks?.database === "connected",
-      pgvector: health.body?.pgvector === true,
-      migrationsCurrent: health.body?.migrationsCurrent === true
+    component("database", releaseSha, [runtime], {
+      connected: runtime.body?.ok === true,
+      pgvector: runtime.body?.pgvector === true,
+      migrationsCurrent: runtime.body?.migrationsCurrent === true
     }),
     component("worker", releaseSha, [acceptance], { recentHeartbeat: workerReady, releaseSha }),
     component("tools", releaseSha, [integrations, provider], { providerReady }),

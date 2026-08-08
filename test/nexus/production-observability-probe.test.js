@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { createServerRuntimeAdapter } = require("../../nexus/compat/server-runtime-adapter.js");
 
 test("acceptance observability probe persists an exact-release trace, cost, and evaluated alerts", async () => {
-  const sha = "f".repeat(40); const membership = { tenant_id: "tenant-1", user_id: "user-1" }; let event;
+  const sha = "f".repeat(40); const membership = { tenant_id: "tenant-1", user_id: "user-1", role: "acceptance-controller", permissions: ["acceptance:identity"] }; let event;
   const runtime = { ready: Promise.resolve(), observability: { async record(input) { event = { trace_id: input.traceId,
     outcome: input.outcome, duration_ms: input.durationMs, cost_micros: input.costMicros, release_sha: input.releaseSha }; } },
   db: { async query(sql) { return sql.includes("nexus_organization_memberships") ? { rows: [membership] } : { rows: [event] }; } } };

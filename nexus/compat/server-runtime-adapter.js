@@ -62,9 +62,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const marker = crypto.randomUUID();
+        const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active);
         const command = { correlationId: `acceptance-${marker}`, conversationId: `acceptance-${marker}`,
-          tenantId: "nexus-production-acceptance", actorId: "nexus-release-controller", channel: "release", locale: "en", text: "Verify authoritative task persistence" };
+          tenantId: principal.tenantId, actorId: principal.userId, channel: "release", locale: "en", text: "Verify authoritative task persistence" };
         const created = await active.engine.create({ command, goal: `Exact-release task-engine probe ${releaseSha}`,
           application: "general", riskTier: "low", steps: [{ title: "Verify durable task lifecycle" }] });
         const transitioned = await active.engine.transition({ tenantId: command.tenantId, taskId: created.taskId,
@@ -86,8 +86,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const marker = crypto.randomUUID(); const embedding = new Array(1536).fill(0); embedding[0] = 1;
-        const scope = { tenantId: "nexus-production-acceptance", principalId: `release-${releaseSha}`, memoryClass: "semantic", purpose: `acceptance-${marker}` };
+        const marker = crypto.randomUUID(); const embedding = new Array(1536).fill(0); embedding[0] = 1; const principal = await acceptancePrincipal(active);
+        const scope = { tenantId: principal.tenantId, principalId: principal.userId, memoryClass: "semantic", purpose: `acceptance-${marker}` };
         const stored = await active.memory.remember({ ...scope, content: { marker }, searchableText: `acceptance ${marker}`,
           embedding, embeddingModel: "acceptance-deterministic-v1", provenance: { source: "production-acceptance", releaseSha },
           importance: 0, confidence: 1, verificationState: "verified", sensitivity: "internal" });
@@ -110,15 +110,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const marker = crypto.randomUUID(); const tenantId = "nexus-production-acceptance";
-        const subjectId = `release-${releaseSha}`; const correlationId = `acceptance-consent-${marker}`;
+        const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active); const tenantId = principal.tenantId;
+        const subjectId = principal.userId; const correlationId = `acceptance-consent-${marker}`;
         const receipt = { source: "production-acceptance", releaseSha, marker };
         const granted = await active.consents.grant({ tenantId, subjectId, scope: `acceptance:${marker}`,
           purpose: "Verify immutable consent and audit receipts", policyVersion: "acceptance-v1", receipt });
-        await active.audit.record({ tenantId, actorId: "nexus-release-controller", correlationId,
+        await active.audit.record({ tenantId, actorId: principal.userId, correlationId,
           eventType: "consent.granted", outcome: "success", metadata: { consentId: granted.consent_id, releaseSha } });
         const revoked = await active.consents.revoke({ tenantId, subjectId, consentId: granted.consent_id });
-        await active.audit.record({ tenantId, actorId: "nexus-release-controller", correlationId,
+        await active.audit.record({ tenantId, actorId: principal.userId, correlationId,
           eventType: "consent.revoked", outcome: "success", metadata: { consentId: granted.consent_id, releaseSha } });
         const consentResult = await active.db.query("select * from nexus_consents where tenant_id=$1 and subject_id=$2 and consent_id=$3", [tenantId, subjectId, granted.consent_id]);
         const auditResult = await active.db.query("select * from nexus_audit_events where tenant_id=$1 and correlation_id=$2 order by occurred_at,event_id", [tenantId, correlationId]);
@@ -143,8 +143,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const marker = crypto.randomUUID(); tenantId = "nexus-production-acceptance";
-        const userId = "nexus-release-controller"; deviceId = `acceptance-${marker}`; operationId = `conflict-${marker}`;
+        const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active); tenantId = principal.tenantId;
+        const userId = principal.userId; deviceId = `acceptance-${marker}`; operationId = `conflict-${marker}`;
         const conflict = await active.sync.apply({ tenantId, userId, deviceId, operationId,
           entityType: "record", entityId: `acceptance-${marker}`, baseVersion: 1,
           payload: { releaseSha, marker } }, async ({ phase }) => phase === "inspect" ? { version: 2, releaseSha } : null);
@@ -176,18 +176,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const membershipResult = await active.db.query(`select tenant_id,user_id,role,permissions from nexus_organization_memberships
-          where state='active' order by updated_at desc limit 1`);
-        const membership = (membershipResult.rows || membershipResult)[0];
-        if (!membership) { send(res, 503, { ok: false, releaseSha, code: "identity_probe_membership_unavailable", error: "No active membership is available for the identity isolation probe." }); return true; }
+        const membership = await acceptancePrincipal(active);
         const permission = membership.role === "admin" || (membership.permissions || []).includes("*")
           ? "acceptance:identity" : (membership.permissions || [])[0];
         if (!permission) { send(res, 503, { ok: false, releaseSha, code: "identity_probe_permission_unavailable", error: "The active membership has no probeable permission." }); return true; }
-        const sameTenant = await active.access.authorize({ tenantId: membership.tenant_id, actorId: membership.user_id,
+        const sameTenant = await active.access.authorize({ tenantId: membership.tenantId, actorId: membership.userId,
           permission, purpose: `Exact-release identity isolation probe ${releaseSha}` });
         let crossTenantDenied = false;
         try {
-          await active.access.authorize({ tenantId: crypto.randomUUID(), actorId: membership.user_id,
+          await active.access.authorize({ tenantId: crypto.randomUUID(), actorId: membership.userId,
             permission, purpose: `Exact-release cross-tenant denial probe ${releaseSha}` });
         } catch (error) { crossTenantDenied = error?.code === "tenant_membership_required"; }
         const tenantIsolation = sameTenant?.authorized === true && crossTenantDenied;
@@ -206,15 +203,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
-        const membershipResult = await active.db.query("select tenant_id,user_id from nexus_organization_memberships where state='active' order by updated_at desc limit 1");
-        const membership = (membershipResult.rows || membershipResult)[0];
-        if (!membership) { send(res, 503, { ok: false, releaseSha, code: "observability_probe_identity_unavailable", error: "No active identity is available for the observability probe." }); return true; }
+        const membership = await acceptancePrincipal(active);
         const marker = crypto.randomUUID(); const traceId = `acceptance-observability-${marker}`;
-        await active.observability.record({ tenantId: membership.tenant_id, actorId: membership.user_id, traceId,
+        await active.observability.record({ tenantId: membership.tenantId, actorId: membership.userId, traceId,
           correlationId: traceId, component: "production-acceptance", eventType: "threshold-probe", outcome: "error",
           durationMs: 1250, provider: "authoritative-runtime", costMicros: 7, releaseSha, metadata: { releaseSha, marker } });
         const persistedResult = await active.db.query(`select trace_id,outcome,duration_ms,cost_micros,release_sha from nexus_observability_events
-          where tenant_id=$1 and trace_id=$2 and release_sha=$3`, [membership.tenant_id, traceId, releaseSha]);
+          where tenant_id=$1 and trace_id=$2 and release_sha=$3`, [membership.tenantId, traceId, releaseSha]);
         const events = persistedResult.rows || persistedResult; const alerts = evaluateObservabilityAlerts(events);
         const tracesReady = events.length === 1 && events[0].trace_id === traceId && events[0].release_sha === releaseSha;
         const costsReady = tracesReady && Number(events[0].cost_micros) === 7;
@@ -329,9 +324,17 @@ function acceptanceAuthorized(req, expected) {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
+async function acceptancePrincipal(active) {
+  const result = await active.db.query(`select tenant_id,user_id,role,permissions from nexus_organization_memberships
+    where state='active' and 'acceptance:identity'=any(permissions) order by updated_at desc limit 1`);
+  const row = (result.rows || result)[0];
+  if (!row) { const error = new Error("No active production acceptance identity is available."); error.code = "acceptance_identity_unavailable"; throw error; }
+  return Object.freeze({ tenantId: row.tenant_id, userId: row.user_id, role: row.role, permissions: row.permissions || [] });
+}
+
 function requestContext(req, user) {
   const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
   return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()), tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
 }
 
-module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized });
+module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal });

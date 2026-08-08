@@ -8,7 +8,8 @@ test("acceptance task-engine probe persists and closes an exact-release task", a
   const runtime = { ready: Promise.resolve(), engine: {
     async create(input) { calls.push(["create", input]); return { taskId: "task_probe" }; },
     async transition(input) { calls.push(["transition", input]); return { state: "cancelled" }; }
-  }, tasks: { async get(input) { calls.push(["get", input]); return { taskId: "task_probe", state: "cancelled", steps: [{}] }; } } };
+  }, tasks: { async get(input) { calls.push(["get", input]); return { taskId: "task_probe", state: "cancelled", steps: [{}] }; } },
+  db: { async query() { return { rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "acceptance-controller", permissions: ["acceptance:identity"] }] }; } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: sha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha: sha }), createRuntimeFn: () => runtime });
   const response = {}; let status; let body;

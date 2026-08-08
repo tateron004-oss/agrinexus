@@ -11,7 +11,8 @@ test("acceptance offline-sync probe persists, resolves, rereads, and cleans up a
     }; rows.push(row); return row; },
     async resolve({ resolution }) { rows[0] = { ...rows[0], state: "rejected", conflict: { ...rows[0].conflict, resolution } }; return rows[0]; },
     async changes() { return [...rows]; }
-  }, db: { async query(sql) { if (sql.startsWith("delete")) rows.splice(0); return { rows: [] }; } } };
+  }, db: { async query(sql) { if (sql.includes("nexus_organization_memberships")) return { rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "acceptance-controller", permissions: ["acceptance:identity"] }] };
+    if (sql.startsWith("delete")) rows.splice(0); return { rows: [] }; } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: sha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha: sha }), createRuntimeFn: () => runtime });
   let status; let body;
