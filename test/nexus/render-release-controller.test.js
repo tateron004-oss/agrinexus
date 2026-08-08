@@ -176,7 +176,7 @@ test("pre-deploy failure captures sanitized Render build diagnostics", async () 
   assert.match(calls.at(-1), /^\/logs\?/);
   assert.match(calls.at(-1), /startTime=2026-08-08T06%3A57%3A00.000Z/);
   assert.match(calls.at(-1), /resource=srv-1/);
-  assert.match(calls.at(-1), /type=build/);
+  assert.doesNotMatch(calls.at(-1), /type=/);
   assert.equal(responses.length, 0);
 });
 
