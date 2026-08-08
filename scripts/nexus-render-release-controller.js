@@ -365,6 +365,7 @@ async function run(env = process.env, options = {}) {
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
+  await installEnvValue(client, worker.id, "NEXUS_RELEASE_SHA", releaseSha);
   const services = [];
   for (const service of [web, worker, provider]) {
     const reconciled = await reconcileServiceConfiguration(client, service);
@@ -374,10 +375,14 @@ async function run(env = process.env, options = {}) {
   await installAcceptanceToken(client, services[0].id, token);
   exportWorkflowSecret(token, env);
   const deployments = [];
-  deployments.push(...await Promise.all(services.map(service => deployExactSha(client, service, releaseSha, options))));
+  const deploy = options.deployExactShaImpl || deployExactSha;
+  deployments.push(...await Promise.all(services.map(service => deploy(client, service, releaseSha, options))));
   const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments };
-  fs.mkdirSync("output", { recursive: true });
-  fs.writeFileSync("output/nexus-render-release.json", JSON.stringify(evidence, null, 2));
+  const outputDir = options.outputDir === undefined ? "output" : options.outputDir;
+  if (outputDir) {
+    fs.mkdirSync(outputDir, { recursive: true });
+    fs.writeFileSync(`${outputDir}/nexus-render-release.json`, JSON.stringify(evidence, null, 2));
+  }
   console.log(JSON.stringify(evidence, null, 2));
   return evidence;
 }

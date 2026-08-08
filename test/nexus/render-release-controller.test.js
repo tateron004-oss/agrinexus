@@ -114,6 +114,34 @@ test("web production secrets are created once and compliant values are preserved
   assert.ok(writes[0].value.length >= 16);
 });
 
+test("unified release binds the worker runtime heartbeat to the exact release SHA", async () => {
+  const writes = [];
+  const releaseSha = "a".repeat(40);
+  const services = {
+    "nexus-genesis-certified": { id: "srv-web", name: "nexus-genesis-certified", type: "web_service", ownerId: "owner", branch: "main", repo: "https://github.com/tateron004-oss/agrinexus" },
+    "nexus-background-worker": { id: "srv-worker", name: "nexus-background-worker", type: "background_worker", ownerId: "owner", branch: "main", repo: "https://github.com/tateron004-oss/agrinexus" },
+    "agrinexus-provider-engines": { id: "srv-provider", name: "agrinexus-provider-engines", type: "web_service", ownerId: "owner", branch: "main", repo: "https://github.com/tateron004-oss/agrinexus" }
+  };
+  const client = { request: async (path, options = {}) => {
+    if (path.startsWith("/services?name=")) {
+      const name = decodeURIComponent(path.match(/name=([^&]+)/)[1]);
+      return [{ service: services[name] }];
+    }
+    if (path === "/postgres?name=nexus-postgres&limit=100") return [{ postgres: { id: "db", name: "nexus-postgres", status: "available" } }];
+    if (path === "/postgres/db/connection-info") return { internalConnectionPoolString: "postgres://private" };
+    if (path.endsWith("/env-vars?limit=100")) return [];
+    if (options.method === "PUT") { writes.push({ path, value: options.body.value }); return {}; }
+    if (options.method === "PATCH") return services[Object.keys(services).find(name => services[name].id === path.split("/").at(-1))];
+    throw new Error(`Unexpected request ${path}`);
+  } };
+  const deployExactSha = async (_client, service) => ({ serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha });
+  await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" }, { client, deployExactShaImpl: deployExactSha, outputDir: null });
+  assert.deepEqual(writes.find(write => write.path.endsWith("/NEXUS_RELEASE_SHA")), {
+    path: "/services/srv-worker/env-vars/NEXUS_RELEASE_SHA",
+    value: releaseSha
+  });
+});
+
 test("exact deploy polls to live and enforces commit identity", async () => {
   const responses = [
     [],

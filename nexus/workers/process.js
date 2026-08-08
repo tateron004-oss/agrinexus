@@ -5,6 +5,7 @@ const { createLogger } = require("../observability/logger.js");
 const { createHandlers } = require("./handlers.js");
 const { NexusWorker } = require("./worker.js");
 const { createNotificationProviders } = require("../notifications/provider-catalog.js");
+const { resolveWorkerReleaseSha } = require("./release-identity.js");
 
 loadEnvFile();
 const logger = createLogger({ service: "nexus-worker" });
@@ -20,7 +21,7 @@ async function main() {
   const deliveryProviders=createNotificationProviders();
   const handlers=createHandlers({ runtime,deliveryProviders });
   const queues = ["default"];
-  const releaseSha = process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development";
+  const releaseSha = resolveWorkerReleaseSha();
   const handlerNames = Object.keys(handlers);
   await runtime.acceptance.heartbeatWorker({ workerId, releaseSha, queues, handlers: handlerNames, status: "ready" });
   const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, queues, logger });
