@@ -18,7 +18,7 @@ class ProductionAcceptanceRepository {
       values ($1,$2,$3,$4,$5,$6,now()) on conflict (worker_id) do update set release_sha=excluded.release_sha,
       queues=excluded.queues,registered_handlers=excluded.registered_handlers,status=excluded.status,
       last_job_id=coalesce(excluded.last_job_id,nexus_worker_instances.last_job_id),last_heartbeat_at=now(),updated_at=now()
-      returning *`, [workerId, releaseSha, queues || [], handlers || [], status, lastJobId]);
+      returning *`, [workerId, releaseSha, JSON.stringify(queues || []), JSON.stringify(handlers || []), status, lastJobId]);
     return (result.rows || result)[0];
   }
 
