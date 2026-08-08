@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -93,6 +93,25 @@ test("missing database is provisioned from the Genesis workspace", async () => {
   assert.equal(creation.options.body.ownerId, "tea-owner");
   assert.equal(creation.options.body.plan, "basic_1gb");
   assert.equal(creation.options.body.connectionPool, "pgbouncer");
+});
+
+test("web production secrets are created once and compliant values are preserved", async () => {
+  const writes = [];
+  const client = { request: async (path, options = {}) => {
+    if (path.endsWith("/env-vars?limit=100")) {
+      return [{ envVar: { key: "SESSION_SECRET", value: "s".repeat(40) } }];
+    }
+    if (options.method === "PUT") {
+      writes.push({ path, value: options.body.value });
+      return { envVar: { key: path.split("/").at(-1), value: options.body.value } };
+    }
+    throw new Error(`Unexpected request ${path}`);
+  } };
+  assert.deepEqual(await ensureGeneratedEnvSecret(client, "srv-web", "SESSION_SECRET", 32), { key: "SESSION_SECRET", installed: false });
+  assert.deepEqual(await ensureGeneratedEnvSecret(client, "srv-web", "PASSWORD_PEPPER", 16, 32), { key: "PASSWORD_PEPPER", installed: true });
+  assert.equal(writes.length, 1);
+  assert.match(writes[0].path, /PASSWORD_PEPPER$/);
+  assert.ok(writes[0].value.length >= 16);
 });
 
 test("exact deploy polls to live and enforces commit identity", async () => {
