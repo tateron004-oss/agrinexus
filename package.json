@@ -19,6 +19,7 @@
     "qa:provider": "node scripts/qa-suite.js provider",
     "qa:native": "node scripts/qa-suite.js native",
     "qa:nexus-system-convergence": "node --test test/nexus/system-convergence.test.js",
+    "qa:nexus-path-1-consolidation": "node scripts/nexus-path-1-consolidation-guard.js && node --test test/nexus/path-1-consolidation.test.js",
     "qa:voice": "node scripts/qa-suite.js voice",
     "qa:nexus-trust-chain-trace": "node scripts/nexus-trust-chain-trace-qa.js",
     "qa:nexus-conversation-acknowledgement": "node scripts/nexus-conversation-acknowledgement-qa.js",

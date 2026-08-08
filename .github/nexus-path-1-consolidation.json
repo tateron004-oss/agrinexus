@@ -1,0 +1,61 @@
+{
+  "schema": "nexus.path-1-controlled-consolidation.v1",
+  "strategy": "migrate-prove-disable-observe-retain",
+  "baselineRef": "origin/main",
+  "productionHost": "https://nexus-genesis-certified.onrender.com",
+  "deletionPolicy": {
+    "sourceCode": "prohibited",
+    "protectedFiles": "prohibited",
+    "databaseRecords": "prohibited",
+    "objectStorageArtifacts": "prohibited",
+    "databaseSchemas": "prohibited",
+    "routesAndConfiguration": "prohibited",
+    "automaticCleanup": "prohibited",
+    "separateOwnerAuthorizationRequired": true
+  },
+  "cutoverPolicy": {
+    "mode": "additive-only",
+    "legacyReadAllowedDuringMigration": true,
+    "legacyWriteFallbackAllowed": false,
+    "disableBeforeRemoval": true,
+    "removalAuthorized": false,
+    "requiredProofs": [
+      "contract",
+      "tenant-isolation",
+      "durable-write",
+      "receipt",
+      "browser-outcome"
+    ],
+    "requiredProductionStabilityPasses": 3,
+    "physicalVoiceCertificationRequired": true,
+    "rollbackRequired": true
+  },
+  "authoritativeTopology": {
+    "webService": "nexus-genesis-certified",
+    "serverEntrypoint": "server.js",
+    "database": "nexus-postgres",
+    "worker": "nexus-background-worker",
+    "providerService": "agrinexus-provider-engines",
+    "deploymentWorkflow": ".github/workflows/nexus-unified-production-release.yml",
+    "evidenceWorkflow": ".github/workflows/nexus-21-objective-production-acceptance.yml"
+  },
+  "workspaces": [
+    "agriculture",
+    "health",
+    "chronic-care",
+    "telehealth",
+    "mobile-clinic",
+    "pharmacy",
+    "learning",
+    "workforce",
+    "marketplace",
+    "maps",
+    "music-media",
+    "documents",
+    "reminders",
+    "offline-queue",
+    "live-knowledge"
+  ],
+  "initialState": "inventory",
+  "protectedManifest": ".github/nexus-protected-foundation.json"
+}
