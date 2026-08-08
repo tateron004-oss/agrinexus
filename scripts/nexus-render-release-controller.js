@@ -205,15 +205,29 @@ function deployId(value) { return value?.id || value?.deploy?.id; }
 function deployStatus(value) { return String(value?.status || value?.deploy?.status || "").toLowerCase(); }
 function deployCommit(value) { return value?.commit?.id || value?.deploy?.commit?.id || value?.commitId || value?.deploy?.commitId; }
 
-async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 30 * 60 * 1000 } = {}) {
-  const created = await client.request(`/services/${service.id}/deploys`, {
+function unwrapDeploy(item) { return item?.deploy || item; }
+
+async function resolveReusableDeploy(client, service, releaseSha) {
+  const result = await client.request(`/services/${service.id}/deploys?limit=20`);
+  const deployments = (Array.isArray(result) ? result : result?.deploys || []).map(unwrapDeploy);
+  return deployments.find(deploy => deployCommit(deploy) === releaseSha && !TERMINAL_FAILURE.has(deployStatus(deploy))) || null;
+}
+
+async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 45 * 60 * 1000 } = {}) {
+  const reusable = await resolveReusableDeploy(client, service, releaseSha);
+  const created = reusable || await client.request(`/services/${service.id}/deploys`, {
     method: "POST", body: { commitId: releaseSha, clearCache: "do_not_clear" }
   });
   const id = required(deployId(created), `deploy ID for ${service.name}`);
   const deadline = Date.now() + timeoutMs;
   let current = created;
+  let previousStatus = "";
   while (Date.now() < deadline) {
     const status = deployStatus(current);
+    if (status !== previousStatus) {
+      console.log(`${service.name} deploy ${id}: ${status || "status unavailable"}${reusable ? " (resumed)" : ""}`);
+      previousStatus = status;
+    }
     if (TERMINAL_SUCCESS.has(status)) {
       const commit = deployCommit(current);
       if (commit && commit !== releaseSha) throw new Error(`${service.name} deployed ${commit}; expected ${releaseSha}`);
@@ -260,7 +274,7 @@ async function run(env = process.env, options = {}) {
   await installAcceptanceToken(client, services[0].id, token);
   exportWorkflowSecret(token, env);
   const deployments = [];
-  for (const service of services) deployments.push(await deployExactSha(client, service, releaseSha, options));
+  deployments.push(...await Promise.all(services.map(service => deployExactSha(client, service, releaseSha, options))));
   const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments };
   fs.mkdirSync("output", { recursive: true });
   fs.writeFileSync("output/nexus-render-release.json", JSON.stringify(evidence, null, 2));
@@ -269,4 +283,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
