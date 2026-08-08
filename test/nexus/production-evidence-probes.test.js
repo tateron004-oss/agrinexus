@@ -30,3 +30,12 @@ test("task-engine evidence requires a durable completed lifecycle on the exact r
   assert.equal(result.passed, true);
   assert.equal(component("taskEngine", sha, [{ ...probe, body: { ...probe.body, releaseSha: "e".repeat(40) } }], {}).passed, false);
 });
+
+test("semantic-memory evidence requires reconstruction persistence and cleanup", () => {
+  const sha = "f".repeat(40);
+  const probe = { url: "https://production/semantic-memory", status: 200, ok: true,
+    body: { ok: true, releaseSha: sha, durable: true, repositoryReconstructed: true, cleanedUp: true } };
+  const facts = { restartPersistent: true, cleanupVerified: true };
+  assert.equal(component("semanticMemory", sha, [probe], facts).passed, true);
+  assert.equal(component("semanticMemory", sha, [{ ...probe, ok: false, status: 503, body: { ...probe.body, cleanedUp: false } }], facts).passed, false);
+});
