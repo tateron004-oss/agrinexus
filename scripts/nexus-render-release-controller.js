@@ -243,7 +243,7 @@ function deployStartedAt(value, now = Date.now()) {
   return Number.isFinite(parsed) ? parsed : now - (10 * 60 * 1000);
 }
 
-async function fetchDeployDiagnostics(client, service, deploy, { attempts = 3, retryMs = 2000 } = {}) {
+async function fetchDeployDiagnostics(client, service, deploy, { attempts = 5, retryMs = 2000 } = {}) {
   const ownerId = service.ownerId || service.owner?.id;
   if (!ownerId) return [];
   try {
@@ -257,6 +257,7 @@ async function fetchDeployDiagnostics(client, service, deploy, { attempts = 3, r
     });
     query.append("resource", service.id);
     query.append("type", "build");
+    const collected = new Map();
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const result = await client.request(`/logs?${query}`);
       const logs = (Array.isArray(result?.logs) ? result.logs : [])
@@ -264,22 +265,28 @@ async function fetchDeployDiagnostics(client, service, deploy, { attempts = 3, r
           const timestamp = Date.parse(log.timestamp || log.time || "");
           return !Number.isFinite(timestamp) || timestamp >= startMs;
         });
-      if (logs.length || attempt === attempts - 1) {
-        return logs.slice(0, 25).map(log => ({
-          timestamp: log.timestamp || log.time || null,
-          level: log.level || null,
-          message: sanitizeDiagnostic(log.message || log.text || log.log || JSON.stringify(log))
-        }));
+      for (const log of logs) {
+        const timestamp = log.timestamp || log.time || null;
+        const message = sanitizeDiagnostic(log.message || log.text || log.log || JSON.stringify(log));
+        collected.set(log.id || `${timestamp}:${message}`, { timestamp, level: log.level || null, message });
       }
-      await sleep(retryMs);
+      if (attempt < attempts - 1) await sleep(retryMs);
     }
-    return [];
+    return [...collected.values()]
+      .sort((left, right) => Date.parse(left.timestamp || 0) - Date.parse(right.timestamp || 0))
+      .slice(-50);
   } catch (error) {
     return [{ timestamp: null, level: "diagnostic_error", message: sanitizeDiagnostic(error.message) }];
   }
 }
 
-async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 45 * 60 * 1000, diagnosticsDir = "output" } = {}) {
+async function deployExactSha(client, service, releaseSha, {
+  pollMs = 15000,
+  timeoutMs = 45 * 60 * 1000,
+  diagnosticsDir = "output",
+  diagnosticAttempts = 5,
+  retryMs = 2000
+} = {}) {
   const reusable = await resolveReusableDeploy(client, service, releaseSha);
   const created = reusable || await client.request(`/services/${service.id}/deploys`, {
     method: "POST", body: { commitId: releaseSha, clearCache: "do_not_clear" }
@@ -300,7 +307,7 @@ async function deployExactSha(client, service, releaseSha, { pollMs = 15000, tim
       return { serviceId: service.id, serviceName: service.name, deployId: id, status, commit: commit || releaseSha };
     }
     if (TERMINAL_FAILURE.has(status)) {
-      const diagnostics = await fetchDeployDiagnostics(client, service, current);
+      const diagnostics = await fetchDeployDiagnostics(client, service, current, { attempts: diagnosticAttempts, retryMs });
       const failure = {
         serviceId: service.id,
         serviceName: service.name,
@@ -312,7 +319,7 @@ async function deployExactSha(client, service, releaseSha, { pollMs = 15000, tim
         fs.mkdirSync(diagnosticsDir, { recursive: true });
         fs.writeFileSync(`${diagnosticsDir}/nexus-render-failure-${service.name}.json`, JSON.stringify(failure, null, 2));
       }
-      const diagnosticTail = diagnostics.map(item => item.message).filter(Boolean).slice(0, 5);
+      const diagnosticTail = diagnostics.map(item => item.message).filter(Boolean).slice(-10);
       throw new Error(`${service.name} deploy ${id} failed: ${JSON.stringify({ ...failure, diagnostics: diagnosticTail })}`);
     }
     await sleep(pollMs);

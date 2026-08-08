@@ -170,7 +170,7 @@ test("pre-deploy failure captures sanitized Render build diagnostics", async () 
     return responses.shift();
   } };
   await assert.rejects(
-    deployExactSha(client, { id: "srv-1", name: "web", ownerId: "tea-1" }, "sha-1", { pollMs: 0, timeoutMs: 100, diagnosticsDir: null }),
+    deployExactSha(client, { id: "srv-1", name: "web", ownerId: "tea-1" }, "sha-1", { pollMs: 0, timeoutMs: 100, diagnosticsDir: null, diagnosticAttempts: 1 }),
     /postgres:\/\/\*\*\*@db\/nexus migration failed/
   );
   assert.match(calls.at(-1), /^\/logs\?/);
@@ -180,13 +180,14 @@ test("pre-deploy failure captures sanitized Render build diagnostics", async () 
   assert.equal(responses.length, 0);
 });
 
-test("pre-deploy diagnostics reject stale log records and retry for current deploy output", async () => {
+test("pre-deploy diagnostics reject stale records and retain the newest migration output", async () => {
   const calls = [];
   const responses = [
     [],
     { id: "dep-1", status: "pre_deploy_failed", createdAt: "2026-08-08T07:20:00Z", commit: { id: "sha-1" } },
     { logs: [{ timestamp: "2026-08-08T05:29:00Z", message: "stale npm audit output" }] },
-    { logs: [{ timestamp: "2026-08-08T07:21:00Z", message: "current migration failed" }] }
+    { logs: [{ timestamp: "2026-08-08T07:21:00Z", message: "build finished" }] },
+    { logs: [{ timestamp: "2026-08-08T07:21:00Z", message: "build finished" }, { timestamp: "2026-08-08T07:22:00Z", message: "current migration failed" }] }
   ];
   const client = { request: async path => {
     calls.push(path);
@@ -197,10 +198,11 @@ test("pre-deploy diagnostics reject stale log records and retry for current depl
       pollMs: 0,
       timeoutMs: 100,
       diagnosticsDir: null,
-      retryMs: 0
+      retryMs: 0,
+      diagnosticAttempts: 3
     }),
     /current migration failed/
   );
-  assert.equal(calls.filter(path => path.startsWith("/logs?")).length, 2);
+  assert.equal(calls.filter(path => path.startsWith("/logs?")).length, 3);
   assert.equal(responses.length, 0);
 });
