@@ -1,7 +1,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { component, objectStorageComponent } = require("../../scripts/nexus-run-production-evidence-probes.js");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { component, objectStorageComponent, securityComponent } = require("../../scripts/nexus-run-production-evidence-probes.js");
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
   const result = component("testing", sha, [probe], { exactSha: sha });
@@ -74,4 +77,19 @@ test("object-storage evidence remains held until a prior distinct release is obs
   assert.equal(objectStorageComponent(sha, base), null);
   const proven = objectStorageComponent(sha, { ...base, body: { ...base.body, priorReleaseObserved: true, redeployPersistent: true } });
   assert.equal(proven.component, "objectStorage"); assert.equal(proven.passed, true); assert.equal(proven.facts.redeployPersistent, true);
+});
+
+test("security evidence requires an exact-release zero-finding production audit", () => {
+  const sha = "9".repeat(40); const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-security-audit-"));
+  const auditPath = path.join(dir, "audit.json");
+  fs.writeFileSync(auditPath, JSON.stringify({ metadata: { vulnerabilities: {
+    info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0
+  }, dependencies: { total: 142 } } }));
+  const result = securityComponent(sha, auditPath);
+  assert.equal(result.passed, true); assert.equal(result.production, true);
+  assert.deepEqual(result.facts, { criticalFindings: 0, highFindings: 0, totalFindings: 0, auditedDependencies: 142 });
+  fs.writeFileSync(auditPath, JSON.stringify({ metadata: { vulnerabilities: {
+    info: 0, low: 0, moderate: 0, high: 1, critical: 0, total: 1
+  }, dependencies: { total: 142 } } }));
+  assert.equal(securityComponent(sha, auditPath).passed, false);
 });
