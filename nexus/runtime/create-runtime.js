@@ -31,6 +31,7 @@ const { createProviderCatalog } = require("../tools/provider-catalog.js");
 const { WorkspaceCutoverPolicy } = require("../apps/cutover-policy.js");
 const { DeviceTokenVault } = require("../security/device-token-vault.js");
 const { ProductionAcceptanceRepository } = require("../acceptance/repository.js");
+const { createObjectStore } = require("../storage/object-store.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -62,6 +63,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const cutover = new WorkspaceCutoverPolicy({migrations:workspaceMigrations,applications});
   const providers = createProviderCatalog({ env, fetchFn });
   const acceptance = new ProductionAcceptanceRepository(db);
+  const objectStorage = createObjectStore(env);
   const governedExecutors = Object.assign({}, providers.executors, executors);
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors: governedExecutors, verifier: verifier || (input => providers.verify(input)) });
@@ -71,7 +73,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
-    engine, planner, agent, providers, acceptance, ready,
+    engine, planner, agent, providers, acceptance, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
 

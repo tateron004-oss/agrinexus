@@ -37,6 +37,22 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/evidence" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active=await runtime();await active.ready;const body=await readJson(req);const releaseSha=env.RENDER_GIT_COMMIT||env.GIT_SHA||"development";
+        if(body.releaseSha!==releaseSha){send(res,409,{error:"Evidence SHA does not match the active release.",code:"evidence_sha_mismatch"});return true;}
+        const result=await active.acceptance.recordEvidence({...body,releaseSha,sourceSha:releaseSha});send(res,201,{ok:true,evidence:result});
+      } catch(error){send(res,400,{error:error.message,code:error.code||"evidence_rejected"});} return true;
+    }
+    const workspaceProofMatch=url.pathname.match(/^\/api\/nexus\/runtime\/production-acceptance\/workspaces\/([^/]+)$/);
+    if (workspaceProofMatch && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active=await runtime();await active.ready;const body=await readJson(req);const releaseSha=env.RENDER_GIT_COMMIT||env.GIT_SHA||"development";const workspaceId=decodeURIComponent(workspaceProofMatch[1]);
+        if(body.releaseSha!==releaseSha){send(res,409,{error:"Workspace proof SHA does not match the active release.",code:"evidence_sha_mismatch"});return true;}
+        if(!active.applications.get(workspaceId)){send(res,404,{error:"Unknown workspace.",code:"workspace_not_found"});return true;}
+        const result=await active.workspaceMigrations.activate({workspaceId,proofs:body.proofs,releaseSha});send(res,201,{ok:true,migration:result});
+      } catch(error){send(res,400,{error:error.message,code:error.code||"workspace_proof_rejected"});} return true;
+    }
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
@@ -56,6 +72,21 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       else if (url.pathname === "/api/nexus/runtime/observability/summary" && req.method === "GET") {
         if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
         send(res, 200, await active.observability.summary({ tenantId: context.tenantId, windowMinutes: request.query.windowMinutes })); return true;
+      } else if (url.pathname === "/api/nexus/runtime/operations" && req.method === "GET") {
+        if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
+        send(res, 200, await active.observability.operationalView({ tenantId: context.tenantId, windowMinutes: request.query.windowMinutes })); return true;
+      } else if (url.pathname === "/api/nexus/runtime/artifacts" && req.method === "POST") {
+        if (!active.objectStorage) { send(res, 503, {error:"Shared object storage is unavailable.",code:"object_storage_unavailable"}); return true; }
+        const bytes=Buffer.from(String(body.contentBase64||""),"base64");
+        if (!bytes.length) { send(res,400,{error:"Artifact content is required.",code:"artifact_content_required"}); return true; }
+        const artifactId=`artifact_${crypto.randomUUID()}`; const key=active.objectStorage.key({tenantId:context.tenantId,ownerId:context.userId,artifactId,filename:body.filename||body.title||"artifact"});
+        const stored=await active.objectStorage.put({key,body:bytes,contentType:body.contentType,metadata:{tenant:context.tenantId,owner:context.userId}});
+        const artifact=await active.artifacts.create({artifactId,tenantId:context.tenantId,ownerId:context.userId,taskId:body.taskId,kind:body.kind||"document",title:body.title||body.filename||"Artifact",contentType:body.contentType,objectKey:key,checksum:stored.checksum,sizeBytes:stored.sizeBytes,metadata:body.metadata||{}});
+        send(res,201,{artifact,contentStored:true}); return true;
+      } else if (/^\/api\/nexus\/runtime\/artifacts\/[^/]+$/.test(url.pathname) && req.method === "GET") {
+        const artifactId=decodeURIComponent(url.pathname.split("/").pop()); const artifact=await active.artifacts.get({tenantId:context.tenantId,ownerId:context.userId,artifactId});
+        if(!artifact){send(res,404,{error:"Artifact not found."});return true;} if(!active.objectStorage){send(res,503,{error:"Shared object storage is unavailable.",code:"object_storage_unavailable"});return true;}
+        const object=await active.objectStorage.get(artifact.object_key); send(res,200,{artifact,contentBase64:object.body.toString("base64"),contentType:object.contentType}); return true;
       } else if (url.pathname === "/api/nexus/runtime/workspaces" && req.method === "GET") {
         const statuses = await Promise.all(active.applications.list().map(async application => ({ ...application,
           migration: await active.workspaceMigrations.status(application.applicationId) })));
