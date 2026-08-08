@@ -23,6 +23,13 @@ function component(component, releaseSha, probes, facts = {}) {
   return { component, releaseSha, production: true, simulated: false, passed, observedAt: new Date().toISOString(),
     receipts: probes.map(receipt), facts };
 }
+function objectStorageComponent(releaseSha, probe) {
+  if (!probe?.ok || probe.body?.releaseSha !== releaseSha || probe.body?.redeployPersistent !== true ||
+      probe.body?.currentWriteVerified !== true || probe.body?.priorReleaseObserved !== true) return null;
+  return component("objectStorage", releaseSha, [probe], {
+    redeployPersistent: true, currentWriteVerified: true, priorReleaseObserved: true
+  });
+}
 async function run(env = process.env) {
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
   const providerBase = required(env.PROVIDER_BASE_URL, "PROVIDER_BASE_URL").replace(/\/$/, "");
@@ -88,12 +95,8 @@ async function run(env = process.env) {
     component("testing", releaseSha, [runtime, health], { exactSha: releaseSha }),
     component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
   ];
-  if (objectStorage.ok && objectStorage.body?.releaseSha === releaseSha && objectStorage.body?.redeployPersistent === true) {
-    componentProbes.push(component("objectStorage", releaseSha, [objectStorage], {
-      redeployPersistent: true, currentWriteVerified: objectStorage.body?.currentWriteVerified === true,
-      priorReleaseObserved: objectStorage.body?.priorReleaseObserved === true
-    }));
-  }
+  const objectStorageEvidence = objectStorageComponent(releaseSha, objectStorage);
+  if (objectStorageEvidence) componentProbes.push(objectStorageEvidence);
   componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
   componentProbes[1].passed = semanticMemory.ok && semanticMemory.body?.ok === true && semanticMemory.body?.releaseSha === releaseSha && semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true && semanticMemory.body?.cleanedUp === true;
   componentProbes[2].passed = consentAudit.ok && consentAudit.body?.ok === true && consentAudit.body?.releaseSha === releaseSha && consentAudit.body?.immutableReceipts === true && consentAudit.body?.auditEventCount === 2 && consentAudit.body?.receiptPreserved === true;
@@ -113,4 +116,4 @@ async function run(env = process.env) {
   return componentProbes;
 }
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = Object.freeze({ component, run, post });
+module.exports = Object.freeze({ component, objectStorageComponent, run, post });
