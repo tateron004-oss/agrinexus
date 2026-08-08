@@ -39,3 +39,12 @@ test("semantic-memory evidence requires reconstruction persistence and cleanup",
   assert.equal(component("semanticMemory", sha, [probe], facts).passed, true);
   assert.equal(component("semanticMemory", sha, [{ ...probe, ok: false, status: 503, body: { ...probe.body, cleanedUp: false } }], facts).passed, false);
 });
+
+test("consent-audit evidence requires preserved immutable receipts", () => {
+  const sha = "c".repeat(40);
+  const probe = { url: "https://production/consent-audit", status: 200, ok: true,
+    body: { ok: true, releaseSha: sha, immutableReceipts: true, auditEventCount: 2, receiptPreserved: true } };
+  const record = component("consentAudit", sha, [probe], { immutableReceipts: true });
+  assert.equal(record.passed, true);
+  assert.equal(record.facts.immutableReceipts, true);
+});

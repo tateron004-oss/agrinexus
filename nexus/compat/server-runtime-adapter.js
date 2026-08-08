@@ -102,6 +102,38 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/consent-audit" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const marker = crypto.randomUUID(); const tenantId = "nexus-production-acceptance";
+        const subjectId = `release-${releaseSha}`; const correlationId = `acceptance-consent-${marker}`;
+        const receipt = { source: "production-acceptance", releaseSha, marker };
+        const granted = await active.consents.grant({ tenantId, subjectId, scope: `acceptance:${marker}`,
+          purpose: "Verify immutable consent and audit receipts", policyVersion: "acceptance-v1", receipt });
+        await active.audit.record({ tenantId, actorId: "nexus-release-controller", correlationId,
+          eventType: "consent.granted", outcome: "success", metadata: { consentId: granted.consent_id, releaseSha } });
+        const revoked = await active.consents.revoke({ tenantId, subjectId, consentId: granted.consent_id });
+        await active.audit.record({ tenantId, actorId: "nexus-release-controller", correlationId,
+          eventType: "consent.revoked", outcome: "success", metadata: { consentId: granted.consent_id, releaseSha } });
+        const consentResult = await active.db.query("select * from nexus_consents where tenant_id=$1 and subject_id=$2 and consent_id=$3", [tenantId, subjectId, granted.consent_id]);
+        const auditResult = await active.db.query("select * from nexus_audit_events where tenant_id=$1 and correlation_id=$2 order by occurred_at,event_id", [tenantId, correlationId]);
+        const persisted = (consentResult.rows || consentResult)[0]; const events = auditResult.rows || auditResult;
+        const preservedReceipt = persisted?.receipt?.marker === marker && persisted?.receipt?.releaseSha === releaseSha;
+        const immutableReceipts = persisted?.state === "revoked" && Boolean(persisted?.granted_at) && Boolean(persisted?.revoked_at) &&
+          preservedReceipt && events.length === 2 && events[0]?.event_type === "consent.granted" && events[1]?.event_type === "consent.revoked" &&
+          events.every(event => event.release_sha === releaseSha);
+        send(res, immutableReceipts ? 200 : 503, { ok: immutableReceipts, releaseSha, immutableReceipts,
+          consentState: persisted?.state, auditEventCount: events.length, receiptPreserved: preservedReceipt });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.consent_audit_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "consent_audit_probe_failed", error: "The authoritative consent-audit probe failed." });
+      }
+      return true;
+    }
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
