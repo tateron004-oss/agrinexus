@@ -1,0 +1,82 @@
+name: Nexus 21-objective production acceptance
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/nexus-21-objective-production-acceptance.yml
+      - scripts/nexus-21-objective-production-acceptance.js
+      - test/nexus/production-acceptance-gate.test.js
+  workflow_dispatch:
+    inputs:
+      expected_release_sha:
+        description: Exact deployed main SHA to certify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-21-objective-production-acceptance
+  cancel-in-progress: false
+
+env:
+  NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
+  PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
+  EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
+  NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
+
+jobs:
+  contract:
+    name: Lock complete acceptance contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_release_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE_SHA"
+          node test/nexus/system-convergence.test.js
+          node test/nexus/production-acceptance-gate.test.js
+          node scripts/nexus-protected-foundation-guard.js
+
+  production:
+    name: Three consecutive exact-SHA production passes
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_release_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run three-pass streak
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          for pass in 1 2 3; do
+            echo "Starting exact-SHA production acceptance pass ${pass}/3"
+            NEXUS_PASS_NUMBER="$pass" node scripts/nexus-21-objective-production-acceptance.js
+            if [ "$pass" -lt 3 ]; then sleep 120; fi
+          done
+          node - <<'NODE'
+          const fs=require('fs');
+          const reports=[1,2,3].map(n=>JSON.parse(fs.readFileSync(`output/nexus-21-objective-pass-${n}.json`)));
+          if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established. Certification remains incomplete.');
+          fs.writeFileSync('output/nexus-21-objective-streak.json',JSON.stringify({certificationComplete:true,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
+          NODE
+      - name: Publish acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-21-objective-production-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: error
+          retention-days: 180
