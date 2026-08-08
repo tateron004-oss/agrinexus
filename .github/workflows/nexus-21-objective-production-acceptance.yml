@@ -37,6 +37,7 @@ jobs:
           node test/nexus/system-convergence.test.js
           node test/nexus/production-acceptance-gate.test.js
           node test/nexus/production-acceptance-repository.test.js
+          node --test rebuild/tests/nexus-launch-provider-profile.test.js
           node test/nexus/server-runtime-adapter.test.js
           node scripts/nexus-protected-foundation-guard.js
 

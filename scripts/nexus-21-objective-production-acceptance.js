@@ -3,6 +3,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { classifyProviders } = require("./lib/nexus-launch-provider-profile.js");
 
 const OBJECTIVES = Object.freeze([
   "consolidated_brain", "agentic_task_engine", "authoritative_storage", "semantic_memory",
@@ -65,7 +66,8 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
   const workspaces = Array.isArray(a.workspaces) ? a.workspaces : [];
   const exactSha = r.releaseSha === expectedSha && a.releaseSha === expectedSha;
   const durable = runtime.ok && r.ok === true && r.pgvector === true && r.migrationsCurrent === true;
-  const providerReady = providers.ok && p.ok === true && integrations.ok && i.ok === true && Array.isArray(i.liveGaps) && i.liveGaps.length === 0;
+  const providerProfile = classifyProviders(i);
+  const providerReady = providers.ok && p.ok === true && providerProfile.ready;
   const allWorkspaces = workspaces.length === 16 && workspaces.every(x => x.state === "authoritative" && x.releaseSha === expectedSha && x.proofsComplete === true);
   const component = name => components[name] || {};
   const live = name => component(name).ready === true && component(name).productionEvidence === true;
@@ -75,7 +77,8 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
     objective("authoritative_storage", durable && live("database"), ["PostgreSQL", "pgvector", "current migrations"]),
     objective("semantic_memory", live("semanticMemory") && component("semanticMemory").restartPersistent === true, component("semanticMemory").evidence),
     objective("worker_system", live("worker") && component("worker").recentHeartbeat === true && component("worker").releaseSha === expectedSha, component("worker").evidence),
-    objective("centralized_tools", providerReady && live("tools"), component("tools").evidence),
+    objective("centralized_tools", providerReady && live("tools"), component("tools").evidence,
+      providerReady ? `${providerProfile.requiredReadyCount}/${providerProfile.requiredCount} launch providers ready` : `Required gaps: ${providerProfile.requiredGaps.map(item => item.id).join(", ")}`),
     objective("realtime_voice", live("voice") && component("voice").physicalEvidence === true, component("voice").evidence),
     objective("durable_workspaces", allWorkspaces, [`${workspaces.length}/16 authoritative workspaces`]),
     objective("documents_forms", live("documents") && component("documents").fullLifecycle === true, component("documents").evidence),

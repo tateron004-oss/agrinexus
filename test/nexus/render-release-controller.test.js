@@ -159,7 +159,10 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
   for (const [key, value] of Object.entries({
     AGRINEXUS_STATE_STORE: "postgres",
     AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
-    PUBLIC_BASE_URL: "https://nexus-genesis-certified.onrender.com"
+    PUBLIC_BASE_URL: "https://nexus-genesis-certified.onrender.com",
+    MAP_TILE_PROVIDER: "openstreetmap",
+    MAP_TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    MAP_TILE_ATTRIBUTION: "OpenStreetMap contributors"
   })) {
     assert.deepEqual(writes.find(write => write.path === `/services/srv-web/env-vars/${key}`), {
       path: `/services/srv-web/env-vars/${key}`,

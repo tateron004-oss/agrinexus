@@ -52,6 +52,7 @@ jobs:
           node - <<'NODE'
           (async () => {
           const fs = require("fs");
+          const { classifyProviders } = require("./scripts/lib/nexus-launch-provider-profile.js");
           const base = process.env.NEXUS_BASE_URL;
           const providerBase = process.env.PROVIDER_BASE_URL;
           const expected = process.env.EXPECTED_RELEASE_SHA;
@@ -78,8 +79,7 @@ jobs:
               const healthReady = health.ok && health.body?.ok === true && health.body?.strictLiveMode === true &&
                 health.body?.checks?.database === "connected";
               const providerReady = providers.ok && providers.body?.ok === true;
-              const integrationsReady = integrations.ok && integrations.body?.ok === true &&
-                Array.isArray(integrations.body?.liveGaps) && integrations.body.liveGaps.length === 0;
+              const integrationsReady = classifyProviders(integrations.body).ready;
               if (runtimeReady && healthReady && providerReady && integrationsReady) break;
             } catch (error) {
               evidence = { expectedReleaseSha: expected, checkedAt: new Date().toISOString(), error: error.message };
@@ -94,8 +94,7 @@ jobs:
           const healthReady = evidence?.health?.ok && evidence.health.body?.ok === true &&
             evidence.health.body?.strictLiveMode === true && evidence.health.body?.checks?.database === "connected";
           const providerReady = evidence?.providers?.ok && evidence.providers.body?.ok === true;
-          const integrationsReady = evidence?.integrations?.ok && evidence.integrations.body?.ok === true &&
-            Array.isArray(evidence.integrations.body?.liveGaps) && evidence.integrations.body.liveGaps.length === 0;
+          const integrationsReady = classifyProviders(evidence?.integrations?.body).ready;
           if (!(runtimeReady && healthReady && providerReady && integrationsReady)) {
             throw new Error("Unified production activation did not reach ready state; certification remains held.");
           }
