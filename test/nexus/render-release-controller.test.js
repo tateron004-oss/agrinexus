@@ -156,6 +156,20 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
     path: "/services/srv-worker/env-vars/NEXUS_RELEASE_SHA",
     value: releaseSha
   });
+  for (const [key, value] of Object.entries({
+    AGRINEXUS_STATE_STORE: "postgres",
+    AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
+    PUBLIC_BASE_URL: "https://nexus-genesis-certified.onrender.com"
+  })) {
+    assert.deepEqual(writes.find(write => write.path === `/services/srv-web/env-vars/${key}`), {
+      path: `/services/srv-web/env-vars/${key}`,
+      value
+    });
+  }
+  assert.deepEqual(writes.find(write => write.path === "/services/srv-worker/env-vars/AGRINEXUS_STATE_STORE"), {
+    path: "/services/srv-worker/env-vars/AGRINEXUS_STATE_STORE",
+    value: "postgres"
+  });
   for (const key of ["SESSION_SECRET", "PASSWORD_PEPPER"]) {
     const write = writes.find(item => item.path === `/services/srv-worker/env-vars/${key}`);
     assert.ok(write, `worker ${key} is installed`);

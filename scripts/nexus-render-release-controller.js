@@ -6,6 +6,11 @@ const fs = require("node:fs");
 
 const API = "https://api.render.com/v1";
 const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
+const REQUIRED_WEB_ENV = Object.freeze({
+  AGRINEXUS_STATE_STORE: "postgres",
+  AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
+  PUBLIC_BASE_URL: CANONICAL_NEXUS_BASE_URL
+});
 const TERMINAL_SUCCESS = new Set(["live", "succeeded"]);
 const TERMINAL_FAILURE = new Set([
   "build_failed",
@@ -368,11 +373,15 @@ async function run(env = process.env, options = {}) {
   validateService(provider, "web_service");
   const databaseUrl = await resolveOrProvisionDatabase(client, web, options);
   await installEnvValue(client, web.id, "DATABASE_URL", databaseUrl);
+  for (const [key, value] of Object.entries(REQUIRED_WEB_ENV)) {
+    await installEnvValue(client, web.id, key, value);
+  }
   await ensureGeneratedEnvSecret(client, web.id, "SESSION_SECRET", 32, 48);
   await ensureGeneratedEnvSecret(client, web.id, "PASSWORD_PEPPER", 16, 32);
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
+  await installEnvValue(client, worker.id, "AGRINEXUS_STATE_STORE", "postgres");
   await ensureGeneratedEnvSecret(client, worker.id, "SESSION_SECRET", 32, 48);
   await ensureGeneratedEnvSecret(client, worker.id, "PASSWORD_PEPPER", 16, 32);
   await installEnvValue(client, worker.id, "NEXUS_RELEASE_SHA", releaseSha);
