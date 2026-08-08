@@ -22,6 +22,21 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   async function handle(req, res, url, send) {
     if (!url.pathname.startsWith("/api/nexus/runtime")) return false;
     if (url.pathname === "/api/nexus/runtime/status" && req.method === "GET") { const result = await status(); send(res, result.ok ? 200 : 503, result); return true; }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance" && req.method === "GET") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const health = await checkHealthFn(active);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const report = await active.acceptance.report({ releaseSha, applications: active.applications, health });
+        send(res, report.ok ? 200 : 503, report);
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.unavailable", { code: error.code || error.name });
+        send(res, 503, { ok: false, authoritative: true, code: error.code || "acceptance_evidence_unavailable",
+          error: "Production acceptance evidence is unavailable; no readiness value was inferred." });
+      }
+      return true;
+    }
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
@@ -75,9 +90,16 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   return Object.freeze({ handle, status });
 }
 
+function acceptanceAuthorized(req, expected) {
+  if (!expected) return false;
+  const supplied = String(req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+  const left = Buffer.from(supplied); const right = Buffer.from(String(expected));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
 function requestContext(req, user) {
   const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
   return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()), tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
 }
 
-module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext });
+module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized });

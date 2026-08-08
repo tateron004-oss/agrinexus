@@ -192,9 +192,9 @@ services:
       - key: OPENAI_TTS_VOICE
         value: coral
       - key: NEXUS_LIVE_KNOWLEDGE_ENABLED
-        value: "false"
+        value: "true"
       - key: NEXUS_LIVE_KNOWLEDGE_PROVIDER
-        sync: false
+        value: tavily
       - key: NEXUS_LIVE_KNOWLEDGE_API_KEY
         sync: false
       - key: NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT
@@ -214,6 +214,8 @@ services:
       - key: BRAVE_SEARCH_API_KEY
         sync: false
       - key: EXA_API_KEY
+        sync: false
+      - key: NEXUS_ACCEPTANCE_TOKEN
         sync: false
       - key: AI_PROVIDER
         value: webhook

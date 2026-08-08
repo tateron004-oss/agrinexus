@@ -8,6 +8,13 @@ on:
       - .github/workflows/nexus-21-objective-production-acceptance.yml
       - scripts/nexus-21-objective-production-acceptance.js
       - test/nexus/production-acceptance-gate.test.js
+      - nexus/acceptance/**
+      - nexus/compat/server-runtime-adapter.js
+      - nexus/runtime/create-runtime.js
+      - nexus/runtime/health.js
+      - nexus/workers/**
+      - foundation/migrations/010_nexus_production_acceptance.sql
+      - render.yaml
   workflow_dispatch:
     inputs:
       expected_release_sha:
@@ -43,6 +50,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE_SHA"
           node test/nexus/system-convergence.test.js
           node test/nexus/production-acceptance-gate.test.js
+          node test/nexus/production-acceptance-repository.test.js
+          node test/nexus/server-runtime-adapter.test.js
           node scripts/nexus-protected-foundation-guard.js
 
   production:

@@ -3,6 +3,8 @@
 function createHandlers({ runtime, deliveryProviders = {} }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
   return Object.freeze({
+    "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
+      nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
     "schedules.dispatch": async ({ job }) => ({ dispatched: await runtime.schedules.dispatchDue({ jobs: runtime.jobs,
       limit: job.payload?.limit || 100 }) }),
     "notifications.deliver": async ({ job, heartbeat }) => {
