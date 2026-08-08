@@ -155,6 +155,11 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
     path: "/services/srv-worker/env-vars/NEXUS_RELEASE_SHA",
     value: releaseSha
   });
+  for (const key of ["SESSION_SECRET", "PASSWORD_PEPPER"]) {
+    const write = writes.find(item => item.path === `/services/srv-worker/env-vars/${key}`);
+    assert.ok(write, `worker ${key} is installed`);
+    assert.ok(write.value.length >= (key === "SESSION_SECRET" ? 32 : 16));
+  }
 });
 
 test("exact deploy polls to live and enforces commit identity", async () => {
