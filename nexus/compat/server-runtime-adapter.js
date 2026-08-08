@@ -63,7 +63,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
         const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active);
-        const command = { correlationId: `acceptance-${marker}`, conversationId: `acceptance-${marker}`,
+        const command = { correlationId: `acceptance-${marker}`, conversationId: `cnv_${marker}`,
           tenantId: principal.tenantId, actorId: principal.userId, channel: "release", locale: "en", text: "Verify authoritative task persistence" };
         const created = await active.engine.create({ command, goal: `Exact-release task-engine probe ${releaseSha}`,
           application: "general", riskTier: "low", steps: [{ title: "Verify durable task lifecycle" }] });
@@ -90,7 +90,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const scope = { tenantId: principal.tenantId, principalId: principal.userId, memoryClass: "semantic", purpose: `acceptance-${marker}` };
         const stored = await active.memory.remember({ ...scope, content: { marker }, searchableText: `acceptance ${marker}`,
           embedding, embeddingModel: "acceptance-deterministic-v1", provenance: { source: "production-acceptance", releaseSha },
-          importance: 0, confidence: 1, verificationState: "verified", sensitivity: "internal" });
+          importance: 0, confidence: 1, verificationState: "source_verified", sensitivity: "internal" });
         const reconstructed = new MemoryRepository(active.db);
         const recalled = await reconstructed.recall({ ...scope, embedding, roles: [], limit: 5 });
         const persisted = recalled.some(item => item.memory_id === stored.memory_id && item.content?.marker === marker);

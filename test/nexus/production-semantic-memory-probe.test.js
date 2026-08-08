@@ -13,8 +13,8 @@ test("acceptance semantic-memory probe uses the governed principal and reconstru
     if (sql.includes("update nexus_memory_items set deleted_at")) return { rows: [{ memory_id: stored.memory_id }] };
     return { rows: [] };
   } };
-  const runtime = { ready: Promise.resolve(), db, memory: { async remember(input) {
-    stored = { memory_id: "memory_probe", content: input.content }; return stored;
+  let rememberInput; const runtime = { ready: Promise.resolve(), db, memory: { async remember(input) {
+    rememberInput = input; stored = { memory_id: "memory_probe", content: input.content }; return stored;
   } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: sha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha: sha }), createRuntimeFn: () => runtime });
@@ -24,4 +24,6 @@ test("acceptance semantic-memory probe uses the governed principal and reconstru
     (_res, code, value) => { status = code; body = value; });
   assert.equal(status, 200); assert.equal(body.ok, true); assert.equal(body.releaseSha, sha);
   assert.equal(body.durable, true); assert.equal(body.repositoryReconstructed, true); assert.equal(body.cleanedUp, true);
+  assert.equal(rememberInput.verificationState, "source_verified");
+  assert.equal(rememberInput.tenantId, "tenant-1"); assert.equal(rememberInput.principalId, "user-1");
 });
