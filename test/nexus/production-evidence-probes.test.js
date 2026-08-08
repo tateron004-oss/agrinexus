@@ -48,3 +48,13 @@ test("consent-audit evidence requires preserved immutable receipts", () => {
   assert.equal(record.passed, true);
   assert.equal(record.facts.immutableReceipts, true);
 });
+
+test("offline-sync evidence requires durable conflict recovery and cleanup", () => {
+  const sha = "d".repeat(40);
+  const probe = { url: "https://production/offline-sync", status: 200, ok: true,
+    body: { ok: true, releaseSha: sha, conflictRecovery: true, durableConflict: true,
+      resolution: "accept-server", cleanedUp: true } };
+  const record = component("offlineSync", sha, [probe], { conflictRecovery: true });
+  assert.equal(record.passed, true);
+  assert.equal(record.facts.conflictRecovery, true);
+});

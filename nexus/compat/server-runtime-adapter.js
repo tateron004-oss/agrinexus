@@ -134,6 +134,40 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/offline-sync" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      let active; let tenantId; let deviceId; let operationId;
+      try {
+        active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const marker = crypto.randomUUID(); tenantId = "nexus-production-acceptance";
+        const userId = "nexus-release-controller"; deviceId = `acceptance-${marker}`; operationId = `conflict-${marker}`;
+        const conflict = await active.sync.apply({ tenantId, userId, deviceId, operationId,
+          entityType: "record", entityId: `acceptance-${marker}`, baseVersion: 1,
+          payload: { releaseSha, marker } }, async ({ phase }) => phase === "inspect" ? { version: 2, releaseSha } : null);
+        const durableConflict = conflict?.state === "conflict" && conflict?.conflict?.serverVersion === 2;
+        const resolved = await active.sync.resolve({ tenantId, userId, deviceId, syncId: conflict.sync_id,
+          resolution: "accept-server", expectedServerVersion: 2 });
+        const changes = await active.sync.changes({ tenantId, userId, deviceId, since: new Date(0), limit: 10 });
+        const recovered = resolved?.state === "rejected" && resolved?.conflict?.resolution === "accept-server" &&
+          changes.some(item => item.sync_id === conflict.sync_id && item.state === "rejected");
+        await active.db.query("delete from nexus_sync_operations where tenant_id=$1 and device_id=$2 and operation_id=$3", [tenantId, deviceId, operationId]);
+        const cleanup = await active.sync.changes({ tenantId, userId, deviceId, since: new Date(0), limit: 10 });
+        const cleanedUp = !cleanup.some(item => item.sync_id === conflict.sync_id);
+        const conflictRecovery = durableConflict && recovered && cleanedUp;
+        send(res, conflictRecovery ? 200 : 503, { ok: conflictRecovery, releaseSha, conflictRecovery,
+          durableConflict, resolution: resolved?.conflict?.resolution, cleanedUp });
+      } catch (error) {
+        if (active?.db && tenantId && deviceId && operationId) {
+          try { await active.db.query("delete from nexus_sync_operations where tenant_id=$1 and device_id=$2 and operation_id=$3", [tenantId, deviceId, operationId]); } catch {}
+        }
+        logger.error?.("authoritative.acceptance.offline_sync_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "offline_sync_probe_failed", error: "The authoritative offline-sync probe failed." });
+      }
+      return true;
+    }
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
