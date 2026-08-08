@@ -110,7 +110,7 @@ test("exact deploy polls to live and enforces commit identity", async () => {
 test("exact deploy fails closed on failed status", async () => {
   const responses = [[], { id: "dep-1", status: "build_failed", commit: { id: "sha-1" } }];
   const client = { request: async () => responses.shift() };
-  await assert.rejects(deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100 }), /failed/);
+  await assert.rejects(deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100, diagnosticsDir: null }), /failed/);
 });
 
 test("exact deploy resumes an existing non-failed deployment for the release SHA", async () => {
@@ -152,8 +152,27 @@ test("exact deploy fails immediately when the pre-deploy command fails", async (
     request: async () => responses.shift()
   };
   await assert.rejects(
-    deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100 }),
+    deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100, diagnosticsDir: null }),
     /pre_deploy_failed.*migration command exited 1/
   );
+  assert.equal(responses.length, 0);
+});
+
+test("pre-deploy failure captures sanitized Render build diagnostics", async () => {
+  const calls = [];
+  const responses = [
+    [],
+    { id: "dep-1", status: "pre_deploy_failed", commit: { id: "sha-1" } },
+    { logs: [{ timestamp: "2026-08-08T07:00:00Z", level: "error", message: "DATABASE_URL=postgres://user:password@db/nexus migration failed" }] }
+  ];
+  const client = { request: async path => {
+    calls.push(path);
+    return responses.shift();
+  } };
+  await assert.rejects(
+    deployExactSha(client, { id: "srv-1", name: "web", ownerId: "tea-1" }, "sha-1", { pollMs: 0, timeoutMs: 100, diagnosticsDir: null }),
+    /postgres:\/\/\*\*\*@db\/nexus migration failed/
+  );
+  assert.match(calls.at(-1), /^\/logs\?/);
   assert.equal(responses.length, 0);
 });
