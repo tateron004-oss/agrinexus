@@ -7,6 +7,7 @@ const { createTaskApi } = require("./task-api.js");
 const { createControlApi } = require("./control-api.js");
 const { createSyncApi } = require("./sync-api.js");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
+const { MemoryRepository } = require("../memory/repository.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -74,6 +75,30 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } catch (error) {
         logger.error?.("authoritative.acceptance.task_engine_probe_failed", { code: error.code || error.name });
         send(res, 503, { ok: false, code: error.code || "task_engine_probe_failed", error: "The authoritative task-engine probe failed." });
+      }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/semantic-memory" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const marker = crypto.randomUUID(); const embedding = new Array(1536).fill(0); embedding[0] = 1;
+        const scope = { tenantId: "nexus-production-acceptance", principalId: `release-${releaseSha}`, memoryClass: "semantic", purpose: `acceptance-${marker}` };
+        const stored = await active.memory.remember({ ...scope, content: { marker }, searchableText: `acceptance ${marker}`,
+          embedding, embeddingModel: "acceptance-deterministic-v1", provenance: { source: "production-acceptance", releaseSha },
+          importance: 0, confidence: 1, verificationState: "verified", sensitivity: "internal" });
+        const reconstructed = new MemoryRepository(active.db);
+        const recalled = await reconstructed.recall({ ...scope, embedding, roles: [], limit: 5 });
+        const persisted = recalled.some(item => item.memory_id === stored.memory_id && item.content?.marker === marker);
+        const cleanedUp = await reconstructed.forget({ tenantId: scope.tenantId, principalId: scope.principalId, memoryId: stored.memory_id });
+        const passed = persisted && cleanedUp;
+        send(res, passed ? 200 : 503, { ok: passed, releaseSha, durable: persisted, repositoryReconstructed: true, cleanedUp });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.semantic_memory_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "semantic_memory_probe_failed", error: "The authoritative semantic-memory probe failed." });
       }
       return true;
     }

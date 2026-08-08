@@ -29,10 +29,11 @@ async function run(env = process.env) {
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const headers = { authorization: `Bearer ${token}` };
-  const [runtime, health, integrations, provider, acceptance, taskEngine] = await Promise.all([
+  const [runtime, health, integrations, provider, acceptance, taskEngine, semanticMemory] = await Promise.all([
     get(`${base}/api/nexus/runtime/status`), get(`${base}/api/healthz`), get(`${base}/api/integrations`),
     get(`${providerBase}/healthz`), get(`${base}/api/nexus/runtime/production-acceptance`, headers),
-    post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha })
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/semantic-memory`, headers, { releaseSha })
   ]);
   if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
@@ -44,6 +45,10 @@ async function run(env = process.env) {
       durableTask: taskEngine.body?.durable === true,
       lifecycleState: taskEngine.body?.state,
       stepCount: taskEngine.body?.steps
+    }),
+    component("semanticMemory", releaseSha, [semanticMemory], {
+      restartPersistent: semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true,
+      cleanupVerified: semanticMemory.body?.cleanedUp === true
     }),
     component("database", releaseSha, [health], {
       connected: health.body?.checks?.database === "connected",
@@ -57,10 +62,11 @@ async function run(env = process.env) {
     component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
   ];
   componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
-  componentProbes[1].passed = databaseReady;
-  componentProbes[2].passed = workerReady;
-  componentProbes[3].passed = providerReady;
-  componentProbes[6].passed = componentProbes[6].passed && health.body?.strictLiveMode === true;
+  componentProbes[1].passed = semanticMemory.ok && semanticMemory.body?.ok === true && semanticMemory.body?.releaseSha === releaseSha && semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true && semanticMemory.body?.cleanedUp === true;
+  componentProbes[2].passed = databaseReady;
+  componentProbes[3].passed = workerReady;
+  componentProbes[4].passed = providerReady;
+  componentProbes[7].passed = componentProbes[7].passed && health.body?.strictLiveMode === true;
   const output = env.NEXUS_PROBE_FILE || path.join("output", "nexus-production-probes.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ releaseSha, source: "unified-release-live-probe", componentProbes, workspaceProbes: [] }, null, 2));
