@@ -9,7 +9,10 @@ const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
 const REQUIRED_WEB_ENV = Object.freeze({
   AGRINEXUS_STATE_STORE: "postgres",
   AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
-  PUBLIC_BASE_URL: CANONICAL_NEXUS_BASE_URL
+  PUBLIC_BASE_URL: CANONICAL_NEXUS_BASE_URL,
+  MAP_TILE_PROVIDER: "openstreetmap",
+  MAP_TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  MAP_TILE_ATTRIBUTION: "OpenStreetMap contributors"
 });
 const TERMINAL_SUCCESS = new Set(["live", "succeeded"]);
 const TERMINAL_FAILURE = new Set([

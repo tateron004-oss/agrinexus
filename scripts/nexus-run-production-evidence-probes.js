@@ -2,6 +2,7 @@
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
+const { classifyProviders } = require("./lib/nexus-launch-provider-profile.js");
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
 async function get(url, headers = {}) {
@@ -64,7 +65,8 @@ async function run(env = process.env) {
   ]);
   if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
-  const providerReady = provider.ok && integrations.ok && integrations.body?.ok === true && Array.isArray(integrations.body.liveGaps) && integrations.body.liveGaps.length === 0;
+  const providerProfile = classifyProviders(integrations.body);
+  const providerReady = provider.ok && providerProfile.ready;
   const databaseReady = runtime.ok && runtime.body?.ok === true && runtime.body?.releaseSha === releaseSha &&
     runtime.body?.pgvector === true && runtime.body?.migrationsCurrent === true;
   const componentProbes = [
@@ -105,7 +107,13 @@ async function run(env = process.env) {
       migrationsCurrent: runtime.body?.migrationsCurrent === true
     }),
     component("worker", releaseSha, [acceptance], { recentHeartbeat: workerReady, releaseSha }),
-    component("tools", releaseSha, [integrations, provider], { providerReady }),
+    component("tools", releaseSha, [provider], {
+      providerReady, launchProfile: providerProfile.profile,
+      requiredReadyCount: providerProfile.requiredReadyCount, requiredCount: providerProfile.requiredCount,
+      requiredGaps: providerProfile.requiredGaps.map(item => item.id),
+      optionalGaps: providerProfile.optionalGaps.map(item => item.id),
+      intentionallyUnavailable: providerProfile.intentionallyUnavailable.map(item => item.id)
+    }),
     component("delivery", releaseSha, [runtime, health], { windowsRunnerRequired: false }),
     component("testing", releaseSha, [runtime, health], { exactSha: releaseSha }),
     component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
