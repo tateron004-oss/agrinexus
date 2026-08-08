@@ -51,6 +51,10 @@ jobs:
           node test/nexus/production-acceptance-repository.test.js
           node test/nexus/production-evidence-producer.test.js
           node test/nexus/production-evidence-probes.test.js
+          node test/nexus/production-identity-probe.test.js
+          node test/nexus/production-observability-probe.test.js
+          node test/nexus/production-object-storage-probe.test.js
+          node test/nexus/observability-alert-evaluator.test.js
           node test/nexus/worker-release-heartbeat.test.js
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js

@@ -8,6 +8,7 @@ const { createControlApi } = require("./control-api.js");
 const { createSyncApi } = require("./sync-api.js");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { MemoryRepository } = require("../memory/repository.js");
+const { evaluateObservabilityAlerts } = require("../observability/alert-evaluator.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -165,6 +166,91 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         }
         logger.error?.("authoritative.acceptance.offline_sync_probe_failed", { code: error.code || error.name });
         send(res, 503, { ok: false, code: error.code || "offline_sync_probe_failed", error: "The authoritative offline-sync probe failed." });
+      }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/identity" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const membershipResult = await active.db.query(`select tenant_id,user_id,role,permissions from nexus_organization_memberships
+          where state='active' order by updated_at desc limit 1`);
+        const membership = (membershipResult.rows || membershipResult)[0];
+        if (!membership) { send(res, 503, { ok: false, releaseSha, code: "identity_probe_membership_unavailable", error: "No active membership is available for the identity isolation probe." }); return true; }
+        const permission = membership.role === "admin" || (membership.permissions || []).includes("*")
+          ? "acceptance:identity" : (membership.permissions || [])[0];
+        if (!permission) { send(res, 503, { ok: false, releaseSha, code: "identity_probe_permission_unavailable", error: "The active membership has no probeable permission." }); return true; }
+        const sameTenant = await active.access.authorize({ tenantId: membership.tenant_id, actorId: membership.user_id,
+          permission, purpose: `Exact-release identity isolation probe ${releaseSha}` });
+        let crossTenantDenied = false;
+        try {
+          await active.access.authorize({ tenantId: crypto.randomUUID(), actorId: membership.user_id,
+            permission, purpose: `Exact-release cross-tenant denial probe ${releaseSha}` });
+        } catch (error) { crossTenantDenied = error?.code === "tenant_membership_required"; }
+        const tenantIsolation = sameTenant?.authorized === true && crossTenantDenied;
+        send(res, tenantIsolation ? 200 : 503, { ok: tenantIsolation, releaseSha, tenantIsolation,
+          sameTenantAuthorized: sameTenant?.authorized === true, crossTenantDenied });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.identity_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "identity_probe_failed", error: "The authoritative identity isolation probe failed." });
+      }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/observability" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const membershipResult = await active.db.query("select tenant_id,user_id from nexus_organization_memberships where state='active' order by updated_at desc limit 1");
+        const membership = (membershipResult.rows || membershipResult)[0];
+        if (!membership) { send(res, 503, { ok: false, releaseSha, code: "observability_probe_identity_unavailable", error: "No active identity is available for the observability probe." }); return true; }
+        const marker = crypto.randomUUID(); const traceId = `acceptance-observability-${marker}`;
+        await active.observability.record({ tenantId: membership.tenant_id, actorId: membership.user_id, traceId,
+          correlationId: traceId, component: "production-acceptance", eventType: "threshold-probe", outcome: "error",
+          durationMs: 1250, provider: "authoritative-runtime", costMicros: 7, releaseSha, metadata: { releaseSha, marker } });
+        const persistedResult = await active.db.query(`select trace_id,outcome,duration_ms,cost_micros,release_sha from nexus_observability_events
+          where tenant_id=$1 and trace_id=$2 and release_sha=$3`, [membership.tenant_id, traceId, releaseSha]);
+        const events = persistedResult.rows || persistedResult; const alerts = evaluateObservabilityAlerts(events);
+        const tracesReady = events.length === 1 && events[0].trace_id === traceId && events[0].release_sha === releaseSha;
+        const costsReady = tracesReady && Number(events[0].cost_micros) === 7;
+        const alertsReady = ["execution-failure", "latency-budget", "cost-threshold"].every(kind => alerts.some(alert => alert.kind === kind && alert.traceId === traceId));
+        const passed = tracesReady && costsReady && alertsReady;
+        send(res, passed ? 200 : 503, { ok: passed, releaseSha, tracesReady, costsReady, alertsReady, alertCount: alerts.length });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.observability_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "observability_probe_failed", error: "The authoritative observability probe failed." });
+      }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/object-storage" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready;
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        if (!active.objectStorage) { send(res, 503, { ok: false, releaseSha, code: "object_storage_unavailable", error: "Shared object storage is unavailable." }); return true; }
+        const key = "nexus/production-acceptance/object-storage/redeploy-marker.json";
+        let previous = null;
+        try { const stored = await active.objectStorage.get(key); previous = JSON.parse(stored.body.toString("utf8")); }
+        catch (error) { if (!["NoSuchKey", "NotFound", "NoSuchObject"].includes(error?.name) && !["NoSuchKey", "NotFound"].includes(error?.Code)) throw error; }
+        const marker = Buffer.from(JSON.stringify({ releaseSha, writtenAt: new Date().toISOString() }));
+        const written = await active.objectStorage.put({ key, body: marker, contentType: "application/json",
+          metadata: { purpose: "production-acceptance", release: releaseSha } });
+        const reread = await active.objectStorage.get(key); const current = JSON.parse(reread.body.toString("utf8"));
+        const currentWriteVerified = current.releaseSha === releaseSha && written.sizeBytes === marker.length;
+        const priorReleaseSha = typeof previous?.releaseSha === "string" ? previous.releaseSha : null;
+        const redeployPersistent = /^[0-9a-f]{40}$/.test(priorReleaseSha || "") && priorReleaseSha !== releaseSha && currentWriteVerified;
+        send(res, redeployPersistent ? 200 : 202, { ok: true, releaseSha, currentWriteVerified, redeployPersistent,
+          priorReleaseObserved: Boolean(priorReleaseSha), priorReleaseDifferent: Boolean(priorReleaseSha && priorReleaseSha !== releaseSha) });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.object_storage_probe_failed", { code: error.code || error.name });
+        send(res, 503, { ok: false, code: error.code || "object_storage_probe_failed", error: "The authoritative object-storage probe failed." });
       }
       return true;
     }
