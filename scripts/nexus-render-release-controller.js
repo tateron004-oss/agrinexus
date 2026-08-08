@@ -97,6 +97,17 @@ async function installEnvValue(client, serviceId, key, value) {
   await client.request(`/services/${serviceId}/env-vars/${encodeURIComponent(key)}`, { method: "PUT", body: { value } });
 }
 
+function unwrapEnvVar(item) { return item?.envVar || item; }
+
+async function ensureGeneratedEnvSecret(client, serviceId, key, minimumLength, bytes = 48) {
+  const result = await client.request(`/services/${serviceId}/env-vars?limit=100`);
+  const envVars = (Array.isArray(result) ? result : result?.envVars || []).map(unwrapEnvVar);
+  const current = envVars.find(item => item?.key === key)?.value || "";
+  if (current.length >= minimumLength) return { key, installed: false };
+  await installEnvValue(client, serviceId, key, crypto.randomBytes(bytes).toString("base64url"));
+  return { key, installed: true };
+}
+
 async function provisionBackgroundWorker(client, web, databaseUrl) {
   validateService(web, "web_service");
   const ownerId = required(web.ownerId || web.owner?.id, "Render workspace ID");
@@ -349,6 +360,8 @@ async function run(env = process.env, options = {}) {
   validateService(provider, "web_service");
   const databaseUrl = await resolveOrProvisionDatabase(client, web, options);
   await installEnvValue(client, web.id, "DATABASE_URL", databaseUrl);
+  await ensureGeneratedEnvSecret(client, web.id, "SESSION_SECRET", 32, 48);
+  await ensureGeneratedEnvSecret(client, web.id, "PASSWORD_PEPPER", 16, 32);
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
@@ -370,4 +383,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, ensureGeneratedEnvSecret, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
