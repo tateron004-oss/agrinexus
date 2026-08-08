@@ -1,0 +1,12 @@
+{
+  "target": "https://nexus-genesis-certified.onrender.com",
+  "baseReleaseSha": "b9dbbad5d64a97020c74bcea4cc2b3cd3e1e7370",
+  "reason": "Restart the unified production release after RENDER_API_KEY was installed in GitHub Actions.",
+  "requestedAt": "2026-08-08T00:00:00Z",
+  "invariants": [
+    "canonical-host-only",
+    "deploy-before-acceptance",
+    "exact-sha-verification",
+    "three-pass-production-acceptance"
+  ]
+}
