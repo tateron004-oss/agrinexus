@@ -30,6 +30,21 @@ function objectStorageComponent(releaseSha, probe) {
     redeployPersistent: true, currentWriteVerified: true, priorReleaseObserved: true
   });
 }
+function securityComponent(releaseSha, auditPath) {
+  if (!auditPath || !fs.existsSync(auditPath)) return null;
+  const audit = JSON.parse(fs.readFileSync(auditPath, "utf8"));
+  const counts = audit?.metadata?.vulnerabilities;
+  if (!counts || !Number.isInteger(counts.critical) || !Number.isInteger(counts.total)) return null;
+  const probe = { url: `github-actions://exact-release/${releaseSha}/npm-audit`, status: 200, ok: true, body: { releaseSha } };
+  const result = component("security", releaseSha, [probe], {
+    criticalFindings: counts.critical,
+    highFindings: counts.high,
+    totalFindings: counts.total,
+    auditedDependencies: audit?.metadata?.dependencies?.total
+  });
+  result.passed = counts.critical === 0 && counts.high === 0 && counts.total === 0;
+  return result;
+}
 async function run(env = process.env) {
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
   const providerBase = required(env.PROVIDER_BASE_URL, "PROVIDER_BASE_URL").replace(/\/$/, "");
@@ -97,6 +112,8 @@ async function run(env = process.env) {
   ];
   const objectStorageEvidence = objectStorageComponent(releaseSha, objectStorage);
   if (objectStorageEvidence) componentProbes.push(objectStorageEvidence);
+  const securityEvidence = securityComponent(releaseSha, env.NEXUS_SECURITY_AUDIT_FILE);
+  if (securityEvidence) componentProbes.push(securityEvidence);
   componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
   componentProbes[1].passed = semanticMemory.ok && semanticMemory.body?.ok === true && semanticMemory.body?.releaseSha === releaseSha && semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true && semanticMemory.body?.cleanedUp === true;
   componentProbes[2].passed = consentAudit.ok && consentAudit.body?.ok === true && consentAudit.body?.releaseSha === releaseSha && consentAudit.body?.immutableReceipts === true && consentAudit.body?.auditEventCount === 2 && consentAudit.body?.receiptPreserved === true;
@@ -116,4 +133,4 @@ async function run(env = process.env) {
   return componentProbes;
 }
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = Object.freeze({ component, objectStorageComponent, run, post });
+module.exports = Object.freeze({ component, objectStorageComponent, securityComponent, run, post });

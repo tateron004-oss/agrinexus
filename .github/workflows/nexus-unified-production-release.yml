@@ -64,6 +64,10 @@ jobs:
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
           node scripts/nexus-protected-foundation-guard.js
+      - name: Record exact-release production dependency audit
+        run: |
+          mkdir -p output
+          npm audit --omit=dev --json > output/nexus-production-security-audit.json
       - name: Deploy exact SHA to the canonical Render topology
         id: render
         env:
@@ -73,6 +77,7 @@ jobs:
         env:
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
+          NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
           NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
         run: |
           node scripts/nexus-run-production-evidence-probes.js
