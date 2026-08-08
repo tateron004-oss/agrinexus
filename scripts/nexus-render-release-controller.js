@@ -45,6 +45,64 @@ async function resolveUniqueService(client, name) {
   return services[0];
 }
 
+async function copyRequiredEnvValue(client, serviceId, key) {
+  const result = await client.request(`/services/${serviceId}/env-vars?limit=100`);
+  const entries = Array.isArray(result) ? result : result?.envVars || [];
+  const match = entries.map(item => item?.envVar || item).find(item => item?.key === key);
+  return required(match?.value, `${key} on nexus-genesis-certified`);
+}
+
+async function provisionBackgroundWorker(client, web) {
+  validateService(web, "web_service");
+  const ownerId = required(web.ownerId || web.owner?.id, "Render workspace ID");
+  const repo = required(web.repo || web.repoUrl, "nexus-genesis-certified repository");
+  const databaseUrl = await copyRequiredEnvValue(client, web.id, "DATABASE_URL");
+  const created = await client.request("/services", {
+    method: "POST",
+    body: {
+      type: "background_worker",
+      name: "nexus-background-worker",
+      ownerId,
+      repo,
+      branch: "main",
+      autoDeploy: "no",
+      envVars: [
+        { key: "NODE_ENV", value: "production" },
+        { key: "DATABASE_URL", value: databaseUrl },
+        { key: "DATABASE_SSL", value: "false" },
+        { key: "DATABASE_POOL_MAX", value: "10" },
+        { key: "DATABASE_STATEMENT_TIMEOUT_MS", value: "60000" },
+        { key: "SESSION_SECRET", generateValue: true },
+        { key: "PASSWORD_PEPPER", generateValue: true },
+        { key: "NEXUS_WORKER_POLL_MS", value: "2000" }
+      ],
+      serviceDetails: {
+        runtime: "node",
+        plan: "starter",
+        region: "oregon",
+        numInstances: 1,
+        maxShutdownDelaySeconds: 60,
+        envSpecificDetails: {
+          buildCommand: "npm install",
+          startCommand: "node nexus/workers/process.js"
+        }
+      }
+    }
+  });
+  return unwrapService(created);
+}
+
+async function resolveOrProvisionWorker(client, web) {
+  const result = await client.request("/services?name=nexus-background-worker&limit=100");
+  const workers = (Array.isArray(result) ? result : result?.services || [])
+    .map(unwrapService)
+    .filter(service => service?.name === "nexus-background-worker");
+  if (workers.length > 1) throw new Error(`Expected exactly one Render service named nexus-background-worker; found ${workers.length}`);
+  if (workers.length === 1) return workers[0];
+  await provisionBackgroundWorker(client, web);
+  return resolveUniqueService(client, "nexus-background-worker");
+}
+
 function validateService(service, expectedType) {
   const type = service.type || service.serviceDetails?.type;
   if (type && type !== expectedType) throw new Error(`${service.name} has type ${type}; expected ${expectedType}`);
@@ -98,18 +156,13 @@ async function run(env = process.env, options = {}) {
   }
   const client = options.client || createClient({ apiKey, fetchImpl: options.fetchImpl });
   const token = crypto.randomBytes(48).toString("base64url");
-  const definitions = [
-    ["nexus-genesis-certified", "web_service"],
-    ["nexus-background-worker", "background_worker"],
-    ["agrinexus-provider-engines", "web_service"]
-  ];
-  const services = [];
-  for (const [name, type] of definitions) {
-    const service = await resolveUniqueService(client, name);
-    validateService(service, type);
-    services.push(service);
-  }
-  const web = services.find(service => service.name === "nexus-genesis-certified");
+  const web = await resolveUniqueService(client, "nexus-genesis-certified");
+  validateService(web, "web_service");
+  const provider = await resolveUniqueService(client, "agrinexus-provider-engines");
+  validateService(provider, "web_service");
+  const worker = await resolveOrProvisionWorker(client, web);
+  validateService(worker, "background_worker");
+  const services = [web, worker, provider];
   await installAcceptanceToken(client, web.id, token);
   exportWorkflowSecret(token, env);
   const deployments = [];
@@ -122,4 +175,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, provisionBackgroundWorker, resolveOrProvisionWorker, deployExactSha, run };
