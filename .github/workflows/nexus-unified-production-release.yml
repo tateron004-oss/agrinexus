@@ -54,6 +54,10 @@ jobs:
           node test/nexus/production-identity-probe.test.js
           node test/nexus/production-observability-probe.test.js
           node test/nexus/production-object-storage-probe.test.js
+          node test/nexus/production-task-engine-probe.test.js
+          node test/nexus/production-semantic-memory-probe.test.js
+          node test/nexus/production-consent-audit-probe.test.js
+          node test/nexus/production-offline-sync-probe.test.js
           node test/nexus/observability-alert-evaluator.test.js
           node test/nexus/worker-release-heartbeat.test.js
           node test/nexus/server-runtime-adapter.test.js

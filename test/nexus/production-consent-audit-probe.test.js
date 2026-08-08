@@ -9,7 +9,8 @@ test("acceptance consent-audit probe preserves release-scoped grant and revoke r
     async grant(input) { consent = { consent_id: "consent_probe", state: "granted", granted_at: new Date(), receipt: input.receipt }; return consent; },
     async revoke() { consent = { ...consent, state: "revoked", revoked_at: new Date() }; return consent; }
   }, audit: { async record(input) { events.push({ event_id: `event_${events.length}`, event_type: input.eventType, release_sha: sha }); } },
-  db: { async query(sql) { return sql.includes("nexus_consents") ? { rows: [consent] } : { rows: events }; } } };
+  db: { async query(sql) { if (sql.includes("nexus_organization_memberships")) return { rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "acceptance-controller", permissions: ["acceptance:identity"] }] };
+    return sql.includes("nexus_consents") ? { rows: [consent] } : { rows: events }; } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: sha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha: sha }), createRuntimeFn: () => runtime });
   let status; let body;
