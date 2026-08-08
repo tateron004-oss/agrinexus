@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { component } = require("../../scripts/nexus-run-production-evidence-probes.js");
+const { component, objectStorageComponent } = require("../../scripts/nexus-run-production-evidence-probes.js");
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
   const result = component("testing", sha, [probe], { exactSha: sha });
@@ -66,4 +66,12 @@ test("identity evidence requires same-tenant authorization and cross-tenant deni
   const record = component("identity", sha, [probe], { tenantIsolation: true });
   assert.equal(record.passed, true);
   assert.equal(record.facts.tenantIsolation, true);
+});
+
+test("object-storage evidence remains held until a prior distinct release is observed", () => {
+  const sha = "f".repeat(40); const base = { url: "https://production/object-storage", status: 200, ok: true,
+    body: { ok: true, releaseSha: sha, currentWriteVerified: true, priorReleaseObserved: false, redeployPersistent: false } };
+  assert.equal(objectStorageComponent(sha, base), null);
+  const proven = objectStorageComponent(sha, { ...base, body: { ...base.body, priorReleaseObserved: true, redeployPersistent: true } });
+  assert.equal(proven.component, "objectStorage"); assert.equal(proven.passed, true); assert.equal(proven.facts.redeployPersistent, true);
 });
