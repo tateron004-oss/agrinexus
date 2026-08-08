@@ -1,0 +1,103 @@
+name: Nexus Path 1 Windows physical certification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/nexus-path-1-windows-physical-certification.yml"
+  workflow_dispatch:
+    inputs:
+      expected_release_sha:
+        description: Exact production SHA to certify
+        required: false
+      base_url:
+        description: Canonical Nexus production URL
+        required: true
+        default: https://nexus-genesis-certified.onrender.com
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-path-1-windows-physical-certification
+  cancel-in-progress: false
+
+jobs:
+  physical-certification:
+    name: Three consecutive Windows physical passes
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    env:
+      NEXUS_CLEAN_BASE_URL: ${{ inputs.base_url || 'https://nexus-genesis-certified.onrender.com' }}
+      NEXUS_EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_release_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Verify exact production identity and provider readiness
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          node scripts/nexus-release-certification-controller.js verify-deployment
+          $report = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/api/nexus/provider-readiness-report" -TimeoutSec 60
+          if ($report.activatedProviders -notcontains "S3-Compatible Storage (s3-storage-provider)") {
+            throw "Production S3-compatible storage is not active."
+          }
+          if ($report.liveReadyProviders -notcontains "YouTube Data / Embed Support (youtube-media-provider)") {
+            throw "Production YouTube search/embed support is not live-ready."
+          }
+
+      - name: Verify protected foundation before device access
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-protected-foundation-guard.js
+
+      - name: Verify interactive Windows microphone and speakers
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: ./scripts/nexus-windows-real-device-preflight.ps1
+
+      - name: Install exact dependencies and Chrome driver
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          npm ci
+          npm install --no-save --no-package-lock @playwright/test@1.61.1
+
+      - name: Establish three consecutive physical passes
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "output/nexus-path-1-physical" | Out-Null
+          1..3 | ForEach-Object {
+            $pass = $_
+            Write-Host "Starting Windows physical certification pass $pass/3"
+            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+            if ($LASTEXITCODE -ne 0) { throw "Physical certification pass $pass failed." }
+            Copy-Item -Recurse -Force "output/nexus-clean-windows-certification" "output/nexus-path-1-physical/pass-$pass"
+            if ($pass -lt 3) { Start-Sleep -Seconds 30 }
+          }
+          @{ certificationComplete = $true; passes = 3; releaseSha = $env:NEXUS_EXPECTED_RELEASE_SHA; canonicalHost = $env:NEXUS_CLEAN_BASE_URL; completedAt = (Get-Date).ToUniversalTime().ToString("o") } |
+            ConvertTo-Json | Set-Content "output/nexus-path-1-physical/streak.json"
+
+      - name: Reverify protected foundation after acceptance
+        if: always()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: node scripts/nexus-protected-foundation-guard.js
+
+      - name: Publish Path 1 physical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-path-1-windows-physical-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/nexus-path-1-physical/
+            output/nexus-clean-windows-certification/
+            test-results/
+          if-no-files-found: error
+          retention-days: 90
