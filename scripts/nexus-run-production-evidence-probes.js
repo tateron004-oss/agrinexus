@@ -29,12 +29,13 @@ async function run(env = process.env) {
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const headers = { authorization: `Bearer ${token}` };
-  const [runtime, health, integrations, provider, acceptance, taskEngine, semanticMemory, consentAudit] = await Promise.all([
+  const [runtime, health, integrations, provider, acceptance, taskEngine, semanticMemory, consentAudit, offlineSync] = await Promise.all([
     get(`${base}/api/nexus/runtime/status`), get(`${base}/api/healthz`), get(`${base}/api/integrations`),
     get(`${providerBase}/healthz`), get(`${base}/api/nexus/runtime/production-acceptance`, headers),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/semantic-memory`, headers, { releaseSha }),
-    post(`${base}/api/nexus/runtime/production-acceptance/probes/consent-audit`, headers, { releaseSha })
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/consent-audit`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/offline-sync`, headers, { releaseSha })
   ]);
   if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
@@ -56,6 +57,12 @@ async function run(env = process.env) {
       auditEventCount: consentAudit.body?.auditEventCount,
       receiptPreserved: consentAudit.body?.receiptPreserved === true
     }),
+    component("offlineSync", releaseSha, [offlineSync], {
+      conflictRecovery: offlineSync.body?.conflictRecovery === true,
+      durableConflict: offlineSync.body?.durableConflict === true,
+      resolution: offlineSync.body?.resolution,
+      cleanupVerified: offlineSync.body?.cleanedUp === true
+    }),
     component("database", releaseSha, [health], {
       connected: health.body?.checks?.database === "connected",
       pgvector: health.body?.pgvector === true,
@@ -70,10 +77,11 @@ async function run(env = process.env) {
   componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
   componentProbes[1].passed = semanticMemory.ok && semanticMemory.body?.ok === true && semanticMemory.body?.releaseSha === releaseSha && semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true && semanticMemory.body?.cleanedUp === true;
   componentProbes[2].passed = consentAudit.ok && consentAudit.body?.ok === true && consentAudit.body?.releaseSha === releaseSha && consentAudit.body?.immutableReceipts === true && consentAudit.body?.auditEventCount === 2 && consentAudit.body?.receiptPreserved === true;
-  componentProbes[3].passed = databaseReady;
-  componentProbes[4].passed = workerReady;
-  componentProbes[5].passed = providerReady;
-  componentProbes[8].passed = componentProbes[8].passed && health.body?.strictLiveMode === true;
+  componentProbes[3].passed = offlineSync.ok && offlineSync.body?.ok === true && offlineSync.body?.releaseSha === releaseSha && offlineSync.body?.conflictRecovery === true && offlineSync.body?.durableConflict === true && offlineSync.body?.resolution === "accept-server" && offlineSync.body?.cleanedUp === true;
+  componentProbes[4].passed = databaseReady;
+  componentProbes[5].passed = workerReady;
+  componentProbes[6].passed = providerReady;
+  componentProbes[9].passed = componentProbes[9].passed && health.body?.strictLiveMode === true;
   const output = env.NEXUS_PROBE_FILE || path.join("output", "nexus-production-probes.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ releaseSha, source: "unified-release-live-probe", componentProbes, workspaceProbes: [] }, null, 2));
