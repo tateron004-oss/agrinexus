@@ -55,3 +55,24 @@ test("workspace cutover and observability status are authenticated and permissio
   const telemetry = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/observability/summary?windowMinutes=15"), telemetry.send);
   assert.equal(telemetry.result.status, 200); assert.equal(telemetry.result.body.windowMinutes, "15");
 });
+
+test("production acceptance requires its machine token before runtime access", async () => {
+  let runtimeCreated = false; const capture = responseCapture();
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret" }, resolveUser: async () => null,
+    readJson: async () => ({}), createRuntimeFn: () => { runtimeCreated = true; return {}; } });
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/production-acceptance"), capture.send);
+  assert.equal(capture.result.status, 401); assert.equal(runtimeCreated, false);
+});
+
+test("production acceptance returns PostgreSQL-backed evidence for the exact release", async () => {
+  const capture = responseCapture(); let reportInput;
+  const runtime = { ready: Promise.resolve(), applications: { list: () => [] },
+    acceptance: { report: async input => { reportInput = input; return { ok: true, releaseSha: input.releaseSha, components: {}, workspaces: [] }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: "release-1" },
+    resolveUser: async () => null, readJson: async () => ({}), createRuntimeFn: () => runtime,
+    checkHealthFn: async () => ({ ok: true, pgvector: true, migrationsCurrent: true }) });
+  await adapter.handle({ method: "GET", headers: { authorization: "Bearer secret" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance"), capture.send);
+  assert.equal(capture.result.status, 200); assert.equal(capture.result.body.releaseSha, "release-1");
+  assert.equal(reportInput.applications, runtime.applications); assert.equal(reportInput.health.pgvector, true);
+});

@@ -19,10 +19,16 @@ async function main() {
   if (!health.ok) throw new Error("Nexus worker refuses to start before pgvector and migrations are ready.");
   const deliveryProviders=createNotificationProviders();
   const handlers=createHandlers({ runtime,deliveryProviders });
-  const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, logger });
+  const queues = ["default"];
+  const releaseSha = process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development";
+  const handlerNames = Object.keys(handlers);
+  await runtime.acceptance.heartbeatWorker({ workerId, releaseSha, queues, handlers: handlerNames, status: "ready" });
+  const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, queues, logger });
   logger.info("worker.started", { workerId, health, registeredHandlers: Object.keys(handlers) });
   while (!stopping) {
     const result = await worker.runOne();
+    await runtime.acceptance.heartbeatWorker({ workerId, releaseSha, queues, handlers: handlerNames,
+      status: "ready", lastJobId: result.job?.job_id || null });
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }
 }
