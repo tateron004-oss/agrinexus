@@ -19,6 +19,10 @@ class ArtifactRepository {
     const result=await this.db.query(`select * from nexus_artifacts where ${where} order by updated_at desc limit $${values.length}`,values);
     return result.rows || result;
   }
+  async get({ tenantId, ownerId, artifactId }) {
+    const result=await this.db.query(`select * from nexus_artifacts where tenant_id=$1 and owner_id=$2 and artifact_id=$3 and deleted_at is null`,[tenantId,ownerId,artifactId]);
+    return (result.rows||result)[0]||null;
+  }
   async remove({ tenantId, ownerId, artifactId }) {
     const result=await this.db.query(`update nexus_artifacts set state='deleted',deleted_at=now(),object_key=null,updated_at=now()
       where tenant_id=$1 and owner_id=$2 and artifact_id=$3 and deleted_at is null returning artifact_id`,[tenantId,ownerId,artifactId]);
@@ -26,4 +30,3 @@ class ArtifactRepository {
   }
 }
 module.exports=Object.freeze({ArtifactRepository});
-

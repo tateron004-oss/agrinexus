@@ -21,5 +21,19 @@ class ObservabilityRepository {
       group by component,event_type,outcome order by component,event_type,outcome`,[tenantId,minutes]);
     return {windowMinutes:minutes,series:result.rows||result};
   }
+  async operationalView({tenantId,windowMinutes=60}) {
+    const summary=await this.summary({tenantId,windowMinutes});
+    const [workers,jobs,release]=await Promise.all([
+      this.db.query(`select worker_id,release_sha,status,last_job_id,last_heartbeat_at from nexus_worker_instances order by last_heartbeat_at desc limit 20`),
+      this.db.query(`select state,count(*)::int as count from nexus_worker_jobs where tenant_id=$1 group by state order by state`,[tenantId]),
+      this.db.query(`select release_sha,state,activated_at,updated_at from nexus_release_activations order by updated_at desc limit 5`)
+    ]);
+    const series=summary.series;
+    return {ok:true,generatedAt:new Date().toISOString(),windowMinutes:summary.windowMinutes,
+      release:(release.rows||release)[0]||null,services:(workers.rows||workers),queues:(jobs.rows||jobs),
+      errors:series.filter(item=>item.outcome==="failed"||item.outcome==="error"),
+      providers:series.filter(item=>item.provider),traces:series.filter(item=>item.event_type||item.trace_id),
+      costMicros:series.reduce((sum,item)=>sum+Number(item.cost_micros||0),0),series};
+  }
 }
 module.exports=Object.freeze({ObservabilityRepository});

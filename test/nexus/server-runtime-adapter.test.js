@@ -76,3 +76,6 @@ test("production acceptance returns PostgreSQL-backed evidence for the exact rel
   assert.equal(capture.result.status, 200); assert.equal(capture.result.body.releaseSha, "release-1");
   assert.equal(reportInput.applications, runtime.applications); assert.equal(reportInput.health.pgvector, true);
 });
+
+test("machine evidence rejects a stale release SHA before recording",async()=>{let recorded=false;const runtime={ready:Promise.resolve(),acceptance:{recordEvidence:async()=>{recorded=true;}},applications:{get:()=>({})},workspaceMigrations:{activate:async()=>({})}};const adapter=createServerRuntimeAdapter({env:{NEXUS_ACCEPTANCE_TOKEN:"token",RENDER_GIT_COMMIT:"active"},resolveUser:async()=>null,readJson:async()=>({releaseSha:"stale",component:"testing"}),createRuntimeFn:()=>runtime});
+ const response=responseCapture();await adapter.handle({method:"POST",headers:{authorization:"Bearer token"}},{},new URL("http://local/api/nexus/runtime/production-acceptance/evidence"),response.send);assert.equal(response.result.status,409);assert.equal(recorded,false);});
