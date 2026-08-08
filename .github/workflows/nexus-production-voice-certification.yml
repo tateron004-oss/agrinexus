@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      NEXUS_LIVE_BASE_URL: https://agrinexus-platform.onrender.com
+      NEXUS_LIVE_BASE_URL: https://nexus-genesis-certified.onrender.com
       NEXUS_LIVE_EXPECTED_TURNS: "16"
       NEXUS_LIVE_REQUIRE_WORKSPACES: "1"
       NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT: "0"
