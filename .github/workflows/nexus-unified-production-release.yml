@@ -35,6 +35,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+      - name: Install locked production dependencies
+        run: npm ci --ignore-scripts
       - name: Require machine deployment control
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
