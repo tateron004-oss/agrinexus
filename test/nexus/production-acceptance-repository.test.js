@@ -3,6 +3,15 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { ProductionAcceptanceRepository, COMPONENTS } = require("../../nexus/acceptance/repository.js");
 
+test("worker heartbeat writes valid JSON arrays for jsonb columns", async () => {
+  let parameters;
+  const db = { query: async (_sql, values) => { parameters = values; return { rows: [{ worker_id: values[0] }] }; } };
+  await new ProductionAcceptanceRepository(db).heartbeatWorker({ workerId: "worker-1", releaseSha: "a".repeat(40),
+    queues: ["default"], handlers: ["acceptance.canary"], status: "ready" });
+  assert.deepEqual(JSON.parse(parameters[2]), ["default"]);
+  assert.deepEqual(JSON.parse(parameters[3]), ["acceptance.canary"]);
+});
+
 test("report fails closed and enumerates all 16 workspace migrations", async () => {
   const responses = [
     { rows: [] }, { rows: [] }, { rows: [] },
