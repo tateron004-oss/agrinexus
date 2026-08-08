@@ -237,24 +237,43 @@ function sanitizeDiagnostic(value) {
     .slice(0, 1000);
 }
 
-async function fetchDeployDiagnostics(client, service) {
+function deployStartedAt(value, now = Date.now()) {
+  const deploy = value?.deploy || value || {};
+  const parsed = Date.parse(deploy.createdAt || deploy.created_at || deploy.startedAt || deploy.started_at || "");
+  return Number.isFinite(parsed) ? parsed : now - (10 * 60 * 1000);
+}
+
+async function fetchDeployDiagnostics(client, service, deploy, { attempts = 3, retryMs = 2000 } = {}) {
   const ownerId = service.ownerId || service.owner?.id;
   if (!ownerId) return [];
   try {
+    const startMs = deployStartedAt(deploy) - (2 * 60 * 1000);
     const query = new URLSearchParams({
       ownerId,
-      resource: service.id,
-      type: "build",
+      startTime: new Date(startMs).toISOString(),
+      endTime: new Date(Date.now() + (60 * 1000)).toISOString(),
       direction: "backward",
       limit: "100"
     });
-    const result = await client.request(`/logs?${query}`);
-    const logs = Array.isArray(result?.logs) ? result.logs : [];
-    return logs.slice(0, 25).map(log => ({
-      timestamp: log.timestamp || log.time || null,
-      level: log.level || null,
-      message: sanitizeDiagnostic(log.message || log.text || log.log || JSON.stringify(log))
-    }));
+    query.append("resource", service.id);
+    query.append("type", "build");
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const result = await client.request(`/logs?${query}`);
+      const logs = (Array.isArray(result?.logs) ? result.logs : [])
+        .filter(log => {
+          const timestamp = Date.parse(log.timestamp || log.time || "");
+          return !Number.isFinite(timestamp) || timestamp >= startMs;
+        });
+      if (logs.length || attempt === attempts - 1) {
+        return logs.slice(0, 25).map(log => ({
+          timestamp: log.timestamp || log.time || null,
+          level: log.level || null,
+          message: sanitizeDiagnostic(log.message || log.text || log.log || JSON.stringify(log))
+        }));
+      }
+      await sleep(retryMs);
+    }
+    return [];
   } catch (error) {
     return [{ timestamp: null, level: "diagnostic_error", message: sanitizeDiagnostic(error.message) }];
   }
@@ -281,7 +300,7 @@ async function deployExactSha(client, service, releaseSha, { pollMs = 15000, tim
       return { serviceId: service.id, serviceName: service.name, deployId: id, status, commit: commit || releaseSha };
     }
     if (TERMINAL_FAILURE.has(status)) {
-      const diagnostics = await fetchDeployDiagnostics(client, service);
+      const diagnostics = await fetchDeployDiagnostics(client, service, current);
       const failure = {
         serviceId: service.id,
         serviceName: service.name,
