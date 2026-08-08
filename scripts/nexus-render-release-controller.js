@@ -373,6 +373,8 @@ async function run(env = process.env, options = {}) {
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
+  await ensureGeneratedEnvSecret(client, worker.id, "SESSION_SECRET", 32, 48);
+  await ensureGeneratedEnvSecret(client, worker.id, "PASSWORD_PEPPER", 16, 32);
   await installEnvValue(client, worker.id, "NEXUS_RELEASE_SHA", releaseSha);
   const services = [];
   for (const service of [web, worker, provider]) {
