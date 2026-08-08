@@ -50,7 +50,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       try { const active=await runtime();await active.ready;const body=await readJson(req);const releaseSha=env.RENDER_GIT_COMMIT||env.GIT_SHA||"development";const workspaceId=decodeURIComponent(workspaceProofMatch[1]);
         if(body.releaseSha!==releaseSha){send(res,409,{error:"Workspace proof SHA does not match the active release.",code:"evidence_sha_mismatch"});return true;}
         if(!active.applications.get(workspaceId)){send(res,404,{error:"Unknown workspace.",code:"workspace_not_found"});return true;}
-        const result=await active.workspaceMigrations.activate({workspaceId,proofs:body.proofs,releaseSha});send(res,201,{ok:true,migration:result});
+        const result=await active.workspaceMigrations.activate({workspaceId,proofs:body.proofs,releaseSha,rollbackRef:body.rollbackRef});send(res,201,{ok:true,migration:result});
       } catch(error){send(res,400,{error:error.message,code:error.code||"workspace_proof_rejected"});} return true;
     }
     const user = await resolveUser(req);
