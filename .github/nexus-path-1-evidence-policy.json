@@ -1,0 +1,19 @@
+{
+  "schema": "nexus.path-1-production-evidence.v1",
+  "mode": "evidence-collection-only",
+  "baselineSha": "3fdc872b89ac3e4968050df52d7b9881075157d1",
+  "exactReleaseBindingRequired": true,
+  "runtimeCutoverAuthorized": false,
+  "removalAuthorized": false,
+  "rollbackRequired": true,
+  "requiredProductionStabilityPasses": 3,
+  "physicalVoiceCertificationRequired": true,
+  "workspaces": [
+    "agriculture", "health", "chronic-care", "telehealth", "mobile-clinic",
+    "pharmacy", "learning", "workforce", "marketplace", "maps", "music-media",
+    "documents", "reminders", "offline-queue", "live-knowledge"
+  ],
+  "requiredProofs": ["contract", "tenant-isolation", "durable-write", "receipt", "browser-outcome"],
+  "initialEvidenceState": "pending",
+  "activationRule": "No workspace may activate until every proof references verified production evidence for the same deployed release SHA and rollback remains available."
+}
