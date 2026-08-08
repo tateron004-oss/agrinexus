@@ -7,7 +7,14 @@ const fs = require("node:fs");
 const API = "https://api.render.com/v1";
 const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
 const TERMINAL_SUCCESS = new Set(["live", "succeeded"]);
-const TERMINAL_FAILURE = new Set(["build_failed", "update_failed", "canceled", "cancelled", "deactivated"]);
+const TERMINAL_FAILURE = new Set([
+  "build_failed",
+  "update_failed",
+  "pre_deploy_failed",
+  "canceled",
+  "cancelled",
+  "deactivated"
+]);
 
 function required(value, name) {
   if (!value) throw new Error(`${name} is required`);
@@ -213,6 +220,15 @@ async function resolveReusableDeploy(client, service, releaseSha) {
   return deployments.find(deploy => deployCommit(deploy) === releaseSha && !TERMINAL_FAILURE.has(deployStatus(deploy))) || null;
 }
 
+function deployFailureDetails(value) {
+  const deploy = value?.deploy || value || {};
+  const details = {
+    status: deployStatus(deploy),
+    failureReason: deploy.failureReason || deploy.reason || deploy.message || null
+  };
+  return JSON.stringify(details);
+}
+
 async function deployExactSha(client, service, releaseSha, { pollMs = 15000, timeoutMs = 45 * 60 * 1000 } = {}) {
   const reusable = await resolveReusableDeploy(client, service, releaseSha);
   const created = reusable || await client.request(`/services/${service.id}/deploys`, {
@@ -233,7 +249,9 @@ async function deployExactSha(client, service, releaseSha, { pollMs = 15000, tim
       if (commit && commit !== releaseSha) throw new Error(`${service.name} deployed ${commit}; expected ${releaseSha}`);
       return { serviceId: service.id, serviceName: service.name, deployId: id, status, commit: commit || releaseSha };
     }
-    if (TERMINAL_FAILURE.has(status)) throw new Error(`${service.name} deploy ${id} failed with status ${status}`);
+    if (TERMINAL_FAILURE.has(status)) {
+      throw new Error(`${service.name} deploy ${id} failed: ${deployFailureDetails(current)}`);
+    }
     await sleep(pollMs);
     current = await client.request(`/services/${service.id}/deploys/${id}`);
   }

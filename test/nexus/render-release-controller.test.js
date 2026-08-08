@@ -137,3 +137,23 @@ test("reusable deploy discovery ignores failed and unrelated deployments", async
   const result = await resolveReusableDeploy(client, { id: "srv-1" }, "sha-1");
   assert.equal(result.id, "dep-match");
 });
+
+test("exact deploy fails immediately when the pre-deploy command fails", async () => {
+  const responses = [
+    [],
+    {
+      id: "dep-1",
+      status: "pre_deploy_failed",
+      reason: "migration command exited 1",
+      commit: { id: "sha-1" }
+    }
+  ];
+  const client = {
+    request: async () => responses.shift()
+  };
+  await assert.rejects(
+    deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100 }),
+    /pre_deploy_failed.*migration command exited 1/
+  );
+  assert.equal(responses.length, 0);
+});
