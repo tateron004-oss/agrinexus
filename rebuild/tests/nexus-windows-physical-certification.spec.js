@@ -165,13 +165,22 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   try {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const standardUserEntry = page.getByRole("button", { name: "Start as User", exact: true });
+    const enterStandardUser = async () => {
+      if (await standardUserEntry.isVisible().catch(() => false)) {
+        await page.getByRole("textbox", { name: "Your name" }).fill("Ron");
+        await standardUserEntry.click();
+      }
+      await expect(page.locator("#appView"), "Standard User entry must reveal the production application").toBeVisible({ timeout: 15000 });
+      await expect(page.locator("#loginView"), "Sign-in must close after Standard User entry").toBeHidden({ timeout: 15000 });
+    };
+    await enterStandardUser();
+    await page.waitForTimeout(3000);
     if (await standardUserEntry.isVisible().catch(() => false)) {
-      await page.getByRole("textbox", { name: "Your name" }).fill("Ron");
-      await standardUserEntry.click();
+      await enterStandardUser();
     }
-    await expect(page.locator("#appView"), "Standard User entry must reveal the production application").toBeVisible({ timeout: 15000 });
-    await expect(page.locator("#loginView"), "Sign-in must close after Standard User entry").toBeHidden({ timeout: 15000 });
     const primaryVoiceEntry = page.locator('[data-nexus-primary-voice-entry="true"]');
+    await expect(page.locator("#appView"), "Application must remain visible before microphone activation").toBeVisible({ timeout: 15000 });
+    await expect(page.locator("#loginView"), "Sign-in must remain closed before microphone activation").toBeHidden({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Primary microphone button must be visible after Standard User entry").toBeVisible({ timeout: 15000 });
     await primaryVoiceEntry.click();
     await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
