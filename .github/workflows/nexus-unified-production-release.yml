@@ -82,7 +82,9 @@ jobs:
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
           NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
         run: |
-          node scripts/nexus-run-production-evidence-probes.js
+          set -o pipefail
+          mkdir -p output
+          node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
       - name: Establish three consecutive deploy-stage production passes
