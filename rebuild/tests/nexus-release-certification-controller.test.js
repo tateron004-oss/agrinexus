@@ -42,7 +42,31 @@ async function verifyAuthenticatedIdentityRequest() {
   assert.doesNotMatch(request.url, /acceptance-secret/);
 }
 
+async function verifyPublicIdentityRequest() {
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url, options });
+    if (url.endsWith("/api/nexus/runtime/status")) return { ok: true, json: async () => ({ releaseSha: "1e328c28" }) };
+    return { ok: true, arrayBuffer: async () => Buffer.from("deployed-bundle") };
+  };
+  try {
+    const identity = await fetchIdentity("https://nexus.example/", null, "/app.js");
+    assert.equal(identity.releaseSha, "1e328c28");
+    assert.match(identity.bundleSha256, /^[0-9a-f]{64}$/);
+    assert.equal(identity.source, "public-runtime-and-bundle");
+  } finally {
+    global.fetch = originalFetch;
+  }
+  assert.deepEqual(requests.map(item => item.url), [
+    "https://nexus.example/api/nexus/runtime/status",
+    "https://nexus.example/app.js"
+  ]);
+  assert.equal(requests.every(item => !item.options.headers.authorization), true);
+}
+
 verifyAuthenticatedIdentityRequest()
+  .then(verifyPublicIdentityRequest)
   .then(() => console.log("Nexus release certification controller: PASS"))
   .catch((error) => {
     console.error(error);
