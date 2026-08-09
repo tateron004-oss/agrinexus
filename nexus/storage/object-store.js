@@ -5,12 +5,21 @@ const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadO
 
 function required(value, label) { if (!value) throw new Error(`${label} is required`); return value; }
 function safeSegment(value) { return String(value).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 160); }
+function normalizeS3Endpoint(value) {
+  if (!value) return undefined;
+  const trimmed = String(value).trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+  if (!trimmed) return undefined;
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(candidate);
+  if (!/^https?:$/.test(parsed.protocol) || !parsed.hostname) throw new Error("S3_ENDPOINT must be an HTTP(S) endpoint");
+  return parsed.toString().replace(/\/$/, "");
+}
 
 class S3ObjectStore {
   constructor({ bucket, region, endpoint, accessKeyId, secretAccessKey, forcePathStyle = true, client } = {}) {
     this.bucket = required(bucket, "S3_BUCKET");
     this.client = client || new S3Client({
-      region: required(region, "S3_REGION"), endpoint: endpoint || undefined, forcePathStyle,
+      region: required(region, "S3_REGION"), endpoint: normalizeS3Endpoint(endpoint), forcePathStyle,
       credentials: { accessKeyId: required(accessKeyId, "S3_ACCESS_KEY_ID"), secretAccessKey: required(secretAccessKey, "S3_SECRET_ACCESS_KEY") }
     });
   }
@@ -43,4 +52,4 @@ function createObjectStore(env = process.env, options = {}) {
     forcePathStyle: String(env.S3_FORCE_PATH_STYLE || "true").toLowerCase() !== "false", client: options.client });
 }
 
-module.exports = Object.freeze({ S3ObjectStore, createObjectStore });
+module.exports = Object.freeze({ S3ObjectStore, createObjectStore, normalizeS3Endpoint });
