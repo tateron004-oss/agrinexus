@@ -214,7 +214,8 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     }
     await expect(page.locator("#appView"), "Application must remain visible after microphone activation").toBeVisible({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Permanent microphone must remain visible after activation").toBeVisible({ timeout: 15000 });
-    await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
+    await expect(primaryVoiceEntry, "Permanent microphone must report the connected state").toHaveAttribute("data-nexus-permanent-microphone-state", "connected", { timeout: 60000 });
+    await expect(page.locator("#nexusPermanentMicrophoneStatus"), "Permanent microphone status must confirm Realtime listening").toContainText(/Realtime voice is connected and listening/i, { timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
       timeout: 60000
     }).toBe("connected");
