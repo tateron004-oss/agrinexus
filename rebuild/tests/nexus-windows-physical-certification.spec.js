@@ -164,6 +164,10 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   try {
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() =>
+      !("serviceWorker" in navigator) || Boolean(navigator.serviceWorker.controller)
+    , null, { timeout: 30000 });
+    await page.waitForTimeout(2000);
     const standardUserEntry = page.getByRole("button", { name: "Start as User", exact: true });
     const enterStandardUser = async () => {
       const submitEntry = async () => {
