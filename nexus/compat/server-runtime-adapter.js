@@ -234,13 +234,22 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         let previous = null;
         try { const stored = await active.objectStorage.get(key); previous = JSON.parse(stored.body.toString("utf8")); }
         catch (error) { if (!["NoSuchKey", "NotFound", "NoSuchObject"].includes(error?.name) && !["NoSuchKey", "NotFound"].includes(error?.Code)) throw error; }
-        const marker = Buffer.from(JSON.stringify({ releaseSha, writtenAt: new Date().toISOString() }));
+        const priorHistory = Array.isArray(previous?.releases)
+          ? previous.releases.filter(item => item && /^[0-9a-f]{40}$/.test(item.releaseSha || ""))
+          : /^[0-9a-f]{40}$/.test(previous?.releaseSha || "")
+            ? [{ releaseSha: previous.releaseSha, writtenAt: previous.writtenAt || null }]
+            : [];
+        const priorRelease = priorHistory.find(item => item.releaseSha !== releaseSha) || null;
+        const releases = priorHistory.some(item => item.releaseSha === releaseSha)
+          ? priorHistory
+          : [...priorHistory, { releaseSha, writtenAt: new Date().toISOString() }];
+        const marker = Buffer.from(JSON.stringify({ schema: "nexus.object-storage-release-history.v1", releases }));
         const written = await active.objectStorage.put({ key, body: marker, contentType: "application/json",
           metadata: { purpose: "production-acceptance", release: releaseSha } });
         const reread = await active.objectStorage.get(key); const current = JSON.parse(reread.body.toString("utf8"));
-        const currentWriteVerified = current.releaseSha === releaseSha && written.sizeBytes === marker.length;
-        const priorReleaseSha = typeof previous?.releaseSha === "string" ? previous.releaseSha : null;
-        const redeployPersistent = /^[0-9a-f]{40}$/.test(priorReleaseSha || "") && priorReleaseSha !== releaseSha && currentWriteVerified;
+        const currentWriteVerified = Array.isArray(current.releases) && current.releases.some(item => item.releaseSha === releaseSha) && written.sizeBytes === marker.length;
+        const priorReleaseSha = priorRelease?.releaseSha || null;
+        const redeployPersistent = Boolean(priorReleaseSha) && currentWriteVerified;
         send(res, redeployPersistent ? 200 : 202, { ok: true, releaseSha, currentWriteVerified, redeployPersistent,
           priorReleaseObserved: Boolean(priorReleaseSha), priorReleaseDifferent: Boolean(priorReleaseSha && priorReleaseSha !== releaseSha) });
       } catch (error) {
