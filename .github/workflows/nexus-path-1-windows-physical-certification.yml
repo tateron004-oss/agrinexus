@@ -30,7 +30,7 @@ jobs:
     env:
       NEXUS_CLEAN_BASE_URL: ${{ inputs.base_url || 'https://nexus-genesis-certified.onrender.com' }}
       NEXUS_EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
-      NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
+      NEXUS_EXPECTED_BUNDLE: public/app.js
     steps:
       - name: Check out exact release source
         uses: actions/checkout@v4
@@ -48,15 +48,7 @@ jobs:
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           node scripts/nexus-release-certification-controller.js verify-deployment
-          if (-not $env:NEXUS_ACCEPTANCE_TOKEN) { throw "NEXUS_ACCEPTANCE_TOKEN is required for production certification." }
-          $headers = @{ Authorization = "Bearer $env:NEXUS_ACCEPTANCE_TOKEN" }
-          $report = Invoke-RestMethod -Uri "$env:NEXUS_CLEAN_BASE_URL/api/nexus/provider-readiness-report" -Headers $headers -TimeoutSec 60
-          if ($report.activatedProviders -notcontains "S3-Compatible Storage (s3-storage-provider)") {
-            throw "Production S3-compatible storage is not active."
-          }
-          if ($report.liveReadyProviders -notcontains "YouTube Data / Embed Support (youtube-media-provider)") {
-            throw "Production YouTube search/embed support is not live-ready."
-          }
+          node scripts/nexus-verify-launch-provider-readiness.js
 
       - name: Verify protected foundation before device access
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
