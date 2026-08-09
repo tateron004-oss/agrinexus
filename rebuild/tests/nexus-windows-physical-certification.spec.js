@@ -178,7 +178,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     if (await standardUserEntry.isVisible().catch(() => false)) {
       await enterStandardUser();
     }
-    const primaryVoiceEntry = page.locator('[data-nexus-primary-voice-entry="true"]');
+    const primaryVoiceEntry = page.locator('[data-nexus-permanent-microphone-control="true"]');
     await expect(page.locator("#appView"), "Application must remain visible before microphone activation").toBeVisible({ timeout: 15000 });
     await expect(page.locator("#loginView"), "Sign-in must remain closed before microphone activation").toBeHidden({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Primary microphone button must be visible after Standard User entry").toBeVisible({ timeout: 15000 });
