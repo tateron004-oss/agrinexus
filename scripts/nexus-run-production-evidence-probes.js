@@ -5,14 +5,27 @@ const path = require("node:path");
 const { classifyProviders } = require("./lib/nexus-launch-provider-profile.js");
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
+async function requestWithRetry(url, init, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try { return await fetch(url, init); }
+    catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  const failure = new Error(`Production probe transport failed after ${attempts} attempts.`);
+  failure.code = lastError?.code || lastError?.cause?.code || lastError?.name || "probe_transport_failed";
+  throw failure;
+}
 async function get(url, headers = {}) {
-  const response = await fetch(url, { headers: { accept: "application/json", "cache-control": "no-cache", ...headers } });
+  const response = await requestWithRetry(url, { headers: { accept: "application/json", "cache-control": "no-cache", ...headers } });
   const text = await response.text(); let body;
   try { body = JSON.parse(text); } catch { body = { raw: text.slice(0, 500) }; }
   return { url, status: response.status, ok: response.ok, body };
 }
 async function post(url, headers, body) {
-  const response = await fetch(url, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+  const response = await requestWithRetry(url, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
   const text = await response.text(); let parsed;
   try { parsed = JSON.parse(text); } catch { parsed = { raw: text.slice(0, 500) }; }
   return { url, status: response.status, ok: response.ok, body: parsed };
@@ -152,5 +165,5 @@ async function run(env = process.env) {
   if (failed.length) throw new Error(`Initial production component probes failed: ${failed.join(", ")}`);
   return componentProbes;
 }
-if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = Object.freeze({ component, objectStorageComponent, securityComponent, run, post });
+if (require.main === module) run().catch(error => { console.error(JSON.stringify({ error: error.message, code: error.code || error.name || "probe_failed" })); process.exit(1); });
+module.exports = Object.freeze({ component, objectStorageComponent, securityComponent, requestWithRetry, run, post });
