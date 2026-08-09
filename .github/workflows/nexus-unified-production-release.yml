@@ -54,6 +54,7 @@ jobs:
           node test/nexus/production-identity-probe.test.js
           node test/nexus/production-observability-probe.test.js
           node test/nexus/production-object-storage-probe.test.js
+          node test/nexus/production-release-readiness.test.js
           node test/nexus/production-task-engine-probe.test.js
           node test/nexus/production-semantic-memory-probe.test.js
           node test/nexus/production-consent-audit-probe.test.js
@@ -84,19 +85,27 @@ jobs:
           node scripts/nexus-run-production-evidence-probes.js
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
-      - name: Establish three consecutive production passes
+      - name: Establish three consecutive deploy-stage production passes
+        env:
+          NEXUS_PROBE_FILE: output/nexus-production-probes.json
+          NEXUS_PROOF_FILE: output/nexus-production-proof.json
+          NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
+          NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
         run: |
           set -euo pipefail
           for pass in 1 2 3; do
-            echo "Starting exact-SHA production acceptance pass ${pass}/3"
-            NEXUS_PASS_NUMBER="$pass" node scripts/nexus-21-objective-production-acceptance.js
+            echo "Starting exact-SHA deploy-stage production pass ${pass}/3"
+            node scripts/nexus-run-production-evidence-probes.js
+            node scripts/nexus-compile-production-evidence.js
+            node scripts/nexus-record-production-proof.js
+            NEXUS_PASS_NUMBER="$pass" node scripts/nexus-production-release-readiness.js
             if [ "$pass" -lt 3 ]; then sleep 120; fi
           done
           node - <<'NODE'
           const fs=require('fs');
-          const reports=[1,2,3].map(n=>JSON.parse(fs.readFileSync(`output/nexus-21-objective-pass-${n}.json`)));
+          const reports=[1,2,3].map(n=>JSON.parse(fs.readFileSync(`output/nexus-production-release-pass-${n}.json`)));
           if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established.');
-          fs.writeFileSync('output/nexus-21-objective-streak.json',JSON.stringify({certificationComplete:true,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
+          fs.writeFileSync('output/nexus-production-release-streak.json',JSON.stringify({releaseReady:true,finalPath1Certification:false,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
           NODE
       - name: Publish unified release evidence
         if: always()

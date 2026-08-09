@@ -2,6 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const {
   CERTIFICATION_CONTRACT_VERSION,
   sha256File
@@ -21,14 +22,30 @@ function sameCommit(expected, actual) {
     (expected === actual || expected.startsWith(actual) || actual.startsWith(expected));
 }
 
-async function fetchIdentity(baseUrl, acceptanceToken) {
+async function fetchIdentity(baseUrl, acceptanceToken, publicAssetPath = "/app.js") {
   const headers = { "cache-control": "no-cache" };
-  if (acceptanceToken) headers.authorization = `Bearer ${acceptanceToken}`;
-  const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/certification/identity`, {
-    headers
-  });
-  if (!response.ok) throw new Error(`identity endpoint returned HTTP ${response.status}`);
-  return response.json();
+  const base = baseUrl.replace(/\/+$/, "");
+  if (acceptanceToken) {
+    headers.authorization = `Bearer ${acceptanceToken}`;
+    const response = await fetch(`${base}/api/certification/identity`, { headers });
+    if (!response.ok) throw new Error(`identity endpoint returned HTTP ${response.status}`);
+    return response.json();
+  }
+  const [runtimeResponse, bundleResponse] = await Promise.all([
+    fetch(`${base}/api/nexus/runtime/status`, { headers }),
+    fetch(`${base}/${String(publicAssetPath).replace(/^\/+/, "")}`, { headers })
+  ]);
+  if (!runtimeResponse.ok) throw new Error(`runtime status returned HTTP ${runtimeResponse.status}`);
+  if (!bundleResponse.ok) throw new Error(`browser bundle returned HTTP ${bundleResponse.status}`);
+  const runtime = await runtimeResponse.json();
+  const bundle = Buffer.from(await bundleResponse.arrayBuffer());
+  return {
+    schema: "nexus.certification.identity.v1",
+    contractVersion: CERTIFICATION_CONTRACT_VERSION,
+    releaseSha: runtime.releaseSha,
+    bundleSha256: crypto.createHash("sha256").update(bundle).digest("hex"),
+    source: "public-runtime-and-bundle"
+  };
 }
 
 function compareIdentity({ identity, expectedSha, expectedBundle }) {
@@ -58,7 +75,8 @@ async function verifyDeployment({
 
   while (Date.now() < deadline) {
     try {
-      lastIdentity = await fetchIdentity(baseUrl, acceptanceToken);
+      const publicAssetPath = `/${path.basename(bundlePath)}`;
+      lastIdentity = await fetchIdentity(baseUrl, acceptanceToken, publicAssetPath);
       const failures = compareIdentity({ identity: lastIdentity, expectedSha, expectedBundle });
       attempts.push({ at: new Date().toISOString(), identity: lastIdentity, failures });
       if (failures.length === 0) {
