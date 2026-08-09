@@ -164,7 +164,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   try {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.locator("#nexus-orb").click();
+    await page.locator('[data-nexus-orb="true"]').click();
     await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
       timeout: 60000
