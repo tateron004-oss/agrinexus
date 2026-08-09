@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/nexus-path-1-windows-physical-certification.yml"
+      - "rebuild/tests/nexus-windows-physical-certification.spec.js"
+      - "rebuild/tests/nexus-path-1-physical-global-setup.js"
+      - "rebuild/tests/nexus-path-1-physical.playwright.config.js"
   workflow_dispatch:
     inputs:
       expected_release_sha:
@@ -72,7 +75,7 @@ jobs:
           1..3 | ForEach-Object {
             $pass = $_
             Write-Host "Starting Windows physical certification pass $pass/3"
-            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --workers=1 --reporter=line
+            npx playwright test rebuild/tests/nexus-windows-physical-certification.spec.js --config=rebuild/tests/nexus-path-1-physical.playwright.config.js --workers=1 --reporter=line
             if ($LASTEXITCODE -ne 0) { throw "Physical certification pass $pass failed." }
             Copy-Item -Recurse -Force "output/nexus-clean-windows-certification" "output/nexus-path-1-physical/pass-$pass"
             if ($pass -lt 3) { Start-Sleep -Seconds 30 }
