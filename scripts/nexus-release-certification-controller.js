@@ -21,9 +21,11 @@ function sameCommit(expected, actual) {
     (expected === actual || expected.startsWith(actual) || actual.startsWith(expected));
 }
 
-async function fetchIdentity(baseUrl) {
+async function fetchIdentity(baseUrl, acceptanceToken) {
+  const headers = { "cache-control": "no-cache" };
+  if (acceptanceToken) headers.authorization = `Bearer ${acceptanceToken}`;
   const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/certification/identity`, {
-    headers: { "cache-control": "no-cache" }
+    headers
   });
   if (!response.ok) throw new Error(`identity endpoint returned HTTP ${response.status}`);
   return response.json();
@@ -42,6 +44,7 @@ async function verifyDeployment({
   baseUrl,
   expectedSha,
   bundlePath,
+  acceptanceToken,
   timeoutMs = 12 * 60 * 1000,
   intervalMs = 15000
 }) {
@@ -55,7 +58,7 @@ async function verifyDeployment({
 
   while (Date.now() < deadline) {
     try {
-      lastIdentity = await fetchIdentity(baseUrl);
+      lastIdentity = await fetchIdentity(baseUrl, acceptanceToken);
       const failures = compareIdentity({ identity: lastIdentity, expectedSha, expectedBundle });
       attempts.push({ at: new Date().toISOString(), identity: lastIdentity, failures });
       if (failures.length === 0) {
@@ -100,6 +103,7 @@ async function main() {
     baseUrl: process.env.NEXUS_CLEAN_BASE_URL,
     expectedSha: process.env.NEXUS_EXPECTED_RELEASE_SHA,
     bundlePath: process.env.NEXUS_EXPECTED_BUNDLE || "rebuild/browser/nexus-clean.bundle.js",
+    acceptanceToken: process.env.NEXUS_ACCEPTANCE_TOKEN,
     timeoutMs: Number(process.env.NEXUS_DEPLOYMENT_TIMEOUT_MS || 12 * 60 * 1000),
     intervalMs: Number(process.env.NEXUS_DEPLOYMENT_POLL_MS || 15000)
   });
@@ -112,4 +116,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { compareIdentity, sameCommit, verifyDeployment };
+module.exports = { compareIdentity, fetchIdentity, sameCommit, verifyDeployment };
