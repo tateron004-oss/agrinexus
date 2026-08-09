@@ -31,6 +31,27 @@ async function post(url, headers, body) {
   return { url, status: response.status, ok: response.ok, body: parsed };
 }
 function receipt(probe) { return `${probe.url} status=${probe.status}${probe.body?.code ? ` code=${probe.body.code}` : ""}`; }
+function exactReleaseReady(runtime, acceptance, releaseSha) {
+  return runtime?.ok === true && acceptance?.ok === true &&
+    runtime.body?.releaseSha === releaseSha && acceptance.body?.releaseSha === releaseSha;
+}
+async function waitForExactRelease(base, headers, releaseSha, attempts = 8) {
+  let runtime; let acceptance;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    [runtime, acceptance] = await Promise.all([
+      get(`${base}/api/nexus/runtime/status`),
+      get(`${base}/api/nexus/runtime/production-acceptance`, headers)
+    ]);
+    if (exactReleaseReady(runtime, acceptance, releaseSha)) return { runtime, acceptance };
+    console.log(JSON.stringify({ exactReleaseWait: { attempt, runtimeStatus: runtime.status,
+      runtimeReleaseSha: runtime.body?.releaseSha || null, acceptanceStatus: acceptance.status,
+      acceptanceReleaseSha: acceptance.body?.releaseSha || null, expectedReleaseSha: releaseSha } }));
+    if (attempt < attempts) await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+  const error = new Error("Production probes did not reach the exact release SHA within the convergence window.");
+  error.code = "exact_release_convergence_timeout";
+  throw error;
+}
 function component(component, releaseSha, probes, facts = {}) {
   const passed = probes.every(probe => probe.ok || (component === "worker" && probe.status === 503)) &&
     probes.every(probe => !probe.body?.releaseSha || probe.body.releaseSha === releaseSha);
@@ -65,9 +86,9 @@ async function run(env = process.env) {
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const headers = { authorization: `Bearer ${token}` };
-  const [runtime, health, integrations, provider, acceptance, taskEngine, semanticMemory, consentAudit, offlineSync, identity, observability, objectStorage] = await Promise.all([
-    get(`${base}/api/nexus/runtime/status`), get(`${base}/api/healthz`), get(`${base}/api/integrations`),
-    get(`${providerBase}/healthz`), get(`${base}/api/nexus/runtime/production-acceptance`, headers),
+  const { runtime, acceptance } = await waitForExactRelease(base, headers, releaseSha);
+  const [health, integrations, provider, taskEngine, semanticMemory, consentAudit, offlineSync, identity, observability, objectStorage] = await Promise.all([
+    get(`${base}/api/healthz`), get(`${base}/api/integrations`), get(`${providerBase}/healthz`),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/semantic-memory`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/consent-audit`, headers, { releaseSha }),
@@ -76,7 +97,6 @@ async function run(env = process.env) {
     post(`${base}/api/nexus/runtime/production-acceptance/probes/observability`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/object-storage`, headers, { releaseSha })
   ]);
-  if (runtime.body?.releaseSha !== releaseSha || acceptance.body?.releaseSha !== releaseSha) throw new Error("Production probes did not reach the exact release SHA.");
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
   const providerProfile = classifyProviders(integrations.body);
   const providerReady = provider.ok && providerProfile.ready;
@@ -166,4 +186,4 @@ async function run(env = process.env) {
   return componentProbes;
 }
 if (require.main === module) run().catch(error => { console.error(JSON.stringify({ error: error.message, code: error.code || error.name || "probe_failed" })); process.exit(1); });
-module.exports = Object.freeze({ component, objectStorageComponent, securityComponent, requestWithRetry, run, post });
+module.exports = Object.freeze({ component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry, run, post, waitForExactRelease });
