@@ -171,13 +171,10 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         await standardUserEntry.click();
       };
       if (await standardUserEntry.isVisible().catch(() => false)) await submitEntry();
-      await page.waitForFunction(() => {
-        const appVisible = Boolean(document.getElementById("appView")?.getClientRects().length);
-        const loginVisible = Boolean(document.getElementById("loginView")?.getClientRects().length);
-        return (appVisible && !loginVisible) || loginVisible;
-      }, null, { timeout: 15000 });
-      if (await standardUserEntry.isVisible().catch(() => false)) await submitEntry();
       await expect(page.locator("#appView"), "Standard User entry must reveal the production application").toBeVisible({ timeout: 15000 });
+      await page.waitForTimeout(3000);
+      if (await standardUserEntry.isVisible().catch(() => false)) await submitEntry();
+      await expect(page.locator("#appView"), "Application must remain visible after one bounded Standard User re-entry").toBeVisible({ timeout: 15000 });
       await expect(page.locator("#loginView"), "Sign-in must close after one bounded Standard User re-entry").toBeHidden({ timeout: 15000 });
     };
     await enterStandardUser();
