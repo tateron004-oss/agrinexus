@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/nexus-path-1-windows-physical-certification.yml"
+      - ".github/nexus-protected-foundation.json"
+      - "public/app.js"
       - "rebuild/tests/nexus-windows-physical-certification.spec.js"
       - "rebuild/tests/nexus-path-1-physical-global-setup.js"
       - "rebuild/tests/nexus-path-1-physical.playwright.config.js"
