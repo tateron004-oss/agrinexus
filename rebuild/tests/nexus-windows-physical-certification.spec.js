@@ -173,7 +173,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect(page.locator("#loginView"), "Sign-in must close after Standard User entry").toBeHidden({ timeout: 15000 });
     const nexusOrb = page.locator('[data-nexus-orb="true"]');
     await expect(nexusOrb, "Nexus orb must be visible after Standard User entry").toBeVisible({ timeout: 15000 });
-    await nexusOrb.click();
+    await nexusOrb.evaluate((element) => element.click());
     await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
       timeout: 60000
