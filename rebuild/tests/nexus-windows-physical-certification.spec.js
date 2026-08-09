@@ -183,6 +183,22 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect(page.locator("#loginView"), "Sign-in must remain closed before microphone activation").toBeHidden({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Primary microphone button must be visible after Standard User entry").toBeVisible({ timeout: 15000 });
     await primaryVoiceEntry.click();
+    await page.waitForFunction(() => {
+      const entry = Array.from(document.querySelectorAll("button"))
+        .find((button) => button.textContent?.trim() === "Start as User");
+      const signInReturned = Boolean(entry && entry.getClientRects().length);
+      const listening = document.getElementById("nexus-status")?.textContent?.trim() === "Listening";
+      return signInReturned || listening;
+    }, null, { timeout: 60000 });
+    if (await standardUserEntry.isVisible().catch(() => false)) {
+      await enterStandardUser();
+      await expect(page.locator("#appView"), "Application must be restored after microphone activation refresh").toBeVisible({ timeout: 15000 });
+      await expect(page.locator("#loginView"), "Sign-in must close after bounded microphone recovery").toBeHidden({ timeout: 15000 });
+      await expect(primaryVoiceEntry, "Permanent microphone must be restored before the single retry").toBeVisible({ timeout: 15000 });
+      await primaryVoiceEntry.click();
+    }
+    await expect(page.locator("#appView"), "Application must remain visible after microphone activation").toBeVisible({ timeout: 15000 });
+    await expect(primaryVoiceEntry, "Permanent microphone must remain visible after activation").toBeVisible({ timeout: 15000 });
     await expect(page.locator("#nexus-status")).toHaveText("Listening", { timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
       timeout: 60000
