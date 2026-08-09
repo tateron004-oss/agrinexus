@@ -95,9 +95,9 @@ jobs:
           set -euo pipefail
           for pass in 1 2 3; do
             echo "Starting exact-SHA deploy-stage production pass ${pass}/3"
-            node scripts/nexus-run-production-evidence-probes.js
-            node scripts/nexus-compile-production-evidence.js
-            node scripts/nexus-record-production-proof.js
+            NEXUS_CLEAN_BASE_URL="$NEXUS_BASE_URL" NEXUS_EXPECTED_RELEASE_SHA="$EXPECTED_RELEASE_SHA" NEXUS_EXPECTED_BUNDLE=public/app.js \
+              node scripts/nexus-release-certification-controller.js verify-deployment
+            NEXUS_CLEAN_BASE_URL="$NEXUS_BASE_URL" node scripts/nexus-verify-launch-provider-readiness.js
             NEXUS_PASS_NUMBER="$pass" node scripts/nexus-production-release-readiness.js
             if [ "$pass" -lt 3 ]; then sleep 120; fi
           done
