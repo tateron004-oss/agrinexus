@@ -119,7 +119,19 @@ async function run(env = process.env) {
     component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
   ];
   const objectStorageEvidence = objectStorageComponent(releaseSha, objectStorage);
+  const objectStorageDiagnostic = {
+    status: objectStorage.status,
+    ok: objectStorage.ok,
+    code: objectStorage.body?.code || null,
+    releaseSha: objectStorage.body?.releaseSha || null,
+    currentWriteVerified: objectStorage.body?.currentWriteVerified === true,
+    redeployPersistent: objectStorage.body?.redeployPersistent === true,
+    priorReleaseObserved: objectStorage.body?.priorReleaseObserved === true,
+    priorReleaseDifferent: objectStorage.body?.priorReleaseDifferent === true
+  };
+  console.log(JSON.stringify({ objectStorageProbe: objectStorageDiagnostic }, null, 2));
   if (objectStorageEvidence) componentProbes.push(objectStorageEvidence);
+  else componentProbes.push(component("objectStorage", releaseSha, [objectStorage], objectStorageDiagnostic));
   const securityEvidence = securityComponent(releaseSha, env.NEXUS_SECURITY_AUDIT_FILE);
   if (securityEvidence) componentProbes.push(securityEvidence);
   componentProbes[0].passed = taskEngine.ok && taskEngine.body?.ok === true && taskEngine.body?.releaseSha === releaseSha && taskEngine.body?.durable === true && taskEngine.body?.state === "cancelled" && taskEngine.body?.steps === 1;
