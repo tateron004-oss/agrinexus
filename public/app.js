@@ -50438,10 +50438,20 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
     return true;
   } catch (error) {
     const message = safeRealtimeStartupMessage(error);
+    const currentSessionId = realtimeVoiceSession?.sessionId || "";
+    const staleAttempt = Boolean(currentSessionId && currentSessionId !== sessionId);
     try {
-      controller?.close?.("openai-agents-realtime-startup-failed");
+      controller?.close?.(staleAttempt ? "stale-openai-agents-startup-failed" : "openai-agents-realtime-startup-failed");
     } catch {
       // Startup controller may not have completed construction.
+    }
+    if (staleAttempt) {
+      nexusGenesisVoiceDebugLog("stale-openai-realtime-startup-failure-ignored", {
+        failedSessionId: sessionId,
+        currentSessionId,
+        reason: message
+      });
+      return false;
     }
     realtimeVoiceSession = null;
     realtimeVoiceStarting = false;
