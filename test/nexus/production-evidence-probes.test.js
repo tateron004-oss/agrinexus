@@ -4,7 +4,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { component, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
+const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
+test("exact-release convergence requires both runtime and acceptance identities", () => {
+  const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
+  assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
+  assert.equal(exactReleaseReady(response("2".repeat(40)), response(sha), sha), false);
+  assert.equal(exactReleaseReady(response(sha), response("3".repeat(40)), sha), false);
+});
 test("production probe transport retries bounded transient failures", async () => {
   const originalFetch = global.fetch; let calls = 0;
   global.fetch = async () => { calls += 1; if (calls === 1) throw Object.assign(new Error("reset"), { code: "ECONNRESET" }); return { ok: true }; };
