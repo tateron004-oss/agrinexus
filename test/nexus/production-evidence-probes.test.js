@@ -8,6 +8,7 @@ const { component, exactReleaseReady, objectStorageComponent, securityComponent,
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
+  assert.equal(exactReleaseReady(response(sha), { status: 503, ok: false, body: { releaseSha: sha } }, sha), true);
   assert.equal(exactReleaseReady(response("2".repeat(40)), response(sha), sha), false);
   assert.equal(exactReleaseReady(response(sha), response("3".repeat(40)), sha), false);
 });

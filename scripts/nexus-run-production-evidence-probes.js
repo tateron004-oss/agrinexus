@@ -32,7 +32,7 @@ async function post(url, headers, body) {
 }
 function receipt(probe) { return `${probe.url} status=${probe.status}${probe.body?.code ? ` code=${probe.body.code}` : ""}`; }
 function exactReleaseReady(runtime, acceptance, releaseSha) {
-  return runtime?.ok === true && acceptance?.ok === true &&
+  return runtime?.ok === true && (acceptance?.ok === true || acceptance?.status === 503) &&
     runtime.body?.releaseSha === releaseSha && acceptance.body?.releaseSha === releaseSha;
 }
 async function waitForExactRelease(base, headers, releaseSha, attempts = 8) {

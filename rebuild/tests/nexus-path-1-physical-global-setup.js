@@ -15,7 +15,7 @@ module.exports = async function globalSetup() {
     await page.goto(baseURL, { waitUntil: "domcontentloaded" });
     await page.getByRole("textbox", { name: "Your name" }).fill("Ron");
     await page.getByRole("button", { name: "Start as User", exact: true }).click();
-    await page.locator("#nexus-orb").waitFor({ state: "visible", timeout: 60000 });
+    await page.locator('[data-nexus-orb="true"]').waitFor({ state: "visible", timeout: 60000 });
     await context.storageState({ path: storageState });
   } finally {
     await browser.close();
