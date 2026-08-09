@@ -4,7 +4,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { component, objectStorageComponent, securityComponent } = require("../../scripts/nexus-run-production-evidence-probes.js");
+const { component, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
+test("production probe transport retries bounded transient failures", async () => {
+  const originalFetch = global.fetch; let calls = 0;
+  global.fetch = async () => { calls += 1; if (calls === 1) throw Object.assign(new Error("reset"), { code: "ECONNRESET" }); return { ok: true }; };
+  try { assert.equal((await requestWithRetry("https://production/health", {}, 2)).ok, true); assert.equal(calls, 2); }
+  finally { global.fetch = originalFetch; }
+});
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
   const result = component("testing", sha, [probe], { exactSha: sha });
