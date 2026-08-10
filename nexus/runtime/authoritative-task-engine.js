@@ -27,6 +27,7 @@ class AuthoritativeTaskEngine {
         confirmationRequired: Boolean(tool?.confirmation_required),
         idempotencyKey: raw.idempotencyKey || `${command.tenantId}:${createId("step")}` });
     }
+    validateDependencies(normalized);
     let task = createTask({ tenantId: command.tenantId, ownerId: command.actorId,
       conversationId: command.conversationId, correlationId: command.correlationId, goal,
       application, riskTier, priority, dueAt });
@@ -62,6 +63,13 @@ class AuthoritativeTaskEngine {
     const step = await this.requiredStep({ tenantId: context.tenantId, taskId, stepId });
     if (!step.tool_id) throw new NexusRuntimeError("step_has_no_tool", "Step has no executable tool.", 409);
     if (["completed", "cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
+    const taskWithSteps = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+    const dependencies = new Set(step.depends_on || []);
+    const incomplete = (taskWithSteps?.steps || []).filter(candidate => dependencies.has(candidate.step_id) && candidate.state !== "completed");
+    if (incomplete.length || dependencies.size > (taskWithSteps?.steps || []).filter(candidate => dependencies.has(candidate.step_id)).length) {
+      throw new NexusRuntimeError("dependencies_incomplete", "Every prerequisite step must complete before this step can execute.", 409,
+        { stepId, dependencies: [...dependencies], incomplete: incomplete.map(candidate => candidate.step_id) });
+    }
     const candidates = [step.tool_id, ...(step.fallback_tool_ids || [])]; let lastError = null;
     for (const [attempt, toolId] of candidates.entries()) {
       const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
@@ -113,6 +121,24 @@ function authorize(context, tool, step) {
   if (tool.confirmation_required && step.confirmation_state !== "approved") throw new NexusRuntimeError("confirmation_required", "Explicit confirmation is required.", 409);
 }
 function required(value, name) { if (!String(value || "").trim()) throw new NexusRuntimeError("invalid_input", `${name} is required.`); return value.trim(); }
+function validateDependencies(steps) {
+  const ids = new Set(steps.map(step => step.stepId));
+  const edges = new Map(steps.map(step => [step.stepId, step.dependsOn || []]));
+  for (const [stepId, dependencies] of edges) {
+    for (const dependency of dependencies) {
+      if (!ids.has(dependency)) throw new NexusRuntimeError("unknown_dependency", `Step ${stepId} depends on an unknown step.`);
+      if (dependency === stepId) throw new NexusRuntimeError("cyclic_dependencies", "A task step cannot depend on itself.");
+    }
+  }
+  const visiting = new Set(); const visited = new Set();
+  const visit = stepId => {
+    if (visiting.has(stepId)) throw new NexusRuntimeError("cyclic_dependencies", "Task step dependencies must be acyclic.");
+    if (visited.has(stepId)) return;
+    visiting.add(stepId); for (const dependency of edges.get(stepId) || []) visit(dependency);
+    visiting.delete(stepId); visited.add(stepId);
+  };
+  for (const stepId of ids) visit(stepId);
+}
 function makeReceipt(executionId, taskId, stepId, toolId, key, state, verification) {
   return { schema: "nexus.receipt.v1", receiptId: createId("receipt"), executionId, taskId, stepId,
     toolId, idempotencyKey: key, state, verification, occurredAt: new Date().toISOString() };

@@ -16,7 +16,7 @@ function fixture() {
     tasks: {
       create: async (task, steps) => { store.task = task; store.steps = steps.map(step => ({ ...step, step_id: step.stepId,
         tool_id: step.toolId, confirmation_state: step.confirmationRequired ? "required" : "not_required",
-        idempotency_key: step.idempotencyKey, state: "pending" })); return task; },
+        idempotency_key: step.idempotencyKey, fallback_tool_ids: step.fallbackToolIds, depends_on: step.dependsOn, state: "pending" })); return task; },
       save: async task => { store.task = task; return task; },
       get: async ({ tenantId, includeSteps }) => tenantId === store.task?.tenantId ? { ...store.task, ...(includeSteps ? { steps: store.steps } : {}) } : null,
       getStep: async ({ tenantId, stepId }) => tenantId === store.task?.tenantId ? store.steps.find(step => step.step_id === stepId) : null,
@@ -73,4 +73,25 @@ test("canonical engine isolates tenants and never simulates disconnected tools",
   const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
   await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId }), "tool_unavailable");
   await expectCode(() => engine.requiredStep({ tenantId: "00000000-0000-0000-0000-000000000099", taskId: task.taskId, stepId: task.steps[0].stepId }), "step_not_found");
+});
+
+test("canonical engine rejects cyclic plans and enforces durable dependency ordering", async () => {
+  const { engine, store } = fixture();
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Prepare and save" });
+  await expectCode(() => engine.create({ command, goal: "Cycle", steps: [
+    { clientStepId: "a", title: "A", toolId: "documents.save", dependsOn: ["b"] },
+    { clientStepId: "b", title: "B", toolId: "documents.save", dependsOn: ["a"] }
+  ] }), "cyclic_dependencies");
+  const task = await engine.create({ command, goal: "Ordered", steps: [
+    { clientStepId: "prepare", title: "Prepare", toolId: "documents.save" },
+    { clientStepId: "save", title: "Save", toolId: "documents.save", dependsOn: ["prepare"] }
+  ] });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
+  const downstream = task.steps[1];
+  await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: downstream.stepId, actorId: command.actorId, approved: true });
+  await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: downstream.stepId }), "dependencies_incomplete");
+  store.steps[0].state = "completed";
+  const result = await engine.execute({ context, taskId: task.taskId, stepId: downstream.stepId });
+  assert.equal(result.receipt.verification.verified, true);
 });
