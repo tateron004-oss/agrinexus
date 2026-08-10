@@ -49447,6 +49447,38 @@ function safeRealtimeStartupMessage(error) {
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]");
 }
 
+const nexusPath1CertificationReceipts = [];
+
+function dispatchNexusPath1CertificationReceipt(type, detail = {}) {
+  const receipt = Object.freeze({
+    schema: "nexus.path1.certification.receipt.v1",
+    type: String(type || "unknown"),
+    detail: { ...(detail || {}) },
+    at: new Date().toISOString()
+  });
+  nexusPath1CertificationReceipts.push(receipt);
+  if (nexusPath1CertificationReceipts.length > 500) nexusPath1CertificationReceipts.shift();
+  window.dispatchEvent(new CustomEvent("nexus.path1.certification.receipt", { detail: receipt }));
+  return receipt;
+}
+
+function nexusPath1CertificationSnapshot() {
+  const realtime = nexusRealtimeClientRuntimeStatus();
+  const workspaceHost = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+  return Object.freeze({
+    schema: "nexus.path1.certification.snapshot.v1",
+    state: realtime.connectionState === "connected" && realtime.liveMicrophoneTrack ? "connected" : realtime.connectionState,
+    realtime,
+    workspace: String(document.body.dataset.genesisWorkspace || ""),
+    workspaceVisible: Boolean(workspaceHost && workspaceHost.getClientRects().length),
+    receipts: nexusPath1CertificationReceipts.slice()
+  });
+}
+
+window.NexusPath1Certification = Object.freeze({
+  snapshot: nexusPath1CertificationSnapshot
+});
+
 function updateRealtimeControllerState(state, eventType, extra = {}) {
   if (!NEXUS_REALTIME_CONTROLLER_STATES.includes(state)) return;
   if (realtimeVoiceSession) realtimeVoiceSession.controllerState = state;
@@ -49458,6 +49490,15 @@ function updateRealtimeControllerState(state, eventType, extra = {}) {
   window.NexusGenesisRealtimeLastClientStatus = nexusRealtimeClientRuntimeStatus(snapshot);
   recordNexusVoiceLifecycleEvent(eventType, { state, ...extra });
   nexusGenesisVoiceDebugLog(eventType, snapshot);
+  if (state === "listening" && (
+    extra.readyForNextInput === true
+    || /response-completed|output-audio-finished|agent-response-completed|turn-ready-for-next-input/.test(String(eventType || ""))
+  )) {
+    dispatchNexusPath1CertificationReceipt("conversation.return-to-listening", {
+      eventType: String(eventType || ""),
+      sessionId: snapshot.sessionId || ""
+    });
+  }
 }
 
 function nextRealtimeTurnId() {
@@ -50068,6 +50109,10 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       realtimeVoiceSession.lastModelEvent = "audio_start";
     }
     markRealtimeResponseStarted({}, "openai-agents-audio-started");
+    dispatchNexusPath1CertificationReceipt("audio.remote-attached", {
+      source: "openai-agents-realtime",
+      sessionId: realtimeVoiceSession?.sessionId || ""
+    });
     updateNexusVoiceSession({ state: "realtime-speaking", assistantSpeaking: true, userSpeaking: false }, "openai-agents-realtime-audio-start");
   }
   if (eventName === "audio_stopped") {
@@ -54068,6 +54113,14 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
     realtimeConnected
   });
   window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
+  dispatchNexusPath1CertificationReceipt("workspace.visible", {
+    workspace,
+    requestId,
+    verified,
+    visible,
+    populatedFields: populatedFields.slice(),
+    mapRendered: ack.mapRendered
+  });
   if (!verified) throw new Error(`Nexus workspace verification failed for ${workspace} (${requestId}).`);
   return ack;
 }

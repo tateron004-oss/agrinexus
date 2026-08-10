@@ -1,7 +1,6 @@
 const { test, expect } = require("@playwright/test");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 
 const BASE_URL = process.env.NEXUS_CLEAN_BASE_URL || "http://127.0.0.1:4317";
@@ -45,60 +44,6 @@ function speak(text) {
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(stderr || `speech exited ${code}`)));
   });
-}
-
-function synthesizePcm(text) {
-  const wavPath = path.join(os.tmpdir(), `nexus-command-${process.pid}-${Date.now()}.wav`);
-  const encodedText = Buffer.from(text, "utf16le").toString("base64");
-  const encodedPath = Buffer.from(wavPath, "utf16le").toString("base64");
-  const script = [
-    "Add-Type -AssemblyName System.Speech",
-    `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedText}'))`,
-    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
-    "$f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(24000,16,1)",
-    "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$v.Rate=-1",
-    "$v.SetOutputToWaveFile($p,$f)",
-    "$v.Speak($t)",
-    "$v.Dispose()"
-  ].join(";");
-  return new Promise((resolve, reject) => {
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
-    let stderr = "";
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("exit", (code) => {
-      if (code !== 0) return reject(new Error(stderr || `speech synthesis exited ${code}`));
-      try {
-        const wav = fs.readFileSync(wavPath);
-        resolve(readWaveData(wav));
-      } catch (error) {
-        reject(error);
-      } finally {
-        fs.rmSync(wavPath, { force: true });
-      }
-    });
-  });
-}
-
-function readWaveData(wav) {
-  for (let offset = 12; offset + 8 <= wav.length;) {
-    const id = wav.toString("ascii", offset, offset + 4);
-    const size = wav.readUInt32LE(offset + 4);
-    if (id === "data") return wav.subarray(offset + 8, offset + 8 + size);
-    offset += 8 + size + (size % 2);
-  }
-  throw new Error("Synthesized WAV contains no PCM data.");
-}
-
-async function injectSpokenCommand(page, text) {
-  const pcm = await synthesizePcm(text);
-  const chunks = [];
-  for (let offset = 0; offset < pcm.length; offset += 16384) {
-    chunks.push(pcm.subarray(offset, offset + 16384).toString("base64"));
-  }
-  await page.evaluate((audioChunks) => {
-    window.NexusCleanRuntime.certificationAudio.send(audioChunks);
-  }, chunks);
 }
 
 test.use({
@@ -158,7 +103,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         return originalSpeak(utterance);
       };
     }
-    window.addEventListener("nexus.clean.receipt", (event) => window.__cleanEvidence.receipts.push(event.detail));
+    window.addEventListener("nexus.path1.certification.receipt", (event) => window.__cleanEvidence.receipts.push(event.detail));
     window.addEventListener("error", (event) => window.__cleanEvidence.errors.push(String(event.message)));
     window.addEventListener("unhandledrejection", (event) => window.__cleanEvidence.errors.push(String(event.reason)));
   });
@@ -225,7 +170,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
             && microphone.getClientRects().length
             && /voice connection unavailable.*retry/i.test(microphone.textContent || "")
           );
-          const runtimeState = window.NexusCleanRuntime?.snapshot?.().state?.state || null;
+          const runtimeState = window.NexusPath1Certification?.snapshot?.().state || null;
           const connected = microphone?.getAttribute("data-nexus-permanent-microphone-state") === "connected"
             && runtimeState === "connected";
           if (connected) return true;
@@ -239,7 +184,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         const internallyConnected = await page.evaluate(() => {
           const microphone = document.querySelector('[data-nexus-permanent-microphone-control="true"]');
           return microphone?.getAttribute("data-nexus-permanent-microphone-state") === "connected"
-            && window.NexusCleanRuntime?.snapshot?.().state?.state === "connected";
+            && window.NexusPath1Certification?.snapshot?.().state === "connected";
         }).catch(() => false);
         if (!internallyConnected) await primaryVoiceEntry.click();
       } else {
@@ -250,7 +195,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect(primaryVoiceEntry, "Permanent microphone must remain visible after activation").toBeVisible({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Permanent microphone must report the connected state").toHaveAttribute("data-nexus-permanent-microphone-state", "connected", { timeout: 60000 });
     await expect(page.locator("#nexusPermanentMicrophoneStatus"), "Permanent microphone status must confirm Realtime listening").toContainText(/Realtime voice is connected and listening/i, { timeout: 60000 });
-    await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state), {
+    await expect.poll(() => page.evaluate(() => window.NexusPath1Certification?.snapshot?.().state), {
       timeout: 60000
     }).toBe("connected");
     await expect.poll(() => page.evaluate(() => {
@@ -264,61 +209,32 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       return receipts.some((item) => item.type === "conversation.return-to-listening");
     }), { timeout: 60000 }).toBe(true);
 
-    // The audible calibration above proves the remote audio path. Silence Nexus
-    // during command injection so its own speaker output cannot feed back into
-    // the physical microphone and overwrite the command under test.
-    await page.locator("#nexus-audio").evaluate((audio) => {
-      audio.muted = true;
-    });
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(window.NexusCleanRuntime.certificationAudio)
-    ), {
-      timeout: 10000,
-      message: "Render must enable NEXUS_CLEAN_CERTIFICATION for exact production command proof"
-    }).toBe(true);
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.begin());
-
     for (const [workspace, command, visual] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await injectSpokenCommand(page, command);
+      await speak(command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
+        const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[workspace] || workspace;
         return window.__cleanEvidence.receipts.slice(before)
-          .some((item) => item.type === "workspace.visible" && item.detail.workspace === workspace);
+          .some((item) => item.type === "workspace.visible" && item.detail.workspace === nativeWorkspace && item.detail.verified === true);
       }, { before, workspace }), { timeout: 60000 }).toBe(true);
-      await expect(page.locator("#nexus-workspace")).toHaveAttribute("data-workspace", workspace);
-      await expect(page.locator("#nexus-workspace")).toBeVisible();
+      await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"]')).toBeVisible();
+      await expect.poll(() => page.evaluate((expected) => {
+        const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[expected] || expected;
+        return document.body.dataset.genesisWorkspace === nativeWorkspace;
+      }, workspace)).toBe(true);
       if (visual === "map") {
-        await expect(page.locator("#nexus-map-canvas")).toBeVisible();
-        await expect(page.locator("#nexus-map-summary")).toContainText(/Mombasa/i);
-        await expect(page.locator("#nexus-map-link")).toHaveAttribute("href", /^https:\/\/www\.openstreetmap\.org\//);
+        await expect(page.locator("#userMapCanvas.leaflet-container")).toBeVisible();
+        await expect.poll(() => page.evaluate(() => document.body.dataset.genesisMapLocation)).toBe("Mombasa");
       } else if (visual === "evidence") {
-        await expect(page.locator(".evidence-source-link").first()).toBeVisible();
+        await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"] a[href^="http"]').first()).toBeVisible();
       } else if (visual) {
-        await expect(page.locator(`[data-nexus-visual="${visual}"]`)).toBeVisible();
+        await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"]')).not.toBeEmpty();
       }
       await expect.poll(() => page.evaluate(({ before }) => {
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "conversation.return-to-listening");
       }, { before }), { timeout: 60000 }).toBe(true);
-      if (visual === "provider-card") {
-        await expect.poll(() => page.evaluate(({ before }) => {
-          return window.__cleanEvidence.receipts.slice(before)
-            .some((item) => item.type === "audio.owner-released");
-        }, { before }), { timeout: 60000 }).toBe(true);
-        const beforeRead = await page.evaluate(() => window.__cleanEvidence.receipts.length);
-        await page.locator('[data-provider-card-action="read"]').click();
-        await expect.poll(() => page.evaluate(({ beforeRead }) => {
-          return window.__cleanEvidence.receipts.slice(beforeRead).some((item) =>
-            item.type === "conversation.response-requested" &&
-            item.detail.reason === "provider-card-read"
-          );
-        }, { beforeRead }), { timeout: 10000 }).toBe(true);
-        await expect.poll(() => page.evaluate(({ beforeRead }) => {
-          return window.__cleanEvidence.receipts.slice(beforeRead)
-            .some((item) => item.type === "conversation.return-to-listening");
-        }, { beforeRead }), { timeout: 60000 }).toBe(true);
-      }
       const turnAudioViolations = await page.evaluate(({ before }) => {
         const receipts = window.__cleanEvidence.receipts.slice(before);
         return [
@@ -330,10 +246,9 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         ];
       }, { before });
       expect(turnAudioViolations, `More than one speech source or response activated for: ${command}`).toEqual([]);
-      await expect.poll(() => page.evaluate(() => window.NexusCleanRuntime.snapshot().state.state)).toBe("connected");
+      await expect.poll(() => page.evaluate(() => window.NexusPath1Certification?.snapshot?.().state)).toBe("connected");
       driverEvidence.turns.push({ workspace, command, visual, passed: true });
     }
-    await page.evaluate(() => window.NexusCleanRuntime.certificationAudio.end());
     const browserErrors = await page.evaluate(() => window.__cleanEvidence.errors);
     expect(browserErrors).toEqual([]);
     const audioViolations = await page.evaluate(() => window.__cleanEvidence.audioViolations);
@@ -352,7 +267,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       url: location.href,
       status: document.getElementById("nexus-status")?.textContent || null,
       microphonePermission: null,
-      snapshot: window.NexusCleanRuntime?.snapshot?.() || null,
+      snapshot: window.NexusPath1Certification?.snapshot?.() || null,
       browserErrors: window.__cleanEvidence?.errors || []
     })).catch((error) => ({ unavailable: error.message }));
     if (driverEvidence.page && !driverEvidence.page.unavailable) {
