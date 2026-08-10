@@ -2,10 +2,10 @@
 const crypto = require("node:crypto");
 const { PATH2_LANES } = require("./certification-contract.js");
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
-const { createId } = require("../contracts/identifiers.js");
+const { MemoryRepository } = require("../memory/repository.js");
+const { AuthoritativeTaskEngine } = require("../runtime/authoritative-task-engine.js");
 
 const LOCALES = ["en", "es", "fr", "sw", "ar", "pt"];
-const SAFE_DOMAINS = new Set(["knowledge", "documents", "jobs", "resume", "maps", "media", "weather", "learning"]);
 
 async function executeProductionCase({ active, principal, input, releaseSha, observedAt = new Date().toISOString() }) {
   validateInput(input, releaseSha); const contract = PATH2_LANES[input.lane];
@@ -27,6 +27,7 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
     if (input.lane === "multilingual") passed = passed && profile.locale === locale && profile.requirements.preserveLanguageAcrossWorkflow && profile.requirements.preserveSafetyMeaning;
     if (input.lane === "accessibility") passed = passed && profile.voiceOnly && profile.preferredFormats.includes("plain-language") && profile.requirements.announceVisibleOutcome;
     if (input.lane === "memory") passed = passed && await verifyDurableMemory({ active, principal, input });
+    if (executionProof && !executionProof.passed) failure = executionProof.error || "outcome_unverified";
   } catch (error) { passed = false; failure = error.code || error.name || "case_execution_failed"; }
   const fact = contract.requiredFacts[(input.ordinal - 1) % contract.requiredFacts.length];
   const digest = crypto.createHash("sha256").update(JSON.stringify({ releaseSha, caseId: input.caseId, plan, passed })).digest("hex");
@@ -49,30 +50,52 @@ async function executeSafeWorkflow({ active, context, command, input, recovery =
   const catalog = await active.tools.list(); const safe = catalog.filter(tool => tool.availability === "available" && tool.risk_tier === "low" &&
     (!tool.required_permission || context.can(tool.required_permission)) && (!tool.required_role || context.hasRole(tool.required_role)) &&
     !tool.consent_scope && tool.confirmation_required !== true && typeof active.engine.executors?.[tool.tool_id] === "function");
-  if (!safe.length) return { passed: false, receiptIds: [] };
+  if (!safe.length) return { passed: false, receiptIds: [], error: "safe_tool_unavailable" };
   const count = input.lane === "crossApplication" ? Math.min(2, safe.length) : 1; const chosen = safe.slice(0, count);
   const steps = chosen.map((tool, index) => ({ clientStepId: `matrix_${index + 1}`, title: `Verify ${tool.domain} outcome`, toolId: tool.tool_id,
     input: { query: promptFor(input), certificationCaseId: input.caseId }, dependsOn: index ? [`matrix_${index}`] : [], fallbackToolIds: [] }));
-  if (recovery) { const unavailable = catalog.find(tool => tool.availability !== "available" && SAFE_DOMAINS.has(tool.domain)); if (!unavailable) return { passed: false, receiptIds: [] };
-    steps[0].toolId = unavailable.tool_id; steps[0].fallbackToolIds = [chosen[0].tool_id]; }
-  const task = await active.engine.create({ command: { ...command, correlationId: `p2-${input.caseId}`, conversationId: `cnv_${crypto.randomUUID()}` },
+  let engine = active.engine;
+  if (recovery) {
+    if (safe.length < 2) return { passed: false, receiptIds: [], error: "safe_fallback_unavailable" };
+    const primary = safe[0]; const fallback = safe[1]; steps[0].toolId = primary.tool_id; steps[0].fallbackToolIds = [fallback.tool_id];
+    engine = new AuthoritativeTaskEngine({ conversations: active.conversations, tasks: active.tasks, tools: active.tools,
+      executions: active.executions, consents: active.consents, audit: active.audit,
+      executors: { ...active.engine.executors, [primary.tool_id]: async () => { const error = new Error("Controlled production recovery probe"); error.code = "controlled_provider_interruption"; throw error; } },
+      verifier: active.engine.verifier });
+  }
+  const task = await engine.create({ command: { ...command, correlationId: `p2-${input.caseId}`, conversationId: `cnv_${crypto.randomUUID()}` },
     goal: promptFor(input), application: input.lane === "crossApplication" ? "general" : "live-knowledge", riskTier: "low", steps });
-  try { const result = await active.engine.executeTask({ context, taskId: task.taskId });
-    const receiptIds = (result.receipts || []).map(receipt => receipt.receiptId).filter(Boolean);
-    return { passed: result.completed === true && receiptIds.length >= steps.length && (input.lane !== "verification" || result.task?.outcome?.visibleOrAudible === true), receiptIds };
+  try {
+    const receipts = [];
+    for (const step of task.steps) {
+      const result = await engine.execute({ context, taskId: task.taskId, stepId: step.stepId });
+      if (result.receipt) receipts.push(result.receipt);
+    }
+    const receiptIds = receipts.map(receipt => receipt.receiptId).filter(Boolean);
+    const visible = receipts.some(receipt => hasVisibleOutcome(receipt.verification));
+    const fallback = receipts.some(receipt => Number(receipt.verification?.fallbackAttempt) > 0);
+    const passed = recovery ? fallback && receiptIds.length === 1
+      : input.lane === "toolUse" ? receiptIds.length === steps.length
+      : receiptIds.length === steps.length && visible;
+    return { passed, receiptIds, error: passed ? null : "visible_outcome_unverified",
+      evidenceTypes: receipts.flatMap(receipt => (receipt.verification?.evidence || []).map(item => item?.type).filter(Boolean)) };
   } catch (error) { return { passed: false, receiptIds: [], error: error.code || error.name }; }
 }
 async function verifyDurableMemory({ active, principal, input }) {
-  if (!active.conversations || !active.memory || !active.db) return false; const conversationId = `cnv_${crypto.randomUUID()}`;
-  await active.conversations.ensure({ conversationId, tenantId: principal.tenantId, ownerId: principal.userId, title: `Path 2 case ${input.caseId}` });
-  await active.db.query(`insert into nexus_messages(message_id,tenant_id,conversation_id,actor_id,role,content,provenance)
-    values ($1,$2,$3,$4,'user',$5,jsonb_build_object('type','path2-production-case'))`,
-  [createId("message"), principal.tenantId, conversationId, principal.userId, `Remember non-sensitive certification marker ${input.caseId}`]);
-  const turns = await active.conversations.recent({ tenantId: principal.tenantId, conversationId, limit: 24 });
-  const scoped = await active.memory.search({ tenantId: principal.tenantId, userId: principal.userId, purpose: "task_planning",
-    query: input.caseId, roles: [principal.role].filter(Boolean), limit: 8 });
-  return turns.some(turn => turn.content?.includes(input.caseId)) && Array.isArray(scoped);
+  if (!active.memory || !active.db) return false;
+  const marker = `${input.caseId}-${crypto.randomUUID()}`; const embedding = new Array(1536).fill(0); embedding[0] = 1;
+  const scope = { tenantId: principal.tenantId, principalId: principal.userId, memoryClass: "semantic", purpose: `path2-${marker}` };
+  const stored = await active.memory.remember({ ...scope, content: { marker }, searchableText: marker, embedding,
+    embeddingModel: "path2-deterministic-v1", provenance: { source: "path2-production-case", caseId: input.caseId },
+    importance: 0, confidence: 1, verificationState: "source_verified", sensitivity: "internal" });
+  const reconstructed = new MemoryRepository(active.db);
+  const recalled = await reconstructed.recall({ ...scope, embedding, roles: [], limit: 5 });
+  const persisted = recalled.some(item => item.memory_id === stored.memory_id && item.content?.marker === marker);
+  const cleanedUp = await reconstructed.forget({ tenantId: scope.tenantId, principalId: scope.principalId, memoryId: stored.memory_id });
+  return persisted && cleanedUp;
 }
+function hasVisibleOutcome(verification = {}) { if (verification.visible === true || verification.audible === true || verification.visibleOrAudible === true) return true;
+  return (verification.evidence || []).some(item => ["visible", "audible", "browser-outcome", "audio-playback", "workspace-render"].includes(item?.type)); }
 async function planWithRetries(planner, request, attempts = 3) { let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) { try { return await planner.plan(request); } catch (error) { lastError = error; } }
   throw lastError; }
