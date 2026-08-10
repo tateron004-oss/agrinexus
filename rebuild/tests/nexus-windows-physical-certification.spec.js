@@ -85,6 +85,22 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
+    const originalGetUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
+    if (originalGetUserMedia) {
+      navigator.mediaDevices.getUserMedia = (constraints = {}) => {
+        if (!constraints.audio) return originalGetUserMedia(constraints);
+        const requestedAudio = typeof constraints.audio === "object" ? constraints.audio : {};
+        return originalGetUserMedia({
+          ...constraints,
+          audio: {
+            ...requestedAudio,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: true
+          }
+        });
+      };
+    }
     localStorage.setItem("agrinexusLoginLanguage", "en");
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
     window.__NEXUS_VOICE_ACCEPTANCE_EVENT_SINK__ = (event) => {
