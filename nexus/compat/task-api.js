@@ -22,7 +22,9 @@ function createTaskApi(engine) {
       taskId: request.params.taskId, stepId: request.params.stepId, actorId: request.context.userId,
       approved: request.body?.approved })); },
     async execute(request) { return respond(() => engine.execute({ context: request.context,
-      taskId: request.params.taskId, stepId: request.params.stepId })); }
+      taskId: request.params.taskId, stepId: request.params.stepId })); },
+    async executeTask(request) { return respond(() => engine.executeTask({ context: request.context,
+      taskId: request.params.taskId })); }
   });
 }
 

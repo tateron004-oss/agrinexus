@@ -25,7 +25,9 @@ function fixture() {
     executions: {
       get: async ({ idempotencyKey }) => store.execution?.idempotency_key === idempotencyKey ? store.execution : null,
       start: async input => { store.execution = { execution_id: "tlc_1", idempotency_key: input.idempotencyKey, state: "running" }; return { execution: store.execution, duplicate: false }; },
-      finish: async input => { Object.assign(store.execution, { state: input.successful ? "completed" : "failed", receipt: input.receipt }); return store.execution; }
+      finish: async input => { Object.assign(store.execution, { state: input.successful ? "completed" : "failed", receipt: input.receipt });
+        const step = store.steps.find(item => item.step_id === input.stepId); if (step) { step.state = input.successful ? "completed" : "failed"; step.output = input.response; }
+        return store.execution; }
     },
     consents: { active: async () => ({ consent_id: "cns_1" }) },
     audit: { record: async event => { store.audits.push(event); return event; } },
@@ -94,4 +96,42 @@ test("canonical engine rejects cyclic plans and enforces durable dependency orde
   store.steps[0].state = "completed";
   const result = await engine.execute({ context, taskId: task.taskId, stepId: downstream.stepId });
   assert.equal(result.receipt.verification.verified, true);
+});
+
+test("canonical engine completes a cross-application workflow with dependency outputs and visible proof", async () => {
+  const { engine, store } = fixture(); const received = [];
+  engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute",
+    confirmation_required: false, consent_scope: null, timeout_ms: 1000 });
+  engine.executors["jobs.search"] = async ({ input }) => { received.push(input); return { jobs: [{ id: "job_1", location: "Nakuru" }] }; };
+  engine.executors["resume.create"] = async ({ input }) => { received.push(input); return { documentId: "doc_1" }; };
+  engine.executors["maps.view"] = async ({ input }) => { received.push(input); return { workspaceId: "maps", rendered: true }; };
+  engine.verifier = async ({ tool, result }) => ({ verified: true, method: "production_probe",
+    visible: tool.tool_id === "maps.view" && result.rendered === true,
+    evidence: tool.tool_id === "maps.view" ? [{ type: "workspace-render", source: "production-browser" }] : [] });
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "voice", text: "Find jobs, make my resume, and map them" });
+  const task = await engine.create({ command, goal: command.text, application: "workforce", steps: [
+    { clientStepId: "jobs", title: "Find jobs", toolId: "jobs.search" },
+    { clientStepId: "resume", title: "Create resume", toolId: "resume.create", dependsOn: ["jobs"] },
+    { clientStepId: "map", title: "Map jobs", toolId: "maps.view", dependsOn: ["jobs", "resume"] }
+  ] });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
+  const result = await engine.executeTask({ context, taskId: task.taskId });
+  assert.equal(result.completed, true); assert.equal(result.task.state, "completed"); assert.equal(result.receipts.length, 3);
+  assert.deepEqual(received[1].dependencyOutputs[task.steps[0].stepId].jobs[0].location, "Nakuru");
+  assert.equal(received[2].dependencyOutputs[task.steps[1].stepId].documentId, "doc_1");
+  assert.equal(result.task.outcome.visibleOrAudible, true);
+});
+
+test("task workflow pauses for confirmation and cannot claim success without user-visible proof", async () => {
+  const { engine, store } = fixture();
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "voice", text: "Save it" });
+  const task = await engine.create({ command, goal: command.text, application: "documents", steps: [{ title: "Save", toolId: "documents.save" }] });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
+  const paused = await engine.executeTask({ context, taskId: task.taskId });
+  assert.equal(paused.state, "awaiting_confirmation"); assert.equal(store.calls, 0);
+  await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: task.steps[0].stepId, actorId: command.actorId, approved: true });
+  await expectCode(() => engine.executeTask({ context, taskId: task.taskId }), "user_outcome_unverified");
+  assert.notEqual(store.task.state, "completed");
 });

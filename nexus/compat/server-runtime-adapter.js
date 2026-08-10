@@ -306,10 +306,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       else if (url.pathname === "/api/nexus/runtime/sync/pull" && req.method === "GET") result=await syncApi.pull(request);
       else if (/^\/api\/nexus\/runtime\/sync\/conflicts\/[^/]+$/.test(url.pathname) && req.method === "POST") { request.params.syncId=decodeURIComponent(url.pathname.split("/").pop()); result=await syncApi.resolve(request); }
       else {
-        const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(transition|steps\/([^/]+)\/(approve|execute)))?$/);
+        const match = url.pathname.match(/^\/api\/nexus\/runtime\/tasks\/([^/]+)(?:\/(execute|transition|steps\/([^/]+)\/(approve|execute)))?$/);
         if (!match) { send(res, 404, { error: "Authoritative runtime route not found." }); return true; }
         request.params.taskId = decodeURIComponent(match[1]);
         if (!match[2] && req.method === "GET") result = await api.get(request);
+        else if (match[2] === "execute" && req.method === "POST") result = await api.executeTask(request);
         else if (match[2] === "transition" && req.method === "POST") result = await api.transition(request);
         else if (match[3] && match[4] === "approve" && req.method === "POST") { request.params.stepId = decodeURIComponent(match[3]); result = await api.approve(request); }
         else if (match[3] && match[4] === "execute" && req.method === "POST") { request.params.stepId = decodeURIComponent(match[3]); result = await api.execute(request); }
