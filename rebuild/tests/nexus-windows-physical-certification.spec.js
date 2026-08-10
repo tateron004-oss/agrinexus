@@ -84,6 +84,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
+    localStorage.setItem("agrinexusLoginLanguage", "en");
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
     window.__NEXUS_VOICE_ACCEPTANCE_EVENT_SINK__ = (event) => {
       window.__cleanEvidence.receipts.push({
@@ -124,6 +125,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     const standardUserEntry = page.getByRole("button", { name: "Start as User", exact: true });
     const enterStandardUser = async () => {
       const submitEntry = async () => {
+        await page.locator("#loginLanguageSelect").selectOption("en");
         await page.getByRole("textbox", { name: "Your name" }).fill("Ron");
         await standardUserEntry.click();
       };
@@ -139,6 +141,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     if (await standardUserEntry.isVisible().catch(() => false)) {
       await enterStandardUser();
     }
+    await expect(page.locator("html"), "English physical commands require the English Realtime profile").toHaveAttribute("lang", "en");
     const primaryVoiceEntry = page.locator('[data-nexus-permanent-microphone-control="true"]');
     await expect(page.locator("#appView"), "Application must remain visible before microphone activation").toBeVisible({ timeout: 15000 });
     await expect(page.locator("#loginView"), "Sign-in must remain closed before microphone activation").toBeHidden({ timeout: 15000 });
