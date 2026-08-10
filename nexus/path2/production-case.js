@@ -13,7 +13,9 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
     hasRole: role => principal.role === role, userPreferences: input.lane === "accessibility" ? { accessibility: { lowLiteracy: true, screenReader: true, captions: true } } : {} };
   const locale = input.lane === "multilingual" ? LOCALES[(input.ordinal - 1) % LOCALES.length] : "en";
   const command = { tenantId: principal.tenantId, actorId: principal.userId, text: promptFor(input), locale, channel: "voice" };
-  const plan = await active.planner.plan({ command, context, conversationHistory: [] });
+  let plan;
+  try { plan = await active.planner.plan({ command, context, conversationHistory: [] }); }
+  catch (error) { return failedCase({ input, releaseSha, locale, observedAt, error }); }
   const profile = createInteractionProfile({ locale, channel: "voice", userPreferences: context.userPreferences });
   let passed = Boolean(plan.goal && plan.application && (plan.steps.length || plan.clarification));
   if (input.lane === "planning") passed = passed && acyclic(plan.steps);
@@ -31,6 +33,14 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
       source: "authoritative-production-runtime", caseId: input.caseId, locale, application: plan.application,
       stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [], digest } };
 }
+
+function failedCase({ input, releaseSha, locale, observedAt, error }) { const contract = PATH2_LANES[input.lane];
+  const fact = contract.requiredFacts[(input.ordinal - 1) % contract.requiredFacts.length]; const failure = error.code || error.name || "planning_failed";
+  const digest = crypto.createHash("sha256").update(JSON.stringify({ releaseSha, caseId: input.caseId, failure })).digest("hex");
+  return { caseId: input.caseId, releaseSha, path1Baseline: input.path1Baseline, lane: input.lane, passed: false,
+    facts: { [fact]: false }, falseSuccesses: 0, production: true, simulated: false, observedAt,
+    receipt: { receiptId: `path2-production-${digest.slice(0, 24)}`, releaseSha, path1GuardPassed: true,
+      source: "authoritative-production-runtime", caseId: input.caseId, locale, outcome: "failed", failure, digest } }; }
 
 async function executeSafeWorkflow({ active, context, command, input, recovery = false }) {
   const catalog = await active.tools.list(); const safe = catalog.filter(tool => tool.availability === "available" && SAFE_DOMAINS.has(tool.domain) &&
