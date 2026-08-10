@@ -35,7 +35,8 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
     facts: { [fact]: passed }, falseSuccesses: 0, production: true, simulated: false, observedAt,
     receipt: { receiptId: `path2-production-${digest.slice(0, 24)}`, releaseSha, path1GuardPassed: true,
       source: "authoritative-production-runtime", caseId: input.caseId, locale, application: plan.application,
-      stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [], failure, digest } };
+      stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [],
+      outcomeTargets: executionProof?.outcomeTargets || [], failure, digest } };
 }
 
 function failedCase({ input, releaseSha, locale, observedAt, error }) { const contract = PATH2_LANES[input.lane];
@@ -77,8 +78,10 @@ async function executeSafeWorkflow({ active, context, command, input, recovery =
     const passed = recovery ? fallback && receiptIds.length === 1
       : input.lane === "toolUse" ? receiptIds.length === steps.length
       : receiptIds.length === steps.length && visible;
+    const evidence = receipts.flatMap(receipt => receipt.verification?.evidence || []);
     return { passed, receiptIds, error: passed ? null : "visible_outcome_unverified",
-      evidenceTypes: receipts.flatMap(receipt => (receipt.verification?.evidence || []).map(item => item?.type).filter(Boolean)) };
+      evidenceTypes: evidence.map(item => item?.type).filter(Boolean),
+      outcomeTargets: evidence.filter(item => item?.type === "render-target").map(item => ({ outcomeUrl: item.outcomeUrl, caseId: item.caseId, toolId: item.toolId })) };
   } catch (error) { return { passed: false, receiptIds: [], error: error.code || error.name }; }
 }
 async function verifyDurableMemory({ active, principal, input }) {

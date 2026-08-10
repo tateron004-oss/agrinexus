@@ -17,11 +17,13 @@ test("every machine lane reaches its exact case threshold with every required fa
 
 test("matrix binds and submits every case to one live exact release", async () => {
   const releaseSha = "a".repeat(40); const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "path2-matrix-")), "matrix.json");
-  const submissions = []; const fetchFn = async (url, init = {}) => {
+  const submissions = []; const browserRecordings = []; const fetchFn = async (url, init = {}) => {
     if (url.endsWith("/api/nexus/runtime/status")) return { ok: true, text: async () => JSON.stringify({ ok: true, releaseSha }) };
     if (url.includes("/api/nexus/runtime/path2/certification")) return { ok: false, status: 503, text: async () => JSON.stringify({ releaseSha,
       lanes: Object.fromEntries(Object.keys(RUNNERS).concat("usability").map(lane => [lane, { certified: lane !== "usability" }])) }) };
-    const descriptor = JSON.parse(init.body); submissions.push(descriptor);
+    const descriptor = JSON.parse(init.body);
+    if (url.endsWith("/api/nexus/runtime/path2/machine-cases")) { browserRecordings.push(descriptor); return { ok: true, status: 201, text: async () => JSON.stringify({ ok: true }) }; }
+    submissions.push(descriptor);
     return { ok: true, status: 201, text: async () => JSON.stringify({ ok: true, evidence: { ...descriptor, passed: true,
       receipt: { receiptId: `receipt-${descriptor.caseId}`, releaseSha, path1GuardPassed: true } } }) };
   };
@@ -29,5 +31,6 @@ test("matrix binds and submits every case to one live exact release", async () =
     EXPECTED_RELEASE_SHA: releaseSha, NEXUS_PATH2_MATRIX_OUTPUT: output }, fetchFn);
   const expected = Object.keys(RUNNERS).reduce((total, lane) => total + PATH2_LANES[lane].minimumCases, 0);
   assert.equal(cases.length, expected); assert.equal(submissions.length, expected); assert.ok(submissions.every(item => item.releaseSha === releaseSha));
+  assert.equal(browserRecordings.length, PATH2_LANES.crossApplication.minimumCases + PATH2_LANES.verification.minimumCases);
   assert.equal(JSON.parse(fs.readFileSync(output)).passed, expected);
 });

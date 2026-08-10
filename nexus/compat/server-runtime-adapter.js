@@ -78,9 +78,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       try { const active = await runtime(); await active.ready; const body = await readJson(req); const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Path 2 case SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
         const evidence = await executeProductionCase({ active, principal: await acceptancePrincipal(active), input: body, releaseSha });
-        let duplicate = false; try { await active.path2Evidence.recordMachineCase(evidence); }
+        const deferRecording = body.deferRecording === true && ["crossApplication", "verification"].includes(body.lane);
+        let duplicate = false; try { if (!deferRecording) await active.path2Evidence.recordMachineCase(evidence); }
         catch (error) { if (error.code !== "duplicate_machine_case") throw error; duplicate = true; }
-        send(res, evidence.passed ? (duplicate ? 200 : 201) : 422, { ok: evidence.passed, evidence, duplicate });
+        send(res, evidence.passed ? (duplicate ? 200 : 201) : 422, { ok: evidence.passed, evidence, duplicate, deferred: deferRecording });
       } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_production_case_rejected" }); } return true;
     }
     if (url.pathname === "/api/nexus/runtime/path2/stability-passes" && req.method === "POST") {
