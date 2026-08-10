@@ -63,6 +63,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, 201, { ok: true, evidence });
       } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_lane_evidence_rejected" }); } return true;
     }
+    if (url.pathname === "/api/nexus/runtime/path2/machine-cases" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Path 2 machine case SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const machineCase = await active.path2Evidence.recordMachineCase({ ...body, releaseSha });
+        send(res, 201, { ok: true, machineCase });
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_machine_case_rejected" }); } return true;
+    }
     if (url.pathname === "/api/nexus/runtime/path2/stability-passes" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
       try { const active = await runtime(); await active.ready; const body = await readJson(req);

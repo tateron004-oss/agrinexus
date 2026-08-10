@@ -40,14 +40,36 @@ test("duplicate participant evidence fails closed", async () => {
 });
 
 test("durable report counts only stored exact-release lanes and stability passes", async () => {
-  const laneRows = Object.keys(require("../../nexus/path2/certification-contract.js").PATH2_LANES)
-    .filter(lane => lane !== "usability").map(lane => { const contract = require("../../nexus/path2/certification-contract.js").PATH2_LANES[lane];
-      return { evidence: { lane, releaseSha, path1Baseline, cases: contract.minimumCases, passed: contract.minimumCases,
-        facts: Object.fromEntries(contract.requiredFacts.map(key => [key, true])), receipts: [`${lane}-receipt`],
-        production: true, simulated: false, path1GuardPassed: true, falseSuccesses: 0 } }; });
+  const contracts = require("../../nexus/path2/certification-contract.js").PATH2_LANES;
   const usabilityRows = Array.from({ length: 30 }, (_, index) => ({ completed: true, unprompted_language: true,
     effort_saved: true, false_successes: 0, receipt: session(index).receipt }));
-  const responses = [{ rows: laneRows }, { rows: [{ pass_number: 1 }, { pass_number: 2 }, { pass_number: 3 }] }, { rows: usabilityRows }];
-  const report = await new Path2EvidenceRepository({ query: async () => responses.shift() }).durableReport({ releaseSha, path1Baseline });
+  const report = await new Path2EvidenceRepository({ query: async (sql, params) => {
+    if (sql.includes("nexus_path2_machine_cases")) { const lane = params[2]; const contract = contracts[lane];
+      return { rows: Array.from({ length: contract.minimumCases }, (_, index) => ({ passed: true, false_successes: 0,
+        facts: Object.fromEntries(contract.requiredFacts.map(key => [key, true])),
+        receipt: { receiptId: `${lane}-${index}`, releaseSha, path1GuardPassed: true } })) }; }
+    if (sql.includes("nexus_path2_stability_passes")) return { rows: [{ pass_number: 1 }, { pass_number: 2 }, { pass_number: 3 }] };
+    return { rows: usabilityRows };
+  } }).durableReport({ releaseSha, path1Baseline });
   assert.equal(report.certified, true); assert.equal(report.stabilityPasses, 3);
+});
+
+test("machine evidence is aggregated only from distinct durable exact-release case receipts", async () => {
+  const releaseSha = "a".repeat(40); const path1Baseline = "b".repeat(40);
+  const rows = [{ case_id: "p2c_plan_0001", passed: true, false_successes: 0,
+    facts: { dependencyOrdering: true, catalogGrounding: true, safeRepair: true },
+    receipt: { receiptId: "receipt-1", releaseSha, path1GuardPassed: true } }];
+  const repo = new Path2EvidenceRepository({ query: async () => ({ rows }) });
+  const evidence = await repo.machineLaneEvidence({ releaseSha, path1Baseline, lane: "planning" });
+  assert.equal(evidence.cases, 1); assert.equal(evidence.passed, 1); assert.equal(evidence.path1GuardPassed, true);
+  assert.deepEqual(evidence.receipts, ["receipt-1"]); assert.equal(evidence.facts.safeRepair, true);
+});
+
+test("machine case storage rejects duplicate receipts instead of inflating totals", async () => {
+  const releaseSha = "c".repeat(40); const path1Baseline = "d".repeat(40);
+  const repo = new Path2EvidenceRepository({ query: async () => ({ rows: [] }) });
+  await assert.rejects(() => repo.recordMachineCase({ caseId: "p2c_memory_0001", releaseSha, path1Baseline,
+    lane: "memory", passed: true, production: true, simulated: false, facts: { multiTurn: true },
+    falseSuccesses: 0, observedAt: new Date().toISOString(),
+    receipt: { receiptId: "receipt-duplicate", releaseSha, path1GuardPassed: true } }), /only once/);
 });
