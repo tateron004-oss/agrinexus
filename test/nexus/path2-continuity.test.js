@@ -19,6 +19,12 @@ test("recent conversation context is tenant scoped, bounded, and chronological",
   assert.deepEqual(turns.map(turn => turn.content), ["first", "second"]);
 });
 
+test("conversation provenance crosses the PostgreSQL boundary as explicit JSON", async () => { let observed;
+  const repository = new ConversationRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [{}] }; } });
+  await repository.append({ tenantId: "tenant-a", conversationId: "cnv_test", actorId: "user-a", role: "user", content: "hello", provenance: { channel: "voice" } });
+  assert.match(observed.sql, /\$7::jsonb/); assert.equal(observed.params[6], '{"channel":"voice"}');
+});
+
 test("planning memory search stays purpose scoped and hides health memory by default", async () => {
   let observed;
   const repository = new MemoryRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [] }; } });
