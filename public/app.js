@@ -53967,6 +53967,14 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   if (!permissionSection || !canOpenSection(permissionSection)) return false;
   if (workspace !== "map" && document.body.classList.contains("user-map-full-open")) {
     document.body.classList.remove("user-map-full-open");
+    goSection("dashboard", {
+      instant: true,
+      scroll: false,
+      openDefaultAction: false,
+      keepAssistant: false,
+      allowRealtimeSurfaceChange: true,
+      source: "openai-realtime-workspace-transition"
+    });
   }
   const capabilityId = action.capabilityId || {
     map: "maps",
@@ -54145,7 +54153,10 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
     || (location.hash === "#map" && document.querySelector("#map"))
   )
 );
-  const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace && visibleMap);
+  const workspaceSurfaceVisible = workspace === "map"
+    ? visibleMap
+    : Boolean(visibleWorkspace && visibleWorkspace.getClientRects().length && !visibleWorkspace.closest("[hidden]"));
+  const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && workspaceSurfaceVisible);
   const verified = visible && populatedFields.length === expected.length && microphoneActive && realtimeConnected;
   const ack = {
     type: "genesis.workspace.acknowledged",
