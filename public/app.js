@@ -50058,6 +50058,13 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
             : realtimeVoiceSession.inboundAudioState || "event-channel-active";
       }
     }
+    if (/^(?:response\.(?:audio|output_audio)|output_audio_buffer\.)/i.test(eventType)) {
+      dispatchNexusPath1CertificationReceipt("audio.remote-attached", {
+        source: "openai-agents-transport-event",
+        eventType,
+        sessionId: realtimeVoiceSession?.sessionId || ""
+      });
+    }
     if (eventType === "input_audio_buffer.speech_started") {
       const turnId = nextRealtimeTurnId();
       markNexusUserSpeech("Realtime voice detected speech.", "openai-agents-realtime");
