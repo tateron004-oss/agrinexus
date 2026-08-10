@@ -9,6 +9,7 @@ const { createSyncApi } = require("./sync-api.js");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { MemoryRepository } = require("../memory/repository.js");
 const { evaluateObservabilityAlerts } = require("../observability/alert-evaluator.js");
+const { executeProductionCase } = require("../path2/production-case.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -71,6 +72,16 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const machineCase = await active.path2Evidence.recordMachineCase({ ...body, releaseSha });
         send(res, 201, { ok: true, machineCase });
       } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_machine_case_rejected" }); } return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/path2/production-case" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const body = await readJson(req); const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Path 2 case SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const evidence = await executeProductionCase({ active, principal: await acceptancePrincipal(active), input: body, releaseSha });
+        let duplicate = false; try { await active.path2Evidence.recordMachineCase(evidence); }
+        catch (error) { if (error.code !== "duplicate_machine_case") throw error; duplicate = true; }
+        send(res, evidence.passed ? (duplicate ? 200 : 201) : 422, { ok: evidence.passed, evidence, duplicate });
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_production_case_rejected" }); } return true;
     }
     if (url.pathname === "/api/nexus/runtime/path2/stability-passes" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
