@@ -50079,8 +50079,10 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
         sessionId: realtimeVoiceSession?.sessionId || ""
       });
     }
-    if (eventType === "output_audio_buffer.stopped") {
-      markRealtimeResponseCompleted("output-audio-buffer-stopped");
+    if (eventType === "output_audio_buffer.stopped" || eventType === "output_audio_buffer.cleared") {
+      markRealtimeResponseCompleted(eventType === "output_audio_buffer.stopped"
+        ? "output-audio-buffer-stopped"
+        : "output-audio-buffer-cleared");
     }
     if (eventType === "input_audio_buffer.speech_started") {
       const turnId = nextRealtimeTurnId();

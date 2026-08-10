@@ -21,7 +21,7 @@
   },
   "protectedFiles": {
     "server.js": "c111a39ea7aa8ab01722b4037b41576a79386ba0",
-    "public/app.js": "b9f7bc2384d917bfa1a7599ed0871d74d072f2b1",
+    "public/app.js": "04cde0003ac77905b71bb732cc663a4fc203241e",
     "public/index.html": "880b99423654af7c5ed9ae029327ef28c5bf0a90",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b3935a6391cad4d141093a38eadc6680dcb21d5c",
@@ -32,6 +32,6 @@
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
     ".github/workflows/nexus-clean-windows-certification.yml": "b3eca0b4ddfa6be8fe15b08dc688c534e73965f6",
-    "rebuild/tests/nexus-windows-physical-certification.spec.js": "661ae299cad749f5d7b1058f93eebd6e2bd1c853"
+    "rebuild/tests/nexus-windows-physical-certification.spec.js": "ad50f8898467c1b14ffb5e4ad505ecf85092f52f"
   }
 }

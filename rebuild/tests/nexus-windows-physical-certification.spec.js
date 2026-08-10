@@ -208,17 +208,17 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     }).toBe("connected");
     const calibrationBefore = await page.evaluate(() => window.__cleanEvidence.receipts.length);
     await speak("Nexus, say physical voice calibration complete.");
-    await expect.poll(() => page.evaluate(() => {
+    await expect.poll(() => page.evaluate((before) => {
       const receipts = window.__cleanEvidence.receipts;
-      return receipts.slice(calibrationBefore).some((item) => item.type === "audio.remote-attached");
-    }), { timeout: 60000 }).toBe(true);
-    await expect.poll(() => page.evaluate(() => {
+      return receipts.slice(before).some((item) => item.type === "audio.remote-attached");
+    }, calibrationBefore), { timeout: 60000 }).toBe(true);
+    await expect.poll(() => page.evaluate((before) => {
       const receipts = window.__cleanEvidence.receipts;
-      return receipts.slice(calibrationBefore).some((item) =>
+      return receipts.slice(before).some((item) =>
         item.type === "conversation.return-to-listening"
-        && item.detail.eventType === "output-audio-buffer-stopped"
+        && ["output-audio-buffer-stopped", "output-audio-buffer-cleared"].includes(item.detail.eventType)
       );
-    }), { timeout: 60000 }).toBe(true);
+    }, calibrationBefore), { timeout: 60000 }).toBe(true);
 
     for (const [workspace, command, visual] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
@@ -245,7 +245,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       await expect.poll(() => page.evaluate(({ before }) => {
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "conversation.return-to-listening"
-            && item.detail.eventType === "output-audio-buffer-stopped");
+            && ["output-audio-buffer-stopped", "output-audio-buffer-cleared"].includes(item.detail.eventType));
       }, { before }), { timeout: 60000 }).toBe(true);
       const turnAudioViolations = await page.evaluate(({ before }) => {
         const receipts = window.__cleanEvidence.receipts.slice(before);
