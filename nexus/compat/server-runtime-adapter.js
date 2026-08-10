@@ -54,6 +54,24 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const session = await active.path2Evidence.recordUsabilitySession(body); send(res, 201, { ok: true, session });
       } catch (error) { send(res, 400, { error: error.message, code: error.code || "usability_evidence_rejected" }); } return true;
     }
+    if (url.pathname === "/api/nexus/runtime/path2/lane-evidence" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Path 2 lane evidence SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const evidence = await active.path2Evidence.recordLaneEvidence({ ...body, releaseSha });
+        send(res, 201, { ok: true, evidence });
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_lane_evidence_rejected" }); } return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/path2/stability-passes" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Path 2 stability receipt SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const stabilityPass = await active.path2Evidence.recordStabilityPass({ ...body, releaseSha });
+        send(res, 201, { ok: true, stabilityPass });
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_stability_evidence_rejected" }); } return true;
+    }
     if (url.pathname === "/api/nexus/runtime/path2/certification" && req.method === "GET") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
       try { const active = await runtime(); await active.ready; const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
