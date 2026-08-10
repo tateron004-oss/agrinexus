@@ -115,6 +115,12 @@ jobs:
           NEXUS_PATH1_BASELINE: 00a1e57759bc9fef7be40362ffc2edee04673769
           NEXUS_PATH2_MATRIX_OUTPUT: output/nexus-path2-production-matrix.json
         run: node scripts/nexus-run-path2-production-matrix.js
+      - name: Capture the exact-release Path 2 certification status
+        env:
+          NEXUS_PATH1_BASELINE: 00a1e57759bc9fef7be40362ffc2edee04673769
+          NEXUS_PATH2_STATUS_OUTPUT: output/nexus-path2-certification-status.json
+          NEXUS_PATH2_ALLOW_PENDING: "true"
+        run: node scripts/nexus-path2-certification-status.js
       - name: Publish unified release evidence
         if: always()
         uses: actions/upload-artifact@v4
