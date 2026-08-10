@@ -49,3 +49,11 @@ test("authoritative persistence and semantic memory have one migration chain", (
   ]);
   assert.match(read("foundation/migrations/003_nexus_unified_runtime.sql"), /vector\(/i);
 });
+
+test("unified release records a case-level Path 2 production matrix after exact-SHA stability", () => {
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/nexus-unified-production-release.yml"), "utf8");
+  assert.match(workflow, /Run and record the Path 2 exact-production machine matrix/);
+  assert.match(workflow, /node scripts\/nexus-run-path2-production-matrix\.js/);
+  assert.ok(workflow.indexOf("Establish three consecutive deploy-stage production passes") <
+    workflow.indexOf("Run and record the Path 2 exact-production machine matrix"));
+});

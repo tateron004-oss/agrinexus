@@ -110,6 +110,11 @@ jobs:
           if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established.');
           fs.writeFileSync('output/nexus-production-release-streak.json',JSON.stringify({releaseReady:true,finalPath1Certification:false,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
           NODE
+      - name: Run and record the Path 2 exact-production machine matrix
+        env:
+          NEXUS_PATH1_BASELINE: 00a1e57759bc9fef7be40362ffc2edee04673769
+          NEXUS_PATH2_MATRIX_OUTPUT: output/nexus-path2-production-matrix.json
+        run: node scripts/nexus-run-path2-production-matrix.js
       - name: Publish unified release evidence
         if: always()
         uses: actions/upload-artifact@v4
