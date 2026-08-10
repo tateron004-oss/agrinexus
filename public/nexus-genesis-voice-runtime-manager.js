@@ -417,7 +417,26 @@
       },
       async recover(reason = "recover") {
         setState("recovering");
-        await invoke("recover", reason, this);
+        let result;
+        try {
+          result = await invoke("recover", reason, this);
+          if (result === false || result?.ok === false) {
+            throw Object.assign(new Error(result?.reason || `${name} failed to recover.`), {
+              category: result?.category || "recovery-failure"
+            });
+          }
+        } catch (error) {
+          await this.releaseOwnership("recovery-failed");
+          sessionOpen = false;
+          interrupted = false;
+          cancelPending = false;
+          responseInProgress = false;
+          activeResponseId = "";
+          const normalizedError = normalizeRuntimeError(error, "recovery-failure");
+          setState("failed");
+          emit("error", normalizedError);
+          return { ok: false, state, error: normalizedError };
+        }
         interrupted = false;
         cancelPending = false;
         responseInProgress = false;
@@ -900,7 +919,20 @@
         if (recoveryLog.length > 80) recoveryLog.shift();
         logTransition("recovering", safeReason);
         clearAllWatchdogs();
-        await runtimeManager.adapter().recover(safeReason);
+        const recoveryResult = await runtimeManager.adapter().recover(safeReason);
+        if (!recoveryResult?.ok) {
+          active = false;
+          logTransition("recovering", "recovery-failed", {
+            errorCategory: recoveryResult?.error?.category || "recovery-failure"
+          });
+          return {
+            ok: false,
+            state,
+            recovered: false,
+            reason: safeReason,
+            error: recoveryResult?.error || { category: "recovery-failure" }
+          };
+        }
         logTransition("listening", "recovery-complete");
         return { ok: true, state, recovered: true, reason: safeReason };
       },
