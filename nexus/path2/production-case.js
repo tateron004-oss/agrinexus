@@ -18,20 +18,22 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
   catch (error) { return failedCase({ input, releaseSha, locale, observedAt, error }); }
   const profile = createInteractionProfile({ locale, channel: "voice", userPreferences: context.userPreferences });
   let passed = Boolean(plan.goal && plan.application && (plan.steps.length || plan.clarification));
-  if (input.lane === "planning") passed = passed && acyclic(plan.steps);
-  let executionProof = null;
-  if (["toolUse", "crossApplication", "verification"].includes(input.lane)) { executionProof = await executeSafeWorkflow({ active, context, command, input }); passed = passed && executionProof.passed; }
-  if (input.lane === "recovery") { executionProof = await executeSafeWorkflow({ active, context, command, input, recovery: true }); passed = passed && executionProof.passed; }
-  if (input.lane === "multilingual") passed = passed && profile.locale === locale && profile.requirements.preserveLanguageAcrossWorkflow && profile.requirements.preserveSafetyMeaning;
-  if (input.lane === "accessibility") passed = passed && profile.voiceOnly && profile.preferredFormats.includes("plain-language") && profile.requirements.announceVisibleOutcome;
-  if (input.lane === "memory") passed = passed && await verifyDurableMemory({ active, principal, input });
+  let executionProof = null; let failure = null;
+  try {
+    if (input.lane === "planning") passed = passed && acyclic(plan.steps);
+    if (["toolUse", "crossApplication", "verification"].includes(input.lane)) { executionProof = await executeSafeWorkflow({ active, context, command, input }); passed = passed && executionProof.passed; }
+    if (input.lane === "recovery") { executionProof = await executeSafeWorkflow({ active, context, command, input, recovery: true }); passed = passed && executionProof.passed; }
+    if (input.lane === "multilingual") passed = passed && profile.locale === locale && profile.requirements.preserveLanguageAcrossWorkflow && profile.requirements.preserveSafetyMeaning;
+    if (input.lane === "accessibility") passed = passed && profile.voiceOnly && profile.preferredFormats.includes("plain-language") && profile.requirements.announceVisibleOutcome;
+    if (input.lane === "memory") passed = passed && await verifyDurableMemory({ active, principal, input });
+  } catch (error) { passed = false; failure = error.code || error.name || "case_execution_failed"; }
   const fact = contract.requiredFacts[(input.ordinal - 1) % contract.requiredFacts.length];
   const digest = crypto.createHash("sha256").update(JSON.stringify({ releaseSha, caseId: input.caseId, plan, passed })).digest("hex");
   return { caseId: input.caseId, releaseSha, path1Baseline: input.path1Baseline, lane: input.lane, passed,
     facts: { [fact]: passed }, falseSuccesses: 0, production: true, simulated: false, observedAt,
     receipt: { receiptId: `path2-production-${digest.slice(0, 24)}`, releaseSha, path1GuardPassed: true,
       source: "authoritative-production-runtime", caseId: input.caseId, locale, application: plan.application,
-      stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [], digest } };
+      stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [], failure, digest } };
 }
 
 function failedCase({ input, releaseSha, locale, observedAt, error }) { const contract = PATH2_LANES[input.lane];
