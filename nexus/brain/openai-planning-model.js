@@ -11,7 +11,7 @@ class OpenAiPlanningModel {
     const response = await this.fetchFn("https://api.openai.com/v1/responses", { method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ model: this.model,
-        instructions: "Plan the user's open-ended goal using only the supplied application and tool catalog. Use conversation history, the prior task, and verified memories to resolve follow-ups and corrections. Preserve the user's locale. Ask exactly one concise clarification only when essential; a clarification plan may have zero steps. Never claim execution or invent a provider result. Return JSON matching the schema.",
+        instructions: "Plan the user's open-ended goal using only the supplied application and tool catalog. Use conversation history, the prior task, and verified memories to resolve follow-ups and corrections. Follow the supplied interaction profile across every step: preserve its language, accessibility requirements, names and identifiers, and safety meaning. Use concise plain language when requested. Ask exactly one concise clarification only when essential; a clarification plan may have zero steps. Never claim execution or invent a provider result. Return JSON matching the schema.",
         input: JSON.stringify(request), text: { format: { type: "json_schema", name: "nexus_task_plan", strict: true, schema: PLAN_SCHEMA } } }) });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(body.error?.message || "Planning provider request failed."); error.code = body.error?.code || "planning_provider_failed"; throw error; }
