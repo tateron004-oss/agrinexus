@@ -77,6 +77,7 @@ jobs:
         run: node scripts/nexus-render-release-controller.js
       - name: Produce, compile, and record exact-release production probes
         env:
+          NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
@@ -89,6 +90,7 @@ jobs:
           node scripts/nexus-record-production-proof.js
       - name: Establish three consecutive deploy-stage production passes
         env:
+          NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
@@ -101,6 +103,7 @@ jobs:
               node scripts/nexus-release-certification-controller.js verify-deployment
             NEXUS_CLEAN_BASE_URL="$NEXUS_BASE_URL" node scripts/nexus-verify-launch-provider-readiness.js
             NEXUS_PASS_NUMBER="$pass" node scripts/nexus-production-release-readiness.js
+            NEXUS_PASS_NUMBER="$pass" node scripts/nexus-record-path2-stability-pass.js
             if [ "$pass" -lt 3 ]; then sleep 120; fi
           done
           node - <<'NODE'
