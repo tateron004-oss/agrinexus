@@ -233,10 +233,11 @@ test("new Genesis build passes physical voice and every command", async ({ page,
           window.__nexusPhysicalReconnectStableAt ||= Date.now();
           return Date.now() - window.__nexusPhysicalReconnectStableAt >= 3000;
         }, null, { timeout: 60000 });
-        const internallyConnected = await primaryVoiceEntry
-          .getAttribute("data-nexus-permanent-microphone-state")
-          .then((state) => state === "connected")
-          .catch(() => false);
+        const internallyConnected = await page.evaluate(() => {
+          const microphone = document.querySelector('[data-nexus-permanent-microphone-control="true"]');
+          return microphone?.getAttribute("data-nexus-permanent-microphone-state") === "connected"
+            && window.NexusCleanRuntime?.snapshot?.().state?.state === "connected";
+        }).catch(() => false);
         if (!internallyConnected) await primaryVoiceEntry.click();
       } else {
         await primaryVoiceEntry.click();
