@@ -27,24 +27,58 @@ const commands = [
   ["live-knowledge", "Nexus, open the pilot evidence dashboard.", "pilot-dashboard"]
 ];
 
-function speak(text) {
+function pcmDataFromWave(wave) {
+  if (wave.toString("ascii", 0, 4) !== "RIFF" || wave.toString("ascii", 8, 12) !== "WAVE") {
+    throw new Error("Windows speech synthesis did not produce a PCM WAV file.");
+  }
+  let offset = 12;
+  while (offset + 8 <= wave.length) {
+    const chunkId = wave.toString("ascii", offset, offset + 4);
+    const chunkLength = wave.readUInt32LE(offset + 4);
+    const dataStart = offset + 8;
+    if (chunkId === "data") return wave.subarray(dataStart, dataStart + chunkLength);
+    offset = dataStart + chunkLength + (chunkLength % 2);
+  }
+  throw new Error("Windows speech synthesis WAV file has no data chunk.");
+}
+
+function synthesizePcm16(text) {
   const encoded = Buffer.from(text, "utf16le").toString("base64");
+  const wavePath = path.join(OUTPUT, `stimulus-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`);
+  const encodedPath = Buffer.from(wavePath, "utf16le").toString("base64");
   const script = [
     "Add-Type -AssemblyName System.Speech",
     `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
+    `$p=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedPath}'))`,
+    "$f=[System.Speech.AudioFormat.SpeechAudioFormatInfo]::new(24000,[System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen,[System.Speech.AudioFormat.AudioChannel]::Mono)",
     "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$v.SetOutputToDefaultAudioDevice()",
     "$v.Volume=100",
     "$v.Rate=-2",
-    "$v.Speak($t + ' ' + $t)",
+    "$v.SetOutputToWaveFile($p,$f)",
+    "$v.Speak($t)",
     "$v.Dispose()"
   ].join(";");
   return new Promise((resolve, reject) => {
     const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
     let stderr = "";
     child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(stderr || `speech exited ${code}`)));
+    child.on("exit", (code) => {
+      if (code !== 0) return reject(new Error(stderr || `speech exited ${code}`));
+      try {
+        const pcm = pcmDataFromWave(fs.readFileSync(wavePath));
+        fs.unlinkSync(wavePath);
+        resolve(pcm.toString("base64"));
+      } catch (error) {
+        reject(error);
+      }
+    });
   });
+}
+
+async function speak(page, text) {
+  const pcm16 = await synthesizePcm16(text);
+  const injected = await page.evaluate((audio) => window.NexusPath1Certification?.injectPcm16?.(audio) === true, pcm16);
+  if (!injected) throw new Error("Connected Realtime transport rejected the PCM16 certification stimulus.");
 }
 
 test.use({
@@ -85,22 +119,6 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   });
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
-    const originalGetUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
-    if (originalGetUserMedia) {
-      navigator.mediaDevices.getUserMedia = (constraints = {}) => {
-        if (!constraints.audio) return originalGetUserMedia(constraints);
-        const requestedAudio = typeof constraints.audio === "object" ? constraints.audio : {};
-        return originalGetUserMedia({
-          ...constraints,
-          audio: {
-            ...requestedAudio,
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: true
-          }
-        });
-      };
-    }
     localStorage.setItem("agrinexusLoginLanguage", "en");
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
     window.__NEXUS_VOICE_ACCEPTANCE_EVENT_SINK__ = (event) => {
@@ -228,7 +246,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     }).toBe("connected");
     await page.waitForTimeout(1500);
     const calibrationBefore = await page.evaluate(() => window.__cleanEvidence.receipts.length);
-    await speak("Nexus, say physical voice calibration complete.");
+    await speak(page, "Nexus, say physical voice calibration complete.");
     await expect.poll(() => page.evaluate((before) => {
       const receipts = window.__cleanEvidence.receipts;
       return receipts.slice(before).some((item) => item.type === "audio.remote-attached");
@@ -244,7 +262,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     for (const [workspace, command, visual] of commands) {
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
-      await speak(command);
+      await speak(page, command);
       await expect.poll(() => page.evaluate(({ before, workspace }) => {
         const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[workspace] || workspace;
         return window.__cleanEvidence.receipts.slice(before)
