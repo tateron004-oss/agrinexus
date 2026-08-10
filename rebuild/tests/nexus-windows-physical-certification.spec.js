@@ -198,12 +198,11 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect.poll(() => page.evaluate(() => window.NexusPath1Certification?.snapshot?.().state), {
       timeout: 60000
     }).toBe("connected");
+    await speak("Nexus, say physical voice calibration complete.");
     await expect.poll(() => page.evaluate(() => {
       const receipts = window.__cleanEvidence.receipts;
       return receipts.some((item) => item.type === "audio.remote-attached");
     }), { timeout: 60000 }).toBe(true);
-
-    await speak("Nexus, say physical voice calibration complete.");
     await expect.poll(() => page.evaluate(() => {
       const receipts = window.__cleanEvidence.receipts;
       return receipts.some((item) => item.type === "conversation.return-to-listening");
