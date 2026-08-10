@@ -38,3 +38,16 @@ test("duplicate participant evidence fails closed", async () => {
   const repo = new Path2EvidenceRepository({ query: async () => ({ rows: [] }) });
   await assert.rejects(() => repo.recordUsabilitySession(session(1)), error => error.code === "duplicate_participant");
 });
+
+test("durable report counts only stored exact-release lanes and stability passes", async () => {
+  const laneRows = Object.keys(require("../../nexus/path2/certification-contract.js").PATH2_LANES)
+    .filter(lane => lane !== "usability").map(lane => { const contract = require("../../nexus/path2/certification-contract.js").PATH2_LANES[lane];
+      return { evidence: { lane, releaseSha, path1Baseline, cases: contract.minimumCases, passed: contract.minimumCases,
+        facts: Object.fromEntries(contract.requiredFacts.map(key => [key, true])), receipts: [`${lane}-receipt`],
+        production: true, simulated: false, path1GuardPassed: true, falseSuccesses: 0 } }; });
+  const usabilityRows = Array.from({ length: 30 }, (_, index) => ({ completed: true, unprompted_language: true,
+    effort_saved: true, false_successes: 0, receipt: session(index).receipt }));
+  const responses = [{ rows: laneRows }, { rows: [{ pass_number: 1 }, { pass_number: 2 }, { pass_number: 3 }] }, { rows: usabilityRows }];
+  const report = await new Path2EvidenceRepository({ query: async () => responses.shift() }).durableReport({ releaseSha, path1Baseline });
+  assert.equal(report.certified, true); assert.equal(report.stabilityPasses, 3);
+});

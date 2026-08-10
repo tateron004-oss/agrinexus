@@ -54,6 +54,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const session = await active.path2Evidence.recordUsabilitySession(body); send(res, 201, { ok: true, session });
       } catch (error) { send(res, 400, { error: error.message, code: error.code || "usability_evidence_rejected" }); } return true;
     }
+    if (url.pathname === "/api/nexus/runtime/path2/certification" && req.method === "GET") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        const report = await active.path2Evidence.durableReport({ releaseSha, path1Baseline: url.searchParams.get("path1Baseline") });
+        send(res, report.certified ? 200 : 503, report);
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "path2_certification_unavailable" }); } return true;
+    }
     const workspaceProofMatch=url.pathname.match(/^\/api\/nexus\/runtime\/production-acceptance\/workspaces\/([^/]+)$/);
     if (workspaceProofMatch && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }

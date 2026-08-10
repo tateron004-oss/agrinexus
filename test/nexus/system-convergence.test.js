@@ -44,7 +44,7 @@ test("authoritative persistence and semantic memory have one migration chain", (
     "006_nexus_resilient_execution.sql", "007_nexus_workspace_records.sql",
     "008_nexus_device_delivery.sql", "009_nexus_data_lifecycle.sql",
     "010_nexus_production_acceptance.sql", "011_nexus_production_acceptance_identity.sql",
-    "012_nexus_path2_certification.sql"
+    "012_nexus_path2_certification.sql", "013_nexus_path2_certification_ledger.sql"
   ]);
   assert.match(read("foundation/migrations/003_nexus_unified_runtime.sql"), /vector\(/i);
 });
