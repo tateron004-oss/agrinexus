@@ -195,8 +195,12 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       const entry = Array.from(document.querySelectorAll("button"))
         .find((button) => button.textContent?.trim() === "Start as User");
       const signInReturned = Boolean(entry && entry.getClientRects().length);
-      const listening = document.getElementById("nexus-status")?.textContent?.trim() === "Listening";
       const microphone = document.querySelector('[data-nexus-permanent-microphone-control="true"]');
+      const listening = microphone?.getAttribute("data-nexus-permanent-microphone-state") === "connected"
+        && /Realtime voice is connected and listening/i.test(
+          document.getElementById("nexusPermanentMicrophoneStatus")?.textContent || ""
+        )
+        && window.NexusCleanRuntime?.snapshot?.().state?.state === "connected";
       const retryAvailable = Boolean(
         microphone
         && microphone.getClientRects().length
