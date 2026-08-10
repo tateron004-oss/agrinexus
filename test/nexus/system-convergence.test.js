@@ -56,4 +56,7 @@ test("unified release records a case-level Path 2 production matrix after exact-
   assert.match(workflow, /node scripts\/nexus-run-path2-production-matrix\.js/);
   assert.ok(workflow.indexOf("Establish three consecutive deploy-stage production passes") <
     workflow.indexOf("Run and record the Path 2 exact-production machine matrix"));
+  assert.ok(workflow.indexOf("Run and record the Path 2 exact-production machine matrix") <
+    workflow.indexOf("Capture the exact-release Path 2 certification status"));
+  assert.match(workflow, /node scripts\/nexus-path2-certification-status\.js/);
 });
