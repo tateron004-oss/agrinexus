@@ -170,27 +170,16 @@ async function run(env = process.env, fetchFn = fetch) {
   const status = await requestJson(`${base}/api/nexus/runtime/status`, { headers: { accept: "application/json", "cache-control": "no-cache" } }, fetchFn);
   if (!status.response.ok || status.body?.ok !== true || status.body?.releaseSha !== releaseSha)
     throw new Error("Path 2 matrix refused a stale or unavailable production release.");
-  const cases = [];
-  for (const [lane, runner] of Object.entries(RUNNERS)) {
-    for (let index = 0; index < PATH2_LANES[lane].minimumCases; index += 1) {
-      const outcome = await runner(index); const observedAt = new Date().toISOString();
-      const caseId = `p2c_${lane.toLowerCase()}_${releaseSha.slice(0, 12)}_${String(index + 1).padStart(3, "0")}`;
-      const digest = crypto.createHash("sha256").update(JSON.stringify({ lane, index, outcome, releaseSha })).digest("hex");
-      cases.push({ caseId, releaseSha, path1Baseline, lane, passed: outcome.passed === true, facts: outcome.facts,
-        falseSuccesses: outcome.falseSuccesses || 0, production: true, simulated: false, observedAt,
-        receipt: { receiptId: `path2-machine-${digest.slice(0, 24)}`, releaseSha, path1GuardPassed: true,
-          source: "nexus-unified-production-release", productionIdentity: status.body.releaseSha,
-          assertion: outcome.assertion, digest } });
-    }
-  }
   const headers = { accept: "application/json", "content-type": "application/json", authorization: `Bearer ${token}` };
-  for (let offset = 0; offset < cases.length; offset += 12) {
-    const batch = cases.slice(offset, offset + 12);
-    await Promise.all(batch.map(async item => {
-      const submitted = await requestJson(`${base}/api/nexus/runtime/path2/machine-cases`, { method: "POST", headers, body: JSON.stringify(item) }, fetchFn);
-      if (!submitted.response.ok || submitted.body?.ok !== true) throw new Error(`Path 2 case ${item.caseId} was rejected: ${submitted.body?.error || submitted.response.status}`);
-    }));
-  }
+  const descriptors = Object.keys(RUNNERS).flatMap(lane => Array.from({ length: PATH2_LANES[lane].minimumCases }, (_, index) => ({
+    caseId: `p2c_${lane.toLowerCase()}_${releaseSha.slice(0, 12)}_${String(index + 1).padStart(3, "0")}`,
+    lane, ordinal: index + 1, releaseSha, path1Baseline })));
+  const cases = new Array(descriptors.length); let cursor = 0;
+  async function worker() { while (true) { const index = cursor++; if (index >= descriptors.length) return; const item = descriptors[index];
+      const submitted = await requestJson(`${base}/api/nexus/runtime/path2/production-case`, { method: "POST", headers, body: JSON.stringify(item) }, fetchFn);
+      if (!submitted.body?.evidence || ![200, 201, 422].includes(submitted.response.status)) throw new Error(`Path 2 case ${item.caseId} could not execute in production: ${submitted.body?.error || submitted.response.status}`);
+      cases[index] = submitted.body.evidence; } }
+  await Promise.all(Array.from({ length: 4 }, () => worker()));
   const failed = cases.filter(item => !item.passed); const output = env.NEXUS_PATH2_MATRIX_OUTPUT || path.join("output", "nexus-path2-production-matrix.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ schema: "nexus.path2.production-matrix.v1", releaseSha, path1Baseline,

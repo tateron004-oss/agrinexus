@@ -118,3 +118,12 @@ test("Path 2 machine cases require the acceptance token and exact active release
   await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, new URL("http://local/api/nexus/runtime/path2/machine-cases"), accepted.send);
   assert.equal(accepted.result.status, 201); assert.equal(recorded.releaseSha, releaseSha);
 });
+
+test("Path 2 production cases cannot reach the planner without acceptance authentication", async () => {
+  const releaseSha = "a".repeat(40); let planned = false;
+  const runtime = { ready: Promise.resolve(), planner: { plan: async () => { planned = true; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha }, resolveUser: async () => null,
+    readJson: async () => ({ releaseSha }), createRuntimeFn: () => runtime }); const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/path2/production-case"), response.send);
+  assert.equal(response.result.status, 401); assert.equal(planned, false);
+});

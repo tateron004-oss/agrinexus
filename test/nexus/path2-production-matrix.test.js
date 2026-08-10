@@ -19,7 +19,9 @@ test("matrix binds and submits every case to one live exact release", async () =
   const releaseSha = "a".repeat(40); const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "path2-matrix-")), "matrix.json");
   const submissions = []; const fetchFn = async (url, init = {}) => {
     if (url.endsWith("/api/nexus/runtime/status")) return { ok: true, text: async () => JSON.stringify({ ok: true, releaseSha }) };
-    submissions.push(JSON.parse(init.body)); return { ok: true, text: async () => JSON.stringify({ ok: true }) };
+    const descriptor = JSON.parse(init.body); submissions.push(descriptor);
+    return { ok: true, status: 201, text: async () => JSON.stringify({ ok: true, evidence: { ...descriptor, passed: true,
+      receipt: { receiptId: `receipt-${descriptor.caseId}`, releaseSha, path1GuardPassed: true } } }) };
   };
   const cases = await run({ NEXUS_BASE_URL: "https://nexus.example", NEXUS_ACCEPTANCE_TOKEN: "token",
     EXPECTED_RELEASE_SHA: releaseSha, NEXUS_PATH2_MATRIX_OUTPUT: output }, fetchFn);

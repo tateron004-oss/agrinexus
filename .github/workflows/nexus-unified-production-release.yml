@@ -65,6 +65,7 @@ jobs:
           node test/nexus/worker-release-heartbeat.test.js
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
+          node test/nexus/path2-production-case.test.js
           node scripts/nexus-protected-foundation-guard.js
       - name: Record exact-release production dependency audit
         run: |
