@@ -13,7 +13,7 @@ class ConversationRepository {
     const messageId = createId("message");
     const result = await this.db.query(`insert into nexus_messages
       (message_id,tenant_id,conversation_id,actor_id,role,content,provenance)
-      values ($1,$2,$3,$4,$5,$6,$7::jsonb) returning *`, [messageId, tenantId, conversationId, actorId, role, content, JSON.stringify(provenance)]);
+      values ($1,$2,$3,$4,$5,to_jsonb($6::text),$7::jsonb) returning *`, [messageId, tenantId, conversationId, actorId, role, content, JSON.stringify(provenance)]);
     return (result.rows || result)[0];
   }
 

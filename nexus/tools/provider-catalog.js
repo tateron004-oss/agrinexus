@@ -56,11 +56,14 @@ function toolRecord(item) {
 function createExecutor(definition, { fetchFn }) {
   if (typeof fetchFn !== "function") throw coded("provider_fetch_unavailable", "A provider HTTP client is required.");
   return async ({ input, context, taskId, stepId, idempotencyKey }) => {
+    const request = { schema: "nexus.provider-request.v1", toolId: definition.toolId,
+      tenantId: context.tenantId, actorId: context.userId, taskId, stepId, idempotencyKey, input };
+    const requestBody = JSON.stringify(request); const requestSignature = crypto.createHmac("sha256", definition.receiptSecret).update(requestBody).digest("hex");
     const response = await fetchFn(definition.endpoint, { method: "POST", headers: {
       "content-type": "application/json", "accept": "application/json", "idempotency-key": idempotencyKey,
-      "x-nexus-tenant-id": context.tenantId, "x-nexus-task-id": taskId, "x-nexus-step-id": stepId
-    }, body: JSON.stringify({ schema: "nexus.provider-request.v1", toolId: definition.toolId,
-      tenantId: context.tenantId, actorId: context.userId, taskId, stepId, idempotencyKey, input }) });
+      "x-nexus-tenant-id": context.tenantId, "x-nexus-task-id": taskId, "x-nexus-step-id": stepId,
+      "x-nexus-request-signature": requestSignature
+    }, body: requestBody });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw coded(body.code || "provider_request_failed", body.message || `Provider returned HTTP ${response.status}.`);
     return body;
