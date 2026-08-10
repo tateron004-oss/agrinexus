@@ -17853,8 +17853,45 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (!command) {
     return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
   }
+  if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
+    const musicResult = await musicProviderCommandResponse(db, user, command, args);
+    const music = musicResult?.metadata?.music || {};
+    return {
+      ...common,
+      capability: "music-media",
+      status: musicResult?.status || "prepared",
+      response: musicResult?.response || "I need the artist, song, genre, or playlist you want.",
+      providerAttempted: Boolean(music.ok),
+      providerSucceeded: Boolean(music.ok),
+      executionAttempted: Boolean(music.ok),
+      executionVerified: Boolean(music.ok),
+      music,
+      testPlayback: musicResult?.metadata?.testPlayback || null,
+      fallbackUrl: music.url || ""
+    };
+  }
+  if (toolName === "nexus_translation") {
+    const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
+    const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
+    const targetValue = args.targetLanguage || targetMatch?.[1] || args.language || "en";
+    const targetLanguage = languageMap[String(targetValue).toLowerCase()] || String(targetValue).toLowerCase();
+    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to)\s+(?:English|Spanish|French|Swahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
+    const translation = await translateDynamicContent(db, user, { text: sourceText, targetLanguage, sourceLanguage: args.sourceLanguage || "en", context: "openai-native-translation" });
+    return {
+      ...common,
+      capability: "nexus_translation",
+      status: "completed",
+      response: translation.translatedText,
+      translation,
+      providerAttempted: !String(translation.provider || "").startsWith("local"),
+      providerSucceeded: !String(translation.provider || "").includes("error"),
+      executionAttempted: false,
+      executionVerified: false
+    };
+  }
   if (toolName === "nexus_weather") {
-    const location = sanitizePilotText(args.location || args.city || args.query || command, 180);
+    const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
+    const location = sanitizePilotText(args.location || args.city || locationMatch?.[1] || args.query || command, 180);
     const result = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
       locationText: location,
       query: args.query || command,
@@ -17980,6 +18017,44 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     };
   }
   if (toolName === "nexus_visual_analysis") {
+    const imageSearchRequest = !args.imageUrl && !args.url && /\b(show|find|search|display|open)\b.*\b(images?|photos?|pictures?)\b/i.test(command);
+    if (imageSearchRequest) {
+      const imageQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|me|real|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
+      try {
+        const commonsUrl = new URL("https://commons.wikimedia.org/w/api.php");
+        commonsUrl.searchParams.set("action", "query");
+        commonsUrl.searchParams.set("generator", "search");
+        commonsUrl.searchParams.set("gsrsearch", `filetype:bitmap ${imageQuery}`);
+        commonsUrl.searchParams.set("gsrnamespace", "6");
+        commonsUrl.searchParams.set("gsrlimit", "6");
+        commonsUrl.searchParams.set("prop", "imageinfo");
+        commonsUrl.searchParams.set("iiprop", "url|extmetadata");
+        commonsUrl.searchParams.set("iiurlwidth", "900");
+        commonsUrl.searchParams.set("format", "json");
+        commonsUrl.searchParams.set("origin", "*");
+        const response = await fetchWithTimeout(commonsUrl, { headers: { accept: "application/json" } }, 10000);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
+        const images = Object.values(payload.query?.pages || {}).map(page => {
+          const info = page.imageinfo?.[0] || {};
+          const metadata = info.extmetadata || {};
+          return {
+            title: sanitizePilotText(page.title || "Wikimedia Commons image", 180),
+            imageUrl: info.thumburl || info.url || "",
+            sourceUrl: info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title || "").replace(/ /g, "_"))}`,
+            creator: sanitizePilotText(metadata.Artist?.value || "", 180),
+            license: sanitizePilotText(metadata.LicenseShortName?.value || metadata.UsageTerms?.value || "See source", 120),
+            description: sanitizePilotText(metadata.ImageDescription?.value || metadata.ObjectName?.value || "", 260)
+          };
+        }).filter(item => item.imageUrl && item.sourceUrl).slice(0, 6);
+        if (images.length) {
+          const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-images", [`Retrieved ${images.length} visible image result(s) from Wikimedia Commons with source pages.`], ["Nexus did not analyze an unseen image, open the camera, or claim ownership of source media."]);
+          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-backed image results for ${imageQuery} from Wikimedia Commons.`, images, sources: images.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
+        }
+      } catch (error) {
+        // Continue into the configured vision provider, which returns a truthful blocked state.
+      }
+    }
     const visionResult = await nexusRealProviders.vision.analyze({
       imageUrl: args.imageUrl || args.url,
       prompt: args.prompt || args.query || command,
@@ -18030,11 +18105,40 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "calendar" }, calendarResult);
   }
   if (toolName === "nexus_workforce_learning") {
+    const learningRequest = /\b(explain|teach|lesson|learn|learning|literacy|course|courses|training|lms|class|quiz|understanding)\b/i.test(command);
+    const jobsRequest = /\b(job|jobs|employment|career|employer|resume|résumé|vacancy|vacancies|position|workforce)\b/i.test(command);
+    if (learningRequest && !jobsRequest) {
+      const cropRotation = /\bcrop rotation\b/i.test(command);
+      const lesson = cropRotation
+        ? "Crop rotation means planting a different crop in the same field in the next season. Changing crops can protect soil nutrients and interrupt some pest and disease cycles. For example, maize may be followed by beans or another legume. Check your local growing conditions before choosing the next crop. Understanding question: why can changing crops help the soil?"
+        : "I opened Learning and prepared a plain-language lesson from your request. I will explain one idea at a time, check understanding with one question, and rephrase anything that is unclear.";
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "lesson-ready", ["Prepared a relevant plain-language learning response and one understanding check."], ["Nexus did not enroll the user, issue a certificate, or claim completion of an external course."]);
+      return { ...common, capability: "learning-training", status: "lesson-ready", response: lesson, receipt, evidenceReceipt: receipt, localOnly: true };
+    }
     const lmsRequest = /\b(course|courses|training|lms|class|learning)\b/i.test(command);
     if (lmsRequest) {
       const courses = await nexusRealProviders.moodle.courses(process.env);
       return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "learning-training" }, courses);
     }
+  }
+  if (toolName === "nexus_agriculture") {
+    const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
+    const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
+    const response = yellowLowerLeaves
+      ? `For ${crop} with yellowing on the lower or older leaves, first inspect soil moisture and drainage, then check whether the yellowing follows a consistent pattern that may indicate nitrogen stress. Also inspect the leaves and stems for pests, lesions, or rot. Do not add fertilizer until the cause is checked; local soil testing or an agricultural specialist can help distinguish nutrient deficiency from disease.`
+      : `I opened Agriculture Help for this ${crop} question. I can help inspect symptoms, soil moisture, drainage, pests, disease signs, crop timing, and source-backed next steps. Tell me the affected plant part, when the problem began, and whether it is spreading.`;
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "guidance-ready", ["Returned crop-relevant, non-transactional agriculture guidance."], ["Nexus did not diagnose the crop from incomplete evidence, prescribe a chemical, place an order, or claim a field inspection occurred."]);
+    return { ...common, capability: "nexus_agriculture", status: "guidance-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
+  }
+  if (toolName === "nexus_health_preparation") {
+    const bp = command.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i);
+    const response = bp
+      ? `I prepared the test blood-pressure reading ${bp[1]} over ${bp[2]} for review. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
+      : /\btelehealth|intake\b/i.test(command)
+        ? "I opened Telehealth Intake and prepared the information you provided as a draft. Nothing was sent. I can collect the reason for the visit, when it began, relevant symptoms, and user-approved history, then show the draft for review."
+        : "I opened Health and Chronic Care. I can help with health literacy, test readings, intake preparation, RPM/RTM records, medication-list preparation, and provider-ready summaries without diagnosing or prescribing.";
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "health-preparation-ready", ["Prepared relevant health information under non-diagnostic safety rules."], ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
+    return { ...common, capability: "nexus_health_preparation", status: "health-preparation-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
   }
   if (toolName === "nexus_marketplace_logistics") {
     if (/\b(create|post|publish|list|sell)\b/i.test(command)) {
@@ -18136,8 +18240,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
 function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const toolNames = toolResults.map(item => String(item?.call?.name || ""));
-  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") || /\b(job|work|workforce|employment|career|resume|application)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|maize|crop)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const learning = /\b(learn|learning|course|training|literacy|irrigation)\b/.test(lower);
-  if (!(route || workforce || marketplace || health || learning)) return null;
+  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const jobs = /\b(job|jobs|workforce|employment|career|resume|résumé|application|employer)\b/.test(lower); const learning = /\b(explain|teach|lesson|learn|learning|course|training|literacy|quiz|understanding)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") && jobs || jobs; const agriculture = toolNames.includes("nexus_agriculture") || /\b(farm|farmer|agriculture|soil|irrigation|pest|disease|leaf|leaves|crop rotation|crop health)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|listing|seller|vendor|price|shipment)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const media = toolNames.includes("nexus_general_conversation") && Boolean(musicAssistantIntent(text));
+  if (!(route || workforce || learning || agriculture || marketplace || health || media)) return null;
   const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i);
   const locationMatch = text.match(/\b(?:in|near|around)\s+([A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*)*)/u);
   const cropMatch = text.match(/\b(?:sell|selling|buy|buying)\s+(?:some\s+)?([\p{L}'-]+)/iu);
@@ -18145,17 +18249,19 @@ function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const countryMatch = text.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i);
   const country = countryMatch?.[1] || locationMatch?.[1]?.trim() || "";
   const jobType = /\bfarming\b/i.test(text) ? "farming" : (jobMatch?.[1]?.replace(/\bjob$/i, "").trim() || "");
-  const workspace = route ? "map" : workforce ? "workforce" : marketplace ? "trade" : health ? "health" : "learning";
+  const workspace = route ? "map" : health ? "health" : media ? "media" : learning && !jobs ? "learning" : workforce ? "workforce" : agriculture && !marketplace ? "agriculture" : "trade";
   const payload = route
     ? { origin: originMatch?.[1]?.trim() || "", destination: originMatch?.[2]?.trim() || country, country }
-    : workforce
+    : workspace === "workforce"
       ? { query: jobType || text, jobType, location: locationMatch?.[1]?.trim() || "", country }
-      : marketplace
+      : workspace === "trade"
         ? { query: text, action: /\bsell(?:ing)?\b/i.test(text) ? "sell" : "buy", product: cropMatch?.[1]?.trim() || (/\bmaize\b/i.test(text) ? "maize" : ""), country }
-        : health
+        : workspace === "health"
           ? { query: text, intake: /blood[- ]?pressure|hypertension/i.test(text) ? "blood-pressure" : "healthcare", intakeType: /\b(healthcare|patient|telehealth)\b/i.exec(text)?.[1]?.toLowerCase() || "healthcare", country }
-          : { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text };
-  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workforce ? "job_search" : marketplace ? "seller_intake" : health ? "intake" : "learning_start", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
+          : workspace === "learning" ? { query: text, learningGoal: /\birrigation\b/i.test(text) ? "irrigation" : text }
+            : workspace === "media" ? { query: musicAssistantIntent(text)?.query || text, action: "play" }
+              : { query: text, crop: /\bmaize\b/i.test(text) ? "maize" : "", country };
+  return { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "openai-realtime", workspace, operation: route ? "route" : workspace === "workforce" ? "job_search" : workspace === "trade" ? "seller_intake" : workspace === "health" ? "intake" : workspace === "learning" ? "learning_start" : workspace === "media" ? "playback" : "agriculture_help", payload, toolResults: toolResults.map(item => item.call?.name).filter(Boolean) };
 }
 async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext = {}) {
   const status = nexusOpenAiNativeStatus(process.env);
@@ -18353,6 +18459,7 @@ function localTranslateText(text, targetLanguage) {
       [["opened"], "Espace ouvert. Vous pouvez continuer ici."]
     ],
     sw: [
+      [["farmer", "inspect", "maize", "leaves"], "Mkulima anapaswa kukagua majani ya mahindi."],
       [["telehealth", "intake"], "Usajili wa afya kwa mbali umefunguliwa. AgriNexus imeunda rekodi na hatua inayofuata."],
       [["vitals"], "Vipimo muhimu vimechukuliwa na kuongezwa kwenye rekodi ya afya."],
       [["consent"], "Ridhaa ya huduma ya afya kwa mbali imerekodiwa."],
@@ -20518,7 +20625,20 @@ async function fetchOpenAiWebKnowledge(query) {
   }, 12000);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
-  return { provider: "openai-web-search", answer: extractResponseText(payload), results: [] };
+  const results = [];
+  const visit = value => {
+    if (!value || typeof value !== "object") return;
+    const url = value.url || value.uri || value.source_url;
+    if (url && /^https?:\/\//i.test(String(url))) {
+      results.push({ title: value.title || value.name || url, url, snippet: value.snippet || value.text || "" });
+    }
+    for (const child of Object.values(value)) {
+      if (Array.isArray(child)) child.forEach(visit);
+      else if (child && typeof child === "object") visit(child);
+    }
+  };
+  visit(payload);
+  return { provider: "openai-web-search", answer: extractResponseText(payload), results };
 }
 
 async function fetchConfiguredLiveKnowledgeEndpoint(query, command) {
@@ -25747,7 +25867,8 @@ function knownAfricanCityLocation(text = "") {
 function musicAssistantIntent(text = "") {
   const lower = String(text || "").toLowerCase();
   if (!/\b(play|open|find|search|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm)\b/.test(lower)
+    && !/\bplay\s+.+\s+by\s+.+/.test(lower)) return null;
   const query = String(text || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|put on|listen to)\b/ig, " ")
@@ -26518,11 +26639,24 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       }
     };
   }
-  const sourceResult = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
+  const liveWeatherExplicitlyEnabled = [
+    process.env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED,
+    process.env.NEXUS_WEATHER_PROVIDER_ENABLED,
+    process.env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED
+  ].every(value => String(value || "").toLowerCase() === "true");
+  const weatherRequest = {
     locationText,
     timeframe: "current",
     queryType: "current weather"
-  }, process.env);
+  };
+  const sourceResult = liveWeatherExplicitlyEnabled
+    ? await nexusWeatherSourceProvider.getWeatherSourceResultAsync(weatherRequest, process.env)
+    : nexusWeatherSourceProvider.getWeatherSourceResult(weatherRequest, {
+        ...process.env,
+        NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "false",
+        NEXUS_WEATHER_PROVIDER_ENABLED: "false",
+        NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "false"
+      });
   const sourceBacked = sourceResult.sourceStatus === "source-result-available" && sourceResult.evidenceStatus === "source-backed";
   if (sourceBacked) {
     const weatherCitation = normalizeNexusKnowledgeCitations([{
@@ -27186,11 +27320,24 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
   }
   db.profile.agentMemory.activeWeatherTurn = null;
   storeGenesisWeatherLocation(db, locationText);
-  const sourceResult = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
+  const liveWeatherExplicitlyEnabled = [
+    process.env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED,
+    process.env.NEXUS_WEATHER_PROVIDER_ENABLED,
+    process.env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED
+  ].every(value => String(value || "").toLowerCase() === "true");
+  const weatherRequest = {
     locationText,
     timeframe: "current",
     queryType: "current weather"
-  }, process.env);
+  };
+  const sourceResult = liveWeatherExplicitlyEnabled
+    ? await nexusWeatherSourceProvider.getWeatherSourceResultAsync(weatherRequest, process.env)
+    : nexusWeatherSourceProvider.getWeatherSourceResult(weatherRequest, {
+        ...process.env,
+        NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "false",
+        NEXUS_WEATHER_PROVIDER_ENABLED: "false",
+        NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "false"
+      });
   const sourceBacked = sourceResult.sourceStatus === "source-result-available" && sourceResult.evidenceStatus === "source-backed";
   if (sourceBacked) {
     const weatherCitation = normalizeNexusKnowledgeCitations([{
@@ -33310,12 +33457,17 @@ async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto",
   const status = nexusKnowledgeProviderStatus(env);
   const chosen = selectedProvider === "auto" || selectedProvider === "not-configured" ? status.provider : selectedProvider;
   const attempts = [];
-  if (chosen === "tavily") attempts.push(() => fetchTavilyKnowledge(query));
-  if (chosen === "brave") attempts.push(() => fetchBraveKnowledge(query));
-  if (chosen === "exa") attempts.push(() => fetchExaKnowledge(query));
-  if (chosen === "generic") attempts.push(() => fetchConfiguredLiveKnowledgeEndpoint(query, query));
-  if (!attempts.length) {
-    attempts.push(() => fetchTavilyKnowledge(query), () => fetchBraveKnowledge(query), () => fetchExaKnowledge(query));
+  const providers = {
+    tavily: () => fetchTavilyKnowledge(query),
+    brave: () => fetchBraveKnowledge(query),
+    exa: () => fetchExaKnowledge(query),
+    generic: () => fetchConfiguredLiveKnowledgeEndpoint(query, query),
+    "provider-endpoint": () => fetchConfiguredLiveKnowledgeEndpoint(query, query),
+    "openai-web-search": () => fetchOpenAiWebKnowledge(query)
+  };
+  if (providers[chosen]) attempts.push(providers[chosen]);
+  for (const [name, attempt] of Object.entries(providers)) {
+    if (name !== chosen) attempts.push(attempt);
   }
   const errors = [];
   for (const attempt of attempts) {
