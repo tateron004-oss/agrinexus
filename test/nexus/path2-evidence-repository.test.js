@@ -39,7 +39,7 @@ test("duplicate participant evidence fails closed", async () => {
   await assert.rejects(() => repo.recordUsabilitySession(session(1)), error => error.code === "duplicate_participant");
 });
 
-test("durable report counts only stored exact-release lanes and stability passes", async () => {
+test("durable report certifies pilot readiness from stored machine lanes and stability passes", async () => {
   const contracts = require("../../nexus/path2/certification-contract.js").PATH2_LANES;
   const usabilityRows = Array.from({ length: 30 }, (_, index) => ({ completed: true, unprompted_language: true,
     effort_saved: true, false_successes: 0, receipt: session(index).receipt }));
@@ -52,6 +52,21 @@ test("durable report counts only stored exact-release lanes and stability passes
     return { rows: usabilityRows };
   } }).durableReport({ releaseSha, path1Baseline });
   assert.equal(report.certified, true); assert.equal(report.stabilityPasses, 3);
+});
+
+test("durable report defers an empty field pilot without misreporting Path 1 drift", async () => {
+  const contracts = require("../../nexus/path2/certification-contract.js").PATH2_LANES;
+  const report = await new Path2EvidenceRepository({ query: async (sql, params) => {
+    if (sql.includes("nexus_path2_machine_cases")) { const lane = params[2]; const contract = contracts[lane];
+      return { rows: Array.from({ length: contract.minimumCases }, (_, index) => ({ passed: true, false_successes: 0,
+        facts: Object.fromEntries(contract.requiredFacts.map(key => [key, true])),
+        receipt: { receiptId: `${lane}-${index}`, releaseSha, path1GuardPassed: true } })) }; }
+    if (sql.includes("nexus_path2_stability_passes")) return { rows: [{ pass_number: 1 }, { pass_number: 2 }, { pass_number: 3 }] };
+    return { rows: [] };
+  } }).durableReport({ releaseSha, path1Baseline });
+  assert.equal(report.certified, true);
+  assert.equal(report.path1Protected, true);
+  assert.equal(report.fieldPilot.status, "pending-pilot");
 });
 
 test("machine evidence is aggregated only from distinct durable exact-release case receipts", async () => {
