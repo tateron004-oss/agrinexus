@@ -5,7 +5,7 @@ const { ApplicationRegistry } = require("../../nexus/apps/registry.js");
 const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { AgentService } = require("../../nexus/runtime/agent-service.js");
-const { OpenAiPlanningModel } = require("../../nexus/brain/openai-planning-model.js");
+const { OpenAiPlanningModel, PLAN_SCHEMA, normalizePlan } = require("../../nexus/brain/openai-planning-model.js");
 
 const context = { tenantId: "tenant", userId: "user", can: permission => permission !== "admin:write" };
 const command = { correlationId: "trace", tenantId: "tenant", actorId: "user", channel: "voice", locale: "en", text: "Find farm jobs near Nakuru and make a resume" };
@@ -58,4 +58,10 @@ test("production planning model requests strict structured output and returns no
   const result = await model.plan({ goal: "Help", catalog: {} });
   assert.equal(request.text.format.type, "json_schema"); assert.equal(request.text.format.strict, true); assert.equal(result.application, "live-knowledge");
   await assert.rejects(() => new OpenAiPlanningModel({ apiKey: "bad", fetchFn: async () => ({ ok: false, json: async () => ({ error: { code: "quota", message: "Unavailable" } }) }) }).plan({}), error => error.code === "quota");
+});
+
+test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
+  assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
+  assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
+  assert.throws(() => normalizePlan({ steps: [{ input: "not-json" }] }));
 });

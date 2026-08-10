@@ -17,12 +17,12 @@ class OpenAiPlanningModel {
     if (!response.ok) { const error = new Error(body.error?.message || "Planning provider request failed."); error.code = body.error?.code || "planning_provider_failed"; throw error; }
     const text = body.output_text || (body.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("");
     if (!text) throw new Error("Planning provider returned no structured plan.");
-    try { return JSON.parse(text); } catch { const error = new Error("Planning provider returned invalid JSON."); error.code = "planning_response_invalid"; throw error; }
+    try { return normalizePlan(JSON.parse(text)); } catch { const error = new Error("Planning provider returned invalid JSON."); error.code = "planning_response_invalid"; throw error; }
   }
 }
 
 const STEP = { type: "object", additionalProperties: false, required: ["id", "title", "toolId", "input", "dependsOn", "fallbackToolIds", "requiredPermission"],
-  properties: { id: { type: "string" }, title: { type: "string" }, toolId: { type: ["string", "null"] }, input: { type: "object" },
+  properties: { id: { type: "string" }, title: { type: "string" }, toolId: { type: ["string", "null"] }, input: { type: "string", description: "A JSON object encoded as a string." },
     dependsOn: { type: "array", items: { type: "string" } }, fallbackToolIds: { type: "array", items: { type: "string" } }, requiredPermission: { type: ["string", "null"] } } };
 const PLAN_SCHEMA = Object.freeze({ type: "object", additionalProperties: false,
   required: ["goal", "application", "riskTier", "clarification", "steps"], properties: {
@@ -30,4 +30,9 @@ const PLAN_SCHEMA = Object.freeze({ type: "object", additionalProperties: false,
     clarification: { type: ["string", "null"] }, steps: { type: "array", items: STEP }
   } });
 
-module.exports = Object.freeze({ OpenAiPlanningModel, PLAN_SCHEMA });
+function normalizePlan(plan) { return { ...plan, steps: (plan.steps || []).map(step => { let input;
+  try { input = JSON.parse(step.input || "{}"); } catch { throw new Error("Step input was not valid JSON."); }
+  if (!input || Array.isArray(input) || typeof input !== "object") throw new Error("Step input must encode a JSON object.");
+  return { ...step, input }; }) }; }
+
+module.exports = Object.freeze({ OpenAiPlanningModel, PLAN_SCHEMA, normalizePlan });
