@@ -105,3 +105,16 @@ test("Path 2 stability evidence rejects a stale release before repository access
   await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, new URL("http://local/api/nexus/runtime/path2/stability-passes"), response.send);
   assert.equal(response.result.status, 409); assert.equal(recorded, false);
 });
+
+test("Path 2 machine cases require the acceptance token and exact active release", async () => {
+  const releaseSha = "a".repeat(40); let recorded;
+  const runtime = { ready: Promise.resolve(), path2Evidence: { recordMachineCase: async input => { recorded = input; return input; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, caseId: "p2c_planning_0001", lane: "planning" }), createRuntimeFn: () => runtime });
+  const unauthorized = responseCapture();
+  await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/path2/machine-cases"), unauthorized.send);
+  assert.equal(unauthorized.result.status, 401); assert.equal(recorded, undefined);
+  const accepted = responseCapture();
+  await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, new URL("http://local/api/nexus/runtime/path2/machine-cases"), accepted.send);
+  assert.equal(accepted.result.status, 201); assert.equal(recorded.releaseSha, releaseSha);
+});
