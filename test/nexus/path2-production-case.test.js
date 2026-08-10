@@ -13,3 +13,7 @@ test("a production planner rejection becomes failed evidence instead of aborting
   const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] },
     input: { caseId: "p2c_intelligence_0002", lane: "intelligence", ordinal: 2, releaseSha, path1Baseline }, releaseSha });
   assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "plan_invalid"); assert.equal(evidence.production, true); });
+test("a durable lane execution error is also recorded instead of aborting later cases", async () => { const active = { planner: { plan: async () => ({ goal: "goal", application: "maps", planningAttempts: 1, clarification: null, steps: [{ clientStepId: "one", dependsOn: [], fallbackToolIds: [] }] }) },
+    conversations: { ensure: async () => { throw Object.assign(new Error("database"), { code: "22P02" }); } }, memory: {} };
+  const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] }, input: { caseId: "p2c_memory_0001", lane: "memory", ordinal: 1, releaseSha, path1Baseline }, releaseSha });
+  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "22P02"); });
