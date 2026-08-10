@@ -9,3 +9,7 @@ test("production case binds a real planner observation to the exact release", as
   assert.equal(evidence.passed, true); assert.equal(evidence.production, true); assert.equal(evidence.simulated, false);
   assert.equal(evidence.receipt.releaseSha, releaseSha); assert.equal(evidence.receipt.source, "authoritative-production-runtime"); });
 test("production prompts vary and multilingual cases cover every supported locale", () => { assert.notEqual(promptFor({ lane: "planning", ordinal: 1 }), promptFor({ lane: "planning", ordinal: 2 })); assert.equal(LOCALES.length, 6); });
+test("a production planner rejection becomes failed evidence instead of aborting the matrix", async () => { const active = { planner: { plan: async () => { throw Object.assign(new Error("invalid"), { code: "plan_invalid" }); } } };
+  const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] },
+    input: { caseId: "p2c_intelligence_0002", lane: "intelligence", ordinal: 2, releaseSha, path1Baseline }, releaseSha });
+  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "plan_invalid"); assert.equal(evidence.production, true); });

@@ -185,7 +185,10 @@ async function run(env = process.env, fetchFn = fetch) {
   fs.writeFileSync(output, JSON.stringify({ schema: "nexus.path2.production-matrix.v1", releaseSha, path1Baseline,
     productionIdentity: status.body.releaseSha, cases: cases.length, passed: cases.length - failed.length,
     failed: failed.map(item => item.caseId), lanes: Object.fromEntries(Object.keys(RUNNERS).map(lane => [lane, cases.filter(item => item.lane === lane).length])) }, null, 2));
-  if (failed.length) throw new Error(`Path 2 production matrix failed ${failed.length} case(s).`);
+  const certification = await requestJson(`${base}/api/nexus/runtime/path2/certification?path1Baseline=${encodeURIComponent(path1Baseline)}`,
+    { headers: { accept: "application/json", authorization: `Bearer ${token}`, "cache-control": "no-cache" } }, fetchFn);
+  const pendingMachine = Object.entries(certification.body?.lanes || {}).filter(([lane, value]) => lane !== "usability" && value.certified !== true).map(([lane]) => lane);
+  if (pendingMachine.length) throw new Error(`Path 2 production matrix did not certify machine lanes: ${pendingMachine.join(", ")}`);
   console.log(JSON.stringify({ releaseSha, cases: cases.length, passed: cases.length, output }));
   return cases;
 }
