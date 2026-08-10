@@ -1,6 +1,7 @@
 "use strict";
 
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
+const { createInteractionProfile } = require("../experience/interaction-profile.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, maxRepairAttempts = 2 }) {
@@ -12,8 +13,11 @@ class OpenEndedPlanner {
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
-    const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: command.locale,
+    const interactionProfile = createInteractionProfile({ locale: command.locale,
+      userPreferences: context.userPreferences || {}, channel: command.channel });
+    const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
+      interactionProfile,
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
       memories: memories.map(safeMemory), catalog };
     let feedback = [];
