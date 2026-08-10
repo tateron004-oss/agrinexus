@@ -260,19 +260,20 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     }, calibrationBefore), { timeout: 60000 }).toBe(true);
 
     for (const [workspace, command, visual] of commands) {
+      const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[workspace] || workspace;
       const before = await page.evaluate(() => window.__cleanEvidence.receipts.length);
       await page.waitForTimeout(500);
       await speak(page, command);
-      await expect.poll(() => page.evaluate(({ before, workspace }) => {
-        const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[workspace] || workspace;
+      await expect.poll(() => page.evaluate(({ before, nativeWorkspace }) => {
         return window.__cleanEvidence.receipts.slice(before)
           .some((item) => item.type === "workspace.visible" && item.detail.workspace === nativeWorkspace && item.detail.verified === true);
-      }, { before, workspace }), { timeout: 60000 }).toBe(true);
-      await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"]')).toBeVisible();
-      await expect.poll(() => page.evaluate((expected) => {
-        const nativeWorkspace = { maps: "map", marketplace: "trade", music: "media" }[expected] || expected;
-        return document.body.dataset.genesisWorkspace === nativeWorkspace;
-      }, workspace)).toBe(true);
+      }, { before, nativeWorkspace }), { timeout: 60000 }).toBe(true);
+      if (nativeWorkspace === "map") {
+        await expect(page.locator("#userMapCanvas.leaflet-container")).toBeVisible();
+      } else {
+        await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"]')).toBeVisible();
+      }
+      await expect.poll(() => page.evaluate((expected) => document.body.dataset.genesisWorkspace === expected, nativeWorkspace)).toBe(true);
       if (visual === "map") {
         await expect(page.locator("#userMapCanvas.leaflet-container")).toBeVisible();
         await expect.poll(() => page.evaluate(() => document.body.dataset.genesisMapLocation)).toBe("Mombasa");
