@@ -99,7 +99,7 @@ async function verifyDurableMemory({ active, principal, input }) {
 }
 function hasVisibleOutcome(verification = {}) { if (verification.visible === true || verification.audible === true || verification.visibleOrAudible === true) return true;
   return (verification.evidence || []).some(item => ["visible", "audible", "browser-outcome", "audio-playback", "workspace-render"].includes(item?.type)); }
-async function planWithRetries(planner, request, attempts = 3) { let lastError;
+async function planWithRetries(planner, request, attempts = 6) { let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) { try { return await planner.plan(request); } catch (error) { lastError = error; } }
   throw lastError; }
 function promptFor(input) { const places=["Kisumu","Nakuru","Mombasa","Eldoret","Nairobi","Kitale"];const place=places[(input.ordinal-1)%places.length];
