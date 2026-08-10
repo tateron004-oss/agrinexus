@@ -77,7 +77,6 @@ jobs:
         run: node scripts/nexus-render-release-controller.js
       - name: Produce, compile, and record exact-release production probes
         env:
-          NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
@@ -90,7 +89,6 @@ jobs:
           node scripts/nexus-record-production-proof.js
       - name: Establish three consecutive deploy-stage production passes
         env:
-          NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json

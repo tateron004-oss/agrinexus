@@ -30,3 +30,14 @@ test("recorder submits authenticated evidence produced from the release report",
   assert.equal(response.ok, true); assert.equal(request.url, "https://nexus.example/api/nexus/runtime/path2/stability-passes");
   assert.equal(request.init.headers.authorization, "Bearer secret"); assert.equal(request.body.releaseSha, releaseSha);
 });
+
+test("unified release inherits the masked acceptance token exported by deployment control", () => {
+  const workflow = fs.readFileSync(".github/workflows/nexus-unified-production-release.yml", "utf8");
+  const controller = fs.readFileSync("scripts/nexus-render-release-controller.js", "utf8");
+  assert.match(controller, /GITHUB_ENV.*NEXUS_ACCEPTANCE_TOKEN/s);
+  assert.match(controller, /::add-mask::/);
+  assert.doesNotMatch(workflow, /NEXUS_ACCEPTANCE_TOKEN:\s*\$\{\{\s*secrets\./,
+    "an absent repository secret must not override the token exported through GITHUB_ENV");
+  assert.ok(workflow.indexOf("Deploy exact SHA to the canonical Render topology") <
+    workflow.indexOf("Produce, compile, and record exact-release production probes"));
+});
