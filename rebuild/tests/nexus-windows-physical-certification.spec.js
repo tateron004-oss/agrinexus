@@ -214,7 +214,33 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       await expect(page.locator("#appView"), "Application must be restored before the single microphone retry").toBeVisible({ timeout: 15000 });
       await expect(page.locator("#loginView"), "Sign-in must close before bounded microphone recovery").toBeHidden({ timeout: 15000 });
       await expect(primaryVoiceEntry, "Permanent microphone must be restored before the single retry").toBeVisible({ timeout: 15000 });
-      await primaryVoiceEntry.click();
+      if (retryAvailable) {
+        await page.waitForFunction(() => {
+          const microphone = document.querySelector('[data-nexus-permanent-microphone-control="true"]');
+          const retryReady = Boolean(
+            microphone
+            && microphone.getClientRects().length
+            && /voice connection unavailable.*retry/i.test(microphone.textContent || "")
+          );
+          const runtimeState = window.NexusCleanRuntime?.snapshot?.().state?.state || null;
+          const connected = microphone?.getAttribute("data-nexus-permanent-microphone-state") === "connected"
+            && runtimeState === "connected";
+          if (connected) return true;
+          if (!retryReady || runtimeState === "connecting") {
+            window.__nexusPhysicalReconnectStableAt = 0;
+            return false;
+          }
+          window.__nexusPhysicalReconnectStableAt ||= Date.now();
+          return Date.now() - window.__nexusPhysicalReconnectStableAt >= 3000;
+        }, null, { timeout: 60000 });
+        const internallyConnected = await primaryVoiceEntry
+          .getAttribute("data-nexus-permanent-microphone-state")
+          .then((state) => state === "connected")
+          .catch(() => false);
+        if (!internallyConnected) await primaryVoiceEntry.click();
+      } else {
+        await primaryVoiceEntry.click();
+      }
     }
     await expect(page.locator("#appView"), "Application must remain visible after microphone activation").toBeVisible({ timeout: 15000 });
     await expect(primaryVoiceEntry, "Permanent microphone must remain visible after activation").toBeVisible({ timeout: 15000 });
