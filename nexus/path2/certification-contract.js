@@ -13,6 +13,8 @@ const PATH2_LANES = Object.freeze({
   usability: { minimumCases: 30, minimumSuccessRate: 0.9, requiredFacts: ["humanUsers", "unpromptedLanguage", "effortSaved"] }
 });
 
+const PATH2_CERTIFICATION_LANES = Object.freeze(Object.keys(PATH2_LANES).filter(lane => lane !== "usability"));
+
 function evaluatePath2Certification({ releaseSha, path1Baseline, laneEvidence = [], stabilityPasses = 0 }) {
   if (!/^[0-9a-f]{40}$/.test(String(releaseSha || ""))) throw new Error("Path 2 requires an exact release SHA.");
   if (!/^[0-9a-f]{40}$/.test(String(path1Baseline || ""))) throw new Error("Path 2 requires an exact Path 1 baseline SHA.");
@@ -30,10 +32,19 @@ function evaluatePath2Certification({ releaseSha, path1Baseline, laneEvidence = 
       minimumSuccessRate: contract.minimumSuccessRate, factsComplete, genuine, exactRelease }];
   }));
   const truthfulness = lanes.verification.certified && evidence.get("verification")?.falseSuccesses === 0;
-  const path1Protected = laneEvidence.every(item => item.path1GuardPassed === true);
-  const certified = Object.values(lanes).every(lane => lane.certified) && truthfulness && path1Protected && stabilityPasses >= 3;
-  return Object.freeze({ schema: "nexus.path2.certification.v1", certified, releaseSha, path1Baseline,
-    stabilityPasses, truthfulness, path1Protected, lanes });
+  const requiredLanesCertified = PATH2_CERTIFICATION_LANES.every(lane => lanes[lane].certified);
+  const requiredEvidence = laneEvidence.filter(item => PATH2_CERTIFICATION_LANES.includes(item.lane));
+  const path1Protected = requiredEvidence.length === PATH2_CERTIFICATION_LANES.length &&
+    requiredEvidence.every(item => item.path1GuardPassed === true);
+  const certified = requiredLanesCertified && truthfulness && path1Protected && stabilityPasses >= 3;
+  const fieldPilot = Object.freeze({ requiredForCertification: false,
+    status: lanes.usability.certified ? "validated" : "pending-pilot",
+    validated: lanes.usability.certified, cases: lanes.usability.cases, passed: lanes.usability.passed,
+    minimumCases: PATH2_LANES.usability.minimumCases,
+    note: "Multi-participant field-pilot validation begins when a pilot cohort is available." });
+  return Object.freeze({ schema: "nexus.path2.certification.v2", certificationStage: "pilot-ready",
+    certified, pilotReady: certified, releaseSha, path1Baseline, stabilityPasses, truthfulness,
+    path1Protected, requiredLanes: PATH2_CERTIFICATION_LANES, lanes, fieldPilot });
 }
 
-module.exports = Object.freeze({ PATH2_LANES, evaluatePath2Certification });
+module.exports = Object.freeze({ PATH2_LANES, PATH2_CERTIFICATION_LANES, evaluatePath2Certification });

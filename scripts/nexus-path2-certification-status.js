@@ -19,9 +19,10 @@ async function run(env = process.env, fetchFn = fetch) {
   if (result.body?.releaseSha !== releaseSha) throw new Error("Path 2 certification status is not bound to the active exact release.");
   const output = env.NEXUS_PATH2_STATUS_OUTPUT || path.join("output", "nexus-path2-certification-status.json");
   fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, JSON.stringify(result.body, null, 2));
-  const pending = Object.entries(result.body?.lanes || {}).filter(([, lane]) => lane.certified !== true).map(([lane]) => lane);
+  const requiredLanes = Array.isArray(result.body?.requiredLanes) ? result.body.requiredLanes : Object.keys(result.body?.lanes || {});
+  const pending = requiredLanes.filter(lane => result.body?.lanes?.[lane]?.certified !== true);
   console.log(JSON.stringify({ certified: result.body?.certified === true, releaseSha, stabilityPasses: result.body?.stabilityPasses,
-    pending, output }));
+    pending, fieldPilot: result.body?.fieldPilot?.status || "not-reported", output }));
   if (result.body?.certified !== true && env.NEXUS_PATH2_ALLOW_PENDING !== "true") throw new Error(`Path 2 certification remains pending: ${pending.join(", ")}`);
   return result.body;
 }

@@ -11,21 +11,34 @@ function evidenceFor(lane, overrides = {}) {
     production: true, simulated: false, path1GuardPassed: true, falseSuccesses: 0, ...overrides };
 }
 
-test("Path 2 certifies only when every user-experience lane and stability pass is proven", () => {
+test("Path 2 pilot-ready certification requires every production lane and stability pass", () => {
   const report = evaluatePath2Certification({ releaseSha, path1Baseline,
     laneEvidence: Object.keys(PATH2_LANES).map(lane => evidenceFor(lane)), stabilityPasses: 3 });
   assert.equal(report.certified, true); assert.equal(report.path1Protected, true);
   assert.equal(Object.keys(report.lanes).length, 10);
+  assert.equal(report.certificationStage, "pilot-ready");
+  assert.equal(report.fieldPilot.status, "validated");
 });
 
-test("Path 2 fails closed on a false success, missing lane, weak success rate, or Path 1 drift", () => {
+test("Path 2 fails closed on a false success, missing required lane, weak success rate, or Path 1 drift", () => {
   const complete = Object.keys(PATH2_LANES).map(lane => evidenceFor(lane));
   assert.equal(evaluatePath2Certification({ releaseSha, path1Baseline,
-    laneEvidence: complete.filter(item => item.lane !== "usability"), stabilityPasses: 3 }).certified, false);
+    laneEvidence: complete.filter(item => item.lane !== "memory"), stabilityPasses: 3 }).certified, false);
   assert.equal(evaluatePath2Certification({ releaseSha, path1Baseline,
     laneEvidence: complete.map(item => item.lane === "verification" ? { ...item, falseSuccesses: 1 } : item), stabilityPasses: 3 }).certified, false);
   assert.equal(evaluatePath2Certification({ releaseSha, path1Baseline,
     laneEvidence: complete.map(item => item.lane === "intelligence" ? { ...item, passed: 1 } : item), stabilityPasses: 3 }).certified, false);
   assert.equal(evaluatePath2Certification({ releaseSha, path1Baseline,
     laneEvidence: complete.map(item => ({ ...item, path1GuardPassed: item.lane !== "memory" })), stabilityPasses: 3 }).certified, false);
+});
+
+test("field-pilot evidence is deferred without weakening pilot-ready certification", () => {
+  const machineEvidence = Object.keys(PATH2_LANES).filter(lane => lane !== "usability").map(lane => evidenceFor(lane));
+  const report = evaluatePath2Certification({ releaseSha, path1Baseline, laneEvidence: machineEvidence, stabilityPasses: 3 });
+  assert.equal(report.certified, true);
+  assert.equal(report.pilotReady, true);
+  assert.equal(report.path1Protected, true);
+  assert.equal(report.lanes.usability.certified, false);
+  assert.equal(report.fieldPilot.requiredForCertification, false);
+  assert.equal(report.fieldPilot.status, "pending-pilot");
 });

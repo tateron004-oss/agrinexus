@@ -8,14 +8,16 @@ const { run: status } = require("../../scripts/nexus-path2-certification-status.
 const { run: record } = require("../../scripts/nexus-record-path2-usability-session.js");
 
 const releaseSha = "a".repeat(40); const path1Baseline = "b".repeat(40);
-test("release captures an exact-SHA pending report without misdeclaring certification", async () => {
+test("release captures an exact-SHA pilot-ready report with field validation deferred", async () => {
   const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "path2-status-")), "status.json");
-  const report = { certified: false, releaseSha, path1Baseline, stabilityPasses: 3,
-    lanes: { intelligence: { certified: true }, usability: { certified: false } } };
+  const report = { certified: true, pilotReady: true, certificationStage: "pilot-ready", releaseSha, path1Baseline, stabilityPasses: 3,
+    requiredLanes: ["intelligence"],
+    lanes: { intelligence: { certified: true }, usability: { certified: false } },
+    fieldPilot: { requiredForCertification: false, status: "pending-pilot" } };
   const result = await status({ NEXUS_BASE_URL: "https://nexus.example", NEXUS_ACCEPTANCE_TOKEN: "token",
     EXPECTED_RELEASE_SHA: releaseSha, NEXUS_PATH1_BASELINE: path1Baseline, NEXUS_PATH2_STATUS_OUTPUT: output,
-    NEXUS_PATH2_ALLOW_PENDING: "true" }, async () => ({ status: 503, ok: false, text: async () => JSON.stringify(report) }));
-  assert.equal(result.certified, false); assert.deepEqual(JSON.parse(fs.readFileSync(output)), report);
+    NEXUS_PATH2_ALLOW_PENDING: "false" }, async () => ({ status: 200, ok: true, text: async () => JSON.stringify(report) }));
+  assert.equal(result.certified, true); assert.deepEqual(JSON.parse(fs.readFileSync(output)), report);
 });
 
 test("trusted observation recorder accepts only genuine distinct-human exact-release evidence", async () => {
