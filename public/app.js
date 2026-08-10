@@ -49489,7 +49489,11 @@ window.NexusPath1Certification = Object.freeze({
       const pcm16 = new Uint8Array(binary.length);
       for (let index = 0; index < binary.length; index += 1) pcm16[index] = binary.charCodeAt(index);
       realtimeVoiceSession.sdkController?.mute?.(true);
-      session.sendAudio(pcm16.buffer, { commit: true });
+      const frameBytes = 24000;
+      for (let offset = 0; offset < pcm16.length; offset += frameBytes) {
+        const frame = pcm16.slice(offset, Math.min(offset + frameBytes, pcm16.length));
+        session.sendAudio(frame.buffer, { commit: offset + frameBytes >= pcm16.length });
+      }
       window.setTimeout(() => realtimeVoiceSession?.sdkController?.mute?.(false), 500);
       dispatchNexusPath1CertificationReceipt("audio.certification-input-injected", {
         encoding: "pcm16",
