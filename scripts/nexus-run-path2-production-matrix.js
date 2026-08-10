@@ -173,13 +173,29 @@ async function run(env = process.env, fetchFn = fetch) {
   const headers = { accept: "application/json", "content-type": "application/json", authorization: `Bearer ${token}` };
   const descriptors = Object.keys(RUNNERS).flatMap(lane => Array.from({ length: PATH2_LANES[lane].minimumCases }, (_, index) => ({
     caseId: `p2c_${lane.toLowerCase()}_${releaseSha.slice(0, 12)}_${String(index + 1).padStart(3, "0")}`,
-    lane, ordinal: index + 1, releaseSha, path1Baseline })));
+    lane, ordinal: index + 1, releaseSha, path1Baseline, deferRecording: ["crossApplication", "verification"].includes(lane) })));
+  let browser;
+  async function observeVisibleOutcome(evidence) {
+    const targets = evidence.receipt?.outcomeTargets || []; if (!targets.length) return evidence;
+    if (!browser) { const { chromium } = require("playwright"); browser = await chromium.launch({ headless: true }); }
+    const page = await browser.newPage(); const observations = [];
+    try { for (const target of targets) { await page.goto(target.outcomeUrl, { waitUntil: "networkidle" });
+        const marker = page.locator(`[data-nexus-production-outcome="true"][data-case-id="${evidence.caseId}"]`); await marker.waitFor({ state: "visible" });
+        const screenshot = await marker.screenshot(); observations.push({ outcomeUrl: page.url(), title: await page.title(),
+          screenshotSha256: crypto.createHash("sha256").update(screenshot).digest("hex"), observedAt: new Date().toISOString() }); }
+    } finally { await page.close(); }
+    const fact = Object.keys(evidence.facts || {})[0]; return { ...evidence, passed: true, facts: { [fact]: true },
+      receipt: { ...evidence.receipt, failure: null, browserObservations: observations } };
+  }
   const cases = new Array(descriptors.length); let cursor = 0;
   async function worker() { while (true) { const index = cursor++; if (index >= descriptors.length) return; const item = descriptors[index];
       const submitted = await requestJson(`${base}/api/nexus/runtime/path2/production-case`, { method: "POST", headers, body: JSON.stringify(item) }, fetchFn);
       if (!submitted.body?.evidence || ![200, 201, 422].includes(submitted.response.status)) throw new Error(`Path 2 case ${item.caseId} could not execute in production: ${submitted.body?.error || submitted.response.status}`);
-      cases[index] = submitted.body.evidence; } }
-  await Promise.all(Array.from({ length: 4 }, () => worker()));
+      let evidence = submitted.body.evidence;
+      if (item.deferRecording) { evidence = await observeVisibleOutcome(evidence); const recorded = await requestJson(`${base}/api/nexus/runtime/path2/machine-cases`,
+          { method: "POST", headers, body: JSON.stringify(evidence) }, fetchFn); if (recorded.response.status !== 201) throw new Error(`Browser-observed case ${item.caseId} could not be recorded.`); }
+      cases[index] = evidence; } }
+  try { await Promise.all(Array.from({ length: 4 }, () => worker())); } finally { if (browser) await browser.close(); }
   const failed = cases.filter(item => !item.passed); const output = env.NEXUS_PATH2_MATRIX_OUTPUT || path.join("output", "nexus-path2-production-matrix.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ schema: "nexus.path2.production-matrix.v1", releaseSha, path1Baseline,

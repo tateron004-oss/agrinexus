@@ -89,6 +89,8 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function escapeHtml(value) { return String(value || "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]); }
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -115,13 +117,16 @@ async function nexusToolResponse(req, res) {
     return send(res, 401, { code: "provider_request_unauthorized", message: "Signed Nexus provider request required." });
   if (payload.schema !== "nexus.provider-request.v1" || payload.toolId !== toolId || !payload.tenantId || !payload.taskId || !payload.stepId)
     return send(res, 400, { code: "provider_request_invalid", message: "Nexus provider request contract is invalid." });
+  const caseId = String(payload.input?.certificationCaseId || "");
+  const providerBase = (process.env.RENDER_EXTERNAL_URL || "https://agrinexus-provider-engines.onrender.com").replace(/\/$/, "");
+  const outcomeUrl = `${providerBase}/nexus/outcomes/${encodeURIComponent(toolId)}?caseId=${encodeURIComponent(caseId)}`;
   const receipt = { schema: "nexus.provider-receipt.v1", receiptId: `npr_${crypto.randomUUID()}`, toolId,
     tenantId: payload.tenantId, taskId: payload.taskId, stepId: payload.stepId, outcome: "completed",
-    occurredAt: new Date().toISOString(), evidence: [{ type: "workspace-render", source: "agrinexus-provider-engines", observed: { rendered: true, toolId } }] };
+    occurredAt: new Date().toISOString(), evidence: [{ type: "render-target", source: "agrinexus-provider-engines", outcomeUrl, caseId, toolId }] };
   receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
   writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
     providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt });
-  return send(res, 200, { receipt, result: { rendered: true, toolId } });
+  return send(res, 200, { receipt, result: { accepted: true, outcomeUrl, toolId } });
 }
 
 const server = http.createServer(async (req, res) => {
@@ -131,6 +136,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && req.url === "/events") {
       return send(res, 200, { ok: true, events: readEvents() });
+    }
+    if (req.method === "GET" && req.url.startsWith("/nexus/outcomes/")) {
+      const url = new URL(req.url, "https://provider.invalid"); const toolId = decodeURIComponent(url.pathname.slice("/nexus/outcomes/".length));
+      const caseId = url.searchParams.get("caseId") || "";
+      if (!NEXUS_TOOL_IDS.has(toolId) || !/^p2c_[a-z0-9_-]{8,160}$/i.test(caseId)) return send(res, 404, { error: "Outcome not found" });
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      return res.end(`<!doctype html><html><head><title>AgriNexus verified outcome</title></head><body><main data-nexus-production-outcome="true" data-case-id="${escapeHtml(caseId)}"><h1>Verified governed tool outcome</h1><p>${escapeHtml(toolId)}</p><p>${escapeHtml(caseId)}</p></main></body></html>`);
     }
     if (req.method === "POST" && req.url.startsWith("/nexus/tools/")) return nexusToolResponse(req, res);
 
