@@ -16,6 +16,15 @@ class ConversationRepository {
       values ($1,$2,$3,$4,$5,$6,$7) returning *`, [messageId, tenantId, conversationId, actorId, role, content, provenance]);
     return (result.rows || result)[0];
   }
+
+  async recent({ tenantId, conversationId, limit = 24 }) {
+    assertId("conversation", conversationId);
+    const boundedLimit = Math.min(Math.max(Number(limit) || 24, 1), 100);
+    const result = await this.db.query(`select message_id,actor_id,role,content,provenance,created_at
+      from nexus_messages where tenant_id=$1 and conversation_id=$2
+      order by created_at desc limit $3`, [tenantId, conversationId, boundedLimit]);
+    return (result.rows || result).slice().reverse();
+  }
 }
 
 module.exports = Object.freeze({ ConversationRepository });

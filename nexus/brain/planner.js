@@ -8,12 +8,14 @@ class OpenEndedPlanner {
     Object.assign(this, { model, tools, applications, memory, maxRepairAttempts });
   }
 
-  async plan({ command, context, priorTask = null }) {
+  async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
-      purpose: "task_planning", query: command.text, limit: 8 }) : [];
+      purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: command.locale,
-      channel: command.channel, priorTask: summarizeTask(priorTask), memories: memories.map(safeMemory), catalog };
+      channel: command.channel, priorTask: summarizeTask(priorTask),
+      conversationHistory: conversationHistory.slice(-24).map(safeTurn),
+      memories: memories.map(safeMemory), catalog };
     let feedback = [];
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
       const candidate = await this.model.plan({ ...request, feedback, attempt });
@@ -39,7 +41,8 @@ function validatePlan(candidate, catalog, context) {
   if (!candidate || typeof candidate !== "object") errors.push("Plan must be an object.");
   if (!String(candidate?.goal || "").trim()) errors.push("Plan goal is required.");
   if (!applicationIds.has(candidate?.application)) errors.push(`Unknown application: ${candidate?.application || "missing"}.`);
-  if (!Array.isArray(candidate?.steps) || !candidate.steps.length) errors.push("At least one plan step is required.");
+  const clarification = String(candidate?.clarification || "").trim();
+  if (!Array.isArray(candidate?.steps) || (!candidate.steps.length && !clarification)) errors.push("At least one plan step or a clarification is required.");
   const ids = new Set();
   for (const [index, step] of (candidate?.steps || []).entries()) {
     const id = String(step.id || `step_${index + 1}`); if (ids.has(id)) errors.push(`Duplicate step id: ${id}.`); ids.add(id);
@@ -51,7 +54,7 @@ function validatePlan(candidate, catalog, context) {
   if (hasCycle(candidate?.steps || [])) errors.push("Plan dependencies contain a cycle.");
   if (errors.length) return { valid: false, errors };
   return { valid: true, plan: { goal: candidate.goal.trim(), application: candidate.application,
-    riskTier: candidate.riskTier || "low", clarification: candidate.clarification || null,
+    riskTier: candidate.riskTier || "low", clarification: clarification || null,
     steps: candidate.steps.map((step, index) => ({ clientStepId: String(step.id || `step_${index + 1}`), title: step.title.trim(),
       toolId: step.toolId || null, input: step.input || {}, dependsOn: step.dependsOn || [], fallbackToolIds: step.fallbackToolIds || [] })) } };
 }
@@ -64,5 +67,6 @@ function hasCycle(steps) {
 }
 function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.goal, application: task.application, state: task.state, outcome: task.outcome || null } : null; }
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
+function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
 module.exports = Object.freeze({ OpenEndedPlanner, validatePlan });

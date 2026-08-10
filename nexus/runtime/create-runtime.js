@@ -69,7 +69,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     audit, executors: governedExecutors, verifier: verifier || (input => providers.verify(input)) });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
-  const agent = planner ? new AgentService({ planner, engine, tasks, audit }) : null;
+  const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
