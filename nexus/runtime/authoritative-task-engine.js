@@ -64,9 +64,10 @@ class AuthoritativeTaskEngine {
     if (!step.tool_id) throw new NexusRuntimeError("step_has_no_tool", "Step has no executable tool.", 409);
     if (step.state === "completed") {
       for (const [attempt, toolId] of [step.tool_id, ...(step.fallback_tool_ids || [])].entries()) {
-        const key = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
-        const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
-        if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+        for (const key of executionKeys(step, toolId, attempt)) {
+          const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
+          if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+        }
       }
       throw new NexusRuntimeError("completed_receipt_missing", "The step is complete but its verified execution receipt is unavailable.", 409);
     }
@@ -79,13 +80,17 @@ class AuthoritativeTaskEngine {
         { stepId, dependencies: [...dependencies], incomplete: incomplete.map(candidate => candidate.step_id) });
     }
     const candidates = [step.tool_id, ...(step.fallback_tool_ids || [])]; let lastError = null;
+    const retryOrdinal = step.state === "failed" ? Number(step.attempt_count || 1) + 1 : 1;
     for (const [attempt, toolId] of candidates.entries()) {
       const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
       if (!tool || tool.availability !== "available" || typeof executor !== "function") { lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} is unavailable.`, 503); continue; }
       authorize(context, tool, step);
       if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
         if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
-      const key = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
+      if (retryOrdinal > Number(tool.max_attempts || 1)) { lastError = new NexusRuntimeError("retry_exhausted", `Tool ${toolId} exhausted its governed retry limit.`, 409,
+        { toolId, attempts: Number(step.attempt_count || 0), maxAttempts: Number(tool.max_attempts || 1) }); continue; }
+      const baseKey = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
+      const key = retryOrdinal > 1 ? `${baseKey}:retry:${retryOrdinal}` : baseKey;
       const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
       if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
       const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
@@ -195,6 +200,12 @@ function makeReceipt(executionId, taskId, stepId, toolId, key, state, verificati
 function hasUserOutcomeProof(verification = {}) {
   if (verification.visible === true || verification.audible === true || verification.visibleOrAudible === true) return true;
   return (verification.evidence || []).some(item => ["visible", "audible", "browser-outcome", "audio-playback", "workspace-render"].includes(item?.type));
+}
+function executionKeys(step, toolId, fallbackAttempt) {
+  const base = fallbackAttempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
+  const keys = [base];
+  for (let ordinal = 2; ordinal <= Number(step.attempt_count || 1); ordinal += 1) keys.push(`${base}:retry:${ordinal}`);
+  return keys.reverse();
 }
 function withTimeout(promise, ms = 30000) {
   let timer; const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new NexusRuntimeError("tool_timeout", `Tool exceeded ${ms}ms.`, 504)), ms); });
