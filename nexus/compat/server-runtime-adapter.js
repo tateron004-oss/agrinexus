@@ -46,6 +46,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const result=await active.acceptance.recordEvidence({...body,releaseSha,sourceSha:releaseSha});send(res,201,{ok:true,evidence:result});
       } catch(error){send(res,400,{error:error.message,code:error.code||"evidence_rejected"});} return true;
     }
+    if (url.pathname === "/api/nexus/runtime/path2/usability-sessions" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try { const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Usability evidence SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const session = await active.path2Evidence.recordUsabilitySession(body); send(res, 201, { ok: true, session });
+      } catch (error) { send(res, 400, { error: error.message, code: error.code || "usability_evidence_rejected" }); } return true;
+    }
     const workspaceProofMatch=url.pathname.match(/^\/api\/nexus\/runtime\/production-acceptance\/workspaces\/([^/]+)$/);
     if (workspaceProofMatch && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
