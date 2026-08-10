@@ -49476,7 +49476,31 @@ function nexusPath1CertificationSnapshot() {
 }
 
 window.NexusPath1Certification = Object.freeze({
-  snapshot: nexusPath1CertificationSnapshot
+  snapshot: nexusPath1CertificationSnapshot,
+  injectPcm16: base64Audio => {
+    const audio = String(base64Audio || "").trim();
+    const session = realtimeVoiceSession?.sdkSession;
+    if (!realtimeVoiceSession?.active || typeof session?.sendAudio !== "function"
+      || !/^[A-Za-z0-9+/]+={0,2}$/.test(audio) || audio.length > 8_000_000) {
+      return false;
+    }
+    try {
+      const binary = atob(audio);
+      const pcm16 = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) pcm16[index] = binary.charCodeAt(index);
+      realtimeVoiceSession.sdkController?.mute?.(true);
+      session.sendAudio(pcm16.buffer, { commit: true });
+      window.setTimeout(() => realtimeVoiceSession?.sdkController?.mute?.(false), 500);
+      dispatchNexusPath1CertificationReceipt("audio.certification-input-injected", {
+        encoding: "pcm16",
+        sampleRate: 24000,
+        transport: "agents-sdk-webrtc"
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 });
 
 function updateRealtimeControllerState(state, eventType, extra = {}) {
