@@ -38,6 +38,39 @@ class Path2EvidenceRepository {
       falseSuccesses: rows.reduce((total, row) => total + Number(row.false_successes || 0), 0) };
   }
 
+  async recordLaneEvidence(input) {
+    requireSha(input.releaseSha, "release"); requireSha(input.path1Baseline, "Path 1 baseline");
+    if (!PATH2_LANES[input.lane] || input.lane === "usability") throw new Error("A non-usability Path 2 lane is required.");
+    validateLaneEvidence(input);
+    const result = await this.db.query(`insert into nexus_path2_lane_evidence
+      (release_sha,path1_baseline,lane,evidence,observed_at) values ($1,$2,$3,$4,$5)
+      on conflict (release_sha,lane) do update set path1_baseline=excluded.path1_baseline,
+      evidence=excluded.evidence,observed_at=excluded.observed_at returning *`,
+    [input.releaseSha, input.path1Baseline, input.lane, input, input.observedAt]);
+    return (result.rows || result)[0];
+  }
+
+  async recordStabilityPass(input) {
+    requireSha(input.releaseSha, "release");
+    if (![1, 2, 3].includes(input.passNumber)) throw new Error("Stability pass number must be 1, 2, or 3.");
+    if (input.production !== true || input.simulated === true || input.receipt?.releaseSha !== input.releaseSha ||
+      input.receipt?.path1GuardPassed !== true || !input.receipt?.receiptId) throw new Error("A genuine exact-release stability receipt is required.");
+    const result = await this.db.query(`insert into nexus_path2_stability_passes
+      (release_sha,pass_number,receipt,observed_at) values ($1,$2,$3,$4)
+      on conflict (release_sha,pass_number) do update set receipt=excluded.receipt,observed_at=excluded.observed_at returning *`,
+    [input.releaseSha, input.passNumber, input.receipt, input.observedAt]);
+    return (result.rows || result)[0];
+  }
+
+  async durableReport({ releaseSha, path1Baseline }) {
+    const [lanesResult, stabilityResult] = await Promise.all([
+      this.db.query(`select evidence from nexus_path2_lane_evidence where release_sha=$1 and path1_baseline=$2 order by lane`, [releaseSha, path1Baseline]),
+      this.db.query(`select * from nexus_path2_stability_passes where release_sha=$1 order by pass_number`, [releaseSha])
+    ]);
+    const laneEvidence = (lanesResult.rows || lanesResult).map(row => row.evidence);
+    return this.report({ releaseSha, path1Baseline, laneEvidence, stabilityPasses: (stabilityResult.rows || stabilityResult).length });
+  }
+
   async report({ releaseSha, path1Baseline, laneEvidence = [], stabilityPasses = 0 }) {
     const usability = await this.usabilityEvidence({ releaseSha, path1Baseline });
     const evidence = laneEvidence.filter(item => item.lane !== "usability").concat(usability);
@@ -56,6 +89,14 @@ function validateSession(input = {}) {
   if (!Array.isArray(input.receipt.outcomes) || input.receipt.outcomes.length === 0) throw new Error("The receipt must contain observed user outcomes.");
 }
 
+function validateLaneEvidence(input) {
+  const contract = PATH2_LANES[input.lane]; const facts = input.facts || {};
+  if (input.production !== true || input.simulated === true || input.path1GuardPassed !== true) throw new Error("Lane evidence must be genuine production evidence with Path 1 protected.");
+  if (!Number.isInteger(input.cases) || !Number.isInteger(input.passed) || input.passed > input.cases || input.passed < 0) throw new Error("Valid case totals are required.");
+  if (!Array.isArray(input.receipts) || input.receipts.length === 0 || !contract.requiredFacts.every(key => facts[key] === true)) throw new Error("Required facts and production receipts are incomplete.");
+  if (!input.observedAt || !Number.isFinite(Date.parse(input.observedAt))) throw new Error("A valid observation time is required.");
+}
+
 function requireSha(value, label) { if (!EXACT_SHA.test(String(value || ""))) throw new Error(`An exact ${label} SHA is required.`); }
 
-module.exports = Object.freeze({ Path2EvidenceRepository, validateSession, LOCALES });
+module.exports = Object.freeze({ Path2EvidenceRepository, validateSession, validateLaneEvidence, LOCALES });
