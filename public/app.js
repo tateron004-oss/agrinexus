@@ -50206,23 +50206,26 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
   const lower = command.toLowerCase();
   if (!command) return null;
-  const explicitOpen = /\b(open|show|display|start|begin|launch|take me to|help me (?:find|sell|record|enter))\b/.test(lower);
+  const explicitOpen = /\b(open|show|display|start|begin|launch|find|search|play|plan|reset|record|create|take me to|remind me|help (?:me )?(?:with|find|sell|record|enter|create))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
-  const workforceRequest = explicitOpen && /\b(job|jobs|workforce|employment|career|work search|farming work)\b/.test(lower);
+  const workforceRequest = explicitOpen && (
+    /\b(job|jobs|workforce|employment|career|work search|farming work|resume)\b/.test(lower)
+    || lower.includes("résumé")
+  );
   const marketplaceRequest = /\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\b/.test(lower)
     && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower));
   const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
   const mobileClinicRequest = /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower)
     && (explicitOpen || /\b(support|access|help|outreach)\b/.test(lower));
-  const pharmacyRequest = explicitOpen && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
-  const healthRequest = explicitOpen && !telehealthRequest && !mobileClinicRequest && !pharmacyRequest && /\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity)\b/.test(lower);
-  const agricultureRequest = explicitOpen && !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop issue|pest|disease|soil|irrigation)\b/.test(lower);
+  const pharmacyRequest = explicitOpen && !/\bremind\b/.test(lower) && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
+  const healthRequest = explicitOpen && !telehealthRequest && !mobileClinicRequest && !pharmacyRequest && /\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity|provider card|doctor)\b/.test(lower);
+  const agricultureRequest = explicitOpen && !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop|maize|pest|disease|soil|irrigation)\b/.test(lower);
   const learningRequest = explicitOpen && /\b(learning|literacy|course|training|lesson)\b/.test(lower);
   const mediaRequest = explicitOpen && /\b(music|media|youtube)\b/.test(lower);
-  const reminderRequest = explicitOpen && /\b(reminder|reminders|follow[- ]?up)\b/.test(lower);
+  const reminderRequest = explicitOpen && /\b(remind|reminder|reminders|follow[- ]?up)\b/.test(lower);
   const offlineRequest = /\b(offline queue|queued offline work)\b/.test(lower)
     || (explicitOpen && /\b(offline|low bandwidth|sync status)\b/.test(lower));
-  const knowledgeRequest = /\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|show sources)\b/.test(lower);
+  const knowledgeRequest = /\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|weather|websites?\b.*\bsources?|sources?\b.*\bwebsites?|pilot evidence dashboard)\b/.test(lower);
   if (!(routeRequest || workforceRequest || marketplaceRequest || telehealthRequest || mobileClinicRequest || pharmacyRequest || healthRequest || agricultureRequest || learningRequest || mediaRequest || reminderRequest || offlineRequest || knowledgeRequest)) return null;
 
   const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
