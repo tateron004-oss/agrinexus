@@ -33,9 +33,10 @@ function speak(text) {
     "Add-Type -AssemblyName System.Speech",
     `$t=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'))`,
     "$v=New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$v.Volume=90",
-    "$v.Rate=-1",
-    "$v.Speak($t)",
+    "$v.SetOutputToDefaultAudioDevice()",
+    "$v.Volume=100",
+    "$v.Rate=-2",
+    "$v.Speak($t + ' ' + $t)",
     "$v.Dispose()"
   ].join(";");
   return new Promise((resolve, reject) => {
@@ -209,6 +210,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect.poll(() => page.evaluate(() => window.NexusPath1Certification?.snapshot?.().state), {
       timeout: 60000
     }).toBe("connected");
+    await page.waitForTimeout(1500);
     const calibrationBefore = await page.evaluate(() => window.__cleanEvidence.receipts.length);
     await speak("Nexus, say physical voice calibration complete.");
     await expect.poll(() => page.evaluate((before) => {
