@@ -85,6 +85,14 @@ test("new Genesis build passes physical voice and every command", async ({ page,
   await context.grantPermissions(["microphone"], { origin: new URL(BASE_URL).origin });
   await page.addInitScript(() => {
     window.__cleanEvidence = { receipts: [], errors: [], speechSources: [], audioViolations: [] };
+    window.__NEXUS_VOICE_ACCEPTANCE_EVENT_SINK__ = (event) => {
+      window.__cleanEvidence.receipts.push({
+        schema: "nexus.path1.certification.receipt.v1",
+        type: "realtime.acceptance-event",
+        detail: { ...(event || {}) },
+        at: new Date().toISOString()
+      });
+    };
     const recordSpeechSource = (source, detail = {}) => {
       window.__cleanEvidence.speechSources.push({ source, detail, at: Date.now() });
       if (source === "browser-speech-synthesis") {
