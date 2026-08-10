@@ -278,7 +278,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
         await expect(page.locator("#userMapCanvas.leaflet-container")).toBeVisible();
         await expect.poll(() => page.evaluate(() => document.body.dataset.genesisMapLocation)).toBe("Mombasa");
       } else if (visual === "evidence") {
-        await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"] a[href^="http"]').first()).toBeVisible();
+        await expect(page.locator('[role="dialog"] a[href^="http"]:visible').first()).toBeVisible();
       } else if (visual) {
         await expect(page.locator('#nexus-workspace[data-nexus-workspace="true"]')).not.toBeEmpty();
       }
