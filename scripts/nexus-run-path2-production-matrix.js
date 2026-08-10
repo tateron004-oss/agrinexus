@@ -184,7 +184,8 @@ async function run(env = process.env, fetchFn = fetch) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ schema: "nexus.path2.production-matrix.v1", releaseSha, path1Baseline,
     productionIdentity: status.body.releaseSha, cases: cases.length, passed: cases.length - failed.length,
-    failed: failed.map(item => item.caseId), lanes: Object.fromEntries(Object.keys(RUNNERS).map(lane => [lane, cases.filter(item => item.lane === lane).length])) }, null, 2));
+    failed: failed.map(item => item.caseId), failureDetails: failed.map(item => ({ caseId: item.caseId, lane: item.lane, failure: item.receipt?.failure || null })),
+    lanes: Object.fromEntries(Object.keys(RUNNERS).map(lane => [lane, cases.filter(item => item.lane === lane).length])) }, null, 2));
   const certification = await requestJson(`${base}/api/nexus/runtime/path2/certification?path1Baseline=${encodeURIComponent(path1Baseline)}`,
     { headers: { accept: "application/json", authorization: `Bearer ${token}`, "cache-control": "no-cache" } }, fetchFn);
   const pendingMachine = Object.entries(certification.body?.lanes || {}).filter(([lane, value]) => lane !== "usability" && value.certified !== true).map(([lane]) => lane);
