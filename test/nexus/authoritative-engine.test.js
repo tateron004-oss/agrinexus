@@ -7,7 +7,7 @@ function fixture() {
   const store = { task: null, steps: [], execution: null, audits: [], calls: 0 };
   const tools = new Map([
     ["documents.save", { tool_id: "documents.save", availability: "available", required_permission: "tasks:execute",
-      confirmation_required: true, consent_scope: null, timeout_ms: 1000 }],
+      confirmation_required: true, consent_scope: null, timeout_ms: 1000, max_attempts: 3 }],
     ["provider.missing", { tool_id: "provider.missing", availability: "unavailable", required_permission: "tasks:execute",
       confirmation_required: false, consent_scope: null, timeout_ms: 1000 }]
   ]);
@@ -24,7 +24,8 @@ function fixture() {
     },
     executions: {
       get: async ({ idempotencyKey }) => store.execution?.idempotency_key === idempotencyKey ? store.execution : null,
-      start: async input => { store.execution = { execution_id: "tlc_1", idempotency_key: input.idempotencyKey, state: "running" }; return { execution: store.execution, duplicate: false }; },
+      start: async input => { const step = store.steps.find(item => item.step_id === input.stepId); if (step) step.attempt_count = Number(step.attempt_count || 0) + 1;
+        store.execution = { execution_id: `tlc_${step?.attempt_count || 1}`, idempotency_key: input.idempotencyKey, state: "running" }; return { execution: store.execution, duplicate: false }; },
       finish: async input => { Object.assign(store.execution, { state: input.successful ? "completed" : "failed", receipt: input.receipt });
         const step = store.steps.find(item => item.step_id === input.stepId); if (step) { step.state = input.successful ? "completed" : "failed"; step.output = input.response; }
         return store.execution; }
@@ -134,4 +135,26 @@ test("task workflow pauses for confirmation and cannot claim success without use
   await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: task.steps[0].stepId, actorId: command.actorId, approved: true });
   await expectCode(() => engine.executeTask({ context, taskId: task.taskId }), "user_outcome_unverified");
   assert.notEqual(store.task.state, "completed");
+});
+
+test("failed provider work resumes with a bounded new idempotency identity and no page refresh", async () => {
+  const { engine, store } = fixture(); let calls = 0;
+  engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute",
+    confirmation_required: false, consent_scope: null, timeout_ms: 1000, max_attempts: 2 });
+  engine.executors["knowledge.search"] = async () => { calls += 1; if (calls === 1) throw Object.assign(new Error("network lost"), { code: "network_failure" });
+    return { rendered: true, results: [{ source: "KALRO" }] }; };
+  engine.verifier = async ({ result }) => ({ verified: result.rendered === true, visible: result.rendered === true,
+    method: "workspace_probe", evidence: [{ type: "workspace-render", source: "production-browser" }] });
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "voice", text: "Find current maize guidance" });
+  const task = await engine.create({ command, goal: command.text, application: "live-knowledge",
+    steps: [{ title: "Search and render", toolId: "knowledge.search" }] });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: task.taskId }), error => error.code === "network_failure");
+  assert.equal(store.task.state, "running"); assert.equal(store.steps[0].state, "failed");
+  const resumed = await engine.executeTask({ context, taskId: task.taskId });
+  assert.equal(resumed.completed, true); assert.equal(calls, 2);
+  assert.match(resumed.receipts[0].idempotencyKey, /:retry:2$/);
+  const duplicate = await engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId });
+  assert.equal(duplicate.duplicate, true); assert.equal(calls, 2);
 });
