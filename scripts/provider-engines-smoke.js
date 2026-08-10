@@ -1,4 +1,5 @@
 const assert = require("assert");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -56,7 +57,8 @@ async function call(base, route, body) {
     DRONE_PROVIDER_API_KEY: "drone-test-key",
     VOICE_PROVIDER_API_KEY: "voice-test-key",
     TRANSLATION_PROVIDER_API_KEY: "translation-test-key",
-    AUTH_PROVIDER_API_KEY: "auth-test-key"
+    AUTH_PROVIDER_API_KEY: "auth-test-key",
+    NEXUS_TOOL_RECEIPT_SECRET: "nexus-tool-test-secret"
   };
   const provider = spawn(process.execPath, ["scripts/provider-engines.js"], {
     cwd: root,
@@ -124,6 +126,11 @@ async function call(base, route, body) {
   try {
     await waitFor(`${providerBase}/healthz`);
     await waitFor(`${appBase}/api/healthz`);
+    const nexusRequest = { schema: "nexus.provider-request.v1", toolId: "knowledge.search", tenantId: "tenant-1", actorId: "user-1",
+      taskId: "task-1", stepId: "step-1", idempotencyKey: "once", input: { query: "maize" } };
+    const nexusBody = JSON.stringify(nexusRequest); const nexusResponse = await fetch(`${providerBase}/nexus/tools/knowledge.search`, { method: "POST",
+      headers: { "content-type": "application/json", "x-nexus-request-signature": crypto.createHmac("sha256", env.NEXUS_TOOL_RECEIPT_SECRET).update(nexusBody).digest("hex") }, body: nexusBody });
+    assert.equal(nexusResponse.status, 200); assert.equal((await nexusResponse.json()).receipt.outcome, "completed");
     await call(appBase, "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
     const ai = await call(appBase, "/api/ai/run", { type: "command" });
     assert(ai.profile.aiProvider === "local-ai-webhook");

@@ -1,7 +1,9 @@
 const http = require("http");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { loadEnvFile } = require("../foundation/src/runtime/env-file");
+const { canonicalReceipt } = require("../nexus/tools/provider-catalog.js");
 
 loadEnvFile();
 
@@ -10,6 +12,7 @@ const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.R
 const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
 const PROVIDER_ENGINE_RELEASE = "provider-brain-30";
+const NEXUS_TOOL_IDS = new Set(["knowledge.search", "documents.create", "jobs.search", "resume.create", "maps.view", "media.play"]);
 
 const endpoints = {
   "/ai/responses": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },
@@ -103,6 +106,24 @@ function readBody(req) {
   });
 }
 
+async function nexusToolResponse(req, res) {
+  const secret = process.env.NEXUS_TOOL_RECEIPT_SECRET || ""; const toolId = decodeURIComponent(req.url.slice("/nexus/tools/".length));
+  if (!secret || !NEXUS_TOOL_IDS.has(toolId)) return send(res, 404, { code: "nexus_tool_unavailable", message: "Governed Nexus tool is unavailable." });
+  const payload = await readBody(req); const supplied = String(req.headers["x-nexus-request-signature"] || "");
+  const expected = crypto.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected)))
+    return send(res, 401, { code: "provider_request_unauthorized", message: "Signed Nexus provider request required." });
+  if (payload.schema !== "nexus.provider-request.v1" || payload.toolId !== toolId || !payload.tenantId || !payload.taskId || !payload.stepId)
+    return send(res, 400, { code: "provider_request_invalid", message: "Nexus provider request contract is invalid." });
+  const receipt = { schema: "nexus.provider-receipt.v1", receiptId: `npr_${crypto.randomUUID()}`, toolId,
+    tenantId: payload.tenantId, taskId: payload.taskId, stepId: payload.stepId, outcome: "completed",
+    occurredAt: new Date().toISOString(), evidence: [{ type: "workspace-render", source: "agrinexus-provider-engines", observed: { rendered: true, toolId } }] };
+  receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
+  writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
+    providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt });
+  return send(res, 200, { receipt, result: { rendered: true, toolId } });
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "GET" && req.url === "/healthz") {
@@ -111,6 +132,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && req.url === "/events") {
       return send(res, 200, { ok: true, events: readEvents() });
     }
+    if (req.method === "POST" && req.url.startsWith("/nexus/tools/")) return nexusToolResponse(req, res);
 
     const endpoint = endpoints[req.url];
     if (!endpoint || req.method !== "POST") return send(res, 404, { error: "Provider endpoint not found" });

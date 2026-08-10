@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, canonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -55,6 +55,12 @@ test("worker and provider configuration use their canonical processes", async ()
   await reconcileServiceConfiguration(client, { id: "srv-provider", name: "agrinexus-provider-engines" });
   assert.equal(bodies[0].serviceDetails.envSpecificDetails.startCommand, "node nexus/workers/process.js");
   assert.equal(bodies[1].serviceDetails.envSpecificDetails.startCommand, "npm run provider-engines");
+});
+
+test("release controller defines the signed low-risk production tool catalog", () => {
+  const tools = canonicalToolProviders("shared-secret");
+  assert.equal(tools.length, 6);
+  assert.ok(tools.every(tool => tool.receiptSecret === "shared-secret" && tool.endpoint.startsWith("https://agrinexus-provider-engines.onrender.com/nexus/tools/")));
 });
 
 test("missing worker is provisioned from Genesis and rediscovered", async () => {
@@ -173,6 +179,9 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
     path: "/services/srv-worker/env-vars/AGRINEXUS_STATE_STORE",
     value: "postgres"
   });
+  const providerDefinitions = JSON.parse(writes.find(write => write.path === "/services/srv-web/env-vars/NEXUS_TOOL_PROVIDERS_JSON").value);
+  const providerSecret = writes.find(write => write.path === "/services/srv-provider/env-vars/NEXUS_TOOL_RECEIPT_SECRET").value;
+  assert.ok(providerSecret.length >= 48); assert.ok(providerDefinitions.every(item => item.receiptSecret === providerSecret));
   for (const key of ["SESSION_SECRET", "PASSWORD_PEPPER"]) {
     const write = writes.find(item => item.path === `/services/srv-worker/env-vars/${key}`);
     assert.ok(write, `worker ${key} is installed`);

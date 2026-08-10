@@ -17,3 +17,7 @@ test("a durable lane execution error is also recorded instead of aborting later 
     memory: { remember: async () => { throw Object.assign(new Error("database"), { code: "22P02" }); } }, db: { query: async () => ({ rows: [] }) } };
   const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] }, input: { caseId: "p2c_memory_0001", lane: "memory", ordinal: 1, releaseSha, path1Baseline }, releaseSha });
   assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "22P02"); });
+test("an unavailable production tool catalog records an actionable failed receipt", async () => { const active = { planner: { plan: async () => ({ goal: "goal", application: "maps", planningAttempts: 1, clarification: null, steps: [{ clientStepId: "one", dependsOn: [], fallbackToolIds: [] }] }) },
+    tools: { list: async () => [] } };
+  const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] }, input: { caseId: "p2c_tooluse_0001", lane: "toolUse", ordinal: 1, releaseSha, path1Baseline }, releaseSha });
+  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "safe_tool_unavailable"); });

@@ -6,6 +6,7 @@ const fs = require("node:fs");
 
 const API = "https://api.render.com/v1";
 const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
+const CANONICAL_PROVIDER_BASE_URL = "https://agrinexus-provider-engines.onrender.com";
 const REQUIRED_WEB_ENV = Object.freeze({
   AGRINEXUS_STATE_STORE: "postgres",
   AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
@@ -235,6 +236,25 @@ async function installAcceptanceToken(client, serviceId, token) {
   await client.request(`/services/${serviceId}/env-vars/NEXUS_ACCEPTANCE_TOKEN`, { method: "PUT", body: { value: token } });
 }
 
+function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BASE_URL) {
+  const tools = [
+    ["knowledge.search", "knowledge", "Search governed production knowledge"],
+    ["documents.create", "documents", "Create a governed production document"],
+    ["jobs.search", "jobs", "Search governed production jobs"],
+    ["resume.create", "resume", "Create a governed production resume"],
+    ["maps.view", "maps", "Render a governed production map"],
+    ["media.play", "media", "Play governed production media"]
+  ].map(([toolId, domain, description]) => ({ toolId, domain, description,
+    endpoint: `${providerBaseUrl}/nexus/tools/${toolId}`, receiptSecret: secret, riskTier: "low",
+    requiredPermission: "tasks:execute", confirmationRequired: false }));
+  return tools;
+}
+
+async function installCanonicalToolProviders(client, webServiceId, providerServiceId, secret) {
+  await installEnvValue(client, webServiceId, "NEXUS_TOOL_PROVIDERS_JSON", JSON.stringify(canonicalToolProviders(secret)));
+  await installEnvValue(client, providerServiceId, "NEXUS_TOOL_RECEIPT_SECRET", secret);
+}
+
 function deployId(value) { return value?.id || value?.deploy?.id; }
 function deployStatus(value) { return String(value?.status || value?.deploy?.status || "").toLowerCase(); }
 function deployCommit(value) { return value?.commit?.id || value?.deploy?.commit?.id || value?.commitId || value?.deploy?.commitId; }
@@ -370,6 +390,7 @@ async function run(env = process.env, options = {}) {
   }
   const client = options.client || createClient({ apiKey, fetchImpl: options.fetchImpl });
   const token = crypto.randomBytes(48).toString("base64url");
+  const toolProviderSecret = crypto.randomBytes(48).toString("base64url");
   const web = await resolveUniqueService(client, "nexus-genesis-certified");
   validateService(web, "web_service");
   const provider = await resolveUniqueService(client, "agrinexus-provider-engines");
@@ -395,6 +416,7 @@ async function run(env = process.env, options = {}) {
     services.push(reconciled);
   }
   await installAcceptanceToken(client, services[0].id, token);
+  await installCanonicalToolProviders(client, services[0].id, services[2].id, toolProviderSecret);
   exportWorkflowSecret(token, env);
   const deployments = [];
   const deploy = options.deployExactShaImpl || deployExactSha;
@@ -416,4 +438,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, ensureGeneratedEnvSecret, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, CANONICAL_PROVIDER_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, ensureGeneratedEnvSecret, canonicalToolProviders, installCanonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };

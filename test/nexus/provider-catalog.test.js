@@ -23,6 +23,7 @@ test("provider execution carries durable correlation and verifies only a signed 
   const catalog = createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: config() }, fetchFn: async (_url, options) => { request = options; return { ok: true, json: async () => ({ receipt, result: [] }) }; } });
   const result = await catalog.executors["knowledge.search"]({ input: { query: "maize" }, context: { tenantId: "tenant-1", userId: "user-1" }, taskId: "task-1", stepId: "step-1", idempotencyKey: "once" });
   assert.equal(request.headers["idempotency-key"], "once");
+  assert.equal(request.headers["x-nexus-request-signature"], crypto.createHmac("sha256", "test-secret").update(request.body).digest("hex"));
   assert.equal(JSON.parse(request.body).tenantId, "tenant-1");
   const verification = await catalog.verify({ tool: { tool_id: "knowledge.search" }, result, context: { tenantId: "tenant-1" }, taskId: "task-1", stepId: "step-1" });
   assert.equal(verification.verified, true); assert.equal(verification.evidence.length, 1);
