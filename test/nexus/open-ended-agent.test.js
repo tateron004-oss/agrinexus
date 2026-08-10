@@ -36,11 +36,21 @@ test("agent service continues cross-application context through one durable task
   const priorTask = { taskId: "tsk_prior", goal: "Find jobs", application: "workforce", state: "completed" };
   const calls = []; const service = new AgentService({
     planner: { plan: async ({ priorTask: prior }) => { assert.equal(prior, priorTask); return { goal: "Map interviews", application: "maps", riskTier: "low", planningAttempts: 1, steps: [{ title: "Map", toolId: "maps.view" }] }; } },
-    tasks: { get: async () => priorTask }, engine: { create: async input => { calls.push(input); return { taskId: "tsk_next", ...input }; } },
+    tasks: { get: async () => priorTask }, conversations: { ensure: async () => {}, recent: async () => [{ role: "user", content: "Find jobs" }], append: async entry => calls.push(entry) },
+    engine: { create: async input => { calls.push(input); return { taskId: "tsk_next", ...input }; }, conversations: {} },
     audit: { record: async event => calls.push(event) }
   });
-  const result = await service.command({ input: { correlationId: "trace", taskId: "tsk_prior", channel: "typed", text: "Put those interviews on a map" }, context });
-  assert.equal(result.action, "continue"); assert.equal(result.task.application, "maps"); assert.equal(calls[1].metadata.continuedFrom, "tsk_prior");
+  const result = await service.command({ input: { correlationId: "trace", conversationId: "cnv_01H00000000000000000000000", taskId: "tsk_prior", channel: "typed", text: "Put those interviews on a map" }, context });
+  const committed = calls.find(item => item.eventType === "brain.plan_committed");
+  assert.equal(result.action, "continue"); assert.equal(result.task.application, "maps"); assert.equal(committed.metadata.continuedFrom, "tsk_prior");
+  assert.equal(calls[0].role, "user"); assert.equal(calls[2].role, "assistant");
+});
+
+test("clarification plans are valid without fake execution steps", () => {
+  const catalog = { tools: [], applications: [{ applicationId: "general", capabilities: [], riskTiers: ["low"] }] };
+  const result = require("../../nexus/brain/planner.js").validatePlan({ goal: "Help me apply", application: "general",
+    riskTier: "low", clarification: "Which role do you want to apply for?", steps: [] }, catalog, context);
+  assert.equal(result.valid, true); assert.equal(result.plan.steps.length, 0);
 });
 
 test("production planning model requests strict structured output and returns no simulated fallback", async () => {

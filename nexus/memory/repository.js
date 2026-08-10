@@ -35,6 +35,23 @@ class MemoryRepository {
     return result.rows || result;
   }
 
+  async search({ tenantId, userId, purpose, query, roles = [], limit = 8 }) {
+    const principalId = userId;
+    const normalizedQuery = String(query || "").trim();
+    if (!normalizedQuery || !purpose) return [];
+    const healthAllowed = roles.includes("admin") || roles.includes("health_operator");
+    const boundedLimit = Math.min(Math.max(Number(limit) || 8, 1), 20);
+    const result = await this.db.query(`select memory_id,memory_class as kind,purpose,content,provenance,
+      importance,confidence,verification_state,sensitivity,created_at
+      from nexus_memory_items where tenant_id=$1 and principal_id=$2 and purpose=$3
+      and deleted_at is null and (expires_at is null or expires_at > now())
+      and (sensitivity <> 'health' or $6::boolean)
+      and searchable_text ilike ('%' || $4 || '%')
+      order by verification_state='source_verified' desc,importance desc,updated_at desc limit $5`,
+    [tenantId, principalId, purpose, normalizedQuery, boundedLimit, healthAllowed]);
+    return result.rows || result;
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
