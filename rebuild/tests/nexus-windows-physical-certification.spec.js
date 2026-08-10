@@ -206,14 +206,18 @@ test("new Genesis build passes physical voice and every command", async ({ page,
     await expect.poll(() => page.evaluate(() => window.NexusPath1Certification?.snapshot?.().state), {
       timeout: 60000
     }).toBe("connected");
+    const calibrationBefore = await page.evaluate(() => window.__cleanEvidence.receipts.length);
     await speak("Nexus, say physical voice calibration complete.");
     await expect.poll(() => page.evaluate(() => {
       const receipts = window.__cleanEvidence.receipts;
-      return receipts.some((item) => item.type === "audio.remote-attached");
+      return receipts.slice(calibrationBefore).some((item) => item.type === "audio.remote-attached");
     }), { timeout: 60000 }).toBe(true);
     await expect.poll(() => page.evaluate(() => {
       const receipts = window.__cleanEvidence.receipts;
-      return receipts.some((item) => item.type === "conversation.return-to-listening");
+      return receipts.slice(calibrationBefore).some((item) =>
+        item.type === "conversation.return-to-listening"
+        && item.detail.eventType === "output-audio-buffer-stopped"
+      );
     }), { timeout: 60000 }).toBe(true);
 
     for (const [workspace, command, visual] of commands) {
@@ -240,7 +244,8 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       }
       await expect.poll(() => page.evaluate(({ before }) => {
         return window.__cleanEvidence.receipts.slice(before)
-          .some((item) => item.type === "conversation.return-to-listening");
+          .some((item) => item.type === "conversation.return-to-listening"
+            && item.detail.eventType === "output-audio-buffer-stopped");
       }, { before }), { timeout: 60000 }).toBe(true);
       const turnAudioViolations = await page.evaluate(({ before }) => {
         const receipts = window.__cleanEvidence.receipts.slice(before);
@@ -275,6 +280,7 @@ test("new Genesis build passes physical voice and every command", async ({ page,
       status: document.getElementById("nexus-status")?.textContent || null,
       microphonePermission: null,
       snapshot: window.NexusPath1Certification?.snapshot?.() || null,
+      cleanEvidence: window.__cleanEvidence || null,
       browserErrors: window.__cleanEvidence?.errors || []
     })).catch((error) => ({ unavailable: error.message }));
     if (driverEvidence.page && !driverEvidence.page.unavailable) {

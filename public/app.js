@@ -50079,6 +50079,9 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
         sessionId: realtimeVoiceSession?.sessionId || ""
       });
     }
+    if (eventType === "output_audio_buffer.stopped") {
+      markRealtimeResponseCompleted("output-audio-buffer-stopped");
+    }
     if (eventType === "input_audio_buffer.speech_started") {
       const turnId = nextRealtimeTurnId();
       markNexusUserSpeech("Realtime voice detected speech.", "openai-agents-realtime");
