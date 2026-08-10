@@ -16,15 +16,19 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
   let plan;
   try { plan = await active.planner.plan({ command, context, conversationHistory: [] }); }
   catch (error) { return failedCase({ input, releaseSha, locale, observedAt, error }); }
-  const profile = createInteractionProfile({ locale, channel: "voice", userPreferences: context.userPreferences });
-  let passed = Boolean(plan.goal && plan.application && (plan.steps.length || plan.clarification));
-  if (input.lane === "planning") passed = passed && acyclic(plan.steps);
-  let executionProof = null;
-  if (["toolUse", "crossApplication", "verification"].includes(input.lane)) { executionProof = await executeSafeWorkflow({ active, context, command, input }); passed = passed && executionProof.passed; }
-  if (input.lane === "recovery") { executionProof = await executeSafeWorkflow({ active, context, command, input, recovery: true }); passed = passed && executionProof.passed; }
-  if (input.lane === "multilingual") passed = passed && profile.locale === locale && profile.requirements.preserveLanguageAcrossWorkflow && profile.requirements.preserveSafetyMeaning;
-  if (input.lane === "accessibility") passed = passed && profile.voiceOnly && profile.preferredFormats.includes("plain-language") && profile.requirements.announceVisibleOutcome;
-  if (input.lane === "memory") passed = passed && await verifyDurableMemory({ active, principal, input });
+  let profile; let passed; let executionProof = null;
+  try {
+    profile = createInteractionProfile({ locale, channel: "voice", userPreferences: context.userPreferences });
+    passed = Boolean(plan.goal && plan.application && (plan.steps.length || plan.clarification));
+    if (input.lane === "planning") passed = passed && acyclic(plan.steps);
+    if (["toolUse", "crossApplication", "verification"].includes(input.lane)) { executionProof = await executeSafeWorkflow({ active, context, command, input }); passed = passed && executionProof.passed; }
+    if (input.lane === "recovery") { executionProof = await executeSafeWorkflow({ active, context, command, input, recovery: true }); passed = passed && executionProof.passed; }
+    if (input.lane === "multilingual") passed = passed && profile.locale === locale && profile.requirements.preserveLanguageAcrossWorkflow && profile.requirements.preserveSafetyMeaning;
+    if (input.lane === "accessibility") passed = passed && profile.voiceOnly && profile.preferredFormats.includes("plain-language") && profile.requirements.announceVisibleOutcome;
+    if (input.lane === "memory") passed = passed && await verifyDurableMemory({ active, principal, input });
+  } catch (error) {
+    return failedCase({ input, releaseSha, locale, observedAt, error, stage: input.lane });
+  }
   const fact = contract.requiredFacts[(input.ordinal - 1) % contract.requiredFacts.length];
   const digest = crypto.createHash("sha256").update(JSON.stringify({ releaseSha, caseId: input.caseId, plan, passed })).digest("hex");
   return { caseId: input.caseId, releaseSha, path1Baseline: input.path1Baseline, lane: input.lane, passed,
@@ -34,13 +38,13 @@ async function executeProductionCase({ active, principal, input, releaseSha, obs
       stepCount: plan.steps.length, planningAttempts: plan.planningAttempts, executionReceiptIds: executionProof?.receiptIds || [], digest } };
 }
 
-function failedCase({ input, releaseSha, locale, observedAt, error }) { const contract = PATH2_LANES[input.lane];
+function failedCase({ input, releaseSha, locale, observedAt, error, stage = "planning" }) { const contract = PATH2_LANES[input.lane];
   const fact = contract.requiredFacts[(input.ordinal - 1) % contract.requiredFacts.length]; const failure = error.code || error.name || "planning_failed";
   const digest = crypto.createHash("sha256").update(JSON.stringify({ releaseSha, caseId: input.caseId, failure })).digest("hex");
   return { caseId: input.caseId, releaseSha, path1Baseline: input.path1Baseline, lane: input.lane, passed: false,
     facts: { [fact]: false }, falseSuccesses: 0, production: true, simulated: false, observedAt,
     receipt: { receiptId: `path2-production-${digest.slice(0, 24)}`, releaseSha, path1GuardPassed: true,
-      source: "authoritative-production-runtime", caseId: input.caseId, locale, outcome: "failed", failure, digest } }; }
+      source: "authoritative-production-runtime", caseId: input.caseId, locale, outcome: "failed", failure, failureStage: stage, digest } }; }
 
 async function executeSafeWorkflow({ active, context, command, input, recovery = false }) {
   const catalog = await active.tools.list(); const safe = catalog.filter(tool => tool.availability === "available" && SAFE_DOMAINS.has(tool.domain) &&

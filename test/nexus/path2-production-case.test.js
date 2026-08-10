@@ -12,4 +12,14 @@ test("production prompts vary and multilingual cases cover every supported local
 test("a production planner rejection becomes failed evidence instead of aborting the matrix", async () => { const active = { planner: { plan: async () => { throw Object.assign(new Error("invalid"), { code: "plan_invalid" }); } } };
   const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] },
     input: { caseId: "p2c_intelligence_0002", lane: "intelligence", ordinal: 2, releaseSha, path1Baseline }, releaseSha });
-  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "plan_invalid"); assert.equal(evidence.production, true); });
+  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "plan_invalid"); assert.equal(evidence.receipt.failureStage, "planning"); assert.equal(evidence.production, true); });
+test("a durable-memory runtime rejection becomes a failed exact-production receipt", async () => { const active = {
+    planner: { plan: async () => ({ goal: "remember", application: "live-knowledge", clarification: null,
+      planningAttempts: 1, steps: [{ clientStepId: "one", dependsOn: [], fallbackToolIds: [] }] }) },
+    conversations: { ensure: async () => ({}), append: async () => { throw Object.assign(new Error("invalid input syntax for type json"), { code: "22P02" }); } },
+    memory: { search: async () => [] }
+  };
+  const evidence = await executeProductionCase({ active, principal: { tenantId: "tenant", userId: "user", role: "standard_user", permissions: [] },
+    input: { caseId: "p2c_memory_0002", lane: "memory", ordinal: 2, releaseSha, path1Baseline }, releaseSha });
+  assert.equal(evidence.passed, false); assert.equal(evidence.receipt.failure, "22P02");
+  assert.equal(evidence.receipt.failureStage, "memory"); assert.equal(evidence.falseSuccesses, 0); });
