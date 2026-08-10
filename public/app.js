@@ -49945,7 +49945,21 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     blockedReason: "client-parse-failed",
     category: "tool-response-parse"
   }));
-  await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
+  const transcriptAction = genesisWorkspaceActionFromFinalTranscript(command);
+  const transcriptWorkspaceVerified = transcriptAction
+    ? await executeGenesisWorkspaceFromFinalTranscript(command)
+    : false;
+  if (transcriptWorkspaceVerified) {
+    result.genesisAction = transcriptAction;
+    result.genesisAcknowledgement = {
+      verified: true,
+      workspace: transcriptAction.workspace,
+      requestId: transcriptAction.requestId,
+      source: "openai-agents-model-command"
+    };
+  } else {
+    await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
+  }
   if (result.genesisAcknowledgement?.verified === true) {
     const workspaceName = String(result.genesisAcknowledgement.workspace || result.genesisAction?.workspace || "Nexus");
     const providerNote = result.blockedReason || result.category || result.status || "";
@@ -50392,7 +50406,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       clientSecret: sessionPayload.clientSecret,
       model: sessionPayload.model || status.model || "gpt-realtime-2",
       voice: sessionPayload.voice || status.voice || "marin",
-      instructions: sessionPayload.clientConfig?.instructions || "",
+      instructions: `${sessionPayload.clientConfig?.instructions || ""} For every explicit Nexus request to open, show, start, find, search, play, plan, reset, record, create, remind, or help with an application or workspace, you must call the closest Nexus tool and pass the user's full request verbatim in the command field. Use nexus_workflow as the navigation bridge for music or media, reminders, offline queue, documents or forms, provider cards, and the pilot evidence dashboard when no narrower tool exists. Do not answer an explicit workspace request without first calling a Nexus tool.`,
       clientConfig: sessionPayload.clientConfig || {},
       preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null,
       language: () => languageCode(),
