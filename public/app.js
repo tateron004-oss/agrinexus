@@ -50280,7 +50280,9 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const route = command.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
   const country = command.match(/\b(Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b/i)?.[1] || "";
   const mapLocation = routeRequest && !route
-    ? command.match(/\b(?:map|maps)\s+(?:of|for|showing)\s+(.+?)(?=,?\s+(?:Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b|[.!?]|$)/i)?.[1]?.trim() || ""
+    ? command.match(/\b(?:map|maps)\s+(?:of|for|showing)\s+(.+?)(?=,?\s+(?:Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b|[.!?]|$)/i)?.[1]?.trim()
+      || command.match(/\b(?:show|display|open)\s+(.+?)(?=,?\s+(?:Kenya|Nigeria|Ghana|Rwanda|Tanzania|Egypt|Uganda|South Africa|Ethiopia)\b|[.!?]|$)/i)?.[1]?.trim()
+      || ""
     : "";
   const quantity = command.match(/\b(\d+(?:\.\d+)?)\s*(bags?|tons?|kg|kilograms?|crates?)\b/i);
   const product = command.match(/\b(?:bags?|tons?|kg|kilograms?|crates?)\s+of\s+([\p{L}'-]+)/iu)?.[1]
@@ -54063,6 +54065,8 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
         .openPopup();
       safeInvalidateLeafletMap(userMap);
     }, 360);
+  } else {
+    delete document.body.dataset.genesisMapLocation;
   }
   return true;
 }
