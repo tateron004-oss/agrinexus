@@ -62,7 +62,15 @@ class AuthoritativeTaskEngine {
   async execute({ context, taskId, stepId }) {
     const step = await this.requiredStep({ tenantId: context.tenantId, taskId, stepId });
     if (!step.tool_id) throw new NexusRuntimeError("step_has_no_tool", "Step has no executable tool.", 409);
-    if (["completed", "cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
+    if (step.state === "completed") {
+      for (const [attempt, toolId] of [step.tool_id, ...(step.fallback_tool_ids || [])].entries()) {
+        const key = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
+        const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
+        if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+      }
+      throw new NexusRuntimeError("completed_receipt_missing", "The step is complete but its verified execution receipt is unavailable.", 409);
+    }
+    if (["cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
     const taskWithSteps = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
     const dependencies = new Set(step.depends_on || []);
     const incomplete = (taskWithSteps?.steps || []).filter(candidate => dependencies.has(candidate.step_id) && candidate.state !== "completed");
@@ -84,7 +92,11 @@ class AuthoritativeTaskEngine {
         toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
       if (started.duplicate) { lastError = new NexusRuntimeError("prior_attempt_failed", `Prior ${toolId} attempt did not complete.`, 409); continue; }
       try {
-      const result = await withTimeout(Promise.resolve(executor({ input: step.input, context, taskId, stepId,
+      const dependencyOutputs = Object.fromEntries((taskWithSteps?.steps || [])
+        .filter(candidate => dependencies.has(candidate.step_id))
+        .map(candidate => [candidate.step_id, candidate.output]));
+      const input = dependencies.size ? { ...step.input, dependencyOutputs } : step.input;
+      const result = await withTimeout(Promise.resolve(executor({ input, context, taskId, stepId,
         idempotencyKey: key })), tool.timeout_ms);
       const verification = await this.verifier({ tool, result, context, taskId, stepId });
       if (!verification?.verified) throw new NexusRuntimeError("outcome_unverified", "Tool result could not be verified.", 502, { verification });
@@ -106,6 +118,43 @@ class AuthoritativeTaskEngine {
       }
     }
     throw lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
+  }
+
+  async executeTask({ context, taskId }) {
+    let task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+    if (!task) throw new NexusRuntimeError("task_not_found", "Task not found.", 404);
+    if (task.ownerId !== context.userId && !context.hasRole?.("admin")) throw new NexusRuntimeError("task_owner_required", "Only the task owner may execute this task.", 403);
+    if (["completed", "cancelled", "blocked", "expired"].includes(task.state)) throw new NexusRuntimeError("task_not_executable", `A ${task.state} task cannot execute.`, 409);
+    if (task.state === "planned") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "queued", reason: "Governed task execution requested" });
+    task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+    if (task.state === "queued") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "running", reason: "Governed task execution started" });
+
+    const receipts = [];
+    while (true) {
+      task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+      const remaining = (task.steps || []).filter(step => !["completed", "cancelled", "skipped"].includes(step.state));
+      if (!remaining.length) break;
+      const completed = new Set((task.steps || []).filter(step => step.state === "completed").map(step => step.step_id));
+      const ready = remaining.find(step => (step.depends_on || []).every(id => completed.has(id)));
+      if (!ready) throw new NexusRuntimeError("task_execution_blocked", "No task step can proceed; prerequisites or prior failures require attention.", 409,
+        { remaining: remaining.map(step => ({ stepId: step.step_id, state: step.state, dependsOn: step.depends_on || [] })) });
+      if (ready.confirmation_state === "required") return { task, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
+      const result = await this.execute({ context, taskId, stepId: ready.step_id });
+      if (result.receipt) receipts.push(result.receipt);
+    }
+
+    const proof = receipts.some(receipt => hasUserOutcomeProof(receipt.verification));
+    if (!proof) throw new NexusRuntimeError("user_outcome_unverified", "The workflow executed, but no visible or audible user outcome was verified.", 502,
+      { receiptIds: receipts.map(receipt => receipt.receiptId) });
+    task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
+    if (task.state === "running") task = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "verifying", reason: "All workflow steps completed; verifying user outcome" });
+    task = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "completed", reason: "Visible or audible workflow outcome verified",
+      outcome: { verified: true, visibleOrAudible: true, receiptIds: receipts.map(receipt => receipt.receiptId) } });
+    return { task, state: "completed", receipts, completed: true };
   }
 
   async requiredStep(input) {
@@ -142,6 +191,10 @@ function validateDependencies(steps) {
 function makeReceipt(executionId, taskId, stepId, toolId, key, state, verification) {
   return { schema: "nexus.receipt.v1", receiptId: createId("receipt"), executionId, taskId, stepId,
     toolId, idempotencyKey: key, state, verification, occurredAt: new Date().toISOString() };
+}
+function hasUserOutcomeProof(verification = {}) {
+  if (verification.visible === true || verification.audible === true || verification.visibleOrAudible === true) return true;
+  return (verification.evidence || []).some(item => ["visible", "audible", "browser-outcome", "audio-playback", "workspace-render"].includes(item?.type));
 }
 function withTimeout(promise, ms = 30000) {
   let timer; const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new NexusRuntimeError("tool_timeout", `Tool exceeded ${ms}ms.`, 504)), ms); });
