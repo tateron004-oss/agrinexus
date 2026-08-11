@@ -30,7 +30,11 @@ async function post(url, headers, body) {
   try { parsed = JSON.parse(text); } catch { parsed = { raw: text.slice(0, 500) }; }
   return { url, status: response.status, ok: response.ok, body: parsed };
 }
-function receipt(probe) { return `${probe.url} status=${probe.status}${probe.body?.code ? ` code=${probe.body.code}` : ""}`; }
+function receipt(probe) {
+  const stage = probe.body?.stage ? ` stage=${String(probe.body.stage).replace(/\s+/g, "_")}` : "";
+  const error = probe.body?.error ? ` error=${JSON.stringify(String(probe.body.error).slice(0, 300))}` : "";
+  return `${probe.url} status=${probe.status}${probe.body?.code ? ` code=${probe.body.code}` : ""}${stage}${error}`;
+}
 function exactReleaseReady(runtime, acceptance, releaseSha) {
   return runtime?.ok === true && (acceptance?.ok === true || acceptance?.status === 503) &&
     runtime.body?.releaseSha === releaseSha && acceptance.body?.releaseSha === releaseSha;
@@ -106,7 +110,10 @@ async function run(env = process.env) {
     component("taskEngine", releaseSha, [taskEngine], {
       durableTask: taskEngine.body?.durable === true,
       lifecycleState: taskEngine.body?.state,
-      stepCount: taskEngine.body?.steps
+      stepCount: taskEngine.body?.steps,
+      failureStage: taskEngine.body?.stage || null,
+      failureCode: taskEngine.body?.code || null,
+      failureMessage: taskEngine.body?.error || null
     }),
     component("semanticMemory", releaseSha, [semanticMemory], {
       restartPersistent: semanticMemory.body?.durable === true && semanticMemory.body?.repositoryReconstructed === true,
@@ -181,7 +188,8 @@ async function run(env = process.env) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ releaseSha, source: "unified-release-live-probe", componentProbes, workspaceProbes: [] }, null, 2));
   const failed = componentProbes.filter(item => !item.passed).map(item => item.component);
-  console.log(JSON.stringify({ releaseSha, produced: componentProbes.length, passed: componentProbes.length - failed.length, failed, output }, null, 2));
+  console.log(JSON.stringify({ releaseSha, produced: componentProbes.length, passed: componentProbes.length - failed.length, failed,
+    failedDetails: componentProbes.filter(item => !item.passed).map(item => ({ component: item.component, receipts: item.receipts, facts: item.facts })), output }, null, 2));
   if (failed.length) throw new Error(`Initial production component probes failed: ${failed.join(", ")}`);
   return componentProbes;
 }
