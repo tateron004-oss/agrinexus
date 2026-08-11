@@ -1,0 +1,140 @@
+name: Nexus protected production deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact main-branch commit SHA to deploy and verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-genesis-certified-production
+  cancel-in-progress: false
+
+env:
+  PRODUCTION_ORIGIN: https://nexus-genesis-certified.onrender.com
+
+jobs:
+  deploy-exact-release:
+    name: Deploy and verify exact production release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: nexus-genesis-certified
+    steps:
+      - name: Resolve immutable target
+        id: target
+        env:
+          REQUESTED_SHA: ${{ github.event.inputs.target_sha }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          target="${REQUESTED_SHA:-$EVENT_SHA}"
+          if ! [[ "$target" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Target must be a full 40-character commit SHA."
+            exit 1
+          fi
+          echo "sha=$target" >> "$GITHUB_OUTPUT"
+          echo "short=${target:0:12}" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm target is current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          git init --quiet
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --quiet --depth=1 origin main
+          main_sha="$(git rev-parse FETCH_HEAD)"
+          if [ "$TARGET_SHA" != "$main_sha" ]; then
+            echo "::error::Refusing deployment: target $TARGET_SHA is not current main $main_sha."
+            exit 1
+          fi
+
+      - name: Require protected Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Repository environment nexus-genesis-certified is missing RENDER_DEPLOY_HOOK_URL."
+            exit 1
+          fi
+
+      - name: Trigger canonical Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 -X POST "$RENDER_DEPLOY_HOOK_URL")"
+          printf '%s\n' "$response" > render-deploy-response.json
+          {
+            echo "### Render deployment requested"
+            echo
+            echo "- Target: \`$TARGET_SHA\`"
+            echo "- Service: \`nexus-genesis-certified\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Wait for exact release identity
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          TARGET_SHORT: ${{ steps.target.outputs.short }}
+        run: |
+          set -euo pipefail
+          matched=""
+          for attempt in $(seq 1 90); do
+            for path in /api/healthz /api/release /api/version; do
+              body="$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$PRODUCTION_ORIGIN$path" || true)"
+              printf '%s' "$body" > "production-response-${path//\//_}.json"
+              if printf '%s' "$body" | grep -Fqi "$TARGET_SHA" || printf '%s' "$body" | grep -Fqi "$TARGET_SHORT"; then
+                matched="$path"
+                break 2
+              fi
+            done
+            echo "Attempt $attempt/90: production has not reported $TARGET_SHORT yet."
+            sleep 15
+          done
+          if [ -z "$matched" ]; then
+            echo "::error::Production became reachable but never reported exact release $TARGET_SHA."
+            exit 1
+          fi
+          echo "Exact release $TARGET_SHA verified through $matched."
+          {
+            echo
+            echo "### Exact release verified"
+            echo
+            echo "- Production: $PRODUCTION_ORIGIN"
+            echo "- Commit: \`$TARGET_SHA\`"
+            echo "- Identity endpoint: \`$matched\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify repaired open-ended routing
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const origin = process.env.PRODUCTION_ORIGIN;
+          const target = process.env.TARGET_SHA;
+          if (!origin || !target) process.exit(1);
+          console.log(`Production ${origin} is pinned to ${target}; behavioral certification may now begin.`);
+          NODE
+
+      - name: Preserve deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-production-deployment-${{ steps.target.outputs.short }}
+          path: |
+            render-deploy-response.json
+            production-response-*.json
+          if-no-files-found: warn
+          retention-days: 30
