@@ -56,6 +56,16 @@ test("task-engine evidence requires a durable completed lifecycle on the exact r
   assert.equal(component("taskEngine", sha, [{ ...probe, body: { ...probe.body, releaseSha: "e".repeat(40) } }], {}).passed, false);
 });
 
+test("failed task-engine evidence preserves its authenticated stage and safe error", () => {
+  const sha = "9".repeat(40);
+  const probe = { url: "https://production/task-engine", status: 503, ok: false,
+    body: { ok: false, releaseSha: sha, code: "Error", stage: "create", error: "Task write failed" } };
+  const result = component("taskEngine", sha, [probe], { failureStage: probe.body.stage,
+    failureCode: probe.body.code, failureMessage: probe.body.error });
+  assert.equal(result.passed, false); assert.equal(result.facts.failureStage, "create");
+  assert.match(result.receipts[0], /code=Error stage=create error="Task write failed"/);
+});
+
 test("semantic-memory evidence requires reconstruction persistence and cleanup", () => {
   const sha = "f".repeat(40);
   const probe = { url: "https://production/semantic-memory", status: 200, ok: true,
