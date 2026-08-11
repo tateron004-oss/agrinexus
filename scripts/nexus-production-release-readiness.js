@@ -3,6 +3,8 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { validateFaultClosure } = require("../nexus/acceptance/fault-register.js");
+const { CONTRACTS, verifyCapabilityCompletion } = require("../nexus/apps/capability-completion-contracts.js");
 
 const REQUIRED_RELEASE_COMPONENTS = Object.freeze([
   "taskEngine", "semanticMemory", "consentAudit", "offlineSync", "identity",
@@ -22,11 +24,16 @@ function validateReleaseProof({ proof, expectedSha }) {
   if (missing.length) {
     throw new Error(`Production release evidence is incomplete: ${missing.join(", ")}.`);
   }
+  const faultClosure = validateFaultClosure({ releaseSha: expectedSha, evidence: proof.faultEvidence });
+  const capabilityClosure = Object.keys(CONTRACTS).map(application =>
+    verifyCapabilityCompletion({ application, releaseSha: proof.releaseSha, expectedSha,
+      evidence: proof.capabilityEvidence?.[application] }));
   return {
     passed: true,
     releaseSha: expectedSha,
     requiredComponents: REQUIRED_RELEASE_COMPONENTS.length,
-    recordedComponents: names.size,
+    recordedComponents: names.size, closedFaults: faultClosure.faultCount,
+    verifiedCapabilities: capabilityClosure.length,
     checkedAt: new Date().toISOString()
   };
 }

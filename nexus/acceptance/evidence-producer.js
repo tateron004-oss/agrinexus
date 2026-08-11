@@ -3,6 +3,8 @@
 const crypto = require("node:crypto");
 const { COMPONENTS } = require("./repository.js");
 const { REQUIRED_PROOFS, validateWorkspaceEvidence } = require("../apps/workspace-evidence-contract.js");
+const { FAULTS, validateFaultClosure } = require("./fault-register.js");
+const { CONTRACTS, verifyCapabilityCompletion } = require("../apps/capability-completion-contracts.js");
 
 const COMPONENT_REQUIREMENTS = Object.freeze({
   taskEngine: [], database: [], semanticMemory: ["restartPersistent"], worker: [], tools: [],
@@ -54,7 +56,8 @@ function compileWorkspace(record, releaseSha, rollbackRef) {
   return { workspaceId: record.workspaceId, proofs, rollbackRef };
 }
 
-function compileProductionProof({ releaseSha, source, rollbackRef, componentProbes = [], workspaceProbes = [] }) {
+function compileProductionProof({ releaseSha, source, rollbackRef, componentProbes = [], workspaceProbes = [],
+  faultProbes = [], capabilityProbes = [] }) {
   if (!validSha(releaseSha)) throw new Error("An exact 40-character release SHA is required.");
   if (!source || !rollbackRef) throw new Error("Evidence source and rollback reference are required.");
   const components = componentProbes.map(record => compileComponent(record, releaseSha));
@@ -62,7 +65,25 @@ function compileProductionProof({ releaseSha, source, rollbackRef, componentProb
   const componentNames = components.map(item => item.name);
   const workspaceNames = workspaces.map(item => item.workspaceId);
   if (new Set(componentNames).size !== componentNames.length || new Set(workspaceNames).size !== workspaceNames.length) throw new Error("Duplicate production evidence subject.");
-  return { ok: true, releaseSha, source, generatedAt: new Date().toISOString(), components, workspaces };
+  const faultEvidence = faultProbes.map(record => {
+    requireExactRelease(record, releaseSha, `Fault ${record?.fault}`);
+    if (!FAULTS.includes(record.fault) || !record.implementation || !Array.isArray(record.tests) || !record.tests.length) {
+      throw new Error(`Fault ${record?.fault || "unknown"} lacks implementation or test evidence.`);
+    }
+    return { fault: record.fault, status: "closed", releaseSha, implementation: record.implementation,
+      tests: record.tests, proofs: record.receipts };
+  });
+  validateFaultClosure({ releaseSha, evidence: faultEvidence });
+  const capabilityEvidence = Object.fromEntries(capabilityProbes.map(record => {
+    requireExactRelease(record, releaseSha, `Capability ${record?.application}`);
+    const evidence = { ...(record.evidence || {}), rendered: record.rendered, visible: record.visible, audible: record.audible };
+    verifyCapabilityCompletion({ application: record.application, evidence, releaseSha });
+    return [record.application, evidence];
+  }));
+  const missingCapabilities = Object.keys(CONTRACTS).filter(application => !capabilityEvidence[application]);
+  if (missingCapabilities.length) throw new Error(`Production capability evidence is incomplete: ${missingCapabilities.join(", ")}.`);
+  return { ok: true, releaseSha, source, generatedAt: new Date().toISOString(), components, workspaces,
+    faultEvidence, capabilityEvidence };
 }
 
 module.exports = Object.freeze({ COMPONENT_REQUIREMENTS, compileProductionProof, evidenceId, requireExactRelease });
