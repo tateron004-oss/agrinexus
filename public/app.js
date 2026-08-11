@@ -50294,11 +50294,13 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const mobileClinicRequest = /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower)
     && (explicitOpen || /\b(support|access|help|outreach)\b/.test(lower));
   const pharmacyRequest = explicitOpen && !/\bremind\b/.test(lower) && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
-  const healthRequest = explicitOpen && !telehealthRequest && !mobileClinicRequest && !pharmacyRequest && /\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity|provider card|doctor)\b/.test(lower);
-  const agricultureRequest = explicitOpen && !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop|maize|pest|disease|soil|irrigation)\b/.test(lower);
+  const healthRequest = !telehealthRequest && !mobileClinicRequest && !pharmacyRequest
+    && (/\b(health|healthcare|intake|blood pressure|hypertension|diabetes|obesity|provider card|doctor)\b/.test(lower)
+      || /\b\d{2,3}\s*(?:\/|over)\s*\d{2,3}\b/.test(lower));
+  const agricultureRequest = !marketplaceRequest && /\b(agriculture|agronomy|farm support|crop|crops|tomato(?:es)?|maize|pest|disease|soil|irrigation|plant|harvest)\b/.test(lower);
   const learningRequest = explicitOpen && /\b(learning|literacy|course|training|lesson)\b/.test(lower);
-  const mediaRequest = explicitOpen && /\b(music|media|youtube)\b/.test(lower);
-  const reminderRequest = explicitOpen && /\b(remind|reminder|reminders|follow[- ]?up)\b/.test(lower);
+  const mediaRequest = /\b(play|open|find|search|start|put on|listen to|pause|resume|stop)\b/.test(lower) && /\b(music|media|youtube|song|songs|playlist|artist|album)\b/.test(lower);
+  const reminderRequest = /\b(remind|reminder|reminders|remember|follow[- ]?up)\b/.test(lower);
   const offlineRequest = /\b(offline queue|queued offline work)\b/.test(lower)
     || (explicitOpen && /\b(offline|low bandwidth|sync status)\b/.test(lower));
   const knowledgeRequest = /\b(search the internet|use the internet|live knowledge|research|find current (?:information|sources)|weather|websites?\b.*\bsources?|sources?\b.*\bwebsites?|pilot evidence dashboard)\b/.test(lower);
@@ -50345,6 +50347,9 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
     offline: "offline",
     "live-knowledge": "live-knowledge"
   }[workspace];
+  const weatherLocation = knowledgeRequest
+    ? command.match(/\b(?:weather|temperature|forecast|rain|heat)\s+(?:in|for|near|around)\s+(.+?)(?:[.!?]|$)/i)?.[1]?.trim() || ""
+    : "";
   const payload = routeRequest
     ? { origin: route?.[1]?.trim() || "", destination: route?.[2]?.trim() || "", location: mapLocation, country }
     : workforceRequest
@@ -50352,10 +50357,12 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
       : marketplaceRequest
         ? { query: command, action: /\b(?:sell|selling|list)\b/i.test(command) ? "sell" : "buy", quantity: quantity?.[1] || "", unit: quantity?.[2] || "", product, country }
         : healthRequest
-          ? { query: command, intakeType: /blood[- ]?pressure|hypertension|\bbp\b/i.test(command) ? "blood-pressure" : "healthcare", systolic: bloodPressure?.[1] || "", diastolic: bloodPressure?.[2] || "", country }
+          ? { query: command, intakeType: /blood[- ]?pressure|hypertension|\bbp\b|\b\d{2,3}\s*(?:\/|over)\s*\d{2,3}\b/i.test(command) ? "blood-pressure" : "healthcare", systolic: bloodPressure?.[1] || "", diastolic: bloodPressure?.[2] || "", country }
+          : reminderRequest
+            ? { query: command, schedule: nexusReminderCalendarParseSchedule(command).scheduleText, country }
           : learningRequest
             ? { query: command, learningGoal: command }
-            : { query: command, country };
+            : { query: command, location: weatherLocation, country };
   return {
     type: "genesis.workspace.open",
     version: 1,
@@ -54099,6 +54106,30 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
         .openPopup();
       safeInvalidateLeafletMap(userMap);
     }, 360);
+  } else if (payload.origin && payload.destination) {
+    const places = africanCityLocationCatalog();
+    const resolvePlace = value => {
+      const normalized = normalizeToolText(value);
+      return places.find(place => place.aliases.some(alias => normalized.includes(normalizeToolText(alias)))) || null;
+    };
+    const origin = resolvePlace(payload.origin);
+    const destination = resolvePlace(payload.destination);
+    if (origin && destination) {
+      document.body.dataset.genesisMapLocation = `${origin.city} to ${destination.city}`;
+      window.setTimeout(() => {
+        if (!userMap) return;
+        userMapLayers.route?.clearLayers?.();
+        userMapLayers.markers?.clearLayers?.();
+        const points = [[origin.latitude, origin.longitude], [destination.latitude, destination.longitude]];
+        L.polyline(points, { color: "#14b8a6", weight: 5, opacity: 0.9 }).addTo(userMapLayers.route);
+        L.marker(points[0]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(origin.city)}</strong>`);
+        L.marker(points[1]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(destination.city)}</strong>`);
+        userMap.fitBounds(points, { padding: [32, 32] });
+        safeInvalidateLeafletMap(userMap);
+      }, 360);
+    } else {
+      delete document.body.dataset.genesisMapLocation;
+    }
   } else {
     delete document.body.dataset.genesisMapLocation;
   }
@@ -55843,6 +55874,9 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   const text = String(command || "").trim();
   if (!text) return false;
   const routedText = normalizeNexusPresenceRoutableCommand(text) || text;
+  authoritativeGenesisTranscriptRoute = null;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
   setNexusPresenceState(NEXUS_PRESENCE_STATES.THINKING, {
     lastUserInput: text,
     lastResponse: "Nexus is reasoning through the authoritative behavior spine.",
@@ -55875,6 +55909,21 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
       legacyFallbackUsed: false,
       source: "nexus-authoritative-behavior-spine"
     };
+    const action = genesisWorkspaceActionFromFinalTranscript(text);
+    if (action) {
+      nexusActiveWorkflowState = null;
+      pendingWorkflow = null;
+      document.querySelector('[data-genesis-workspace-prefill="true"]')?.remove();
+      delete document.body.dataset.genesisWorkspace;
+      delete document.body.dataset.genesisWorkspaceRequestId;
+      rememberAuthoritativeGenesisTranscriptRoute(action, text);
+      result.genesisAction = action;
+      await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId: result.correlationId });
+    }
+    if (/\b(play|open|find|search|start|put on|listen to|pause|resume|stop)\b/i.test(text)
+      && /\b(music|media|youtube|song|songs|playlist|artist|album)\b/i.test(text)) {
+      await runMusicAssistantCommand(text, { turnToken: options.turnToken });
+    }
     openAskNexus();
     enableHeyAgriNexusMode();
     renderUserWorkspace?.();

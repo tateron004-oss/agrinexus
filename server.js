@@ -87,7 +87,7 @@ const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
 const PUBLIC = path.join(ROOT, "public");
 const REQUIRE_LIVE_SERVICES = process.env.AGRINEXUS_REQUIRE_LIVE_SERVICES === "true";
-const STATE_STORE = process.env.AGRINEXUS_STATE_STORE || "json";
+const STATE_STORE = process.env.AGRINEXUS_STATE_STORE || (process.env.DATABASE_URL ? "postgres" : "json");
 const PROVIDER_WEBHOOK_TIMEOUT_MS = Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 3000);
 const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 3000);
 const sessions = new Map();
@@ -95,11 +95,48 @@ const genesisVoiceGuestSessions = new Map();
 const rateBuckets = new Map();
 const phoneAudioCache = new Map();
 const spotifyOAuthStates = new Map();
+const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
-  resolveUser: async req => currentUser(req, await readDb()),
+  resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
   readJson: readBody,
   logger: console
 });
+
+function deterministicAuthoritativeUserId(legacyUserId = "") {
+  const hex = crypto.createHash("sha256").update(`nexus-authoritative-user:${legacyUserId}`).digest("hex").slice(0, 32).split("");
+  hex[12] = "5";
+  hex[16] = ((Number.parseInt(hex[16], 16) & 3) | 8).toString(16);
+  const value = hex.join("");
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+}
+
+async function authoritativeRuntimeUser(user) {
+  if (!user) return null;
+  const authoritativeUserId = deterministicAuthoritativeUserId(user.id);
+  const role = String(user.role || "standard-user").toLowerCase().replace(/\s+/g, "-");
+  const permissions = ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write"];
+  if (usingPostgresState()) {
+    const pool = getPgPool();
+    const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
+    await pool.query(`insert into users(id,tenant_id,email,display_name,password_hash,status)
+      values($1,$2,$3,$4,$5,'active') on conflict(id) do update set
+      display_name=excluded.display_name,status='active',updated_at=now()`,
+    [authoritativeUserId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
+    await pool.query(`insert into nexus_organization_memberships(tenant_id,user_id,role,permissions,state)
+      values($1,$2,$3,$4,'active') on conflict(tenant_id,user_id,role) do update set
+      permissions=excluded.permissions,state='active',updated_at=now()`,
+    [NEXUS_AUTHORITATIVE_TENANT_ID, authoritativeUserId, role, permissions]);
+  }
+  return {
+    ...user,
+    legacyUserId: user.id,
+    id: authoritativeUserId,
+    tenantId: NEXUS_AUTHORITATIVE_TENANT_ID,
+    organizationId: NEXUS_AUTHORITATIVE_TENANT_ID,
+    roles: [role],
+    permissions
+  };
+}
 
 function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
