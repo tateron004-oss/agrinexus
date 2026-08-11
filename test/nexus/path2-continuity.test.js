@@ -40,9 +40,9 @@ test("planner carries corrections, locale, prior task, and recent turns into one
   let request;
   const planner = new OpenEndedPlanner({
     model: { plan: async input => { request = input; return { goal: "Use Kisumu, not Nakuru", application: "maps",
-      riskTier: "low", clarification: null, steps: [{ id: "map", title: "Correct map", toolId: null,
+      riskTier: "low", clarification: null, steps: [{ id: "map", title: "Correct map", toolId: "maps.view",
         input: { location: "Kisumu" }, dependsOn: [], fallbackToolIds: [], requiredPermission: null }] }; } },
-    tools: { list: async () => [] }, applications: new ApplicationRegistry(defaultApplicationManifests()),
+    tools: { list: async () => [{ tool_id: "maps.view", availability: "available" }] }, applications: new ApplicationRegistry(defaultApplicationManifests()),
     memory: { search: async () => [] }
   });
   const command = { tenantId: "tenant-a", actorId: "user-a", text: "No, use Kisumu instead",

@@ -51,6 +51,7 @@ function validatePlan(candidate, catalog, context) {
   for (const [index, step] of (candidate?.steps || []).entries()) {
     const id = String(step.id || `step_${index + 1}`); if (ids.has(id)) errors.push(`Duplicate step id: ${id}.`); ids.add(id);
     if (!String(step.title || "").trim()) errors.push(`Step ${id} requires a title.`);
+    if (!clarification && !step.toolId) errors.push(`Step ${id} requires an executable tool.`);
     if (step.toolId && !toolIds.has(step.toolId)) errors.push(`Step ${id} references unavailable tool ${step.toolId}.`);
     if (step.requiredPermission && !context.can(step.requiredPermission)) errors.push(`Step ${id} requires unavailable permission ${step.requiredPermission}.`);
   }
