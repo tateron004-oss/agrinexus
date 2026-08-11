@@ -14,14 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "050643b18627cb087e52e7bb0198931a2a19992b",
-    "recoveryBranch": "recovery/pre-command-ownership-activation-050643b1",
-    "files": ["public/app.js"],
-    "purpose": "Activate authoritative typed outcomes for all live voice and typed requests, disconnect browser and workspace re-parsing, require verified renderer acknowledgement, and supersede stale transitions"
+    "baseCommit": "6b6c0aece981099e1577498c153e4d1e53d14399",
+    "recoveryBranch": "recovery/pre-30-fault-probe-completion-6b6c0aec",
+    "files": ["nexus/runtime/health.js", "nexus/compat/server-runtime-adapter.js", "public/app.js"],
+    "purpose": "Complete the 30-fault correction with transactional PostgreSQL write/readback, exact-release live behavior and browser evidence probes, provider-isolated readiness, sequential command protection, and voice/typed equivalence"
   },
   "protectedFiles": {
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
-    "public/app.js": "c61e5021f43227c76e8728e797edccda110679f3",
+    "public/app.js": "164794913402535e1c62751368430a990b327397",
+    "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
+    "nexus/compat/server-runtime-adapter.js": "8d3b1bbcee8ad61c35637027401e070a04be32b4",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",

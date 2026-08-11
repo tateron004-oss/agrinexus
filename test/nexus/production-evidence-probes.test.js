@@ -18,6 +18,15 @@ test("production probe transport retries bounded transient failures", async () =
   try { assert.equal((await requestWithRetry("https://production/health", {}, 2)).ok, true); assert.equal(calls, 2); }
   finally { global.fetch = originalFetch; }
 });
+
+test("release workflow executes the real browser capability producer before compiling proof", () => {
+  const workflow = fs.readFileSync(".github/workflows/nexus-unified-production-release.yml", "utf8");
+  const producer = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  assert.ok(workflow.indexOf("nexus-run-browser-capability-probes.js") < workflow.indexOf("nexus-compile-production-evidence.js"));
+  assert.match(producer, /__NEXUS_CAPTURE_PRODUCTION_OUTCOME__/);
+  assert.match(producer, /behavior-turn/); assert.match(producer, /browser-acknowledgement/);
+  assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
+});
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
   const result = component("testing", sha, [probe], { exactSha: sha });

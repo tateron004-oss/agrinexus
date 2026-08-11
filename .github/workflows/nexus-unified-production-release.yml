@@ -1,6 +1,9 @@
 name: Nexus unified production release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       expected_release_sha:
@@ -16,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
+  EXPECTED_RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_release_sha || github.sha }}
   NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
   PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
 
@@ -28,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.expected_release_sha || github.sha }}
+          ref: ${{ env.EXPECTED_RELEASE_SHA }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -74,6 +77,10 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: node scripts/nexus-render-release-controller.js
+      - name: Install production browser for visible and audible evidence
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
       - name: Produce, compile, and record exact-release production probes
         env:
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
@@ -84,6 +91,7 @@ jobs:
           set -o pipefail
           mkdir -p output
           node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
+          node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
       - name: Establish three consecutive deploy-stage production passes
@@ -114,8 +122,6 @@ jobs:
           NEXUS_PATH1_BASELINE: 00a1e57759bc9fef7be40362ffc2edee04673769
           NEXUS_PATH2_MATRIX_OUTPUT: output/nexus-path2-production-matrix.json
         run: |
-          npm install --no-save --no-package-lock playwright@1.55.0
-          npx playwright install --with-deps chromium
           node scripts/nexus-run-path2-production-matrix.js
       - name: Capture the exact-release Path 2 certification status
         env:
