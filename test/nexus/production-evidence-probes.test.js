@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
+const { post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -17,6 +18,16 @@ test("production probe transport retries bounded transient failures", async () =
   global.fetch = async () => { calls += 1; if (calls === 1) throw Object.assign(new Error("reset"), { code: "ECONNRESET" }); return { ok: true }; };
   try { assert.equal((await requestWithRetry("https://production/health", {}, 2)).ok, true); assert.equal(calls, 2); }
   finally { global.fetch = originalFetch; }
+});
+
+test("browser capability failure preserves application, category, and safe server message", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ ok: false, status: 503, text: async () => JSON.stringify({ code: "planner_failed",
+    category: "provider", error: "Planner rejected the request" }) });
+  try {
+    await assert.rejects(() => browserProbePost("https://production/behavior-turn", "token", { application: "agriculture" }),
+      /application=agriculture code=planner_failed category=provider error=Planner rejected the request/);
+  } finally { global.fetch = originalFetch; }
 });
 
 test("release workflow executes the real browser capability producer before compiling proof", () => {
