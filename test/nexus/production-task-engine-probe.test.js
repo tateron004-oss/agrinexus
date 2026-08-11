@@ -21,3 +21,17 @@ test("acceptance task-engine probe persists and closes an exact-release task", a
   assert.match(calls[0][1].command.conversationId, /^cnv_/);
   assert.equal(calls[0][1].command.tenantId, "tenant-1"); assert.equal(calls[0][1].command.actorId, "user-1");
 });
+
+test("acceptance task-engine probe reports the exact failing lifecycle stage", async () => {
+  const sha = "b".repeat(40);
+  const failure = Object.assign(new Error("conversation write rejected"), { code: "23503" });
+  const runtime = { ready: Promise.resolve(), engine: { async create() { throw failure; } },
+    db: { async query() { return { rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "acceptance-controller", permissions: ["acceptance:identity"] }] }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret", RENDER_GIT_COMMIT: sha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha: sha }), createRuntimeFn: () => runtime });
+  let status; let body;
+  await adapter.handle({ method: "POST", headers: { authorization: "Bearer secret" } }, {},
+    new URL("https://production/api/nexus/runtime/production-acceptance/probes/task-engine"), (_res, code, value) => { status = code; body = value; });
+  assert.equal(status, 503); assert.equal(body.releaseSha, sha); assert.equal(body.stage, "create");
+  assert.equal(body.code, "23503"); assert.equal(body.error, "conversation write rejected");
+});
