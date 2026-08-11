@@ -64,8 +64,10 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install candidate browser
         run: |
-          npm install --no-save --no-package-lock playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --prefix /tmp/nexus-playwright --no-save --no-package-lock playwright@1.55.0
+          ln -s /tmp/nexus-playwright/node_modules/playwright node_modules/playwright
+          ln -s /tmp/nexus-playwright/node_modules/playwright-core node_modules/playwright-core
+          /tmp/nexus-playwright/node_modules/.bin/playwright install --with-deps chromium
       - name: Prove source and release contracts
         run: |
           set -euo pipefail

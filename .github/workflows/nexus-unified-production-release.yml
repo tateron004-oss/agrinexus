@@ -79,8 +79,10 @@ jobs:
         run: node scripts/nexus-render-release-controller.js
       - name: Install production browser for visible and audible evidence
         run: |
-          npm install --no-save --no-package-lock playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --prefix /tmp/nexus-playwright --no-save --no-package-lock playwright@1.55.0
+          ln -s /tmp/nexus-playwright/node_modules/playwright node_modules/playwright
+          ln -s /tmp/nexus-playwright/node_modules/playwright-core node_modules/playwright-core
+          /tmp/nexus-playwright/node_modules/.bin/playwright install --with-deps chromium
       - name: Produce, compile, and record exact-release production probes
         env:
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
