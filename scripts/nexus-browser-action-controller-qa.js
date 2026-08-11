@@ -11,4 +11,15 @@ assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", tra
 assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "2", sessionId: "s", role: "assistant", isFinal: true }, build).handled, false);
 assert.equal(controller.handleFinalUserTranscript({ transcript: "open Maps", transcriptId: "3", sessionId: "s", role: "user", isFinal: false }, build).handled, false);
 assert.equal(controller.handleFinalUserTranscript({ transcript: "hello", transcriptId: "4", sessionId: "s", role: "user", isFinal: true }, build).handled, false);
+assert.equal(controller.getVisualExperienceIntent("Why do maize leaves turn yellow, and what should a farmer check first?"), "", "open-ended agriculture questions must reach the conversation brain");
+assert.equal(controller.getVisualExperienceIntent("Do yellow maize leaves always mean disease?"), "", "symptom questions must not open image galleries automatically");
+assert.equal(controller.getVisualExperienceIntent("Nexus, show pictures of yellow maize leaves"), "maize-images", "explicit image requests must still open the image workspace");
+assert.equal(controller.getVisualExperienceIntent("Open the map of Nairobi"), "map", "explicit map requests must still open the map workspace");
+assert.equal(controller.getVisualExperienceIntent("How do maps work?"), "", "map questions must not be mistaken for map navigation");
+assert.equal(controller.getRequestedMapPlace("Open the map of Accra, Ghana"), "Accra, Ghana", "global map locations must not silently fall back to Kenya");
+assert.equal(controller.getRequestedMapPlace("Show Medellin Colombia on the map"), "Medellin Colombia", "map place extraction must support unfamiliar global locations");
+assert.match(source, /String\(value \?\? ""\)/, "zero-valued provider data must remain renderable");
+assert.equal(controller.isMusicRequest("Play Superstition by Stevie Wonder"), true, "unfamiliar song and artist requests must reach music playback");
+assert.equal(controller.getMusicQuery("Nexus, play Superstition by Stevie Wonder"), "Superstition by Stevie Wonder", "music provider must receive the requested song and artist");
+assert.equal(controller.isMusicRequest("Play the role of a farmer"), false, "non-media play phrases must not route to music");
 console.log("Nexus browser Action Controller QA passed");

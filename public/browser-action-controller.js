@@ -5,7 +5,7 @@
   const providerCardReplayWindowMs = 2500;
   const pilotEvidenceStorageKey = "nexus.pilot-evidence.v1";
   const pilotConsentStorageKey = "nexus.pilot-evidence-consent.v1";
-  function text(value) { return String(value || "").trim(); }
+  function text(value) { return String(value ?? "").trim(); }
   function html(value) {
     return text(value).replace(/[&<>"']/g, character => ({
       "&": "&amp;",
@@ -31,15 +31,66 @@
     const value = text(command).toLowerCase();
     return /\b(weather|forecast|temperature|rain|raining|heat|hali ya hewa|clima|meteo|météo)\b/.test(value);
   }
+  function musicRequest(command = "") {
+    const value = text(command).toLowerCase();
+    if (!/\b(play|listen to|put on|start)\b/.test(value)) return false;
+    if (/\b(role|part|game|video|movie|podcast|lesson|course|workflow|recording)\b/.test(value)) return false;
+    return /\b(music|song|track|playlist|album|artist|by|r&b|rnb|gospel|afrobeats|jazz|hip hop|reggae|rumba|soul)\b/.test(value)
+      || /\b(play|listen to|put on)\b\s+[^.?!]{2,80}$/i.test(value);
+  }
+  function musicQuery(command = "") {
+    return text(command)
+      .replace(/^\s*(?:hello|hey)?\s*nexus[\s,.:;-]*/i, "")
+      .replace(/^\s*(?:please\s+)?(?:can|could|would)\s+you\s+/i, "")
+      .replace(/^\s*(?:please\s+)?(?:play|listen\s+to|put\s+on|start)\s+/i, "")
+      .replace(/[?.!]+$/g, "")
+      .trim();
+  }
+  async function openLiveMusicPlayer(command = "", options = {}) {
+    if (typeof document === "undefined" || !document.body || typeof global.fetch !== "function") return { opened: false, reason: "browser-unavailable" };
+    const query = musicQuery(command) || "music";
+    const shell = visualShell("🎵 Nexus Music", `Finding ${query} through the connected provider`);
+    const body = shell.querySelector(".nexus-visual-body");
+    try {
+      const response = await global.fetch("/api/music/youtube/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.videoId) throw new Error(result.error || `music provider returned ${response.status}`);
+      const embed = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(result.videoId)}?autoplay=1&enablejsapi=1&playsinline=1&rel=0`;
+      body.innerHTML = `<section class="nexus-visual-panel nexus-visual-source"><strong>Now playing through YouTube</strong><h2>${html(result.title || query)}</h2><p>Playable provider result verified for this request.</p></section>
+        <iframe data-nexus-live-music-frame="true" title="${html(result.title || query)}" src="${embed}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="width:100%;min-height:360px;border:0;border-radius:16px"></iframe>
+        <div class="nexus-visual-actions" role="group" aria-label="Music controls"><button data-music-action="play">Play</button><button data-music-action="pause">Pause</button><button data-music-action="stop">Stop</button><button data-visual-action="close">Close and keep listening</button></div>`;
+      const frame = body.querySelector("[data-nexus-live-music-frame]");
+      body.addEventListener("click", event => {
+        const action = event.target?.closest?.("[data-music-action]")?.dataset?.musicAction;
+        if (!action) return;
+        const func = action === "play" ? "playVideo" : action === "pause" ? "pauseVideo" : "stopVideo";
+        frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "https://www.youtube-nocookie.com");
+        if (action === "stop") shell.remove();
+      });
+      setTimeout(() => frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "https://www.youtube-nocookie.com"), 700);
+      global.dispatchEvent?.(new global.CustomEvent("nexus.music.opened", { detail: { query, title: result.title || query, provider: "YouTube", playable: true, visible: true, source: options.source || "command" } }));
+      return { opened: true, playable: true, query, title: result.title || query, videoId: result.videoId };
+    } catch (error) {
+      body.innerHTML = `<div class="nexus-live-weather-error">Nexus could not start verified music playback for ${html(query)}. No playback success was claimed.<br><small>${html(error?.message || "music provider unavailable")}</small></div><div class="nexus-visual-actions"><button data-visual-action="close">Close</button></div>`;
+      return { opened: true, failed: true, query, reason: error?.message || "music-provider-unavailable" };
+    }
+  }
   function visualExperienceIntent(command = "") {
     const value = text(command).toLowerCase();
     if (!value) return "";
     if (weatherRequest(value)) return "";
-    if (/\b(map|maps|show (?:me )?(?:nairobi|mombasa|kenya)|reset (?:the )?map|return to kenya)\b/.test(value)) return "map";
+    const explicitVisualAction = /\b(show|open|display|view|give|find|search|look up|pull up|load|reset|return)\b/.test(value);
+    const explicitImageAction = /\b(show|open|display|view|find|search|look up|pull up|load|give)\b/.test(value);
+    if (/\b(open|show|display|view|reset|return)\b.*\b(map|maps|nairobi|mombasa|kenya)\b|\b(reset (?:the )?map|return to kenya)\b/.test(value)) return "map";
     if (/\b(agriculture help|agricultural help|farm help|crop help|help (?:me )?with (?:agriculture|farming|my crop))\b/.test(value)) return "agriculture";
-    if (/\b(maize|corn)\b.*\b(picture|pictures|photo|photos|image|images|disease|yellow|spot|spots|leaf|leaves)\b|\b(picture|pictures|photo|photos|image|images)\b.*\b(maize|corn)\b/.test(value)) return "maize-images";
+    const maizeImageSubject = /\b(maize|corn)\b.*\b(picture|pictures|photo|photos|image|images|disease|yellow|spot|spots|leaf|leaves)\b|\b(picture|pictures|photo|photos|image|images)\b.*\b(maize|corn)\b/.test(value);
+    if (explicitImageAction && maizeImageSubject) return "maize-images";
     if (/\b(create|make|build|write|prepare|help me (?:create|make|write))\b.*\b(r[eé]sum[eé]|cv|curriculum vitae)\b/.test(value)) return "resume";
-    if (/\b(show|open|display|give)\b.*\b(website|web site|link|source|sources|resource|resources)\b/.test(value)) return "sources";
+    if (explicitVisualAction && /\b(website|web site|link|source|sources|resource|resources)\b/.test(value)) return "sources";
     if (/\b(show|open|display|create|make)\b.*\b(card|visual|list|document|report|workspace|process)\b/.test(value)) return "display";
     return "";
   }
@@ -78,8 +129,13 @@
     return shell;
   }
   function requestedMapPlace(command = "") {
-    const match = text(command).match(/\b(Nairobi|Mombasa|Kisumu|Nakuru|Nyeri|Eldoret|Meru|Machakos|Kakamega|Kisii|Malindi|Lamu|Kenya)\b/i);
-    return match?.[1] || "Kenya";
+    const value = text(command).replace(/[?.!]+$/g, "").trim();
+    const explicit = value.match(/\b(?:map|maps)\s+(?:of|for|at|near|in)\s+(.+)$/i)
+      || value.match(/\b(?:show|open|display|view|load|reset|return)(?:\s+me)?\s+(?:the\s+)?(?:map|maps)(?:\s+(?:of|for|at|near|in|to))?\s+(.+)$/i)
+      || value.match(/\b(?:show|open|display|view|load)\s+(.+?)\s+(?:on|in)\s+(?:the\s+)?map$/i);
+    if (explicit?.[1]) return explicit[1].replace(/\b(?:please|right now|now)\b/gi, "").replace(/\s+/g, " ").trim();
+    const known = value.match(/\b(Nairobi|Mombasa|Kisumu|Nakuru|Nyeri|Eldoret|Meru|Machakos|Kakamega|Kisii|Malindi|Lamu|Kenya)\b/i);
+    return known?.[1] || "Kenya";
   }
   async function openReliableMap(command = "", options = {}) {
     if (typeof document === "undefined" || typeof global.fetch !== "function") return { opened: false, reason: "browser-unavailable" };
@@ -94,19 +150,21 @@
         kakamega: [0.2827, 34.7519, 12], kisii: [-0.6817, 34.7667, 12], malindi: [-3.2192, 40.1169, 12], lamu: [-2.2696, 40.9006, 12]
       };
       let point = known[requested.toLowerCase()];
+      let placeLabel = requested.toLowerCase() === "kenya" ? "Kenya" : `${requested}, Kenya`;
       if (!point) {
         const response = await global.fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(requested)}&count=1&language=en&format=json`);
         const place = response.ok ? (await response.json())?.results?.[0] : null;
         if (!place) throw new Error("location not found");
         point = [place.latitude, place.longitude, 12];
+        placeLabel = [place.name, place.admin1, place.country].filter(Boolean).join(", ");
       }
       const [lat, lon, zoom] = point;
       const span = zoom < 8 ? 8 : .18;
       const bbox = [lon - span, lat - span, lon + span, lat + span].join("%2C");
       const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
       const direct = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=${zoom}/${lat}/${lon}`;
-      body.innerHTML = `<iframe class="nexus-map-frame" title="Interactive map of ${html(requested)}" src="${embed}"></iframe>
-        <section class="nexus-visual-panel nexus-visual-source"><strong>Visible location: ${html(requested)}, Kenya</strong><p>Map supplied by OpenStreetMap contributors. This command creates a fresh map each time, so an earlier India or other location cannot remain stuck.</p></section>
+      body.innerHTML = `<iframe class="nexus-map-frame" title="Interactive map of ${html(placeLabel)}" src="${embed}"></iframe>
+        <section class="nexus-visual-panel nexus-visual-source"><strong>Visible location: ${html(placeLabel)}</strong><p>Map supplied by OpenStreetMap contributors. This command creates a fresh map each time, so an earlier location cannot remain stuck.</p></section>
         <div class="nexus-visual-actions"><a href="${direct}" target="_blank" rel="noopener noreferrer">Open full map website ↗</a><button data-visual-action="close">Close and keep listening</button></div>`;
       global.dispatchEvent?.(new global.CustomEvent("nexus.map.opened", { detail: { location: requested, visible: true, reset: true, source: "OpenStreetMap" } }));
       recordPilotEvidence({ topic: "maps", outcome: "completed", pathway: options.source?.includes("voice") ? "voice" : "typed", durationBand: "under-2-min", language: document.documentElement.lang || "unknown" });
@@ -728,6 +786,7 @@
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command" }), 0);
+      if (musicRequest(command)) setTimeout(() => void openLiveMusicPlayer(command, { source: "typed-command" }), 0);
       if (visualExperienceIntent(command)) setTimeout(() => void openVisualExperience(command, { source: "typed-command" }), 0);
     }, true);
     document.addEventListener("keydown", event => {
@@ -737,6 +796,7 @@
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command-enter" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command-enter" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command-enter" }), 0);
+      if (musicRequest(command)) setTimeout(() => void openLiveMusicPlayer(command, { source: "typed-command-enter" }), 0);
       if (visualExperienceIntent(command)) setTimeout(() => void openVisualExperience(command, { source: "typed-command-enter" }), 0);
     }, true);
   }
@@ -770,12 +830,14 @@
       : null;
     const weatherCardRequested = weatherRequest(transcript);
     if (weatherCardRequested) void openLiveWeatherCard(transcript, { source: "voice-final-transcript" });
+    const musicPlayerRequested = musicRequest(transcript);
+    if (musicPlayerRequested) void openLiveMusicPlayer(transcript, { source: "voice-final-transcript" });
     const visualIntent = visualExperienceIntent(transcript);
     if (visualIntent) void openVisualExperience(transcript, { source: "voice-final-transcript" });
     const action = typeof actionBuilder === "function" ? actionBuilder(transcript) : null;
-    if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested && !visualIntent) return { handled: false };
+    if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested && !musicPlayerRequested && !visualIntent) return { handled: false };
     seen.set(sessionId + ":" + transcriptId, now);
-    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, weatherCardRequested, visualIntent, transcriptId, sessionId, originalTranscript: transcript };
+    return { handled: true, ...(action || {}), providerCardOpened: providerCard?.opened === true, pilotDashboardOpened: pilotDashboard?.opened === true, weatherCardRequested, musicPlayerRequested, visualIntent, transcriptId, sessionId, originalTranscript: transcript };
   }
   global.NexusBrowserActionController = Object.freeze({
     handleFinalUserTranscript,
@@ -786,7 +848,11 @@
     isWeatherRequest: weatherRequest,
     getWeatherLocation: weatherLocation,
     openLiveWeatherCard,
+    isMusicRequest: musicRequest,
+    getMusicQuery: musicQuery,
+    openLiveMusicPlayer,
     getVisualExperienceIntent: visualExperienceIntent,
+    getRequestedMapPlace: requestedMapPlace,
     openVisualExperience,
     openReliableMap,
     openAgricultureHelp,
