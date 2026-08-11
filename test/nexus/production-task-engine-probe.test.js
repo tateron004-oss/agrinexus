@@ -18,6 +18,7 @@ test("acceptance task-engine probe persists and closes an exact-release task", a
   assert.equal(status, 200); assert.equal(body.ok, true); assert.equal(body.releaseSha, sha);
   assert.equal(body.durable, true); assert.equal(body.state, "cancelled"); assert.equal(body.steps, 1);
   assert.deepEqual(calls.map(([name]) => name), ["create", "transition", "get"]);
+  assert.match(calls[0][1].command.commandId, /^cmd_/);
   assert.match(calls[0][1].command.conversationId, /^cnv_/);
   assert.equal(calls[0][1].command.tenantId, "tenant-1"); assert.equal(calls[0][1].command.actorId, "user-1");
 });

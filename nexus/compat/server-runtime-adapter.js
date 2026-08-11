@@ -164,7 +164,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
         probeStage = "identity";
         const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active);
-        const command = { correlationId: `acceptance-${marker}`, conversationId: `cnv_${marker}`,
+        const command = { commandId: `cmd_${marker}`, correlationId: `acceptance-${marker}`, conversationId: `cnv_${marker}`,
           tenantId: principal.tenantId, actorId: principal.userId, channel: "release", locale: "en", text: "Verify authoritative task persistence" };
         probeStage = "create";
         const created = await active.engine.create({ command, goal: `Exact-release task-engine probe ${releaseSha}`,
