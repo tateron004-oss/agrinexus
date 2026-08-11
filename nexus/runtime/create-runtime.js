@@ -33,6 +33,7 @@ const { DeviceTokenVault } = require("../security/device-token-vault.js");
 const { ProductionAcceptanceRepository } = require("../acceptance/repository.js");
 const { createObjectStore } = require("../storage/object-store.js");
 const { Path2EvidenceRepository } = require("../path2/evidence-repository.js");
+const { BehaviorSpine } = require("./behavior-spine.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -71,11 +72,12 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     audit, executors: governedExecutors, verifier: verifier || (input => providers.verify(input)) });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
-  const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit }) : null;
+  const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
+  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
-    engine, planner, agent, providers, acceptance, path2Evidence, objectStorage, ready,
+    engine, planner, agent, behavior, providers, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
 

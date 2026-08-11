@@ -45,6 +45,23 @@ test("authenticated users see only their tenant-owned task status", async () => 
   assert.equal(capture.result.status, 200); assert.deepEqual(listInput, { tenantId: "tenant-1", ownerId: "user-1", state: "running", limit: "10" });
 });
 
+test("behavior turn enters one authoritative spine without a caller-selected workspace", async () => {
+  let turnInput;
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    behavior: { turn: async input => { turnInput = input; return { schema: "nexus.behavior-turn.v1",
+      completed: true, application: "live-knowledge", legacyFallbackUsed: false }; } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ text: "Why do leaves change color?", channel: "typed" }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-1" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/turn"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(turnInput.input.text, "Why do leaves change color?");
+  assert.equal(turnInput.input.workspaceId, undefined);
+  assert.equal(response.result.body.legacyFallbackUsed, false);
+});
+
 test("workspace cutover and observability status are authenticated and permission governed", async () => {
   const runtime = { engine: { tasks: {} }, applications: { list: () => [{ applicationId: "maps" }] },
     workspaceMigrations: { status: async id => ({ workspace_id: id, state: "authoritative" }) },

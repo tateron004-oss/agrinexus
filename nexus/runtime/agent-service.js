@@ -3,7 +3,9 @@
 const { createCommand } = require("../contracts/command.js");
 
 class AgentService {
-  constructor({ planner, engine, tasks, conversations, audit }) { Object.assign(this, { planner, engine, tasks, conversations, audit }); }
+  constructor({ planner, engine, tasks, conversations, audit, cutover = null }) {
+    Object.assign(this, { planner, engine, tasks, conversations, audit, cutover });
+  }
 
   async command({ input, context }) {
     const command = createCommand({ ...input, tenantId: context.tenantId, actorId: context.userId });
@@ -24,6 +26,10 @@ class AgentService {
         taskId: priorTask?.taskId || null, eventType: "brain.clarification_requested", outcome: "clarifying", metadata: { question: plan.clarification } });
       return { command, task: priorTask, plan, action: "clarify" };
     }
+    // Reasoning owns workspace selection. Cutover is checked only after the
+    // authoritative planner has selected an application, never from a legacy
+    // browser hint supplied before reasoning.
+    await this.cutover?.requireAuthoritative(plan.application);
     const task = await this.engine.create({ command, goal: plan.goal, application: plan.application,
       riskTier: plan.riskTier, steps: plan.steps });
     await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,

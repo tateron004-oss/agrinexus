@@ -55827,53 +55827,75 @@ function renderNexusAgenticCommandResult(result = {}) {
   return nexusAgenticBrainLastResult;
 }
 
+const NEXUS_AUTHORITATIVE_CONVERSATION_KEY = "nexusAuthoritativeConversationId";
+
+function nexusAuthoritativeConversationId() {
+  let conversationId = localStorage.getItem(NEXUS_AUTHORITATIVE_CONVERSATION_KEY) || "";
+  if (!conversationId) {
+    const suffix = globalThis.crypto?.randomUUID?.().replace(/-/g, "") || `${Date.now()}${Math.random().toString(16).slice(2)}`;
+    conversationId = `cnv_${suffix.slice(0, 26)}`;
+    localStorage.setItem(NEXUS_AUTHORITATIVE_CONVERSATION_KEY, conversationId);
+  }
+  return conversationId;
+}
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
-  const runtime = window.NexusUnifiedBrainRuntime;
   const text = String(command || "").trim();
   if (!text) return false;
-  if (handleNexusPresenceWakePhrase(text, options)) return true;
-  if (handleNexusExperienceStarterCommand(text, options)) return true;
-  if (handleNexusExperienceStatusCommand(text, options)) return true;
-  if (handleNexusPresenceFollowUp(text, options)) return true;
-  if (handleNexusMentalHealthBehavioralWellnessCommand(text, {
-    ...options,
-    source: options.source || "unified-brain-mental-health-priority"
-  })) return true;
-  const intentRoute = resolveNexusIntentDrivenWorkflowRoute(text, options);
-  if (intentRoute && (intentRoute.recommendedWorkflow || intentRoute.confidence >= 0.4)) {
-    return routeNexusIntentDrivenWorkflowCommand(text, {
-      ...options,
-      source: options.source || "unified-brain-intent-router"
-    });
-  }
-  const routedText = normalizeNexusPresenceRoutableCommand(text);
-  const experienceMode = nexusExperienceModeFromCommand(routedText);
-  const progressSteps = getNexusExperienceProgressSteps(experienceMode);
+  const routedText = normalizeNexusPresenceRoutableCommand(text) || text;
   setNexusPresenceState(NEXUS_PRESENCE_STATES.THINKING, {
     lastUserInput: text,
-    lastResponse: getNexusExperienceAcknowledgment(experienceMode, text),
-    nextQuestion: `${progressSteps[0]}. ${progressSteps[1]}. ${progressSteps[2]}.`,
+    lastResponse: "Nexus is reasoning through the authoritative behavior spine.",
+    nextQuestion: "",
     activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || ""
   });
-  if (!runtime) return false;
-  const shouldHandle = typeof runtime.shouldHandleBeforeLegacy === "function"
-    ? runtime.shouldHandleBeforeLegacy(routedText, options)
-    : false;
-  if (!shouldHandle && !options.force) return false;
-  const result = await runtime.process(routedText, {
-    language: languageCode(),
-    inputType: options.source || "typed_chat",
-    sourceMode: "standard_user_workspace"
-  });
-  runtime.mount?.();
-  runtime.render?.(result);
-  renderNexusAgenticCommandResult({
-    ok: true,
-    command: text,
-    source: "nexus-unified-brain-runtime",
-    unifiedBrainResult: result,
-    message: result?.userVisibleStatus || result?.conversationalResponse || result?.understoodGoal || "Nexus prepared a unified mission plan."
-  });
+  try {
+    const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
+      method: "POST",
+      body: {
+        text: routedText,
+        channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed",
+        locale: languageCode(),
+        conversationId: nexusAuthoritativeConversationId()
+      }
+    }, 90000);
+    if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
+      throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
+    }
+    const message = result.response || "Nexus needs more information before it can continue.";
+    nexusAgenticBrainLastResult = {
+      ok: result.completed === true,
+      status: result.state,
+      mode: result.application,
+      message,
+      command: text,
+      result,
+      receipts: result.receipts || [],
+      authoritative: true,
+      legacyFallbackUsed: false,
+      source: "nexus-authoritative-behavior-spine"
+    };
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderUserWorkspace?.();
+    setVoiceResponse(message, true, {
+      allowHandoff: false,
+      command: text,
+      source: "nexus-authoritative-behavior-spine",
+      turnToken: options.turnToken
+    });
+  } catch (error) {
+    const message = error.message || "The authoritative Nexus behavior spine is unavailable. No legacy route was used.";
+    updateNexusBehaviorLayer("ready", message);
+    setVoiceResponse(message, true, {
+      allowHandoff: false,
+      command: text,
+      source: "nexus-authoritative-behavior-spine-unavailable",
+      turnToken: options.turnToken
+    });
+  }
+  // This gateway owns every user request. Success, clarification, governed
+  // confirmation, and truthful failure all terminate routing here.
   return true;
 }
 
@@ -56240,6 +56262,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     ...options,
     source: options.source || "voice-command"
   })) return;
+  if (await handleNexusUnifiedBrainRuntimeCommand(trustChainInput, {
+    ...options,
+    turnToken,
+    source: options.source || "voice"
+  })) return;
   if (handleNexusDailyCompanionCommand(trustChainInput, {
     ...options,
     speak: true,
@@ -56282,7 +56309,6 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (handleNexusVoicePreferenceCommand(spokenCommand || command || localizedCommand || rawCommand, { source: options.source || "voice-preference-command" })) return;
-  if (await handleNexusUnifiedBrainRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusAgricultureCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusHealthcareCollaborationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
   if (await handleNexusMessagePreparationRuntimeCommand(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, source: options.source || "voice" })) return;
@@ -59696,6 +59722,12 @@ function bindStatic() {
     if (persistentOperationsSubmit) {
       const input = nexusCommandInputForSubmit(persistentOperationsSubmit);
       const command = input?.value?.trim() || "";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        return;
+      }
       if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -59711,12 +59743,6 @@ function bindStatic() {
         event.stopImmediatePropagation?.();
         if (input) input.value = command;
         setCommandInputs(command);
-        return;
-      }
-      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation?.();
         return;
       }
       if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-submit" })) {
@@ -59791,6 +59817,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = nexusCommandInputForSubmit(earlyCommandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (handleNexusGenesisProviderOrchestrationCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
@@ -59833,14 +59867,6 @@ function bindStatic() {
       }
       advanceNexusOsMissionForCommand(command, { source: "typed-command-submit" });
       if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation?.();
-        if (input) input.value = command;
-        setCommandInputs(command);
-        return;
-      }
-      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
@@ -60076,17 +60102,17 @@ function bindStatic() {
       event.stopPropagation();
       const input = nexusCommandInputForSubmit(commandCenterSubmit);
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = "";
         setCommandInputs("");
         return;
       }
       if (routeNexusIntentDrivenWorkflowCommand(command, { source: "typed-command-submit" })) {
-        if (input) input.value = command;
-        setCommandInputs(command);
-        return;
-      }
-      if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-submit" })) {
         if (input) input.value = command;
         setCommandInputs(command);
         return;
@@ -61385,6 +61411,14 @@ function installNexusBrainIntelligenceCommandBridge() {
     const input = event.target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]") ? event.target : null;
     if (!input) return;
     const command = input.value?.trim() || "";
+    if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return;
+    }
     if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();
@@ -61394,14 +61428,6 @@ function installNexusBrainIntelligenceCommandBridge() {
       return;
     }
     advanceNexusOsMissionForCommand(command, { source: "typed-command-keyboard" });
-    if (await handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed-command-keyboard" })) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-      if (input) input.value = command;
-      setCommandInputs(command);
-      return;
-    }
     if (await handleNexusAgricultureCollaborationRuntimeCommand(command, { source: "typed-command-keyboard" })) {
       event.preventDefault();
       event.stopPropagation();

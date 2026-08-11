@@ -320,8 +320,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
         query: Object.fromEntries(url.searchParams.entries()) };
       let result = null;
-      if (url.pathname === "/api/nexus/runtime/commands" && req.method === "POST") {
-        await active.cutover.requireAuthoritative(body.workspaceId);
+      if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
+        if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
+        const result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
+          conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
+          locale: request.locale, text: body.text }, context });
+        send(res, result.completed ? 200 : 202, result); return true;
+      } else if (url.pathname === "/api/nexus/runtime/commands" && req.method === "POST") {
         if (!active.agent) { send(res, 503, { error: "The authoritative planning provider is unavailable; no phrase-specific fallback was used.", code: "planning_provider_unavailable" }); return true; }
         const planned = await active.agent.command({ input: { correlationId: request.context.requestId,
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel, locale: request.locale, text: body.text }, context });
