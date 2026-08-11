@@ -18,7 +18,7 @@ test("all channels normalize into one immutable command envelope", () => {
 test("one task lifecycle enforces attributed transitions, pause/resume, retry, and terminal states", () => {
   let task = createTask({ tenantId: "00000000-0000-0000-0000-000000000001",
     ownerId: "00000000-0000-0000-0000-000000000002", conversationId: "cnv_123",
-    correlationId: "trace-1", goal: "Prepare and verify a field visit" }, fixedNow);
+    commandId: "cmd_123", correlationId: "trace-1", goal: "Prepare and verify a field visit" }, fixedNow);
   task = transitionTask(task, "planned", { actorId: "brain", reason: "plan ready" }, fixedNow);
   task = transitionTask(task, "paused", { actorId: "user", reason: "pause" }, fixedNow);
   task = transitionTask(task, "queued", { actorId: "user", reason: "resume" }, fixedNow);

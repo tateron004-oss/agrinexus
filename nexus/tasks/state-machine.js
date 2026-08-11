@@ -29,6 +29,7 @@ function createTask(input = {}, now = () => new Date()) {
     schema: "nexus.task.v1", taskId: input.taskId || createId("task"),
     tenantId: required(input.tenantId, "Tenant ID"), ownerId: required(input.ownerId, "Task owner ID"),
     conversationId: required(input.conversationId, "Conversation ID"),
+    commandId: required(input.commandId, "Command ID"),
     correlationId: required(input.correlationId, "Correlation ID"), goal: required(input.goal, "Task goal"),
     application: input.application || "general", riskTier: input.riskTier || "low",
     priority: Math.min(Math.max(Number(input.priority || 3), 1), 5), state: "draft", version: 1,

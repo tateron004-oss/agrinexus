@@ -62,6 +62,22 @@ test("behavior turn enters one authoritative spine without a caller-selected wor
   assert.equal(response.result.body.legacyFallbackUsed, false);
 });
 
+test("renderer acknowledgement completes the same authoritative command transaction", async () => {
+  let ackInput;
+  const runtime = { ready: Promise.resolve(), behavior: { acknowledge: async value => {
+    ackInput = value; return { schema: "nexus.behavior-acknowledgement.v1", completed: true };
+  } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ taskId: "tsk_1", commandId: "cmd_1",
+      correlationId: "trace-1", workspace: "map", rendered: true, visible: true }), createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: {} }, {},
+    new URL("http://local/api/nexus/runtime/behavior/acknowledgements"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(ackInput.input.correlationId, "trace-1");
+  assert.equal(ackInput.input.workspace, "map");
+});
+
 test("workspace cutover and observability status are authenticated and permission governed", async () => {
   const runtime = { engine: { tasks: {} }, applications: { list: () => [{ applicationId: "maps" }] },
     workspaceMigrations: { status: async id => ({ workspace_id: id, state: "authoritative" }) },
