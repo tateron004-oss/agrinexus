@@ -7,11 +7,6 @@ on:
         description: Exact deployed main SHA to certify
         required: true
         type: string
-  workflow_run:
-    workflows:
-      - Nexus protected production deployment
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -23,12 +18,11 @@ concurrency:
 env:
   NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
   PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
-  EXPECTED_RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.expected_release_sha || github.sha }}
+  EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha || github.sha }}
   NEXUS_ACCEPTANCE_TOKEN: ${{ secrets.NEXUS_ACCEPTANCE_TOKEN }}
 
 jobs:
   contract:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main') }}
     name: Lock complete acceptance contract
     runs-on: ubuntu-latest
     steps:
