@@ -44,6 +44,7 @@ test("agent service continues cross-application context through one durable task
   const committed = calls.find(item => item.eventType === "brain.plan_committed");
   assert.equal(result.action, "continue"); assert.equal(result.task.application, "maps"); assert.equal(committed.metadata.continuedFrom, "tsk_prior");
   assert.equal(calls[0].role, "user"); assert.equal(calls[2].role, "assistant");
+  assert.equal(calls[2].actorId, null); assert.equal(calls[2].provenance.systemActor, "nexus-brain");
 });
 
 test("clarification plans are valid without fake execution steps", () => {

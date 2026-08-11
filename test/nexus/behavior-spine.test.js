@@ -27,6 +27,8 @@ test("behavior spine executes a reasoned task and returns only verified completi
   assert.equal(result.render.originalText, command.text);
   assert.deepEqual(result.outcome.receiptIds, ["rcp_1"]);
   assert.equal(appended[0].provenance.type, "verified_outcome");
+  assert.equal(appended[0].actorId, null);
+  assert.equal(appended[0].provenance.systemActor, "nexus-brain");
 });
 
 test("behavior spine preserves clarification and confirmation without false success", async () => {

@@ -20,8 +20,8 @@ class AgentService {
     const plan = await this.planner.plan({ command, context, priorTask, conversationHistory });
     if (plan.clarification) {
       await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
-        actorId: "nexus-brain", role: "assistant", content: plan.clarification,
-        provenance: { type: "clarification", correlationId: command.correlationId } });
+        actorId: null, role: "assistant", content: plan.clarification,
+        provenance: { type: "clarification", systemActor: "nexus-brain", correlationId: command.correlationId } });
       await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: command.correlationId,
         taskId: priorTask?.taskId || null, eventType: "brain.clarification_requested", outcome: "clarifying", metadata: { question: plan.clarification } });
       return { command, task: priorTask, plan, action: "clarify" };
@@ -36,8 +36,8 @@ class AgentService {
     const task = await this.engine.create({ command, goal: plan.goal, application: plan.application,
       riskTier: plan.riskTier, steps: plan.steps });
     await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
-      actorId: "nexus-brain", role: "assistant", content: `I created a ${plan.steps.length}-step plan for: ${plan.goal}`,
-      provenance: { type: "plan", taskId: task.taskId, correlationId: command.correlationId } });
+      actorId: null, role: "assistant", content: `I created a ${plan.steps.length}-step plan for: ${plan.goal}`,
+      provenance: { type: "plan", systemActor: "nexus-brain", taskId: task.taskId, correlationId: command.correlationId } });
     await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: command.correlationId,
       taskId: task.taskId, eventType: "brain.plan_committed", outcome: "planned",
       metadata: { application: plan.application, planningAttempts: plan.planningAttempts, continuedFrom: priorTask?.taskId || null } });
