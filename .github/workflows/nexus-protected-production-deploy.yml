@@ -22,8 +22,85 @@ env:
   PRODUCTION_ORIGIN: https://nexus-genesis-certified.onrender.com
 
 jobs:
+  qualify-release-candidate:
+    name: Prove release candidate before production
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: nexus_candidate
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus_candidate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexus -d nexus_candidate"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nexus:nexus_candidate@127.0.0.1:5432/nexus_candidate
+      DATABASE_SSL: "false"
+      AGRINEXUS_STATE_STORE: postgres
+      NEXUS_ACCEPTANCE_TOKEN: candidate-only-token
+      NEXUS_DISABLE_LOCAL_ENV_FILES: "true"
+      RENDER_GIT_COMMIT: ${{ github.event.inputs.target_sha || github.sha }}
+      PORT: "4173"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install immutable dependencies
+        run: npm ci --ignore-scripts
+      - name: Install candidate browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Prove source and release contracts
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RENDER_GIT_COMMIT"
+          node scripts/nexus-protected-foundation-guard.js
+          node --test test/nexus/system-convergence.test.js
+          node --test test/nexus/open-ended-agent.test.js
+          node --test test/nexus/release-promotion-policy.test.js
+          npm run qa:nexus-browser-action-controller
+          npm run qa:nexus-production-layer-activation-integration
+          node test/nexus/server-runtime-adapter.test.js
+          node test/nexus/render-release-controller.test.js
+      - name: Migrate production-equivalent PostgreSQL
+        run: npm run foundation:migrate
+      - name: Boot exact candidate and prove it as a black box
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          node server.js > output/candidate-server.log 2>&1 &
+          echo $! > output/candidate-server.pid
+          trap 'kill "$(cat output/candidate-server.pid)" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:4173/api/healthz > output/candidate-health.json && break
+            sleep 2
+          done
+          node scripts/nexus-preproduction-black-box.js
+      - name: Preserve candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-qualified-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: error
+          retention-days: 180
+
   deploy-exact-release:
     name: Deploy and verify exact production release
+    needs: qualify-release-candidate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: nexus-genesis-certified
@@ -42,6 +119,20 @@ jobs:
           fi
           echo "sha=$target" >> "$GITHUB_OUTPUT"
           echo "short=${target:0:12}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install immutable deployment controller
+        run: npm ci --ignore-scripts
+      - name: Install production verification browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
 
       - name: Confirm target is current main
         env:
@@ -49,8 +140,6 @@ jobs:
           TARGET_SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
-          git init --quiet
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch --quiet --depth=1 origin main
           main_sha="$(git rev-parse FETCH_HEAD)"
           if [ "$TARGET_SHA" != "$main_sha" ]; then
@@ -58,30 +147,23 @@ jobs:
             exit 1
           fi
 
-      - name: Require protected Render deploy hook
+      - name: Require protected Render API control
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           set -euo pipefail
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "::error::Repository environment nexus-genesis-certified is missing RENDER_DEPLOY_HOOK_URL."
+          if [ -z "$RENDER_API_KEY" ]; then
+            echo "::error::Repository environment nexus-genesis-certified is missing RENDER_API_KEY."
             exit 1
           fi
 
-      - name: Trigger canonical Render deployment
+      - name: Reconcile topology and deploy the exact release
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-          TARGET_SHA: ${{ steps.target.outputs.sha }}
-        run: |
-          set -euo pipefail
-          response="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 -X POST "$RENDER_DEPLOY_HOOK_URL")"
-          printf '%s\n' "$response" > render-deploy-response.json
-          {
-            echo "### Render deployment requested"
-            echo
-            echo "- Target: \`$TARGET_SHA\`"
-            echo "- Service: \`nexus-genesis-certified\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          NEXUS_BASE_URL: ${{ env.PRODUCTION_ORIGIN }}
+          NEXUS_RELEASE_OUTPUT: render-deploy-response.json
+        run: node scripts/nexus-render-release-controller.js
 
       - name: Wait for exact release identity
         env:
@@ -116,17 +198,11 @@ jobs:
             echo "- Identity endpoint: \`$matched\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify repaired open-ended routing
+      - name: Re-prove deployed Standard User behavior
         env:
-          TARGET_SHA: ${{ steps.target.outputs.sha }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const origin = process.env.PRODUCTION_ORIGIN;
-          const target = process.env.TARGET_SHA;
-          if (!origin || !target) process.exit(1);
-          console.log(`Production ${origin} is pinned to ${target}; behavioral certification may now begin.`);
-          NODE
+          RENDER_GIT_COMMIT: ${{ steps.target.outputs.sha }}
+          NEXUS_CANDIDATE_URL: ${{ env.PRODUCTION_ORIGIN }}
+        run: node scripts/nexus-preproduction-black-box.js
 
       - name: Preserve deployment evidence
         if: always()
@@ -136,5 +212,6 @@ jobs:
           path: |
             render-deploy-response.json
             production-response-*.json
+            output/nexus-preproduction-black-box.json
           if-no-files-found: warn
           retention-days: 30
