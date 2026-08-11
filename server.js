@@ -49097,6 +49097,18 @@ async function api(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
+  if (url.pathname === "/nexus-clean.bundle.js") {
+    const certifiedBundlePath = path.join(ROOT, "rebuild", "browser", "nexus-clean.bundle.js");
+    return fs.readFile(certifiedBundlePath, (err, data) => {
+      if (err) return send(res, 404, "Not found");
+      res.writeHead(200, {
+        "content-type": "application/javascript; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(data);
+    });
+  }
   if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
     const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
     return fs.readFile(livekitPath, (err, data) => {

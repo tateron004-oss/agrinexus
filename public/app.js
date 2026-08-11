@@ -38388,6 +38388,15 @@ function renderUserWorkspace() {
   ensureNexusOsVisualBoundaryStyles();
   const trueExperienceMode = nexusTrueExperienceMode();
   const showMission = trueExperienceMode === "mission";
+  const microphoneFallbackRequired = trueExperienceMode === "home" && (
+    nexusOsVoiceRuntimeState?.microphoneUnavailable === true
+    || nexusVoicePermissionDeniedThisSession === true
+    || ["denied", "microphone-unavailable", "microphone-blocked", "realtime-failed", "realtime-blocked"].includes(
+      String(nexusOsVoiceRuntimeState?.permissionState === "denied"
+        ? "denied"
+        : nexusOsVoiceRuntimeState?.mode || "").toLowerCase()
+    )
+  );
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -38404,6 +38413,12 @@ function renderUserWorkspace() {
           : trueExperienceMode === "conversation"
             ? renderNexusUserWorkspaceSegment("Audio companion", renderNexusAudioCompanionExperience)
             : renderNexusUserWorkspaceSegment("Workflow workspace", renderNexusCommandCenterHero)}
+        ${microphoneFallbackRequired ? `
+          <section class="nexus-true-conversation" data-nexus-microphone-fallback="true" aria-label="${escapeHtml(translateText("Typed Nexus fallback"))}">
+            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(translateText("Voice is unavailable right now. Type your request below while the microphone retry remains available."))}</p>
+            ${renderNexusTrueCommandComposer({ compact: true })}
+          </section>
+        ` : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mode launcher", renderNexusModeLauncher) : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Activity receipts", renderNexusPremiumActivityReceiptsPanel) : ""}
@@ -51316,6 +51331,13 @@ async function acquirePermanentGenesisMicrophoneFromClick(source = "permanent-ht
       microphoneUnavailable: true,
       lastError: error.message || "microphone-start-failed"
     }, source);
+    renderUserWorkspace();
+    setNexusPermanentMicrophoneState(
+      denied ? "blocked" : "unavailable",
+      denied
+        ? "Microphone permission is blocked. Use typed Nexus below or allow microphone access in browser site settings, then retry."
+        : `Nexus could not open the microphone: ${error.message || "device unavailable"}. Use typed Nexus below or retry when a microphone is available.`
+    );
     throw error;
   }
 }
