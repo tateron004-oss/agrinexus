@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "c23bd79932d45cb51e7ff7df8ca51d5206ead0cd",
-    "recoveryBranch": "recovery/pre-workspace-cutover-certification-c23bd799",
+    "baseCommit": "f5f63332a93d2991321cd1a45188f92a1da4ba5f",
+    "recoveryBranch": "recovery/pre-acceptance-policy-context-f5f63332",
     "files": ["nexus/compat/server-runtime-adapter.js"],
-    "purpose": "Complete the authorized 30-fault correction by allowing exact-SHA authenticated pre-cutover evidence, followed by durable activation and mandatory normal-path replay"
+    "purpose": "Complete the authorized 30-fault correction by giving the exact-SHA authenticated acceptance lane the same permission and role policy methods as ordinary authoritative requests"
   },
   "protectedFiles": {
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
     "public/app.js": "164794913402535e1c62751368430a990b327397",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
-    "nexus/compat/server-runtime-adapter.js": "6844164ed4b71c3e66595d3edaaa918104f7be81",
+    "nexus/compat/server-runtime-adapter.js": "3e70bf47f81bf46a4ce838dc374319a7c83fe85d",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",
