@@ -156,25 +156,32 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/task-engine" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      let probeStage = "runtime";
       try {
         const active = await runtime(); await active.ready;
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         const body = await readJson(req);
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        probeStage = "identity";
         const marker = crypto.randomUUID(); const principal = await acceptancePrincipal(active);
         const command = { correlationId: `acceptance-${marker}`, conversationId: `cnv_${marker}`,
           tenantId: principal.tenantId, actorId: principal.userId, channel: "release", locale: "en", text: "Verify authoritative task persistence" };
+        probeStage = "create";
         const created = await active.engine.create({ command, goal: `Exact-release task-engine probe ${releaseSha}`,
           application: "general", riskTier: "low", steps: [{ title: "Verify durable task lifecycle" }] });
+        probeStage = "transition";
         const transitioned = await active.engine.transition({ tenantId: command.tenantId, taskId: created.taskId,
           actorId: command.actorId, nextState: "cancelled", reason: "Production acceptance probe completed" });
+        probeStage = "readback";
         const persisted = await active.tasks.get({ tenantId: command.tenantId, taskId: created.taskId, includeSteps: true });
         const passed = transitioned.state === "cancelled" && persisted?.state === "cancelled" && Array.isArray(persisted.steps) && persisted.steps.length === 1;
         send(res, passed ? 200 : 503, { ok: passed, releaseSha, taskId: created.taskId, state: persisted?.state,
           durable: Boolean(persisted), steps: persisted?.steps?.length || 0 });
       } catch (error) {
-        logger.error?.("authoritative.acceptance.task_engine_probe_failed", { code: error.code || error.name });
-        send(res, 503, { ok: false, code: error.code || "task_engine_probe_failed", error: "The authoritative task-engine probe failed." });
+        const code = error.code || error.name || "task_engine_probe_failed";
+        logger.error?.("authoritative.acceptance.task_engine_probe_failed", { code, stage: probeStage });
+        send(res, 503, { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development",
+          code, stage: probeStage, error: String(error.message || "The authoritative task-engine probe failed.").slice(0, 300) });
       }
       return true;
     }
