@@ -1,9 +1,6 @@
 name: Nexus unified production release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       expected_release_sha:
