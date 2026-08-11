@@ -14,14 +14,14 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "a2b2e2ddabca1ef14d697f06e030ebc9bec1f4f0",
-    "recoveryBranch": "recovery/pre-certification-visible-shell-a2b2e2dd",
+    "baseCommit": "379910d2adc6f19407f838339397c2d33632f5f2",
+    "recoveryBranch": "recovery/pre-certification-evidence-viewport-379910d2",
     "files": ["public/app.js"],
-    "purpose": "Complete the authorized 30-fault correction by exposing the real passive workspace renderer to measurable browser geometry only inside an exact-SHA production evidence session"
+    "purpose": "Complete the authorized 30-fault correction by measuring the real renderer-produced DOM inside an exact-SHA-only production evidence viewport"
   },
   "protectedFiles": {
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
-    "public/app.js": "bcea1e376429014b5febcc2410ad9d4337274a89",
+    "public/app.js": "3cd818cad391e4de913e5d3d93c530adfa2c9bc5",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "7f86ab62078f55df26f6ff441f6fafd15c2d15d3",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
