@@ -33,8 +33,13 @@ test("browser capability failure preserves application, category, and safe serve
 test("release workflow executes the real browser capability producer before compiling proof", () => {
   const workflow = fs.readFileSync(".github/workflows/nexus-unified-production-release.yml", "utf8");
   const producer = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  const app = fs.readFileSync("public/app.js", "utf8");
   assert.ok(workflow.indexOf("nexus-run-browser-capability-probes.js") < workflow.indexOf("nexus-compile-production-evidence.js"));
   assert.match(producer, /__NEXUS_CAPTURE_PRODUCTION_OUTCOME__/);
+  assert.match(producer, /nexusProductionEvidence/);
+  assert.match(app, /#loginView/);
+  assert.match(app, /#appView/);
+  assert.match(app, /exact_release_evidence_required/);
   assert.match(producer, /behavior-turn/); assert.match(producer, /browser-acknowledgement/);
   assert.match(producer, /pre-cutover/); assert.match(producer, /post-cutover/);
   assert.match(producer, /production-acceptance\/workspaces/);

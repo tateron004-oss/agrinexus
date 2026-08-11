@@ -55974,9 +55974,18 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
 // server acknowledgement to the machine acceptance endpoint so evidence stays
 // bound to the exact release and acceptance principal.
 window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProductionOutcome(outcome = {}) {
+  const evidenceRelease = new URLSearchParams(window.location.search).get("nexusProductionEvidence") || "";
+  if (!/^[a-f0-9]{40}$/i.test(evidenceRelease)) {
+    return { rendered: false, visible: false, audible: false, error: "exact_release_evidence_required" };
+  }
+  // The production-evidence browser has no human login session. Reveal the
+  // real application shell only inside this exact-release capture call so the
+  // ordinary passive renderer can produce measurable, visible DOM geometry.
+  document.querySelector("#loginView")?.classList.add("hidden");
+  document.querySelector("#appView")?.classList.remove("hidden");
   const observedAt = new Date().toISOString();
   const receipt = await renderNexusPassiveWorkspace(outcome, outcome.data || {}, {});
-  return { ...receipt, observedAt, commandId: outcome.commandId, correlationId: outcome.correlationId,
+  return { ...receipt, observedAt, releaseSha: evidenceRelease, commandId: outcome.commandId, correlationId: outcome.correlationId,
     workspace: outcome.workspace, application: outcome.application };
 };
 
