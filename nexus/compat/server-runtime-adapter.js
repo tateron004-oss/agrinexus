@@ -122,11 +122,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         if (!active.behavior?.turn) { send(res, 503, { ok: false, releaseSha, code: "behavior_planner_unavailable", error: "The authoritative behavior planner is unavailable." }); return true; }
         const principal = await acceptancePrincipal(active); const marker = crypto.randomUUID();
         const correlationId = `acceptance-${marker}`;
+        const acceptancePreCutover = body.phase === "pre-cutover";
         const result = await active.behavior.turn({ input: { text: String(body.text || ""), channel: body.channel === "voice" ? "voice" : "typed",
           locale: body.locale || "en", correlationId, conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
           context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
             requestId: correlationId, correlationId, roles: principal.roles || [principal.role].filter(Boolean),
-            permissions: principal.permissions || ["*"] } });
+            permissions: principal.permissions || ["*"], acceptancePreCutover,
+            acceptanceApplication: acceptancePreCutover ? body.application : null } });
         const applicationMatched = !body.application || result.application === body.application;
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,

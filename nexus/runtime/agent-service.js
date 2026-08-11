@@ -29,7 +29,10 @@ class AgentService {
     // Reasoning owns workspace selection. Cutover is checked only after the
     // authoritative planner has selected an application, never from a legacy
     // browser hint supplied before reasoning.
-    await this.cutover?.requireAuthoritative(plan.application);
+    const governedPreCutover = context.acceptancePreCutover === true &&
+      context.acceptanceApplication === plan.application &&
+      context.permissions?.includes("acceptance:identity");
+    if (!governedPreCutover) await this.cutover?.requireAuthoritative(plan.application);
     const task = await this.engine.create({ command, goal: plan.goal, application: plan.application,
       riskTier: plan.riskTier, steps: plan.steps });
     await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,

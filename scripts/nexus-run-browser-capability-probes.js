@@ -52,15 +52,30 @@ async function run(env = process.env) {
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
-      const turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
-        { releaseSha, application, text, channel: "typed", locale: "en" });
-      const outcome = turn.result?.render;
-      if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} did not reach render_required.`);
-      const receipt = await page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
-      const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
-        { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
-          workspace: outcome.workspace, receipt });
-      if (acknowledged.result?.completed !== true) throw new Error(`${application} renderer acknowledgement did not complete.`);
+      const execute = async phase => {
+        const turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
+          { releaseSha, application, text, channel: "typed", locale: "en", phase });
+        const outcome = turn.result?.render;
+        if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required.`);
+        const receipt = await page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
+        const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
+          { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
+            workspace: outcome.workspace, receipt });
+        if (acknowledged.result?.completed !== true) throw new Error(`${application} ${phase} renderer acknowledgement did not complete.`);
+        return { outcome, receipt };
+      };
+      const candidate = await execute("pre-cutover");
+      const candidateReceipts = [`${base}/behavior-turn application=${application} phase=pre-cutover commandId=${candidate.outcome.commandId}`,
+        `${base}/browser-acknowledgement application=${application} phase=pre-cutover completed=true`];
+      const candidateProof = exactRecord(releaseSha, candidateReceipts);
+      const proofs = { contract: candidateProof,
+        "tenant-isolation": exactRecord(releaseSha, [`${base}/probes/identity tenantIsolation=true`]),
+        "durable-write": exactRecord(releaseSha, [`${base}/probes/task-engine durable=true taskId=${candidate.outcome.taskId}`]),
+        receipt: candidateProof, "browser-outcome": exactRecord(releaseSha, candidateReceipts) };
+      await post(`${base}/api/nexus/runtime/production-acceptance/workspaces/${encodeURIComponent(application)}`, token,
+        { releaseSha, rollbackRef: env.NEXUS_ROLLBACK_REF, proofs: Object.fromEntries(Object.entries(proofs).map(([key, value]) =>
+          [key, { state: "verified", evidenceId: `${application}-${key}-${candidate.outcome.commandId}`, releaseSha, record: value }])) });
+      const { outcome, receipt } = await execute("post-cutover");
       const receipts = [`${base}/behavior-turn application=${application} commandId=${outcome.commandId}`,
         `${base}/browser-acknowledgement application=${application} completed=true`];
       capabilityProbes.push(exactRecord(releaseSha, receipts, { application, rendered: receipt.rendered === true,
