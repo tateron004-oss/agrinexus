@@ -15,6 +15,67 @@ const REQUIRED_WEB_ENV = Object.freeze({
   MAP_TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   MAP_TILE_ATTRIBUTION: "OpenStreetMap contributors"
 });
+const HOSTED_PROVIDER_ENV = Object.freeze({
+  AI_PROVIDER: "webhook",
+  AI_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/ai/responses`,
+  TRANSLATION_PROVIDER: "webhook",
+  TRANSLATION_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/translate`,
+  AUTH_PROVIDER: "webhook",
+  PASSWORD_RESET_PROVIDER: "webhook",
+  AUTH_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/auth/users`,
+  PASSWORD_RESET_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/auth/password-reset`,
+  EMAIL_PROVIDER: "webhook",
+  EMAIL_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/communications/email`,
+  SMS_PROVIDER: "webhook",
+  SMS_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/communications/sms`,
+  WHATSAPP_PROVIDER: "webhook",
+  WHATSAPP_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/communications/whatsapp`,
+  BILLING_PROVIDER: "webhook",
+  BILLING_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/billing/subscriptions`,
+  LEARNING_COURSE_PROVIDER: "webhook",
+  LEARNING_CERTIFICATE_PROVIDER: "webhook",
+  LEARNING_COURSE_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/learning/courses`,
+  LEARNING_CERTIFICATE_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/learning/certificates`,
+  WORKFORCE_JOB_PROVIDER: "webhook",
+  WORKFORCE_CALENDAR_PROVIDER: "webhook",
+  WORKFORCE_NOTIFICATION_PROVIDER: "webhook",
+  WORKFORCE_HRIS_PROVIDER: "webhook",
+  WORKFORCE_SHIFT_PROVIDER: "webhook",
+  WORKFORCE_JOB_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/workforce/jobs`,
+  WORKFORCE_CALENDAR_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/workforce/calendar`,
+  WORKFORCE_NOTIFICATION_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/workforce/notifications`,
+  WORKFORCE_HRIS_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/workforce/hris`,
+  WORKFORCE_SHIFT_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/workforce/shifts`,
+  HEALTH_TELEHEALTH_PROVIDER: "webhook",
+  HEALTH_NOTIFICATION_PROVIDER: "webhook",
+  HEALTH_EHR_PROVIDER: "webhook",
+  HEALTH_TELEHEALTH_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/health/telehealth`,
+  HEALTH_NOTIFICATION_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/health/notifications`,
+  HEALTH_EHR_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/health/ehr`,
+  TRADE_PAYMENT_PROVIDER: "webhook",
+  TRADE_LOGISTICS_PROVIDER: "webhook",
+  TRADE_MARKET_PROVIDER: "webhook",
+  TRADE_PAYMENT_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/trade/payments`,
+  TRADE_LOGISTICS_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/trade/logistics`,
+  TRADE_MARKET_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/trade/market`,
+  LOGISTICS_TRACKING_PROVIDER: "webhook",
+  LOGISTICS_TRACKING_URL: `${CANONICAL_PROVIDER_BASE_URL}/trade/logistics`,
+  DRONE_PROVIDER: "webhook",
+  DRONE_WEBHOOK_URL: `${CANONICAL_PROVIDER_BASE_URL}/field/drones`
+});
+const SHARED_PROVIDER_SECRET_KEYS = Object.freeze([
+  "AI_PROVIDER_API_KEY",
+  "TRANSLATION_PROVIDER_API_KEY",
+  "AUTH_PROVIDER_API_KEY",
+  "COMMUNICATION_PROVIDER_API_KEY",
+  "BILLING_PROVIDER_API_KEY",
+  "LEARNING_PROVIDER_API_KEY",
+  "WORKFORCE_PROVIDER_API_KEY",
+  "HEALTH_PROVIDER_API_KEY",
+  "TRADE_PROVIDER_API_KEY",
+  "DRONE_PROVIDER_API_KEY",
+  "VOICE_PROVIDER_API_KEY"
+]);
 const TERMINAL_SUCCESS = new Set(["live", "succeeded"]);
 const TERMINAL_FAILURE = new Set([
   "build_failed",
@@ -115,6 +176,34 @@ async function installEnvValue(client, serviceId, key, value) {
 }
 
 function unwrapEnvVar(item) { return item?.envVar || item; }
+
+async function readServiceEnv(client, serviceId) {
+  const result = await client.request(`/services/${serviceId}/env-vars?limit=100`);
+  return new Map((Array.isArray(result) ? result : result?.envVars || [])
+    .map(unwrapEnvVar)
+    .filter(item => item?.key)
+    .map(item => [item.key, String(item.value || "")]));
+}
+
+async function ensureSharedEnvSecret(client, serviceIds, key, minimumLength = 24, bytes = 32) {
+  const environments = await Promise.all(serviceIds.map(serviceId => readServiceEnv(client, serviceId)));
+  const existing = environments.map(environment => environment.get(key) || "").find(value => value.length >= minimumLength);
+  const value = existing || crypto.randomBytes(bytes).toString("base64url");
+  await Promise.all(serviceIds.map((serviceId, index) => environments[index].get(key) === value
+    ? Promise.resolve()
+    : installEnvValue(client, serviceId, key, value)));
+  return { key, generated: !existing, serviceCount: serviceIds.length };
+}
+
+async function installHostedProviderContract(client, webServiceId, providerServiceId) {
+  await Promise.all(Object.entries(HOSTED_PROVIDER_ENV)
+    .map(([key, value]) => installEnvValue(client, webServiceId, key, value)));
+  const secrets = [];
+  for (const key of SHARED_PROVIDER_SECRET_KEYS) {
+    secrets.push(await ensureSharedEnvSecret(client, [webServiceId, providerServiceId], key));
+  }
+  return { environmentKeys: Object.keys(HOSTED_PROVIDER_ENV), secrets };
+}
 
 async function ensureGeneratedEnvSecret(client, serviceId, key, minimumLength, bytes = 48) {
   const result = await client.request(`/services/${serviceId}/env-vars?limit=100`);
@@ -403,6 +492,7 @@ async function run(env = process.env, options = {}) {
   }
   await ensureGeneratedEnvSecret(client, web.id, "SESSION_SECRET", 32, 48);
   await ensureGeneratedEnvSecret(client, web.id, "PASSWORD_PEPPER", 16, 32);
+  const providerContract = await installHostedProviderContract(client, web.id, provider.id);
   const worker = await resolveOrProvisionWorker(client, web, databaseUrl);
   validateService(worker, "background_worker");
   await installEnvValue(client, worker.id, "DATABASE_URL", databaseUrl);
@@ -429,7 +519,7 @@ async function run(env = process.env, options = {}) {
       attempts: options.runtimeDiagnosticAttempts || 5,
       retryMs: options.retryMs || 2000
     });
-  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments, workerDiagnostics };
+  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments, providerContract, workerDiagnostics };
   const outputDir = options.outputDir === undefined ? "output" : options.outputDir;
   if (outputDir) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -440,4 +530,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, CANONICAL_PROVIDER_BASE_URL, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, ensureGeneratedEnvSecret, canonicalToolProviders, installCanonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, CANONICAL_PROVIDER_BASE_URL, REQUIRED_WEB_ENV, HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, readServiceEnv, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, installCanonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };

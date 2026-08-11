@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, canonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -133,6 +133,53 @@ test("web production secrets are created once and compliant values are preserved
   assert.equal(writes.length, 1);
   assert.match(writes[0].path, /PASSWORD_PEPPER$/);
   assert.ok(writes[0].value.length >= 16);
+});
+
+test("hosted provider contract installs every live mode and endpoint on Nexus", async () => {
+  const writes = [];
+  const environments = {
+    "srv-web": new Map([["AI_PROVIDER_API_KEY", "existing-shared-provider-secret"]]),
+    "srv-provider": new Map()
+  };
+  const client = { request: async (path, options = {}) => {
+    const match = path.match(/^\/services\/([^/]+)\/env-vars(?:\/([^?]+))?/);
+    if (!match) throw new Error(`Unexpected request ${path}`);
+    const [, serviceId, encodedKey] = match;
+    if (!encodedKey) return [...environments[serviceId].entries()].map(([key, value]) => ({ envVar: { key, value } }));
+    const key = decodeURIComponent(encodedKey);
+    environments[serviceId].set(key, options.body.value);
+    writes.push({ serviceId, key, value: options.body.value });
+    return {};
+  } };
+
+  const result = await installHostedProviderContract(client, "srv-web", "srv-provider");
+  assert.deepEqual(result.environmentKeys.sort(), Object.keys(HOSTED_PROVIDER_ENV).sort());
+  for (const [key, value] of Object.entries(HOSTED_PROVIDER_ENV)) {
+    assert.equal(environments["srv-web"].get(key), value, `${key} is installed on Nexus`);
+  }
+  for (const key of SHARED_PROVIDER_SECRET_KEYS) {
+    assert.ok(environments["srv-web"].get(key).length >= 24, `${key} exists on Nexus`);
+    assert.equal(environments["srv-web"].get(key), environments["srv-provider"].get(key), `${key} is shared byte-for-byte`);
+  }
+  assert.equal(environments["srv-provider"].get("AI_PROVIDER_API_KEY"), "existing-shared-provider-secret");
+  assert.equal(writes.some(write => write.key === "BILLING_PRICE_ID"), false, "controller does not fabricate a paid billing price");
+});
+
+test("shared provider credentials preserve an existing value and repair drift", async () => {
+  const environments = {
+    web: new Map([["SHARED_KEY", "authoritative-existing-secret"]]),
+    provider: new Map([["SHARED_KEY", "stale-different-secret-value"]])
+  };
+  const client = { request: async (path, options = {}) => {
+    const match = path.match(/^\/services\/([^/]+)\/env-vars(?:\/([^?]+))?/);
+    const [, serviceId, encodedKey] = match;
+    if (!encodedKey) return [...environments[serviceId].entries()].map(([key, value]) => ({ key, value }));
+    environments[serviceId].set(decodeURIComponent(encodedKey), options.body.value);
+    return {};
+  } };
+  const result = await ensureSharedEnvSecret(client, ["web", "provider"], "SHARED_KEY");
+  assert.equal(result.generated, false);
+  assert.equal(environments.provider.get("SHARED_KEY"), "authoritative-existing-secret");
 });
 
 test("unified release binds every production process to the exact release SHA", async () => {
