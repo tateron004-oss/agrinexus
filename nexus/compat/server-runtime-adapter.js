@@ -125,10 +125,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const acceptancePreCutover = body.phase === "pre-cutover";
         const result = await active.behavior.turn({ input: { text: String(body.text || ""), channel: body.channel === "voice" ? "voice" : "typed",
           locale: body.locale || "en", correlationId, conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
-          context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
+          context: acceptanceContext(principal, { actorId: principal.userId,
             requestId: correlationId, correlationId, roles: principal.roles || [principal.role].filter(Boolean),
             permissions: principal.permissions || ["*"], acceptancePreCutover,
-            acceptanceApplication: acceptancePreCutover ? body.application : null } });
+            acceptanceApplication: acceptancePreCutover ? body.application : null }) });
         const applicationMatched = !body.application || result.application === body.application;
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
@@ -150,9 +150,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const result = await active.behavior.acknowledge({ input: { taskId: body.taskId, commandId: body.commandId,
           correlationId: body.correlationId, workspace: body.workspace, rendered: true, visible: receipt.visible === true,
           audible: receipt.audible === true, evidence: { ...receipt.evidence, releaseSha, browserObservedAt: receipt.observedAt } },
-          context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
+          context: acceptanceContext(principal, { actorId: principal.userId,
             requestId: `acceptance-browser-${body.commandId}`, correlationId: body.correlationId,
-            roles: principal.roles || [principal.role].filter(Boolean), permissions: principal.permissions || ["*"] } });
+            roles: principal.roles || [principal.role].filter(Boolean), permissions: principal.permissions || ["*"] }) });
         send(res, result.completed === true ? 200 : 503, { ok: result.completed === true, releaseSha, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
@@ -470,4 +470,12 @@ function requestContext(req, user) {
   return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()), tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
 }
 
-module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal });
+function acceptanceContext(principal, values = {}) {
+  const roles = new Set(values.roles || principal.roles || [principal.role].filter(Boolean));
+  const permissions = new Set(values.permissions || principal.permissions || []);
+  return Object.freeze({ tenantId: principal.tenantId, userId: principal.userId, ...values,
+    roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role),
+    can: permission => permissions.has("*") || permissions.has(permission) });
+}
+
+module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal, acceptanceContext });

@@ -128,6 +128,8 @@ test("production behavior probe preserves exact release, channel, and authoritat
   assert.equal(turnInput.input.channel, "voice"); assert.equal(turnInput.input.text, "Route Nairobi to Nakuru");
   assert.match(turnInput.input.correlationId, /^acceptance-/);
   assert.equal(turnInput.context.correlationId, turnInput.input.correlationId);
+  assert.equal(turnInput.context.can("acceptance:identity"), true);
+  assert.equal(turnInput.context.hasRole("admin"), true);
 });
 
 test("production behavior probe grants pre-cutover authority only through the authenticated exact-SHA lane", async () => {
