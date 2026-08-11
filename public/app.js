@@ -29167,6 +29167,12 @@ function resolveNexusIntentDrivenWorkflowRoute(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return null;
   const lower = text.toLowerCase();
+  // Explicit memory statements and recall questions are conversation controls,
+  // not workflow-launch requests. Domain words inside the remembered fact must
+  // not steal precedence and open an application.
+  if (/\bremember that\b|^remember\s+|\bwhat did i say\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b/.test(lower)) {
+    return null;
+  }
   const matches = NEXUS_INTENT_WORKFLOW_ROUTE_RULES
     .map(rule => ({ rule, matched: new RegExp(rule.pattern, "i").test(lower) }))
     .filter(item => item.matched);
