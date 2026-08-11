@@ -14,13 +14,13 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "ba3e9ef42bdaa596a312e0bd085a63ec07c42688",
-    "recoveryBranch": "recovery/pre-immutable-release-identity-2026-08-10",
-    "files": ["server.js", "public/app.js", "public/index.html", "public/sw.js"],
-    "purpose": "One immutable commit-derived identity for server, browser assets, service worker cache, worker, migrations, and production endpoints"
+    "baseCommit": "e41eca4167c2ac62e7effc16343c3459b596842a",
+    "recoveryBranch": "recovery/pre-health-policy-e41eca41",
+    "files": ["server.js"],
+    "purpose": "Separate mandatory Nexus production health from truthful optional Twilio phone and paid subscription billing activation"
   },
   "protectedFiles": {
-    "server.js": "782b6edd8163e2915f6ef7a1b9fc4739b1f0c5d7",
+    "server.js": "91a941b1831e3bf9763e8336d54981fc55a56d7d",
     "public/app.js": "968cf40e219794afd06ac68110e1bac1d423e846",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",

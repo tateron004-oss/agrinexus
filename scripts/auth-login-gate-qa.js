@@ -16,7 +16,7 @@ const currentBuild = appBuildMatch[1];
 const currentCache = appCacheMatch[1];
 
 const checks = [
-  ["build bumped", server.includes(`AGRINEXUS_WEB_BUILD_VERSION = "${currentBuild}"`) && html.includes(`app.js?v=${currentBuild}`) && sw.includes(`BUILD_VERSION = "${currentBuild}"`) && sw.includes(currentCache)],
+  ["immutable build identity", currentBuild === "__NEXUS_RELEASE_SHA__" && currentCache === "agrinexus-pwa-__NEXUS_RELEASE_SHA__" && server.includes("AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA") && server.includes("AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`") && html.includes(`app.js?v=${currentBuild}`) && sw.includes(`BUILD_VERSION = "${currentBuild}"`) && sw.includes(currentCache)],
   ["password input is not prefilled", !html.includes('id="password" value=') && html.includes('placeholder="Type password"')],
   ["profile buttons do not store password dataset", app.includes('data-login-email="${profile.email}"') && !app.includes("data-login-password")],
   ["profile selection clears password", app.includes('$("#password").value = "";') && app.includes("Type the password to enter")],

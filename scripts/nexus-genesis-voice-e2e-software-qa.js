@@ -35,22 +35,23 @@ function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
 
-const build = "nexus-behavior-502";
-const cache = "agrinexus-pwa-v447";
+const build = "__NEXUS_RELEASE_SHA__";
+const cache = "agrinexus-pwa-__NEXUS_RELEASE_SHA__";
 
 [
   ["app", app],
-  ["server", server],
   ["service worker", sw]
 ].forEach(([label, source]) => {
   includes(source, build, `${label} build marker`);
   includes(source, cache, `${label} cache marker`);
 });
+includes(server, "AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA", "server immutable build marker");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server immutable cache marker");
 includes(index, build, "index build marker");
 
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "static HTML must contain exactly one permanent microphone button");
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-502"), "microphone button must exist before app.js executes");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=__NEXUS_RELEASE_SHA__"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
 includes(index, "Enable microphone", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");

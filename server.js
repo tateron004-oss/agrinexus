@@ -6633,8 +6633,11 @@ function integrationStatus(db) {
   const providers = runtimeProviders(db);
   const readiness = productionReadiness(providers);
   const liveGaps = readiness.checks.filter(check => !check.ready);
+  const mandatoryGaps = liveGaps.filter(check => !check.optional);
+  const optionalProviderGaps = liveGaps.filter(check => check.optional);
+  const optionalProviderActivations = [...new Set(optionalProviderGaps.map(check => check.optionalActivation).filter(Boolean))];
   return {
-    ok: !REQUIRE_LIVE_SERVICES || liveGaps.length === 0,
+    ok: !REQUIRE_LIVE_SERVICES || mandatoryGaps.length === 0,
     service: "agrinexus",
     strictLiveMode: REQUIRE_LIVE_SERVICES,
     mode: process.env.NODE_ENV || "development",
@@ -6644,6 +6647,9 @@ function integrationStatus(db) {
     providers,
     readiness,
     liveGaps,
+    mandatoryGaps,
+    optionalProviderGaps,
+    optionalProviderActivations,
     requiredEnvironment: {
       database: ["DATABASE_URL", "AGRINEXUS_STATE_STORE=postgres"],
       security: ["SESSION_SECRET", "PASSWORD_PEPPER"],
@@ -7093,6 +7099,8 @@ function productionReadiness(providers) {
       id,
       label,
       ready,
+      optional: options.optional === true,
+      optionalActivation: options.optionalActivation || null,
       detail
     };
   };
@@ -7176,7 +7184,7 @@ function productionReadiness(providers) {
         },
         providerReady("voice-stt", "Speech-to-text command provider"),
         providerReady("voice-tts", "Text-to-speech response provider"),
-        providerReady("phone-voice", "Phone-call voice assistant provider"),
+        providerReady("phone-voice", "Phone-call voice assistant provider", { optional: true, optionalActivation: "twilio-phone-calling" }),
         providerReady("translation", "Live multilingual translation provider"),
         {
           id: "map-provider",
@@ -7213,11 +7221,13 @@ function productionReadiness(providers) {
     {
       module: "Billing",
       checks: [
-        providerReady("billing-subscriptions", "Subscription billing provider"),
+        providerReady("billing-subscriptions", "Subscription billing provider", { optional: true, optionalActivation: "paid-subscription-billing" }),
         {
           id: "billing-price",
           label: "BILLING_PRICE_ID",
           ready: Boolean(process.env.BILLING_PRICE_ID),
+          optional: true,
+          optionalActivation: "paid-subscription-billing",
           detail: process.env.BILLING_PRICE_ID ? "Billing price configured." : "Set BILLING_PRICE_ID for subscriptions."
         }
       ]
@@ -7272,10 +7282,22 @@ function productionReadiness(providers) {
     }
   ];
   const readyCount = expandedChecks.filter(check => check.ready).length;
+  const mandatoryChecks = expandedChecks.filter(check => !check.optional);
+  const mandatoryReadyCount = mandatoryChecks.filter(check => check.ready).length;
+  const optionalChecks = expandedChecks.filter(check => check.optional);
+  const optionalReadyCount = optionalChecks.filter(check => check.ready).length;
   return {
-    status: readyCount === expandedChecks.length ? "production-ready" : "local-optimized",
+    status: mandatoryReadyCount === mandatoryChecks.length
+      ? optionalReadyCount === optionalChecks.length
+        ? "production-ready"
+        : "production-ready-with-optional-providers-unavailable"
+      : "local-optimized",
     readyCount,
     total: expandedChecks.length,
+    mandatoryReadyCount,
+    mandatoryTotal: mandatoryChecks.length,
+    optionalReadyCount,
+    optionalTotal: optionalChecks.length,
     checks: expandedChecks,
     legacyChecks,
     moduleReadiness,
@@ -40232,6 +40254,10 @@ async function api(req, res, url) {
         readiness: status.readiness.status,
         readyCount: status.readiness.readyCount,
         total: status.readiness.total,
+        mandatoryReadyCount: status.readiness.mandatoryReadyCount,
+        mandatoryTotal: status.readiness.mandatoryTotal,
+        mandatoryGaps: status.mandatoryGaps.length,
+        optionalProviderGaps: status.optionalProviderActivations.length,
         liveGaps: status.liveGaps.length
       },
       timestamp: new Date().toISOString()

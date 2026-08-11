@@ -59,15 +59,15 @@ includes(server, 'edition: "genesis"', "server edition");
 assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "tool registry product identity");
 assert.strictEqual(registry.edition, "genesis", "tool registry edition");
 
-includes(index, "/manifest.webmanifest?v=nexus-behavior-502", "manifest cache marker");
-includes(index, "/styles.css?v=nexus-behavior-502", "stylesheet cache marker");
-includes(index, "/app.js?v=nexus-behavior-502", "app cache marker");
-includes(app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-502"', "app build marker");
-includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447"', "app PWA cache marker");
-includes(server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502"', "server build marker");
-includes(server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447"', "server PWA cache marker");
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v447"', "service worker cache marker");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-502"', "service worker build marker");
+includes(index, "/manifest.webmanifest?v=__NEXUS_RELEASE_SHA__", "manifest cache marker");
+includes(index, "/styles.css?v=__NEXUS_RELEASE_SHA__", "stylesheet cache marker");
+includes(index, "/app.js?v=__NEXUS_RELEASE_SHA__", "app cache marker");
+includes(app, 'AGRINEXUS_BUILD_VERSION = "__NEXUS_RELEASE_SHA__"', "app build marker");
+includes(app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"', "app PWA cache marker");
+includes(server, "AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA", "server build marker");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server PWA cache marker");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"', "service worker cache marker");
+includes(sw, 'BUILD_VERSION = "__NEXUS_RELEASE_SHA__"', "service worker build marker");
 includes(server, 'if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname))', "public redacted config route and bounded voice routes must not trigger guest console 401");
 
 excludes(index, "data-nexus-genesis-orb-entry", "index orb entry");

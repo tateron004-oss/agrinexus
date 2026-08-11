@@ -120,7 +120,7 @@ const html = sandbox.renderNexusSafetyReviewDashboard(state);
 assert(html.includes("data-nexus-safety-review-dashboard=\"true\""), "Safety dashboard should render review surface.");
 assert(html.includes("data-execution-authority=\"false\""), "Safety dashboard should render no-execution attribute.");
 
-assert(/nexus-behavior-\d+/.test(app) && /nexus-behavior-\d+/.test(index) && /nexus-behavior-\d+/.test(server), "Sprint 18 should preserve coordinated web build versioning.");
+assert(app.includes("__NEXUS_RELEASE_SHA__") && index.includes("__NEXUS_RELEASE_SHA__") && server.includes("NEXUS_EFFECTIVE_RELEASE_SHA"), "Sprint 18 should preserve coordinated immutable release identity.");
 assert(/agrinexus-pwa-v\d+/.test(app) && /agrinexus-pwa-v\d+/.test(sw) && /agrinexus-pwa-v\d+/.test(server), "Sprint 18 should preserve coordinated PWA cache versioning.");
 
 assert.equal(

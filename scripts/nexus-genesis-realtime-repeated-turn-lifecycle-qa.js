@@ -66,11 +66,12 @@ includes(server, "create_response: true", "server VAD repeated response creation
 includes(server, "interrupt_response: true", "server VAD interruption support");
 includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
 
-["nexus-behavior-502", "agrinexus-pwa-v447"].forEach(marker => {
+["__NEXUS_RELEASE_SHA__", "agrinexus-pwa-__NEXUS_RELEASE_SHA__"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
-  includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
+includes(server, "NEXUS_EFFECTIVE_RELEASE_SHA", "server immutable release identity");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server immutable cache identity");
 includes(app, "nexus-genesis-voice-runtime-v456", "voice runtime marker");
 assert.strictEqual(
   pkg.scripts["qa:nexus-genesis-realtime-repeated-turn-lifecycle"],

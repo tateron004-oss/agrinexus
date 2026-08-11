@@ -486,11 +486,11 @@ assert(unifiedFastLaneIndex < indexAfter(app, "if (await answerPendingNexusQuest
 const mainVoiceFastLaneIndex = app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand)");
 assert(mainVoiceFastLaneIndex > -1, "Main voice fast lane must be present");
 assert(mainVoiceFastLaneIndex < indexAfter(app, "if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand))", mainVoiceFastLaneIndex, "Main voice later pending-answer handling must remain after the fast lane"), "Main voice fast lane must run before old pending-answer context");
-const cssBehaviorVersion = html.match(/\/styles\.css\?v=(nexus-behavior-\d+)/);
-const jsBehaviorVersion = html.match(/\/app\.js\?v=(nexus-behavior-\d+)/);
+const cssBehaviorVersion = html.match(/\/styles\.css\?v=(__NEXUS_RELEASE_SHA__)/);
+const jsBehaviorVersion = html.match(/\/app\.js\?v=(__NEXUS_RELEASE_SHA__)/);
 assert(cssBehaviorVersion, "Index must force browsers to load Nexus behavior CSS with a cache-buster");
 assert(jsBehaviorVersion, "Index must force browsers to load Nexus behavior JS with a cache-buster");
-assert.strictEqual(cssBehaviorVersion[1], jsBehaviorVersion[1], "Index should use the same Nexus behavior cache-buster for CSS and JS");
+assert.strictEqual(cssBehaviorVersion[1], jsBehaviorVersion[1], "Index must use the same immutable release SHA for CSS and JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -730,5 +730,4 @@ assert(app.includes("highest level|frontier brain|frontier nexus"), "Voice layer
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");
-
 
