@@ -55859,6 +55859,137 @@ function renderNexusAgenticCommandResult(result = {}) {
 }
 
 const NEXUS_AUTHORITATIVE_CONVERSATION_KEY = "nexusAuthoritativeConversationId";
+let nexusAuthoritativeOutcomeRendererPromise = null;
+
+function loadNexusAuthoritativeOutcomeRenderer() {
+  if (window.NexusAuthoritativeOutcomeRenderer) return Promise.resolve(window.NexusAuthoritativeOutcomeRenderer);
+  if (!nexusAuthoritativeOutcomeRendererPromise) {
+    nexusAuthoritativeOutcomeRendererPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `/nexus-authoritative-outcome-renderer.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`;
+      script.async = true;
+      script.dataset.nexusAuthoritativeOutcomeRenderer = "true";
+      script.addEventListener("load", () => window.NexusAuthoritativeOutcomeRenderer
+        ? resolve(window.NexusAuthoritativeOutcomeRenderer)
+        : reject(new Error("The authoritative outcome renderer did not initialize.")), { once: true });
+      script.addEventListener("error", () => reject(new Error("The authoritative outcome renderer could not be loaded.")), { once: true });
+      document.head.append(script);
+    });
+  }
+  return nexusAuthoritativeOutcomeRendererPromise;
+}
+
+function nexusAuthoritativeCapabilityId(outcome = {}) {
+  if (outcome.workspace === "health" && outcome.operation === "record_blood_pressure") return "hypertension";
+  return {
+    agriculture: "agriculture", health: "chronic-disease", telehealth: "telehealth",
+    "mobile-clinic": "mobile-clinic", pharmacy: "pharmacy", learning: "learning",
+    workforce: "workforce", trade: "agritrade", map: "maps", media: "music-media",
+    documents: "ask-nexus", reminders: "reminders", offline: "offline",
+    "live-knowledge": "ask-nexus", communications: "communications", operations: "global-platform-status"
+  }[outcome.workspace] || "ask-nexus";
+}
+
+function renderNexusAuthoritativeData(outcome = {}) {
+  const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+  if (!host) return null;
+  host.querySelector('[data-nexus-authoritative-outcome="true"]')?.remove();
+  const surface = document.createElement("section");
+  surface.dataset.nexusAuthoritativeOutcome = "true";
+  surface.dataset.commandId = outcome.commandId;
+  surface.dataset.correlationId = outcome.correlationId;
+  surface.dataset.workspace = outcome.workspace;
+  surface.setAttribute("aria-label", "Authoritative Nexus result");
+  const heading = document.createElement("strong");
+  heading.textContent = outcome.response || "Nexus result";
+  surface.append(heading);
+  Object.entries(outcome.data || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    const row = document.createElement("p");
+    const label = key.replace(/([A-Z])/g, " $1").replace(/^./, letter => letter.toUpperCase());
+    row.dataset.nexusAuthoritativeField = key;
+    row.textContent = `${label}: ${Array.isArray(value) ? value.join(", ") : typeof value === "object" ? JSON.stringify(value) : value}`;
+    surface.append(row);
+  });
+  host.prepend(surface);
+  return surface;
+}
+
+async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}) {
+  if (context.signal?.aborted) return { rendered: false, visible: false };
+  if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
+    setExperienceMode("user", { persist: false, announceChange: false });
+  }
+  let opened = false;
+  if (outcome.workspace === "map") {
+    opened = openGenesisRealtimeMapWorkspace(data, outcome.response);
+    document.body.dataset.genesisWorkspace = "map";
+    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  } else {
+    opened = openNexusCapability(nexusAuthoritativeCapabilityId(outcome), {
+      command: outcome.response || `${outcome.application} result`,
+      source: "nexus-authoritative-typed-outcome",
+      sourceSurface: outcome.channel === "voice" ? "voice_audio" : "ask_nexus",
+      instant: true,
+      preparedResult: {
+        ok: true,
+        status: "authoritative_provider_result",
+        mode: outcome.application,
+        message: outcome.response,
+        command: outcome.originalText,
+        result: data,
+        authoritative: true,
+        commandId: outcome.commandId,
+        correlationId: outcome.correlationId,
+        source: "nexus-authoritative-typed-outcome"
+      }
+    });
+    document.body.dataset.genesisWorkspace = outcome.workspace;
+    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  }
+  if (!opened || context.signal?.aborted) return { rendered: false, visible: false };
+  await new Promise(resolve => window.setTimeout(resolve, outcome.workspace === "map" ? 500 : 0));
+  if (context.signal?.aborted) return { rendered: false, visible: false };
+  const surface = outcome.workspace === "map"
+    ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
+    : renderNexusAuthoritativeData(outcome);
+  const visible = Boolean(surface && (surface.getClientRects?.().length || outcome.workspace === "map"));
+  return {
+    rendered: visible,
+    visible,
+    audible: false,
+    evidence: {
+      workspace: outcome.workspace,
+      operation: outcome.operation,
+      commandId: outcome.commandId,
+      renderedFields: Object.keys(data || {}),
+      routeEndpoints: outcome.operation === "show_route" ? [data.origin, data.destination].filter(Boolean) : undefined,
+      providerVerified: outcome.verification?.providerVerified === true
+    }
+  };
+}
+
+async function nexusAuthoritativeOutcomeRenderer() {
+  if (window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__) return window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__;
+  const Renderer = await loadNexusAuthoritativeOutcomeRenderer();
+  const workspaces = ["agriculture", "health", "telehealth", "mobile-clinic", "pharmacy", "learning", "workforce", "trade", "map", "media", "documents", "reminders", "offline", "live-knowledge", "communications", "operations"];
+  const adapters = Object.fromEntries(workspaces.map(workspace => [workspace, {
+    render: (data, context) => renderNexusPassiveWorkspace(context.outcome, data, context)
+  }]));
+  const renderer = new Renderer({
+    adapters,
+    onReset: ({ commandId }) => {
+      pendingWorkflow = null;
+      nexusActiveWorkflowState = null;
+      document.querySelector('[data-nexus-authoritative-outcome="true"]')?.remove();
+      document.querySelector('[data-genesis-workspace-prefill="true"]')?.remove();
+      document.body.dataset.genesisWorkspaceRequestId = String(commandId || "");
+    },
+    acknowledge: body => requestWithTimeout("/api/nexus/runtime/behavior/acknowledgements", { method: "POST", body }, 30000)
+  });
+  window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__ = renderer;
+  return renderer;
+}
 
 function nexusAuthoritativeConversationId() {
   let conversationId = localStorage.getItem(NEXUS_AUTHORITATIVE_CONVERSATION_KEY) || "";
@@ -55896,7 +56027,14 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
     }
-    const message = result.response || "Nexus needs more information before it can continue.";
+    let message = result.response || "Nexus needs more information before it can continue.";
+    let renderReceipt = null;
+    if (result.render?.schema === "nexus.workspace-outcome.v1") {
+      const renderer = await nexusAuthoritativeOutcomeRenderer();
+      renderReceipt = await renderer.render(result.render);
+      if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
+      message = result.render.response || message;
+    }
     nexusAgenticBrainLastResult = {
       ok: result.completed === true,
       status: result.state,
@@ -55905,25 +56043,11 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
       command: text,
       result,
       receipts: result.receipts || [],
+      renderReceipt,
       authoritative: true,
       legacyFallbackUsed: false,
       source: "nexus-authoritative-behavior-spine"
     };
-    const action = genesisWorkspaceActionFromFinalTranscript(text);
-    if (action) {
-      nexusActiveWorkflowState = null;
-      pendingWorkflow = null;
-      document.querySelector('[data-genesis-workspace-prefill="true"]')?.remove();
-      delete document.body.dataset.genesisWorkspace;
-      delete document.body.dataset.genesisWorkspaceRequestId;
-      rememberAuthoritativeGenesisTranscriptRoute(action, text);
-      result.genesisAction = action;
-      await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId: result.correlationId });
-    }
-    if (/\b(play|open|find|search|start|put on|listen to|pause|resume|stop)\b/i.test(text)
-      && /\b(music|media|youtube|song|songs|playlist|artist|album)\b/i.test(text)) {
-      await runMusicAssistantCommand(text, { turnToken: options.turnToken });
-    }
     openAskNexus();
     enableHeyAgriNexusMode();
     renderUserWorkspace?.();
@@ -57604,7 +57728,12 @@ function voiceCrashRecoveryMessage(command = "") {
 
 async function handleVoiceCommand(rawCommand, options = {}) {
   try {
-    return await handleVoiceCommandCore(rawCommand, options);
+    const command = String(rawCommand || "").trim();
+    if (!command) return null;
+    return await handleNexusUnifiedBrainRuntimeCommand(command, {
+      ...options,
+      source: options.source || "typed"
+    });
   } catch (error) {
     console.error("Nexus voice command failed", error);
     clearAgentProgressTimers();

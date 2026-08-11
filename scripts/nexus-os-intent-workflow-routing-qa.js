@@ -103,7 +103,13 @@ assert(app.includes("Do not open a large mode menu as the default fallback") ===
 assert(app.includes("routeNexusIntentDrivenWorkflowCommand(normalized, { source: \"standard-user-intent-router\" })"), "Standard User command path uses intent router");
 assert(app.indexOf("routeNexusIntentDrivenWorkflowCommand(normalized, { source: \"standard-user-intent-router\" })") < app.indexOf("isNexusPersistentOperationsCommand(normalized)"), "intent router runs before broad operations router");
 assert(app.includes("if (!route.recommendedWorkflow && route.confidence < 0.4) return false;"), "unknown low-confidence text does not replace existing capability routes");
-assert(app.includes("unified-brain-intent-router"), "unified runtime defers recognized goals to intent routing");
+const liveGatewayStart = app.indexOf("async function handleVoiceCommand(rawCommand");
+const liveGatewayEnd = app.indexOf("async function runBackendAgentCommand", liveGatewayStart);
+const liveGateway = app.slice(liveGatewayStart, liveGatewayEnd);
+assert(liveGateway.includes("handleNexusUnifiedBrainRuntimeCommand(command")
+  && !liveGateway.includes("routeNexusIntentDrivenWorkflowCommand(")
+  && !liveGateway.includes("handleVoiceCommandCore("),
+"unified runtime owns recognized goals without legacy intent routing");
 const earlySubmitRouter = app.slice(
   app.indexOf("function routeNexusCommandCenterCommunicationSubmit"),
   app.indexOf("const predictiveCommand", app.indexOf("function routeNexusCommandCenterCommunicationSubmit"))

@@ -34,6 +34,25 @@ test("voice enters the authoritative gateway before legacy behavior handlers", (
   ].forEach(marker => assert.ok(gateway < voice.indexOf(marker), `${marker} must follow the gateway`));
 });
 
+test("the live voice and typed entrypoint cannot enter the legacy command core", () => {
+  const start = source.indexOf("async function handleVoiceCommand(rawCommand");
+  const end = source.indexOf("async function runBackendAgentCommand", start);
+  const liveGateway = source.slice(start, end);
+  assert.match(liveGateway, /handleNexusUnifiedBrainRuntimeCommand\(command/);
+  assert.doesNotMatch(liveGateway, /handleVoiceCommandCore\(/);
+});
+
+test("authoritative browser completion requires typed rendering and server acknowledgement", () => {
+  const start = source.indexOf("async function handleNexusUnifiedBrainRuntimeCommand");
+  const end = source.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand", start);
+  const gateway = source.slice(start, end);
+  assert.match(gateway, /result\.render\?\.schema === "nexus\.workspace-outcome\.v1"/);
+  assert.match(gateway, /renderer\.render\(result\.render\)/);
+  assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
+  assert.doesNotMatch(gateway, /genesisWorkspaceActionFromFinalTranscript\(text\)/);
+  assert.doesNotMatch(gateway, /runMusicAssistantCommand\(text/);
+});
+
 test("each command-center submit gateway precedes legacy intent routing", () => {
   const eventHandlers = source.slice(source.indexOf("function bindStatic()"));
   const lines = eventHandlers.split("\n");

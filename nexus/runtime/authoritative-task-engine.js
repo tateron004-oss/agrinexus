@@ -29,7 +29,8 @@ class AuthoritativeTaskEngine {
     }
     validateDependencies(normalized);
     let task = createTask({ tenantId: command.tenantId, ownerId: command.actorId,
-      conversationId: command.conversationId, correlationId: command.correlationId, goal,
+      conversationId: command.conversationId, commandId: command.commandId,
+      correlationId: command.correlationId, goal,
       application, riskTier, priority, dueAt });
     await this.tasks.create(task, normalized);
     task = transitionTask(task, "planned", { actorId: "nexus-brain", reason: "Durable plan created" });
@@ -150,16 +151,32 @@ class AuthoritativeTaskEngine {
       if (result.receipt) receipts.push(result.receipt);
     }
 
-    const proof = receipts.some(receipt => hasUserOutcomeProof(receipt.verification));
-    if (!proof) throw new NexusRuntimeError("user_outcome_unverified", "The workflow executed, but no visible or audible user outcome was verified.", 502,
-      { receiptIds: receipts.map(receipt => receipt.receiptId) });
     task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
     if (task.state === "running") task = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "verifying", reason: "All workflow steps completed; verifying user outcome" });
-    task = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
-      nextState: "completed", reason: "Visible or audible workflow outcome verified",
-      outcome: { verified: true, visibleOrAudible: true, receiptIds: receipts.map(receipt => receipt.receiptId) } });
-    return { task, state: "completed", receipts, completed: true };
+    return { task, state: "awaiting_render", receipts, completed: false, renderRequired: true };
+  }
+
+  async acknowledgeRender({ context, taskId, commandId, correlationId, workspace, rendered, visible, audible = false, evidence = {} }) {
+    const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
+    if (!task) throw new NexusRuntimeError("task_not_found", "Task not found.", 404);
+    if (task.ownerId !== context.userId && !context.hasRole?.("admin")) {
+      throw new NexusRuntimeError("task_owner_required", "Only the task owner may acknowledge its outcome.", 403);
+    }
+    if (task.state !== "verifying") {
+      throw new NexusRuntimeError("render_acknowledgement_not_expected", "This task is not awaiting a renderer acknowledgement.", 409);
+    }
+    if (task.commandId !== commandId || task.correlationId !== correlationId) {
+      throw new NexusRuntimeError("command_acknowledgement_mismatch", "Renderer acknowledgement does not match the active command.", 409);
+    }
+    if (!rendered || (!visible && !audible)) {
+      throw new NexusRuntimeError("user_outcome_unverified", "The requested visible or audible outcome was not verified.", 422);
+    }
+    const outcome = { verified: true, visibleOrAudible: true, rendered: true, visible: Boolean(visible),
+      audible: Boolean(audible), workspace: required(workspace, "Workspace"), commandId, correlationId, evidence };
+    const completed = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "completed", reason: "Authoritative renderer acknowledged the user outcome", outcome });
+    return { task: completed, state: "completed", completed: true, outcome };
   }
 
   async requiredStep(input) {
@@ -196,10 +213,6 @@ function validateDependencies(steps) {
 function makeReceipt(executionId, taskId, stepId, toolId, key, state, verification) {
   return { schema: "nexus.receipt.v1", receiptId: createId("receipt"), executionId, taskId, stepId,
     toolId, idempotencyKey: key, state, verification, occurredAt: new Date().toISOString() };
-}
-function hasUserOutcomeProof(verification = {}) {
-  if (verification.visible === true || verification.audible === true || verification.visibleOrAudible === true) return true;
-  return (verification.evidence || []).some(item => ["visible", "audible", "browser-outcome", "audio-playback", "workspace-render"].includes(item?.type));
 }
 function executionKeys(step, toolId, fallbackAttempt) {
   const base = fallbackAttempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
