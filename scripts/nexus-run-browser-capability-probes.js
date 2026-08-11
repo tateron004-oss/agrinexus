@@ -34,7 +34,8 @@ async function post(url, token, body) {
   const response = await fetch(url, { method: "POST", headers: { authorization: `Bearer ${token}`,
     accept: "application/json", "content-type": "application/json" }, body: JSON.stringify(body) });
   const value = await json(response);
-  if (!response.ok) throw new Error(`${url} failed (${response.status}): ${value.code || value.error || value.raw}`);
+  if (!response.ok) throw new Error(`${url} failed (${response.status}) application=${body.application || "none"}` +
+    ` code=${value.code || "none"} category=${value.category || "none"} error=${value.error || value.raw || "none"}`);
   return value;
 }
 
@@ -92,4 +93,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, post, run });
