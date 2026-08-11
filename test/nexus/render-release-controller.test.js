@@ -59,8 +59,12 @@ test("worker and provider configuration use their canonical processes", async ()
 
 test("release controller defines the signed low-risk production tool catalog", () => {
   const tools = canonicalToolProviders("shared-secret");
-  assert.equal(tools.length, 6);
+  assert.equal(tools.length, 7);
   assert.ok(tools.every(tool => tool.receiptSecret === "shared-secret" && tool.endpoint.startsWith("https://agrinexus-provider-engines.onrender.com/nexus/tools/")));
+  const health = tools.find(tool => tool.toolId === "health.record");
+  assert.deepEqual({ riskTier: health.riskTier, confirmationRequired: health.confirmationRequired,
+    consentScope: health.consentScope, dataClassification: health.dataClassification },
+  { riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" });
 });
 
 test("missing worker is provisioned from Genesis and rediscovered", async () => {

@@ -327,15 +327,19 @@ async function installAcceptanceToken(client, serviceId, token) {
 
 function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BASE_URL) {
   const tools = [
-    ["knowledge.search", "knowledge", "Search governed production knowledge"],
-    ["documents.create", "documents", "Create a governed production document"],
-    ["jobs.search", "jobs", "Search governed production jobs"],
-    ["resume.create", "resume", "Create a governed production resume"],
-    ["maps.view", "maps", "Render a governed production map"],
-    ["media.play", "media", "Play governed production media"]
-  ].map(([toolId, domain, description]) => ({ toolId, domain, description,
-    endpoint: `${providerBaseUrl}/nexus/tools/${toolId}`, receiptSecret: secret, riskTier: "low",
-    requiredPermission: "tasks:execute", confirmationRequired: false }));
+    { toolId: "knowledge.search", domain: "knowledge", description: "Search governed production knowledge" },
+    { toolId: "documents.create", domain: "documents", description: "Create a governed production document" },
+    { toolId: "jobs.search", domain: "jobs", description: "Search governed production jobs" },
+    { toolId: "resume.create", domain: "resume", description: "Create a governed production resume" },
+    { toolId: "maps.view", domain: "maps", description: "Render a governed production map" },
+    { toolId: "media.play", domain: "media", description: "Play governed production media" },
+    { toolId: "health.record", domain: "health", description: "Record a user-confirmed health observation",
+      riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write",
+      dataClassification: "health" }
+  ].map(tool => ({ ...tool,
+    endpoint: `${providerBaseUrl}/nexus/tools/${tool.toolId}`, receiptSecret: secret,
+    riskTier: tool.riskTier || "low", requiredPermission: "tasks:execute",
+    confirmationRequired: Boolean(tool.confirmationRequired) }));
   return tools;
 }
 

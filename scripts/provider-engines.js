@@ -12,7 +12,7 @@ const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.R
 const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
 const PROVIDER_ENGINE_RELEASE = "provider-brain-30";
-const NEXUS_TOOL_IDS = new Set(["knowledge.search", "documents.create", "jobs.search", "resume.create", "maps.view", "media.play"]);
+const NEXUS_TOOL_IDS = new Set(["knowledge.search", "documents.create", "jobs.search", "resume.create", "maps.view", "media.play", "health.record"]);
 
 const endpoints = {
   "/ai/responses": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },

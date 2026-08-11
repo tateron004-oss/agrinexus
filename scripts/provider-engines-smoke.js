@@ -131,6 +131,12 @@ async function call(base, route, body) {
     const nexusBody = JSON.stringify(nexusRequest); const nexusResponse = await fetch(`${providerBase}/nexus/tools/knowledge.search`, { method: "POST",
       headers: { "content-type": "application/json", "x-nexus-request-signature": crypto.createHmac("sha256", env.NEXUS_TOOL_RECEIPT_SECRET).update(nexusBody).digest("hex") }, body: nexusBody });
     assert.equal(nexusResponse.status, 200); assert.equal((await nexusResponse.json()).receipt.outcome, "completed");
+    const healthRequest = { ...nexusRequest, toolId: "health.record", stepId: "health-step-1",
+      input: { readingType: "blood-pressure", systolic: 140, diastolic: 90, confirmed: true } };
+    const healthBody = JSON.stringify(healthRequest); const healthResponse = await fetch(`${providerBase}/nexus/tools/health.record`, { method: "POST",
+      headers: { "content-type": "application/json", "x-nexus-request-signature": crypto.createHmac("sha256", env.NEXUS_TOOL_RECEIPT_SECRET).update(healthBody).digest("hex") }, body: healthBody });
+    assert.equal(healthResponse.status, 200); const healthReceipt = (await healthResponse.json()).receipt;
+    assert.equal(healthReceipt.toolId, "health.record"); assert.equal(healthReceipt.outcome, "completed");
     await call(appBase, "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
     const ai = await call(appBase, "/api/ai/run", { type: "command" });
     assert(ai.profile.aiProvider === "local-ai-webhook");
