@@ -34798,6 +34798,7 @@ function renderNexusPredictiveMaturityInline(mode = "") {
 }
 
 function isNexusAgriculturePredictiveModelerCommand(command = "") {
+  if (/\bremember that\b|^remember\s+|\bwhat did i say\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b/i.test(String(command || ""))) return false;
   return /\b(maize|tomato|cassava|rice|crop|field|farm|farmer|agriculture|agronomist|leaves|leaf|yellowing|wilting|stunted|spots|lesions|pests?|cassava leaves|mold|stored|storage|rainfall|irrigation|drought|soil test|soil|fertility|hectares?|acreage|yield risk|field risk trend|crop risk pattern|agriculture risk|farm prediction|compare this week|simulate .*rainfall|simulate .*irrigation|agriculture reasoning trace|agriculture expert checklist|agriculture predictive receipts|market-ready|prepare .*sale|food-security risk)\b/i.test(String(command || ""));
 }
 
@@ -35658,6 +35659,7 @@ function predictiveAdapterForCommand(input = "") {
 }
 
 function isNexusMultiDomainPredictiveCommand(command = "") {
+  if (/\bremember that\b|^remember\s+|\bwhat did i say\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b/i.test(String(command || ""))) return false;
   return Boolean(predictiveAdapterForCommand(command));
 }
 
