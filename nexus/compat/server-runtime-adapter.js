@@ -127,7 +127,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           locale: body.locale || "en", correlationId, conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
           context: acceptanceContext(principal, { actorId: principal.userId,
             requestId: correlationId, correlationId, roles: principal.roles || [principal.role].filter(Boolean),
-            permissions: principal.permissions || ["*"], acceptancePreCutover,
+            permissions: acceptanceExecutionPermissions(principal), acceptancePreCutover,
             acceptanceApplication: acceptancePreCutover ? body.application : null }) });
         const applicationMatched = !body.application || result.application === body.application;
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
@@ -152,7 +152,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           audible: receipt.audible === true, evidence: { ...receipt.evidence, releaseSha, browserObservedAt: receipt.observedAt } },
           context: acceptanceContext(principal, { actorId: principal.userId,
             requestId: `acceptance-browser-${body.commandId}`, correlationId: body.correlationId,
-            roles: principal.roles || [principal.role].filter(Boolean), permissions: principal.permissions || ["*"] }) });
+            roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) }) });
         send(res, result.completed === true ? 200 : 503, { ok: result.completed === true, releaseSha, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
@@ -478,4 +478,9 @@ function acceptanceContext(principal, values = {}) {
     can: permission => permissions.has("*") || permissions.has(permission) });
 }
 
-module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal, acceptanceContext });
+function acceptanceExecutionPermissions(principal) {
+  return [...new Set([...(principal.permissions || []), "acceptance:identity", "tasks:execute"])];
+}
+
+module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal,
+  acceptanceContext, acceptanceExecutionPermissions });
