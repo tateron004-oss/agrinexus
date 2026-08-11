@@ -129,6 +129,8 @@ test("production behavior probe preserves exact release, channel, and authoritat
   assert.match(turnInput.input.correlationId, /^acceptance-/);
   assert.equal(turnInput.context.correlationId, turnInput.input.correlationId);
   assert.equal(turnInput.context.can("acceptance:identity"), true);
+  assert.equal(turnInput.context.can("tasks:execute"), true);
+  assert.equal(turnInput.context.can("admin:write"), false);
   assert.equal(turnInput.context.hasRole("admin"), true);
 });
 
