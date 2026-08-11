@@ -130,6 +130,19 @@ test("production behavior probe preserves exact release, channel, and authoritat
   assert.equal(turnInput.context.correlationId, turnInput.input.correlationId);
 });
 
+test("production behavior probe grants pre-cutover authority only through the authenticated exact-SHA lane", async () => {
+  const releaseSha = "c".repeat(40); let turnInput;
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "admin", permissions: ["acceptance:identity"] }] }) },
+    behavior: { turn: async input => { turnInput = input; return { application: "agriculture", state: "render_required", render: { taskId: "task-1" } }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha }, resolveUser: async () => null,
+    readJson: async () => ({ releaseSha, application: "agriculture", text: "Assess maize", phase: "pre-cutover" }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/behavior-turn"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(turnInput.context.acceptancePreCutover, true);
+  assert.equal(turnInput.context.acceptanceApplication, "agriculture");
+  assert.ok(turnInput.context.permissions.includes("acceptance:identity"));
+});
+
 test("authenticated production behavior probe preserves the safe underlying failure message", async () => {
   const releaseSha = "b".repeat(40);
   const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "admin", permissions: ["acceptance:identity"] }] }) },

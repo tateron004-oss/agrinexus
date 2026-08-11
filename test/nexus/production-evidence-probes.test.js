@@ -36,6 +36,8 @@ test("release workflow executes the real browser capability producer before comp
   assert.ok(workflow.indexOf("nexus-run-browser-capability-probes.js") < workflow.indexOf("nexus-compile-production-evidence.js"));
   assert.match(producer, /__NEXUS_CAPTURE_PRODUCTION_OUTCOME__/);
   assert.match(producer, /behavior-turn/); assert.match(producer, /browser-acknowledgement/);
+  assert.match(producer, /pre-cutover/); assert.match(producer, /post-cutover/);
+  assert.match(producer, /production-acceptance\/workspaces/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
 test("live probe receipts remain exact-release and fail on stale identities", () => {
