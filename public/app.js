@@ -55969,6 +55969,17 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   };
 }
 
+// Production certification invokes this through a real browser. It renders the
+// same passive workspace path as a user turn, but leaves the authenticated
+// server acknowledgement to the machine acceptance endpoint so evidence stays
+// bound to the exact release and acceptance principal.
+window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProductionOutcome(outcome = {}) {
+  const observedAt = new Date().toISOString();
+  const receipt = await renderNexusPassiveWorkspace(outcome, outcome.data || {}, {});
+  return { ...receipt, observedAt, commandId: outcome.commandId, correlationId: outcome.correlationId,
+    workspace: outcome.workspace, application: outcome.application };
+};
+
 async function nexusAuthoritativeOutcomeRenderer() {
   if (window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__) return window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__;
   const Renderer = await loadNexusAuthoritativeOutcomeRenderer();

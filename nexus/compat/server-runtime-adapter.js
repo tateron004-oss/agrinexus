@@ -113,6 +113,47 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const result=await active.workspaceMigrations.activate({workspaceId,proofs:body.proofs,releaseSha,rollbackRef:body.rollbackRef});send(res,201,{ok:true,migration:result});
       } catch(error){send(res,400,{error:error.message,code:error.code||"workspace_proof_rejected"});} return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/behavior-turn" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        if (!active.behavior?.turn) { send(res, 503, { ok: false, releaseSha, code: "behavior_planner_unavailable", error: "The authoritative behavior planner is unavailable." }); return true; }
+        const principal = await acceptancePrincipal(active); const marker = crypto.randomUUID();
+        const result = await active.behavior.turn({ input: { text: String(body.text || ""), channel: body.channel === "voice" ? "voice" : "typed",
+          locale: body.locale || "en", conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
+          context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
+            requestId: `acceptance-${marker}`, correlationId: `acceptance-${marker}`, roles: principal.roles || [principal.role].filter(Boolean),
+            permissions: principal.permissions || ["*"] } });
+        const applicationMatched = !body.application || result.application === body.application;
+        send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
+      } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
+        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const receipt = body.receipt || {};
+        if (receipt.rendered !== true || (receipt.visible !== true && receipt.audible !== true)) {
+          send(res, 422, { ok: false, releaseSha, code: "browser_outcome_unverified", error: "The browser did not verify a visible or audible outcome." }); return true;
+        }
+        const principal = await acceptancePrincipal(active);
+        const result = await active.behavior.acknowledge({ input: { taskId: body.taskId, commandId: body.commandId,
+          correlationId: body.correlationId, workspace: body.workspace, rendered: true, visible: receipt.visible === true,
+          audible: receipt.audible === true, evidence: { ...receipt.evidence, releaseSha, browserObservedAt: receipt.observedAt } },
+          context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
+            requestId: `acceptance-browser-${body.commandId}`, correlationId: body.correlationId,
+            roles: principal.roles || [principal.role].filter(Boolean), permissions: principal.permissions || ["*"] } });
+        send(res, result.completed === true ? 200 : 503, { ok: result.completed === true, releaseSha, result });
+      } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
+        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
+      return true;
+    }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/task-engine" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
       try {

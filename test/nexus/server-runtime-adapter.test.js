@@ -116,6 +116,28 @@ test("machine evidence rejects a stale release SHA before recording",async()=>{l
 test("workspace activation forwards rollback evidence into the authoritative repository",async()=>{let input;const releaseSha="a".repeat(40);const runtime={ready:Promise.resolve(),applications:{get:()=>({applicationId:"health"})},workspaceMigrations:{activate:async value=>{input=value;return {state:"authoritative"};}}};const adapter=createServerRuntimeAdapter({env:{NEXUS_ACCEPTANCE_TOKEN:"token",RENDER_GIT_COMMIT:releaseSha},resolveUser:async()=>null,readJson:async()=>({releaseSha,rollbackRef:"refs/tags/nexus-before-health",proofs:{}}),createRuntimeFn:()=>runtime});
  const response=responseCapture();await adapter.handle({method:"POST",headers:{authorization:"Bearer token"}},{},new URL("http://local/api/nexus/runtime/production-acceptance/workspaces/health"),response.send);assert.equal(response.result.status,201);assert.equal(input.rollbackRef,"refs/tags/nexus-before-health");});
 
+test("production behavior probe preserves exact release, channel, and authoritative application", async () => {
+  const releaseSha = "a".repeat(40); let turnInput;
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "admin", permissions: ["acceptance:identity"] }] }) },
+    behavior: { turn: async input => { turnInput = input; return { application: "maps", state: "render_required", render: { taskId: "task-1" } }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, application: "maps", text: "Route Nairobi to Nakuru", channel: "voice" }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/behavior-turn"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(response.result.body.releaseSha, releaseSha);
+  assert.equal(turnInput.input.channel, "voice"); assert.equal(turnInput.input.text, "Route Nairobi to Nakuru");
+});
+
+test("production browser acknowledgement rejects invisible evidence before task completion", async () => {
+  const releaseSha = "a".repeat(40); let acknowledged = false;
+  const runtime = { ready: Promise.resolve(), behavior: { acknowledge: async () => { acknowledged = true; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, receipt: { rendered: true, visible: false, audible: false } }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement"), response.send);
+  assert.equal(response.result.status, 422); assert.equal(response.result.body.code, "browser_outcome_unverified"); assert.equal(acknowledged, false);
+});
+
 test("Path 2 machine lane evidence requires the acceptance token and exact active release", async () => {
   const releaseSha = "a".repeat(40); let recorded;
   const runtime = { ready: Promise.resolve(), path2Evidence: { recordLaneEvidence: async input => { recorded = input; return input; } } };

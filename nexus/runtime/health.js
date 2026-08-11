@@ -21,8 +21,12 @@ async function checkRuntimeHealth(runtime, { env = process.env } = {}) {
 
 async function verifyReadWrite(db) {
   const marker = `health-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const result = await db.query("select $1::text as marker", [marker]);
-  return (result.rows || result)[0]?.marker === marker;
+  return db.transaction(async trx => {
+    await trx.query("create temporary table if not exists nexus_health_write_probe (marker text primary key) on commit drop");
+    await trx.query("insert into nexus_health_write_probe(marker) values($1)", [marker]);
+    const result = await trx.query("select marker from nexus_health_write_probe where marker=$1", [marker]);
+    return (result.rows || result)[0]?.marker === marker;
+  });
 }
 
-module.exports = Object.freeze({ checkRuntimeHealth });
+module.exports = Object.freeze({ checkRuntimeHealth, verifyReadWrite });
