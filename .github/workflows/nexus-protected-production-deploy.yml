@@ -210,6 +210,26 @@ jobs:
           NEXUS_CANDIDATE_URL: ${{ env.PRODUCTION_ORIGIN }}
         run: node scripts/nexus-preproduction-black-box.js
 
+      - name: Run three consecutive authenticated exact-SHA production passes
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          NEXUS_BASE_URL: ${{ env.PRODUCTION_ORIGIN }}
+          PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          for pass in 1 2 3; do
+            echo "Starting exact-SHA production acceptance pass ${pass}/3"
+            NEXUS_PASS_NUMBER="$pass" node scripts/nexus-21-objective-production-acceptance.js
+            if [ "$pass" -lt 3 ]; then sleep 120; fi
+          done
+          node - <<'NODE'
+          const fs=require('fs');
+          const reports=[1,2,3].map(n=>JSON.parse(fs.readFileSync(`output/nexus-21-objective-pass-${n}.json`)));
+          if(!reports.every(r=>r.passed&&r.releaseSha===process.env.EXPECTED_RELEASE_SHA)) throw new Error('Exact-SHA 3/3 streak not established. Certification remains incomplete.');
+          fs.writeFileSync('output/nexus-21-objective-streak.json',JSON.stringify({certificationComplete:true,passes:3,releaseSha:process.env.EXPECTED_RELEASE_SHA,completedAt:new Date().toISOString()},null,2));
+          NODE
+
       - name: Preserve deployment evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -219,5 +239,6 @@ jobs:
             render-deploy-response.json
             production-response-*.json
             output/nexus-preproduction-black-box.json
+            output/nexus-21-objective-*.json
           if-no-files-found: warn
           retention-days: 30
