@@ -126,6 +126,8 @@ test("production behavior probe preserves exact release, channel, and authoritat
     new URL("http://local/api/nexus/runtime/production-acceptance/probes/behavior-turn"), response.send);
   assert.equal(response.result.status, 200); assert.equal(response.result.body.releaseSha, releaseSha);
   assert.equal(turnInput.input.channel, "voice"); assert.equal(turnInput.input.text, "Route Nairobi to Nakuru");
+  assert.match(turnInput.input.correlationId, /^acceptance-/);
+  assert.equal(turnInput.context.correlationId, turnInput.input.correlationId);
 });
 
 test("authenticated production behavior probe preserves the safe underlying failure message", async () => {

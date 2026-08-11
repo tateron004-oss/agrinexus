@@ -121,10 +121,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
         if (!active.behavior?.turn) { send(res, 503, { ok: false, releaseSha, code: "behavior_planner_unavailable", error: "The authoritative behavior planner is unavailable." }); return true; }
         const principal = await acceptancePrincipal(active); const marker = crypto.randomUUID();
+        const correlationId = `acceptance-${marker}`;
         const result = await active.behavior.turn({ input: { text: String(body.text || ""), channel: body.channel === "voice" ? "voice" : "typed",
-          locale: body.locale || "en", conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
+          locale: body.locale || "en", correlationId, conversationId: `cnv_acceptance_${marker.replace(/-/g, "").slice(0, 20)}` },
           context: { tenantId: principal.tenantId, userId: principal.userId, actorId: principal.userId,
-            requestId: `acceptance-${marker}`, correlationId: `acceptance-${marker}`, roles: principal.roles || [principal.role].filter(Boolean),
+            requestId: correlationId, correlationId, roles: principal.roles || [principal.role].filter(Boolean),
             permissions: principal.permissions || ["*"] } });
         const applicationMatched = !body.application || result.application === body.application;
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
