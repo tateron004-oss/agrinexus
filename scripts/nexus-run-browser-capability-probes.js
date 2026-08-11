@@ -2,7 +2,6 @@
 "use strict";
 
 const fs = require("node:fs");
-const { chromium } = require("playwright");
 const { CONTRACTS } = require("../nexus/apps/capability-completion-contracts.js");
 const { FAULTS } = require("../nexus/acceptance/fault-register.js");
 
@@ -40,6 +39,7 @@ async function post(url, token, body) {
 }
 
 async function run(env = process.env) {
+  const { chromium } = require("playwright");
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
