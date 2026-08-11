@@ -73,14 +73,14 @@ async function runCommand(command) {
   assert(app.includes("function nexusNormalConversationPreflightIntent"), "browser must define normal conversation preflight");
   assert(app.includes("function runNexusNormalConversationPreflight"), "browser must run normal conversation preflight");
   assert(
-    commandCore.indexOf("runNexusNormalConversationPreflight(trustChainInput") <
-      commandCore.indexOf("handleNexusUnifiedBrainRuntimeCommand"),
-    "conversation preflight must run before broad workflow/runtime handlers"
+    commandCore.indexOf("handleNexusUnifiedBrainRuntimeCommand(trustChainInput") <
+      commandCore.indexOf("runNexusNormalConversationPreflight(trustChainInput"),
+    "the authoritative behavior spine must own ordinary conversation before legacy preflight"
   );
   assert(
-    commandCore.indexOf("runNexusNormalConversationPreflight(trustChainInput") <
+    commandCore.indexOf("handleNexusUnifiedBrainRuntimeCommand(trustChainInput") <
       commandCore.indexOf("launchCapabilityFromVoice"),
-    "conversation preflight must run before capability/workflow launchers"
+    "the authoritative behavior spine must run before capability/workflow launchers"
   );
   assert(app.includes("I will only open a workflow when you clearly ask me to start one."), "capability answer must preserve workflow boundary");
   assert(serverSource.includes("function companionDirectConversationIntent"), "server must preserve stable direct conversational intent names");
@@ -166,7 +166,7 @@ async function runCommand(command) {
         "ordinary speech routes to Nexus dialogue",
         "hearing checks do not open workflows",
         "capability questions do not open workflows",
-        "browser conversation preflight precedes broad workflow handlers",
+        "authoritative behavior spine precedes legacy conversation and workflow handlers",
         "explicit workflow requests remain routable"
       ]
     }, null, 2));
