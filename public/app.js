@@ -38388,7 +38388,11 @@ function renderUserWorkspace() {
   ensureNexusOsVisualBoundaryStyles();
   const trueExperienceMode = nexusTrueExperienceMode();
   const showMission = trueExperienceMode === "mission";
-  const microphoneFallbackRequired = trueExperienceMode === "home" && (
+  // Keep typed access available throughout the audio-only home/conversation
+  // states when voice cannot run. A successful typed turn moves Genesis from
+  // home to conversation, so limiting this fallback to home strands the user
+  // immediately after their first request.
+  const microphoneFallbackRequired = trueExperienceMode !== "mission" && (
     nexusOsVoiceRuntimeState?.microphoneUnavailable === true
     || nexusVoicePermissionDeniedThisSession === true
     || ["denied", "microphone-unavailable", "microphone-blocked", "realtime-failed", "realtime-blocked"].includes(
