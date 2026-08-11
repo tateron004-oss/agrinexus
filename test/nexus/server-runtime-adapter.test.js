@@ -128,6 +128,18 @@ test("production behavior probe preserves exact release, channel, and authoritat
   assert.equal(turnInput.input.channel, "voice"); assert.equal(turnInput.input.text, "Route Nairobi to Nakuru");
 });
 
+test("authenticated production behavior probe preserves the safe underlying failure message", async () => {
+  const releaseSha = "b".repeat(40);
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "admin", permissions: ["acceptance:identity"] }] }) },
+    behavior: { turn: async () => { throw new Error("Workspace agriculture has not completed authoritative cutover."); } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, application: "agriculture", text: "Assess maize" }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/behavior-turn"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.equal(response.result.body.error, "Workspace agriculture has not completed authoritative cutover.");
+});
+
 test("production browser acknowledgement rejects invisible evidence before task completion", async () => {
   const releaseSha = "a".repeat(40); let acknowledged = false;
   const runtime = { ready: Promise.resolve(), behavior: { acknowledge: async () => { acknowledged = true; } } };

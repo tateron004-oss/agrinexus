@@ -129,7 +129,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const applicationMatched = !body.application || result.application === body.application;
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
-        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
+        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category,
+          error: String(error.message || failure.message).slice(0, 300) }); }
       return true;
     }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement" && req.method === "POST") {
