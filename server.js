@@ -29111,6 +29111,17 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { memory: db.profile.agentMemory }
     };
   }
+  if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
+    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    return {
+      intent: "memory-recalled",
+      response: remembered
+        ? `You said your priority was ${remembered.replace(/^my priority (?:today )?is\s*/i, "")}.`
+        : "You have not asked me to remember a priority yet.",
+      status: remembered ? "completed" : "needs-details",
+      metadata: { conversationMode: true, memoryRecalled: Boolean(remembered) }
+    };
+  }
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
     const summary = longTermMemorySummary(db.profile);
     const memories = summary.topMemories;
@@ -30734,6 +30745,18 @@ async function runAgentCommand(db, user, command, options = {}) {
       intent: "memory-updated",
       response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
       metadata: { memory: db.profile.agentMemory }
+    };
+  }
+
+  if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
+    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    return {
+      intent: "memory-recalled",
+      response: remembered
+        ? `You said your priority was ${remembered.replace(/^my priority (?:today )?is\s*/i, "")}.`
+        : "You have not asked me to remember a priority yet.",
+      status: remembered ? "completed" : "needs-details",
+      metadata: { conversationMode: true, memoryRecalled: Boolean(remembered) }
     };
   }
 

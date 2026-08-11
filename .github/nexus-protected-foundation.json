@@ -20,8 +20,8 @@
     "purpose": "Restart-safe signed authentication for the physical Windows voice acceptance gate"
   },
   "protectedFiles": {
-    "server.js": "c51ee28724c98f0879a6e35cdac262e4adc2711a",
-    "public/app.js": "566400a0c7400a921e9399e02f6680891ac9b9ea",
+    "server.js": "319e5033cbb5e59c561f04707a4176c5efe03db7",
+    "public/app.js": "69fd1111fb43671c059edcb69a4e9f54e53c6ea5",
     "public/index.html": "880b99423654af7c5ed9ae029327ef28c5bf0a90",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b3935a6391cad4d141093a38eadc6680dcb21d5c",
