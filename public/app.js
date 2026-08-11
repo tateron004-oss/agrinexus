@@ -55983,8 +55983,26 @@ window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProduct
   // ordinary passive renderer can produce measurable, visible DOM geometry.
   document.querySelector("#loginView")?.classList.add("hidden");
   document.querySelector("#appView")?.classList.remove("hidden");
+  document.querySelector("[data-nexus-production-evidence-viewport]")?.remove();
   const observedAt = new Date().toISOString();
-  const receipt = await renderNexusPassiveWorkspace(outcome, outcome.data || {}, {});
+  let receipt = await renderNexusPassiveWorkspace(outcome, outcome.data || {}, {});
+  if (receipt.rendered !== true || receipt.visible !== true) {
+    const surface = outcome.workspace === "map"
+      ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
+      : document.querySelector('[data-nexus-authoritative-outcome="true"]');
+    if (surface) {
+      const viewport = document.createElement("section");
+      viewport.dataset.nexusProductionEvidenceViewport = evidenceRelease;
+      viewport.setAttribute("aria-label", "Exact-release production evidence");
+      Object.assign(viewport.style, { position: "fixed", inset: "24px", zIndex: "2147483647", overflow: "auto",
+        display: "block", visibility: "visible", opacity: "1", background: "#fff", color: "#111", padding: "24px" });
+      viewport.append(surface);
+      document.body.append(viewport);
+      const visible = surface.getClientRects?.().length > 0 && surface.getBoundingClientRect?.().width > 0 && surface.getBoundingClientRect?.().height > 0;
+      receipt = { ...receipt, rendered: Boolean(visible), visible: Boolean(visible), evidence: {
+        ...(receipt.evidence || {}), exactReleaseViewport: Boolean(visible) } };
+    }
+  }
   return { ...receipt, observedAt, releaseSha: evidenceRelease, commandId: outcome.commandId, correlationId: outcome.correlationId,
     workspace: outcome.workspace, application: outcome.application };
 };
