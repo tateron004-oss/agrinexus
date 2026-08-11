@@ -8,6 +8,7 @@ const canonicalPath = ".github/workflows/nexus-protected-production-deploy.yml";
 const retiredPath = ".github/workflows/nexus-unified-production-release.yml";
 const canonical = fs.readFileSync(canonicalPath, "utf8");
 const retired = fs.readFileSync(retiredPath, "utf8");
+const standaloneAcceptance = fs.readFileSync(".github/workflows/nexus-21-objective-production-acceptance.yml", "utf8");
 
 test("production promotion is gated by production-equivalent qualification", () => {
   assert.match(canonical, /qualify-release-candidate:/);
@@ -32,6 +33,13 @@ test("production identity and behavior are both re-proved after deployment", () 
   assert.match(canonical, /Wait for exact release identity/);
   assert.match(canonical, /NEXUS_CANDIDATE_URL: \$\{\{ env\.PRODUCTION_ORIGIN \}\}/);
   assert.match(canonical, /Re-prove deployed Standard User behavior/);
+});
+
+test("protected deployment owns authenticated 3/3 acceptance without cross-workflow secret loss", () => {
+  assert.match(canonical, /node scripts\/nexus-render-release-controller\.js[\s\S]*Run three consecutive authenticated exact-SHA production passes/);
+  assert.match(canonical, /node scripts\/nexus-21-objective-production-acceptance\.js/);
+  assert.match(canonical, /output\/nexus-21-objective-\*\.json/);
+  assert.doesNotMatch(standaloneAcceptance, /workflow_run:/);
 });
 
 test("release promotion binds every runtime surface to one immutable SHA", () => {
