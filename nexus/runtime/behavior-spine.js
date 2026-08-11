@@ -36,8 +36,8 @@ class BehaviorSpine {
     }
     const response = completedResponse(task);
     await this.conversations?.append?.({ tenantId: context.tenantId, conversationId: planned.command.conversationId,
-      actorId: "nexus-brain", role: "assistant", content: response,
-      provenance: { type: "verified_outcome", taskId: task.taskId,
+      actorId: null, role: "assistant", content: response,
+      provenance: { type: "verified_outcome", systemActor: "nexus-brain", taskId: task.taskId,
         receiptIds: execution.receipts.map(item => item.receiptId) } });
     return envelope({ planned, execution, task, state: "completed", completed: true, response,
       outcome: { verified: true, visibleOrAudible: true,
