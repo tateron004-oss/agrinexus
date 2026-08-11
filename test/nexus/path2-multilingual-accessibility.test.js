@@ -26,8 +26,8 @@ test("planner sends locale and accessibility requirements through an unfamiliar 
   let observed;
   const planner = new OpenEndedPlanner({
     model: { plan: async request => { observed = request; return { goal: request.goal, application: "health",
-      riskTier: "high", steps: [{ id: "intake", title: "Collect intake", toolId: null, input: {}, dependsOn: [] }], clarification: null }; } },
-    tools: { list: async () => [] }, applications: new ApplicationRegistry(defaultApplicationManifests()), memory: null
+      riskTier: "high", steps: [{ id: "intake", title: "Collect intake", toolId: "health.intake", input: {}, dependsOn: [] }], clarification: null }; } },
+    tools: { list: async () => [{ tool_id: "health.intake", availability: "available" }] }, applications: new ApplicationRegistry(defaultApplicationManifests()), memory: null
   });
   await planner.plan({ command: { tenantId: "tenant", actorId: "user", text: "Nisaidie kuandaa ziara yangu ya daktari",
     locale: "sw-KE", channel: "voice" }, context: { roles: [], can: () => true,

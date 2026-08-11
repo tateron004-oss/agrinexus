@@ -54,6 +54,13 @@ test("clarification plans are valid without fake execution steps", () => {
   assert.equal(result.valid, true); assert.equal(result.plan.steps.length, 0);
 });
 
+test("executable plans reject tool-free steps before task creation", () => {
+  const catalog = { tools: [{ toolId: "health.record" }], applications: [{ applicationId: "health" }] };
+  const result = require("../../nexus/brain/planner.js").validatePlan({ goal: "Record blood pressure", application: "health",
+    riskTier: "regulated", clarification: null, steps: [{ id: "record", title: "Record reading", toolId: null }] }, catalog, context);
+  assert.equal(result.valid, false); assert.match(result.errors[0], /executable tool/);
+});
+
 test("production planning model requests strict structured output and returns no simulated fallback", async () => {
   let request; const model = new OpenAiPlanningModel({ apiKey: "test-key", fetchFn: async (_url, options) => { request = JSON.parse(options.body); return { ok: true, json: async () => ({ output_text: JSON.stringify({ goal: "Help", application: "live-knowledge", riskTier: "low", clarification: null, steps: [] }) }) }; } });
   const result = await model.plan({ goal: "Help", catalog: {} });
