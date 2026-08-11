@@ -21,7 +21,7 @@
   },
   "protectedFiles": {
     "server.js": "319e5033cbb5e59c561f04707a4176c5efe03db7",
-    "public/app.js": "69fd1111fb43671c059edcb69a4e9f54e53c6ea5",
+    "public/app.js": "2f64e39e0d3aabcddf5056626ab70ff368af9d88",
     "public/index.html": "880b99423654af7c5ed9ae029327ef28c5bf0a90",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b3935a6391cad4d141093a38eadc6680dcb21d5c",
