@@ -25,7 +25,7 @@ test("canonical promotion uses Render API control without a dashboard bridge or 
 });
 
 test("legacy unified release cannot race the canonical main promotion", () => {
-  assert.doesNotMatch(retired, /push:\s*\n\s*branches:\s*\[main\]/);
+  assert.doesNotMatch(retired, /^\s*push\s*:/m);
   assert.match(retired, /workflow_dispatch:/);
 });
 
