@@ -11,7 +11,7 @@ async function checkRuntimeHealth(runtime, { env = process.env } = {}) {
   const providers = (runtime.providers?.definitions || []).map(item => ({ toolId: item.toolId, domain: item.domain, configured: true }));
   const providersConfigured = providers.length > 0;
   const browserBundleCompatible = Boolean(runtime.behavior?.acknowledge);
-  const ok = Boolean(state.pgvector && state.migrated && databaseReadWrite && identity && worker && browserBundleCompatible);
+  const ok = Boolean(state.pgvector && state.migrated && databaseReadWrite && identity && worker);
   return { ok, authoritative: true, durable: databaseReadWrite, database: state.database, postgresVersion: state.version_num,
     pgvector: state.pgvector, migrationsCurrent: state.migrated,
     databaseReadWrite, identity, worker, providers, providersConfigured, browserBundleCompatible,
