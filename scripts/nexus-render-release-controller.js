@@ -397,6 +397,7 @@ async function run(env = process.env, options = {}) {
   validateService(provider, "web_service");
   const databaseUrl = await resolveOrProvisionDatabase(client, web, options);
   await installEnvValue(client, web.id, "DATABASE_URL", databaseUrl);
+  await installEnvValue(client, web.id, "NEXUS_RELEASE_SHA", releaseSha);
   for (const [key, value] of Object.entries(REQUIRED_WEB_ENV)) {
     await installEnvValue(client, web.id, key, value);
   }
@@ -409,6 +410,7 @@ async function run(env = process.env, options = {}) {
   await ensureGeneratedEnvSecret(client, worker.id, "SESSION_SECRET", 32, 48);
   await ensureGeneratedEnvSecret(client, worker.id, "PASSWORD_PEPPER", 16, 32);
   await installEnvValue(client, worker.id, "NEXUS_RELEASE_SHA", releaseSha);
+  await installEnvValue(client, provider.id, "NEXUS_RELEASE_SHA", releaseSha);
   const services = [];
   for (const service of [web, worker, provider]) {
     const reconciled = await reconcileServiceConfiguration(client, service);

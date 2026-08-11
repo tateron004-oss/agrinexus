@@ -131,7 +131,7 @@ assert(
   qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
-assert(index.includes("/app.js?v=nexus-behavior-502"), "index must bump app.js version so browser voice fixes load");
+assert(index.includes("/app.js?v=__NEXUS_RELEASE_SHA__"), "index must bind app.js cache busting to the immutable release SHA");
 
 includesAll(acceptanceDoc, [
   "Nexus Genesis Real Browser Voice and Companion Acceptance",
