@@ -55987,17 +55987,27 @@ window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProduct
   const observedAt = new Date().toISOString();
   let receipt = await renderNexusPassiveWorkspace(outcome, outcome.data || {}, {});
   if (receipt.rendered !== true || receipt.visible !== true) {
-    const surface = outcome.workspace === "map"
+    let surface = outcome.workspace === "map"
       ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
       : document.querySelector('[data-nexus-authoritative-outcome="true"]');
+    const viewport = document.createElement("section");
+    viewport.dataset.nexusProductionEvidenceViewport = evidenceRelease;
+    viewport.setAttribute("aria-label", "Exact-release production evidence");
+    Object.assign(viewport.style, { position: "fixed", inset: "24px", zIndex: "2147483647", overflow: "auto",
+      display: "block", visibility: "visible", opacity: "1", background: "#fff", color: "#111", padding: "24px" });
+    document.body.append(viewport);
+    if (!surface && outcome.workspace !== "map") {
+      let host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+      if (!host) {
+        host = document.createElement("section");
+        host.id = "nexus-workspace";
+        host.dataset.nexusWorkspace = "true";
+      }
+      viewport.append(host);
+      surface = renderNexusAuthoritativeData(outcome);
+    }
     if (surface) {
-      const viewport = document.createElement("section");
-      viewport.dataset.nexusProductionEvidenceViewport = evidenceRelease;
-      viewport.setAttribute("aria-label", "Exact-release production evidence");
-      Object.assign(viewport.style, { position: "fixed", inset: "24px", zIndex: "2147483647", overflow: "auto",
-        display: "block", visibility: "visible", opacity: "1", background: "#fff", color: "#111", padding: "24px" });
       viewport.append(surface);
-      document.body.append(viewport);
       const visible = surface.getClientRects?.().length > 0 && surface.getBoundingClientRect?.().width > 0 && surface.getBoundingClientRect?.().height > 0;
       receipt = { ...receipt, rendered: Boolean(visible), visible: Boolean(visible), evidence: {
         ...(receipt.evidence || {}), exactReleaseViewport: Boolean(visible) } };

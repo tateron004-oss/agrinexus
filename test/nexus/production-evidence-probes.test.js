@@ -38,6 +38,7 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(producer, /__NEXUS_CAPTURE_PRODUCTION_OUTCOME__/);
   assert.match(producer, /nexusProductionEvidence/);
   assert.match(app, /nexusProductionEvidenceViewport/);
+  assert.match(app, /renderNexusAuthoritativeData\(outcome\)/);
   assert.match(app, /getBoundingClientRect/);
   assert.match(app, /#loginView/);
   assert.match(app, /#appView/);
