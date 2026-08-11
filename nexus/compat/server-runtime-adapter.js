@@ -326,6 +326,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
           locale: request.locale, text: body.text }, context });
         send(res, result.completed ? 200 : 202, result); return true;
+      } else if (url.pathname === "/api/nexus/runtime/behavior/acknowledgements" && req.method === "POST") {
+        if (!active.behavior?.acknowledge) { send(res, 503, { error: "The authoritative renderer acknowledgement path is unavailable.", code: "behavior_acknowledgement_unavailable" }); return true; }
+        const acknowledged = await active.behavior.acknowledge({ input: {
+          taskId: body.taskId, commandId: body.commandId, correlationId: body.correlationId,
+          workspace: body.workspace, rendered: body.rendered === true, visible: body.visible === true,
+          audible: body.audible === true, evidence: body.evidence || {}
+        }, context });
+        send(res, acknowledged.completed ? 200 : 422, acknowledged); return true;
       } else if (url.pathname === "/api/nexus/runtime/commands" && req.method === "POST") {
         if (!active.agent) { send(res, 503, { error: "The authoritative planning provider is unavailable; no phrase-specific fallback was used.", code: "planning_provider_unavailable" }); return true; }
         const planned = await active.agent.command({ input: { correlationId: request.context.requestId,

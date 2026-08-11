@@ -78,15 +78,18 @@ check("wake phrase detector supports Nexus greetings", hasAll(app, [
   "Hello, how can I help?"
 ]));
 
+const liveCommandStart = app.indexOf("async function handleVoiceCommand(rawCommand");
+const liveCommandEnd = app.indexOf("async function runBackendAgentCommand", liveCommandStart);
+const liveCommandBlock = liveCommandStart >= 0 && liveCommandEnd > liveCommandStart
+  ? app.slice(liveCommandStart, liveCommandEnd)
+  : "";
 check("typed wake phrases route through unified runtime", hasAll(app, [
   "async function handleNexusUnifiedBrainRuntimeCommand",
-  "handleNexusPresenceWakePhrase(text, options)",
-  "handleNexusPresenceFollowUp(text, options)",
   "const routedText = normalizeNexusPresenceRoutableCommand(text)",
-  "runtime.shouldHandleBeforeLegacy(routedText, options)",
-  "runtime.process(routedText",
-  "NEXUS_PRESENCE_STATES.THINKING"
-]));
+  "NEXUS_PRESENCE_STATES.THINKING",
+  "/api/nexus/runtime/behavior/turn"
+]) && liveCommandBlock.includes("handleNexusUnifiedBrainRuntimeCommand(command")
+  && !liveCommandBlock.includes("handleVoiceCommandCore("));
 
 check("visible submit buttons route predictive commands before pre-router interception", hasAll(app, [
   "function routeNexusCommandCenterCommunicationSubmit",

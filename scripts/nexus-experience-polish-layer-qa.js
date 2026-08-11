@@ -126,13 +126,12 @@ check("follow-up parser covers cross-domain continuity", hasAll(polishBlock, [
 ]));
 
 check("unified runtime routes help/status/follow-up before generic processing", hasAll(unifiedBlock, [
-  "handleNexusPresenceWakePhrase(text, options)",
-  "handleNexusExperienceStarterCommand(text, options)",
-  "handleNexusExperienceStatusCommand(text, options)",
-  "handleNexusPresenceFollowUp(text, options)",
-  "getNexusExperienceProgressSteps(experienceMode)",
-  "getNexusExperienceAcknowledgment(experienceMode, text)",
-  "runtime.process(routedText"
+  "const routedText = normalizeNexusPresenceRoutableCommand(text) || text",
+  "/api/nexus/runtime/behavior/turn",
+  "conversationId: nexusAuthoritativeConversationId()",
+  'result.render?.schema === "nexus.workspace-outcome.v1"',
+  "renderer.render(result.render)",
+  "legacyFallbackUsed !== false"
 ]));
 
 check("command-center submit routes polish before predictive or legacy routers", hasAll(app, [

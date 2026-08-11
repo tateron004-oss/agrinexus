@@ -99,7 +99,7 @@ test("canonical engine rejects cyclic plans and enforces durable dependency orde
   assert.equal(result.receipt.verification.verified, true);
 });
 
-test("canonical engine completes a cross-application workflow with dependency outputs and visible proof", async () => {
+test("canonical engine waits for the browser before completing a cross-application workflow", async () => {
   const { engine, store } = fixture(); const received = [];
   engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute",
     confirmation_required: false, consent_scope: null, timeout_ms: 1000 });
@@ -118,13 +118,20 @@ test("canonical engine completes a cross-application workflow with dependency ou
   ] });
   const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
   const result = await engine.executeTask({ context, taskId: task.taskId });
-  assert.equal(result.completed, true); assert.equal(result.task.state, "completed"); assert.equal(result.receipts.length, 3);
+  assert.equal(result.completed, false); assert.equal(result.state, "awaiting_render"); assert.equal(result.task.state, "verifying"); assert.equal(result.receipts.length, 3);
   assert.deepEqual(received[1].dependencyOutputs[task.steps[0].stepId].jobs[0].location, "Nakuru");
   assert.equal(received[2].dependencyOutputs[task.steps[1].stepId].documentId, "doc_1");
-  assert.equal(result.task.outcome.visibleOrAudible, true);
+  const acknowledged = await engine.acknowledgeRender({ context, taskId: task.taskId,
+    commandId: command.commandId, correlationId: command.correlationId, workspace: "workforce",
+    rendered: true, visible: true, evidence: { populatedFields: ["jobs", "resume", "map"] } });
+  assert.equal(acknowledged.completed, true);
+  assert.equal(acknowledged.task.outcome.workspace, "workforce");
+  await expectCode(() => engine.acknowledgeRender({ context, taskId: task.taskId,
+    commandId: "command_wrong", correlationId: command.correlationId, workspace: "workforce",
+    rendered: true, visible: true }), "render_acknowledgement_not_expected");
 });
 
-test("task workflow pauses for confirmation and cannot claim success without user-visible proof", async () => {
+test("task workflow pauses for confirmation and requires renderer acknowledgement", async () => {
   const { engine, store } = fixture();
   const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
     actorId: "00000000-0000-0000-0000-000000000002", channel: "voice", text: "Save it" });
@@ -133,7 +140,14 @@ test("task workflow pauses for confirmation and cannot claim success without use
   const paused = await engine.executeTask({ context, taskId: task.taskId });
   assert.equal(paused.state, "awaiting_confirmation"); assert.equal(store.calls, 0);
   await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: task.steps[0].stepId, actorId: command.actorId, approved: true });
-  await expectCode(() => engine.executeTask({ context, taskId: task.taskId }), "user_outcome_unverified");
+  const pending = await engine.executeTask({ context, taskId: task.taskId });
+  assert.equal(pending.state, "awaiting_render");
+  await expectCode(() => engine.acknowledgeRender({ context, taskId: task.taskId,
+    commandId: "command_wrong", correlationId: command.correlationId, workspace: "documents",
+    rendered: true, visible: true }), "command_acknowledgement_mismatch");
+  await expectCode(() => engine.acknowledgeRender({ context, taskId: task.taskId,
+    commandId: command.commandId, correlationId: command.correlationId, workspace: "documents",
+    rendered: false, visible: false }), "user_outcome_unverified");
   assert.notEqual(store.task.state, "completed");
 });
 
@@ -153,7 +167,7 @@ test("failed provider work resumes with a bounded new idempotency identity and n
   await assert.rejects(() => engine.executeTask({ context, taskId: task.taskId }), error => error.code === "network_failure");
   assert.equal(store.task.state, "running"); assert.equal(store.steps[0].state, "failed");
   const resumed = await engine.executeTask({ context, taskId: task.taskId });
-  assert.equal(resumed.completed, true); assert.equal(calls, 2);
+  assert.equal(resumed.completed, false); assert.equal(resumed.state, "awaiting_render"); assert.equal(calls, 2);
   assert.match(resumed.receipts[0].idempotencyKey, /:retry:2$/);
   const duplicate = await engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId });
   assert.equal(duplicate.duplicate, true); assert.equal(calls, 2);

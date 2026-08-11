@@ -4,7 +4,7 @@ const test = require("node:test");
 const { BehaviorSpine } = require("../../nexus/runtime/behavior-spine.js");
 
 const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
-const command = { commandId: "cmd_1", correlationId: "trace", conversationId: "cnv_1" };
+const command = { commandId: "cmd_1", correlationId: "trace", conversationId: "cnv_1", channel: "typed", text: "Why do leaves change color?" };
 
 test("behavior spine executes a reasoned task and returns only verified completion", async () => {
   const appended = [];
@@ -22,6 +22,9 @@ test("behavior spine executes a reasoned task and returns only verified completi
   assert.equal(result.completed, true);
   assert.equal(result.application, "live-knowledge");
   assert.equal(result.legacyFallbackUsed, false);
+  assert.equal(result.render.schema, "nexus.workspace-outcome.v1");
+  assert.equal(result.render.workspace, "live-knowledge");
+  assert.equal(result.render.originalText, command.text);
   assert.deepEqual(result.outcome.receiptIds, ["rcp_1"]);
   assert.equal(appended[0].provenance.type, "verified_outcome");
 });
@@ -51,4 +54,24 @@ test("behavior spine rejects execution without verified user outcome", async () 
     engine: { executeTask: async () => ({ state: "completed", completed: true, receipts: [] }) },
     tasks: { get: async () => ({ taskId: "tsk_3", outcome: { verified: false } }) } });
   await assert.rejects(() => spine.turn({ input: {}, context }), error => error.code === "behavior_outcome_unverified");
+});
+
+test("behavior spine returns a typed render request and accepts only matching acknowledgement", async () => {
+  let acknowledgement;
+  const spine = new BehaviorSpine({ agent: { command: async () => ({ action: "create", command,
+    plan: { application: "maps", goal: "Route Nairobi to Nakuru", steps: [{ input: { origin: "Nairobi", destination: "Nakuru" } }] },
+    task: { taskId: "tsk_4" } }) },
+  engine: {
+    executeTask: async () => ({ state: "awaiting_render", completed: false, receipts: [{ receiptId: "rcp_4" }] }),
+    acknowledgeRender: async input => { acknowledgement = input; return { state: "completed", completed: true, outcome: { verified: true } }; }
+  },
+  tasks: { get: async () => ({ taskId: "tsk_4", steps: [] }) } });
+  const pending = await spine.turn({ input: {}, context });
+  assert.equal(pending.state, "render_required");
+  assert.equal(pending.render.operation, "show_route");
+  assert.equal(pending.render.data.destination, "Nakuru");
+  const ack = await spine.acknowledge({ input: { taskId: "tsk_4", commandId: "cmd_1", correlationId: "trace",
+    workspace: "map", rendered: true, visible: true }, context });
+  assert.equal(ack.completed, true);
+  assert.equal(acknowledgement.correlationId, "trace");
 });
