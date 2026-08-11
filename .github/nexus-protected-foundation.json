@@ -14,14 +14,14 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "21be62b114fd4ac704b3fda70e6946e24e64206b",
-    "recoveryBranch": "recovery/pre-acceptance-execute-21be62b1",
-    "files": ["nexus/compat/server-runtime-adapter.js"],
-    "purpose": "Complete the authorized 30-fault correction by granting only task execution authority to the bearer-authenticated exact-SHA acceptance lane"
+    "baseCommit": "a2b2e2ddabca1ef14d697f06e030ebc9bec1f4f0",
+    "recoveryBranch": "recovery/pre-certification-visible-shell-a2b2e2dd",
+    "files": ["public/app.js"],
+    "purpose": "Complete the authorized 30-fault correction by exposing the real passive workspace renderer to measurable browser geometry only inside an exact-SHA production evidence session"
   },
   "protectedFiles": {
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
-    "public/app.js": "164794913402535e1c62751368430a990b327397",
+    "public/app.js": "bcea1e376429014b5febcc2410ad9d4337274a89",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "7f86ab62078f55df26f6ff441f6fafd15c2d15d3",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
