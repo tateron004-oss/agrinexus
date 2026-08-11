@@ -71,10 +71,16 @@ class ProductionAcceptanceRepository {
       productionEvidence: Boolean(worker) && components.worker.productionEvidence === true,
       recentHeartbeat: Boolean(worker), releaseSha: worker?.release_sha || null,
       evidence: [...(components.worker.evidence || []), worker ? `worker ${worker.worker_id} heartbeat ${worker.last_heartbeat_at}` : "no current release worker heartbeat"] };
-    return { ok: Boolean(activeRelease) && health.ok === true, authoritative: true, generatedAt: now.toISOString(), releaseSha,
+    const componentsReady = COMPONENTS.every(name => components[name]?.ready === true && components[name]?.productionEvidence === true);
+    const workspacesReady = workspaces.every(item => item.state === "authoritative" && item.proofsComplete === true);
+    const noProductionFallbacks = Number(fallback.legacy_write_paths || 0) === 0 &&
+      Number(fallback.simulated_providers || 0) === 0 && Number(fallback.memory_fallbacks || 0) === 0;
+    const ok = Boolean(activeRelease) && health.ok === true && componentsReady && workspacesReady && noProductionFallbacks;
+    return { ok, authoritative: true, generatedAt: now.toISOString(), releaseSha,
       singleRuntime: Boolean(activeRelease), legacyWritePaths: fallback.legacy_write_paths || 0,
       simulatedProductionProviders: fallback.simulated_providers || 0,
-      inMemoryProductionFallbacks: fallback.memory_fallbacks || 0, components, workspaces };
+      inMemoryProductionFallbacks: fallback.memory_fallbacks || 0, componentsReady, workspacesReady,
+      noProductionFallbacks, components, workspaces };
   }
 }
 

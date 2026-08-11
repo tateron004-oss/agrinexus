@@ -10,6 +10,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { MemoryRepository } = require("../memory/repository.js");
 const { evaluateObservabilityAlerts } = require("../observability/alert-evaluator.js");
 const { executeProductionCase } = require("../path2/production-case.js");
+const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -20,7 +21,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   }
   async function status() {
     try { const active = await runtime(); await active.ready; return await checkHealthFn(active); }
-    catch (error) { return { ok: false, authoritative: true, durable: false, code: error.code || "authoritative_runtime_unavailable", message: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development" }; }
+    catch (error) { const failure = classifyRuntimeError(error); return { ok: false, authoritative: true, durable: false,
+      category: failure.category, code: failure.code, retryable: failure.retryable,
+      message: `${failure.message} No legacy write fallback was used.`,
+      legacyWriteFallbackUsed: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development" }; }
   }
   async function handle(req, res, url, send) {
     if (!url.pathname.startsWith("/api/nexus/runtime")) return false;
