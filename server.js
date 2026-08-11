@@ -56,9 +56,21 @@ const HOST = process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
-const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-502";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v447";
+const NEXUS_RELEASE_SHA = String(
+  process.env.NEXUS_RELEASE_SHA ||
+  process.env.RENDER_GIT_COMMIT ||
+  process.env.GIT_COMMIT ||
+  process.env.COMMIT_SHA ||
+  ""
+).trim().toLowerCase();
+if (IS_HOSTED && !/^[0-9a-f]{40}$/.test(NEXUS_RELEASE_SHA)) {
+  throw new Error("NEXUS_RELEASE_SHA must be a full immutable Git commit SHA in production.");
+}
+const NEXUS_EFFECTIVE_RELEASE_SHA = NEXUS_RELEASE_SHA || "development";
+const AGRINEXUS_RELEASE = NEXUS_EFFECTIVE_RELEASE_SHA;
+const AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA;
+const AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`;
+const NEXUS_RELEASE_PLACEHOLDER = "__NEXUS_RELEASE_SHA__";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
@@ -40207,6 +40219,8 @@ async function api(req, res, url) {
       service: "agrinexus",
       productIdentity: productIdentityMetadata(),
       release: AGRINEXUS_RELEASE,
+      releaseSha: NEXUS_EFFECTIVE_RELEASE_SHA,
+      deployedCommit: NEXUS_EFFECTIVE_RELEASE_SHA,
       webBuild: AGRINEXUS_WEB_BUILD_VERSION,
       pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
       mode: process.env.NODE_ENV || "development",
@@ -40222,6 +40236,19 @@ async function api(req, res, url) {
       },
       timestamp: new Date().toISOString()
     });
+  }
+
+  if (["/api/release", "/api/version"].includes(url.pathname) && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      service: "nexus-genesis-certified",
+      releaseSha: NEXUS_EFFECTIVE_RELEASE_SHA,
+      deployedCommit: NEXUS_EFFECTIVE_RELEASE_SHA,
+      webBuild: AGRINEXUS_WEB_BUILD_VERSION,
+      pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
+      immutable: NEXUS_EFFECTIVE_RELEASE_SHA !== "development",
+      timestamp: new Date().toISOString()
+    }, { "cache-control": "no-store, no-cache, must-revalidate" });
   }
 
   if (url.pathname === "/api/health" && req.method === "GET") {
@@ -43981,7 +44008,8 @@ async function api(req, res, url) {
     const voiceRuntimePolicy = nexusGenesisVoiceRuntimePolicy(user, process.env);
     return send(res, 200, {
       schemaVersion: "nexus.production.voiceDiagnostics.v1",
-      deployedCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || process.env.COMMIT_SHA || "unknown",
+      deployedCommit: NEXUS_EFFECTIVE_RELEASE_SHA,
+      releaseSha: NEXUS_EFFECTIVE_RELEASE_SHA,
       webBuild: AGRINEXUS_WEB_BUILD_VERSION,
       pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
       selectedVoiceRuntime: voiceRuntimePolicy.selectedRuntime,
@@ -49149,6 +49177,9 @@ function serveStatic(req, res, url) {
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
     const ext = path.extname(filePath);
+    if ([".html", ".js", ".mjs", ".css", ".webmanifest"].includes(ext)) {
+      data = Buffer.from(data.toString("utf8").replaceAll(NEXUS_RELEASE_PLACEHOLDER, NEXUS_EFFECTIVE_RELEASE_SHA));
+    }
     const cacheControl = ext === ".html" || ext === ".js" || ext === ".mjs" || ext === ".css" ? "no-store" : "public, max-age=3600";
     res.writeHead(200, { "content-type": mime[ext] || "application/octet-stream", "cache-control": cacheControl });
     res.end(data);

@@ -135,7 +135,7 @@ test("web production secrets are created once and compliant values are preserved
   assert.ok(writes[0].value.length >= 16);
 });
 
-test("unified release binds the worker runtime heartbeat to the exact release SHA", async () => {
+test("unified release binds every production process to the exact release SHA", async () => {
   const writes = [];
   const releaseSha = "a".repeat(40);
   const services = {
@@ -158,10 +158,12 @@ test("unified release binds the worker runtime heartbeat to the exact release SH
   const deployExactSha = async (_client, service) => ({ serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha });
   await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" },
     { client, deployExactShaImpl: deployExactSha, outputDir: null, captureRuntimeDiagnostics: false });
-  assert.deepEqual(writes.find(write => write.path.endsWith("/NEXUS_RELEASE_SHA")), {
-    path: "/services/srv-worker/env-vars/NEXUS_RELEASE_SHA",
-    value: releaseSha
-  });
+  for (const serviceId of ["srv-web", "srv-worker", "srv-provider"]) {
+    assert.deepEqual(writes.find(write => write.path === `/services/${serviceId}/env-vars/NEXUS_RELEASE_SHA`), {
+      path: `/services/${serviceId}/env-vars/NEXUS_RELEASE_SHA`,
+      value: releaseSha
+    });
+  }
   for (const [key, value] of Object.entries({
     AGRINEXUS_STATE_STORE: "postgres",
     AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",

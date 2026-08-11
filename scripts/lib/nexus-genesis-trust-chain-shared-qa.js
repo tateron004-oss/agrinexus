@@ -590,10 +590,11 @@ function assertRegistration(context, label) {
 }
 
 function assertAcceptance(context, label) {
-  const appVersion = context.app.match(/AGRINEXUS_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
-  const swVersion = context.sw.match(/BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
-  const serverVersion = context.server.match(/AGRINEXUS_WEB_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1];
-  assert(appVersion && appVersion === swVersion && swVersion === serverVersion, `${label}: app, SW, and server build versions must align.`);
+  const appVersion = context.app.match(/AGRINEXUS_BUILD_VERSION = "([^"]+)"/)?.[1];
+  const swVersion = context.sw.match(/BUILD_VERSION = "([^"]+)"/)?.[1];
+  const serverUsesReleaseSha = context.server.includes("const AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA") &&
+    context.server.includes("replaceAll(NEXUS_RELEASE_PLACEHOLDER, NEXUS_EFFECTIVE_RELEASE_SHA)");
+  assert(appVersion === "__NEXUS_RELEASE_SHA__" && swVersion === appVersion && serverUsesReleaseSha, `${label}: app, SW, and server must share the immutable release SHA.`);
   assert(context.index.includes(`/app.js?v=${appVersion}`), `${label}: index must load current app build.`);
   assert(context.index.includes(`/styles.css?v=${appVersion}`), `${label}: index must load current stylesheet build.`);
 }
@@ -921,7 +922,7 @@ function runTrustChainQa(options = {}) {
     railNumber: options.railNumber || null,
     repositoryRoot,
     groups: passedGroups,
-    appVersion: context.app.match(/AGRINEXUS_BUILD_VERSION = "(nexus-behavior-\d+)"/)?.[1] || "unknown",
+    appVersion: context.app.match(/AGRINEXUS_BUILD_VERSION = "([^"]+)"/)?.[1] || "unknown",
     ok: true
   };
 

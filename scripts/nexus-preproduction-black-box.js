@@ -17,12 +17,32 @@ async function json(pathname, init) {
   return body;
 }
 
+async function text(pathname) {
+  const response = await fetch(`${base}${pathname}`);
+  const body = await response.text();
+  assert.equal(response.ok, true, `${pathname} returned ${response.status}`);
+  return body;
+}
+
 async function run() {
   assert.match(expectedSha, /^[0-9a-f]{40}$/, "candidate must be bound to a full commit SHA");
   const health = await json("/api/healthz");
+  const release = await json("/api/release");
+  const version = await json("/api/version");
   const runtime = await json("/api/nexus/runtime/status");
   assert.equal(health.ok, true, "candidate health must be ready");
+  for (const [label, identity] of [["health", health], ["release", release], ["version", version]]) {
+    assert.equal(identity.releaseSha, expectedSha, `${label} must report the exact candidate SHA`);
+    assert.equal(identity.deployedCommit, expectedSha, `${label} deployed commit must match the candidate SHA`);
+    assert.equal(identity.webBuild, expectedSha, `${label} web build must match the candidate SHA`);
+    assert.equal(identity.pwaCache, `agrinexus-pwa-${expectedSha}`, `${label} cache must derive from the candidate SHA`);
+  }
   assert.equal(runtime.releaseSha, expectedSha, "runtime must report the exact candidate SHA");
+  for (const pathname of ["/", "/app.js", "/sw.js"]) {
+    const asset = await text(pathname);
+    assert.match(asset, new RegExp(expectedSha), `${pathname} must contain the exact candidate SHA`);
+    assert.doesNotMatch(asset, /__NEXUS_RELEASE_SHA__|nexus-behavior-502|agrinexus-pwa-v447/, `${pathname} must not expose a placeholder or legacy identity`);
+  }
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -56,7 +76,7 @@ async function run() {
     passed: true,
     releaseSha: expectedSha,
     candidateUrl: base,
-    health: { ok: health.ok, database: health.checks?.database },
+    health: { ok: health.ok, database: health.checks?.database, releaseSha: health.releaseSha },
     behavior,
     consoleErrors,
     checkedAt: new Date().toISOString()

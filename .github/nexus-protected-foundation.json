@@ -1,9 +1,9 @@
 {
   "baseline": {
     "commit": "0e3ce5b6",
-    "runtime": "nexus-behavior-502",
-    "cache": "agrinexus-pwa-v447",
-    "certification": "production certification #101"
+    "runtime": "immutable NEXUS_RELEASE_SHA",
+    "cache": "agrinexus-pwa-${NEXUS_RELEASE_SHA}",
+    "certification": "pending exact-release protected certification"
   },
   "genesisProductionCertification": {
     "service": "https://nexus-genesis-certified.onrender.com",
@@ -14,17 +14,17 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "348f4fde948c0106f73949354bd09b51fc341072",
-    "recoveryBranch": "recovery/pre-restart-safe-auth-2026-07-27",
-    "file": "server.js",
-    "purpose": "Restart-safe signed authentication for the physical Windows voice acceptance gate"
+    "baseCommit": "ba3e9ef42bdaa596a312e0bd085a63ec07c42688",
+    "recoveryBranch": "recovery/pre-immutable-release-identity-2026-08-10",
+    "files": ["server.js", "public/app.js", "public/index.html", "public/sw.js"],
+    "purpose": "One immutable commit-derived identity for server, browser assets, service worker cache, worker, migrations, and production endpoints"
   },
   "protectedFiles": {
-    "server.js": "319e5033cbb5e59c561f04707a4176c5efe03db7",
-    "public/app.js": "9254952598c593077cf7678d904a8e84a77bb3bd",
-    "public/index.html": "880b99423654af7c5ed9ae029327ef28c5bf0a90",
+    "server.js": "782b6edd8163e2915f6ef7a1b9fc4739b1f0c5d7",
+    "public/app.js": "968cf40e219794afd06ac68110e1bac1d423e846",
+    "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
-    "public/sw.js": "b3935a6391cad4d141093a38eadc6680dcb21d5c",
+    "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",
     "public/nexus-genesis-voice-runtime-manager.js": "fd8f20d57cf4526307a487c5e810d41ce62aae0b",
     "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
     "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",

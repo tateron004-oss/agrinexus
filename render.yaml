@@ -6,7 +6,7 @@ services:
     buildCommand: npm install
     startCommand: npm run provider-engines
     healthCheckPath: /healthz
-    autoDeploy: true
+    autoDeploy: false
     envVars:
       - key: NODE_ENV
         value: production
@@ -91,7 +91,7 @@ services:
     preDeployCommand: node foundation/scripts/migrate.js
     startCommand: npm start
     healthCheckPath: /api/healthz
-    autoDeploy: true
+    autoDeploy: false
     disk:
       name: agrinexus-data
       mountPath: /var/data
@@ -99,6 +99,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXUS_RELEASE_SHA
+        sync: false
       - key: HOST
         value: 0.0.0.0
       - key: PORT
@@ -424,11 +426,13 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: node nexus/workers/process.js
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: off
     maxShutdownDelaySeconds: 60
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXUS_RELEASE_SHA
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: nexus-postgres

@@ -141,10 +141,10 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech restart");
 
-includesAll(index, ["/app.js?v=nexus-behavior-502", "/styles.css?v=nexus-behavior-502"], "index cache");
-includesAll(app, ["nexus-behavior-502", "agrinexus-pwa-v447", "nexus-genesis-voice-runtime-v456"], "app cache");
-includesAll(server, ["nexus-behavior-502", "agrinexus-pwa-v447"], "server cache");
-includesAll(sw, ["nexus-behavior-502", "agrinexus-pwa-v447"], "service worker cache");
+includesAll(index, ["/app.js?v=__NEXUS_RELEASE_SHA__", "/styles.css?v=__NEXUS_RELEASE_SHA__"], "immutable index cache");
+includesAll(app, ["AGRINEXUS_BUILD_VERSION = \"__NEXUS_RELEASE_SHA__\"", "AGRINEXUS_PWA_CACHE_VERSION = \"agrinexus-pwa-__NEXUS_RELEASE_SHA__\"", "nexus-genesis-voice-runtime-v456"], "immutable app cache");
+includesAll(server, ["AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA", "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`"], "immutable server cache");
+includesAll(sw, ["BUILD_VERSION = \"__NEXUS_RELEASE_SHA__\"", "CACHE_NAME = \"agrinexus-pwa-__NEXUS_RELEASE_SHA__\""], "immutable service worker cache");
 
 assert(
   packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
