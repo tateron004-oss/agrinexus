@@ -137,13 +137,14 @@ function excludes(source, token, label) {
 ].forEach(token => includes(css, token, `production rail CSS ${token}`));
 
 [
-  "nexus-behavior-502",
-  "agrinexus-pwa-v447"
+  "__NEXUS_RELEASE_SHA__",
+  "agrinexus-pwa-__NEXUS_RELEASE_SHA__"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
-  includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
+includes(server, "AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA", "server immutable build identity");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server immutable cache identity");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-production-platform-rails"],

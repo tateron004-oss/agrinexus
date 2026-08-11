@@ -21,16 +21,17 @@ function notIncludes(source, needle, label) {
   assert(!source.includes(needle), `${label} must not include: ${needle}`);
 }
 
-["nexus-behavior-502", "agrinexus-pwa-v447"].forEach(marker => {
+["__NEXUS_RELEASE_SHA__", "agrinexus-pwa-__NEXUS_RELEASE_SHA__"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
-  includes(server, marker, `server marker ${marker}`);
   includes(sw, marker, `service worker marker ${marker}`);
 });
-includes(index, "nexus-behavior-502", "index behavior marker nexus-behavior-502");
+includes(server, "NEXUS_EFFECTIVE_RELEASE_SHA", "server immutable release identity");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server immutable cache identity");
+includes(index, "__NEXUS_RELEASE_SHA__", "index behavior marker __NEXUS_RELEASE_SHA__");
 
 includes(index, 'id="nexusPermanentMicrophoneBtn"', "static microphone button");
 includes(index, "Enable microphone", "static microphone initial label");
-assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=nexus-behavior-502"), "microphone button must appear before app.js");
+assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=__NEXUS_RELEASE_SHA__"), "microphone button must appear before app.js");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "static microphone button must not be hidden or disabled");
 
 [

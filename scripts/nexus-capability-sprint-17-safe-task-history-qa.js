@@ -130,7 +130,7 @@ const html = sandbox.renderNexusSafeTaskHistory();
 assert(html.includes("data-nexus-safe-task-history=\"true\""), "Safe task history should render review-only surface.");
 assert(html.includes("no backend write, provider handoff, permission request, or external action"), "Safe task history should display no-execution copy.");
 
-assert(/nexus-behavior-\d+/.test(app) && /nexus-behavior-\d+/.test(index) && /nexus-behavior-\d+/.test(server), "Sprint 17 should preserve coordinated web build versioning.");
+assert(app.includes("__NEXUS_RELEASE_SHA__") && index.includes("__NEXUS_RELEASE_SHA__") && server.includes("NEXUS_EFFECTIVE_RELEASE_SHA"), "Sprint 17 should preserve coordinated immutable release identity.");
 assert(/agrinexus-pwa-v\d+/.test(app) && /agrinexus-pwa-v\d+/.test(sw) && /agrinexus-pwa-v\d+/.test(server), "Sprint 17 should preserve coordinated PWA cache versioning.");
 
 assert.equal(

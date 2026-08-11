@@ -136,17 +136,14 @@ formButtonMatches.forEach(buttonHtml => {
   assert(!pattern.test(styles), `${selector} must not disable pointer events`);
 });
 
-[
-  ["nexus-behavior-502", "app build version", "server build version"],
-  ["agrinexus-pwa-v447", "app cache version", "server cache version"]
-].forEach(([version, appLabel, serverLabel]) => {
-  includes(app, version, `${appLabel} ${version}`);
-  includes(server, version, `${serverLabel} ${version}`);
-});
-includes(sw, 'CACHE_NAME = "agrinexus-pwa-v447"', "service worker cache bump");
-includes(sw, 'BUILD_VERSION = "nexus-behavior-502"', "service worker build bump");
-includes(index, "/styles.css?v=nexus-behavior-502", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-502", "app cache bust");
+includes(app, "__NEXUS_RELEASE_SHA__", "app immutable build version");
+includes(app, "agrinexus-pwa-__NEXUS_RELEASE_SHA__", "app immutable cache version");
+includes(server, "AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA", "server immutable build version");
+includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE_RELEASE_SHA}`", "server immutable cache version");
+includes(sw, 'CACHE_NAME = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"', "service worker cache bump");
+includes(sw, 'BUILD_VERSION = "__NEXUS_RELEASE_SHA__"', "service worker build bump");
+includes(index, "/styles.css?v=__NEXUS_RELEASE_SHA__", "stylesheet cache bust");
+includes(index, "/app.js?v=__NEXUS_RELEASE_SHA__", "app cache bust");
 
 [
   "live emergency response enabled",

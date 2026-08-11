@@ -67,8 +67,8 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
 
 const loaderPresent = index.includes("nexus-agriculture-support-response-card.js");
 assert(loaderPresent, "Phase 101C must insert the agriculture support card loader into public/index.html.");
-const appLoaderIndex = index.search(/\/app\.js\?v=nexus-behavior-\d+/);
-assert(appLoaderIndex > -1, "Index must load app.js with a Nexus behavior cache-buster.");
+const appLoaderIndex = index.search(/\/app\.js\?v=__NEXUS_RELEASE_SHA__/);
+assert(appLoaderIndex > -1, "Index must bind app.js cache busting to the immutable release SHA.");
 assert(index.indexOf("nexus-agriculture-support-response-card.js") < appLoaderIndex, "Phase 101 loader must appear before app.js.");
 
 console.log("[nexus-phase-101b-standard-user-runtime-wiring-readiness-qa] passed");
