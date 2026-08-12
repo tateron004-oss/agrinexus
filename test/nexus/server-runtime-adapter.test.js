@@ -204,6 +204,41 @@ test("Health continuation fails closed for stale releases, missing authorization
   assert.equal(stale.result.status, 409); assert.equal(stale.result.body.code, "evidence_sha_mismatch");
 });
 
+test("exact-SHA authenticated Offline Queue continuation preserves transaction identity and confirmation", async () => {
+  const releaseSha = "a".repeat(40); const calls = []; const task = { taskId: "task-1", ownerId: "user-1",
+    application: "offline-queue", commandId: "command-1", correlationId: "correlation-1", conversationId: "conversation-1",
+    goal: "Synchronize the queued crop observation", steps: [{ step_id: "step-1", tool_id: "offline.sync",
+      confirmation_state: "required", input: { operation: "sync" } }] };
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1",
+    role: "acceptance-controller", permissions: ["acceptance:identity"] }] }) }, tasks: { get: async () => task },
+    tools: { get: async () => ({ tool_id: "offline.sync", consent_scope: null, confirmation_required: true }) },
+    engine: { approve: async input => { calls.push(["approve", input]); }, executeTask: async input => {
+      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, taskId: "task-1", stepId: "step-1",
+      commandId: "command-1", correlationId: "correlation-1", confirmed: true }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/offline-queue-continuation"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(response.result.body.result.state, "render_required");
+  assert.equal(response.result.body.result.application, "offline-queue");
+  assert.equal(response.result.body.result.render.application, "offline-queue");
+  assert.equal(response.result.body.result.render.workspace, "offline"); assert.equal(calls[0][1].approved, true);
+  assert.equal(calls[1][1].context.can("tasks:execute"), true);
+});
+
+test("Offline Queue continuation fails closed without acceptance auth, exact release, or explicit confirmation", async () => {
+  const releaseSha = "a".repeat(40); let runtimeCreated = false;
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha: "stale", confirmed: true }),
+    createRuntimeFn: () => { runtimeCreated = true; return { ready: Promise.resolve() }; } });
+  const unauthorized = responseCapture(); await adapter.handle({ method: "POST", headers: {} }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/offline-queue-continuation"), unauthorized.send);
+  assert.equal(unauthorized.result.status, 401); assert.equal(runtimeCreated, false);
+  const stale = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/offline-queue-continuation"), stale.send);
+  assert.equal(stale.result.status, 409); assert.equal(stale.result.body.code, "evidence_sha_mismatch");
+});
+
 test("Path 2 machine lane evidence requires the acceptance token and exact active release", async () => {
   const releaseSha = "a".repeat(40); let recorded;
   const runtime = { ready: Promise.resolve(), path2Evidence: { recordLaneEvidence: async input => { recorded = input; return input; } } };

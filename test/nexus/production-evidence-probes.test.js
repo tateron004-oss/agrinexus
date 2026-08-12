@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingHealthContinuation, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -30,14 +30,14 @@ test("browser capability failure preserves application, category, and safe serve
   } finally { global.fetch = originalFetch; }
 });
 
-test("Health browser evidence continues only a confirmation-bound pending transaction", () => {
+test("browser evidence continues only transaction-bound Health and Offline Queue confirmations", () => {
   const transaction = { result: { state: "confirmation_required", taskId: "task-1", commandId: "command-1",
     correlationId: "correlation-1", outcome: { pendingStepId: "step-1" } } };
-  assert.equal(pendingHealthContinuation("health", transaction), true);
-  assert.equal(pendingHealthContinuation("maps", transaction), false);
-  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, render: {} } }), true);
-  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, state: "clarification_required" } }), false);
-  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, commandId: null } }), false);
+  assert.equal(pendingConfirmationContinuation("health", transaction), true);
+  assert.equal(pendingConfirmationContinuation("offline-queue", transaction), true);
+  assert.equal(pendingConfirmationContinuation("maps", transaction), false);
+  assert.equal(pendingConfirmationContinuation("offline-queue", { result: { ...transaction.result, state: "clarification_required" } }), false);
+  assert.equal(pendingConfirmationContinuation("offline-queue", { result: { ...transaction.result, commandId: null } }), false);
 });
 
 test("release workflow executes the real browser capability producer before compiling proof", () => {
@@ -55,11 +55,11 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(app, /exact_release_evidence_required/);
   assert.match(producer, /behavior-turn/); assert.match(producer, /browser-acknowledgement/);
   assert.match(producer, /health-continuation/); assert.match(producer, /confirmed: true, consented: true/);
+  assert.match(producer, /offline-queue-continuation/);
   assert.match(producer, /pre-cutover/); assert.match(producer, /post-cutover/);
   assert.match(producer, /production-acceptance\/workspaces/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
-
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(source, /page\.context\(\)\.request\.post/);
