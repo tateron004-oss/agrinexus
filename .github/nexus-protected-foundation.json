@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "6bfa9c15f268848687ed8eec7f0774bb2ecee09b",
-    "recoveryBranch": "agent/stage-continuation-outcomes",
+    "baseCommit": "dadf8b213b0a5490c973c918f7f8b9a922256d01",
+    "recoveryBranch": "agent/youtube-bounded-candidate-depth",
     "files": [
-      "nexus/compat/server-runtime-adapter.js"
+      "public/app.js"
     ],
-    "purpose": "Stage durable Health and Offline Queue continuation outcomes before browser rendering under the user's explicit authorization"
+    "purpose": "Expand the authorized fail-closed YouTube candidate-selection and verified-playback recovery loop while continuing to require genuine player state 1"
   },
   "protectedFiles": {
     "server.js": "6764c3a143bf4acc8a440f425e41164ea87f3b44",
-    "public/app.js": "ba3480a8966801e7c883bbb06e33643fc49c26cc",
+    "public/app.js": "b26cc93d43628c8af0aeb28e417eb8a20e439473",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
