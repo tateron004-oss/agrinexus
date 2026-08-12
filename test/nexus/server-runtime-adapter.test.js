@@ -276,7 +276,8 @@ test("exact-SHA authenticated Health continuation preserves transaction identity
     tools: { get: async () => ({ tool_id: "health.record", consent_scope: "health:record:write", confirmation_required: true }) },
     consents: { grant: async input => { calls.push(["consent", input]); return { consent_id: "consent-1" }; } },
     engine: { approve: async input => { calls.push(["approve", input]); }, executeTask: async input => {
-      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } } };
+      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } },
+    workspaceStates: { stage: async input => { calls.push(["stage", input]); return input; } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha, taskId: "task-1", stepId: "step-1",
       commandId: "command-1", correlationId: "correlation-1", confirmed: true, consented: true }), createRuntimeFn: () => runtime });
@@ -286,6 +287,10 @@ test("exact-SHA authenticated Health continuation preserves transaction identity
   assert.equal(response.result.body.result.render.workspace, "health"); assert.equal(calls[0][1].taskId, "task-1");
   assert.equal(calls[0][1].scope, "health:record:write"); assert.equal(calls[1][1].approved, true);
   assert.equal(calls[2][1].context.can("tasks:execute"), true);
+  assert.equal(calls[3][0], "stage"); assert.equal(calls[3][1].tenantId, "tenant-1");
+  assert.equal(calls[3][1].ownerId, "user-1"); assert.equal(calls[3][1].taskId, "task-1");
+  assert.equal(calls[3][1].outcome.schema, "nexus.workspace-outcome.v2");
+  assert.equal(calls[3][1].outcome.presentation.completionAuthority, false);
 });
 
 test("Health continuation fails closed for stale releases, missing authorization, and cross-command identity", async () => {
@@ -310,7 +315,8 @@ test("exact-SHA authenticated Offline Queue continuation preserves transaction i
     role: "acceptance-controller", permissions: ["acceptance:identity"] }] }); } }, tasks: { get: async () => task },
     tools: { get: async () => ({ tool_id: "offline.sync", consent_scope: null, confirmation_required: true }) },
     engine: { approve: async input => { calls.push(["approve", input]); }, executeTask: async input => {
-      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } } };
+      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } },
+    workspaceStates: { stage: async input => { calls.push(["stage", input]); return input; } } };
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
     resolveUser: async () => null, readJson: async () => ({ releaseSha, taskId: "task-1", stepId: "step-1",
       commandId: "command-1", correlationId: "correlation-1", confirmed: true }), createRuntimeFn: () => runtime });
@@ -322,6 +328,10 @@ test("exact-SHA authenticated Offline Queue continuation preserves transaction i
   assert.equal(response.result.body.result.render.workspace, "offline"); assert.equal(calls[0][1].approved, true);
   assert.match(principalQuery.sql, /join nexus_organization_memberships/); assert.deepEqual(principalQuery.params, ["task-1"]);
   assert.equal(calls[1][1].context.can("tasks:execute"), true);
+  assert.equal(calls[2][0], "stage"); assert.equal(calls[2][1].tenantId, "tenant-1");
+  assert.equal(calls[2][1].ownerId, "user-1"); assert.equal(calls[2][1].taskId, "task-1");
+  assert.equal(calls[2][1].outcome.schema, "nexus.workspace-outcome.v2");
+  assert.equal(calls[2][1].outcome.presentation.completionAuthority, false);
 });
 
 test("Offline Queue continuation fails closed without acceptance auth, exact release, or explicit confirmation", async () => {
