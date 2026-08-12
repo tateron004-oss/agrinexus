@@ -23,6 +23,8 @@ class OpenEndedPlanner {
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
+    const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
+    if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -111,6 +113,19 @@ function completeLiveKnowledgePlan(text, catalog) {
       toolId: "knowledge.search", input: { query: goal, requireCurrentSources: true }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeMobileClinicPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\bmobile\s+clinic\b/i.test(goal) || !/\b(find|search|show|locate)\b/i.test(goal) ||
+      !/\b(location|locations|near|nearest|closest)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "clinic.find") ||
+      !catalog.applications.some(app => app.applicationId === "mobile-clinic")) return null;
+  const location = goal.match(/\b(?:near|in|around)\s+([a-z][a-z .'-]*?)(?=\s+(?:and|then|with)\b|[,.]|$)/i)?.[1]?.trim() || "current location";
+  return { goal, application: "mobile-clinic", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "find-mobile-clinic", title: "Find mobile clinic locations",
+      toolId: "clinic.find", input: { location, selectClosest: /\b(nearest|closest|select)\b/i.test(goal) },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -147,4 +162,5 @@ function safeMemory(item) { return { kind: item.kind, content: item.content, con
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
-  completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan, validatePlan });
+  completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
+  completeMobileClinicPlan, validatePlan });
