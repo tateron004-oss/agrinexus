@@ -10211,12 +10211,16 @@ async function playNexusYouTubeMusic(query = "music", options = {}) {
   const rejectedVideoIds = new Set((options.excludeVideoIds || []).map(value => String(value || "").trim()).filter(Boolean));
   const attempts = [];
   let lastFailure = { phase: "not-started", errorCode: null, errorLabel: null, playerState: null };
+  let initialCandidate = options.initialCandidate?.videoId ? options.initialCandidate : null;
 
   for (const candidatePlan of candidatePlans.slice(0, 24)) {
     const candidateQuery = String(candidatePlan?.query || normalizedQuery);
     let response;
     try {
-      response = await request("/api/music/youtube/search", {
+      if (initialCandidate) {
+        response = initialCandidate;
+        initialCandidate = null;
+      } else response = await request("/api/music/youtube/search", {
         method: "POST",
         body: {
           query: candidateQuery,
