@@ -10124,9 +10124,9 @@ function showNexusYouTubePlayer(result) {
 }
 
 async function playNexusYouTubeMusic(query = "music", options = {}) {
-  const response = await api("/api/music/youtube/search", {
+  const response = await request("/api/music/youtube/search", {
     method: "POST",
-    body: JSON.stringify({ query })
+    body: { query }
   });
   if (!response?.ok || !response.videoId) throw new Error(response?.error || "YouTube did not return a playable result");
   showNexusYouTubePlayer(response);
