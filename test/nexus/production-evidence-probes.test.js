@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingHealthContinuation, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -28,6 +28,15 @@ test("browser capability failure preserves application, category, and safe serve
     await assert.rejects(() => browserProbePost("https://production/behavior-turn", "token", { application: "agriculture" }),
       /application=agriculture code=planner_failed category=provider error=Planner rejected the request/);
   } finally { global.fetch = originalFetch; }
+});
+
+test("Health browser evidence continues a bound pending transaction without trusting a UI state label", () => {
+  const transaction = { result: { state: "governed_pause", taskId: "task-1", commandId: "command-1",
+    correlationId: "correlation-1", outcome: { pendingStepId: "step-1" } } };
+  assert.equal(pendingHealthContinuation("health", transaction), true);
+  assert.equal(pendingHealthContinuation("maps", transaction), false);
+  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, render: {} } }), false);
+  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, commandId: null } }), false);
 });
 
 test("release workflow executes the real browser capability producer before compiling proof", () => {
