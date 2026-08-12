@@ -56,26 +56,19 @@ async function run(env = process.env) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
-  await page.evaluate(async () => {
-    let response; let lastError;
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
-      try {
-        response = await fetch("/api/login", { method: "POST", credentials: "same-origin",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "user@agrinexus.org", password: "User2026!" }) });
-        break;
-      } catch (error) {
-        lastError = error;
-        if (attempt < 4) await new Promise(resolve => setTimeout(resolve, attempt * 500));
-      }
-    }
-    if (!response) throw new Error(`Standard User login transport failed after 4 attempts: ${lastError?.message || "network error"}`);
-    const shell = await response.json();
-    if (!response.ok || shell?.user?.role !== "Standard User" || !shell?.profile) {
-      throw new Error(`Authenticated Standard User shell state is required for production rendering (status=${response.status}, role=${shell?.user?.role || "missing"}, profile=${Boolean(shell?.profile)}).`);
-    }
-    data = shell;
-  });
+  let loginResponse; let lastLoginError;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try { loginResponse = await page.context().request.post(`${base}/api/login`, {
+      data: { email: "user@agrinexus.org", password: "User2026!" } }); break; }
+    catch (error) { lastLoginError = error; if (attempt < 4) await new Promise(resolve => setTimeout(resolve, attempt * 500)); }
+  }
+  if (!loginResponse) throw new Error(`Standard User login transport failed after 4 attempts: ${lastLoginError?.message || "network error"}`);
+  const shell = await loginResponse.json();
+  if (!loginResponse.ok() || shell?.user?.role !== "Standard User" || !shell?.profile) throw new Error(
+    `Authenticated Standard User shell state is required for production rendering (status=${loginResponse.status()}, role=${shell?.user?.role || "missing"}, profile=${Boolean(shell?.profile)}).`);
+  await page.reload({ waitUntil: "networkidle", timeout: 90000 });
+  await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
+  await page.evaluate(value => { data = value; }, shell);
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
