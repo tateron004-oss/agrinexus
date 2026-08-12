@@ -48,12 +48,12 @@ class BehaviorSpine {
   }
 
   async acknowledge({ input, context }) {
-    await this.workspaceStates.acknowledge({ tenantId: context.tenantId, actorId: context.userId,
-      taskId: input.taskId, receipt: { rendered: input.rendered, visible: input.visible,
-        audible: input.audible, evidence: input.evidence, observedAt: input.observedAt } });
     const execution = await this.engine.acknowledgeRender({ context, taskId: input.taskId,
       commandId: input.commandId, correlationId: input.correlationId, workspace: input.workspace, rendered: input.rendered,
       visible: input.visible, audible: input.audible, evidence: input.evidence });
+    await this.workspaceStates.acknowledge({ tenantId: context.tenantId, actorId: context.userId,
+      taskId: input.taskId, receipt: { rendered: input.rendered, visible: input.visible,
+        audible: input.audible, evidence: input.evidence, observedAt: input.observedAt } });
     return Object.freeze({ schema: "nexus.behavior-acknowledgement.v1", authoritative: true,
       legacyFallbackUsed: false, taskId: input.taskId, commandId: input.commandId,
       state: execution.state, completed: execution.completed, outcome: execution.outcome });
