@@ -13,7 +13,10 @@ class CapabilityExecutionAuthority {
     if (!toolId) throw coded("authoritative_tool_required", "An authoritative tool definition is required.");
     const adapter = this.adapters.require(toolId);
     const verifier = this.verifiers.require(toolId);
-    await this.emit("adapter.started", { toolId, taskId: input.taskId, stepId: input.stepId, adapterVersion: adapter.version });
+    const scope = { tenantId: input.context?.tenantId || null, actorId: input.context?.userId || null,
+      traceId: input.context?.traceId || input.context?.correlationId || input.taskId,
+      correlationId: input.context?.correlationId || null, taskId: input.taskId, stepId: input.stepId };
+    await this.emit("adapter.started", { ...scope, toolId, adapterVersion: adapter.version });
     let result;
     try {
       result = await adapter.execute({
@@ -21,7 +24,7 @@ class CapabilityExecutionAuthority {
         stepId: input.stepId, idempotencyKey: input.idempotencyKey
       });
     } catch (error) {
-      await this.emit("adapter.failed", { toolId, taskId: input.taskId, stepId: input.stepId,
+      await this.emit("adapter.failed", { ...scope, toolId,
         code: error.code || "adapter_execution_failed", message: error.message });
       throw error;
     }
@@ -32,7 +35,7 @@ class CapabilityExecutionAuthority {
     if (verification?.verified !== true) {
       const error = coded("outcome_unverified", `The authoritative verifier rejected the ${toolId} outcome.`, 502);
       error.details = { toolId, verification: verification || null };
-      await this.emit("verification.failed", { toolId, taskId: input.taskId, stepId: input.stepId, verification });
+      await this.emit("verification.failed", { ...scope, toolId, verification });
       throw error;
     }
     const normalized = Object.freeze({
@@ -40,7 +43,7 @@ class CapabilityExecutionAuthority {
       adapterVersion: adapter.version, verifierVersion: verifier.version,
       verificationMethod: verification.method || verifier.method
     });
-    await this.emit("verification.passed", { toolId, taskId: input.taskId, stepId: input.stepId, verification: normalized });
+    await this.emit("verification.passed", { ...scope, toolId, verification: normalized });
     return Object.freeze({ result, verification: normalized, adapter, verifier });
   }
 
