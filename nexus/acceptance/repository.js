@@ -35,17 +35,17 @@ class ProductionAcceptanceRepository {
 
   async report({ releaseSha, applications, health, now = new Date() }) {
     const [workersResult, evidenceResult, workspaceResult, fallbackResult, activationResult] = await Promise.all([
-      this.db.query(`select * from nexus_worker_instances where release_sha=$1 and status='ready'
+      acceptanceQuery(this.db, "worker-heartbeat", `select * from nexus_worker_instances where release_sha=$1 and status='ready'
         and last_heartbeat_at > now()-interval '90 seconds' order by last_heartbeat_at desc`, [releaseSha]),
-      this.db.query(`select distinct on (component) * from nexus_acceptance_evidence where release_sha=$1
+      acceptanceQuery(this.db, "component-evidence", `select distinct on (component) * from nexus_acceptance_evidence where release_sha=$1
         and source_sha=$1 and (expires_at is null or expires_at>now()) order by component,verified_at desc`, [releaseSha]),
-      this.db.query("select * from nexus_workspace_migrations order by workspace_id"),
-      this.db.query(`select
+      acceptanceQuery(this.db, "workspace-migrations", "select * from nexus_workspace_migrations order by workspace_id"),
+      acceptanceQuery(this.db, "production-exceptions", `select
         count(*) filter (where component='legacy_write_path')::int as legacy_write_paths,
         count(*) filter (where component='simulated_provider')::int as simulated_providers,
         count(*) filter (where component='in_memory_fallback')::int as memory_fallbacks
         from nexus_production_exceptions where active=true`),
-      this.db.query("select * from nexus_release_activations where release_sha=$1 and state='active'", [releaseSha])
+      acceptanceQuery(this.db, "release-activation", "select * from nexus_release_activations where release_sha=$1 and state='active'", [releaseSha])
     ]);
     const evidenceRows = evidenceResult.rows || evidenceResult;
     const evidenceByComponent = new Map(evidenceRows.map(row => [row.component, row]));
@@ -81,6 +81,17 @@ class ProductionAcceptanceRepository {
       simulatedProductionProviders: fallback.simulated_providers || 0,
       inMemoryProductionFallbacks: fallback.memory_fallbacks || 0, componentsReady, workspacesReady,
       noProductionFallbacks, components, workspaces };
+  }
+}
+
+async function acceptanceQuery(db, stage, sql, parameters = []) {
+  try { return await db.query(sql, parameters); }
+  catch (error) {
+    const failure = new Error(`Production acceptance query failed at ${stage}.`);
+    failure.code = "acceptance_query_failed";
+    failure.stage = stage;
+    failure.cause = error;
+    throw failure;
   }
 }
 

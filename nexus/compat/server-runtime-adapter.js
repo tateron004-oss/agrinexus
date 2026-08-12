@@ -39,8 +39,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const report = await active.acceptance.report({ releaseSha, applications: active.applications, health });
         send(res, report.ok ? 200 : 503, report);
       } catch (error) {
-        logger.error?.("authoritative.acceptance.unavailable", { code: error.code || error.name });
-        send(res, 503, { ok: false, authoritative: true, code: error.code || "acceptance_evidence_unavailable",
+        const code = error.code || "acceptance_evidence_unavailable";
+        const stage = String(error.stage || "runtime-initialization").replace(/[^a-z0-9-]/gi, "").slice(0, 64);
+        logger.error?.("authoritative.acceptance.unavailable", { code, stage });
+        send(res, 503, { ok: false, authoritative: true, code, stage,
           error: "Production acceptance evidence is unavailable; no readiness value was inferred." });
       }
       return true;
