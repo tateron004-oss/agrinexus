@@ -180,6 +180,20 @@ test("production acceptance returns PostgreSQL-backed evidence for the exact rel
   assert.equal(reportInput.applications, runtime.applications); assert.equal(reportInput.health.pgvector, true);
 });
 
+test("production acceptance exposes a safe failing stage without leaking database details", async () => {
+  const failure = Object.assign(new Error("password=secret table detail"), { code: "acceptance_query_failed", stage: "workspace-migrations" });
+  const runtime = { ready: Promise.resolve(), applications: {}, acceptance: { report: async () => { throw failure; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: "a".repeat(40) },
+    resolveUser: async () => null, readJson: async () => ({}), checkHealthFn: async () => ({ ok: true }), createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "GET", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.equal(response.result.body.code, "acceptance_query_failed");
+  assert.equal(response.result.body.stage, "workspace-migrations");
+  assert.doesNotMatch(JSON.stringify(response.result.body), /password|secret|table detail/);
+});
+
 test("machine evidence rejects a stale release SHA before recording",async()=>{let recorded=false;const runtime={ready:Promise.resolve(),acceptance:{recordEvidence:async()=>{recorded=true;}},applications:{get:()=>({})},workspaceMigrations:{activate:async()=>({})}};const adapter=createServerRuntimeAdapter({env:{NEXUS_ACCEPTANCE_TOKEN:"token",RENDER_GIT_COMMIT:"active"},resolveUser:async()=>null,readJson:async()=>({releaseSha:"stale",component:"testing"}),createRuntimeFn:()=>runtime});
  const response=responseCapture();await adapter.handle({method:"POST",headers:{authorization:"Bearer token"}},{},new URL("http://local/api/nexus/runtime/production-acceptance/evidence"),response.send);assert.equal(response.result.status,409);assert.equal(recorded,false);});
 
