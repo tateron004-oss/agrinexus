@@ -18,6 +18,9 @@ async function runYouTubeDataApiLiveProviderQa() {
     YOUTUBE_API_KEY: "test-secret-key",
     NEXUS_MUSIC_MEDIA_FETCH_IMPL: async url => {
       calls.push(String(url));
+      if (String(url).startsWith(media.YOUTUBE_VIDEOS_URL)) return buildResponse({
+        items: [{ id: "abc123", status: { embeddable: true, privacyStatus: "public" } }]
+      });
       return buildResponse({
         items: [{
           id: { videoId: "abc123" },
@@ -37,7 +40,7 @@ async function runYouTubeDataApiLiveProviderQa() {
     mediaRequest: "show me how to plant maize"
   }, env);
 
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
   const requestUrl = new URL(calls[0]);
   assert.equal(requestUrl.origin + requestUrl.pathname, media.YOUTUBE_SEARCH_URL);
   assert.equal(requestUrl.searchParams.get("part"), "snippet");
@@ -47,6 +50,10 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.equal(requestUrl.searchParams.get("safeSearch"), "moderate");
   assert.equal(requestUrl.searchParams.get("q"), "show me how to plant maize");
   assert.equal(requestUrl.searchParams.get("key"), "test-secret-key");
+  const statusUrl = new URL(calls[1]);
+  assert.equal(statusUrl.origin + statusUrl.pathname, media.YOUTUBE_VIDEOS_URL);
+  assert.equal(statusUrl.searchParams.get("part"), "status");
+  assert.equal(statusUrl.searchParams.get("id"), "abc123");
 
   assert.equal(isSafeReadOnlySourceResult(result), true);
   assert.equal(result.sourceName, "YouTube Data API v3");
