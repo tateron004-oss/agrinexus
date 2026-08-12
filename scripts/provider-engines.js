@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadEnvFile } = require("../foundation/src/runtime/env-file");
 const { canonicalReceipt } = require("../nexus/tools/provider-catalog.js");
+const { CANONICAL_PROVIDER_TOOLS } = require("../nexus/tools/canonical-provider-definitions.js");
 
 loadEnvFile();
 
@@ -12,8 +13,7 @@ const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.R
 const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
 const PROVIDER_ENGINE_RELEASE = "provider-brain-31";
-const NEXUS_TOOL_IDS = new Set(["knowledge.search", "documents.create", "jobs.search", "resume.create", "maps.view", "media.play", "health.record",
-  "health.emergency-guidance", "telehealth.prepare", "clinic.find", "pharmacy.find", "marketplace.search", "reminders.schedule", "offline.sync", "communications.send", "drone.plan"]);
+const NEXUS_TOOL_IDS = new Set(CANONICAL_PROVIDER_TOOLS.map(tool => tool.toolId));
 
 const endpoints = {
   "/ai/responses": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },
@@ -125,8 +125,9 @@ async function nexusToolResponse(req, res) {
     tenantId: payload.tenantId, taskId: payload.taskId, stepId: payload.stepId, outcome: "completed",
     occurredAt: new Date().toISOString(), evidence: [{ type: "render-target", source: "agrinexus-provider-engines", outcomeUrl, caseId, toolId }] };
   receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
-  writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
-    providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt });
+  try { writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
+    providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt }); }
+  catch (error) { console.error("Nexus provider diagnostic write failed", { code: error.code || error.name }); }
   const evidence = await capabilityEvidence(toolId, payload.input || {}, receipt, outcomeUrl);
   return send(res, 200, { receipt, result: { accepted: true, outcomeUrl, toolId }, ...evidence });
 }
