@@ -10096,7 +10096,7 @@ function youtubePlayerCommand(func, args = []) {
   }
   const frame = nexusYouTubePlayback.iframe;
   if (!frame?.contentWindow) return false;
-  frame.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube-nocookie.com");
+  frame.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube.com");
   return true;
 }
 
@@ -10124,7 +10124,7 @@ function showNexusYouTubePlayer(result) {
     </div>
     <div class="nexus-youtube-frame-wrap">
       <iframe title="${escapeHtml(result.title || result.query)}"
-        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}"
+        src="https://www.youtube.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}"
         allow="autoplay; encrypted-media; picture-in-picture"
         referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
