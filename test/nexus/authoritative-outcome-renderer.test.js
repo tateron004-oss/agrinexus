@@ -5,9 +5,11 @@ const test = require("node:test");
 const { NexusAuthoritativeOutcomeRenderer } = require("../../public/nexus-authoritative-outcome-renderer.js");
 
 function outcome(overrides = {}) {
-  return { schema: "nexus.workspace-outcome.v1", commandId: "cmd_1", correlationId: "trace_1",
+  return { schema: "nexus.workspace-outcome.v2", commandId: "cmd_1", correlationId: "trace_1",
     conversationId: "cnv_1", channel: "typed", taskId: "tsk_1", application: "maps", workspace: "map",
-    operation: "show_route", data: { origin: "Nairobi", destination: "Nakuru" }, response: "Route ready.", ...overrides };
+    operation: "show_route", presentation: { kind: "map", renderer: "passive-ui", interaction: "receipt-only",
+      commandAuthority: false, completionAuthority: false },
+    data: { origin: "Nairobi", destination: "Nakuru" }, response: "Route ready.", ...overrides };
 }
 
 test("passive renderer consumes typed server data and acknowledges visible outcome", async () => {
@@ -39,4 +41,10 @@ test("new turn supersedes an unfinished renderer and prevents stale acknowledgem
 test("renderer fails closed when no visible or audible proof exists", async () => {
   const renderer = new NexusAuthoritativeOutcomeRenderer({ adapters: { map: { render: async () => ({ rendered: true, visible: false }) } }, acknowledge: async () => ({}) });
   await assert.rejects(() => renderer.render(outcome()), /not visibly or audibly verified/);
+});
+
+test("renderer rejects browser command or completion authority", async () => {
+  const renderer = new NexusAuthoritativeOutcomeRenderer({ adapters: { map: { render: async () => ({ rendered: true, visible: true }) } }, acknowledge: async () => ({}) });
+  await assert.rejects(() => renderer.render(outcome({ presentation: { ...outcome().presentation, commandAuthority: true } })), /receipt-only passive presentation/);
+  await assert.rejects(() => renderer.render(outcome({ presentation: { ...outcome().presentation, completionAuthority: true } })), /receipt-only passive presentation/);
 });

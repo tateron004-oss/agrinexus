@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "9e3fa92ec9794f026efb4c0fee7f3184aa62b6a8",
-    "recoveryBranch": "agent/youtube-fallback-browser-parse",
+    "baseCommit": "2743f489b68f57aa407ec4dcd366e4546e5f28a1",
+    "recoveryBranch": "agent/passive-standard-user-cutover",
     "files": [
       "public/app.js"
     ],
-    "purpose": "Correct the authorized YouTube fallback diagnostic syntax and require full protected browser-bundle parsing before release"
+    "purpose": "Complete the authorized Standard User passive-UI cutover to typed authoritative runtime outcomes while preserving voice, orb, microphone, language, and consent protections"
   },
   "protectedFiles": {
     "server.js": "6764c3a143bf4acc8a440f425e41164ea87f3b44",
-    "public/app.js": "e8b9fcd80b1da2fa490a8b29f314d9e2f6d20e96",
+    "public/app.js": "ba3480a8966801e7c883bbb06e33643fc49c26cc",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "6cfa3a17a081c52d8a3f0c42a8c300852c41e644",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
