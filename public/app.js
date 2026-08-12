@@ -10086,7 +10086,7 @@ function showNexusYouTubePlayer(result) {
     </div>
     <div class="nexus-youtube-frame-wrap">
       <iframe title="${escapeHtml(result.title || result.query)}"
-        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(result.videoId)}?autoplay=1&enablejsapi=1&playsinline=1&rel=0"
+        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}"
         allow="autoplay; encrypted-media; picture-in-picture"
         referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
@@ -56026,6 +56026,7 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 10000) {
   if (!frame?.contentWindow) return Promise.resolve(false);
   return new Promise(resolve => {
     let settled = false;
+    let ready = false;
     const finish = value => {
       if (settled) return;
       settled = true;
@@ -56037,15 +56038,24 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 10000) {
       if (event.source !== frame.contentWindow || !/youtube(?:-nocookie)?\.com$/i.test(new URL(event.origin).hostname)) return;
       let payload = event.data;
       try { if (typeof payload === "string") payload = JSON.parse(payload); } catch (_) { return; }
+      if (payload?.event === "onReady") {
+        ready = true;
+        youtubePlayerCommand("addEventListener", ["onStateChange"]);
+        youtubePlayerCommand("playVideo");
+        return;
+      }
       const state = Number(payload?.info?.playerState ?? payload?.info ?? payload?.data);
       if (state === 1) finish(true);
       if (state === 0 || state === 2 || state === 5) nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
     };
     const timeout = window.setTimeout(() => finish(false), timeoutMs);
     window.addEventListener("message", onMessage);
+    youtubePlayerCommand("addEventListener", ["onReady"]);
     youtubePlayerCommand("addEventListener", ["onStateChange"]);
-    youtubePlayerCommand("playVideo");
-    window.setTimeout(() => youtubePlayerCommand("getPlayerState"), 500);
+    youtubePlayerCommand("getPlayerState");
+    window.setTimeout(() => {
+      if (!ready) youtubePlayerCommand("playVideo");
+    }, 1500);
   });
 }
 
