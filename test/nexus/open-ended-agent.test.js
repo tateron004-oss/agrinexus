@@ -135,6 +135,16 @@ test("a current-source question has explicit Live Knowledge ownership", () => {
   assert.equal(completeLiveKnowledgePlan("Assess yellow leaves on my maize crop and show sources.", catalog), null);
 });
 
+test("a complete mobile clinic search has an executable Mobile Clinic plan", () => {
+  const { completeMobileClinicPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "clinic.find" }] };
+  const plan = completeMobileClinicPlan(
+    "Find mobile clinic locations near Nairobi and select the closest one.", catalog);
+  assert.equal(plan.application, "mobile-clinic"); assert.equal(plan.steps[0].toolId, "clinic.find");
+  assert.equal(plan.steps[0].input.location, "Nairobi"); assert.equal(plan.steps[0].input.selectClosest, true);
+  assert.equal(completeMobileClinicPlan("Tell me about mobile clinics.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
