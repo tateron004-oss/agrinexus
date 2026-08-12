@@ -14,17 +14,17 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "0cf817fcf64bd9b26ac30891bb02326a0fca1eeb",
-    "recoveryBranch": "agent/youtube-candidate-recovery",
+    "baseCommit": "bd43dab7d7ac5263157be4bdfb4d3d658c955d53",
+    "recoveryBranch": "agent/youtube-rights-aware-fallback",
     "files": [
       "server.js",
       "public/app.js"
     ],
-    "purpose": "Implement the owner-authorized fail-closed YouTube candidate-selection and genuine state-1 verified-playback recovery contract"
+    "purpose": "Continue the authorized fail-closed YouTube recovery with rights-aware candidate fallback and per-attempt production evidence"
   },
   "protectedFiles": {
-    "server.js": "5928b16269dd1022245616e4233d2435ebb860ba",
-    "public/app.js": "cd800b8a3aae468b64d54cb1973235e0570558ad",
+    "server.js": "6764c3a143bf4acc8a440f425e41164ea87f3b44",
+    "public/app.js": "6c7537e403f53174af6764b5df9c03549d23f31e",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "6cfa3a17a081c52d8a3f0c42a8c300852c41e644",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
