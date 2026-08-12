@@ -71,7 +71,7 @@ test("release controller defines signed production tool coverage for every works
   const emergency = tools.find(tool => tool.toolId === "health.emergency-guidance");
   assert.deepEqual({ riskTier: emergency.riskTier, confirmationRequired: emergency.confirmationRequired,
     dataClassification: emergency.dataClassification },
-  { riskTier: "critical", confirmationRequired: false, dataClassification: "health" });
+  { riskTier: "regulated", confirmationRequired: false, dataClassification: "health" });
   const offline = tools.find(tool => tool.toolId === "offline.sync");
   assert.equal(offline.confirmationRequired, true);
   assert.equal(offline.consentScope, undefined);
@@ -393,4 +393,12 @@ test("pre-deploy diagnostics reject stale records and retain the newest migratio
   );
   assert.equal(calls.filter(path => path.startsWith("/logs?")).length, 3);
   assert.equal(responses.length, 0);
+});
+
+
+test("canonical providers use registry-supported risk tiers", () => {
+  const providers = canonicalToolProviders("s".repeat(48));
+  const allowed = new Set(["low", "medium", "high", "regulated"]);
+  assert.ok(providers.every(provider => allowed.has(provider.riskTier)));
+  assert.equal(providers.find(provider => provider.toolId === "health.emergency-guidance").riskTier, "regulated");
 });
