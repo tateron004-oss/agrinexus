@@ -66,7 +66,6 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const dataLifecycle = new DataLifecycleRepository(db);
   const schedules = new ScheduleRepository(db);
   const applications = new ApplicationRegistry(defaultApplicationManifests());
-  const cutover = new WorkspaceCutoverPolicy({migrations:workspaceMigrations,applications});
   const providers = createProviderCatalog({ env, fetchFn });
   const acceptance = new ProductionAcceptanceRepository(db);
   const path2Evidence = new Path2EvidenceRepository(db);
@@ -85,6 +84,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
       component: "capability-execution-authority", eventType: event.eventType,
       outcome: event.eventType.endsWith(".failed") ? "failed" : "observed", metadata: event }) });
   const authorityCoverage = new AuthorityCoverage({ applications, tools, adapters, verifiers });
+  const cutover = new WorkspaceCutoverPolicy({ migrations: workspaceMigrations, applications, authorityCoverage });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, executors: governedExecutors, verifier: verifyOutcome, authority });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
