@@ -14,16 +14,17 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "35405338736624c8c4c17df44c0e68a5f4642106",
-    "recoveryBranch": "recovery/pre-certification-workspace-host-35405338",
+    "baseCommit": "0cf817fcf64bd9b26ac30891bb02326a0fca1eeb",
+    "recoveryBranch": "agent/youtube-candidate-recovery",
     "files": [
+      "server.js",
       "public/app.js"
     ],
-    "purpose": "Complete the authorized 30-fault correction by mounting the real workspace host inside the exact-SHA-only production evidence viewport before measuring renderer output"
+    "purpose": "Implement the owner-authorized fail-closed YouTube candidate-selection and genuine state-1 verified-playback recovery contract"
   },
   "protectedFiles": {
-    "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
-    "public/app.js": "1d8b660f862872493919d48618ceffb6ba731c84",
+    "server.js": "5928b16269dd1022245616e4233d2435ebb860ba",
+    "public/app.js": "cd800b8a3aae468b64d54cb1973235e0570558ad",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "6cfa3a17a081c52d8a3f0c42a8c300852c41e644",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
