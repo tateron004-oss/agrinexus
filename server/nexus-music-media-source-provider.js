@@ -168,9 +168,17 @@ function buildYouTubeProviderErrorResult(query, errorType) {
   });
 }
 
-function normalizeYouTubePayload(query, payload) {
+function normalizeYouTubePayload(query, payload, options = {}) {
+  const excludedVideoIds = new Set((options.excludeVideoIds || [])
+    .map(normalizeText)
+    .filter(Boolean));
   const items = payload && Array.isArray(payload.items) ? payload.items : [];
-  const first = items.find(item => item && item.id && hasText(item.id.videoId) && item.snippet && hasText(item.snippet.title));
+  const first = items.find(item => item
+    && item.id
+    && hasText(item.id.videoId)
+    && !excludedVideoIds.has(normalizeText(item.id.videoId))
+    && item.snippet
+    && hasText(item.snippet.title));
   if (!first) return buildYouTubeProviderErrorResult(query, "source-result-empty");
   const videoId = normalizeText(first.id.videoId);
   const title = normalizeText(first.snippet.title);
@@ -267,6 +275,10 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
           const playableRank = item => preferredPattern.test(normalizeText(item?.snippet?.title)) ? 0 : 1;
           return playableRank(left) - playableRank(right);
         })
+    }, {
+      excludeVideoIds: Array.isArray(request.excludeVideoIds)
+        ? request.excludeVideoIds.slice(0, 20)
+        : []
     });
   } catch (error) {
     return buildYouTubeProviderErrorResult(query, error && error.message ? error.message : "source-error");
