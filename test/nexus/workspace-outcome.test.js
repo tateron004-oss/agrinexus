@@ -19,6 +19,11 @@ test("server outcome preserves agriculture entities and original command", () =>
   assert.equal(result.data.crop, "tomato");
   assert.deepEqual(result.data.observations, ["yellow spots on leaves"]);
   assert.equal(result.verification.renderVerified, false);
+  assert.equal(result.schema, "nexus.workspace-outcome.v2");
+  assert.deepEqual(result.presentation, {
+    kind: "assessment", renderer: "passive-ui", interaction: "receipt-only",
+    commandAuthority: false, completionAuthority: false
+  });
 });
 
 test("server outcome retains both map endpoints", () => {
@@ -28,6 +33,7 @@ test("server outcome retains both map endpoints", () => {
     task: { taskId: "tsk_2", steps: [] }, state: "completed", outcome: { verified: true }
   });
   assert.equal(result.operation, "show_route");
+  assert.equal(result.presentation.kind, "map");
   assert.deepEqual({ origin: result.data.origin, destination: result.data.destination }, { origin: "Nairobi", destination: "Nakuru" });
 });
 
