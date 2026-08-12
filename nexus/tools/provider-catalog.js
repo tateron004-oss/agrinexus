@@ -67,15 +67,34 @@ function createExecutor(definition, { fetchFn }) {
     const request = { schema: "nexus.provider-request.v1", toolId: definition.toolId,
       tenantId: context.tenantId, actorId: context.userId, taskId, stepId, idempotencyKey, input };
     const requestBody = JSON.stringify(request); const requestSignature = crypto.createHmac("sha256", definition.receiptSecret).update(requestBody).digest("hex");
-    const response = await fetchFn(definition.endpoint, { method: "POST", headers: {
-      "content-type": "application/json", "accept": "application/json", "idempotency-key": idempotencyKey,
-      "x-nexus-tenant-id": context.tenantId, "x-nexus-task-id": taskId, "x-nexus-step-id": stepId,
-      "x-nexus-request-signature": requestSignature
-    }, body: requestBody });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw coded(body.code || "provider_request_failed", body.message || `Provider returned HTTP ${response.status}.`);
-    return body;
+    let lastError;
+    for (let attempt = 1; attempt <= definition.maxAttempts; attempt += 1) {
+      let response;
+      try {
+        response = await fetchFn(definition.endpoint, { method: "POST", headers: {
+          "content-type": "application/json", "accept": "application/json", "idempotency-key": idempotencyKey,
+          "x-nexus-tenant-id": context.tenantId, "x-nexus-task-id": taskId, "x-nexus-step-id": stepId,
+          "x-nexus-request-signature": requestSignature
+        }, body: requestBody });
+      } catch (error) {
+        lastError = coded(error.code || "provider_request_failed", "Provider request could not be completed.");
+        if (attempt === definition.maxAttempts) throw lastError;
+        await retryDelay(attempt);
+        continue;
+      }
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) return body;
+      lastError = coded(body.code || "provider_request_failed", body.message || `Provider returned HTTP ${response.status}.`);
+      if (![408, 429].includes(response.status) && response.status < 500) throw lastError;
+      if (attempt === definition.maxAttempts) throw lastError;
+      await retryDelay(attempt);
+    }
+    throw lastError || coded("provider_request_failed", "Provider request could not be completed.");
   };
+}
+
+function retryDelay(attempt) {
+  return new Promise(resolve => setTimeout(resolve, Math.min(250 * (2 ** (attempt - 1)), 1000)));
 }
 
 function verifyReceipt({ definition, result, context, taskId, stepId }) {
