@@ -145,6 +145,17 @@ test("a complete mobile clinic search has an executable Mobile Clinic plan", () 
   assert.equal(completeMobileClinicPlan("Tell me about mobile clinics.", catalog), null);
 });
 
+test("an explicit media play request has an executable Music and Media plan", () => {
+  const { completeMediaPlaybackPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "media.play" }] };
+  const plan = completeMediaPlaybackPlan(
+    "Play Stevie Wonder Sir Duke and confirm playback is playing.", catalog);
+  assert.equal(plan.application, "music-media"); assert.equal(plan.steps[0].toolId, "media.play");
+  assert.equal(plan.steps[0].input.requestedMedia, "Stevie Wonder Sir Duke");
+  assert.equal(plan.steps[0].input.playbackState, "playing");
+  assert.equal(completeMediaPlaybackPlan("Tell me about Stevie Wonder.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
