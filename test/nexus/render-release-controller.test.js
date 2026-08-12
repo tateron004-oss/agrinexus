@@ -71,7 +71,7 @@ test("release controller defines signed production tool coverage for every works
   const emergency = tools.find(tool => tool.toolId === "health.emergency-guidance");
   assert.deepEqual({ riskTier: emergency.riskTier, confirmationRequired: emergency.confirmationRequired,
     dataClassification: emergency.dataClassification },
-  { riskTier: "critical", confirmationRequired: false, dataClassification: "health" });
+  { riskTier: "regulated", confirmationRequired: false, dataClassification: "health" });
   const offline = tools.find(tool => tool.toolId === "offline.sync");
   assert.equal(offline.confirmationRequired, true);
   assert.equal(offline.consentScope, undefined);
