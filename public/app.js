@@ -55998,14 +55998,22 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   } else if (outcome.workspace === "media" && outcome.operation === "play") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
-    const playback = await playNexusYouTubeMusic(requestedMedia, { announce: false });
-    opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
-    audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
-    if (!audible) {
-      const lifecycle = nexusYouTubePlayback.lifecycle;
-      const errorCode = nexusYouTubePlayback.errorCode || "none";
+    const candidateQueries = [requestedMedia, `${requestedMedia} live performance`, `${requestedMedia} cover`];
+    let playback = null;
+    let lastFailure = { lifecycle: "not-started", errorCode: "none" };
+    for (const candidateQuery of candidateQueries) {
+      playback = await playNexusYouTubeMusic(candidateQuery, { announce: false });
+      opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
+      audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
+      if (audible) break;
+      lastFailure = {
+        lifecycle: nexusYouTubePlayback.lifecycle,
+        errorCode: nexusYouTubePlayback.errorCode || "none"
+      };
       closeNexusYouTubePlayback();
-      throw new Error(`YouTube loaded ${playback?.title || requestedMedia}, but playback did not start (lifecycle=${lifecycle}, error=${errorCode}). Nexus will not report it as playing.`);
+    }
+    if (!audible) {
+      throw new Error(`YouTube loaded candidates for ${requestedMedia}, but playback did not start (lifecycle=${lastFailure.lifecycle}, error=${lastFailure.errorCode}). Nexus will not report it as playing.`);
     }
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
