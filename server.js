@@ -43451,7 +43451,8 @@ async function api(req, res, url) {
       : [];
     const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({
       mediaRequest: query,
-      excludeVideoIds
+      excludeVideoIds,
+      creativeCommonsOnly: body.creativeCommonsOnly === true
     }, process.env);
     const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
     if (!match || source.sourceStatus !== "source-result-available") {
@@ -43473,6 +43474,7 @@ async function api(req, res, url) {
       query,
       videoId: match[1],
       excludedCandidateCount: excludeVideoIds.length,
+      licenseFilter: body.creativeCommonsOnly === true ? "creativeCommon" : "any",
       playbackVerified: false,
       title
     });

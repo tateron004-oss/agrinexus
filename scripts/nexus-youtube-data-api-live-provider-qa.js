@@ -85,6 +85,13 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.match(recovered.resultSummary, /How to Plant Maize Live/);
   assert.equal(calls.length, 4);
 
+  await media.getMusicMediaSourceResultAsync({
+    mediaRequest: "show me how to plant maize",
+    creativeCommonsOnly: true
+  }, env);
+  const rightsAwareUrl = new URL(calls[4]);
+  assert.equal(rightsAwareUrl.searchParams.get("videoLicense"), "creativeCommon");
+
   const exhausted = await media.getMusicMediaSourceResultAsync({
     mediaRequest: "show me how to plant maize",
     excludeVideoIds: ["abc123", "def456"]
