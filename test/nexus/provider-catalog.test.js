@@ -45,3 +45,15 @@ test("registration failures identify the exact provider boundary without leaking
     return true;
   });
 });
+
+
+test("provider execution retries transient upstream failures with one idempotency key", async () => {
+  let attempts = 0; const keys = [];
+  const catalog = createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: config({ maxAttempts: 3 }) }, fetchFn: async (_url, options) => {
+    attempts += 1; keys.push(options.headers["idempotency-key"]);
+    if (attempts < 3) return { ok: false, status: 502, json: async () => ({ code: "temporary_gateway_failure" }) };
+    return { ok: true, status: 200, json: async () => ({ result: { accepted: true } }) };
+  } });
+  const result = await catalog.executors["knowledge.search"]({ input: {}, context: { tenantId: "tenant", userId: "user" }, taskId: "task", stepId: "step", idempotencyKey: "stable-key" });
+  assert.equal(result.result.accepted, true); assert.equal(attempts, 3); assert.deepEqual(keys, ["stable-key", "stable-key", "stable-key"]);
+});
