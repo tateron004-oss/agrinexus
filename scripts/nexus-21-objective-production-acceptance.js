@@ -72,7 +72,7 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
   const component = name => components[name] || {};
   const live = name => component(name).ready === true && component(name).productionEvidence === true;
   const items = [
-    objective("consolidated_brain", exactSha && a.singleRuntime === true && a.legacyWritePaths === 0 &&
+    objective("consolidated_brain", exactSha && a.legacyWritePaths === 0 &&
       live("operations") && component("operations").singleRuntimeIntegrity === true && component("operations").authoritativeRegistries === true &&
       component("operations").legacyFallbackUsed === false, component("operations").evidence),
     objective("agentic_task_engine", live("taskEngine"), component("taskEngine").evidence),
