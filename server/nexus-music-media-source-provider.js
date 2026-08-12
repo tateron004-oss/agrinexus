@@ -16,6 +16,7 @@ const MUSIC_MEDIA_PROVIDER_CANDIDATES = Object.freeze([
 const INTERNET_ARCHIVE_SEARCH_URL = "https://archive.org/advancedsearch.php";
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
+const YOUTUBE_OEMBED_URL = "https://www.youtube.com/oembed";
 
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -245,7 +246,7 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
     url.searchParams.set("videoEmbeddable", "true");
     url.searchParams.set("videoSyndicated", "true");
     if (request.creativeCommonsOnly === true) url.searchParams.set("videoLicense", "creativeCommon");
-    url.searchParams.set("maxResults", "5");
+    url.searchParams.set("maxResults", "25");
     url.searchParams.set("safeSearch", "moderate");
     url.searchParams.set("q", `${query.mediaRequest || query.providerPreference} lyrics audio`);
     url.searchParams.set("key", config.youtubeApiKey);
@@ -255,17 +256,35 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
       : [];
     if (!candidateIds.length) return buildYouTubeProviderErrorResult(query, "source-result-empty");
     const statusUrl = new URL(YOUTUBE_VIDEOS_URL);
-    statusUrl.searchParams.set("part", "status");
+    statusUrl.searchParams.set("part", "status,contentDetails");
     statusUrl.searchParams.set("id", candidateIds.join(","));
     statusUrl.searchParams.set("key", config.youtubeApiKey);
     const statusPayload = await fetchJson(fetchImpl, statusUrl);
-    const embeddableIds = new Set((statusPayload?.items || [])
-      .filter(item => item?.status?.embeddable === true && item?.status?.privacyStatus === "public")
-      .map(item => normalizeText(item.id)));
+    const apiEmbeddableIds = (statusPayload?.items || [])
+      .filter(item => {
+        const blocked = item?.contentDetails?.regionRestriction?.blocked || [];
+        const allowed = item?.contentDetails?.regionRestriction?.allowed || [];
+        return item?.status?.embeddable === true && item?.status?.privacyStatus === "public"
+          && !blocked.includes("US") && (!allowed.length || allowed.includes("US"));
+      })
+      .map(item => normalizeText(item.id))
+      .filter(Boolean);
+    const oembedResults = await Promise.all(apiEmbeddableIds.slice(0, 20).map(async videoId => {
+      try {
+        const oembedUrl = new URL(YOUTUBE_OEMBED_URL);
+        oembedUrl.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
+        oembedUrl.searchParams.set("format", "json");
+        const metadata = await fetchJson(fetchImpl, oembedUrl);
+        return metadata?.type === "video" && hasText(metadata?.html) ? videoId : "";
+      } catch (_) {
+        return "";
+      }
+    }));
+    const embedQualifiedIds = new Set(oembedResults.filter(Boolean));
     return normalizeYouTubePayload(query, {
       ...payload,
       items: (payload.items || [])
-        .filter(item => embeddableIds.has(normalizeText(item?.id?.videoId)))
+        .filter(item => embedQualifiedIds.has(normalizeText(item?.id?.videoId)))
         .sort((left, right) => {
           const requestText = normalizeText(query.mediaRequest || query.providerPreference);
           const preferredPattern = /\bcover\b/i.test(requestText)
@@ -348,6 +367,7 @@ module.exports = Object.freeze({
   INTERNET_ARCHIVE_SEARCH_URL,
   YOUTUBE_SEARCH_URL,
   YOUTUBE_VIDEOS_URL,
+  YOUTUBE_OEMBED_URL,
   classifyMusicMediaIntent,
   buildMusicMediaQuery,
   resolveMusicMediaProviderConfig,
