@@ -24,7 +24,7 @@ class OpenEndedPlanner {
       memories: memories.map(safeMemory), catalog };
     let feedback = [];
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
-      const candidate = await this.model.plan({ ...request, feedback, attempt });
+      const candidate = canonicalizeExplicitApplication(await this.model.plan({ ...request, feedback, attempt }), command.text, catalog);
       const validation = validatePlan(candidate, catalog, context);
       if (validation.valid) return Object.freeze({ ...validation.plan, planningAttempts: attempt + 1 });
       feedback = validation.errors;
@@ -40,6 +40,19 @@ class OpenEndedPlanner {
       confirmationRequired: tool.confirmation_required, consentScope: tool.consent_scope })),
     applications: applications.map(app => ({ applicationId: app.applicationId, capabilities: app.capabilities, riskTiers: app.riskTiers })) };
   }
+}
+
+function canonicalizeExplicitApplication(candidate, text, catalog) {
+  if (!candidate || typeof candidate !== "object") return candidate;
+  const goal = String(text || "").toLowerCase();
+  const explicit = catalog.applications.slice().sort((a, b) => b.applicationId.length - a.applicationId.length).find(app => {
+    const phrase = app.applicationId.replace(/-/g, " ").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`\\b${phrase.replace(/\s+/g, "\\s+(?:and\\s+)?")}\\b`, "i").test(goal);
+  });
+  if (!explicit || candidate.application === explicit.applicationId) return candidate;
+  const capabilities = new Set(explicit.capabilities || []);
+  const toolsCompatible = (candidate.steps || []).every(step => !step.toolId || capabilities.has(step.toolId));
+  return toolsCompatible ? { ...candidate, application: explicit.applicationId } : candidate;
 }
 
 function completeHealthRecordPlan(text, catalog) {
@@ -92,4 +105,4 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, completeHealthRecordPlan, validatePlan });
+module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan, validatePlan });

@@ -26,7 +26,7 @@ test("browser capability failure preserves application, category, and safe serve
     category: "provider", error: "Planner rejected the request" }) });
   try {
     await assert.rejects(() => browserProbePost("https://production/behavior-turn", "token", { application: "agriculture" }),
-      /application=agriculture code=planner_failed category=provider error=Planner rejected the request/);
+      /application=agriculture actualApplication=none expectedApplication=none code=planner_failed category=provider error=Planner rejected the request/);
   } finally { global.fetch = originalFetch; }
 });
 
