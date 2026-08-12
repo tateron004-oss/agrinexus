@@ -40,6 +40,7 @@ async function post(url, token, body) {
     accept: "application/json", "content-type": "application/json" }, body: JSON.stringify(body) });
   const value = await json(response);
   if (!response.ok) throw new Error(`${url} failed (${response.status}) application=${body.application || "none"}` +
+    ` actualApplication=${value.result?.application || "none"} expectedApplication=${value.expectedApplication || "none"}` +
     ` code=${value.code || "none"} category=${value.category || "none"} error=${value.error || value.raw || "none"}`);
   return value;
 }

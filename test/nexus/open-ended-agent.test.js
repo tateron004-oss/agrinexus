@@ -95,6 +95,17 @@ test("complete blood-pressure record commands become governed Health plans witho
   assert.equal(completeHealthRecordPlan("Help me understand blood pressure.", catalog), null);
 });
 
+test("an explicitly named workspace owns a compatible overlapping tool", () => {
+  const { canonicalizeExplicitApplication } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests() };
+  const candidate = { goal: "Prepare intake", application: "health", clarification: null,
+    steps: [{ toolId: "telehealth.prepare" }] };
+  assert.equal(canonicalizeExplicitApplication(candidate,
+    "Save a telehealth intake for my blood pressure concern", catalog).application, "telehealth");
+  assert.equal(canonicalizeExplicitApplication(candidate,
+    "Help with my health concern", catalog).application, "health");
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
