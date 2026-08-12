@@ -36,3 +36,12 @@ test("provider configuration fails closed for insecure, unsigned, or duplicate t
   assert.throws(() => createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: config({ endpoint: "http://provider.example" }) } }), /HTTPS/);
   assert.throws(() => createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: "not-json" } }), /valid JSON/);
 });
+
+test("registration failures identify the exact provider boundary without leaking details", async () => {
+  const catalog = createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: config() } });
+  await assert.rejects(catalog.register({ register: async () => { throw new Error("database detail"); } }), error => {
+    assert.equal(error.code, "provider_registration_failed");
+    assert.equal(error.stage, "provider-registration-knowledge-search");
+    return true;
+  });
+});

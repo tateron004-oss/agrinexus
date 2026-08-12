@@ -13,7 +13,15 @@ function createProviderCatalog({ env = process.env, fetchFn = globalThis.fetch }
     executors,
     async register(registry) {
       const rows = [];
-      for (const definition of definitions) rows.push(await registry.register(toolRecord(definition)));
+      for (const definition of definitions) {
+        try {
+          rows.push(await registry.register(toolRecord(definition)));
+        } catch (error) {
+          error.stage = `provider-registration-${String(definition.toolId).replace(/[^a-z0-9-]/gi, "-").slice(0, 48)}`;
+          error.code = error.code || "provider_registration_failed";
+          throw error;
+        }
+      }
       return rows;
     },
     async verify({ tool, result, context, taskId, stepId }) {
