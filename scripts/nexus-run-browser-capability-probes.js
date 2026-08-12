@@ -108,6 +108,7 @@ async function run(env = process.env) {
         if (application === "music-media") {
           const player = page.locator("[data-nexus-youtube-player] iframe");
           await player.waitFor({ state: "visible", timeout: 15000 });
+          await page.waitForTimeout(2500);
           const box = await player.boundingBox();
           if (!box) throw new Error("The production YouTube player did not expose a clickable viewport.");
           await page.mouse.click(box.x + (box.width / 2), box.y + (box.height / 2));
