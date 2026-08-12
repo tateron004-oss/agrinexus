@@ -104,7 +104,15 @@ async function run(env = process.env) {
         const outcome = turn.result?.render;
         if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required` +
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
-        const receipt = await page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
+        const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
+        if (application === "media") {
+          const player = page.locator("[data-nexus-youtube-player] iframe");
+          await player.waitFor({ state: "visible", timeout: 15000 });
+          const box = await player.boundingBox();
+          if (!box) throw new Error("The production YouTube player did not expose a clickable viewport.");
+          await page.mouse.click(box.x + (box.width / 2), box.y + (box.height / 2));
+        }
+        const receipt = await receiptPromise;
         const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
           { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
             workspace: outcome.workspace, receipt });
