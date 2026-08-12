@@ -30,7 +30,7 @@ function exactRecord(releaseSha, receipts, extra = {}) { return { releaseSha, pr
   passed: true, observedAt: new Date().toISOString(), receipts, ...extra }; }
 
 function pendingHealthContinuation(application, turn) {
-  return application === "health" && !turn?.result?.render && Boolean(turn?.result?.taskId) &&
+  return application === "health" && turn?.result?.state === "confirmation_required" && Boolean(turn?.result?.taskId) &&
     Boolean(turn?.result?.outcome?.pendingStepId) && Boolean(turn?.result?.commandId) &&
     Boolean(turn?.result?.correlationId);
 }
