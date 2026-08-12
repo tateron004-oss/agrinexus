@@ -233,6 +233,8 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
     const url = new URL(YOUTUBE_SEARCH_URL);
     url.searchParams.set("part", "snippet");
     url.searchParams.set("type", "video");
+    url.searchParams.set("videoEmbeddable", "true");
+    url.searchParams.set("videoSyndicated", "true");
     url.searchParams.set("maxResults", "5");
     url.searchParams.set("safeSearch", "moderate");
     url.searchParams.set("q", query.mediaRequest || query.providerPreference);
