@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingConfirmationContinuation, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, reloadAuthenticatedShell, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -28,6 +28,18 @@ test("browser capability failure preserves application, category, and safe serve
     await assert.rejects(() => browserProbePost("https://production/behavior-turn", "token", { application: "agriculture" }),
       /application=agriculture actualApplication=none expectedApplication=none code=planner_failed category=provider error=Planner rejected the request/);
   } finally { global.fetch = originalFetch; }
+});
+
+test("authenticated shell reload recovers from an aborted navigation", async () => {
+  let reloads = 0; let navigations = 0;
+  const page = {
+    reload: async () => { reloads += 1; throw new Error("page.reload: net::ERR_ABORTED; maybe frame was detached?"); },
+    url: () => "https://nexus.example/?evidence=release",
+    goto: async (url, options) => { navigations += 1; assert.match(url, /evidence=release/); assert.equal(options.waitUntil, "networkidle"); }
+  };
+  await reloadAuthenticatedShell(page, 2);
+  assert.equal(reloads, 1);
+  assert.equal(navigations, 1);
 });
 
 test("browser evidence continues only transaction-bound Health and Offline Queue confirmations", () => {
