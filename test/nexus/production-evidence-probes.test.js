@@ -65,6 +65,8 @@ test("browser capability evidence hydrates an authenticated Standard User shell"
   assert.match(source, /fetch\("\/api\/login"/);
   assert.match(source, /shell\?\.user\?\.role !== "Standard User"/);
   assert.match(source, /data = shell/);
+  assert.match(source, /attempt <= 4/);
+  assert.match(source, /login transport failed after 4 attempts/);
 });
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
