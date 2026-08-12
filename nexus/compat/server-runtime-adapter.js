@@ -139,7 +139,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category,
-          error: String(error.message || failure.message).slice(0, 300) }); }
+          stage: String(error.stage || "behavior-execution").replace(/[^a-z0-9-]/gi, "-").slice(0, 64), error: String(error.message || failure.message).slice(0, 300) }); }
       return true;
     }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/health-continuation" && req.method === "POST") {

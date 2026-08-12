@@ -57,3 +57,11 @@ test("provider execution retries transient upstream failures with one idempotenc
   const result = await catalog.executors["knowledge.search"]({ input: {}, context: { tenantId: "tenant", userId: "user" }, taskId: "task", stepId: "step", idempotencyKey: "stable-key" });
   assert.equal(result.result.accepted, true); assert.equal(attempts, 3); assert.deepEqual(keys, ["stable-key", "stable-key", "stable-key"]);
 });
+
+
+test("terminal provider failures identify the selected tool boundary", async () => {
+  const catalog = createProviderCatalog({ env: { NEXUS_TOOL_PROVIDERS_JSON: config({ maxAttempts: 1 }) }, fetchFn: async () => ({ ok: false, status: 502, json: async () => ({}) }) });
+  await assert.rejects(catalog.executors["knowledge.search"]({ input: {}, context: { tenantId: "tenant", userId: "user" }, taskId: "task", stepId: "step", idempotencyKey: "key" }), error => {
+    assert.equal(error.stage, "provider-execution-knowledge-search"); return true;
+  });
+});

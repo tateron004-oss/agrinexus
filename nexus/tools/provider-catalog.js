@@ -78,20 +78,22 @@ function createExecutor(definition, { fetchFn }) {
         }, body: requestBody });
       } catch (error) {
         lastError = coded(error.code || "provider_request_failed", "Provider request could not be completed.");
-        if (attempt === definition.maxAttempts) throw lastError;
+        if (attempt === definition.maxAttempts) throw providerFailure(lastError, definition.toolId);
         await retryDelay(attempt);
         continue;
       }
       const body = await response.json().catch(() => ({}));
       if (response.ok) return body;
       lastError = coded(body.code || "provider_request_failed", body.message || `Provider returned HTTP ${response.status}.`);
-      if (![408, 429].includes(response.status) && response.status < 500) throw lastError;
-      if (attempt === definition.maxAttempts) throw lastError;
+      if (![408, 429].includes(response.status) && response.status < 500) throw providerFailure(lastError, definition.toolId);
+      if (attempt === definition.maxAttempts) throw providerFailure(lastError, definition.toolId);
       await retryDelay(attempt);
     }
-    throw lastError || coded("provider_request_failed", "Provider request could not be completed.");
+    throw providerFailure(lastError || coded("provider_request_failed", "Provider request could not be completed."), definition.toolId);
   };
 }
+
+function providerFailure(error, toolId) { error.stage = `provider-execution-${String(toolId).replace(/[^a-z0-9-]/gi, "-").slice(0, 48)}`; return error; }
 
 function retryDelay(attempt) {
   return new Promise(resolve => setTimeout(resolve, Math.min(250 * (2 ** (attempt - 1)), 1000)));
