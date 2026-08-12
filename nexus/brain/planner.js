@@ -19,6 +19,8 @@ class OpenEndedPlanner {
     if (completeHealthRecord) return Object.freeze({ ...completeHealthRecord, planningAttempts: 1 });
     const completeTelehealthIntake = completeTelehealthIntakePlan(command.text, catalog);
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
+    const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
+    if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -84,6 +86,19 @@ function completeTelehealthIntakePlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeMarketplaceSearchPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\bmarketplace\b/i.test(goal) || !/\b(find|search|show|browse)\b/i.test(goal) ||
+      !/\b(listing|listings|product|products|offer|offers)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "marketplace.search") ||
+      !catalog.applications.some(app => app.applicationId === "marketplace")) return null;
+  const crop = goal.match(/\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?)\b/i)?.[1] || "agriculture";
+  return { goal, application: "marketplace", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "search-marketplace", title: "Search marketplace listings",
+      toolId: "marketplace.search", input: { query: crop, selectListing: /\bselect\b/i.test(goal) },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -120,4 +135,4 @@ function safeMemory(item) { return { kind: item.kind, content: item.content, con
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
-  completeTelehealthIntakePlan, validatePlan });
+  completeTelehealthIntakePlan, completeMarketplaceSearchPlan, validatePlan });
