@@ -492,7 +492,7 @@ async function waitForAcceptanceToken({ baseUrl, token, releaseSha, fetchImpl = 
       let body = null;
       try { body = text ? JSON.parse(text) : null; } catch { body = null; }
       last = { status: response.status, releaseSha: body?.releaseSha || null, code: body?.code || null, stage: body?.stage || null };
-      if (response.status >= 500 && body?.releaseSha === releaseSha) {
+      if (response.status >= 500 && body?.releaseSha === releaseSha && body?.stage) {
         throw Object.assign(new Error(`Production acceptance failed at ${body?.stage || "unknown-stage"}.`), { code: body?.code || "acceptance_failed", stage: body?.stage || null, failFast: true });
       }
       if (response.status !== 401 && body?.releaseSha === releaseSha) return last;
