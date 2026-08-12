@@ -23,7 +23,7 @@
   },
   "protectedFiles": {
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
-    "public/app.js": "4986c9dcb49c6eb3f65be3ea3bdd095ef3bc58ab",
+    "public/app.js": "74bcc725989ffb21c46d04eaa9e7323543f6963b",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "6cfa3a17a081c52d8a3f0c42a8c300852c41e644",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
