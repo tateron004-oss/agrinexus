@@ -30,12 +30,13 @@ test("browser capability failure preserves application, category, and safe serve
   } finally { global.fetch = originalFetch; }
 });
 
-test("Health browser evidence continues a bound pending transaction without trusting a UI state label", () => {
-  const transaction = { result: { state: "governed_pause", taskId: "task-1", commandId: "command-1",
+test("Health browser evidence continues only a confirmation-bound pending transaction", () => {
+  const transaction = { result: { state: "confirmation_required", taskId: "task-1", commandId: "command-1",
     correlationId: "correlation-1", outcome: { pendingStepId: "step-1" } } };
   assert.equal(pendingHealthContinuation("health", transaction), true);
   assert.equal(pendingHealthContinuation("maps", transaction), false);
-  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, render: {} } }), false);
+  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, render: {} } }), true);
+  assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, state: "clarification_required" } }), false);
   assert.equal(pendingHealthContinuation("health", { result: { ...transaction.result, commandId: null } }), false);
 });
 
