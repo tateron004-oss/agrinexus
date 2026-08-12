@@ -23,7 +23,7 @@
     "server.js": "fb27077518d3332fcaf38e192acaf7663dd95f30",
     "public/app.js": "d5d8da2c9602144a2d3d5e4fcd283b585eb3d5ed",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
-    "nexus/compat/server-runtime-adapter.js": "a69e1c224eb7cb521d4cfcce5ac094fc0f7c2fa3",
+    "nexus/compat/server-runtime-adapter.js": "51c14a857660bc70d7b6471f0095abbbf0fa8024",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",

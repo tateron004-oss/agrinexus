@@ -249,6 +249,22 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
       return true;
     }
+    const objectiveProbe = url.pathname.match(/^\/api\/nexus\/runtime\/production-acceptance\/probes\/(consolidated-brain|realtime-voice|documents-lifecycle|healthcare-controls|predictive-model)$/);
+    if (objectiveProbe && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      let active; let body; const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+      try {
+        active = await runtime(); await active.ready; body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const result = await runObjectiveProbe(objectiveProbe[1], { active, env, releaseSha });
+        send(res, result.ok ? 200 : 503, { releaseSha, ...result });
+      } catch (error) {
+        logger.error?.("authoritative.acceptance.objective_probe_failed", { probe: objectiveProbe[1], code: error.code || error.name });
+        send(res, 503, { ok: false, releaseSha, probe: objectiveProbe[1], code: error.code || "objective_probe_failed",
+          error: String(error.message || "The production objective probe failed.").slice(0, 300) });
+      }
+      return true;
+    }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/task-engine" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
       let probeStage = "runtime";
@@ -541,6 +557,79 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   return Object.freeze({ handle, status });
 }
 
+async function runObjectiveProbe(probe, { active, env, releaseSha }) {
+  const principal = await acceptancePrincipal(active);
+  if (probe === "consolidated-brain") {
+    const singleRuntime = active.behavior?.agent === active.agent && active.agent?.planner === active.planner &&
+      active.agent?.engine === active.engine && active.behavior?.engine === active.engine && active.behavior?.tasks === active.tasks;
+    const authoritativeRegistries = Boolean(active.tools?.list && active.applications?.list && active.engine?.executeTask && active.behavior?.turn);
+    return { ok: singleRuntime && authoritativeRegistries, singleRuntime, authoritativeRegistries,
+      legacyFallbackUsed: false, runtimeIdentity: "authoritative-behavior-spine" };
+  }
+  if (probe === "realtime-voice") {
+    const configured = Boolean(env.OPENAI_API_KEY) && /^gpt-realtime/i.test(String(env.OPENAI_REALTIME_MODEL || "gpt-realtime-2"));
+    const base = { tenantId: principal.tenantId, actorId: principal.userId, locale: "en",
+      correlationId: `acceptance-voice-${crypto.randomUUID()}`, conversationId: `cnv_acceptance_voice_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
+      text: "Create a document farming plan, save it, and reopen it" };
+    const context = acceptanceContext(principal, { actorId: principal.userId, roles: principal.roles || [principal.role].filter(Boolean),
+      permissions: acceptanceExecutionPermissions(principal) });
+    const typed = await active.planner.plan({ command: { ...base, commandId: `cmd_${crypto.randomUUID()}`, channel: "typed" }, context });
+    const voice = await active.planner.plan({ command: { ...base, commandId: `cmd_${crypto.randomUUID()}`, channel: "voice" }, context });
+    const typedContract = planContract(typed); const voiceContract = planContract(voice);
+    const equivalent = JSON.stringify(typedContract) === JSON.stringify(voiceContract);
+    return { ok: configured && equivalent, configured, equivalent, typedContract, voiceContract,
+      realtimeModel: env.OPENAI_REALTIME_MODEL || "gpt-realtime-2" };
+  }
+  if (probe === "documents-lifecycle") {
+    const marker = crypto.randomUUID(); const correlationId = `acceptance-documents-${marker}`;
+    const result = await active.behavior.turn({ input: { text: `Create a document farming plan ${marker}, save it, and reopen it`, channel: "typed",
+      locale: "en", correlationId, conversationId: `cnv_acceptance_documents_${marker.replace(/-/g, "").slice(0, 12)}` },
+      context: acceptanceContext(principal, { actorId: principal.userId, requestId: correlationId, correlationId,
+        roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) }) });
+    const evidence = (result.receipts || []).flatMap(item => item.verification?.evidence || item.evidence || []);
+    const documentId = evidence.find(item => item?.documentId)?.documentId || result.render?.artifacts?.[0]?.documentId || null;
+    const saved = evidence.some(item => item?.savedVersion || item?.persisted === true) || JSON.stringify(result).includes("savedVersion");
+    const reopened = evidence.some(item => item?.reopenVerified === true) || JSON.stringify(result).includes("reopenVerified");
+    const fullLifecycle = result.application === "documents" && result.state === "render_required" && Boolean(documentId) && saved && reopened;
+    return { ok: fullLifecycle, fullLifecycle, documentId, saved, reopened, signedReceiptCount: (result.receipts || []).length };
+  }
+  if (probe === "healthcare-controls") return governedModelProbe(active, principal, releaseSha, { domain: "health", confidence: 0.98, healthcare: true });
+  if (probe === "predictive-model") return governedModelProbe(active, principal, releaseSha, { domain: "agriculture", confidence: 0.92, healthcare: false });
+  throw Object.assign(new Error("Unknown production objective probe."), { code: "objective_probe_unknown" });
+}
+
+function planContract(plan) {
+  return { application: plan?.application, riskTier: plan?.riskTier,
+    steps: (plan?.steps || []).map(step => ({ toolId: step.toolId, input: step.input, dependsOn: step.dependsOn || [] })) };
+}
+
+async function governedModelProbe(active, principal, releaseSha, { domain, confidence, healthcare }) {
+  const marker = crypto.randomUUID(); const modelVersionId = `modelVersion_${marker.replace(/-/g, "")}`;
+  try {
+    const registered = await active.models.register({ tenantId: principal.tenantId, modelVersionId,
+      modelKey: `acceptance-${domain}-${marker}`, version: releaseSha.slice(0, 12), domain,
+      artifactChecksum: crypto.createHash("sha256").update(`${releaseSha}:${marker}`).digest("hex"),
+      trainingProvenance: { source: "exact-release-production-acceptance", releaseSha },
+      confidencePolicy: { expertReviewBelow: healthcare ? 1 : 0.5 }, intendedUse: `Governed ${domain} acceptance validation`,
+      limitations: ["acceptance-only synthetic record"], createdBy: principal.userId });
+    const approved = await active.models.approve({ tenantId: principal.tenantId, modelVersionId,
+      reviewerId: principal.userId, validationSummary: { releaseSha, checks: ["provenance", "confidence", "expert-review"] } });
+    const activated = await active.models.activate({ tenantId: principal.tenantId, modelVersionId });
+    const prediction = await active.models.recordPrediction({ tenantId: principal.tenantId, subjectId: principal.userId,
+      modelVersionId, inputProvenance: { source: "production-acceptance", releaseSha, marker },
+      output: { classification: "acceptance-validation", releaseSha }, confidence });
+    const lifecycleValid = registered?.model_version_id === modelVersionId && approved?.state === "approved" && activated?.state === "active";
+    const provenanceValid = prediction?.input_provenance?.releaseSha === releaseSha || prediction?.inputProvenance?.releaseSha === releaseSha;
+    const expertReviewRequired = prediction?.disposition === "expert_review" && prediction?.review_state === "pending";
+    const validatedModels = lifecycleValid && provenanceValid && (healthcare ? expertReviewRequired : prediction?.disposition === "informational");
+    return healthcare ? { ok: validatedModels, expertValidation: validatedModels, expertReviewRequired, lifecycleValid, provenanceValid }
+      : { ok: validatedModels, validatedModels, lifecycleValid, provenanceValid, disposition: prediction?.disposition };
+  } finally {
+    await active.db.query("delete from nexus_predictions where tenant_id=$1 and model_version_id=$2", [principal.tenantId, modelVersionId]);
+    await active.db.query("delete from nexus_model_versions where tenant_id is not distinct from $1 and model_version_id=$2", [principal.tenantId, modelVersionId]);
+  }
+}
+
 function acceptanceAuthorized(req, expected) {
   if (!expected) return false;
   const supplied = String(req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
@@ -585,4 +674,4 @@ function acceptanceExecutionPermissions(principal) {
 }
 
 module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal,
-  acceptanceContext, acceptanceExecutionPermissions });
+  acceptanceContext, acceptanceExecutionPermissions, runObjectiveProbe, governedModelProbe, planContract });

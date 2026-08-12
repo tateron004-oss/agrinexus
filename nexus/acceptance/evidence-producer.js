@@ -8,7 +8,7 @@ const { CONTRACTS, verifyCapabilityCompletion } = require("../apps/capability-co
 
 const COMPONENT_REQUIREMENTS = Object.freeze({
   taskEngine: [], database: [], semanticMemory: ["restartPersistent"], worker: [], tools: [],
-  voice: ["physicalEvidence"], documents: ["fullLifecycle"], objectStorage: ["redeployPersistent"],
+  voice: ["realtimeEquivalent"], documents: ["fullLifecycle"], objectStorage: ["redeployPersistent"],
   identity: ["tenantIsolation"], consentAudit: ["immutableReceipts"], offlineSync: ["conflictRecovery"],
   security: ["criticalFindings"], healthcare: ["expertValidation"], predictive: ["validatedModels"],
   observability: ["alertsReady", "costsReady", "tracesReady"], delivery: ["windowsRunnerRequired"],

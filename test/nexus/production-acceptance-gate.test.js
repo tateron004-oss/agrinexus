@@ -26,6 +26,25 @@ test("every pass remains bound to one exact production SHA", () => {
   assert.equal(result.objectives.find(x => x.id === "managed_delivery").passed, false);
 });
 
+test("five legacy objectives require recorded exact-production facts instead of circular readiness", () => {
+  const sha = "sha"; const live = evidence => ({ ready: true, productionEvidence: true, evidence: ["production"], ...evidence });
+  const components = {
+    operations: live({ singleRuntimeIntegrity: true, authoritativeRegistries: true, legacyFallbackUsed: false }),
+    voice: live({ realtimeConfigured: true, realtimeEquivalent: true }), documents: live({ fullLifecycle: true }),
+    healthcare: live({ expertValidation: true }), predictive: live({ validatedModels: true })
+  };
+  const base = { expectedSha: sha, runtime: { ok: true, body: { ok: true, releaseSha: sha, pgvector: true, migrationsCurrent: true } },
+    health: { ok: true, body: { ok: true, strictLiveMode: true } }, integrations: { ok: true, body: { liveGaps: [] } },
+    providers: { ok: true, body: { ok: true } }, acceptance: { ok: false, status: 503, body: { releaseSha: sha,
+      singleRuntime: true, legacyWritePaths: 0, components, workspaces: [] } } };
+  const result = evaluate(base);
+  for (const id of ["consolidated_brain", "realtime_voice", "documents_forms", "healthcare_controls", "predictive_intelligence"])
+    assert.equal(result.objectives.find(item => item.id === id).passed, true, id);
+  const missing = evaluate({ ...base, acceptance: { ...base.acceptance, body: { ...base.acceptance.body,
+    components: { ...components, voice: live({ realtimeConfigured: true, realtimeEquivalent: false }) } } } });
+  assert.equal(missing.objectives.find(item => item.id === "realtime_voice").passed, false);
+});
+
 test("acceptance waits through Render cutover until runtime and authorization agree on the exact SHA", async () => {
   const originalFetch = global.fetch;
   let round = 0;
