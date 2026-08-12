@@ -106,6 +106,17 @@ test("an explicitly named workspace owns a compatible overlapping tool", () => {
     "Help with my health concern", catalog).application, "health");
 });
 
+test("a complete telehealth intake command bypasses ambiguous health planning", () => {
+  const { completeTelehealthIntakePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(),
+    tools: [{ toolId: "telehealth.prepare" }] };
+  const plan = completeTelehealthIntakePlan(
+    "Save a telehealth intake for my blood pressure concern and show the next step.", catalog);
+  assert.equal(plan.application, "telehealth");
+  assert.equal(plan.steps[0].toolId, "telehealth.prepare");
+  assert.equal(completeTelehealthIntakePlan("Tell me about telehealth.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
