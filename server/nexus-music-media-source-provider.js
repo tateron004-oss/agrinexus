@@ -244,6 +244,7 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
     url.searchParams.set("type", "video");
     url.searchParams.set("videoEmbeddable", "true");
     url.searchParams.set("videoSyndicated", "true");
+    if (request.creativeCommonsOnly === true) url.searchParams.set("videoLicense", "creativeCommon");
     url.searchParams.set("maxResults", "5");
     url.searchParams.set("safeSearch", "moderate");
     url.searchParams.set("q", `${query.mediaRequest || query.providerPreference} lyrics audio`);
