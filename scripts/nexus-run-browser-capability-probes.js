@@ -105,7 +105,7 @@ async function run(env = process.env) {
         if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required` +
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
         const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
-        if (application === "media") {
+        if (application === "music-media") {
           const player = page.locator("[data-nexus-youtube-player] iframe");
           await player.waitFor({ state: "visible", timeout: 15000 });
           const box = await player.boundingBox();
