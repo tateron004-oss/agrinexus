@@ -56098,18 +56098,32 @@ function nexusMapOutcomeVerified(outcome = {}, data = {}) {
     Boolean(document.body.dataset.genesisMapLocation);
 }
 
+function validateNexusPassivePresentation(outcome = {}) {
+  const presentation = outcome.presentation;
+  if (outcome.schema !== "nexus.workspace-outcome.v2" || !presentation || typeof presentation !== "object") {
+    throw new Error("Nexus requires a typed v2 passive presentation outcome.");
+  }
+  if (presentation.renderer !== "passive-ui" || presentation.interaction !== "receipt-only" ||
+      presentation.commandAuthority !== false || presentation.completionAuthority !== false ||
+      !String(presentation.kind || "").trim()) {
+    throw new Error("Nexus rejected browser execution or completion authority.");
+  }
+  return presentation;
+}
+
 async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}) {
+  const presentation = validateNexusPassivePresentation(outcome);
   if (context.signal?.aborted) return { rendered: false, visible: false };
   if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
     setExperienceMode("user", { persist: false, announceChange: false });
   }
   let opened = false;
   let audible = false;
-  if (outcome.workspace === "map") {
+  if (presentation.kind === "map") {
     opened = openGenesisRealtimeMapWorkspace(data, outcome.response);
     document.body.dataset.genesisWorkspace = "map";
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
-  } else if (outcome.workspace === "media" && outcome.operation === "play") {
+  } else if (presentation.kind === "media-player") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
     const playback = await playNexusYouTubeMusic(requestedMedia, {
@@ -56146,16 +56160,16 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   }
   if (!opened || context.signal?.aborted) return { rendered: false, visible: false };
-  await new Promise(resolve => window.setTimeout(resolve, outcome.workspace === "map" ? 700 : 0));
+  await new Promise(resolve => window.setTimeout(resolve, presentation.kind === "map" ? 700 : 0));
   if (context.signal?.aborted) return { rendered: false, visible: false };
-  const surface = outcome.workspace === "map"
+  const surface = presentation.kind === "map"
     ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
-    : outcome.workspace === "media"
+    : presentation.kind === "media-player"
       ? document.querySelector('[data-nexus-youtube-player="true"] iframe')
-    : outcome.workspace === "documents"
+    : presentation.kind === "document"
       ? renderNexusAuthoritativeDocument(outcome)
       : renderNexusAuthoritativeData(outcome);
-  const visible = outcome.workspace === "map"
+  const visible = presentation.kind === "map"
     ? nexusMapOutcomeVerified(outcome, data)
     : Boolean(surface && surface.getClientRects?.().length);
   return {
@@ -56295,8 +56309,8 @@ window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProduct
 async function nexusAuthoritativeOutcomeRenderer() {
   if (window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__) return window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__;
   const Renderer = await loadNexusAuthoritativeOutcomeRenderer();
-  const workspaces = ["agriculture", "health", "telehealth", "mobile-clinic", "pharmacy", "learning", "workforce", "trade", "map", "media", "documents", "reminders", "offline", "live-knowledge", "communications", "operations"];
-  const adapters = Object.fromEntries(workspaces.map(workspace => [workspace, {
+  const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "reminder", "task-list", "source-answer", "communication", "operation"];
+  const adapters = Object.fromEntries(presentationKinds.map(kind => [kind, {
     render: (data, context) => renderNexusPassiveWorkspace(context.outcome, data, context)
   }]));
   const renderer = new Renderer({
@@ -56388,7 +56402,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     let message = result.response || "Nexus needs more information before it can continue.";
     if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
     let renderReceipt = null;
-    if (result.render?.schema === "nexus.workspace-outcome.v1") {
+    if (result.render) {
+      validateNexusPassivePresentation(result.render);
       const renderer = await nexusAuthoritativeOutcomeRenderer();
       renderReceipt = await renderer.render(result.render);
       if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
@@ -62009,7 +62024,48 @@ function installNexusBrainIntelligenceCommandBridge() {
   }, true);
 }
 
+ function isNexusStandardUserExperience() {
+  return experienceMode === "user" || document.body.classList.contains("user-mode");
+}
+
+function nexusAuthoritativeCommandFromEvent(event) {
+  const target = event.target;
+  const input = target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]")
+    ? target
+    : target?.closest?.("form")?.querySelector?.("#nexusCommandCenterInput, [data-nexus-window-command-input]")
+      || document.querySelector("#nexusCommandCenterInput");
+  if (event.type === "keydown") {
+    if (event.key !== "Enter" || event.shiftKey || !target?.matches?.("#nexusCommandCenterInput, [data-nexus-window-command-input]")) return "";
+    return String(target.value || "").trim();
+  }
+  const control = target?.closest?.("[data-nexus-command-center-submit], [data-nexus-mode-shortcut][data-nexus-command], [data-simple-command]");
+  if (!control && event.type !== "submit") return "";
+  if (control?.dataset?.nexusModeShortcut === "language" ||
+      control?.matches?.("[data-nexus-command-center-voice], [data-nexus-os-voice-control], [data-nexus-voice-preference-action]")) return "";
+  return String(control?.dataset?.nexusCommand || control?.dataset?.simpleCommand || input?.value || "").trim();
+}
+
+function installNexusStandardUserAuthorityFirewall() {
+  const intercept = event => {
+    if (!isNexusStandardUserExperience() || event.defaultPrevented) return;
+    const command = nexusAuthoritativeCommandFromEvent(event);
+    if (!command) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    setCommandInputs(command);
+    void handleNexusUnifiedBrainRuntimeCommand(command, {
+      source: event.type === "keydown" ? "typed-command-keyboard" : "typed-command-submit"
+    });
+  };
+  window.addEventListener("click", intercept, true);
+  window.addEventListener("submit", intercept, true);
+  window.addEventListener("keydown", intercept, true);
+  document.body.dataset.nexusStandardUserAuthority = "server-only";
+}
+
 async function boot() {
+  installNexusStandardUserAuthorityFirewall();
   exposeNexusAppWindowApis();
   exposeNexusBrainIntelligenceRuntimeApis();
   registerWebApp();
