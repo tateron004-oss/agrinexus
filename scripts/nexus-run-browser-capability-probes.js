@@ -29,6 +29,12 @@ async function json(response) { const text = await response.text(); try { return
 function exactRecord(releaseSha, receipts, extra = {}) { return { releaseSha, production: true, simulated: false,
   passed: true, observedAt: new Date().toISOString(), receipts, ...extra }; }
 
+function pendingHealthContinuation(application, turn) {
+  return application === "health" && !turn?.result?.render && Boolean(turn?.result?.taskId) &&
+    Boolean(turn?.result?.outcome?.pendingStepId) && Boolean(turn?.result?.commandId) &&
+    Boolean(turn?.result?.correlationId);
+}
+
 async function post(url, token, body) {
   const response = await fetch(url, { method: "POST", headers: { authorization: `Bearer ${token}`,
     accept: "application/json", "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -55,14 +61,15 @@ async function run(env = process.env) {
       const execute = async phase => {
         let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
           { releaseSha, application, text, channel: "typed", locale: "en", phase });
-        if (application === "health" && turn.result?.state === "confirmation_required") {
+        if (pendingHealthContinuation(application, turn)) {
           turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/health-continuation`, token,
             { releaseSha, taskId: turn.result.taskId, stepId: turn.result.outcome?.pendingStepId,
               commandId: turn.result.commandId, correlationId: turn.result.correlationId,
               channel: "typed", confirmed: true, consented: true });
         }
         const outcome = turn.result?.render;
-        if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required.`);
+        if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required` +
+          ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
         const receipt = await page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
         const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
           { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
@@ -114,4 +121,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingHealthContinuation, post, run });
