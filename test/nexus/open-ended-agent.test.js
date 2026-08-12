@@ -165,6 +165,16 @@ test("a complete document create-save-reopen request has an executable Documents
   assert.equal(completeDocumentPlan("Tell me about farming plans.", catalog), null);
 });
 
+test("a complete consented communication request has an executable Communications plan", () => {
+  const { completeCommunicationPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "communications.send" }] };
+  const plan = completeCommunicationPlan(
+    "Draft a clinic follow-up message, obtain consent, send it, and return the delivery receipt.", catalog);
+  assert.equal(plan.application, "communications"); assert.equal(plan.steps[0].toolId, "communications.send");
+  assert.equal(plan.steps[0].input.consentRequired, true);
+  assert.equal(completeCommunicationPlan("Draft a clinic follow-up message.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });

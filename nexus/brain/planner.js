@@ -29,6 +29,8 @@ class OpenEndedPlanner {
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
+    const completeCommunication = completeCommunicationPlan(command.text, catalog);
+    if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -154,6 +156,19 @@ function completeDocumentPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeCommunicationPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(message|communication|follow-up)\b/i.test(goal) || !/\b(draft|write|prepare)\b/i.test(goal) ||
+      !/\b(consent|permission|approval)\b/i.test(goal) || !/\b(send|deliver)\b/i.test(goal) ||
+      !/\b(receipt|confirmation|proof)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
+      !catalog.applications.some(app => app.applicationId === "communications")) return null;
+  return { goal, application: "communications", riskTier: "medium", clarification: null,
+    steps: [{ clientStepId: "send-communication", title: "Draft and deliver consented communication",
+      toolId: "communications.send", input: { draft: goal, consentRequired: true, returnDeliveryReceipt: true },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -191,4 +206,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, validatePlan });
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, completeCommunicationPlan, validatePlan });
