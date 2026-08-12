@@ -34,6 +34,7 @@ class OpenEndedPlanner {
     const [tools, applications] = await Promise.all([this.tools.list(), Promise.resolve(this.applications.list())]);
     return { tools: tools.filter(tool => tool.availability !== "unavailable").map(tool => ({ toolId: tool.tool_id,
       domain: tool.domain, description: tool.description, riskTier: tool.risk_tier,
+      requiredPermission: tool.required_permission || null,
       confirmationRequired: tool.confirmation_required, consentScope: tool.consent_scope })),
     applications: applications.map(app => ({ applicationId: app.applicationId, capabilities: app.capabilities, riskTiers: app.riskTiers })) };
   }
