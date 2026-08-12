@@ -73,6 +73,16 @@ test("realtime voice probe requires configured Realtime and identical governed t
   assert.equal(result.ok, true); assert.equal(result.equivalent, true); assert.equal(result.configured, true);
 });
 
+test("documents lifecycle probe reads the verified provider output from the workspace data contract", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const active = { db: { query: async () => ({ rows: [principal] }) }, behavior: { turn: async () => ({
+    application: "documents", state: "render_required", render: { data: { documentId: "doc-1", savedVersion: 1, reopenVerified: true } },
+    receipts: [{ verification: { evidence: [{ savedVersion: 1, reopenVerified: true }] } }]
+  }) } };
+  const result = await runObjectiveProbe("documents-lifecycle", { active, env: {}, releaseSha: "a".repeat(40) });
+  assert.equal(result.ok, true); assert.equal(result.documentId, "doc-1"); assert.equal(result.fullLifecycle, true);
+});
+
 test("authenticated users see only their tenant-owned task status", async () => {
   let listInput; const capture = responseCapture();
   const runtime = { engine: { tasks: { list: async input => { listInput = input; return [{ taskId: "task-1", state: "running" }]; } } },

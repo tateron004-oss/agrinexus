@@ -587,7 +587,7 @@ async function runObjectiveProbe(probe, { active, env, releaseSha }) {
       context: acceptanceContext(principal, { actorId: principal.userId, requestId: correlationId, correlationId,
         roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) }) });
     const evidence = (result.receipts || []).flatMap(item => item.verification?.evidence || item.evidence || []);
-    const documentId = evidence.find(item => item?.documentId)?.documentId || result.render?.artifacts?.[0]?.documentId || null;
+    const documentId = evidence.find(item => item?.documentId)?.documentId || result.render?.data?.documentId || null;
     const saved = evidence.some(item => item?.savedVersion || item?.persisted === true) || JSON.stringify(result).includes("savedVersion");
     const reopened = evidence.some(item => item?.reopenVerified === true) || JSON.stringify(result).includes("reopenVerified");
     const fullLifecycle = result.application === "documents" && result.state === "render_required" && Boolean(documentId) && saved && reopened;
