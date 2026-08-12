@@ -62,8 +62,9 @@ test("release workflow executes the real browser capability producer before comp
 
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
-  assert.match(source, /data = await request\("\/api\/login"/);
-  assert.match(source, /if \(!data\?\.profile\) throw new Error/);
+  assert.match(source, /fetch\("\/api\/login"/);
+  assert.match(source, /shell\?\.user\?\.role !== "Standard User"/);
+  assert.match(source, /data = shell/);
 });
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
