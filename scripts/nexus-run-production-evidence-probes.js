@@ -91,7 +91,8 @@ async function run(env = process.env) {
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const headers = { authorization: `Bearer ${token}` };
   const { runtime, acceptance } = await waitForExactRelease(base, headers, releaseSha);
-  const [health, integrations, provider, taskEngine, semanticMemory, consentAudit, offlineSync, identity, observability, objectStorage] = await Promise.all([
+  const [health, integrations, provider, taskEngine, semanticMemory, consentAudit, offlineSync, identity, observability, objectStorage,
+    consolidatedBrain, realtimeVoice, realtimeVoiceStatus, documentsLifecycle, healthcareControls, predictiveModel] = await Promise.all([
     get(`${base}/api/healthz`), get(`${base}/api/integrations`), get(`${providerBase}/healthz`),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/semantic-memory`, headers, { releaseSha }),
@@ -99,7 +100,13 @@ async function run(env = process.env) {
     post(`${base}/api/nexus/runtime/production-acceptance/probes/offline-sync`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/identity`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/observability`, headers, { releaseSha }),
-    post(`${base}/api/nexus/runtime/production-acceptance/probes/object-storage`, headers, { releaseSha })
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/object-storage`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/consolidated-brain`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/realtime-voice`, headers, { releaseSha }),
+    get(`${base}/api/voice/realtime/status`),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/documents-lifecycle`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/healthcare-controls`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/predictive-model`, headers, { releaseSha })
   ]);
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
   const providerProfile = classifyProviders(integrations.body);
@@ -156,7 +163,33 @@ async function run(env = process.env) {
     }),
     component("delivery", releaseSha, [runtime, health], { windowsRunnerRequired: false }),
     component("testing", releaseSha, [runtime, health], { exactSha: releaseSha }),
-    component("operations", releaseSha, [runtime, health, integrations, provider], { strictLive: health.body?.strictLiveMode === true })
+    component("voice", releaseSha, [realtimeVoice, realtimeVoiceStatus], {
+      realtimeEquivalent: realtimeVoice.body?.equivalent === true,
+      realtimeConfigured: realtimeVoice.body?.configured === true && realtimeVoiceStatus.body?.realtimeVoice?.ready === true,
+      realtimeModel: realtimeVoice.body?.realtimeModel
+    }),
+    component("documents", releaseSha, [documentsLifecycle], {
+      fullLifecycle: documentsLifecycle.body?.fullLifecycle === true,
+      documentId: documentsLifecycle.body?.documentId,
+      saved: documentsLifecycle.body?.saved === true,
+      reopened: documentsLifecycle.body?.reopened === true
+    }),
+    component("healthcare", releaseSha, [healthcareControls], {
+      expertValidation: healthcareControls.body?.expertValidation === true,
+      expertReviewRequired: healthcareControls.body?.expertReviewRequired === true,
+      provenanceValid: healthcareControls.body?.provenanceValid === true
+    }),
+    component("predictive", releaseSha, [predictiveModel], {
+      validatedModels: predictiveModel.body?.validatedModels === true,
+      lifecycleValid: predictiveModel.body?.lifecycleValid === true,
+      provenanceValid: predictiveModel.body?.provenanceValid === true
+    }),
+    component("operations", releaseSha, [runtime, health, integrations, provider, consolidatedBrain], {
+      strictLive: health.body?.strictLiveMode === true,
+      singleRuntimeIntegrity: consolidatedBrain.body?.singleRuntime === true,
+      authoritativeRegistries: consolidatedBrain.body?.authoritativeRegistries === true,
+      legacyFallbackUsed: consolidatedBrain.body?.legacyFallbackUsed === true
+    })
   ];
   const objectStorageEvidence = objectStorageComponent(releaseSha, objectStorage);
   const objectStorageDiagnostic = {
@@ -183,7 +216,15 @@ async function run(env = process.env) {
   componentProbes[6].passed = databaseReady;
   componentProbes[7].passed = workerReady;
   componentProbes[8].passed = providerReady;
-  componentProbes[11].passed = componentProbes[11].passed && health.body?.strictLiveMode === true;
+  const byName = Object.fromEntries(componentProbes.map(item => [item.component, item]));
+  byName.voice.passed = realtimeVoice.ok && realtimeVoice.body?.releaseSha === releaseSha && realtimeVoice.body?.configured === true &&
+    realtimeVoice.body?.equivalent === true && realtimeVoiceStatus.ok && realtimeVoiceStatus.body?.realtimeVoice?.ready === true;
+  byName.documents.passed = documentsLifecycle.ok && documentsLifecycle.body?.releaseSha === releaseSha && documentsLifecycle.body?.fullLifecycle === true;
+  byName.healthcare.passed = healthcareControls.ok && healthcareControls.body?.releaseSha === releaseSha && healthcareControls.body?.expertValidation === true;
+  byName.predictive.passed = predictiveModel.ok && predictiveModel.body?.releaseSha === releaseSha && predictiveModel.body?.validatedModels === true;
+  byName.operations.passed = byName.operations.passed && health.body?.strictLiveMode === true && consolidatedBrain.ok &&
+    consolidatedBrain.body?.releaseSha === releaseSha && consolidatedBrain.body?.singleRuntime === true &&
+    consolidatedBrain.body?.authoritativeRegistries === true && consolidatedBrain.body?.legacyFallbackUsed === false;
   const output = env.NEXUS_PROBE_FILE || path.join("output", "nexus-production-probes.json");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify({ releaseSha, source: "unified-release-live-probe", componentProbes, workspaceProbes: [] }, null, 2));

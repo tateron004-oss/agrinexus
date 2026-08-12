@@ -55,6 +55,7 @@ test("browser evidence continues only transaction-bound Health and Offline Queue
 test("release workflow executes the real browser capability producer before compiling proof", () => {
   const workflow = fs.readFileSync(".github/workflows/nexus-unified-production-release.yml", "utf8");
   const producer = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  const componentProducer = fs.readFileSync("scripts/nexus-run-production-evidence-probes.js", "utf8");
   const app = fs.readFileSync("public/app.js", "utf8");
   assert.ok(workflow.indexOf("nexus-run-browser-capability-probes.js") < workflow.indexOf("nexus-compile-production-evidence.js"));
   assert.match(producer, /__NEXUS_CAPTURE_PRODUCTION_OUTCOME__/);
@@ -70,6 +71,8 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(producer, /offline-queue-continuation/);
   assert.match(producer, /pre-cutover/); assert.match(producer, /post-cutover/);
   assert.match(producer, /production-acceptance\/workspaces/);
+  assert.match(componentProducer, /api\/voice\/realtime\/status/);
+  assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
@@ -86,6 +89,15 @@ test("live probe receipts remain exact-release and fail on stale identities", ()
   const result = component("testing", sha, [probe], { exactSha: sha });
   assert.equal(result.production, true); assert.equal(result.simulated, false); assert.equal(result.passed, true);
   assert.equal(component("testing", sha, [{ ...probe, body: { releaseSha: "b".repeat(40) } }], {}).passed, false);
+});
+
+test("five objective components fail closed unless their genuine probe facts are present", () => {
+  const sha = "8".repeat(40); const ok = name => ({ url: `https://production/${name}`, status: 200, ok: true, body: { releaseSha: sha } });
+  assert.equal(component("voice", sha, [ok("voice")], { realtimeEquivalent: true, realtimeConfigured: true }).passed, true);
+  assert.equal(component("documents", sha, [{ ...ok("documents"), ok: false }], { fullLifecycle: true }).passed, false);
+  assert.equal(component("healthcare", sha, [ok("healthcare")], { expertValidation: true }).facts.expertValidation, true);
+  assert.equal(component("predictive", sha, [ok("predictive")], { validatedModels: true }).facts.validatedModels, true);
+  assert.equal(component("operations", sha, [ok("brain")], { singleRuntimeIntegrity: true }).facts.singleRuntimeIntegrity, true);
 });
 
 test("database evidence remains a genuine exact-release production observation", () => {

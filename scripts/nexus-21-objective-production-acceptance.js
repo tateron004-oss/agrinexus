@@ -72,14 +72,17 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
   const component = name => components[name] || {};
   const live = name => component(name).ready === true && component(name).productionEvidence === true;
   const items = [
-    objective("consolidated_brain", exactSha && a.singleRuntime === true && a.legacyWritePaths === 0, ["exact release SHA", "single runtime", "zero legacy writes"]),
+    objective("consolidated_brain", exactSha && a.singleRuntime === true && a.legacyWritePaths === 0 &&
+      live("operations") && component("operations").singleRuntimeIntegrity === true && component("operations").authoritativeRegistries === true &&
+      component("operations").legacyFallbackUsed === false, component("operations").evidence),
     objective("agentic_task_engine", live("taskEngine"), component("taskEngine").evidence),
     objective("authoritative_storage", durable && live("database"), ["PostgreSQL", "pgvector", "current migrations"]),
     objective("semantic_memory", live("semanticMemory") && component("semanticMemory").restartPersistent === true, component("semanticMemory").evidence),
     objective("worker_system", live("worker") && component("worker").recentHeartbeat === true && component("worker").releaseSha === expectedSha, component("worker").evidence),
     objective("centralized_tools", providerReady && live("tools"), component("tools").evidence,
       providerReady ? `${providerProfile.requiredReadyCount}/${providerProfile.requiredCount} launch providers ready` : `Required gaps: ${providerProfile.requiredGaps.map(item => item.id).join(", ")}`),
-    objective("realtime_voice", live("voice") && component("voice").physicalEvidence === true, component("voice").evidence),
+    objective("realtime_voice", live("voice") && component("voice").realtimeConfigured === true &&
+      component("voice").realtimeEquivalent === true, component("voice").evidence),
     objective("durable_workspaces", allWorkspaces, [`${workspaces.length}/16 authoritative workspaces`]),
     objective("documents_forms", live("documents") && component("documents").fullLifecycle === true, component("documents").evidence),
     objective("object_file_storage", live("objectStorage") && component("objectStorage").redeployPersistent === true, component("objectStorage").evidence),

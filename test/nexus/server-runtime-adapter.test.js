@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createServerRuntimeAdapter, requestContext } = require("../../nexus/compat/server-runtime-adapter.js");
+const { createServerRuntimeAdapter, requestContext, runObjectiveProbe } = require("../../nexus/compat/server-runtime-adapter.js");
 
 function responseCapture() {
   const result = {};
@@ -34,6 +34,43 @@ test("task endpoints require an authenticated Nexus user before database access"
   const capture = responseCapture();
   await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/tasks"), capture.send);
   assert.equal(capture.result.status, 401); assert.equal(runtimeCreated, false);
+});
+
+test("five production objective probes require acceptance authentication and the exact release", async () => {
+  const releaseSha = "a".repeat(40); let runtimeCreated = false;
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha: "b".repeat(40) }),
+    createRuntimeFn: () => { runtimeCreated = true; return { ready: Promise.resolve() }; } });
+  for (const probe of ["consolidated-brain", "realtime-voice", "documents-lifecycle", "healthcare-controls", "predictive-model"]) {
+    runtimeCreated = false; const unauthorized = responseCapture();
+    await adapter.handle({ method: "POST", headers: {} }, {},
+      new URL(`http://local/api/nexus/runtime/production-acceptance/probes/${probe}`), unauthorized.send);
+    assert.equal(unauthorized.result.status, 401); assert.equal(runtimeCreated, false);
+    const stale = responseCapture();
+    await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+      new URL(`http://local/api/nexus/runtime/production-acceptance/probes/${probe}`), stale.send);
+    assert.equal(stale.result.status, 409); assert.equal(stale.result.body.code, "evidence_sha_mismatch");
+  }
+});
+
+test("consolidated brain probe verifies one authoritative object graph without a legacy fallback", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const planner = {}; const tasks = {}; const engine = { executeTask() {} }; const agent = { planner, engine };
+  const behavior = { agent, engine, tasks, turn() {} };
+  const active = { ready: Promise.resolve(), db: { query: async () => ({ rows: [principal] }) }, planner, tasks, engine, agent, behavior,
+    tools: { list() {} }, applications: { list() {} } };
+  const result = await runObjectiveProbe("consolidated-brain", { active, env: {}, releaseSha: "a".repeat(40) });
+  assert.equal(result.ok, true); assert.equal(result.singleRuntime, true); assert.equal(result.legacyFallbackUsed, false);
+});
+
+test("realtime voice probe requires configured Realtime and identical governed typed and voice plans", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const active = { db: { query: async () => ({ rows: [principal] }) }, planner: { plan: async ({ command }) => ({
+    application: "documents", riskTier: "low", steps: [{ toolId: "documents.create", input: { title: "Farming plan" }, dependsOn: [] }], channel: command.channel
+  }) } };
+  const result = await runObjectiveProbe("realtime-voice", { active,
+    env: { OPENAI_API_KEY: "configured", OPENAI_REALTIME_MODEL: "gpt-realtime-2" }, releaseSha: "a".repeat(40) });
+  assert.equal(result.ok, true); assert.equal(result.equivalent, true); assert.equal(result.configured, true);
 });
 
 test("authenticated users see only their tenant-owned task status", async () => {

@@ -28,7 +28,7 @@ test("compiler rejects source-only, simulated, stale, and incomplete claims", ()
   ]) assert.throws(() => compileProductionProof(complete({ releaseSha: sha, source: "probe", rollbackRef: "rollback",
     componentProbes: [{ component: "taskEngine", ...receipt("task"), ...mutation }], workspaceProbes: [] })), /production|release|pass|receipts/i);
   assert.throws(() => compileProductionProof(complete({ releaseSha: sha, source: "probe", rollbackRef: "rollback",
-    componentProbes: [{ component: "voice", ...receipt("voice"), facts: {} }], workspaceProbes: [] })), /physicalEvidence/);
+    componentProbes: [{ component: "voice", ...receipt("voice"), facts: {} }], workspaceProbes: [] })), /realtimeEquivalent/);
 });
 
 test("compiler refuses to activate a workspace unless all five exact-release proofs exist", () => {
