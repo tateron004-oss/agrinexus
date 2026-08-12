@@ -34,6 +34,9 @@ const { ProductionAcceptanceRepository } = require("../acceptance/repository.js"
 const { createObjectStore } = require("../storage/object-store.js");
 const { Path2EvidenceRepository } = require("../path2/evidence-repository.js");
 const { BehaviorSpine } = require("./behavior-spine.js");
+const { CapabilityAdapterRegistry } = require("../tools/capability-adapter-registry.js");
+const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.js");
+const { CapabilityExecutionAuthority } = require("./capability-execution-authority.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -68,8 +71,18 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const path2Evidence = new Path2EvidenceRepository(db);
   const objectStorage = createObjectStore(env);
   const governedExecutors = Object.assign({}, providers.executors, executors);
+  const adapters = new CapabilityAdapterRegistry();
+  const verifiers = new OutcomeVerifierRegistry();
+  const verifyOutcome = verifier || (input => providers.verify(input));
+  for (const [toolId, execute] of Object.entries(governedExecutors)) {
+    adapters.register({ toolId, implementation: `authoritative:${toolId}`, provider: providers.executors[toolId] ? "canonical-provider" : "runtime", execute });
+    verifiers.register({ toolId, method: "provider_receipt", verify: verifyOutcome });
+  }
+  const authority = new CapabilityExecutionAuthority({ adapters, verifiers,
+    observe: event => observability.record?.({ tenantId: event.tenantId || null, eventType: event.eventType,
+      severity: event.eventType.endsWith(".failed") ? "error" : "info", payload: event }).catch?.(() => {}) });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
-    audit, executors: governedExecutors, verifier: verifier || (input => providers.verify(input)) });
+    audit, executors: governedExecutors, verifier: verifyOutcome, authority });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
@@ -77,7 +90,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
-    engine, planner, agent, behavior, providers, acceptance, path2Evidence, objectStorage, ready,
+    engine, planner, agent, behavior, providers, adapters, verifiers, authority, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
 
