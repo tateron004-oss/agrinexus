@@ -10211,12 +10211,16 @@ async function playNexusYouTubeMusic(query = "music", options = {}) {
   const rejectedVideoIds = new Set((options.excludeVideoIds || []).map(value => String(value || "").trim()).filter(Boolean));
   const attempts = [];
   let lastFailure = { phase: "not-started", errorCode: null, errorLabel: null, playerState: null };
+  let initialCandidate = options.initialCandidate?.videoId ? options.initialCandidate : null;
 
   for (const candidatePlan of candidatePlans.slice(0, 24)) {
     const candidateQuery = String(candidatePlan?.query || normalizedQuery);
     let response;
     try {
-      response = await request("/api/music/youtube/search", {
+      if (initialCandidate) {
+        response = initialCandidate;
+        initialCandidate = null;
+      } else response = await request("/api/music/youtube/search", {
         method: "POST",
         body: {
           query: candidateQuery,
@@ -56105,6 +56109,148 @@ function validateNexusPassivePresentation(outcome = {}) {
   return presentation;
 }
 
+const nexusProviderAudioPlayback = {
+  element: null,
+  host: null,
+  provider: "",
+  playbackClass: "",
+  title: "",
+  artist: "",
+  telemetry: null
+};
+
+function closeNexusProviderAudioPlayback() {
+  const audio = nexusProviderAudioPlayback.element;
+  try { audio?.pause?.(); } catch (_) {}
+  try { if (audio) audio.removeAttribute("src"); audio?.load?.(); } catch (_) {}
+  nexusProviderAudioPlayback.host?.remove?.();
+  Object.assign(nexusProviderAudioPlayback, {
+    element: null, host: null, provider: "", playbackClass: "", title: "", artist: "", telemetry: null
+  });
+}
+
+function showNexusProviderAudioPlayer(candidate = {}) {
+  closeNexusProviderAudioPlayback();
+  closeNexusYouTubePlayback();
+  const host = document.createElement("section");
+  host.className = "nexus-provider-audio-player";
+  host.dataset.nexusProviderAudioPlayer = "true";
+  host.dataset.provider = String(candidate.provider || "");
+  host.setAttribute("aria-label", "Nexus provider audio player");
+  const heading = document.createElement("strong");
+  heading.textContent = candidate.playbackClass === "preview"
+    ? `Playing a 30-second preview of ${candidate.title} by ${candidate.artist}`
+    : `Playing ${candidate.title} by ${candidate.artist}`;
+  const provider = document.createElement("p");
+  provider.textContent = `Provider: ${candidate.providerName || candidate.provider}`;
+  const audio = document.createElement("audio");
+  audio.controls = true;
+  audio.preload = "auto";
+  audio.autoplay = true;
+  audio.dataset.nexusProviderAudio = "true";
+  audio.src = String(candidate.audioUrl || "");
+  audio.setAttribute("aria-label", heading.textContent);
+  host.append(heading, provider, audio);
+  document.body.append(host);
+  Object.assign(nexusProviderAudioPlayback, {
+    element: audio,
+    host,
+    provider: String(candidate.provider || ""),
+    playbackClass: String(candidate.playbackClass || ""),
+    title: String(candidate.title || ""),
+    artist: String(candidate.artist || ""),
+    telemetry: null
+  });
+  return audio;
+}
+
+async function verifyNexusProviderAudioPlayback(audio, timeoutMs = 15000) {
+  if (!audio?.isConnected || !/^https:\/\//i.test(String(audio.currentSrc || audio.src || ""))) {
+    return { verified: false, phase: "audio-element-unavailable" };
+  }
+  const startedAt = performance.now();
+  const initialTime = Number(audio.currentTime || 0);
+  let playResolved = false;
+  try {
+    await audio.play();
+    playResolved = true;
+  } catch (error) {
+    return { verified: false, phase: "play-rejected", playResolved: false,
+      error: error?.name || error?.message || String(error) };
+  }
+  while (performance.now() - startedAt < timeoutMs) {
+    const currentTime = Number(audio.currentTime || 0);
+    const advancedSeconds = Math.max(0, currentTime - initialTime);
+    const audibleState = playResolved && audio.paused === false && audio.muted === false &&
+      Number(audio.volume) > 0 && Number(audio.readyState) >= 2 && advancedSeconds >= 3;
+    if (audibleState) {
+      const telemetry = Object.freeze({
+        schema: "nexus.media-playback-evidence.v1",
+        provider: nexusProviderAudioPlayback.provider,
+        playbackClass: nexusProviderAudioPlayback.playbackClass,
+        title: nexusProviderAudioPlayback.title,
+        artist: nexusProviderAudioPlayback.artist,
+        playResolved,
+        paused: audio.paused,
+        muted: audio.muted,
+        volume: Number(audio.volume),
+        readyState: Number(audio.readyState),
+        initialTime,
+        currentTime,
+        advancedSeconds,
+        duration: Number.isFinite(audio.duration) ? Number(audio.duration) : null,
+        observedAt: new Date().toISOString()
+      });
+      nexusProviderAudioPlayback.telemetry = telemetry;
+      window.__NEXUS_MEDIA_PLAYBACK_TELEMETRY__ = telemetry;
+      return { verified: true, phase: "playing", telemetry };
+    }
+    if (audio.error) {
+      return { verified: false, phase: "media-error", playResolved,
+        errorCode: Number(audio.error.code || 0), error: audio.error.message || "HTML media error" };
+    }
+    await new Promise(resolve => window.setTimeout(resolve, 250));
+  }
+  return { verified: false, phase: "playback-progress-timeout", playResolved,
+    paused: audio.paused, muted: audio.muted, volume: Number(audio.volume),
+    readyState: Number(audio.readyState), currentTime: Number(audio.currentTime || 0) };
+}
+
+async function playNexusProviderNeutralMusic(query, options = {}) {
+  const normalizedQuery = String(query || "music").trim() || "music";
+  const attempts = [];
+  let candidate = await request("/api/music/providers/playback", {
+    method: "POST",
+    body: { query: normalizedQuery, country: options.country || "US" }
+  });
+  attempts.push(...(candidate?.attempts || []));
+  if (candidate?.ok && candidate.provider === "apple-itunes-preview" && candidate.audioUrl) {
+    const audio = showNexusProviderAudioPlayer(candidate);
+    const proof = await verifyNexusProviderAudioPlayback(audio, Number(options.verificationTimeoutMs || 15000));
+    if (proof.verified) {
+      return { ...candidate, playbackVerified: true, audible: true, telemetry: proof.telemetry, attempts };
+    }
+    attempts.push({ provider: candidate.provider, status: proof.phase, error: proof.error || proof.errorCode || null });
+    closeNexusProviderAudioPlayback();
+    candidate = await request("/api/music/providers/playback", {
+      method: "POST",
+      body: { query: normalizedQuery, country: options.country || "US", excludeProviders: ["apple-itunes-preview"] }
+    });
+    attempts.push(...(candidate?.attempts || []));
+  }
+  if (candidate?.ok && candidate.provider === "youtube" && candidate.videoId) {
+    const playback = await playNexusYouTubeMusic(normalizedQuery, {
+      announce: false,
+      verificationTimeoutMs: Number(options.verificationTimeoutMs || 12000),
+      candidateQueries: [normalizedQuery],
+      initialCandidate: candidate
+    });
+    return { ...playback, provider: "youtube", playbackClass: "video", audible: true,
+      attempts: [...attempts, ...(playback.attempts || [])] };
+  }
+  throw new Error(`All authoritative music providers failed without verified audible progress for ${normalizedQuery}.`);
+}
+
 async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}) {
   const presentation = validateNexusPassivePresentation(outcome);
   if (context.signal?.aborted) return { rendered: false, visible: false };
@@ -56120,15 +56266,23 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   } else if (presentation.kind === "media-player") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
-    const playback = await playNexusYouTubeMusic(requestedMedia, {
-      announce: false,
-      verificationTimeoutMs: 12000
+    const playback = await playNexusProviderNeutralMusic(requestedMedia, {
+      verificationTimeoutMs: 15000
     });
-    opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
-    audible = opened && playback?.playbackVerified === true && playback?.telemetry?.playerState === 1;
+    opened = Boolean(
+      (playback?.provider === "apple-itunes-preview" && nexusProviderAudioPlayback.element) ||
+      (playback?.provider === "youtube" && nexusYouTubePlayback.iframe)
+    );
+    audible = opened && playback?.playbackVerified === true && (
+      playback?.provider === "apple-itunes-preview"
+        ? Number(playback?.telemetry?.advancedSeconds || 0) >= 3
+        : playback?.telemetry?.playerState === 1
+    );
     if (!audible) {
-      throw new Error("YouTube playback returned without a genuine verified state 1 receipt.");
+      throw new Error("Music playback returned without genuine provider-owned audible progress.");
     }
+    document.body.dataset.nexusMediaProvider = String(playback.provider || "");
+    document.body.dataset.nexusMediaPlaybackClass = String(playback.playbackClass || "");
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else {
@@ -56159,7 +56313,7 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   const surface = presentation.kind === "map"
     ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
     : presentation.kind === "media-player"
-      ? document.querySelector('[data-nexus-youtube-player="true"] iframe')
+      ? document.querySelector('[data-nexus-provider-audio="true"], [data-nexus-youtube-player="true"] iframe')
     : presentation.kind === "document"
       ? renderNexusAuthoritativeDocument(outcome)
       : renderNexusAuthoritativeData(outcome);
@@ -56179,7 +56333,12 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       routeGeometryObserved: outcome.workspace === "map" ? visible : undefined,
       documentLifecycle: outcome.workspace === "documents" && visible ? "created_saved_closed_reopened" : undefined,
       providerVerified: outcome.verification?.providerVerified === true,
-      playbackStarted: outcome.workspace === "media" ? audible : undefined
+      playbackStarted: outcome.workspace === "media" ? audible : undefined,
+      mediaProvider: outcome.workspace === "media" ? (document.body.dataset.nexusMediaProvider || undefined) : undefined,
+      playbackClass: outcome.workspace === "media" ? (document.body.dataset.nexusMediaPlaybackClass || undefined) : undefined,
+      playbackEvidence: outcome.workspace === "media"
+        ? (nexusProviderAudioPlayback.telemetry || nexusYouTubePlayback.telemetry || undefined)
+        : undefined
     }
   };
 }

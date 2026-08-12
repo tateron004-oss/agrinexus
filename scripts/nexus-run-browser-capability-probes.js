@@ -107,14 +107,32 @@ async function run(env = process.env) {
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
         const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
         if (application === "music-media") {
-          const player = page.locator("[data-nexus-youtube-player] iframe");
-          await player.waitFor({ state: "visible", timeout: 15000 });
-          await page.waitForTimeout(2500);
-          const box = await player.boundingBox();
-          if (!box) throw new Error("The production YouTube player did not expose a clickable viewport.");
-          await page.mouse.click(box.x + (box.width / 2), box.y + (box.height / 2));
+          const player = page.locator('[data-nexus-provider-audio="true"], [data-nexus-youtube-player] iframe').first();
+          await player.waitFor({ state: "visible", timeout: 20000 });
+          if (await player.evaluate(node => node.tagName === "IFRAME")) {
+            await page.waitForTimeout(1500);
+            const box = await player.boundingBox();
+            if (!box) throw new Error("The production fallback player did not expose a clickable viewport.");
+            await page.mouse.click(box.x + (box.width / 2), box.y + (box.height / 2));
+          }
         }
         const receipt = await receiptPromise;
+        if (application === "music-media") {
+          const playback = receipt?.evidence?.playbackEvidence || {};
+          const previewVerified = receipt.audible === true &&
+            receipt.evidence?.mediaProvider === "apple-itunes-preview" &&
+            receipt.evidence?.playbackClass === "preview" &&
+            playback.schema === "nexus.media-playback-evidence.v1" &&
+            playback.playResolved === true && playback.paused === false &&
+            playback.muted === false && Number(playback.volume) > 0 &&
+            Number(playback.readyState) >= 2 && Number(playback.advancedSeconds) >= 3;
+          const youtubeVerified = receipt.audible === true &&
+            receipt.evidence?.mediaProvider === "youtube" &&
+            Number(playback.playerState) === 1;
+          if (!previewVerified && !youtubeVerified) {
+            throw new Error(`Music did not return genuine provider-owned playback evidence: ${JSON.stringify(receipt?.evidence || {})}`);
+          }
+        }
         const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
           { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
             workspace: outcome.workspace, receipt });

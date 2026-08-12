@@ -14,16 +14,17 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "a937439706e75f4a73fd0e5d32485cc9520d7fc9",
-    "recoveryBranch": "agent/youtube-player-owned-iframe",
+    "baseCommit": "4ba6d242791a975a670aecb32d1f10f17764d059",
+    "recoveryBranch": "agent/provider-neutral-music-playback",
     "files": [
+      "server.js",
       "public/app.js"
     ],
-    "purpose": "Use the authorized fail-closed YouTube lifecycle contract with an official player-owned iframe and genuine state 1 verification"
+    "purpose": "Implement authorized provider-neutral music playback with official iTunes preview audio, optional YouTube fallback, passive rendering, genuine playback-progress evidence, durable acknowledgement, and unchanged fail-closed certification gates"
   },
   "protectedFiles": {
-    "server.js": "6764c3a143bf4acc8a440f425e41164ea87f3b44",
-    "public/app.js": "f01b8812e6b03cb8951595dbc0be3e885edf6259",
+    "server.js": "a9959736ca9dc1647f84108bb2d09427c786b4c9",
+    "public/app.js": "4adb9580f3313da3d4daa0f1da2e6f1ddec45790",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
