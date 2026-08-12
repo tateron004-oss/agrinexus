@@ -341,7 +341,8 @@ function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BAS
     { toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" },
     { toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" },
     { toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" },
-    { toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation" },
+    { toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation",
+      confirmationRequired: true },
     { toolId: "communications.send", domain: "communications", description: "Deliver a governed communication" },
     { toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" }
   ].map(tool => ({ ...tool,

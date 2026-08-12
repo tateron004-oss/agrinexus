@@ -68,6 +68,9 @@ test("release controller defines signed production tool coverage for every works
   assert.deepEqual({ riskTier: health.riskTier, confirmationRequired: health.confirmationRequired,
     consentScope: health.consentScope, dataClassification: health.dataClassification },
   { riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" });
+  const offline = tools.find(tool => tool.toolId === "offline.sync");
+  assert.equal(offline.confirmationRequired, true);
+  assert.equal(offline.consentScope, undefined);
 });
 
 test("missing worker is provisioned from Genesis and rediscovered", async () => {

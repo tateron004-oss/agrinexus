@@ -195,6 +195,10 @@ function completeRemainingWorkspacePlan(text, catalog) {
   }
   if (/\b(remind|reminder)\b/i.test(goal) && /\b(tomorrow|today|tonight|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.test(goal) && /\b(save|schedule|remind)\b/i.test(goal))
     return plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
+  if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&
+      /\b(acknowledg(?:e|ement)|server|receipt|confirm)\b/i.test(goal))
+    return plan("offline-queue", "offline.sync", "Synchronize governed offline operation",
+      { operation: "sync", observation: goal, requireServerAcknowledgement: true });
   if (/\b(prepare|plan|create)\b/i.test(goal) && /\b(field\s+operation|operation)\b/i.test(goal) && /\b(approval|receipt)\b/i.test(goal))
     return plan("operations", "drone.plan", "Prepare governed field operation", { operation: goal, recordApproval: true }, "medium");
   return null;
