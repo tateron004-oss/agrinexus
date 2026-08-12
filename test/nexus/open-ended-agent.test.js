@@ -68,6 +68,21 @@ test("production planning model requests strict structured output and returns no
   await assert.rejects(() => new OpenAiPlanningModel({ apiKey: "bad", fetchFn: async () => ({ ok: false, json: async () => ({ error: { code: "quota", message: "Unavailable" } }) }) }).plan({}), error => error.code === "quota");
 });
 
+test("planning catalog separates execution permission from regulated consent", async () => {
+  let observed;
+  const planner = new OpenEndedPlanner({ model: { plan: async request => { observed = request; return {
+    goal: "Record blood pressure", application: "health", riskTier: "regulated", clarification: null,
+    steps: [{ id: "record", title: "Record reading", toolId: "health.record", input: {}, dependsOn: [],
+      fallbackToolIds: [], requiredPermission: "tasks:execute" }] }; } }, tools: { list: async () => [{
+    tool_id: "health.record", domain: "health", description: "Record health observation", risk_tier: "regulated",
+    availability: "available", required_permission: "tasks:execute", confirmation_required: true,
+    consent_scope: "health:record:write" }] }, applications: new ApplicationRegistry(defaultApplicationManifests()) });
+  await planner.plan({ command: { ...command, text: "Record blood pressure" }, context });
+  assert.equal(observed.catalog.tools[0].requiredPermission, "tasks:execute");
+  assert.equal(observed.catalog.tools[0].consentScope, "health:record:write");
+  assert.notEqual(observed.catalog.tools[0].requiredPermission, observed.catalog.tools[0].consentScope);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });

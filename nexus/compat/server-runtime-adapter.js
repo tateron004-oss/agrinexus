@@ -133,7 +133,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, applicationMatched ? 200 : 422, { ok: applicationMatched, releaseSha, expectedApplication: body.application || null, result });
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category,
-          error: String(error.message || failure.message).slice(0, 300) }); }
+          error: String(error.message || failure.message).slice(0, 300),
+          validationFeedback: safePlanningFeedback(error) }); }
       return true;
     }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement" && req.method === "POST") {
@@ -482,5 +483,10 @@ function acceptanceExecutionPermissions(principal) {
   return [...new Set([...(principal.permissions || []), "acceptance:identity", "tasks:execute"])];
 }
 
+function safePlanningFeedback(error) {
+  if (error?.code !== "plan_invalid" || !Array.isArray(error?.details?.feedback)) return [];
+  return error.details.feedback.slice(0, 12).map(item => String(item).slice(0, 240));
+}
+
 module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal,
-  acceptanceContext, acceptanceExecutionPermissions });
+  acceptanceContext, acceptanceExecutionPermissions, safePlanningFeedback });

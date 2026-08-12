@@ -159,6 +159,20 @@ test("authenticated production behavior probe preserves the safe underlying fail
   assert.equal(response.result.body.error, "Workspace agriculture has not completed authoritative cutover.");
 });
 
+test("authenticated behavior probe returns bounded safe planner validation feedback", async () => {
+  const releaseSha = "d".repeat(40); const error = new (require("../../nexus/runtime/authoritative-task-engine.js").NexusRuntimeError)(
+    "plan_invalid", "Nexus could not produce a safe executable plan.", 422,
+    { feedback: ["Step record requires unavailable permission health:record:write."] });
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1", role: "admin", permissions: ["acceptance:identity"] }] }) },
+    behavior: { turn: async () => { throw error; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha }, resolveUser: async () => null,
+    readJson: async () => ({ releaseSha, application: "health", text: "Record blood pressure" }), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance/probes/behavior-turn"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.deepEqual(response.result.body.validationFeedback, ["Step record requires unavailable permission health:record:write."]);
+});
+
 test("production browser acknowledgement rejects invisible evidence before task completion", async () => {
   const releaseSha = "a".repeat(40); let acknowledged = false;
   const runtime = { ready: Promise.resolve(), behavior: { acknowledge: async () => { acknowledged = true; } } };
