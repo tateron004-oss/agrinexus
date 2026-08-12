@@ -13,7 +13,7 @@ const output = path.resolve("output", "nexus-preproduction-black-box.json");
 async function json(pathname, init) {
   const response = await fetch(`${base}${pathname}`, init);
   const body = await response.json().catch(() => ({}));
-  assert.equal(response.ok, true, `${pathname} returned ${response.status}`);
+  assert.equal(response.ok, true, `${pathname} returned ${response.status}: ${JSON.stringify(body)}`);
   return body;
 }
 
