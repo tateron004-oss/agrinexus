@@ -19,6 +19,12 @@ assert.match(app, /youtubePlayerCommand\("pauseVideo"\)/, "Pause voice control m
 assert.match(app, /youtubePlayerCommand\("playVideo"\)/, "Resume voice control must reach YouTube");
 assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Next voice control must request another selection");
 assert.match(app, /youtubePlayerCommand\("stopVideo"\)/, "Stop voice control must reach YouTube");
+assert.match(server, /excludeVideoIds/, "The server adapter must accept bounded rejected YouTube candidate IDs");
+assert.match(server, /playbackVerified: false/, "Search metadata must not claim verified playback");
+assert.match(app, /rejectedVideoIds\.add\(String\(response\.videoId\)\)/, "A failed iframe candidate must be excluded before retry");
+assert.match(app, /status: "playback-verified"/, "Only a verified browser outcome may produce playback success");
+assert.match(app, /playback\?\.telemetry\?\.playerState === 1/, "Production evidence must require the genuine YouTube state 1 receipt");
+assert.doesNotMatch(app.slice(app.indexOf("async function playNexusYouTubeMusic"), app.indexOf("function clearNexusLocalMusicTimers")), /Playing .* through YouTube now[\s\S]*showNexusYouTubePlayer\(response\)/, "Nexus must not announce playback before verification");
 assert.match(app, /setVoiceResponse\("YouTube music stopped\. Nexus is still listening\."/,
   "Stopping music must preserve Nexus listening");
 assert.match(server, /__NEXUS_RELEASE_SHA__/);
