@@ -10050,8 +10050,36 @@ const nexusLocalMusicPlayback = {
   track: null
 };
 
+let nexusYouTubeIframeApiPromise = null;
+
+function loadNexusYouTubeIframeApi() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (nexusYouTubeIframeApiPromise) return nexusYouTubeIframeApiPromise;
+  nexusYouTubeIframeApiPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    const script = existing || document.createElement("script");
+    const deadline = Date.now() + 10000;
+    const waitForPlayer = () => {
+      if (window.YT?.Player) return resolve(window.YT);
+      if (Date.now() >= deadline) return reject(new Error("YouTube iframe API did not become ready"));
+      window.setTimeout(waitForPlayer, 50);
+    };
+    script.addEventListener("load", waitForPlayer, { once: true });
+    script.addEventListener("error", () => reject(new Error("YouTube iframe API failed to load")), { once: true });
+    if (!existing) {
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      document.head.appendChild(script);
+    } else {
+      waitForPlayer();
+    }
+  });
+  return nexusYouTubeIframeApiPromise;
+}
+
 const nexusYouTubePlayback = {
   iframe: null,
+  player: null,
   state: "idle",
   query: "",
   title: "",
@@ -10059,6 +10087,11 @@ const nexusYouTubePlayback = {
 };
 
 function youtubePlayerCommand(func, args = []) {
+  const playerMethod = nexusYouTubePlayback.player?.[func];
+  if (typeof playerMethod === "function") {
+    playerMethod.apply(nexusYouTubePlayback.player, args);
+    return true;
+  }
   const frame = nexusYouTubePlayback.iframe;
   if (!frame?.contentWindow) return false;
   frame.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube-nocookie.com");
@@ -10066,8 +10099,11 @@ function youtubePlayerCommand(func, args = []) {
 }
 
 function closeNexusYouTubePlayback() {
-  nexusYouTubePlayback.iframe?.closest("[data-nexus-youtube-player]")?.remove();
+  const host = nexusYouTubePlayback.iframe?.closest("[data-nexus-youtube-player]");
+  try { nexusYouTubePlayback.player?.destroy?.(); } catch (_) {}
+  host?.remove();
   nexusYouTubePlayback.iframe = null;
+  nexusYouTubePlayback.player = null;
   nexusYouTubePlayback.state = "stopped";
   nexusYouTubePlayback.videoId = "";
   return true;
@@ -56022,40 +56058,43 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   };
 }
 
-function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 10000) {
+function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
   if (!frame?.contentWindow) return Promise.resolve(false);
   return new Promise(resolve => {
     let settled = false;
-    let ready = false;
+    let timeout;
     const finish = value => {
       if (settled) return;
       settled = true;
-      window.removeEventListener("message", onMessage);
       window.clearTimeout(timeout);
       resolve(value);
     };
-    const onMessage = event => {
-      if (event.source !== frame.contentWindow || !/youtube(?:-nocookie)?\.com$/i.test(new URL(event.origin).hostname)) return;
-      let payload = event.data;
-      try { if (typeof payload === "string") payload = JSON.parse(payload); } catch (_) { return; }
-      if (payload?.event === "onReady") {
-        ready = true;
-        youtubePlayerCommand("addEventListener", ["onStateChange"]);
-        youtubePlayerCommand("playVideo");
-        return;
-      }
-      const state = Number(payload?.info?.playerState ?? payload?.info ?? payload?.data);
-      if (state === 1) finish(true);
-      if (state === 0 || state === 2 || state === 5) nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
-    };
-    const timeout = window.setTimeout(() => finish(false), timeoutMs);
-    window.addEventListener("message", onMessage);
-    youtubePlayerCommand("addEventListener", ["onReady"]);
-    youtubePlayerCommand("addEventListener", ["onStateChange"]);
-    youtubePlayerCommand("getPlayerState");
-    window.setTimeout(() => {
-      if (!ready) youtubePlayerCommand("playVideo");
-    }, 1500);
+    timeout = window.setTimeout(() => finish(false), timeoutMs);
+    loadNexusYouTubeIframeApi().then(YT => {
+      if (settled || nexusYouTubePlayback.iframe !== frame) return finish(false);
+      const player = new YT.Player(frame, {
+        events: {
+          onReady(event) {
+            if (settled) return;
+            nexusYouTubePlayback.player = event.target;
+            event.target.playVideo();
+          },
+          onStateChange(event) {
+            const state = Number(event?.data ?? event?.target?.getPlayerState?.());
+            if (state === 1) {
+              nexusYouTubePlayback.state = "playing";
+              finish(true);
+            } else if (state === 0 || state === 2 || state === 5) {
+              nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
+            }
+          },
+          onError() {
+            finish(false);
+          }
+        }
+      });
+      nexusYouTubePlayback.player = player;
+    }).catch(() => finish(false));
   });
 }
 
