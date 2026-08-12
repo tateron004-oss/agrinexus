@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run } = require("../../scripts/nexus-render-release-controller.js");
+const { HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, waitForAcceptanceToken, run } = require("../../scripts/nexus-render-release-controller.js");
 
 test("release controller refuses every non-canonical Nexus host", async () => {
   await assert.rejects(
@@ -211,7 +211,8 @@ test("unified release binds every production process to the exact release SHA", 
   } };
   const deployExactSha = async (_client, service) => ({ serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha });
   await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" },
-    { client, deployExactShaImpl: deployExactSha, outputDir: null, captureRuntimeDiagnostics: false });
+    { client, deployExactShaImpl: deployExactSha, outputDir: null, captureRuntimeDiagnostics: false,
+      acceptanceFetchImpl: async () => ({ status: 503, text: async () => JSON.stringify({ releaseSha, ok: false }) }) });
   for (const serviceId of ["srv-web", "srv-worker", "srv-provider"]) {
     assert.deepEqual(writes.find(write => write.path === `/services/${serviceId}/env-vars/NEXUS_RELEASE_SHA`), {
       path: `/services/${serviceId}/env-vars/NEXUS_RELEASE_SHA`,
@@ -276,6 +277,36 @@ test("exact deploy resumes an existing non-failed deployment for the release SHA
   const result = await deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1", { pollMs: 0, timeoutMs: 100 });
   assert.equal(result.deployId, "dep-existing");
   assert.equal(calls.some(call => call.options.method === "POST"), false);
+});
+
+test("forced exact deploy ignores an already-live SHA after environment rotation", async () => {
+  const calls = [];
+  const client = { request: async (path, options = {}) => {
+    calls.push({ path, options });
+    if (options.method === "POST") return { id: "dep-fresh", status: "queued", commit: { id: "sha-1" } };
+    return { id: "dep-fresh", status: "live", commit: { id: "sha-1" } };
+  } };
+  const result = await deployExactSha(client, { id: "srv-1", name: "web" }, "sha-1",
+    { pollMs: 0, timeoutMs: 100, forceFresh: true });
+  assert.equal(result.deployId, "dep-fresh");
+  assert.equal(calls.some(call => call.path.includes("deploys?limit=20")), false);
+  assert.equal(calls.filter(call => call.options.method === "POST").length, 1);
+});
+
+test("acceptance propagation requires authentication and exact running release", async () => {
+  const responses = [
+    { status: 401, body: { code: "acceptance_authentication_required" } },
+    { status: 503, body: { releaseSha: "old-sha", ok: false } },
+    { status: 503, body: { releaseSha: "sha-1", ok: false } }
+  ];
+  const fetchImpl = async () => {
+    const current = responses.shift();
+    return { status: current.status, text: async () => JSON.stringify(current.body) };
+  };
+  assert.deepEqual(await waitForAcceptanceToken({ baseUrl: "https://nexus.example", token: "secret",
+    releaseSha: "sha-1", fetchImpl, pollMs: 0, timeoutMs: 100 }),
+  { status: 503, releaseSha: "sha-1", code: null });
+  assert.equal(responses.length, 0);
 });
 
 test("reusable deploy discovery ignores failed and unrelated deployments", async () => {
