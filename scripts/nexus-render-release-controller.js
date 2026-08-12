@@ -203,7 +203,15 @@ async function installHostedProviderContract(client, webServiceId, providerServi
   for (const key of SHARED_PROVIDER_SECRET_KEYS) {
     secrets.push(await ensureSharedEnvSecret(client, [webServiceId, providerServiceId], key));
   }
-  return { environmentKeys: Object.keys(HOSTED_PROVIDER_ENV), secrets };
+  const webEnvironment = await readServiceEnv(client, webServiceId);
+  const liveProviderKeys = [];
+  for (const key of ["OPENAI_API_KEY", "TAVILY_API_KEY"]) {
+    const value = webEnvironment.get(key) || "";
+    if (!value) continue;
+    await installEnvValue(client, providerServiceId, key, value);
+    liveProviderKeys.push(key);
+  }
+  return { environmentKeys: Object.keys(HOSTED_PROVIDER_ENV), secrets, liveProviderKeys };
 }
 
 async function ensureGeneratedEnvSecret(client, serviceId, key, minimumLength, bytes = 48) {

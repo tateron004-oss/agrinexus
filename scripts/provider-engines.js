@@ -380,7 +380,7 @@ const server = http.createServer(async (req, res) => {
     writeEvent(event);
     return send(res, 200, { ok: true, accepted: true, eventId: event.id });
   } catch (error) {
-    return send(res, 500, { error: error.message || "Provider engine error" });
+    return send(res, 500, { code: error.code || "provider_engine_error", message: error.message || "Provider engine error" });
   }
 });
 
