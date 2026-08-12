@@ -62,9 +62,10 @@ test("release workflow executes the real browser capability producer before comp
 
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
-  assert.match(source, /fetch\("\/api\/login"/);
+  assert.match(source, /page\.context\(\)\.request\.post/);
   assert.match(source, /shell\?\.user\?\.role !== "Standard User"/);
-  assert.match(source, /data = shell/);
+  assert.match(source, /page\.reload/);
+  assert.match(source, /data = value/);
   assert.match(source, /attempt <= 4/);
   assert.match(source, /login transport failed after 4 attempts/);
 });
