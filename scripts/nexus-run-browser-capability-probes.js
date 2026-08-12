@@ -29,10 +29,10 @@ async function json(response) { const text = await response.text(); try { return
 function exactRecord(releaseSha, receipts, extra = {}) { return { releaseSha, production: true, simulated: false,
   passed: true, observedAt: new Date().toISOString(), receipts, ...extra }; }
 
-function pendingHealthContinuation(application, turn) {
-  return application === "health" && turn?.result?.state === "confirmation_required" && Boolean(turn?.result?.taskId) &&
-    Boolean(turn?.result?.outcome?.pendingStepId) && Boolean(turn?.result?.commandId) &&
-    Boolean(turn?.result?.correlationId);
+function pendingConfirmationContinuation(application, turn) {
+  return ["health", "offline-queue"].includes(application) && turn?.result?.state === "confirmation_required" &&
+    Boolean(turn?.result?.taskId) && Boolean(turn?.result?.outcome?.pendingStepId) &&
+    Boolean(turn?.result?.commandId) && Boolean(turn?.result?.correlationId);
 }
 
 async function post(url, token, body) {
@@ -75,8 +75,9 @@ async function run(env = process.env) {
       const execute = async phase => {
         let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
           { releaseSha, application, text, channel: "typed", locale: "en", phase });
-        if (pendingHealthContinuation(application, turn)) {
-          turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/health-continuation`, token,
+        if (pendingConfirmationContinuation(application, turn)) {
+          const continuation = application === "health" ? "health-continuation" : "offline-queue-continuation";
+          turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/${continuation}`, token,
             { releaseSha, taskId: turn.result.taskId, stepId: turn.result.outcome?.pendingStepId,
               commandId: turn.result.commandId, correlationId: turn.result.correlationId,
               channel: "typed", confirmed: true, consented: true });
@@ -135,4 +136,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingHealthContinuation, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, post, run });

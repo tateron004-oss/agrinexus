@@ -184,6 +184,49 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           category: failure.category, error: String(error.message || failure.message).slice(0, 300) }); }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/offline-queue-continuation" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        if (body.confirmed !== true) { send(res, 422, { error: "Explicit Offline Queue confirmation is required.", code: "acceptance_offline_queue_confirmation_required" }); return true; }
+        const principal = await acceptancePrincipal(active);
+        const task = await active.tasks.get({ tenantId: principal.tenantId, taskId: body.taskId, includeSteps: true });
+        const step = (task?.steps || []).find(item => item.step_id === body.stepId);
+        if (!task || task.ownerId !== principal.userId || task.application !== "offline-queue" ||
+            task.commandId !== body.commandId || task.correlationId !== body.correlationId ||
+            !step || step.tool_id !== "offline.sync" || step.confirmation_state !== "required") {
+          send(res, 409, { error: "Offline Queue continuation does not match the pending acceptance transaction.", code: "acceptance_offline_queue_transaction_mismatch" }); return true;
+        }
+        const tool = await active.tools.get(step.tool_id);
+        if (!tool || tool.tool_id !== "offline.sync" || tool.consent_scope || tool.confirmation_required !== true) {
+          send(res, 409, { error: "The governed Offline Queue tool contract does not match the continuation.", code: "acceptance_offline_queue_contract_mismatch" }); return true;
+        }
+        await active.engine.approve({ tenantId: principal.tenantId, taskId: task.taskId, stepId: step.step_id,
+          actorId: principal.userId, approved: true });
+        const context = acceptanceContext(principal, { actorId: principal.userId,
+          requestId: `acceptance-offline-queue-${task.commandId}`, correlationId: task.correlationId,
+          roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) });
+        const execution = await active.engine.executeTask({ context, taskId: task.taskId });
+        const resumedTask = await active.tasks.get({ tenantId: principal.tenantId, taskId: task.taskId, includeSteps: true });
+        if (execution.state !== "awaiting_render") {
+          send(res, 503, { ok: false, releaseSha, code: "acceptance_offline_queue_render_not_reached", error: "Offline Queue continuation did not reach renderer verification." }); return true;
+        }
+        const command = { commandId: task.commandId, correlationId: task.correlationId, conversationId: task.conversationId,
+          text: task.goal, channel: body.channel === "voice" ? "voice" : "typed" };
+        const plan = { application: "offline-queue", steps: (resumedTask.steps || []).map(item => ({ input: item.input || {} })) };
+        const render = createWorkspaceOutcome({ command, plan, task: resumedTask, state: "render_required",
+          response: "Nexus completed the confirmed Offline Queue transaction and is rendering the verified server acknowledgement.",
+          outcome: { verified: true, reason: "renderer_acknowledgement_required" } });
+        send(res, 200, { ok: true, releaseSha, result: { state: "render_required", completed: false,
+          application: "offline-queue", taskId: task.taskId, commandId: task.commandId,
+          correlationId: task.correlationId, render, receipts: execution.receipts || [] } });
+      } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
+        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code,
+          category: failure.category, error: String(error.message || failure.message).slice(0, 300) }); }
+      return true;
+    }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement" && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
       try {
