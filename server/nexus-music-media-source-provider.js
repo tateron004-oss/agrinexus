@@ -15,6 +15,7 @@ const MUSIC_MEDIA_PROVIDER_CANDIDATES = Object.freeze([
 
 const INTERNET_ARCHIVE_SEARCH_URL = "https://archive.org/advancedsearch.php";
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
+const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -240,7 +241,22 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
     url.searchParams.set("q", query.mediaRequest || query.providerPreference);
     url.searchParams.set("key", config.youtubeApiKey);
     const payload = await fetchJson(fetchImpl, url);
-    return normalizeYouTubePayload(query, payload);
+    const candidateIds = Array.isArray(payload?.items)
+      ? payload.items.map(item => normalizeText(item?.id?.videoId)).filter(Boolean)
+      : [];
+    if (!candidateIds.length) return buildYouTubeProviderErrorResult(query, "source-result-empty");
+    const statusUrl = new URL(YOUTUBE_VIDEOS_URL);
+    statusUrl.searchParams.set("part", "status");
+    statusUrl.searchParams.set("id", candidateIds.join(","));
+    statusUrl.searchParams.set("key", config.youtubeApiKey);
+    const statusPayload = await fetchJson(fetchImpl, statusUrl);
+    const embeddableIds = new Set((statusPayload?.items || [])
+      .filter(item => item?.status?.embeddable === true && item?.status?.privacyStatus === "public")
+      .map(item => normalizeText(item.id)));
+    return normalizeYouTubePayload(query, {
+      ...payload,
+      items: (payload.items || []).filter(item => embeddableIds.has(normalizeText(item?.id?.videoId)))
+    });
   } catch (error) {
     return buildYouTubeProviderErrorResult(query, error && error.message ? error.message : "source-error");
   }
@@ -307,6 +323,7 @@ module.exports = Object.freeze({
   MUSIC_MEDIA_PROVIDER_CANDIDATES,
   INTERNET_ARCHIVE_SEARCH_URL,
   YOUTUBE_SEARCH_URL,
+  YOUTUBE_VIDEOS_URL,
   classifyMusicMediaIntent,
   buildMusicMediaQuery,
   resolveMusicMediaProviderConfig,
