@@ -3,6 +3,7 @@
 
 const crypto = require("node:crypto");
 const fs = require("node:fs");
+const { canonicalProviderTools } = require("../nexus/tools/canonical-provider-definitions.js");
 
 const API = "https://api.render.com/v1";
 const CANONICAL_NEXUS_BASE_URL = "https://nexus-genesis-certified.onrender.com";
@@ -326,32 +327,7 @@ async function installAcceptanceToken(client, serviceId, token) {
 }
 
 function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BASE_URL) {
-  const tools = [
-    { toolId: "knowledge.search", domain: "knowledge", description: "Search governed production knowledge" },
-    { toolId: "documents.create", domain: "documents", description: "Create a governed production document" },
-    { toolId: "jobs.search", domain: "jobs", description: "Search governed production jobs" },
-    { toolId: "resume.create", domain: "resume", description: "Create a governed production resume" },
-    { toolId: "maps.view", domain: "maps", description: "Render a governed production map" },
-    { toolId: "media.play", domain: "media", description: "Play governed production media" },
-    { toolId: "health.record", domain: "health", description: "Record a user-confirmed health observation",
-      riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write",
-      dataClassification: "health" },
-    { toolId: "health.emergency-guidance", domain: "health", description: "Display immediate emergency guidance without claiming diagnosis or dispatch",
-      riskTier: "regulated", dataClassification: "health" },
-    { toolId: "telehealth.prepare", domain: "telehealth", description: "Save a governed telehealth intake" },
-    { toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" },
-    { toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" },
-    { toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" },
-    { toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" },
-    { toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation",
-      confirmationRequired: true },
-    { toolId: "communications.send", domain: "communications", description: "Deliver a governed communication" },
-    { toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" }
-  ].map(tool => ({ ...tool,
-    endpoint: `${providerBaseUrl}/nexus/tools/${tool.toolId}`, receiptSecret: secret,
-    riskTier: tool.riskTier || "low", requiredPermission: "tasks:execute",
-    confirmationRequired: Boolean(tool.confirmationRequired) }));
-  return tools;
+  return canonicalProviderTools({ receiptSecret: secret, providerBaseUrl });
 }
 
 async function installCanonicalToolProviders(client, webServiceId, providerServiceId, secret) {

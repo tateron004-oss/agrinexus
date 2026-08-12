@@ -1,11 +1,15 @@
 "use strict";
 
 const crypto = require("crypto");
+const { assertCanonicalProviderBindings } = require("./canonical-provider-definitions.js");
 
 const PROVIDER_ENV = "NEXUS_TOOL_PROVIDERS_JSON";
 
 function createProviderCatalog({ env = process.env, fetchFn = globalThis.fetch } = {}) {
   const definitions = parseDefinitions(env[PROVIDER_ENV]);
+  if (env.NODE_ENV === "production" || env.NEXUS_ENFORCE_CANONICAL_PROVIDER_CATALOG === "true") {
+    assertCanonicalProviderBindings(definitions);
+  }
   const executors = {};
   for (const definition of definitions) executors[definition.toolId] = createExecutor(definition, { fetchFn });
   return Object.freeze({
