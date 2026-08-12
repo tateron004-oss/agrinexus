@@ -19,16 +19,28 @@ async function runYouTubeDataApiLiveProviderQa() {
     NEXUS_MUSIC_MEDIA_FETCH_IMPL: async url => {
       calls.push(String(url));
       if (String(url).startsWith(media.YOUTUBE_VIDEOS_URL)) return buildResponse({
-        items: [{ id: "abc123", status: { embeddable: true, privacyStatus: "public" } }]
+        items: [
+          { id: "abc123", status: { embeddable: true, privacyStatus: "public" } },
+          { id: "def456", status: { embeddable: true, privacyStatus: "public" } }
+        ]
       });
       return buildResponse({
-        items: [{
-          id: { videoId: "abc123" },
-          snippet: {
-            title: "How to Plant Maize Audio",
-            channelTitle: "Kenya Farm Learning"
+        items: [
+          {
+            id: { videoId: "abc123" },
+            snippet: {
+              title: "How to Plant Maize Audio",
+              channelTitle: "Kenya Farm Learning"
+            }
+          },
+          {
+            id: { videoId: "def456" },
+            snippet: {
+              title: "How to Plant Maize Live",
+              channelTitle: "Kenya Farm Learning"
+            }
           }
-        }]
+        ]
       });
     }
   };
@@ -53,7 +65,7 @@ async function runYouTubeDataApiLiveProviderQa() {
   const statusUrl = new URL(calls[1]);
   assert.equal(statusUrl.origin + statusUrl.pathname, media.YOUTUBE_VIDEOS_URL);
   assert.equal(statusUrl.searchParams.get("part"), "status");
-  assert.equal(statusUrl.searchParams.get("id"), "abc123");
+  assert.equal(statusUrl.searchParams.get("id"), "abc123,def456");
 
   assert.equal(isSafeReadOnlySourceResult(result), true);
   assert.equal(result.sourceName, "YouTube Data API v3");
@@ -63,6 +75,22 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.match(result.resultSummary, /How to Plant Maize/);
   assert.doesNotMatch(JSON.stringify(result), /test-secret-key/);
   assert.equal(result.executionAuthority, false);
+
+  const recovered = await media.getMusicMediaSourceResultAsync({
+    mediaRequest: "show me how to plant maize",
+    excludeVideoIds: ["abc123"]
+  }, env);
+  assert.equal(recovered.sourceStatus, "source-result-available");
+  assert.equal(recovered.sourceUrl, "https://www.youtube.com/watch?v=def456");
+  assert.match(recovered.resultSummary, /How to Plant Maize Live/);
+  assert.equal(calls.length, 4);
+
+  const exhausted = await media.getMusicMediaSourceResultAsync({
+    mediaRequest: "show me how to plant maize",
+    excludeVideoIds: ["abc123", "def456"]
+  }, env);
+  assert.equal(exhausted.sourceStatus, "source-error");
+  assert.match(exhausted.limitationNotes, /source-result-empty/);
 
   const failed = await media.getMusicMediaSourceResultAsync({
     mediaRequest: "Swahili diabetes education"
