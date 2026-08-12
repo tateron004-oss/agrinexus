@@ -57,10 +57,13 @@ test("worker and provider configuration use their canonical processes", async ()
   assert.equal(bodies[1].serviceDetails.envSpecificDetails.startCommand, "npm run provider-engines");
 });
 
-test("release controller defines the signed low-risk production tool catalog", () => {
+test("release controller defines signed production tool coverage for every workspace", () => {
   const tools = canonicalToolProviders("shared-secret");
-  assert.equal(tools.length, 7);
+  assert.equal(tools.length, 15);
   assert.ok(tools.every(tool => tool.receiptSecret === "shared-secret" && tool.endpoint.startsWith("https://agrinexus-provider-engines.onrender.com/nexus/tools/")));
+  const manifests = require("../../nexus/apps/default-manifests.js").defaultApplicationManifests();
+  const toolIds = new Set(tools.map(tool => tool.toolId));
+  for (const manifest of manifests) assert.ok(manifest.capabilities.some(capability => toolIds.has(capability)), `${manifest.applicationId} has a production executor`);
   const health = tools.find(tool => tool.toolId === "health.record");
   assert.deepEqual({ riskTier: health.riskTier, confirmationRequired: health.confirmationRequired,
     consentScope: health.consentScope, dataClassification: health.dataClassification },

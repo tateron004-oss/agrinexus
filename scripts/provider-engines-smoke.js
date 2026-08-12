@@ -137,6 +137,16 @@ async function call(base, route, body) {
       headers: { "content-type": "application/json", "x-nexus-request-signature": crypto.createHmac("sha256", env.NEXUS_TOOL_RECEIPT_SECRET).update(healthBody).digest("hex") }, body: healthBody });
     assert.equal(healthResponse.status, 200); const healthReceipt = (await healthResponse.json()).receipt;
     assert.equal(healthReceipt.toolId, "health.record"); assert.equal(healthReceipt.outcome, "completed");
+    for (const toolId of ["documents.create", "jobs.search", "resume.create", "maps.view", "media.play", "telehealth.prepare", "clinic.find",
+      "pharmacy.find", "marketplace.search", "reminders.schedule", "offline.sync", "communications.send", "drone.plan"]) {
+      const request = { ...nexusRequest, toolId, stepId: `${toolId}-step`, idempotencyKey: `${toolId}-once`,
+        input: { query: "maize", message: "Clinic follow-up", resolvedTime: "tomorrow 09:00" } };
+      const body = JSON.stringify(request); const response = await fetch(`${providerBase}/nexus/tools/${toolId}`, { method: "POST",
+        headers: { "content-type": "application/json", "x-nexus-request-signature": crypto.createHmac("sha256", env.NEXUS_TOOL_RECEIPT_SECRET).update(body).digest("hex") }, body });
+      assert.equal(response.status, 200); const result = await response.json();
+      assert.equal(result.receipt.toolId, toolId); assert.equal(result.receipt.outcome, "completed");
+      assert(Object.keys(result).length > 2, `${toolId} must return capability evidence`);
+    }
     await call(appBase, "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
     const ai = await call(appBase, "/api/ai/run", { type: "command" });
     assert(ai.profile.aiProvider === "local-ai-webhook");

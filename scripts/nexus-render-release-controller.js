@@ -335,7 +335,15 @@ function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BAS
     { toolId: "media.play", domain: "media", description: "Play governed production media" },
     { toolId: "health.record", domain: "health", description: "Record a user-confirmed health observation",
       riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write",
-      dataClassification: "health" }
+      dataClassification: "health" },
+    { toolId: "telehealth.prepare", domain: "telehealth", description: "Save a governed telehealth intake" },
+    { toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" },
+    { toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" },
+    { toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" },
+    { toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" },
+    { toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation" },
+    { toolId: "communications.send", domain: "communications", description: "Deliver a governed communication" },
+    { toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" }
   ].map(tool => ({ ...tool,
     endpoint: `${providerBaseUrl}/nexus/tools/${tool.toolId}`, receiptSecret: secret,
     riskTier: tool.riskTier || "low", requiredPermission: "tasks:execute",
