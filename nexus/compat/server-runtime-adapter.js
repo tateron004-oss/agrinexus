@@ -181,6 +181,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const render = createWorkspaceOutcome({ command, plan, task: resumedTask, state: "render_required",
           response: "Nexus completed the confirmed Health transaction and is rendering the verified result.",
           outcome: { verified: true, reason: "renderer_acknowledgement_required" } });
+        await active.workspaceStates.stage({ tenantId: principal.tenantId, ownerId: principal.userId,
+          taskId: task.taskId, outcome: render });
         send(res, 200, { ok: true, releaseSha, consentId: consent.consent_id, result: { state: "render_required",
           completed: false, application: "health", taskId: task.taskId, commandId: task.commandId,
           correlationId: task.correlationId, render, receipts: execution.receipts || [] } });
@@ -224,6 +226,8 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const render = createWorkspaceOutcome({ command, plan, task: resumedTask, state: "render_required",
           response: "Nexus completed the confirmed Offline Queue transaction and is rendering the verified server acknowledgement.",
           outcome: { verified: true, reason: "renderer_acknowledgement_required" } });
+        await active.workspaceStates.stage({ tenantId: principal.tenantId, ownerId: principal.userId,
+          taskId: task.taskId, outcome: render });
         send(res, 200, { ok: true, releaseSha, result: { state: "render_required", completed: false,
           application: "offline-queue", taskId: task.taskId, commandId: task.commandId,
           correlationId: task.correlationId, render, receipts: execution.receipts || [] } });
