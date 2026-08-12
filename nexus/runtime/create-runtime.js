@@ -22,6 +22,7 @@ const { OpenEndedPlanner } = require("../brain/planner.js");
 const { AgentService } = require("./agent-service.js");
 const { OpenAiPlanningModel } = require("../brain/openai-planning-model.js");
 const { RecordRepository } = require("../data/record-repository.js");
+const { WorkspaceStateRepository } = require("../apps/workspace-state-repository.js");
 const { WorkspaceMigrationRepository } = require("../apps/migration-repository.js");
 const { DeviceRepository } = require("../devices/repository.js");
 const { NotificationRepository } = require("../notifications/repository.js");
@@ -59,6 +60,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
+  const workspaceStates = new WorkspaceStateRepository(records);
   const workspaceMigrations = new WorkspaceMigrationRepository(db);
   const devices = new DeviceRepository(db);
   const deviceTokens = env.NEXUS_DEVICE_TOKEN_KEY ? new DeviceTokenVault(env.NEXUS_DEVICE_TOKEN_KEY) : null;
@@ -90,10 +92,10 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
-  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations }) : null;
+  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceStates, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
