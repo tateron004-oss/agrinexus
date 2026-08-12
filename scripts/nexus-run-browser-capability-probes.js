@@ -56,6 +56,12 @@ async function run(env = process.env) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
+  await page.evaluate(async () => {
+    if (!data?.profile) data = await request("/api/login", {
+      method: "POST", body: { email: "user@agrinexus.org", password: "User2026!" }
+    });
+    if (!data?.profile) throw new Error("Authenticated Standard User shell state is required for production rendering.");
+  });
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
