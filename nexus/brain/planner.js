@@ -25,6 +25,8 @@ class OpenEndedPlanner {
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
+    const completeMediaPlayback = completeMediaPlaybackPlan(command.text, catalog);
+    if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -126,6 +128,18 @@ function completeMobileClinicPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeMediaPlaybackPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const requestedMedia = goal.replace(/^\s*(?:nexus[,:]?\s*)?play\s+/i, "").replace(/\s+and\s+confirm\b.*$/i, "").trim();
+  if (!/^\s*(?:nexus[,:]?\s*)?play\b/i.test(goal) || !requestedMedia) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "media.play") ||
+      !catalog.applications.some(app => app.applicationId === "music-media")) return null;
+  return { goal, application: "music-media", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "play-media", title: "Play requested media", toolId: "media.play",
+      input: { action: "play", requestedMedia, resolvedMedia: requestedMedia, playbackState: "playing" },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -163,4 +177,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, validatePlan });
+  completeMobileClinicPlan, completeMediaPlaybackPlan, validatePlan });
