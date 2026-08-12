@@ -21,6 +21,8 @@ class OpenEndedPlanner {
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
+    const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
+    if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -99,6 +101,16 @@ function completeMarketplaceSearchPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeLiveKnowledgePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/[?]|\b(why|what|how|when|where|who)\b/i.test(goal) || !/\b(current|latest|live|sources?)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "knowledge.search") ||
+      !catalog.applications.some(app => app.applicationId === "live-knowledge")) return null;
+  return { goal, application: "live-knowledge", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "search-live-knowledge", title: "Search current governed sources",
+      toolId: "knowledge.search", input: { query: goal, requireCurrentSources: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -135,4 +147,4 @@ function safeMemory(item) { return { kind: item.kind, content: item.content, con
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
-  completeTelehealthIntakePlan, completeMarketplaceSearchPlan, validatePlan });
+  completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan, validatePlan });
