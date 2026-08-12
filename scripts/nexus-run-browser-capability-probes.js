@@ -45,6 +45,24 @@ async function post(url, token, body) {
   return value;
 }
 
+async function reloadAuthenticatedShell(page, attempts = 4) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 90000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      const recoverable = /ERR_ABORTED|frame was detached|navigation/i.test(String(error?.message || error));
+      if (!recoverable || attempt === attempts) break;
+      await new Promise(resolve => setTimeout(resolve, attempt * 500));
+      await page.goto(page.url(), { waitUntil: "networkidle", timeout: 90000 });
+      return;
+    }
+  }
+  throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
+}
+
 async function run(env = process.env) {
   const { chromium } = require("playwright");
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
@@ -66,7 +84,7 @@ async function run(env = process.env) {
   const shell = await loginResponse.json();
   if (!loginResponse.ok() || shell?.user?.role !== "Standard User" || !shell?.profile) throw new Error(
     `Authenticated Standard User shell state is required for production rendering (status=${loginResponse.status()}, role=${shell?.user?.role || "missing"}, profile=${Boolean(shell?.profile)}).`);
-  await page.reload({ waitUntil: "networkidle", timeout: 90000 });
+  await reloadAuthenticatedShell(page);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   await page.evaluate(value => { data = value; }, shell);
   const capabilityProbes = []; const workspaceProbes = [];
@@ -136,4 +154,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, post, run });
