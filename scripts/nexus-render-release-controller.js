@@ -330,8 +330,10 @@ function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BAS
   return canonicalProviderTools({ receiptSecret: secret, providerBaseUrl });
 }
 
-async function installCanonicalToolProviders(client, webServiceId, providerServiceId, secret) {
-  await installEnvValue(client, webServiceId, "NEXUS_TOOL_PROVIDERS_JSON", JSON.stringify(canonicalToolProviders(secret)));
+async function installCanonicalToolProviders(client, webServiceId, workerServiceId, providerServiceId, secret) {
+  const serialized = JSON.stringify(canonicalToolProviders(secret));
+  await installEnvValue(client, webServiceId, "NEXUS_TOOL_PROVIDERS_JSON", serialized);
+  await installEnvValue(client, workerServiceId, "NEXUS_TOOL_PROVIDERS_JSON", serialized);
   await installEnvValue(client, providerServiceId, "NEXUS_TOOL_RECEIPT_SECRET", secret);
 }
 
@@ -527,7 +529,7 @@ async function run(env = process.env, options = {}) {
     services.push(reconciled);
   }
   await installAcceptanceToken(client, services[0].id, token);
-  await installCanonicalToolProviders(client, services[0].id, services[2].id, toolProviderSecret);
+  await installCanonicalToolProviders(client, services[0].id, services[1].id, services[2].id, toolProviderSecret);
   exportWorkflowSecret(token, env);
   const deployments = [];
   const deploy = options.deployExactShaImpl || deployExactSha;
