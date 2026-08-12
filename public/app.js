@@ -10124,9 +10124,9 @@ function showNexusYouTubePlayer(result) {
     </div>
     <div class="nexus-youtube-frame-wrap">
       <iframe title="${escapeHtml(result.title || result.query)}"
-        src="https://www.youtube.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}"
+        src="https://www.youtube.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}&widget_referrer=${encodeURIComponent(window.location.href)}"
         allow="autoplay; encrypted-media; picture-in-picture"
-        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        referrerpolicy="origin" allowfullscreen></iframe>
     </div>
     <div class="nexus-youtube-controls" role="group" aria-label="Music controls">
       <button type="button" data-youtube-action="play">Play</button>
