@@ -14,17 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "bd43dab7d7ac5263157be4bdfb4d3d658c955d53",
-    "recoveryBranch": "agent/youtube-rights-aware-fallback",
+    "baseCommit": "9e3fa92ec9794f026efb4c0fee7f3184aa62b6a8",
+    "recoveryBranch": "agent/youtube-fallback-browser-parse",
     "files": [
-      "server.js",
       "public/app.js"
     ],
-    "purpose": "Continue the authorized fail-closed YouTube recovery with rights-aware candidate fallback and per-attempt production evidence"
+    "purpose": "Correct the authorized YouTube fallback diagnostic syntax and require full protected browser-bundle parsing before release"
   },
   "protectedFiles": {
     "server.js": "6764c3a143bf4acc8a440f425e41164ea87f3b44",
-    "public/app.js": "6c7537e403f53174af6764b5df9c03549d23f31e",
+    "public/app.js": "e8b9fcd80b1da2fa490a8b29f314d9e2f6d20e96",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "6cfa3a17a081c52d8a3f0c42a8c300852c41e644",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",

@@ -10283,7 +10283,7 @@ async function playNexusYouTubeMusic(query = "music", options = {}) {
   }
 
   const attemptSummary = attempts.map(attempt =>
-    `${attempt.videoId || "none"}:${attempt.errorCode ?? attempt.errorLabel ?? attempt.phase || "unknown"}:${attempt.creativeCommonsOnly ? "cc" : "standard"}`
+    `${attempt.videoId || "none"}:${attempt.errorCode ?? attempt.errorLabel ?? attempt.phase ?? "unknown"}:${attempt.creativeCommonsOnly ? "cc" : "standard"}`
   ).join(",");
   throw new Error(`YouTube exhausted bounded candidates for ${normalizedQuery} without genuine playback state 1 (phase=${lastFailure.phase || "unknown"}, state=${lastFailure.playerState ?? "unknown"}, stateLabel=${lastFailure.playerStateLabel || "unknown"}, error=${lastFailure.errorCode ?? "none"}, errorLabel=${lastFailure.errorLabel || "none"}, ready=${lastFailure.readyObserved === true}, playRequested=${lastFailure.playRequested === true}, attempts=[${attemptSummary}]). Nexus will not report it as playing.`);
 }
