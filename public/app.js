@@ -10083,7 +10083,9 @@ const nexusYouTubePlayback = {
   state: "idle",
   query: "",
   title: "",
-  videoId: ""
+  videoId: "",
+  lifecycle: "idle",
+  errorCode: ""
 };
 
 function youtubePlayerCommand(func, args = []) {
@@ -56000,8 +56002,10 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
     audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
     if (!audible) {
+      const lifecycle = nexusYouTubePlayback.lifecycle;
+      const errorCode = nexusYouTubePlayback.errorCode || "none";
       closeNexusYouTubePlayback();
-      throw new Error(`YouTube loaded ${playback?.title || requestedMedia}, but playback did not start. Nexus will not report it as playing.`);
+      throw new Error(`YouTube loaded ${playback?.title || requestedMedia}, but playback did not start (lifecycle=${lifecycle}, error=${errorCode}). Nexus will not report it as playing.`);
     }
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
@@ -56069,18 +56073,25 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
       window.clearTimeout(timeout);
       resolve(value);
     };
-    timeout = window.setTimeout(() => finish(false), timeoutMs);
+    timeout = window.setTimeout(() => {
+      nexusYouTubePlayback.lifecycle = "timeout";
+      finish(false);
+    }, timeoutMs);
+    nexusYouTubePlayback.lifecycle = "api-loading";
+    nexusYouTubePlayback.errorCode = "";
     loadNexusYouTubeIframeApi().then(YT => {
       if (settled || nexusYouTubePlayback.iframe !== frame) return finish(false);
       const player = new YT.Player(frame, {
         events: {
           onReady(event) {
+            nexusYouTubePlayback.lifecycle = "ready";
             if (settled) return;
             nexusYouTubePlayback.player = event.target;
             event.target.playVideo();
           },
           onStateChange(event) {
             const state = Number(event?.data ?? event?.target?.getPlayerState?.());
+            nexusYouTubePlayback.lifecycle = `state-${state}`;
             if (state === 1) {
               nexusYouTubePlayback.state = "playing";
               finish(true);
@@ -56088,13 +56099,19 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
               nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
             }
           },
-          onError() {
+          onError(event) {
+            nexusYouTubePlayback.errorCode = String(event?.data ?? "unknown");
+            nexusYouTubePlayback.lifecycle = `error-${nexusYouTubePlayback.errorCode}`;
             finish(false);
           }
         }
       });
       nexusYouTubePlayback.player = player;
-    }).catch(() => finish(false));
+    }).catch(error => {
+      nexusYouTubePlayback.errorCode = String(error?.message || "api-load-failed");
+      nexusYouTubePlayback.lifecycle = "api-error";
+      finish(false);
+    });
   });
 }
 
