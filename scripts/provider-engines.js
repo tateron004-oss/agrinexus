@@ -174,9 +174,11 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
 
 async function liveKnowledgeEvidence(input, common, receiptId) {
   const query = String(input.query || input.question || "").trim();
+  let lastProviderError = null;
   if (!query) throw Object.assign(new Error("A knowledge question is required."), { code: "knowledge_query_required" });
   if (process.env.TAVILY_API_KEY) {
-    const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
+    try {
+      const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5 }) });
     if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
     const body = await response.json();
@@ -185,8 +187,10 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
     return { ...common, sources, source: sources[0], answer: body.answer, assessment: body.answer,
       crop: input.crop || "crop", observations: input.observations || [query], lesson: body.answer,
       content: body.answer, savedProgress: receiptId, provider: "tavily" };
+    } catch (error) { lastProviderError = error; }
   }
   if (process.env.OPENAI_API_KEY) {
+    try {
     const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: {
       authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json"
     }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5-mini",
@@ -197,7 +201,9 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
     if (!answer) throw Object.assign(new Error("Reasoning provider returned no usable answer."), { code: "knowledge_outcome_unverified" });
     return { ...common, answer, assessment: answer, crop: input.crop || "crop", observations: input.observations || [query],
       lesson: answer, content: answer, savedProgress: receiptId, provider: "openai" };
+    } catch (error) { lastProviderError = error; }
   }
+  if (lastProviderError) throw lastProviderError;
   throw Object.assign(new Error("No live reasoning or knowledge provider is configured."), { code: "knowledge_provider_unavailable" });
 }
 
@@ -216,7 +222,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       return res.end(`<!doctype html><html><head><title>AgriNexus verified outcome</title></head><body><main data-nexus-production-outcome="true" data-case-id="${escapeHtml(caseId)}"><h1>Verified governed tool outcome</h1><p>${escapeHtml(toolId)}</p><p>${escapeHtml(caseId)}</p></main></body></html>`);
     }
-    if (req.method === "POST" && req.url.startsWith("/nexus/tools/")) return nexusToolResponse(req, res);
+    if (req.method === "POST" && req.url.startsWith("/nexus/tools/")) return await nexusToolResponse(req, res);
 
     const endpoint = endpoints[req.url];
     if (!endpoint || req.method !== "POST") return send(res, 404, { error: "Provider endpoint not found" });
