@@ -432,9 +432,10 @@ async function deployExactSha(client, service, releaseSha, {
   timeoutMs = 45 * 60 * 1000,
   diagnosticsDir = "output",
   diagnosticAttempts = 5,
-  retryMs = 2000
+  retryMs = 2000,
+  forceFresh = false
 } = {}) {
-  const reusable = await resolveReusableDeploy(client, service, releaseSha);
+  const reusable = forceFresh ? null : await resolveReusableDeploy(client, service, releaseSha);
   const created = reusable || await client.request(`/services/${service.id}/deploys`, {
     method: "POST", body: { commitId: releaseSha, clearCache: "do_not_clear" }
   });
@@ -473,6 +474,28 @@ async function deployExactSha(client, service, releaseSha, {
     current = await client.request(`/services/${service.id}/deploys/${id}`);
   }
   throw new Error(`${service.name} deploy ${id} did not finish within ${timeoutMs}ms`);
+}
+
+async function waitForAcceptanceToken({ baseUrl, token, releaseSha, fetchImpl = fetch,
+  pollMs = 15000, timeoutMs = 15 * 60 * 1000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let last = { status: 0, releaseSha: null, code: "not_attempted" };
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetchImpl(`${required(baseUrl, "acceptance base URL").replace(/\/$/, "")}/api/nexus/runtime/production-acceptance`, {
+        headers: { authorization: `Bearer ${required(token, "acceptance token")}` }
+      });
+      const text = await response.text();
+      let body = null;
+      try { body = text ? JSON.parse(text) : null; } catch { body = null; }
+      last = { status: response.status, releaseSha: body?.releaseSha || null, code: body?.code || null };
+      if (response.status !== 401 && body?.releaseSha === releaseSha) return last;
+    } catch (error) {
+      last = { status: 0, releaseSha: null, code: error.code || error.name || "request_failed" };
+    }
+    await sleep(pollMs);
+  }
+  throw new Error(`Production acceptance token did not propagate for exact release ${releaseSha}: ${JSON.stringify(last)}`);
 }
 
 function exportWorkflowSecret(token, env = process.env) {
@@ -524,14 +547,23 @@ async function run(env = process.env, options = {}) {
   exportWorkflowSecret(token, env);
   const deployments = [];
   const deploy = options.deployExactShaImpl || deployExactSha;
-  deployments.push(...await Promise.all(services.map(service => deploy(client, service, releaseSha, options))));
+  deployments.push(...await Promise.all(services.map((service, index) => deploy(client, service, releaseSha,
+    index === 0 ? { ...options, forceFresh: true } : options))));
+  const acceptanceAuthentication = await waitForAcceptanceToken({
+    baseUrl: nexusBaseUrl,
+    token,
+    releaseSha,
+    fetchImpl: options.acceptanceFetchImpl || options.fetchImpl,
+    pollMs: options.acceptancePollMs,
+    timeoutMs: options.acceptanceTimeoutMs
+  });
   const workerDeployment = deployments.find(item => item.serviceId === worker.id);
   const workerDiagnostics = options.captureRuntimeDiagnostics === false ? [] :
     await fetchDeployDiagnostics(client, worker, workerDeployment || {}, {
       attempts: options.runtimeDiagnosticAttempts || 5,
       retryMs: options.retryMs || 2000
     });
-  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments, providerContract, workerDiagnostics };
+  const evidence = { releaseSha, deployedAt: new Date().toISOString(), services: deployments, providerContract, acceptanceAuthentication, workerDiagnostics };
   const outputDir = options.outputDir === undefined ? "output" : options.outputDir;
   if (outputDir) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -542,4 +574,4 @@ async function run(env = process.env, options = {}) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.message); process.exit(1); });
-module.exports = { CANONICAL_NEXUS_BASE_URL, CANONICAL_PROVIDER_BASE_URL, REQUIRED_WEB_ENV, HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, readServiceEnv, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, installCanonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, run };
+module.exports = { CANONICAL_NEXUS_BASE_URL, CANONICAL_PROVIDER_BASE_URL, REQUIRED_WEB_ENV, HOSTED_PROVIDER_ENV, SHARED_PROVIDER_SECRET_KEYS, createClient, resolveUniqueService, validateService, reconcileServiceConfiguration, resolveOrProvisionDatabase, installEnvValue, readServiceEnv, ensureGeneratedEnvSecret, ensureSharedEnvSecret, installHostedProviderContract, canonicalToolProviders, installCanonicalToolProviders, provisionBackgroundWorker, resolveOrProvisionWorker, resolveReusableDeploy, deployExactSha, waitForAcceptanceToken, run };
