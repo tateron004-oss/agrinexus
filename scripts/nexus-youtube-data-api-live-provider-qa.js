@@ -42,6 +42,8 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.equal(requestUrl.origin + requestUrl.pathname, media.YOUTUBE_SEARCH_URL);
   assert.equal(requestUrl.searchParams.get("part"), "snippet");
   assert.equal(requestUrl.searchParams.get("type"), "video");
+  assert.equal(requestUrl.searchParams.get("videoEmbeddable"), "true");
+  assert.equal(requestUrl.searchParams.get("videoSyndicated"), "true");
   assert.equal(requestUrl.searchParams.get("safeSearch"), "moderate");
   assert.equal(requestUrl.searchParams.get("q"), "show me how to plant maize");
   assert.equal(requestUrl.searchParams.get("key"), "test-secret-key");
