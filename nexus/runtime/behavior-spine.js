@@ -4,11 +4,11 @@ const { NexusRuntimeError } = require("./authoritative-task-engine.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 
 class BehaviorSpine {
-  constructor({ agent, engine, tasks, conversations }) {
-    if (!agent?.command || !engine?.executeTask || !tasks?.get) {
+  constructor({ agent, engine, tasks, conversations, workspaceStates }) {
+    if (!agent?.command || !engine?.executeTask || !tasks?.get || !workspaceStates?.stage || !workspaceStates?.acknowledge) {
       throw new Error("The authoritative agent, task engine, and task repository are required.");
     }
-    Object.assign(this, { agent, engine, tasks, conversations });
+    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates });
   }
 
   async turn({ input, context }) {
@@ -26,9 +26,12 @@ class BehaviorSpine {
         outcome: { verified: false, reason: "confirmation_required", pendingStepId: execution.pendingStepId } });
     }
     if (execution.state === "awaiting_render") {
-      return envelope({ planned, execution, task, state: "render_required", completed: false,
+      const result = envelope({ planned, execution, task, state: "render_required", completed: false,
         response: "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
+      await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
+        taskId: task.taskId, outcome: result.render });
+      return result;
     }
     if (!execution.completed || execution.state !== "completed" || task?.outcome?.verified !== true) {
       throw new NexusRuntimeError("behavior_outcome_unverified",
@@ -45,6 +48,9 @@ class BehaviorSpine {
   }
 
   async acknowledge({ input, context }) {
+    await this.workspaceStates.acknowledge({ tenantId: context.tenantId, actorId: context.userId,
+      taskId: input.taskId, receipt: { rendered: input.rendered, visible: input.visible,
+        audible: input.audible, evidence: input.evidence, observedAt: input.observedAt } });
     const execution = await this.engine.acknowledgeRender({ context, taskId: input.taskId,
       commandId: input.commandId, correlationId: input.correlationId, workspace: input.workspace, rendered: input.rendered,
       visible: input.visible, audible: input.audible, evidence: input.evidence });
