@@ -14,6 +14,7 @@ const MUSIC_MEDIA_PROVIDER_CANDIDATES = Object.freeze([
 ]);
 
 const INTERNET_ARCHIVE_SEARCH_URL = "https://archive.org/advancedsearch.php";
+const ITUNES_SEARCH_URL = "https://itunes.apple.com/search";
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 const YOUTUBE_OEMBED_URL = "https://www.youtube.com/oembed";
@@ -147,6 +148,102 @@ function normalizeInternetArchivePayload(query, payload) {
     evidenceStatus: "source-backed",
     sourceStatus: "source-result-available"
   });
+}
+
+function buildItunesPreviewProviderErrorResult(query, errorType) {
+  return Object.freeze({
+    ok: false,
+    provider: "apple-itunes-preview",
+    providerName: "Apple iTunes Search API",
+    playbackClass: "preview",
+    query: query.mediaRequest || query.providerPreference || "media request",
+    status: "source-error",
+    error: errorType || "source-error"
+  });
+}
+
+function normalizeItunesPreviewPayload(query, payload) {
+  const requested = normalizeText(query.mediaRequest || query.providerPreference).toLowerCase();
+  const tokens = requested.split(/[^a-z0-9]+/).filter(token => token.length > 1);
+  const candidates = Array.isArray(payload?.results) ? payload.results.filter(item =>
+    hasText(item?.previewUrl) && /^https:\/\//i.test(item.previewUrl) &&
+    hasText(item?.trackName) && hasText(item?.artistName)
+  ) : [];
+  const ranked = candidates.map(item => {
+    const haystack = normalizeText(`${item.artistName} ${item.trackName}`).toLowerCase();
+    const score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
+    return { item, score };
+  }).sort((left, right) => right.score - left.score);
+  const best = ranked[0];
+  if (!best || best.score < Math.min(2, tokens.length || 2)) {
+    return buildItunesPreviewProviderErrorResult(query, "exact-track-match-unavailable");
+  }
+  const item = best.item;
+  return Object.freeze({
+    ok: true,
+    provider: "apple-itunes-preview",
+    providerName: "Apple iTunes Search API",
+    providerEvidence: "official-provider-preview-url",
+    playbackClass: "preview",
+    previewDurationSeconds: 30,
+    query: query.mediaRequest || query.providerPreference,
+    title: normalizeText(item.trackName),
+    artist: normalizeText(item.artistName),
+    album: normalizeText(item.collectionName || ""),
+    artworkUrl: normalizeText(item.artworkUrl100 || ""),
+    providerUrl: normalizeText(item.trackViewUrl || ""),
+    audioUrl: normalizeText(item.previewUrl),
+    matchScore: best.score,
+    playbackVerified: false,
+    status: "candidate-ready"
+  });
+}
+
+async function preflightPlayableAudio(fetchImpl, candidate) {
+  if (!candidate?.ok || !hasText(candidate.audioUrl)) return buildItunesPreviewProviderErrorResult(
+    buildMusicMediaQuery({ mediaRequest: candidate?.query || "" }), "preview-url-unavailable");
+  try {
+    const response = await fetchImpl(candidate.audioUrl, {
+      method: "GET",
+      headers: { Range: "bytes=0-1", Accept: "audio/*" },
+      signal: AbortSignal.timeout(8000)
+    });
+    const contentType = normalizeText(response?.headers?.get?.("content-type") || "").toLowerCase();
+    const playable = Boolean(response && (response.ok === true || response.status === 206) &&
+      (contentType.startsWith("audio/") || contentType.includes("mpeg") || contentType.includes("mp4")));
+    try { await response?.body?.cancel?.(); } catch (_) {}
+    return playable
+      ? Object.freeze({ ...candidate, preflightVerified: true, contentType })
+      : buildItunesPreviewProviderErrorResult(buildMusicMediaQuery({ mediaRequest: candidate.query }),
+          `preview-preflight-failed-http-${response?.status || "unknown"}-${contentType || "unknown"}`);
+  } catch (error) {
+    return buildItunesPreviewProviderErrorResult(buildMusicMediaQuery({ mediaRequest: candidate.query }),
+      error?.message || "preview-preflight-failed");
+  }
+}
+
+async function runItunesPreviewLookup(request = {}, env = process.env) {
+  const query = buildMusicMediaQuery(request);
+  if (!hasText(query.mediaRequest) && !hasText(query.providerPreference)) {
+    return buildItunesPreviewProviderErrorResult(query, "music-search-query-required");
+  }
+  const fetchImpl = typeof env.NEXUS_MUSIC_MEDIA_FETCH_IMPL === "function"
+    ? env.NEXUS_MUSIC_MEDIA_FETCH_IMPL : globalThis.fetch;
+  if (typeof fetchImpl !== "function") return buildItunesPreviewProviderErrorResult(query, "fetch-unavailable");
+  try {
+    const url = new URL(ITUNES_SEARCH_URL);
+    url.searchParams.set("term", query.mediaRequest || query.providerPreference);
+    url.searchParams.set("media", "music");
+    url.searchParams.set("entity", "song");
+    url.searchParams.set("attribute", "songTerm");
+    url.searchParams.set("country", normalizeText(request.country || "US").slice(0, 2).toUpperCase());
+    url.searchParams.set("explicit", "No");
+    url.searchParams.set("limit", "25");
+    const payload = await fetchJson(fetchImpl, url);
+    return preflightPlayableAudio(fetchImpl, normalizeItunesPreviewPayload(query, payload));
+  } catch (error) {
+    return buildItunesPreviewProviderErrorResult(query, error?.message || "source-error");
+  }
 }
 
 function buildYouTubeProviderErrorResult(query, errorType) {
@@ -365,6 +462,7 @@ module.exports = Object.freeze({
   MUSIC_MEDIA_PROVIDER_NAME,
   MUSIC_MEDIA_PROVIDER_CANDIDATES,
   INTERNET_ARCHIVE_SEARCH_URL,
+  ITUNES_SEARCH_URL,
   YOUTUBE_SEARCH_URL,
   YOUTUBE_VIDEOS_URL,
   YOUTUBE_OEMBED_URL,
@@ -377,6 +475,10 @@ module.exports = Object.freeze({
   buildMusicMediaProviderUnavailableResult,
   buildInternetArchiveProviderErrorResult,
   normalizeInternetArchivePayload,
+  buildItunesPreviewProviderErrorResult,
+  normalizeItunesPreviewPayload,
+  preflightPlayableAudio,
+  runItunesPreviewLookup,
   buildYouTubeProviderErrorResult,
   normalizeYouTubePayload,
   runYouTubeReadOnlyLookup,
