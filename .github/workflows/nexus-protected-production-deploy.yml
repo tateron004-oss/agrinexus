@@ -49,7 +49,6 @@ jobs:
       AGRINEXUS_STATE_STORE: postgres
       NEXUS_ACCEPTANCE_TOKEN: candidate-only-token
       NEXUS_DISABLE_LOCAL_ENV_FILES: "true"
-      NEXUS_TOOL_PROVIDERS_JSON: '[{"toolId":"knowledge.search","domain":"knowledge","description":"Search governed production knowledge","endpoint":"https://provider.example/nexus/tools/knowledge.search","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"documents.create","domain":"documents","description":"Create a governed production document","endpoint":"https://provider.example/nexus/tools/documents.create","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"jobs.search","domain":"jobs","description":"Search governed production jobs","endpoint":"https://provider.example/nexus/tools/jobs.search","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"resume.create","domain":"resume","description":"Create a governed production resume","endpoint":"https://provider.example/nexus/tools/resume.create","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"maps.view","domain":"maps","description":"Render a governed production map","endpoint":"https://provider.example/nexus/tools/maps.view","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"media.play","domain":"media","description":"Play governed production media","endpoint":"https://provider.example/nexus/tools/media.play","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","riskTier":"low","requiredPermission":"tasks:execute","confirmationRequired":false},{"toolId":"health.record","domain":"health","description":"Record a user-confirmed health observation","riskTier":"regulated","confirmationRequired":true,"consentScope":"health:record:write","dataClassification":"health","endpoint":"https://provider.example/nexus/tools/health.record","receiptSecret":"candidate-provider-receipt-secret-0000000000000000","requiredPermission":"tasks:execute"}]'
       RENDER_GIT_COMMIT: ${{ github.event.inputs.target_sha || github.sha }}
       PORT: "4173"
     steps:
@@ -81,6 +80,8 @@ jobs:
           npm run qa:nexus-production-layer-activation-integration
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
+      - name: Install production-equivalent provider contract
+        run: node -e 'const fs=require("node:fs");const {canonicalToolProviders}=require("./scripts/nexus-render-release-controller.js");fs.appendFileSync(process.env.GITHUB_ENV,"NEXUS_TOOL_PROVIDERS_JSON="+JSON.stringify(canonicalToolProviders("candidate-provider-receipt-secret-0000000000000000","https://provider.example"))+"\\n")'
       - name: Migrate production-equivalent PostgreSQL
         run: npm run foundation:migrate
       - name: Boot exact candidate and prove it as a black box

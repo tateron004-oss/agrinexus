@@ -394,3 +394,11 @@ test("pre-deploy diagnostics reject stale records and retain the newest migratio
   assert.equal(calls.filter(path => path.startsWith("/logs?")).length, 3);
   assert.equal(responses.length, 0);
 });
+
+
+test("canonical providers use registry-supported risk tiers", () => {
+  const providers = canonicalToolProviders("s".repeat(48));
+  const allowed = new Set(["low", "medium", "high", "regulated"]);
+  assert.ok(providers.every(provider => allowed.has(provider.riskTier)));
+  assert.equal(providers.find(provider => provider.toolId === "health.emergency-guidance").riskTier, "regulated");
+});
