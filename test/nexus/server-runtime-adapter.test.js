@@ -194,6 +194,19 @@ test("production acceptance exposes a safe failing stage without leaking databas
   assert.doesNotMatch(JSON.stringify(response.result.body), /password|secret|table detail/);
 });
 
+test("production acceptance classifies a runtime health failure and binds it to the active SHA", async () => {
+  const releaseSha = "c".repeat(40);
+  const runtime = { ready: Promise.resolve(), applications: {}, acceptance: { report: async () => ({}) } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({}), checkHealthFn: async () => { throw new Error("database unavailable"); }, createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "GET", headers: { authorization: "Bearer token" } }, {},
+    new URL("http://local/api/nexus/runtime/production-acceptance"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.equal(response.result.body.releaseSha, releaseSha);
+  assert.equal(response.result.body.stage, "runtime-health");
+});
+
 test("machine evidence rejects a stale release SHA before recording",async()=>{let recorded=false;const runtime={ready:Promise.resolve(),acceptance:{recordEvidence:async()=>{recorded=true;}},applications:{get:()=>({})},workspaceMigrations:{activate:async()=>({})}};const adapter=createServerRuntimeAdapter({env:{NEXUS_ACCEPTANCE_TOKEN:"token",RENDER_GIT_COMMIT:"active"},resolveUser:async()=>null,readJson:async()=>({releaseSha:"stale",component:"testing"}),createRuntimeFn:()=>runtime});
  const response=responseCapture();await adapter.handle({method:"POST",headers:{authorization:"Bearer token"}},{},new URL("http://local/api/nexus/runtime/production-acceptance/evidence"),response.send);assert.equal(response.result.status,409);assert.equal(recorded,false);});
 

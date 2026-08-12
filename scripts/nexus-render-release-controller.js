@@ -491,11 +491,9 @@ async function waitForAcceptanceToken({ baseUrl, token, releaseSha, fetchImpl = 
       const text = await response.text();
       let body = null;
       try { body = text ? JSON.parse(text) : null; } catch { body = null; }
-      last = { status: response.status, releaseSha: body?.releaseSha || null, code: body?.code || null };
+      last = { status: response.status, releaseSha: body?.releaseSha || null, code: body?.code || null, stage: body?.stage || null };\n      if (response.status >= 500 && body?.releaseSha === releaseSha) {\n        throw Object.assign(new Error(`Production acceptance failed at ${body?.stage || "unknown-stage"}.`), { code: body?.code || "acceptance_failed", stage: body?.stage || null, failFast: true });\n      }
       if (response.status !== 401 && body?.releaseSha === releaseSha) return last;
-    } catch (error) {
-      last = { status: 0, releaseSha: null, code: error.code || error.name || "request_failed" };
-    }
+    } catch (error) {\n      if (error.failFast) throw error;\n      last = { status: 0, releaseSha: null, code: error.code || error.name || "request_failed", stage: error.stage || null };\n    }
     await sleep(pollMs);
   }
   throw new Error(`Production acceptance token did not propagate for exact release ${releaseSha}: ${JSON.stringify(last)}`);
