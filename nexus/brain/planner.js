@@ -15,6 +15,8 @@ class OpenEndedPlanner {
     const catalog = await this.catalog();
     const interactionProfile = createInteractionProfile({ locale: command.locale,
       userPreferences: context.userPreferences || {}, channel: command.channel });
+    const completeHealthRecord = completeHealthRecordPlan(command.text, catalog);
+    if (completeHealthRecord) return Object.freeze({ ...completeHealthRecord, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -38,6 +40,21 @@ class OpenEndedPlanner {
       confirmationRequired: tool.confirmation_required, consentScope: tool.consent_scope })),
     applications: applications.map(app => ({ applicationId: app.applicationId, capabilities: app.capabilities, riskTiers: app.riskTiers })) };
   }
+}
+
+function completeHealthRecordPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(record|log|save|add|capture)\b/i.test(goal) || !/\b(blood\s*pressure|bp)\b/i.test(goal)) return null;
+  const match = goal.match(/\b(?:blood\s*pressure|bp)\b[^\d]{0,40}(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i) ||
+    goal.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i);
+  if (!match || !catalog.tools.some(tool => tool.toolId === "health.record") ||
+      !catalog.applications.some(app => app.applicationId === "health")) return null;
+  const systolic = Number(match[1]); const diastolic = Number(match[2]);
+  if (systolic < 40 || systolic > 300 || diastolic < 20 || diastolic > 200) return null;
+  return { goal, application: "health", riskTier: "regulated", clarification: null, steps: [{ clientStepId: "record-reading",
+    title: "Record blood pressure reading", toolId: "health.record",
+    input: { intakeType: "blood-pressure", readingType: "blood-pressure", systolic, diastolic },
+    dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function validatePlan(candidate, catalog, context) {
@@ -75,4 +92,4 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, validatePlan });
+module.exports = Object.freeze({ OpenEndedPlanner, completeHealthRecordPlan, validatePlan });

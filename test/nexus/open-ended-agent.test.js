@@ -83,6 +83,18 @@ test("planning catalog separates execution permission from regulated consent", a
   assert.notEqual(observed.catalog.tools[0].requiredPermission, observed.catalog.tools[0].consentScope);
 });
 
+test("complete blood-pressure record commands become governed Health plans without unnecessary clarification", async () => {
+  const catalog = { tools: [{ toolId: "health.record" }], applications: [{ applicationId: "health" }] };
+  const { completeHealthRecordPlan } = require("../../nexus/brain/planner.js");
+  const direct = completeHealthRecordPlan("Record my blood pressure as 140 over 90 and show the safety response.", catalog);
+  assert.equal(direct.application, "health"); assert.equal(direct.clarification, null);
+  assert.equal(direct.steps[0].toolId, "health.record");
+  assert.deepEqual({ systolic: direct.steps[0].input.systolic, diastolic: direct.steps[0].input.diastolic },
+    { systolic: 140, diastolic: 90 });
+  assert.equal(completeHealthRecordPlan("Please log 128/82 BP for me.", catalog).steps[0].input.systolic, 128);
+  assert.equal(completeHealthRecordPlan("Help me understand blood pressure.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
