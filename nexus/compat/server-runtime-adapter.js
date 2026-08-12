@@ -489,6 +489,21 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
           locale: request.locale, text: body.text }, context });
         send(res, result.completed ? 200 : 202, result); return true;
+      } else if (url.pathname === "/api/nexus/runtime/behavior/conversation" && req.method === "GET") {
+        const conversationId = String(request.query.conversationId || "").trim();
+        if (!conversationId) { send(res, 400, { error: "Conversation ID is required.", code: "conversation_id_required" }); return true; }
+        const turns = await active.conversations.recent({ tenantId: context.tenantId, conversationId,
+          limit: Math.min(Math.max(Number(request.query.limit) || 24, 1), 100) });
+        send(res, 200, { schema: "nexus.behavior-conversation.v1", authoritative: true,
+          conversationId, turns: turns.map(turn => ({ role: turn.role, content: turn.content,
+            occurredAt: turn.created_at || turn.occurredAt, provenance: turn.provenance || {} })) }); return true;
+      } else if (url.pathname === "/api/nexus/runtime/behavior/readiness" && req.method === "GET") {
+        const database = active.db && typeof active.db.query === "function"
+          ? await active.db.query("select 1 as authoritative_runtime_ready")
+          : null;
+        send(res, database ? 200 : 503, { schema: "nexus.behavior-readiness.v1", authoritative: true,
+          releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", databaseConnected: Boolean(database), behaviorSpineReady: Boolean(active.behavior),
+          conversationRecoveryReady: Boolean(active.conversations?.recent) }); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/acknowledgements" && req.method === "POST") {
         if (!active.behavior?.acknowledge) { send(res, 503, { error: "The authoritative renderer acknowledgement path is unavailable.", code: "behavior_acknowledgement_unavailable" }); return true; }
         const acknowledged = await active.behavior.acknowledge({ input: {

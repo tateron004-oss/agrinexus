@@ -11,9 +11,9 @@ const PORT = Number(process.env.PROVIDER_ENGINE_PORT || process.env.PORT || 4280
 const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_URL);
 const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
-const PROVIDER_ENGINE_RELEASE = "provider-brain-30";
+const PROVIDER_ENGINE_RELEASE = "provider-brain-31";
 const NEXUS_TOOL_IDS = new Set(["knowledge.search", "documents.create", "jobs.search", "resume.create", "maps.view", "media.play", "health.record",
-  "telehealth.prepare", "clinic.find", "pharmacy.find", "marketplace.search", "reminders.schedule", "offline.sync", "communications.send", "drone.plan"]);
+  "health.emergency-guidance", "telehealth.prepare", "clinic.find", "pharmacy.find", "marketplace.search", "reminders.schedule", "offline.sync", "communications.send", "drone.plan"]);
 
 const endpoints = {
   "/ai/responses": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },
@@ -127,17 +127,15 @@ async function nexusToolResponse(req, res) {
   receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
   writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
     providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt });
-  return send(res, 200, { receipt, result: { accepted: true, outcomeUrl, toolId },
-    ...capabilityEvidence(toolId, payload.input || {}, receipt, outcomeUrl) });
+  const evidence = await capabilityEvidence(toolId, payload.input || {}, receipt, outcomeUrl);
+  return send(res, 200, { receipt, result: { accepted: true, outcomeUrl, toolId }, ...evidence });
 }
 
-function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
+async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
   const source = { title: "AgriNexus governed provider outcome", url: outcomeUrl }; const id = receipt.receiptId;
   const common = { sources: [source], source };
   const evidence = {
-    "knowledge.search": { ...common, crop: input.crop || "maize", observations: input.observations || ["User-described crop condition"],
-      assessment: input.assessment || "Source-backed assessment prepared", answer: input.answer || "Source-backed answer prepared",
-      lesson: input.lesson || "Source-backed learning lesson", content: input.content || "Provider-verified learning content", savedProgress: id },
+    "knowledge.search": toolId === "knowledge.search" ? await liveKnowledgeEvidence(input, common, id) : null,
     "documents.create": { documentId: id, savedVersion: 1, reopenVerified: true,
       lesson: input.lesson || "Saved learning lesson", content: input.content || "Provider-verified document content", savedProgress: id },
     "jobs.search": { ...common, listings: input.listings || [{ id, title: "Agriculture opportunity" }], selectedListing: input.selectedListing || id },
@@ -148,6 +146,18 @@ function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
       resolvedMedia: input.resolvedMedia || "Provider-resolved media", playbackState: "playing" },
     "health.record": { reading: { type: "blood-pressure", systolic: input.systolic, diastolic: input.diastolic },
       persistedRecordId: id, safetyResponse: "Reading recorded with provider-review safety guidance" },
+    "health.emergency-guidance": {
+      riskLevel: "emergency",
+      safetyResponse: "This may be a medical emergency. Call 911 or your local emergency number now. Do not wait for Nexus or drive yourself. If someone is with you, ask them to stay with you and help emergency responders reach you.",
+      immediateActions: [
+        "Call 911 or your local emergency number now.",
+        "Do not wait for Nexus and do not drive yourself.",
+        "Ask someone nearby to stay with you if possible."
+      ],
+      emergencyServicesDispatched: false,
+      limitation: "Nexus cannot diagnose this condition or dispatch emergency services.",
+      userStatement: input.userStatement || "Emergency warning signs reported"
+    },
     "telehealth.prepare": { intake: input, savedRecordId: id, nextStep: "Review and schedule with a connected care provider" },
     "clinic.find": { locations: [{ id, name: "Connected mobile clinic", source: outcomeUrl }], source, selectedLocation: id },
     "pharmacy.find": { result: { id, query: input.query || "pharmacy support" }, source,
@@ -159,6 +169,35 @@ function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
     "drone.plan": { operation: input.operation || "Field operation prepared", approvalState: "recorded", operationReceipt: id }
   };
   return evidence[toolId] || {};
+}
+
+async function liveKnowledgeEvidence(input, common, receiptId) {
+  const query = String(input.query || input.question || "").trim();
+  if (!query) throw Object.assign(new Error("A knowledge question is required."), { code: "knowledge_query_required" });
+  if (process.env.TAVILY_API_KEY) {
+    const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5 }) });
+    if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
+    const body = await response.json();
+    const sources = (body.results || []).filter(item => item?.url).map(item => ({ title: item.title || item.url, url: item.url }));
+    if (!String(body.answer || "").trim() || !sources.length) throw Object.assign(new Error("Live knowledge returned no answer with sources."), { code: "knowledge_outcome_unverified" });
+    return { ...common, sources, source: sources[0], answer: body.answer, assessment: body.answer,
+      crop: input.crop || "crop", observations: input.observations || [query], lesson: body.answer,
+      content: body.answer, savedProgress: receiptId, provider: "tavily" };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: {
+      authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json"
+    }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5-mini",
+      input: `Answer this user directly and practically. Do not open or propose a workflow unless asked. Question: ${query}` }) });
+    if (!response.ok) throw Object.assign(new Error(`Reasoning provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
+    const body = await response.json();
+    const answer = String(body.output_text || body.output?.flatMap(item => item.content || []).find(item => item.type === "output_text")?.text || "").trim();
+    if (!answer) throw Object.assign(new Error("Reasoning provider returned no usable answer."), { code: "knowledge_outcome_unverified" });
+    return { ...common, answer, assessment: answer, crop: input.crop || "crop", observations: input.observations || [query],
+      lesson: answer, content: answer, savedProgress: receiptId, provider: "openai" };
+  }
+  throw Object.assign(new Error("No live reasoning or knowledge provider is configured."), { code: "knowledge_provider_unavailable" });
 }
 
 const server = http.createServer(async (req, res) => {

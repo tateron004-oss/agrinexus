@@ -39799,6 +39799,7 @@ function render() {
   applyRoleNavigation();
   applyExperienceMode();
   welcomeSignedInUser();
+  void restoreNexusAuthoritativeRuntime();
 
   $("#countrySelect").innerHTML = [
     `<option value="language:en">English</option>`,
@@ -55859,7 +55860,9 @@ function renderNexusAgenticCommandResult(result = {}) {
 }
 
 const NEXUS_AUTHORITATIVE_CONVERSATION_KEY = "nexusAuthoritativeConversationId";
+const NEXUS_AUTHORITATIVE_TASK_KEY = "nexusAuthoritativeActiveTaskId";
 let nexusAuthoritativeOutcomeRendererPromise = null;
+let nexusAuthoritativeRecoveryStarted = false;
 
 function loadNexusAuthoritativeOutcomeRenderer() {
   if (window.NexusAuthoritativeOutcomeRenderer) return Promise.resolve(window.NexusAuthoritativeOutcomeRenderer);
@@ -55915,15 +55918,56 @@ function renderNexusAuthoritativeData(outcome = {}) {
   return surface;
 }
 
+function renderNexusAuthoritativeDocument(outcome = {}) {
+  const data = outcome.data || {};
+  if (!data.documentId || !data.savedVersion || data.reopenVerified !== true) return null;
+  const surface = renderNexusAuthoritativeData(outcome);
+  if (!surface) return null;
+  surface.dataset.nexusDocumentLifecycle = "reopened";
+  surface.dataset.documentId = String(data.documentId);
+  const editor = document.createElement("textarea");
+  editor.dataset.nexusDocumentEditor = "true";
+  editor.value = String(data.content || outcome.originalText || "");
+  editor.setAttribute("aria-label", String(data.title || "Saved Nexus document"));
+  const status = document.createElement("p");
+  status.dataset.nexusDocumentStatus = "true";
+  status.textContent = `Saved version ${data.savedVersion}; closed and reopened from the authoritative document record.`;
+  surface.append(editor, status);
+  return surface;
+}
+
+function nexusMapOutcomeVerified(outcome = {}, data = {}) {
+  const canvas = document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas");
+  if (!canvas || !userMap) return false;
+  if (outcome.operation !== "show_route") return Boolean(document.body.dataset.genesisMapLocation);
+  const expected = [data.origin, data.destination].filter(Boolean);
+  return expected.length === 2 && userMapLayers.route?.getLayers?.().length > 0 &&
+    userMapLayers.markers?.getLayers?.().length >= 2 &&
+    Boolean(document.body.dataset.genesisMapLocation);
+}
+
 async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}) {
   if (context.signal?.aborted) return { rendered: false, visible: false };
   if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
     setExperienceMode("user", { persist: false, announceChange: false });
   }
   let opened = false;
+  let audible = false;
   if (outcome.workspace === "map") {
     opened = openGenesisRealtimeMapWorkspace(data, outcome.response);
     document.body.dataset.genesisWorkspace = "map";
+    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  } else if (outcome.workspace === "media" && outcome.operation === "play") {
+    const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
+    if (!requestedMedia) return { rendered: false, visible: false, audible: false };
+    const playback = await playNexusYouTubeMusic(requestedMedia, { announce: false });
+    opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
+    audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
+    if (!audible) {
+      closeNexusYouTubePlayback();
+      throw new Error(`YouTube loaded ${playback?.title || requestedMedia}, but playback did not start. Nexus will not report it as playing.`);
+    }
+    document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else {
     opened = openNexusCapability(nexusAuthoritativeCapabilityId(outcome), {
@@ -55948,25 +55992,61 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   }
   if (!opened || context.signal?.aborted) return { rendered: false, visible: false };
-  await new Promise(resolve => window.setTimeout(resolve, outcome.workspace === "map" ? 500 : 0));
+  await new Promise(resolve => window.setTimeout(resolve, outcome.workspace === "map" ? 700 : 0));
   if (context.signal?.aborted) return { rendered: false, visible: false };
   const surface = outcome.workspace === "map"
     ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
-    : renderNexusAuthoritativeData(outcome);
-  const visible = Boolean(surface && (surface.getClientRects?.().length || outcome.workspace === "map"));
+    : outcome.workspace === "media"
+      ? document.querySelector('[data-nexus-youtube-player="true"] iframe')
+    : outcome.workspace === "documents"
+      ? renderNexusAuthoritativeDocument(outcome)
+      : renderNexusAuthoritativeData(outcome);
+  const visible = outcome.workspace === "map"
+    ? nexusMapOutcomeVerified(outcome, data)
+    : Boolean(surface && surface.getClientRects?.().length);
   return {
     rendered: visible,
     visible,
-    audible: false,
+    audible,
     evidence: {
       workspace: outcome.workspace,
       operation: outcome.operation,
       commandId: outcome.commandId,
       renderedFields: Object.keys(data || {}),
       routeEndpoints: outcome.operation === "show_route" ? [data.origin, data.destination].filter(Boolean) : undefined,
-      providerVerified: outcome.verification?.providerVerified === true
+      routeGeometryObserved: outcome.workspace === "map" ? visible : undefined,
+      documentLifecycle: outcome.workspace === "documents" && visible ? "created_saved_closed_reopened" : undefined,
+      providerVerified: outcome.verification?.providerVerified === true,
+      playbackStarted: outcome.workspace === "media" ? audible : undefined
     }
   };
+}
+
+function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 10000) {
+  if (!frame?.contentWindow) return Promise.resolve(false);
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", onMessage);
+      window.clearTimeout(timeout);
+      resolve(value);
+    };
+    const onMessage = event => {
+      if (event.source !== frame.contentWindow || !/youtube(?:-nocookie)?\.com$/i.test(new URL(event.origin).hostname)) return;
+      let payload = event.data;
+      try { if (typeof payload === "string") payload = JSON.parse(payload); } catch (_) { return; }
+      const state = Number(payload?.info ?? payload?.info?.playerState ?? payload?.data);
+      if (state === 1) finish(true);
+      if (state === 0 || state === 2 || state === 5) nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
+    };
+    const timeout = window.setTimeout(() => finish(false), timeoutMs);
+    window.addEventListener("message", onMessage);
+    youtubePlayerCommand("addEventListener", ["onStateChange"]);
+    youtubePlayerCommand("playVideo");
+    window.setTimeout(() => youtubePlayerCommand("getPlayerState"), 500);
+  });
 }
 
 // Production certification invokes this through a real browser. It renders the
@@ -56049,6 +56129,40 @@ function nexusAuthoritativeConversationId() {
   return conversationId;
 }
 
+async function restoreNexusAuthoritativeRuntime() {
+  if (nexusAuthoritativeRecoveryStarted) return;
+  nexusAuthoritativeRecoveryStarted = true;
+  try {
+    const conversationId = nexusAuthoritativeConversationId();
+    const [readiness, conversation] = await Promise.all([
+      requestWithTimeout("/api/nexus/runtime/behavior/readiness", {}, 30000),
+      requestWithTimeout(`/api/nexus/runtime/behavior/conversation?conversationId=${encodeURIComponent(conversationId)}&limit=24`, {}, 30000)
+    ]);
+    if (readiness?.authoritative !== true || readiness.databaseConnected !== true || readiness.behaviorSpineReady !== true) {
+      throw new Error("The authoritative Nexus database or behavior spine is not ready.");
+    }
+    document.body.dataset.nexusAuthoritativeDatabase = "connected";
+    document.body.dataset.nexusAuthoritativeRelease = String(readiness.releaseSha || "");
+    nexusPersistentMemoryState.status = { ...(nexusPersistentMemoryState.status || {}),
+      persistenceScope: "authoritative_database",
+      message: "Production database connected. Authoritative conversation recovery is active." };
+    document.querySelectorAll("[data-nexus-user-testing-database-status] span:last-child").forEach(element => {
+      element.textContent = nexusPersistentMemoryState.status.message;
+    });
+    const turns = Array.isArray(conversation?.turns) ? conversation.turns : [];
+    const restoredTaskId = turns.slice().reverse().find(turn => String(turn?.provenance?.taskId || "").startsWith("tsk_"))?.provenance?.taskId;
+    if (restoredTaskId) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, restoredTaskId);
+    turns.forEach(turn => recordNexusOsConversationTurn(turn.role,
+      typeof turn.content === "string" ? turn.content : JSON.stringify(turn.content), {
+        source: "nexus-authoritative-conversation-recovery", occurredAt: turn.occurredAt, restored: true
+      }));
+    if (turns.length) renderUserWorkspace?.();
+  } catch (_) {
+    nexusAuthoritativeRecoveryStarted = false;
+    document.body.dataset.nexusAuthoritativeDatabase = "unavailable";
+  }
+}
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
@@ -56069,13 +56183,15 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         text: routedText,
         channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed",
         locale: languageCode(),
-        conversationId: nexusAuthoritativeConversationId()
+        conversationId: nexusAuthoritativeConversationId(),
+        taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined
       }
     }, 90000);
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
     }
     let message = result.response || "Nexus needs more information before it can continue.";
+    if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
     let renderReceipt = null;
     if (result.render?.schema === "nexus.workspace-outcome.v1") {
       const renderer = await nexusAuthoritativeOutcomeRenderer();
