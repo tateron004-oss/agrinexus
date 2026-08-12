@@ -17,6 +17,8 @@ class OpenEndedPlanner {
       userPreferences: context.userPreferences || {}, channel: command.channel });
     const completeHealthRecord = completeHealthRecordPlan(command.text, catalog);
     if (completeHealthRecord) return Object.freeze({ ...completeHealthRecord, planningAttempts: 1 });
+    const completeTelehealthIntake = completeTelehealthIntakePlan(command.text, catalog);
+    if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -70,6 +72,18 @@ function completeHealthRecordPlan(text, catalog) {
     dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeTelehealthIntakePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\btelehealth\b/i.test(goal) || !/\b(save|prepare|create|start|record)\b/i.test(goal) ||
+      !/\b(intake|concern|visit|consultation|appointment)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "telehealth.prepare") ||
+      !catalog.applications.some(app => app.applicationId === "telehealth")) return null;
+  return { goal, application: "telehealth", riskTier: "regulated", clarification: null,
+    steps: [{ clientStepId: "prepare-telehealth-intake", title: "Save telehealth intake",
+      toolId: "telehealth.prepare", input: { concern: goal, requestedNextStep: true },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -105,4 +119,5 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan, validatePlan });
+module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
+  completeTelehealthIntakePlan, validatePlan });
