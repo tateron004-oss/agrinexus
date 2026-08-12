@@ -19,6 +19,25 @@ const APPLICATION_TO_WORKSPACE = Object.freeze({
   operations: "operations"
 });
 
+const APPLICATION_PRESENTATION = Object.freeze({
+  agriculture: "assessment",
+  health: "health-support",
+  telehealth: "form",
+  "mobile-clinic": "location-list",
+  pharmacy: "location-list",
+  learning: "learning-plan",
+  workforce: "document",
+  marketplace: "listing",
+  maps: "map",
+  "music-media": "media-player",
+  documents: "document",
+  reminders: "reminder",
+  "offline-queue": "task-list",
+  "live-knowledge": "source-answer",
+  communications: "communication",
+  operations: "operation"
+});
+
 function createWorkspaceOutcome({ command, plan, task, state, response, outcome }) {
   const application = required(plan?.application, "Application");
   const workspace = APPLICATION_TO_WORKSPACE[application];
@@ -26,7 +45,7 @@ function createWorkspaceOutcome({ command, plan, task, state, response, outcome 
   const inputs = mergeStepObjects(plan?.steps, "input");
   const outputs = mergeStepObjects(task?.steps, "output");
   return Object.freeze({
-    schema: "nexus.workspace-outcome.v1",
+    schema: "nexus.workspace-outcome.v2",
     commandId: required(command?.commandId, "Command ID"),
     correlationId: required(command?.correlationId, "Correlation ID"),
     conversationId: required(command?.conversationId, "Conversation ID"),
@@ -40,6 +59,13 @@ function createWorkspaceOutcome({ command, plan, task, state, response, outcome 
     completed: state === "completed",
     data: Object.freeze({ ...inputs, ...outputs }),
     response: String(response || ""),
+    presentation: Object.freeze({
+      kind: required(APPLICATION_PRESENTATION[application], "Presentation kind"),
+      renderer: "passive-ui",
+      interaction: "receipt-only",
+      commandAuthority: false,
+      completionAuthority: false
+    }),
     verification: Object.freeze({
       providerVerified: outcome?.verified === true,
       renderRequired: true,
@@ -73,4 +99,4 @@ function required(value, label) {
   return normalized;
 }
 
-module.exports = Object.freeze({ APPLICATION_TO_WORKSPACE, createWorkspaceOutcome });
+module.exports = Object.freeze({ APPLICATION_TO_WORKSPACE, APPLICATION_PRESENTATION, createWorkspaceOutcome });
