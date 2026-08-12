@@ -32,17 +32,20 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     if (url.pathname === "/api/nexus/runtime/status" && req.method === "GET") { const result = await status(); send(res, result.ok ? 200 : 503, result); return true; }
     if (url.pathname === "/api/nexus/runtime/production-acceptance" && req.method === "GET") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      let acceptanceStage = "runtime-create";
       try {
-        const active = await runtime(); await active.ready;
-        const health = await checkHealthFn(active);
+        const active = await runtime();
+        acceptanceStage = "runtime-ready"; await active.ready;
+        acceptanceStage = "runtime-health"; const health = await checkHealthFn(active);
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        acceptanceStage = "acceptance-report";
         const report = await active.acceptance.report({ releaseSha, applications: active.applications, health });
         send(res, report.ok ? 200 : 503, report);
       } catch (error) {
         const code = error.code || "acceptance_evidence_unavailable";
-        const stage = String(error.stage || "runtime-initialization").replace(/[^a-z0-9-]/gi, "").slice(0, 64);
+        const stage = String(error.stage || acceptanceStage || "runtime-initialization").replace(/[^a-z0-9-]/gi, "").slice(0, 64);
         logger.error?.("authoritative.acceptance.unavailable", { code, stage });
-        send(res, 503, { ok: false, authoritative: true, code, stage,
+        send(res, 503, { ok: false, authoritative: true, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code, stage,
           error: "Production acceptance evidence is unavailable; no readiness value was inferred." });
       }
       return true;
