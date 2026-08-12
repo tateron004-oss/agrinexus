@@ -11,6 +11,7 @@ const { MemoryRepository } = require("../memory/repository.js");
 const { evaluateObservabilityAlerts } = require("../observability/alert-evaluator.js");
 const { executeProductionCase } = require("../path2/production-case.js");
 const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
+const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
@@ -134,6 +135,53 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category,
           error: String(error.message || failure.message).slice(0, 300) }); }
+      return true;
+    }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/health-continuation" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        if (body.confirmed !== true || body.consented !== true) { send(res, 422, { error: "Explicit Health confirmation and consent are required.", code: "acceptance_health_authorization_required" }); return true; }
+        const principal = await acceptancePrincipal(active);
+        const task = await active.tasks.get({ tenantId: principal.tenantId, taskId: body.taskId, includeSteps: true });
+        const step = (task?.steps || []).find(item => item.step_id === body.stepId);
+        if (!task || task.ownerId !== principal.userId || task.application !== "health" ||
+            task.commandId !== body.commandId || task.correlationId !== body.correlationId ||
+            !step || step.tool_id !== "health.record" || step.confirmation_state !== "required") {
+          send(res, 409, { error: "Health continuation does not match the pending acceptance transaction.", code: "acceptance_health_transaction_mismatch" }); return true;
+        }
+        const tool = await active.tools.get(step.tool_id);
+        if (!tool || tool.consent_scope !== "health:record:write" || tool.confirmation_required !== true) {
+          send(res, 409, { error: "The governed Health tool contract does not match the continuation.", code: "acceptance_health_contract_mismatch" }); return true;
+        }
+        const consent = await active.consents.grant({ tenantId: principal.tenantId, subjectId: principal.userId,
+          taskId: task.taskId, scope: tool.consent_scope, purpose: "Exact-release production Health transaction proof",
+          policyVersion: "production-acceptance-v1", receipt: { source: "production-acceptance", releaseSha,
+            taskId: task.taskId, stepId: step.step_id, commandId: task.commandId, correlationId: task.correlationId } });
+        await active.engine.approve({ tenantId: principal.tenantId, taskId: task.taskId, stepId: step.step_id,
+          actorId: principal.userId, approved: true });
+        const context = acceptanceContext(principal, { actorId: principal.userId,
+          requestId: `acceptance-health-${task.commandId}`, correlationId: task.correlationId,
+          roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) });
+        const execution = await active.engine.executeTask({ context, taskId: task.taskId });
+        const resumedTask = await active.tasks.get({ tenantId: principal.tenantId, taskId: task.taskId, includeSteps: true });
+        if (execution.state !== "awaiting_render") {
+          send(res, 503, { ok: false, releaseSha, code: "acceptance_health_render_not_reached", error: "Health continuation did not reach renderer verification." }); return true;
+        }
+        const command = { commandId: task.commandId, correlationId: task.correlationId, conversationId: task.conversationId,
+          text: task.goal, channel: body.channel === "voice" ? "voice" : "typed" };
+        const plan = { application: "health", steps: (resumedTask.steps || []).map(item => ({ input: item.input || {} })) };
+        const render = createWorkspaceOutcome({ command, plan, task: resumedTask, state: "render_required",
+          response: "Nexus completed the confirmed Health transaction and is rendering the verified result.",
+          outcome: { verified: true, reason: "renderer_acknowledgement_required" } });
+        send(res, 200, { ok: true, releaseSha, consentId: consent.consent_id, result: { state: "render_required",
+          completed: false, application: "health", taskId: task.taskId, commandId: task.commandId,
+          correlationId: task.correlationId, render, receipts: execution.receipts || [] } });
+      } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
+        { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code,
+          category: failure.category, error: String(error.message || failure.message).slice(0, 300) }); }
       return true;
     }
     if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement" && req.method === "POST") {

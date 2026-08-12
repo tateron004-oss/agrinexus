@@ -44,6 +44,7 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(app, /#appView/);
   assert.match(app, /exact_release_evidence_required/);
   assert.match(producer, /behavior-turn/); assert.match(producer, /browser-acknowledgement/);
+  assert.match(producer, /health-continuation/); assert.match(producer, /confirmed: true, consented: true/);
   assert.match(producer, /pre-cutover/); assert.match(producer, /post-cutover/);
   assert.match(producer, /production-acceptance\/workspaces/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
