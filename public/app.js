@@ -10201,16 +10201,75 @@ function showNexusYouTubePlayer(result) {
 }
 
 async function playNexusYouTubeMusic(query = "music", options = {}) {
-  const response = await request("/api/music/youtube/search", {
-    method: "POST",
-    body: { query }
-  });
-  if (!response?.ok || !response.videoId) throw new Error(response?.error || "YouTube did not return a playable result");
-  showNexusYouTubePlayer(response);
-  if (options.announce !== false) {
-    setVoiceResponse(`Playing ${response.title || query} through YouTube now. You can say pause music, resume music, next song, or stop music.`, true);
+  const normalizedQuery = String(query || "music").trim() || "music";
+  const candidateQueries = Array.isArray(options.candidateQueries) && options.candidateQueries.length
+    ? options.candidateQueries
+    : [
+        normalizedQuery,
+        normalizedQuery,
+        `${normalizedQuery} lyrics audio`,
+        `${normalizedQuery} live performance`,
+        `${normalizedQuery} cover`,
+        `${normalizedQuery} official audio`
+      ];
+  const rejectedVideoIds = new Set((options.excludeVideoIds || []).map(value => String(value || "").trim()).filter(Boolean));
+  let lastFailure = { phase: "not-started", errorCode: null, errorLabel: null, playerState: null };
+
+  for (const candidateQuery of candidateQueries.slice(0, 8)) {
+    let response;
+    try {
+      response = await request("/api/music/youtube/search", {
+        method: "POST",
+        body: {
+          query: String(candidateQuery || normalizedQuery),
+          excludeVideoIds: [...rejectedVideoIds]
+        }
+      });
+    } catch (error) {
+      lastFailure = {
+        phase: "candidate-search-error",
+        errorCode: null,
+        errorLabel: "candidate_search_error",
+        playerState: null,
+        detail: error?.message || String(error)
+      };
+      continue;
+    }
+    if (!response?.ok || !response.videoId) {
+      lastFailure = {
+        phase: "candidate-unavailable",
+        errorCode: null,
+        errorLabel: response?.status || "candidate_unavailable",
+        playerState: null,
+        detail: response?.error || "YouTube did not return another eligible candidate"
+      };
+      continue;
+    }
+
+    showNexusYouTubePlayer(response);
+    const verified = await verifyNexusYouTubePlaybackStarted(
+      nexusYouTubePlayback.iframe,
+      Number(options.verificationTimeoutMs || 12000)
+    );
+    if (verified) {
+      const result = {
+        ...response,
+        status: "playback-verified",
+        playbackVerified: true,
+        telemetry: nexusYouTubePlayback.telemetry
+      };
+      if (options.announce !== false) {
+        setVoiceResponse(`Playing ${response.title || normalizedQuery} through YouTube now. You can say pause music, resume music, next song, or stop music.`, true);
+      }
+      return result;
+    }
+
+    lastFailure = nexusYouTubePlayback.telemetry || lastFailure;
+    rejectedVideoIds.add(String(response.videoId));
+    closeNexusYouTubePlayback();
   }
-  return response;
+
+  throw new Error(`YouTube exhausted bounded candidates for ${normalizedQuery} without genuine playback state 1 (phase=${lastFailure.phase || "unknown"}, state=${lastFailure.playerState ?? "unknown"}, stateLabel=${lastFailure.playerStateLabel || "unknown"}, error=${lastFailure.errorCode ?? "none"}, errorLabel=${lastFailure.errorLabel || "none"}, ready=${lastFailure.readyObserved === true}, playRequested=${lastFailure.playRequested === true}). Nexus will not report it as playing.`);
 }
 
 function clearNexusLocalMusicTimers() {
@@ -56037,24 +56096,14 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   } else if (outcome.workspace === "media" && outcome.operation === "play") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
-    const candidateQueries = [requestedMedia, `${requestedMedia} live performance`, `${requestedMedia} cover`];
-    let playback = null;
-    let lastFailure = { lifecycle: "not-started", errorCode: "none" };
-    for (const candidateQuery of candidateQueries) {
-      playback = await playNexusYouTubeMusic(candidateQuery, { announce: false });
-      opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
-      audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
-      if (audible) break;
-      lastFailure = nexusYouTubePlayback.telemetry || {
-        phase: nexusYouTubePlayback.lifecycle,
-        errorCode: nexusYouTubePlayback.errorCode || "none",
-        playerState: null,
-        playerStateLabel: "unknown"
-      };
-      closeNexusYouTubePlayback();
-    }
+    const playback = await playNexusYouTubeMusic(requestedMedia, {
+      announce: false,
+      verificationTimeoutMs: 12000
+    });
+    opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
+    audible = opened && playback?.playbackVerified === true && playback?.telemetry?.playerState === 1;
     if (!audible) {
-      throw new Error(`YouTube loaded candidates for ${requestedMedia}, but genuine playback state 1 was not observed (phase=${lastFailure.phase || "unknown"}, state=${lastFailure.playerState ?? "unknown"}, stateLabel=${lastFailure.playerStateLabel || "unknown"}, error=${lastFailure.errorCode ?? "none"}, errorLabel=${lastFailure.errorLabel || "none"}, ready=${lastFailure.readyObserved === true}, playRequested=${lastFailure.playRequested === true}). Nexus will not report it as playing.`);
+      throw new Error("YouTube playback returned without a genuine verified state 1 receipt.");
     }
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;

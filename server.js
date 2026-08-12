@@ -43443,7 +43443,16 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const query = String(body.query || body.command || "").trim();
     if (!query) return send(res, 400, { ok: false, error: "Music search query is required" });
-    const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({ mediaRequest: query }, process.env);
+    const excludeVideoIds = Array.isArray(body.excludeVideoIds)
+      ? [...new Set(body.excludeVideoIds
+        .map(value => String(value || "").trim())
+        .filter(value => /^[A-Za-z0-9_-]{6,}$/.test(value)))]
+        .slice(0, 20)
+      : [];
+    const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({
+      mediaRequest: query,
+      excludeVideoIds
+    }, process.env);
     const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
     if (!match || source.sourceStatus !== "source-result-available") {
       return send(res, 503, {
@@ -43460,9 +43469,11 @@ async function api(req, res, url) {
     return send(res, 200, {
       ok: true,
       provider: "youtube",
-      status: "playback-ready",
+      status: "candidate-ready",
       query,
       videoId: match[1],
+      excludedCandidateCount: excludeVideoIds.length,
+      playbackVerified: false,
       title
     });
   }
