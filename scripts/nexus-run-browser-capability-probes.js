@@ -57,10 +57,14 @@ async function run(env = process.env) {
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   await page.evaluate(async () => {
-    if (!data?.profile) data = await request("/api/login", {
-      method: "POST", body: { email: "user@agrinexus.org", password: "User2026!" }
-    });
-    if (!data?.profile) throw new Error("Authenticated Standard User shell state is required for production rendering.");
+    const response = await fetch("/api/login", { method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "user@agrinexus.org", password: "User2026!" }) });
+    const shell = await response.json();
+    if (!response.ok || shell?.user?.role !== "Standard User" || !shell?.profile) {
+      throw new Error(`Authenticated Standard User shell state is required for production rendering (status=${response.status}, role=${shell?.user?.role || "missing"}, profile=${Boolean(shell?.profile)}).`);
+    }
+    data = shell;
   });
   const capabilityProbes = []; const workspaceProbes = [];
   try {
