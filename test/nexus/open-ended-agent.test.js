@@ -117,6 +117,16 @@ test("a complete telehealth intake command bypasses ambiguous health planning", 
   assert.equal(completeTelehealthIntakePlan("Tell me about telehealth.", catalog), null);
 });
 
+test("a complete marketplace search command has an executable marketplace plan", () => {
+  const { completeMarketplaceSearchPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "marketplace.search" }] };
+  const plan = completeMarketplaceSearchPlan(
+    "Find maize marketplace listings with sources and select one listing.", catalog);
+  assert.equal(plan.application, "marketplace"); assert.equal(plan.steps[0].toolId, "marketplace.search");
+  assert.equal(plan.steps[0].input.query, "maize"); assert.equal(plan.steps[0].input.selectListing, true);
+  assert.equal(completeMarketplaceSearchPlan("Explain marketplace pricing.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
