@@ -191,7 +191,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
         if (body.confirmed !== true) { send(res, 422, { error: "Explicit Offline Queue confirmation is required.", code: "acceptance_offline_queue_confirmation_required" }); return true; }
-        const principal = await acceptancePrincipal(active);
+        const principal = await acceptancePrincipalForTask(active, body.taskId);
         const task = await active.tasks.get({ tenantId: principal.tenantId, taskId: body.taskId, includeSteps: true });
         const step = (task?.steps || []).find(item => item.step_id === body.stepId);
         if (!task || task.ownerId !== principal.userId || task.application !== "offline-queue" ||
@@ -553,6 +553,17 @@ async function acceptancePrincipal(active) {
     where state='active' and 'acceptance:identity'=any(permissions) order by updated_at desc limit 1`);
   const row = (result.rows || result)[0];
   if (!row) { const error = new Error("No active production acceptance identity is available."); error.code = "acceptance_identity_unavailable"; throw error; }
+  return Object.freeze({ tenantId: row.tenant_id, userId: row.user_id, role: row.role, permissions: row.permissions || [] });
+}
+
+async function acceptancePrincipalForTask(active, taskId) {
+  const result = await active.db.query(`select m.tenant_id,m.user_id,m.role,m.permissions
+    from nexus_tasks t join nexus_organization_memberships m
+      on m.tenant_id=t.tenant_id and m.user_id=t.owner_id
+    where t.task_id=$1 and m.state='active' and 'acceptance:identity'=any(m.permissions)
+    order by m.updated_at desc limit 1`, [taskId]);
+  const row = (result.rows || result)[0];
+  if (!row) { const error = new Error("The pending task has no active production acceptance owner."); error.code = "acceptance_transaction_owner_unavailable"; throw error; }
   return Object.freeze({ tenantId: row.tenant_id, userId: row.user_id, role: row.role, permissions: row.permissions || [] });
 }
 

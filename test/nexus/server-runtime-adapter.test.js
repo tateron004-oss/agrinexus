@@ -205,12 +205,12 @@ test("Health continuation fails closed for stale releases, missing authorization
 });
 
 test("exact-SHA authenticated Offline Queue continuation preserves transaction identity and confirmation", async () => {
-  const releaseSha = "a".repeat(40); const calls = []; const task = { taskId: "task-1", ownerId: "user-1",
+  const releaseSha = "a".repeat(40); const calls = []; let principalQuery; const task = { taskId: "task-1", ownerId: "user-1",
     application: "offline-queue", commandId: "command-1", correlationId: "correlation-1", conversationId: "conversation-1",
     goal: "Synchronize the queued crop observation", steps: [{ step_id: "step-1", tool_id: "offline.sync",
       confirmation_state: "required", input: { operation: "sync" } }] };
-  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1",
-    role: "acceptance-controller", permissions: ["acceptance:identity"] }] }) }, tasks: { get: async () => task },
+  const runtime = { ready: Promise.resolve(), db: { query: async (sql, params) => { principalQuery = { sql, params }; return ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1",
+    role: "acceptance-controller", permissions: ["acceptance:identity"] }] }); } }, tasks: { get: async () => task },
     tools: { get: async () => ({ tool_id: "offline.sync", consent_scope: null, confirmation_required: true }) },
     engine: { approve: async input => { calls.push(["approve", input]); }, executeTask: async input => {
       calls.push(["execute", input]); return { state: "awaiting_render", receipts: [{ receiptId: "receipt-1" }] }; } } };
@@ -223,6 +223,7 @@ test("exact-SHA authenticated Offline Queue continuation preserves transaction i
   assert.equal(response.result.body.result.application, "offline-queue");
   assert.equal(response.result.body.result.render.application, "offline-queue");
   assert.equal(response.result.body.result.render.workspace, "offline"); assert.equal(calls[0][1].approved, true);
+  assert.match(principalQuery.sql, /join nexus_organization_memberships/); assert.deepEqual(principalQuery.params, ["task-1"]);
   assert.equal(calls[1][1].context.can("tasks:execute"), true);
 });
 
