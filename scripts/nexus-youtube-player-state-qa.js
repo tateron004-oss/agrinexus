@@ -1,0 +1,12 @@
+"use strict";
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const app = fs.readFileSync("public/app.js", "utf8");
+const start = app.indexOf("function verifyNexusYouTubePlaybackStarted");
+const end = app.indexOf("\n}\n", start) + 2;
+const block = app.slice(start, end);
+assert.ok(start >= 0, "YouTube playback verifier must exist");
+assert.match(block, /payload\?\.info\?\.playerState\s*\?\?\s*payload\?\.info\s*\?\?\s*payload\?\.data/);
+assert.doesNotMatch(block, /payload\?\.info\s*\?\?\s*payload\?\.info\?\.playerState/);
+assert.match(block, /state === 1/);
+console.log("Nexus YouTube player-state verification QA passed.");
