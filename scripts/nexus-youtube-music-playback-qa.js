@@ -1,12 +1,16 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { Script } = require("node:vm");
 
 const root = path.join(__dirname, "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
+
+assert.doesNotThrow(() => new Script(app, { filename: "public/app.js" }),
+  "The complete protected browser bundle must parse before release");
 
 assert.match(server, /nexusMusicMediaSourceProvider\.getMusicMediaSourceResultAsync/, "YouTube search must use the server-side provider so the API key never enters the browser");
 assert.match(server, /\/api\/music\/youtube\/search/, "YouTube music search endpoint must exist");
