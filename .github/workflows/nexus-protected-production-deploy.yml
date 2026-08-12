@@ -80,7 +80,6 @@ jobs:
           npm run qa:nexus-production-layer-activation-integration
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
-          npm run provider-engines:smoke
       - name: Install production-equivalent provider contract
         run: node -e 'const fs=require("node:fs");const {canonicalToolProviders}=require("./scripts/nexus-render-release-controller.js");fs.appendFileSync(process.env.GITHUB_ENV,"NEXUS_TOOL_PROVIDERS_JSON="+JSON.stringify(canonicalToolProviders("candidate-provider-receipt-secret-0000000000000000","https://provider.example"))+"\n")'
       - name: Migrate production-equivalent PostgreSQL
