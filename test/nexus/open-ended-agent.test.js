@@ -32,6 +32,27 @@ test("open-ended planner repairs invalid model output against the live tool cata
   assert.match(attempts[1].feedback[0], /unavailable tool/); assert.equal(attempts[0].memories[0].content, "Agronomy experience");
 });
 
+test("emergency health red flags bypass ordinary workflows and model planning", async () => {
+  const { emergencyHealthGuidancePlan } = require("../../nexus/brain/planner.js");
+  const catalog = {
+    tools: [{ toolId: "health.emergency-guidance" }, { toolId: "health.record" }],
+    applications: [{ applicationId: "health" }]
+  };
+  for (const text of [
+    "My blood pressure is 180 over 120 and I have chest pain.",
+    "I'm suddenly short of breath and one side feels weak.",
+    "My dad passed out and is unconscious. What should I do?",
+    "I think this is a medical emergency and need an ambulance."
+  ]) {
+    const plan = emergencyHealthGuidancePlan(text, catalog);
+    assert.equal(plan.application, "health");
+    assert.equal(plan.riskTier, "critical");
+    assert.equal(plan.steps[0].toolId, "health.emergency-guidance");
+    assert.equal(plan.steps[0].input.emergencyServicesNotDispatched, true);
+  }
+  assert.equal(emergencyHealthGuidancePlan("My blood pressure is 140 over 90 and I want to log it.", catalog), null);
+});
+
 test("agent service continues cross-application context through one durable task engine", async () => {
   const priorTask = { taskId: "tsk_prior", goal: "Find jobs", application: "workforce", state: "completed" };
   const calls = []; const service = new AgentService({
@@ -162,6 +183,7 @@ test("a complete document create-save-reopen request has an executable Documents
   const plan = completeDocumentPlan("Create and save a farming plan document, then reopen it.", catalog);
   assert.equal(plan.application, "documents"); assert.equal(plan.steps[0].toolId, "documents.create");
   assert.equal(plan.steps[0].input.reopenAfterSave, true);
+  assert.equal(completeDocumentPlan("Write and save a report titled Nakuru Harvest, then open again.", catalog).steps[0].input.title, "Nakuru Harvest");
   assert.equal(completeDocumentPlan("Tell me about farming plans.", catalog), null);
 });
 
@@ -185,6 +207,8 @@ test("every remaining complete gauntlet request has a deterministic governed pla
     ["learning", "Create a short maize farming literacy lesson and save my progress."],
     ["workforce", "Find agriculture jobs in Nairobi with sources and select one listing."],
     ["maps", "Show a route from Nairobi to Nakuru with route geometry."],
+    ["maps", "Get me from Kisumu to Nakuru."],
+    ["maps", "No, that is wrong. Take me from Eldoret to Kitale instead."],
     ["reminders", "Remind me tomorrow at 9 AM to check my crops and save the reminder."],
     ["offline-queue", "Queue a crop observation offline, synchronize it, and show the server acknowledgement."],
     ["operations", "Prepare a field operation, record approval state, and return its receipt."]

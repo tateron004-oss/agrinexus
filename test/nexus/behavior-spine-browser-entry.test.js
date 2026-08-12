@@ -53,6 +53,33 @@ test("authoritative browser completion requires typed rendering and server ackno
   assert.doesNotMatch(gateway, /runMusicAssistantCommand\(text/);
 });
 
+test("media completion requires observed player state instead of a provider playing assertion", () => {
+  const start = source.indexOf("async function renderNexusPassiveWorkspace");
+  const end = source.indexOf("// Production certification invokes this", start);
+  const renderer = source.slice(start, end);
+  assert.match(renderer, /verifyNexusYouTubePlaybackStarted/);
+  assert.match(renderer, /playback did not start/);
+  assert.match(renderer, /playbackStarted: outcome\.workspace === "media" \? audible/);
+  assert.match(source, /state === 1\) finish\(true\)/);
+});
+
+test("map and document completion require complete user-observable outcomes", () => {
+  assert.match(source, /function nexusMapOutcomeVerified/);
+  assert.match(source, /userMapLayers\.route\?\.getLayers\?\.\(\)\.length > 0/);
+  assert.match(source, /userMapLayers\.markers\?\.getLayers\?\.\(\)\.length >= 2/);
+  assert.match(source, /function renderNexusAuthoritativeDocument/);
+  assert.match(source, /data\.reopenVerified !== true/);
+  assert.match(source, /nexusDocumentLifecycle = "reopened"/);
+  assert.match(source, /created_saved_closed_reopened/);
+});
+
+test("signed-in render restores authoritative conversation and database readiness", () => {
+  assert.match(source, /\/api\/nexus\/runtime\/behavior\/readiness/);
+  assert.match(source, /\/api\/nexus\/runtime\/behavior\/conversation\?conversationId=/);
+  assert.match(source, /Production database connected\. Authoritative conversation recovery is active\./);
+  assert.match(source, /void restoreNexusAuthoritativeRuntime\(\)/);
+});
+
 test("each command-center submit gateway precedes legacy intent routing", () => {
   const eventHandlers = source.slice(source.indexOf("function bindStatic()"));
   const lines = eventHandlers.split("\n");

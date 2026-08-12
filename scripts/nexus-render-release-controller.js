@@ -336,6 +336,8 @@ function canonicalToolProviders(secret, providerBaseUrl = CANONICAL_PROVIDER_BAS
     { toolId: "health.record", domain: "health", description: "Record a user-confirmed health observation",
       riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write",
       dataClassification: "health" },
+    { toolId: "health.emergency-guidance", domain: "health", description: "Display immediate emergency guidance without claiming diagnosis or dispatch",
+      riskTier: "critical", dataClassification: "health" },
     { toolId: "telehealth.prepare", domain: "telehealth", description: "Save a governed telehealth intake" },
     { toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" },
     { toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" },

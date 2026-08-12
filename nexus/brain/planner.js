@@ -15,6 +15,8 @@ class OpenEndedPlanner {
     const catalog = await this.catalog();
     const interactionProfile = createInteractionProfile({ locale: command.locale,
       userPreferences: context.userPreferences || {}, channel: command.channel });
+    const emergencyHealth = emergencyHealthGuidancePlan(command.text, catalog);
+    if (emergencyHealth) return Object.freeze({ ...emergencyHealth, planningAttempts: 1 });
     const completeHealthRecord = completeHealthRecordPlan(command.text, catalog);
     if (completeHealthRecord) return Object.freeze({ ...completeHealthRecord, planningAttempts: 1 });
     const completeTelehealthIntake = completeTelehealthIntakePlan(command.text, catalog);
@@ -56,6 +58,27 @@ class OpenEndedPlanner {
       confirmationRequired: tool.confirmation_required, consentScope: tool.consent_scope })),
     applications: applications.map(app => ({ applicationId: app.applicationId, capabilities: app.capabilities, riskTiers: app.riskTiers })) };
   }
+}
+
+function emergencyHealthGuidancePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const normalized = goal.toLowerCase().replace(/[’]/g, "'");
+  const bloodPressure = normalized.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/);
+  const hypertensiveCrisis = bloodPressure && (Number(bloodPressure[1]) >= 180 || Number(bloodPressure[2]) >= 120);
+  const redFlag = /\b(chest pain|pressure (?:in|on) (?:my|the) chest|trouble breathing|cannot breathe|can't breathe|shortness of breath|face droop|one-sided weakness|(?:weak|weakness|numb|numbness) (?:on )?(?:my |the )?(?:one|left|right) side|one side (?:feels? )?(?:weak|numb)|slurred speech|sudden confusion|passed out|unconscious|seizure|heavy bleeding)\b/i.test(normalized);
+  const explicitEmergency = /\b(medical emergency|health emergency|call (?:911|emergency services)|need (?:an |the )?ambulance)\b/i.test(normalized);
+  if (!(redFlag || explicitEmergency || hypertensiveCrisis)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "health.emergency-guidance") ||
+      !catalog.applications.some(app => app.applicationId === "health")) return null;
+  return { goal, application: "health", riskTier: "critical", clarification: null,
+    steps: [{ clientStepId: "emergency-guidance", title: "Show urgent emergency guidance",
+      toolId: "health.emergency-guidance", input: {
+        userStatement: goal,
+        systolic: bloodPressure ? Number(bloodPressure[1]) : null,
+        diastolic: bloodPressure ? Number(bloodPressure[2]) : null,
+        redFlagObserved: redFlag,
+        emergencyServicesNotDispatched: true
+      }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function canonicalizeExplicitApplication(candidate, text, catalog) {
@@ -152,9 +175,10 @@ function completeDocumentPlan(text, catalog) {
       !/\b(save|reopen|open again|persist)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "documents.create") ||
       !catalog.applications.some(app => app.applicationId === "documents")) return null;
+  const namedTitle = goal.match(/(?:called|titled|named)\s+["']?(.+?)(?=["']?(?:,|\s+then\b|\s+and\s+(?:save|open|reopen)\b|\.|$))/i)?.[1]?.trim();
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
-      toolId: "documents.create", input: { title: "Farming plan", content: goal, reopenAfterSave: true },
+      toolId: "documents.create", input: { title: namedTitle || "Nexus document", content: goal, reopenAfterSave: true },
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
@@ -188,7 +212,7 @@ function completeRemainingWorkspacePlan(text, catalog) {
       { query: goal, lesson: goal, content: goal, saveProgress: true });
   if (/\b(find|search|show)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?)\b/i.test(goal))
     return plan("workforce", "jobs.search", "Find governed workforce listings", { query: goal, selectListing: true });
-  if (/\b(show|map|route|directions?)\b/i.test(goal) && /\broute\b/i.test(goal) && /\bfrom\b/i.test(goal) && /\bto\b/i.test(goal)) {
+  if (/\b(show|map|route|directions?|get|take|travel)\b/i.test(goal) && /\bfrom\b/i.test(goal) && /\bto\b/i.test(goal)) {
     const endpoints = goal.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+with\b|[,.]|$)/i);
     return plan("maps", "maps.view", "Render governed route", { origin: endpoints?.[1]?.trim() || "Nairobi",
       destination: endpoints?.[2]?.trim() || "Nakuru", requireRouteGeometry: true });
@@ -239,7 +263,7 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, validatePlan });

@@ -109,6 +109,29 @@ test("behavior turn enters one authoritative spine without a caller-selected wor
   assert.equal(response.result.body.legacyFallbackUsed, false);
 });
 
+test("authenticated refresh recovery returns only authoritative tenant conversation turns", async () => {
+  let recentInput; const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    conversations: { recent: async input => { recentInput = input; return [{ role: "assistant", content: "Your route is still open.", created_at: "2026-08-12T00:00:00Z", provenance: { taskId: "tsk_1" } }]; } } };
+  const adapter = createServerRuntimeAdapter({ env: { RENDER_GIT_COMMIT: "a".repeat(40) },
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {},
+    new URL("http://local/api/nexus/runtime/behavior/conversation?conversationId=cnv_12345678&limit=24"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(response.result.body.authoritative, true);
+  assert.deepEqual(recentInput, { tenantId: "tenant-1", conversationId: "cnv_12345678", limit: 24 });
+  assert.equal(response.result.body.turns[0].content, "Your route is still open.");
+});
+
+test("runtime readiness proves the authoritative database with a live query", async () => {
+  let queried = false; const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {}, conversations: { recent() {} },
+    db: { query: async sql => { queried = /select 1/.test(sql); return { rows: [{ authoritative_runtime_ready: 1 }] }; } } };
+  const adapter = createServerRuntimeAdapter({ env: { RENDER_GIT_COMMIT: "b".repeat(40) },
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const response = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {},
+    new URL("http://local/api/nexus/runtime/behavior/readiness"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(queried, true);
+  assert.equal(response.result.body.databaseConnected, true); assert.equal(response.result.body.conversationRecoveryReady, true);
+});
+
 test("renderer acknowledgement completes the same authoritative command transaction", async () => {
   let ackInput;
   const runtime = { ready: Promise.resolve(), behavior: { acknowledge: async value => {
