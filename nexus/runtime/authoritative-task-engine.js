@@ -8,8 +8,8 @@ class NexusRuntimeError extends Error {
 }
 
 class AuthoritativeTaskEngine {
-  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier }) {
-    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors });
+  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null }) {
+    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority });
     this.verifier = verifier || (async ({ result }) => ({ verified: result !== undefined, method: "result_present" }));
   }
 
@@ -84,7 +84,10 @@ class AuthoritativeTaskEngine {
     const retryOrdinal = step.state === "failed" ? Number(step.attempt_count || 1) + 1 : 1;
     for (const [attempt, toolId] of candidates.entries()) {
       const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
-      if (!tool || tool.availability !== "available" || typeof executor !== "function") { lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} is unavailable.`, 503); continue; }
+      const authorityOwnsTool = Boolean(tool && this.authority?.has?.(tool.tool_id));
+      if (!tool || tool.availability !== "available" || (!authorityOwnsTool && typeof executor !== "function")) {
+        lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} has no available authoritative execution owner.`, 503); continue;
+      }
       authorize(context, tool, step);
       if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
         if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
@@ -102,9 +105,16 @@ class AuthoritativeTaskEngine {
         .filter(candidate => dependencies.has(candidate.step_id))
         .map(candidate => [candidate.step_id, candidate.output]));
       const input = dependencies.size ? { ...step.input, dependencyOutputs } : step.input;
-      const result = await withTimeout(Promise.resolve(executor({ input, context, taskId, stepId,
-        idempotencyKey: key })), tool.timeout_ms);
-      const verification = await this.verifier({ tool, result, context, taskId, stepId });
+      let result; let verification;
+      if (authorityOwnsTool) {
+        const governed = await withTimeout(this.authority.execute({ tool, input, context, taskId, stepId,
+          idempotencyKey: key }), tool.timeout_ms);
+        result = governed.result; verification = governed.verification;
+      } else {
+        result = await withTimeout(Promise.resolve(executor({ input, context, taskId, stepId,
+          idempotencyKey: key })), tool.timeout_ms);
+        verification = await this.verifier({ tool, result, context, taskId, stepId });
+      }
       if (!verification?.verified) throw new NexusRuntimeError("outcome_unverified", "Tool result could not be verified.", 502, { verification });
       const receipt = makeReceipt(started.execution.execution_id, taskId, stepId, tool.tool_id,
         key, "completed", { ...verification, selectedTool: toolId, fallbackAttempt: attempt });
