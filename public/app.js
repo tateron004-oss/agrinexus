@@ -56037,7 +56037,7 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 10000) {
       if (event.source !== frame.contentWindow || !/youtube(?:-nocookie)?\.com$/i.test(new URL(event.origin).hostname)) return;
       let payload = event.data;
       try { if (typeof payload === "string") payload = JSON.parse(payload); } catch (_) { return; }
-      const state = Number(payload?.info ?? payload?.info?.playerState ?? payload?.data);
+      const state = Number(payload?.info?.playerState ?? payload?.info ?? payload?.data);
       if (state === 1) finish(true);
       if (state === 0 || state === 2 || state === 5) nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
     };
