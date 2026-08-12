@@ -178,7 +178,7 @@ test("a complete consented communication request has an executable Communication
 test("every remaining complete gauntlet request has a deterministic governed plan", () => {
   const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
   const catalog = { applications: defaultApplicationManifests(), tools: ["knowledge.search", "pharmacy.find", "jobs.search",
-    "maps.view", "reminders.schedule", "drone.plan"].map(toolId => ({ toolId })) };
+    "maps.view", "reminders.schedule", "offline.sync", "drone.plan"].map(toolId => ({ toolId })) };
   const cases = [
     ["agriculture", "Assess yellow leaves on my maize crop and show sources."],
     ["pharmacy", "Find pharmacy support for metformin and show a safety response with sources."],
@@ -186,12 +186,14 @@ test("every remaining complete gauntlet request has a deterministic governed pla
     ["workforce", "Find agriculture jobs in Nairobi with sources and select one listing."],
     ["maps", "Show a route from Nairobi to Nakuru with route geometry."],
     ["reminders", "Remind me tomorrow at 9 AM to check my crops and save the reminder."],
+    ["offline-queue", "Queue a crop observation offline, synchronize it, and show the server acknowledgement."],
     ["operations", "Prepare a field operation, record approval state, and return its receipt."]
   ];
   for (const [application, command] of cases) {
     const plan = completeRemainingWorkspacePlan(command, catalog);
     assert.equal(plan.application, application, command); assert.equal(plan.steps.length, 1, command);
   }
+  assert.equal(completeRemainingWorkspacePlan("Tell me about offline work.", catalog), null);
   assert.equal(completeRemainingWorkspacePlan("Tell me about jobs.", catalog), null);
 });
 
