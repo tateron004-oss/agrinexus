@@ -258,7 +258,13 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
       items: (payload.items || [])
         .filter(item => embeddableIds.has(normalizeText(item?.id?.videoId)))
         .sort((left, right) => {
-          const playableRank = item => /\b(lyrics?|audio|live)\b/i.test(normalizeText(item?.snippet?.title)) ? 0 : 1;
+          const requestText = normalizeText(query.mediaRequest || query.providerPreference);
+          const preferredPattern = /\bcover\b/i.test(requestText)
+            ? /\bcover\b/i
+            : /\blive(?:\s+performance)?\b/i.test(requestText)
+              ? /\blive\b/i
+              : /\b(lyrics?|audio)\b/i;
+          const playableRank = item => preferredPattern.test(normalizeText(item?.snippet?.title)) ? 0 : 1;
           return playableRank(left) - playableRank(right);
         })
     });
