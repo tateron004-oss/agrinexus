@@ -71,8 +71,10 @@ async function run(env = process.env) {
   const probeFile = required(env.NEXUS_PROBE_FILE, "NEXUS_PROBE_FILE");
   const document = JSON.parse(fs.readFileSync(probeFile, "utf8"));
   const browser = await chromium.launch({ headless: true,
-    args: ["--autoplay-policy=no-user-gesture-required"] });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    ignoreDefaultArgs: ["--enable-automation"],
+    args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 },
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36" });
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   let loginResponse; let lastLoginError;
