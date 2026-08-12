@@ -210,6 +210,24 @@ jobs:
           NEXUS_CANDIDATE_URL: ${{ env.PRODUCTION_ORIGIN }}
         run: node scripts/nexus-preproduction-black-box.js
 
+      - name: Produce and record exact-release production evidence
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          NEXUS_BASE_URL: ${{ env.PRODUCTION_ORIGIN }}
+          PROVIDER_BASE_URL: https://agrinexus-provider-engines.onrender.com
+          NEXUS_PROBE_FILE: output/nexus-production-probes.json
+          NEXUS_PROOF_FILE: output/nexus-production-proof.json
+          NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
+          NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          npm audit --omit=dev --json > output/nexus-production-security-audit.json
+          node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
+          node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log
+          node scripts/nexus-compile-production-evidence.js
+          node scripts/nexus-record-production-proof.js
+
       - name: Run three consecutive authenticated exact-SHA production passes
         env:
           EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
@@ -239,6 +257,9 @@ jobs:
             render-deploy-response.json
             production-response-*.json
             output/nexus-preproduction-black-box.json
+            output/nexus-production-*.json
+            output/nexus-production-*.log
+            output/nexus-browser-capability-probe-run.log
             output/nexus-21-objective-*.json
           if-no-files-found: warn
           retention-days: 30

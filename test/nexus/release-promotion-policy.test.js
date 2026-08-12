@@ -42,6 +42,14 @@ test("protected deployment owns authenticated 3/3 acceptance without cross-workf
   assert.doesNotMatch(standaloneAcceptance, /workflow_run:/);
 });
 
+test("protected deployment records exact-release evidence before evaluating the 3/3 streak", () => {
+  const probes = canonical.indexOf("node scripts/nexus-run-production-evidence-probes.js");
+  const browser = canonical.indexOf("node scripts/nexus-run-browser-capability-probes.js");
+  const record = canonical.indexOf("node scripts/nexus-record-production-proof.js");
+  const acceptance = canonical.indexOf("node scripts/nexus-21-objective-production-acceptance.js");
+  assert.ok(probes > -1 && browser > probes && record > browser && acceptance > record);
+});
+
 test("release promotion binds every runtime surface to one immutable SHA", () => {
   const server = fs.readFileSync("server.js", "utf8");
   const app = fs.readFileSync("public/app.js", "utf8");
