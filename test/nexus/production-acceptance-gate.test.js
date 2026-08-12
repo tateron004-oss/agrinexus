@@ -36,7 +36,7 @@ test("five legacy objectives require recorded exact-production facts instead of 
   const base = { expectedSha: sha, runtime: { ok: true, body: { ok: true, releaseSha: sha, pgvector: true, migrationsCurrent: true } },
     health: { ok: true, body: { ok: true, strictLiveMode: true } }, integrations: { ok: true, body: { liveGaps: [] } },
     providers: { ok: true, body: { ok: true } }, acceptance: { ok: false, status: 503, body: { releaseSha: sha,
-      singleRuntime: true, legacyWritePaths: 0, components, workspaces: [] } } };
+      singleRuntime: false, legacyWritePaths: 0, components, workspaces: [] } } };
   const result = evaluate(base);
   for (const id of ["consolidated_brain", "realtime_voice", "documents_forms", "healthcare_controls", "predictive_intelligence"])
     assert.equal(result.objectives.find(item => item.id === id).passed, true, id);
