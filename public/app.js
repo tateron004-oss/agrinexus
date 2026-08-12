@@ -10205,20 +10205,18 @@ async function playNexusYouTubeMusic(query = "music", options = {}) {
   const candidatePlans = Array.isArray(options.candidateQueries) && options.candidateQueries.length
     ? options.candidateQueries.map(query => ({ query, creativeCommonsOnly: false }))
     : [
-        { query: normalizedQuery, creativeCommonsOnly: false },
-        { query: normalizedQuery, creativeCommonsOnly: false },
-        { query: `${normalizedQuery} lyrics audio`, creativeCommonsOnly: false },
-        { query: `${normalizedQuery} live performance`, creativeCommonsOnly: false },
-        { query: `${normalizedQuery} cover`, creativeCommonsOnly: false },
-        { query: `${normalizedQuery} tribute cover`, creativeCommonsOnly: true },
-        { query: `${normalizedQuery} instrumental cover`, creativeCommonsOnly: true },
-        { query: `${normalizedQuery} live cover`, creativeCommonsOnly: true }
+        ...Array.from({ length: 8 }, () => ({ query: normalizedQuery, creativeCommonsOnly: false })),
+        ...Array.from({ length: 4 }, () => ({ query: `${normalizedQuery} official audio`, creativeCommonsOnly: false })),
+        ...Array.from({ length: 4 }, () => ({ query: `${normalizedQuery} live performance`, creativeCommonsOnly: false })),
+        ...Array.from({ length: 4 }, () => ({ query: `${normalizedQuery} cover`, creativeCommonsOnly: false })),
+        ...Array.from({ length: 2 }, () => ({ query: `${normalizedQuery} instrumental cover`, creativeCommonsOnly: true })),
+        ...Array.from({ length: 2 }, () => ({ query: `${normalizedQuery} live cover`, creativeCommonsOnly: true }))
       ];
   const rejectedVideoIds = new Set((options.excludeVideoIds || []).map(value => String(value || "").trim()).filter(Boolean));
   const attempts = [];
   let lastFailure = { phase: "not-started", errorCode: null, errorLabel: null, playerState: null };
 
-  for (const candidatePlan of candidatePlans.slice(0, 8)) {
+  for (const candidatePlan of candidatePlans.slice(0, 24)) {
     const candidateQuery = String(candidatePlan?.query || normalizedQuery);
     let response;
     try {
