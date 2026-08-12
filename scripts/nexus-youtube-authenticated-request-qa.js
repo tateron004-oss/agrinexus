@@ -1,0 +1,12 @@
+"use strict";
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const app = fs.readFileSync("public/app.js", "utf8");
+const start = app.indexOf("async function playNexusYouTubeMusic");
+const end = app.indexOf("\nfunction ", start + 20);
+const block = app.slice(start, end);
+assert.ok(start >= 0, "YouTube music function must exist");
+assert.match(block, /await request\("\/api\/music\/youtube\/search"/);
+assert.match(block, /body:\s*\{ query \}/);
+assert.doesNotMatch(block, /\bapi\s*\(/);
+console.log("Nexus YouTube authenticated request QA passed.");
