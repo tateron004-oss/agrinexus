@@ -238,7 +238,7 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
     url.searchParams.set("videoSyndicated", "true");
     url.searchParams.set("maxResults", "5");
     url.searchParams.set("safeSearch", "moderate");
-    url.searchParams.set("q", query.mediaRequest || query.providerPreference);
+    url.searchParams.set("q", `${query.mediaRequest || query.providerPreference} lyrics audio`);
     url.searchParams.set("key", config.youtubeApiKey);
     const payload = await fetchJson(fetchImpl, url);
     const candidateIds = Array.isArray(payload?.items)
@@ -255,7 +255,12 @@ async function runYouTubeReadOnlyLookup(request = {}, env = process.env) {
       .map(item => normalizeText(item.id)));
     return normalizeYouTubePayload(query, {
       ...payload,
-      items: (payload.items || []).filter(item => embeddableIds.has(normalizeText(item?.id?.videoId)))
+      items: (payload.items || [])
+        .filter(item => embeddableIds.has(normalizeText(item?.id?.videoId)))
+        .sort((left, right) => {
+          const playableRank = item => /\b(lyrics?|audio|live)\b/i.test(normalizeText(item?.snippet?.title)) ? 0 : 1;
+          return playableRank(left) - playableRank(right);
+        })
     });
   } catch (error) {
     return buildYouTubeProviderErrorResult(query, error && error.message ? error.message : "source-error");

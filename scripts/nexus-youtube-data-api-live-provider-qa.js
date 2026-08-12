@@ -25,7 +25,7 @@ async function runYouTubeDataApiLiveProviderQa() {
         items: [{
           id: { videoId: "abc123" },
           snippet: {
-            title: "How to Plant Maize",
+            title: "How to Plant Maize Audio",
             channelTitle: "Kenya Farm Learning"
           }
         }]
@@ -48,7 +48,7 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.equal(requestUrl.searchParams.get("videoEmbeddable"), "true");
   assert.equal(requestUrl.searchParams.get("videoSyndicated"), "true");
   assert.equal(requestUrl.searchParams.get("safeSearch"), "moderate");
-  assert.equal(requestUrl.searchParams.get("q"), "show me how to plant maize");
+  assert.equal(requestUrl.searchParams.get("q"), "show me how to plant maize lyrics audio");
   assert.equal(requestUrl.searchParams.get("key"), "test-secret-key");
   const statusUrl = new URL(calls[1]);
   assert.equal(statusUrl.origin + statusUrl.pathname, media.YOUTUBE_VIDEOS_URL);
