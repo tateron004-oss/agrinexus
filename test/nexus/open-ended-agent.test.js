@@ -156,6 +156,15 @@ test("an explicit media play request has an executable Music and Media plan", ()
   assert.equal(completeMediaPlaybackPlan("Tell me about Stevie Wonder.", catalog), null);
 });
 
+test("a complete document create-save-reopen request has an executable Documents plan", () => {
+  const { completeDocumentPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "documents.create" }] };
+  const plan = completeDocumentPlan("Create and save a farming plan document, then reopen it.", catalog);
+  assert.equal(plan.application, "documents"); assert.equal(plan.steps[0].toolId, "documents.create");
+  assert.equal(plan.steps[0].input.reopenAfterSave, true);
+  assert.equal(completeDocumentPlan("Tell me about farming plans.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });

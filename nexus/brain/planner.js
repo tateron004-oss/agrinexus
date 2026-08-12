@@ -27,6 +27,8 @@ class OpenEndedPlanner {
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
     const completeMediaPlayback = completeMediaPlaybackPlan(command.text, catalog);
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
+    const completeDocument = completeDocumentPlan(command.text, catalog);
+    if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -140,6 +142,18 @@ function completeMediaPlaybackPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeDocumentPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
+      !/\b(save|reopen|open again|persist)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "documents.create") ||
+      !catalog.applications.some(app => app.applicationId === "documents")) return null;
+  return { goal, application: "documents", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
+      toolId: "documents.create", input: { title: "Farming plan", content: goal, reopenAfterSave: true },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -177,4 +191,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, validatePlan });
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, validatePlan });
