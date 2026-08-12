@@ -10160,10 +10160,7 @@ function showNexusYouTubePlayer(result) {
       <button type="button" data-youtube-action="close" aria-label="Close music player">Close</button>
     </div>
     <div class="nexus-youtube-frame-wrap">
-      <iframe title="${escapeHtml(result.title || result.query)}"
-        src="https://www.youtube.com/embed/${encodeURIComponent(result.videoId)}?autoplay=0&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}&widget_referrer=${encodeURIComponent(window.location.href)}"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        referrerpolicy="origin" allowfullscreen></iframe>
+      <div data-nexus-youtube-player-mount="true" aria-label="${escapeHtml(result.title || result.query)}"></div>
     </div>
     <div class="nexus-youtube-controls" role="group" aria-label="Music controls">
       <button type="button" data-youtube-action="play">Play</button>
@@ -10173,7 +10170,7 @@ function showNexusYouTubePlayer(result) {
     </div>
   `;
   document.body.appendChild(host);
-  nexusYouTubePlayback.iframe = host.querySelector("iframe");
+  nexusYouTubePlayback.iframe = host.querySelector("[data-nexus-youtube-player-mount]");
   nexusYouTubePlayback.state = "loading";
   nexusYouTubePlayback.query = result.query;
   nexusYouTubePlayback.title = result.title;
@@ -10196,7 +10193,6 @@ function showNexusYouTubePlayer(result) {
       closeNexusYouTubePlayback();
     }
   });
-  setTimeout(() => youtubePlayerCommand("playVideo"), 700);
   return true;
 }
 
@@ -56189,8 +56185,8 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
 }
 
 function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
-  if (!frame?.contentWindow) {
-    recordNexusYouTubeLifecycle("frame-unavailable", { detail: "The embedded frame has no content window." });
+  if (!frame?.isConnected || !nexusYouTubePlayback.videoId) {
+    recordNexusYouTubeLifecycle("frame-unavailable", { detail: "The player mount or video identifier is unavailable." });
     return Promise.resolve(false);
   }
   recordNexusYouTubeLifecycle("api-loading");
@@ -56214,10 +56210,28 @@ function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
       if (nexusYouTubePlayback.iframe !== frame) return finish(false, "frame-replaced");
       recordNexusYouTubeLifecycle("api-ready");
       try {
-        const player = new YT.Player(frame, { events: {
+        const player = new YT.Player(frame, {
+          host: "https://www.youtube.com",
+          videoId: nexusYouTubePlayback.videoId,
+          playerVars: {
+            autoplay: 0,
+            enablejsapi: 1,
+            playsinline: 1,
+            rel: 0,
+            origin: window.location.origin,
+            widget_referrer: window.location.href
+          },
+          events: {
           onReady(event) {
             if (settled) return;
             nexusYouTubePlayback.player = event.target;
+            nexusYouTubePlayback.iframe = event.target.getIframe?.() || nexusYouTubePlayback.iframe;
+            const iframe = event.target.getIframe?.();
+            if (iframe) {
+              iframe.title = nexusYouTubePlayback.title || nexusYouTubePlayback.query;
+              iframe.allow = "autoplay; encrypted-media; picture-in-picture";
+              iframe.referrerPolicy = "origin";
+            }
             recordNexusYouTubeLifecycle("player-ready", { readyObserved: true });
             try {
               event.target.playVideo();
