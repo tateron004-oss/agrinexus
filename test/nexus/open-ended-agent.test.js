@@ -175,6 +175,26 @@ test("a complete consented communication request has an executable Communication
   assert.equal(completeCommunicationPlan("Draft a clinic follow-up message.", catalog), null);
 });
 
+test("every remaining complete gauntlet request has a deterministic governed plan", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: ["knowledge.search", "pharmacy.find", "jobs.search",
+    "maps.view", "reminders.schedule", "drone.plan"].map(toolId => ({ toolId })) };
+  const cases = [
+    ["agriculture", "Assess yellow leaves on my maize crop and show sources."],
+    ["pharmacy", "Find pharmacy support for metformin and show a safety response with sources."],
+    ["learning", "Create a short maize farming literacy lesson and save my progress."],
+    ["workforce", "Find agriculture jobs in Nairobi with sources and select one listing."],
+    ["maps", "Show a route from Nairobi to Nakuru with route geometry."],
+    ["reminders", "Remind me tomorrow at 9 AM to check my crops and save the reminder."],
+    ["operations", "Prepare a field operation, record approval state, and return its receipt."]
+  ];
+  for (const [application, command] of cases) {
+    const plan = completeRemainingWorkspacePlan(command, catalog);
+    assert.equal(plan.application, application, command); assert.equal(plan.steps.length, 1, command);
+  }
+  assert.equal(completeRemainingWorkspacePlan("Tell me about jobs.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
