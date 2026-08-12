@@ -10085,8 +10085,45 @@ const nexusYouTubePlayback = {
   title: "",
   videoId: "",
   lifecycle: "idle",
-  errorCode: ""
+  errorCode: "",
+  telemetry: null
 };
+
+const NEXUS_YOUTUBE_STATE_LABELS = Object.freeze({ "-1": "unstarted", "0": "ended", "1": "playing", "2": "paused", "3": "buffering", "5": "cued" });
+const NEXUS_YOUTUBE_ERROR_LABELS = Object.freeze({ "2": "invalid_parameter", "5": "html5_player_error", "100": "video_not_found_or_private", "101": "embedding_not_allowed", "150": "embedding_not_allowed" });
+
+function nexusYouTubePlayerStateFromEvent(event) {
+  const value = event?.data?.info?.playerState ?? event?.info?.playerState ?? event?.data ?? event?.target?.getPlayerState?.();
+  const state = Number(value);
+  return Number.isFinite(state) ? state : null;
+}
+
+function recordNexusYouTubeLifecycle(phase, details = {}) {
+  const prior = nexusYouTubePlayback.telemetry || {};
+  const observedAt = new Date().toISOString();
+  const playerState = Number.isFinite(details.playerState) ? details.playerState : prior.playerState ?? null;
+  const telemetry = {
+    schema: "nexus.youtube-lifecycle.v1",
+    phase, observedAt, origin: window.location.origin,
+    videoId: nexusYouTubePlayback.videoId || prior.videoId || "",
+    playerState,
+    playerStateLabel: playerState === null ? "unknown" : NEXUS_YOUTUBE_STATE_LABELS[String(playerState)] || "unknown",
+    errorCode: details.errorCode ?? prior.errorCode ?? null,
+    errorLabel: details.errorLabel ?? prior.errorLabel ?? null,
+    readyObserved: details.readyObserved ?? prior.readyObserved ?? false,
+    playRequested: details.playRequested ?? prior.playRequested ?? false,
+    stateHistory: [...(prior.stateHistory || []), ...(playerState === null ? [] : [{ state: playerState, label: NEXUS_YOUTUBE_STATE_LABELS[String(playerState)] || "unknown", observedAt }])].slice(-12),
+    detail: details.detail || ""
+  };
+  nexusYouTubePlayback.lifecycle = phase;
+  nexusYouTubePlayback.errorCode = telemetry.errorCode === null ? "" : String(telemetry.errorCode);
+  nexusYouTubePlayback.telemetry = telemetry;
+  document.body.dataset.nexusYoutubeLifecycle = phase;
+  document.body.dataset.nexusYoutubePlayerState = playerState === null ? "" : String(playerState);
+  document.body.dataset.nexusYoutubePlayerError = nexusYouTubePlayback.errorCode;
+  window.__NEXUS_YOUTUBE_LIFECYCLE_TELEMETRY__ = Object.freeze({ ...telemetry });
+  return telemetry;
+}
 
 function youtubePlayerCommand(func, args = []) {
   const playerMethod = nexusYouTubePlayback.player?.[func];
@@ -10137,10 +10174,12 @@ function showNexusYouTubePlayer(result) {
   `;
   document.body.appendChild(host);
   nexusYouTubePlayback.iframe = host.querySelector("iframe");
-  nexusYouTubePlayback.state = "playing";
+  nexusYouTubePlayback.state = "loading";
   nexusYouTubePlayback.query = result.query;
   nexusYouTubePlayback.title = result.title;
   nexusYouTubePlayback.videoId = result.videoId;
+  nexusYouTubePlayback.telemetry = null;
+  recordNexusYouTubeLifecycle("iframe-created", { detail: "Playback is not verified until genuine player state 1." });
   host.addEventListener("click", event => {
     const action = event.target.closest("[data-youtube-action]")?.dataset.youtubeAction;
     if (!action) return;
@@ -56006,14 +56045,16 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       opened = Boolean(playback?.videoId && nexusYouTubePlayback.iframe);
       audible = opened && await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe);
       if (audible) break;
-      lastFailure = {
-        lifecycle: nexusYouTubePlayback.lifecycle,
-        errorCode: nexusYouTubePlayback.errorCode || "none"
+      lastFailure = nexusYouTubePlayback.telemetry || {
+        phase: nexusYouTubePlayback.lifecycle,
+        errorCode: nexusYouTubePlayback.errorCode || "none",
+        playerState: null,
+        playerStateLabel: "unknown"
       };
       closeNexusYouTubePlayback();
     }
     if (!audible) {
-      throw new Error(`YouTube loaded candidates for ${requestedMedia}, but playback did not start (lifecycle=${lastFailure.lifecycle}, error=${lastFailure.errorCode}). Nexus will not report it as playing.`);
+      throw new Error(`YouTube loaded candidates for ${requestedMedia}, but genuine playback state 1 was not observed (phase=${lastFailure.phase || "unknown"}, state=${lastFailure.playerState ?? "unknown"}, stateLabel=${lastFailure.playerStateLabel || "unknown"}, error=${lastFailure.errorCode ?? "none"}, errorLabel=${lastFailure.errorLabel || "none"}, ready=${lastFailure.readyObserved === true}, playRequested=${lastFailure.playRequested === true}). Nexus will not report it as playing.`);
     }
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
@@ -56071,55 +56112,70 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
 }
 
 function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
-  if (!frame?.contentWindow) return Promise.resolve(false);
+  if (!frame?.contentWindow) {
+    recordNexusYouTubeLifecycle("frame-unavailable", { detail: "The embedded frame has no content window." });
+    return Promise.resolve(false);
+  }
+  recordNexusYouTubeLifecycle("api-loading");
   return new Promise(resolve => {
     let settled = false;
     let timeout;
-    const finish = value => {
+    const finish = (passed, phase, details = {}) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
-      resolve(value);
+      recordNexusYouTubeLifecycle(phase, details);
+      resolve(passed === true);
     };
     timeout = window.setTimeout(() => {
-      nexusYouTubePlayback.lifecycle = "timeout";
-      finish(false);
+      let playerState = null;
+      try { playerState = nexusYouTubePlayerStateFromEvent({ target: nexusYouTubePlayback.player }); } catch (_) {}
+      finish(false, "timeout", { playerState, detail: `State 1 was not observed within ${timeoutMs}ms.` });
     }, timeoutMs);
-    nexusYouTubePlayback.lifecycle = "api-loading";
-    nexusYouTubePlayback.errorCode = "";
     loadNexusYouTubeIframeApi().then(YT => {
-      if (settled || nexusYouTubePlayback.iframe !== frame) return finish(false);
-      const player = new YT.Player(frame, {
-        events: {
+      if (settled) return;
+      if (nexusYouTubePlayback.iframe !== frame) return finish(false, "frame-replaced");
+      recordNexusYouTubeLifecycle("api-ready");
+      try {
+        const player = new YT.Player(frame, { events: {
           onReady(event) {
-            nexusYouTubePlayback.lifecycle = "ready";
             if (settled) return;
             nexusYouTubePlayback.player = event.target;
-            event.target.playVideo();
-          },
-          onStateChange(event) {
-            const state = Number(event?.data ?? event?.target?.getPlayerState?.());
-            nexusYouTubePlayback.lifecycle = `state-${state}`;
-            if (state === 1) {
-              nexusYouTubePlayback.state = "playing";
-              finish(true);
-            } else if (state === 0 || state === 2 || state === 5) {
-              nexusYouTubePlayback.state = state === 2 ? "paused" : "cued";
+            recordNexusYouTubeLifecycle("player-ready", { readyObserved: true });
+            try {
+              event.target.playVideo();
+              recordNexusYouTubeLifecycle("play-requested", { readyObserved: true, playRequested: true });
+            } catch (error) {
+              finish(false, "play-request-error", { readyObserved: true, detail: error?.message || String(error) });
             }
           },
+          onStateChange(event) {
+            const playerState = nexusYouTubePlayerStateFromEvent(event);
+            recordNexusYouTubeLifecycle("state-change", { playerState, readyObserved: true, playRequested: true });
+            if (playerState === 1) {
+              nexusYouTubePlayback.state = "playing";
+              finish(true, "playing", { playerState: 1, readyObserved: true, playRequested: true });
+            } else if (playerState === 3) nexusYouTubePlayback.state = "buffering";
+            else if (playerState === 2) nexusYouTubePlayback.state = "paused";
+            else if (playerState === 0 || playerState === 5) nexusYouTubePlayback.state = "cued";
+          },
           onError(event) {
-            nexusYouTubePlayback.errorCode = String(event?.data ?? "unknown");
-            nexusYouTubePlayback.lifecycle = `error-${nexusYouTubePlayback.errorCode}`;
-            finish(false);
+            const errorCode = Number(event?.data);
+            finish(false, "player-error", {
+              errorCode: Number.isFinite(errorCode) ? errorCode : null,
+              errorLabel: NEXUS_YOUTUBE_ERROR_LABELS[String(errorCode)] || "unknown_player_error",
+              playerState: nexusYouTubePlayerStateFromEvent(event),
+              readyObserved: nexusYouTubePlayback.telemetry?.readyObserved === true,
+              playRequested: nexusYouTubePlayback.telemetry?.playRequested === true
+            });
           }
-        }
-      });
-      nexusYouTubePlayback.player = player;
-    }).catch(error => {
-      nexusYouTubePlayback.errorCode = String(error?.message || "api-load-failed");
-      nexusYouTubePlayback.lifecycle = "api-error";
-      finish(false);
-    });
+        }});
+        nexusYouTubePlayback.player = player;
+        recordNexusYouTubeLifecycle("player-created");
+      } catch (error) {
+        finish(false, "player-construction-error", { detail: error?.message || String(error) });
+      }
+    }).catch(error => finish(false, "api-error", { detail: error?.message || String(error) }));
   });
 }
 
