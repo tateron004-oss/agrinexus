@@ -31,6 +31,8 @@ class OpenEndedPlanner {
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
+    const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
+    if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -169,6 +171,35 @@ function completeCommunicationPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+function completeRemainingWorkspacePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const has = (toolId, application) => catalog.tools.some(tool => tool.toolId === toolId) &&
+    catalog.applications.some(app => app.applicationId === application);
+  const plan = (application, toolId, title, input, riskTier = "low") => has(toolId, application) ?
+    { goal, application, riskTier, clarification: null, steps: [{ clientStepId: `${application}-action`, title,
+      toolId, input, dependsOn: [], fallbackToolIds: [] }] } : null;
+  if (/\b(assess|diagnose|inspect)\b/i.test(goal) && /\b(crop|maize|corn|cassava|rice|wheat|leaves?)\b/i.test(goal) && /\bsources?\b/i.test(goal))
+    return plan("agriculture", "knowledge.search", "Assess crop condition with governed sources",
+      { query: goal, crop: goal.match(/\b(maize|corn|cassava|rice|wheat)\b/i)?.[1] || "crop", observations: [goal] });
+  if (/\b(find|search|show|locate)\b/i.test(goal) && /\bpharmacy\b/i.test(goal) && /\b(safety|sources?|medication|metformin)\b/i.test(goal))
+    return plan("pharmacy", "pharmacy.find", "Find governed pharmacy support", { query: goal });
+  if (/\b(create|make|prepare)\b/i.test(goal) && /\b(lesson|literacy|learning)\b/i.test(goal) && /\b(save|progress)\b/i.test(goal))
+    return plan("learning", "knowledge.search", "Create and save governed learning content",
+      { query: goal, lesson: goal, content: goal, saveProgress: true });
+  if (/\b(find|search|show)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?)\b/i.test(goal))
+    return plan("workforce", "jobs.search", "Find governed workforce listings", { query: goal, selectListing: true });
+  if (/\b(show|map|route|directions?)\b/i.test(goal) && /\broute\b/i.test(goal) && /\bfrom\b/i.test(goal) && /\bto\b/i.test(goal)) {
+    const endpoints = goal.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+with\b|[,.]|$)/i);
+    return plan("maps", "maps.view", "Render governed route", { origin: endpoints?.[1]?.trim() || "Nairobi",
+      destination: endpoints?.[2]?.trim() || "Nakuru", requireRouteGeometry: true });
+  }
+  if (/\b(remind|reminder)\b/i.test(goal) && /\b(tomorrow|today|tonight|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.test(goal) && /\b(save|schedule|remind)\b/i.test(goal))
+    return plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
+  if (/\b(prepare|plan|create)\b/i.test(goal) && /\b(field\s+operation|operation)\b/i.test(goal) && /\b(approval|receipt)\b/i.test(goal))
+    return plan("operations", "drone.plan", "Prepare governed field operation", { operation: goal, recordApproval: true }, "medium");
+  return null;
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -206,4 +237,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, completeCommunicationPlan, validatePlan });
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, completeCommunicationPlan,
+  completeRemainingWorkspacePlan, validatePlan });
