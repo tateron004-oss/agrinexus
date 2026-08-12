@@ -43445,7 +43445,12 @@ async function api(req, res, url) {
     if (!query) return send(res, 400, { ok: false, error: "Music search query is required" });
 
     const attempts = [];
-    const preview = await nexusMusicMediaSourceProvider.runItunesPreviewLookup({
+    const excludedProviders = new Set(Array.isArray(body.excludeProviders)
+      ? body.excludeProviders.map(value => String(value || "").trim()).filter(Boolean)
+      : []);
+    const preview = excludedProviders.has("apple-itunes-preview")
+      ? { ok: false, provider: "apple-itunes-preview", status: "provider-excluded", error: "provider-excluded" }
+      : await nexusMusicMediaSourceProvider.runItunesPreviewLookup({
       mediaRequest: query,
       country: body.country || "US"
     }, process.env);
