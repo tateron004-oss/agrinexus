@@ -53,8 +53,14 @@ async function run(env = process.env) {
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
       const execute = async phase => {
-        const turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
+        let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
           { releaseSha, application, text, channel: "typed", locale: "en", phase });
+        if (application === "health" && turn.result?.state === "confirmation_required") {
+          turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/health-continuation`, token,
+            { releaseSha, taskId: turn.result.taskId, stepId: turn.result.outcome?.pendingStepId,
+              commandId: turn.result.commandId, correlationId: turn.result.correlationId,
+              channel: "typed", confirmed: true, consented: true });
+        }
         const outcome = turn.result?.render;
         if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required.`);
         const receipt = await page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
