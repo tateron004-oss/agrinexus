@@ -75,14 +75,14 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
-test("browser verifier proves Standard User identity through the authenticated server context", async () => {
+test("browser verifier proves Standard User identity through the authenticated server state contract", async () => {
   let request;
   const page = { context: () => ({ request: { get: async (url, options) => {
     request = { url, options };
     return { ok: () => true, status: () => 200, json: async () => ({ user: { role: "Standard User" } }) };
   } } }) };
   assert.equal(await authenticatedStandardUserRole(page, "https://nexus.example"), "Standard User");
-  assert.deepEqual(request, { url: "https://nexus.example/api/context",
+  assert.deepEqual(request, { url: "https://nexus.example/api/state",
     options: { headers: { accept: "application/json", "cache-control": "no-cache" } } });
 });
 
