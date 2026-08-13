@@ -64,6 +64,15 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
+async function authenticatedStandardUserRole(page, base) {
+  const response = await page.context().request.get(`${base}/api/context`, {
+    headers: { accept: "application/json", "cache-control": "no-cache" }
+  });
+  if (!response.ok()) throw new Error(`Authenticated context failed (${response.status()}).`);
+  const shell = await response.json();
+  return shell?.user?.role || "";
+}
+
 async function requireVisibleAuthoritativeTypedIngress(page) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   if (await input.isVisible()) return input;
@@ -129,7 +138,7 @@ async function run(env = process.env) {
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
   await requireVisibleAuthoritativeTypedIngress(page);
-  const shellRole = await page.evaluate(() => globalThis.data?.user?.role || "");
+  const shellRole = await authenticatedStandardUserRole(page, base);
   if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   const visibleIngress = [];
@@ -231,4 +240,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
