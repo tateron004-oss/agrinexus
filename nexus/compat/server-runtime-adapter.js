@@ -13,6 +13,10 @@ const { executeProductionCase } = require("../path2/production-case.js");
 const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 
+function safeDatabaseIdentifier(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
+}
+
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
   let runtimePromise = null;
@@ -589,7 +593,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       send(res, result.status, result.body);
     } catch (error) {
-      logger.error?.("authoritative.runtime.request_failed", { code: error.code || error.name, requestId: req.headers["x-request-id"] || "" });
+      logger.error?.("authoritative.runtime.request_failed", {
+          code: error.code || error.name,
+          requestId: req.headers["x-request-id"] || "",
+          schema: safeDatabaseIdentifier(error.schema),
+          table: safeDatabaseIdentifier(error.table),
+          column: safeDatabaseIdentifier(error.column),
+          constraint: safeDatabaseIdentifier(error.constraint),
+          routine: safeDatabaseIdentifier(error.routine)
+        });
       if (error instanceof NexusRuntimeError || error.status) send(res, error.status, { error: error.message, code: error.code, details: error.details });
       else send(res, 503, { error: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", code: error.code || "authoritative_runtime_unavailable" });
     }

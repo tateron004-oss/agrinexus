@@ -109,6 +109,32 @@ test("behavior turn enters one authoritative spine without a caller-selected wor
   assert.equal(response.result.body.legacyFallbackUsed, false);
 });
 
+test("behavior-turn database failures log only safe diagnostic identifiers", async () => {
+  const secret = "private-row-value-must-not-leak"; const logCalls = [];
+  const databaseError = new Error(`null value contains ${secret}`);
+  Object.assign(databaseError, { code: "23502", schema: "public", table: "nexus_tasks",
+    column: "owner_id", constraint: "nexus_tasks_owner_id_not_null", routine: "ExecConstraints",
+    detail: `Failing row contains ${secret}` });
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    behavior: { turn: async () => { throw databaseError; } } };
+  const adapter = createServerRuntimeAdapter({
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", permissions: ["tasks:execute"] }),
+    readJson: async () => ({ text: "Diagnose safely", channel: "typed" }),
+    logger: { error: (...args) => logCalls.push(args) }, createRuntimeFn: () => runtime
+  });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-safe-1" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/turn"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.deepEqual(response.result.body, {
+    error: "The authoritative Nexus runtime is unavailable; no legacy write fallback was used.", code: "23502"
+  });
+  assert.equal(logCalls.length, 1); assert.equal(logCalls[0][0], "authoritative.runtime.request_failed");
+  assert.deepEqual(logCalls[0][1], { code: "23502", requestId: "request-safe-1", schema: "public",
+    table: "nexus_tasks", column: "owner_id", constraint: "nexus_tasks_owner_id_not_null", routine: "ExecConstraints" });
+  assert.doesNotMatch(JSON.stringify(logCalls), /private-row-value-must-not-leak|null value|Failing row/);
+});
+
 test("authenticated refresh recovery returns only authoritative tenant conversation turns", async () => {
   let recentInput; const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
     conversations: { recent: async input => { recentInput = input; return [{ role: "assistant", content: "Your route is still open.", created_at: "2026-08-12T00:00:00Z", provenance: { taskId: "tsk_1" } }]; } } };
