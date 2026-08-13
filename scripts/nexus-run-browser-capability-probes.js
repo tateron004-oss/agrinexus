@@ -64,7 +64,7 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
-async function submitRegisteredStandardUserLogin(page, base) {
+async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
   const loginResponsePromise = page.waitForResponse(response => {
     try {
       const url = new URL(response.url());
@@ -74,6 +74,12 @@ async function submitRegisteredStandardUserLogin(page, base) {
       return false;
     }
   }, { timeout: 30000 });
+  if (lifecycle) lifecycle.beforeClick = await page.evaluate(() => ({
+    loginSubmitListenerRegistrations:
+      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
+    currentFormWasRegisteredTarget:
+      document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm
+  }));
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
   let response;
   try {
@@ -96,7 +102,8 @@ async function installLoginLifecycleDiagnostics(page, base) {
     schema: "nexus.browser-login-lifecycle-context.v1",
     requests: [],
     responses: [],
-    navigations: []
+    navigations: [],
+    submitEvents: []
   };
   const sameOriginPath = value => {
     try {
@@ -105,10 +112,11 @@ async function installLoginLifecycleDiagnostics(page, base) {
     } catch { return "invalid-url"; }
   };
   page.on("request", request => {
-    if (lifecycle.requests.length >= 30) return;
     const path = sameOriginPath(request.url());
     if (path === "cross-origin") return;
-    lifecycle.requests.push({ method: request.method(), path, resourceType: request.resourceType() });
+    const record = { method: request.method(), path, resourceType: request.resourceType() };
+    if (path.startsWith("/api/login") || request.resourceType() === "document") lifecycle.requests.push(record);
+    else if (lifecycle.requests.length < 30) lifecycle.requests.push(record);
   });
   page.on("response", response => {
     if (lifecycle.responses.length >= 30) return;
@@ -120,9 +128,14 @@ async function installLoginLifecycleDiagnostics(page, base) {
     if (frame !== page.mainFrame() || lifecycle.navigations.length >= 20) return;
     lifecycle.navigations.push({ path: sameOriginPath(frame.url()) });
   });
+  await page.exposeFunction("__NEXUS_REPORT_LOGIN_SUBMIT__", value => {
+    if (lifecycle.submitEvents.length < 10) lifecycle.submitEvents.push(value);
+  });
   await page.addInitScript(() => {
     const state = window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__ = {
       loginSubmitListenerRegistrations: 0,
+      registeredLoginForm: null,
+      submitEvents: [],
       errors: []
     };
     const record = value => {
@@ -132,9 +145,25 @@ async function installLoginLifecycleDiagnostics(page, base) {
     EventTarget.prototype.addEventListener = function nexusLoginLifecycleAddEventListener(type, listener, options) {
       if (type === "submit" && this instanceof Element && this.id === "loginForm") {
         state.loginSubmitListenerRegistrations += 1;
+        state.registeredLoginForm = this;
       }
       return originalAddEventListener.call(this, type, listener, options);
     };
+    document.addEventListener("submit", event => {
+      if (event.target?.id !== "loginForm" || state.submitEvents.length >= 10) return;
+      state.submitEvents.push({
+        currentFormWasRegisteredTarget: event.target === state.registeredLoginForm,
+        defaultPreventedAtCapture: event.defaultPrevented
+      });
+      void window.__NEXUS_REPORT_LOGIN_SUBMIT__?.({
+        currentFormWasRegisteredTarget: event.target === state.registeredLoginForm,
+        defaultPreventedAtCapture: event.defaultPrevented
+      });
+      queueMicrotask(() => {
+        const record = state.submitEvents[state.submitEvents.length - 1];
+        if (record) record.defaultPreventedAfterDispatch = event.defaultPrevented;
+      });
+    }, true);
     window.addEventListener("error", event => record({
       type: "error",
       name: event.error?.name || "Error",
@@ -161,6 +190,9 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
     readyState: document.readyState,
     loginSubmitListenerRegistrations:
       window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
+    currentFormWasRegisteredTarget:
+      document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm,
+    submitEvents: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.submitEvents || [],
     errors: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.errors || []
   })).catch(error => ({ captureError: String(error?.message || error) }));
   const errors = Array.isArray(browser.errors) ? browser.errors.map(value => ({
@@ -173,6 +205,8 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
   })) : [];
   return {
     schema: lifecycle.schema,
+    beforeClick: lifecycle.beforeClick || null,
+    submitEvents: lifecycle.submitEvents.slice(-10),
     browser: { ...browser, errors },
     requests: lifecycle.requests.slice(-30),
     responses: lifecycle.responses.slice(-30),
@@ -334,7 +368,7 @@ async function run(env = process.env) {
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   let loginBoundary;
   try {
-    loginBoundary = await submitRegisteredStandardUserLogin(page, base);
+    loginBoundary = await submitRegisteredStandardUserLogin(page, base, loginLifecycle);
     await waitForAuthenticatedStandardUserShell(page, base);
     await requireVisibleAuthoritativeTypedIngress(page);
   } catch (error) {
