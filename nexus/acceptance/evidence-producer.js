@@ -3,7 +3,7 @@
 const crypto = require("node:crypto");
 const { COMPONENTS } = require("./repository.js");
 const { REQUIRED_PROOFS, validateWorkspaceEvidence } = require("../apps/workspace-evidence-contract.js");
-const { FAULTS, validateFaultClosure } = require("./fault-register.js");
+const { validateFaultClosure } = require("./fault-register.js");
 const { CONTRACTS, verifyCapabilityCompletion } = require("../apps/capability-completion-contracts.js");
 
 const COMPONENT_REQUIREMENTS = Object.freeze({
@@ -65,14 +65,7 @@ function compileProductionProof({ releaseSha, source, rollbackRef, componentProb
   const componentNames = components.map(item => item.name);
   const workspaceNames = workspaces.map(item => item.workspaceId);
   if (new Set(componentNames).size !== componentNames.length || new Set(workspaceNames).size !== workspaceNames.length) throw new Error("Duplicate production evidence subject.");
-  const faultEvidence = faultProbes.map(record => {
-    requireExactRelease(record, releaseSha, `Fault ${record?.fault}`);
-    if (!FAULTS.includes(record.fault) || !record.implementation || !Array.isArray(record.tests) || !record.tests.length) {
-      throw new Error(`Fault ${record?.fault || "unknown"} lacks implementation or test evidence.`);
-    }
-    return { fault: record.fault, status: "closed", releaseSha, implementation: record.implementation,
-      tests: record.tests, proofs: record.receipts };
-  });
+  const faultEvidence = faultProbes.map(record => ({ ...record }));
   validateFaultClosure({ releaseSha, evidence: faultEvidence });
   const capabilityEvidence = Object.fromEntries(capabilityProbes.map(record => {
     requireExactRelease(record, releaseSha, `Capability ${record?.application}`);
