@@ -84,6 +84,21 @@ jobs:
           npm run qa:nexus-production-layer-activation-integration
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
+      - name: Execute source-backed fault verifiers and preserve open production obligations
+        env:
+          EXPECTED_RELEASE_SHA: ${{ github.event.inputs.target_sha || github.sha }}
+          NEXUS_FAULT_PROOF_FILE: output/nexus-candidate-fault-proof-report.json
+          NEXUS_FAULT_ALLOW_OPEN: "true"
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          node scripts/nexus-run-fault-proof-verifiers.js
+          node - <<'NODE'
+          const report=require("./output/nexus-candidate-fault-proof-report.json");
+          if(report.closed!==false||report.proven!==20||report.open.length!==10) {
+            throw new Error(`Unexpected candidate fault inventory: ${report.proven}/${report.required}, open=${report.open.length}`);
+          }
+          NODE
       - name: Install production-equivalent provider contract
         run: node -e 'const fs=require("node:fs");const {canonicalToolProviders}=require("./scripts/nexus-render-release-controller.js");fs.appendFileSync(process.env.GITHUB_ENV,"NEXUS_TOOL_PROVIDERS_JSON="+JSON.stringify(canonicalToolProviders("candidate-provider-receipt-secret-0000000000000000","https://provider.example"))+"\n")'
       - name: Migrate production-equivalent PostgreSQL
