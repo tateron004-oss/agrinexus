@@ -65,7 +65,7 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 }
 
 async function requireVisibleAuthoritativeTypedIngress(page) {
-  const input = await requireVisibleAuthoritativeTypedIngress(page);
+  const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   if (await input.isVisible()) return input;
   const microphone = page.locator('[data-nexus-permanent-microphone-control="true"]:visible').first();
   await microphone.waitFor({ state: "visible", timeout: 30000 });
