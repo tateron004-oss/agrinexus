@@ -56011,6 +56011,16 @@ function renderNexusAgenticCommandResult(result = {}) {
 
 const NEXUS_AUTHORITATIVE_CONVERSATION_KEY = "nexusAuthoritativeConversationId";
 const NEXUS_AUTHORITATIVE_TASK_KEY = "nexusAuthoritativeActiveTaskId";
+const NEXUS_AUTHORITATIVE_PRINCIPAL_KEY = "nexusAuthoritativePrincipalId";
+
+function resetNexusAuthoritativeIdentityContext(principalId = "") {
+  localStorage.removeItem(NEXUS_AUTHORITATIVE_CONVERSATION_KEY);
+  localStorage.removeItem(NEXUS_AUTHORITATIVE_TASK_KEY);
+  if (principalId) localStorage.setItem(NEXUS_AUTHORITATIVE_PRINCIPAL_KEY, String(principalId));
+  else localStorage.removeItem(NEXUS_AUTHORITATIVE_PRINCIPAL_KEY);
+  nexusAuthoritativeRecoveryStarted = false;
+}
+
 let nexusAuthoritativeOutcomeRendererPromise = null;
 let nexusAuthoritativeRecoveryStarted = false;
 
@@ -58768,6 +58778,10 @@ async function startGuestUserSession() {
     });
     if (data?.auth?.authenticated !== true || data?.auth?.authoritative !== true || data?.auth?.guest !== true) {
       throw new Error("Nexus could not establish an authoritative Standard User session.");
+    }
+    if (data.auth.resumed !== true ||
+        localStorage.getItem(NEXUS_AUTHORITATIVE_PRINCIPAL_KEY) !== String(data?.user?.id || "")) {
+      resetNexusAuthoritativeIdentityContext(data?.user?.id || "");
     }
     localStorage.setItem("agrinexusGuestDisplayName", guestName.slice(0, 80));
     await loadPublicMapConfig();
@@ -61642,6 +61656,7 @@ function bindStatic() {
         return;
       }
       data = await request("/api/login", { method: "POST", body: { email, password } });
+      resetNexusAuthoritativeIdentityContext(data?.user?.id || "");
       if (loginLanguage && loginLanguage !== data?.user?.language) {
         data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
       }
@@ -61663,6 +61678,7 @@ function bindStatic() {
 
   $("#logoutBtn").onclick = async () => {
     localStorage.removeItem("agrinexusGuestDisplayName");
+    resetNexusAuthoritativeIdentityContext();
     await request("/api/logout", { method: "POST" });
     location.reload();
   };
