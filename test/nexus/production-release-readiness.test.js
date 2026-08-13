@@ -3,12 +3,23 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { REQUIRED_RELEASE_COMPONENTS, validateReleaseProof } = require("../../scripts/nexus-production-release-readiness.js");
-const { FAULTS } = require("../../nexus/acceptance/fault-register.js");
+const { FAULT_CONTRACTS } = require("../../nexus/acceptance/fault-register.js");
 const { CONTRACTS } = require("../../nexus/apps/capability-completion-contracts.js");
 
 const sha = "a".repeat(40);
-const faultEvidence = FAULTS.map(fault => ({ fault, status: "closed", releaseSha: sha,
-  implementation: "implemented", tests: ["test"], proofs: ["proof"] }));
+const observedAt = "2026-08-13T00:00:00.000Z";
+const faultEvidence = FAULT_CONTRACTS.map((contract, index) => ({
+  fault: contract.fault, status: "closed", releaseSha: sha,
+  verifierId: contract.verifierId, proofType: contract.proofType,
+  implementation: { owner: contract.owner, contract: "Executed contract for " + contract.fault,
+    location: "nexus/verifiers/" + contract.verifierId + ".js" },
+  tests: [contract.verifierId], proofs: [{
+    proofId: contract.fault + "-proof-" + index, executionId: contract.fault + "-execution-" + index,
+    verifierId: contract.verifierId, method: contract.proofType, releaseSha: sha,
+    passed: true, observedAt,
+    observation: { expected: "control enforced", actual: "control enforced", matched: true }
+  }]
+}));
 const capabilityEvidence = Object.fromEntries(Object.entries(CONTRACTS).map(([application, requirements]) =>
   [application, Object.fromEntries([...requirements.map(key => [key, key === "playbackState" ? "playing" : "verified"]),
     ["rendered", true], ["visible", true]])]));
@@ -19,7 +30,7 @@ test("release readiness accepts every deploy-stage production component", () => 
   assert.equal(report.passed, true);
   assert.equal(report.requiredComponents, 14);
   assert.equal(report.closedFaults, 30);
-  assert.equal(report.verifiedCapabilities, 16);
+  assert.equal(report.verifiedCapabilities, 17);
 });
 
 test("release readiness does not claim success without durable object storage", () => {
