@@ -226,6 +226,9 @@ test("unified release binds every production process to the exact release SHA", 
       value: releaseSha
     });
   }
+  const webAcceptance = writes.find(write => write.path === "/services/srv-web/env-vars/NEXUS_ACCEPTANCE_TOKEN");
+  const providerAcceptance = writes.find(write => write.path === "/services/srv-provider/env-vars/NEXUS_ACCEPTANCE_TOKEN");
+  assert.ok(webAcceptance?.value); assert.equal(providerAcceptance?.value, webAcceptance.value);
   for (const [key, value] of Object.entries({
     AGRINEXUS_STATE_STORE: "postgres",
     AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
