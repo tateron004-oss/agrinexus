@@ -199,16 +199,15 @@ async function run(env = process.env) {
     if (voice.result?.render?.application !== "live-knowledge" || voice.result?.render?.originalText !== voiceText) {
       throw new Error("Voice and typed input did not preserve equivalent authoritative intent.");
     }
-    const allReceipts = capabilityProbes.flatMap(item => item.receipts);
-    const faultProbes = FAULTS.map(fault => exactRecord(releaseSha,
-      [...allReceipts, `github-actions://exact-release/${releaseSha}/fault/${fault}`],
-      { fault, implementation: `runtime control for ${fault}`, tests: ["authoritative-runtime", "browser-capability-gauntlet"] }));
+    const faultProbes = [];
     Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes,
+      faultProofStatus: { closed: false, releaseSha, required: FAULTS.length, proven: 0,
+        missing: [...FAULTS], reason: "Typed fault verifiers have not executed; capability success receipts cannot prove fault closure." },
       browserProbe: { releaseSha, capabilities: capabilityProbes.length, workspaces: workspaceProbes.length,
         visibleIngress, visibleAuthenticatedLogin: true, sequential: true, voiceTypedEquivalent: true, observedAt: new Date().toISOString() } });
     fs.writeFileSync(probeFile, JSON.stringify(document, null, 2));
     console.log(JSON.stringify({ ok: true, releaseSha, capabilities: capabilityProbes.length,
-      workspaces: workspaceProbes.length, faults: faultProbes.length }, null, 2));
+      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false }, null, 2));
     return document;
   } finally { await browser.close(); }
 }
