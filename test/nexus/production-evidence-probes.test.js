@@ -89,6 +89,18 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
+
+test("authoritative source answers survive the Standard User conversation lifecycle", () => {
+  const renderer = fs.readFileSync("public/nexus-authoritative-outcome-renderer.js", "utf8");
+  assert.match(renderer, /proof\?\.rendered !== true && outcome\.presentation\.kind === "source-answer"/);
+  assert.match(renderer, /renderConversationOutcome\(outcome\)/);
+  assert.match(renderer, /data-nexus-genesis-first-viewport="true"/);
+  assert.match(renderer, /nexusAuthoritativeConversationHost/);
+  assert.match(renderer, /dataset\.executionAuthority = "false"/);
+  assert.match(renderer, /new MutationObserver/);
+  assert.ok(renderer.indexOf("const result = await this.acknowledge(acknowledgement)") <
+    renderer.indexOf("this.preserveConversationOutcome(outcome, turn)"));
+});
 test("browser verifier proves Standard User identity through the authenticated server state contract", async () => {
   let request;
   const page = { context: () => ({ request: { get: async (url, options) => {
@@ -178,20 +190,22 @@ test("production browser establishes a real denied microphone permission before 
 
 test("browser capability verifier binds visible interaction to stable authoritative ingress ownership", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
-  assert.match(source, /data-nexus-primary-typed-entry="true":visible/);
-  assert.match(source, /data-nexus-primary-typed-submit="true":visible/);
+  assert.match(source, /\[data-nexus-primary-typed-entry="true"\]:visible/);
+  assert.match(source, /\[data-nexus-primary-typed-submit="true"\]:visible/);
   assert.doesNotMatch(source, /getByLabel\("Workflow details for Nexus"/);
   assert.doesNotMatch(source, /getByRole\("button", \{ name: "Send to Nexus"/);
 });
 
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
-  assert.match(source, /page\.context\(\)\.request\.post/);
-  assert.match(source, /shell\?\.user\?\.role !== "Standard User"/);
+  assert.match(source, /submitRegisteredStandardUserLogin\(page, base, loginLifecycle\)/);
+  assert.match(source, /url\.pathname === "\/api\/login"/);
+  assert.match(source, /response\.request\(\)\.method\(\) === "POST"/);
+  assert.match(source, /waitForAuthenticatedStandardUserShell\(page, base\)/);
+  assert.match(source, /return shell\?\.user\?\.role \|\| ""/);
   assert.match(source, /page\.reload/);
-  assert.match(source, /data = value/);
-  assert.match(source, /attempt <= 4/);
-  assert.match(source, /login transport failed after 4 attempts/);
+  assert.match(source, /lastRole === "Standard User" && shellState\.appVisible && !shellState\.loginVisible/);
+  assert.match(source, /Registered Standard User login request was not observed within 30000ms/);
 });
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
