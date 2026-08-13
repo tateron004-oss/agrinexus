@@ -15,3 +15,15 @@ test("production browser evidence classifies the registered login boundary befor
   assert.match(probe, /Login boundary: requestObserved=true, status=\$\{loginBoundary\.status\}/);
   assert.doesNotMatch(probe, /loginBoundary[^\n]*(password|cookie|authorization)/i);
 });
+
+test("production browser evidence captures same-context login binding and navigation diagnostics", () => {
+  assert.match(probe, /installLoginLifecycleDiagnostics\(page, base\)/);
+  assert.match(probe, /loginSubmitListenerRegistrations/);
+  assert.match(probe, /window\.addEventListener\("error"/);
+  assert.match(probe, /window\.addEventListener\("unhandledrejection"/);
+  assert.match(probe, /page\.on\("request"/);
+  assert.match(probe, /page\.on\("response"/);
+  assert.match(probe, /page\.on\("framenavigated"/);
+  assert.match(probe, /nexus-browser-login-lifecycle-context\.json/);
+  assert.doesNotMatch(probe, /lifecycle\.(requests|responses|navigations)[^\n]*(postData|headers|cookies)/i);
+});
