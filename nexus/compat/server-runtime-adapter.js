@@ -258,6 +258,23 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category, error: failure.message }); }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/probes/fault-isolation" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Probe SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const result = await executeProductionFaultIsolation({ active, principal: await acceptancePrincipal(active),
+          releaseSha, acceptanceToken: env.NEXUS_ACCEPTANCE_TOKEN });
+        send(res, result.ok ? 200 : 503, result);
+      } catch (error) {
+        const failure = classifyRuntimeError(error);
+        logger.error?.("authoritative.acceptance.fault_isolation_probe_failed", { code: failure.code, category: failure.category });
+        send(res, 503, { ok: false, releaseSha, code: failure.code, category: failure.category,
+          error: failure.message });
+      }
+      return true;
+    }
     const objectiveProbe = url.pathname.match(/^\/api\/nexus\/runtime\/production-acceptance\/probes\/(consolidated-brain|realtime-voice|documents-lifecycle|healthcare-controls|predictive-model)$/);
     if (objectiveProbe && req.method === "POST") {
       if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
@@ -654,6 +671,87 @@ async function governedModelProbe(active, principal, releaseSha, { domain, confi
   }
 }
 
+async function executeProductionFaultIsolation({ active, principal, releaseSha, acceptanceToken }) {
+  if (!active?.tasks?.save || !active?.engine?.create || !active?.engine?.transition || !active?.db?.query ||
+      !active?.providers?.executors?.["maps.view"] || !active?.providers?.verify || !active?.tools?.get) {
+    const error = new Error("The authoritative fault-isolation dependencies are unavailable.");
+    error.code = "fault_isolation_dependencies_unavailable";
+    throw error;
+  }
+  const marker = crypto.randomUUID(); const taskIdMarker = marker.replace(/-/g, "");
+  const command = { commandId: `cmd_${marker}`, correlationId: `acceptance-fault-${marker}`,
+    conversationId: `cnv_${taskIdMarker.slice(0, 20)}`, tenantId: principal.tenantId,
+    actorId: principal.userId, channel: "release", locale: "en",
+    text: "Verify exact-release production fault isolation" };
+  let created; let staleTransitionRejected = false; let staleTaskUnchanged = false;
+  let providerFailureObserved = false; let providerFailureCode = null; let providerFailureStage = null;
+  let databaseFailureDiagnosed = false; let databaseFailureSafe = false; let databaseRecovered = false;
+  let unrelatedCapabilitySurvived = false; let recoveryReceiptVerified = false;
+  try {
+    created = await active.engine.create({ command, goal: `Fault-isolation probe ${releaseSha}`,
+      application: "general", riskTier: "low", steps: [{ title: "Reject a stale authoritative transition" }] });
+    const transitioned = await active.engine.transition({ tenantId: principal.tenantId, taskId: created.taskId,
+      actorId: principal.userId, nextState: "cancelled", reason: "Acceptance stale-transition baseline" });
+    const staleCandidate = { ...created, state: "cancelled", version: Number(created.version) + 1,
+      updatedAt: new Date().toISOString() };
+    try { await active.tasks.save(staleCandidate, created.version); }
+    catch (error) { staleTransitionRejected = error?.name === "ConcurrencyError"; }
+    const afterRejection = await active.tasks.get({ tenantId: principal.tenantId, taskId: created.taskId, includeSteps: true });
+    staleTaskUnchanged = staleTransitionRejected && afterRejection?.state === transitioned.state &&
+      Number(afterRejection?.version) === Number(transitioned.version);
+
+    const context = acceptanceContext(principal, { actorId: principal.userId,
+      requestId: `acceptance-fault-${marker}`, correlationId: command.correlationId,
+      roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) });
+    const executor = active.providers.executors["maps.view"];
+    try {
+      await executor({ input: { origin: "Nairobi", destination: "Nakuru",
+        __nexusAcceptanceFault: { token: acceptanceToken, kind: "provider_failure", releaseSha } },
+        context, taskId: created.taskId, stepId: `stp_fault_${taskIdMarker.slice(0, 16)}`,
+        idempotencyKey: `acceptance-provider-fault-${marker}` });
+    } catch (error) {
+      providerFailureCode = String(error?.code || "");
+      providerFailureStage = String(error?.stage || "");
+      providerFailureObserved = providerFailureCode === "acceptance_provider_failure" &&
+        providerFailureStage === "provider-execution-maps-view";
+    }
+
+    try { await active.db.query("select 1/0 as nexus_acceptance_fault"); }
+    catch (error) {
+      const diagnostic = classifyRuntimeError(Object.assign(
+        new Error("PostgreSQL acceptance probe produced a controlled database error."),
+        { code: `database_${String(error?.code || "query_error")}` }));
+      databaseFailureDiagnosed = diagnostic.category === "database_unavailable";
+      const serialized = JSON.stringify(diagnostic);
+      databaseFailureSafe = !/(postgres(?:ql)?:\/\/|password|credential|NEXUS_ACCEPTANCE_TOKEN)/i.test(serialized);
+    }
+    const recovery = await active.db.query("select 1 as nexus_acceptance_recovered");
+    databaseRecovered = Number((recovery.rows || recovery)[0]?.nexus_acceptance_recovered) === 1;
+
+    const recoveryStepId = `stp_recovery_${taskIdMarker.slice(0, 16)}`;
+    const recoveryResult = await executor({ input: { origin: "Nairobi", destination: "Nakuru",
+      certificationCaseId: `p2c_fault_recovery_${taskIdMarker.slice(0, 16)}` }, context,
+      taskId: created.taskId, stepId: recoveryStepId, idempotencyKey: `acceptance-provider-recovery-${marker}` });
+    const tool = await active.tools.get("maps.view");
+    const verification = await active.providers.verify({ tool, result: recoveryResult, context,
+      taskId: created.taskId, stepId: recoveryStepId });
+    recoveryReceiptVerified = verification?.verified === true;
+    unrelatedCapabilitySurvived = databaseRecovered && recoveryReceiptVerified;
+  } finally {
+    if (created?.taskId) {
+      await active.db.query("delete from nexus_task_steps where tenant_id=$1 and task_id=$2", [principal.tenantId, created.taskId]);
+      await active.db.query("delete from nexus_tasks where tenant_id=$1 and task_id=$2", [principal.tenantId, created.taskId]);
+    }
+  }
+  const ok = staleTransitionRejected && staleTaskUnchanged && providerFailureObserved &&
+    databaseFailureDiagnosed && databaseFailureSafe && databaseRecovered &&
+    unrelatedCapabilitySurvived && recoveryReceiptVerified;
+  return Object.freeze({ ok, releaseSha, staleTransitionRejected, staleTaskUnchanged,
+    providerFailureObserved, providerFailureCode, providerFailureStage,
+    databaseFailureDiagnosed, databaseFailureSafe, databaseRecovered,
+    unrelatedCapabilitySurvived, recoveryReceiptVerified });
+}
+
 function acceptanceAuthorized(req, expected) {
   if (!expected) return false;
   const supplied = String(req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
@@ -698,4 +796,4 @@ function acceptanceExecutionPermissions(principal) {
 }
 
 module.exports = Object.freeze({ createServerRuntimeAdapter, requestContext, acceptanceAuthorized, acceptancePrincipal,
-  acceptanceContext, acceptanceExecutionPermissions, runObjectiveProbe, governedModelProbe, planContract });
+  acceptanceContext, acceptanceExecutionPermissions, executeProductionFaultIsolation, runObjectiveProbe, governedModelProbe, planContract });
