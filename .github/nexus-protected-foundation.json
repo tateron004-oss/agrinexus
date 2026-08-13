@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "98a09f8ba22470abb1cc3c35dc499bf6a7c575ca",
-    "recoveryBranch": "fix/behavior-correlation-contract",
+    "baseCommit": "588a6425f7223371c1043fe2538d0a1133a7b3f0",
+    "recoveryBranch": "fix/authenticated-shell-reload-restoration",
     "files": [
-      "nexus/compat/server-runtime-adapter.js"
+      "public/app.js"
     ],
-    "purpose": "Repair the confirmed behavior-turn observability NOT NULL violation by binding the immutable request identifier to the execution correlation contract, without changing fallback, identity, database schema, or certification gates"
+    "purpose": "Restore the authenticated protected shell on reload by requiring server /api/state proof before rendering the app and showing login only when authenticated state is unavailable, without changing identity, voice, fallback, or certification gates"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "915792842ecaf804b92d5a25abee33931077d928",
+    "public/app.js": "8755f9d5ca6d9cc397cbc1cad77ecc2c1b1f0aa8",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "a68dd9af4ea92d4922de6c2cb0c5d536e29e0519",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
