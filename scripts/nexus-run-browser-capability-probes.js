@@ -64,6 +64,16 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
+async function requireVisibleAuthoritativeTypedIngress(page) {
+  const input = await requireVisibleAuthoritativeTypedIngress(page);
+  if (await input.isVisible()) return input;
+  const microphone = page.locator('[data-nexus-permanent-microphone-control="true"]:visible').first();
+  await microphone.waitFor({ state: "visible", timeout: 30000 });
+  await microphone.click();
+  await input.waitFor({ state: "visible", timeout: 30000 });
+  return input;
+}
+
 async function submitVisibleCommand(page, text, application) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
@@ -110,7 +120,7 @@ async function run(env = process.env) {
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
-  await page.locator('[data-nexus-primary-typed-entry="true"]:visible').first().waitFor({ state: "visible", timeout: 30000 });
+  await requireVisibleAuthoritativeTypedIngress(page);
   const shellRole = await page.evaluate(() => globalThis.data?.user?.role || "");
   if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
@@ -119,7 +129,7 @@ async function run(env = process.env) {
     visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
   }
   await reloadAuthenticatedShell(page);
-  await page.locator('[data-nexus-primary-typed-entry="true"]:visible').first().waitFor({ state: "visible", timeout: 30000 });
+  await requireVisibleAuthoritativeTypedIngress(page);
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
@@ -213,4 +223,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });

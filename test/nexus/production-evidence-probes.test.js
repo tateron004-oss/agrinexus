@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingConfirmationContinuation, reloadAuthenticatedShell, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, reloadAuthenticatedShell, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -75,6 +75,20 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
+test("browser verifier uses the visible microphone control to establish truthful typed fallback", async () => {
+  const calls = []; let visible = false;
+  const input = { isVisible: async () => visible, waitFor: async options => {
+    calls.push(["input-wait", options]); visible = true;
+  } };
+  const microphone = { waitFor: async options => calls.push(["microphone-wait", options]),
+    click: async () => calls.push(["microphone-click"]) };
+  const page = { locator: selector => ({
+    first: () => selector.includes("primary-typed-entry") ? input : microphone
+  }) };
+  assert.equal(await requireVisibleAuthoritativeTypedIngress(page), input);
+  assert.deepEqual(calls.map(call => call[0]), ["microphone-wait", "microphone-click", "input-wait"]);
+});
+
 test("browser capability verifier binds visible interaction to stable authoritative ingress ownership", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(source, /data-nexus-primary-typed-entry="true":visible/);
