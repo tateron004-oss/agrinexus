@@ -65,10 +65,10 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 }
 
 async function authenticatedStandardUserRole(page, base) {
-  const response = await page.context().request.get(`${base}/api/context`, {
+  const response = await page.context().request.get(`${base}/api/state`, {
     headers: { accept: "application/json", "cache-control": "no-cache" }
   });
-  if (!response.ok()) throw new Error(`Authenticated context failed (${response.status()}).`);
+  if (!response.ok()) throw new Error(`Authenticated state failed (${response.status()}).`);
   const shell = await response.json();
   return shell?.user?.role || "";
 }
