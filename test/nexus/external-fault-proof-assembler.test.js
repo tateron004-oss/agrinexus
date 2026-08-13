@@ -11,7 +11,7 @@ const component = (name, facts = {}) => ({
 function fixture() {
   return {
     releaseSha: sha, executionId: "run-1", candidateResult: "success",
-    protectedChecksPassed: true, pipelineOwner: "github-actions", pipelineRunId: "123",
+    candidateGatesPassed: true, pipelineOwner: "github-actions", pipelineRunId: "123",
     blackBox: { passed: true, releaseSha: sha, checkedAt: "2026-08-13T00:00:00.000Z" },
     probes: {
       releaseSha: sha, source: "unified-release-live-probe",
@@ -53,10 +53,10 @@ test("assembler rejects stale black-box or probe evidence", () => {
   assert.throws(() => assembleExternalFaultProofs(stale), /exact release SHA/);
 });
 
-test("assembler does not convert missing candidate or protected-check results into release proof", () => {
+test("assembler does not convert missing candidate or candidate-gate results into release proof", () => {
   const input = fixture();
   input.candidateResult = "failure";
-  input.protectedChecksPassed = false;
+  input.candidateGatesPassed = false;
   const proofs = assembleExternalFaultProofs(input);
   assert.equal(proofs["production-equivalent-black-box"], undefined);
   assert.equal(proofs["prepublication-gauntlet-run"], undefined);
