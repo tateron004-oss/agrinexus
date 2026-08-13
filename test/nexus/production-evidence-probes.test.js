@@ -6,6 +6,20 @@ const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
 const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, captureTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+test("production evidence failure preserves sanitized authoritative runtime logs", () => {
+  const workflow = fs.readFileSync(".github/workflows/nexus-protected-production-deploy.yml", "utf8");
+  const collector = fs.readFileSync("scripts/nexus-capture-render-runtime-diagnostics.js", "utf8");
+  const controller = require("../../scripts/nexus-render-release-controller.js");
+  assert.match(workflow, /Capture sanitized authoritative runtime failure logs/);
+  assert.match(workflow, /if: failure\(\)/);
+  assert.match(workflow, /nexus-capture-render-runtime-diagnostics\.js/);
+  assert.match(collector, /nexus-production-render-runtime-diagnostics\.json/);
+  assert.match(controller.sanitizeDiagnostic("password=visible-secret token=visible-token"),
+    /password=\*\*\* token=\*\*\*/);
+  assert.doesNotMatch(controller.sanitizeDiagnostic("password=visible-secret token=visible-token"),
+    /visible-secret|visible-token/);
+});
+
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
