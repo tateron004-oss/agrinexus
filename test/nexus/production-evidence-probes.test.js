@@ -75,6 +75,14 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
+test("browser capability verifier binds visible interaction to stable authoritative ingress ownership", () => {
+  const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  assert.match(source, /data-nexus-primary-typed-entry="true":visible/);
+  assert.match(source, /data-nexus-primary-typed-submit="true":visible/);
+  assert.doesNotMatch(source, /getByLabel\("Workflow details for Nexus"/);
+  assert.doesNotMatch(source, /getByRole\("button", \{ name: "Send to Nexus"/);
+});
+
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(source, /page\.context\(\)\.request\.post/);
