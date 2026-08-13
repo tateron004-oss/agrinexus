@@ -5,15 +5,45 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const probe = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+const { waitForCurrentLoginSubmitListener } = require("../../scripts/nexus-run-browser-capability-probes.js");
 
 test("production browser evidence classifies the registered login boundary before shell proof", () => {
   assert.match(probe, /function submitRegisteredStandardUserLogin/);
+  assert.match(probe, /await waitForCurrentLoginSubmitListener\(page\)/);
+  assert.ok(probe.indexOf("await waitForCurrentLoginSubmitListener(page)") <
+    probe.indexOf("const loginResponsePromise = page.waitForResponse"));
   assert.match(probe, /url\.pathname === "\/api\/login"/);
   assert.match(probe, /response\.request\(\)\.method\(\) === "POST"/);
   assert.match(probe, /Registered Standard User login request was not observed within 30000ms/);
   assert.match(probe, /Registered Standard User login returned HTTP \$\{response\.status\(\)\}/);
   assert.match(probe, /Login boundary: requestObserved=true, status=\$\{loginBoundary\.status\}/);
   assert.doesNotMatch(probe, /loginBoundary[^\n]*(password|cookie|authorization)/i);
+});
+
+test("login click waits for the current form's registered submit listener", async () => {
+  let waitPredicate;
+  let waitArgument;
+  let waitOptions;
+  const page = {
+    waitForFunction: async (predicate, argument, options) => {
+      waitPredicate = predicate;
+      waitArgument = argument;
+      waitOptions = options;
+    },
+    evaluate: async () => ({
+      loginSubmitListenerRegistrations: 1,
+      currentFormWasRegisteredTarget: true
+    })
+  };
+  assert.deepEqual(await waitForCurrentLoginSubmitListener(page, 1234), {
+    loginSubmitListenerRegistrations: 1,
+    currentFormWasRegisteredTarget: true
+  });
+  assert.equal(typeof waitPredicate, "function");
+  assert.equal(waitArgument, null);
+  assert.deepEqual(waitOptions, { timeout: 1234 });
+  assert.match(String(waitPredicate), /loginSubmitListenerRegistrations > 0/);
+  assert.match(String(waitPredicate), /form === context\.registeredLoginForm/);
 });
 
 test("production browser evidence captures same-context login binding and navigation diagnostics", () => {
