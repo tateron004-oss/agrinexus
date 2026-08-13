@@ -9874,6 +9874,7 @@ function africanCityLocationCatalog() {
     { aliases: ["thika"], label: "Thika, Kenya", city: "Thika", country: "Kenya", latitude: -1.0333, longitude: 37.0693, timeZone: "Africa/Nairobi" },
     { aliases: ["ruiru"], label: "Ruiru, Kenya", city: "Ruiru", country: "Kenya", latitude: -1.1466, longitude: 36.9609, timeZone: "Africa/Nairobi" },
     { aliases: ["kisumu"], label: "Kisumu, Kenya", city: "Kisumu", country: "Kenya", latitude: -0.0917, longitude: 34.768, timeZone: "Africa/Nairobi" },
+    { aliases: ["nakuru"], label: "Nakuru, Kenya", city: "Nakuru", country: "Kenya", latitude: -0.3031, longitude: 36.08, timeZone: "Africa/Nairobi" },
     { aliases: ["eldoret"], label: "Eldoret, Kenya", city: "Eldoret", country: "Kenya", latitude: 0.5143, longitude: 35.2698, timeZone: "Africa/Nairobi" },
     { aliases: ["lagos"], label: "Lagos, Nigeria", city: "Lagos", country: "Nigeria", latitude: 6.5244, longitude: 3.3792, timeZone: "Africa/Lagos" },
     { aliases: ["abuja"], label: "Abuja, Nigeria", city: "Abuja", country: "Nigeria", latitude: 9.0765, longitude: 7.3986, timeZone: "Africa/Lagos" },
