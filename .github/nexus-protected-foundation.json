@@ -14,17 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "30bd5e3be939ce01d9fb56d556c311ca2fe8634b",
-    "recoveryBranch": "agent/authoritative-entry-convergence",
+    "baseCommit": "31b7ca47cba545da8b3785666748e58cba4b3914",
+    "recoveryBranch": "agent/identity-scoped-conversation-state",
     "files": [
-      "server.js",
       "public/app.js"
     ],
-    "purpose": "Fix all confirmed Standard User entry and identity convergence defects by replacing browser-owned guest login with a unique durable server-issued authoritative guest principal, truthful demo password behavior, restricted guest permissions, reload continuity, protected hash updates, and complete live behavioral recertification"
+    "purpose": "Complete Standard User identity convergence by preventing conversation and task identifiers from crossing guest, registered login, and logout boundaries while preserving same-principal reload continuity"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "e9f6c5add9ed25337c7f67b9eb4b1c08e76ddad8",
+    "public/app.js": "705322522755a0f9dfecbd98c327ad776334a384",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
