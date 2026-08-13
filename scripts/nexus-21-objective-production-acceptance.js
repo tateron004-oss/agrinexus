@@ -68,7 +68,7 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
   const durable = runtime.ok && r.ok === true && r.pgvector === true && r.migrationsCurrent === true;
   const providerProfile = classifyProviders(i);
   const providerReady = providers.ok && p.ok === true && providerProfile.ready;
-  const allWorkspaces = workspaces.length === 16 && workspaces.every(x => x.state === "authoritative" && x.releaseSha === expectedSha && x.proofsComplete === true);
+  const allWorkspaces = workspaces.length === 17 && workspaces.every(x => x.state === "authoritative" && x.releaseSha === expectedSha && x.proofsComplete === true);
   const component = name => components[name] || {};
   const live = name => component(name).ready === true && component(name).productionEvidence === true;
   const items = [
@@ -83,7 +83,7 @@ function evaluate({ expectedSha, runtime, health, integrations, providers, accep
       providerReady ? `${providerProfile.requiredReadyCount}/${providerProfile.requiredCount} launch providers ready` : `Required gaps: ${providerProfile.requiredGaps.map(item => item.id).join(", ")}`),
     objective("realtime_voice", live("voice") && component("voice").realtimeConfigured === true &&
       component("voice").realtimeEquivalent === true, component("voice").evidence),
-    objective("durable_workspaces", allWorkspaces, [`${workspaces.length}/16 authoritative workspaces`]),
+    objective("durable_workspaces", allWorkspaces, [`${workspaces.length}/17 authoritative workspaces`]),
     objective("documents_forms", live("documents") && component("documents").fullLifecycle === true, component("documents").evidence),
     objective("object_file_storage", live("objectStorage") && component("objectStorage").redeployPersistent === true, component("objectStorage").evidence),
     objective("identity_access", live("identity") && component("identity").tenantIsolation === true, component("identity").evidence),

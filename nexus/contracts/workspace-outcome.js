@@ -15,6 +15,7 @@ const APPLICATION_TO_WORKSPACE = Object.freeze({
   reminders: "reminders",
   "offline-queue": "offline",
   "live-knowledge": "live-knowledge",
+  images: "images",
   communications: "communications",
   operations: "operations"
 });
@@ -34,6 +35,7 @@ const APPLICATION_PRESENTATION = Object.freeze({
   reminders: "reminder",
   "offline-queue": "task-list",
   "live-knowledge": "source-answer",
+  images: "image-gallery",
   communications: "communication",
   operations: "operation"
 });
@@ -90,6 +92,7 @@ function operationFor(application, input) {
   if (application === "reminders") return "schedule_reminder";
   if (application === "agriculture") return "agriculture_assessment";
   if (application === "live-knowledge") return "show_answer";
+  if (application === "images") return "show_images";
   return "show_result";
 }
 

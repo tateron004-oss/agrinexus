@@ -23,6 +23,8 @@ class OpenEndedPlanner {
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
+    const completeImageSearch = completeImageSearchPlan(command.text, catalog);
+    if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
     const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
@@ -132,6 +134,18 @@ function completeMarketplaceSearchPlan(text, catalog) {
     steps: [{ clientStepId: "search-marketplace", title: "Search marketplace listings",
       toolId: "marketplace.search", input: { query: crop, selectListing: /\bselect\b/i.test(goal) },
       dependsOn: [], fallbackToolIds: [] }] };
+}
+
+function completeImageSearchPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(show|find|search|display|open)\b/i.test(goal) || !/\b(images?|pictures?|photos?)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "images.search") ||
+      !catalog.applications.some(app => app.applicationId === "images")) return null;
+  const query = goal.replace(/^\s*(?:nexus[,:]?\s*)?(?:show|find|search|display|open)\s+(?:me\s+)?/i, "")
+    .replace(/\b(images?|pictures?|photos?)\b/ig, "").replace(/\s+/g, " ").trim() || goal;
+  return { goal, application: "images", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "search-images", title: "Search governed images", toolId: "images.search",
+      input: { query, requireSources: true }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeLiveKnowledgePlan(text, catalog) {
@@ -265,5 +279,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeDocumentPlan, completeCommunicationPlan,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, validatePlan });
