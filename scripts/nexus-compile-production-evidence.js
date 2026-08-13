@@ -9,7 +9,10 @@ function run(env = process.env) {
   const input = required(env.NEXUS_PROBE_FILE, "NEXUS_PROBE_FILE");
   const output = env.NEXUS_PROOF_FILE || path.join("output", "nexus-production-proof.json");
   const probes = JSON.parse(fs.readFileSync(input, "utf8"));
-  const proof = compileProductionProof({ ...probes,
+  const faultReportFile = required(env.NEXUS_FAULT_PROOF_FILE, "NEXUS_FAULT_PROOF_FILE");
+  const faultReport = JSON.parse(fs.readFileSync(faultReportFile, "utf8"));
+  if (faultReport.closed !== true) throw new Error("Typed fault verifier report is not closed.");
+  const proof = compileProductionProof({ ...probes, faultProbes: faultReport.evidence,
     releaseSha: required(env.EXPECTED_RELEASE_SHA || probes.releaseSha, "EXPECTED_RELEASE_SHA"),
     rollbackRef: required(env.NEXUS_ROLLBACK_REF || probes.rollbackRef, "NEXUS_ROLLBACK_REF") });
   fs.mkdirSync(path.dirname(output), { recursive: true });
