@@ -31,7 +31,7 @@ function sameOriginPath(value, base) {
 }
 
 function sanitizeTurnPayload(value = {}) {
-  const result = value?.result || {};
+  const result = value?.result || value;
   const render = result?.render || result?.outcome?.render || null;
   return Object.freeze({
     code: clean(value?.code || result?.code || "", 100),
@@ -75,7 +75,11 @@ async function installMapLifecycleDiagnostics(page, base) {
     });
   });
   page.on("pageerror", error => {
-    if (lifecycle.pageErrors.length < 20) lifecycle.pageErrors.push({ name: clean(error?.name, 100), message: clean(error?.message, 1000) });
+    if (lifecycle.pageErrors.length < 20) lifecycle.pageErrors.push({
+      name: clean(error?.name, 100),
+      message: clean(error?.message, 1000),
+      stack: clean(error?.stack, 2000)
+    });
   });
   page.on("console", message => {
     if (message.type() === "error" && lifecycle.consoleErrors.length < 20) lifecycle.consoleErrors.push(clean(message.text(), 1000));

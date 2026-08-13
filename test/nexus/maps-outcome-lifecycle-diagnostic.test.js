@@ -34,6 +34,11 @@ test("maps lifecycle response sanitizer retains only structural outcome evidence
     renderWorkspace: "maps", renderType: "show_map", commandIdPresent: true,
     correlationIdPresent: true, taskIdPresent: true, error: ""
   });
+  assert.equal(sanitizeTurnPayload({ application: "maps", state: "render_required", render: { workspace: "maps" } }).renderPresent, true);
+});
+
+test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
+  assert.match(source, /stack: clean\(error\?\.stack, 2000\)/);
 });
 
 test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evidence", () => {
