@@ -30,3 +30,15 @@ test("production browser evidence captures same-context login binding and naviga
   assert.match(probe, /nexus-browser-login-lifecycle-context\.json/);
   assert.doesNotMatch(probe, /lifecycle\.(requests|responses|navigations)[^\n]*(postData|headers|cookies)/i);
 });
+
+test("production browser evidence captures sanitized live-knowledge renderer boundaries", () => {
+  assert.match(probe, /installLiveKnowledgeLifecycleDiagnostics\(page, base\)/);
+  assert.match(probe, /\/api\/nexus\/runtime\/behavior\/turn/);
+  assert.match(probe, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
+  assert.match(probe, /renderPresent/);
+  assert.match(probe, /acknowledgementRequest/);
+  assert.match(probe, /authoritativeOutcome/);
+  assert.match(probe, /relevantStatus/);
+  assert.match(probe, /nexus-live-knowledge-browser-lifecycle\.json/);
+  assert.doesNotMatch(probe, /liveKnowledgeLifecycle[^\n]*(headers|cookies|authorization|responseText)/i);
+});
