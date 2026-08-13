@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "31b7ca47cba545da8b3785666748e58cba4b3914",
-    "recoveryBranch": "agent/identity-scoped-conversation-state",
+    "baseCommit": "f623e6cb3aeacb6679e9f090d70040409ba859a6",
+    "recoveryBranch": "agent/defer-guest-entry-certification",
     "files": [
       "public/app.js"
     ],
-    "purpose": "Complete Standard User identity convergence by preventing conversation and task identifiers from crossing guest, registered login, and logout boundaries while preserving same-principal reload continuity"
+    "purpose": "Temporarily remove unsupported no-login guest entry from the release-critical interface while preserving authenticated authoritative Standard User behavior, fail-closed runtime authority, and complete production certification"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "705322522755a0f9dfecbd98c327ad776334a384",
+    "public/app.js": "8ed0011beb651fb2b739d1ee69105169a4f654a7",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
