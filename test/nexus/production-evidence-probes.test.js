@@ -104,7 +104,7 @@ test("production browser establishes a real denied microphone permission before 
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(source, /newCDPSession\(page\)/);
   assert.match(source, /Browser\.setPermission/);
-  assert.match(source, /permission: \{ name: "audioCapture" \}, setting: "denied", origin: base/);
+  assert.match(source, /permission: \{ name: "microphone" \}, setting: "denied", origin: base/);
   assert.match(source, /permissionSession\.detach\(\)/);
 });
 
