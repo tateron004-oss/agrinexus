@@ -61,11 +61,11 @@ function assembleExternalFaultProofs(input) {
       { candidateResult: input.candidateResult, database: database.facts, tools: tools.facts, blackBox });
   }
 
-  if (blackBox.passed === true && input.candidateResult === "success" && input.protectedChecksPassed === true) {
+  if (blackBox.passed === true && input.candidateResult === "success" && input.candidateGatesPassed === true) {
     const key = FAULT_VERIFIERS["prepublication-gauntlet"].evidenceKey;
     proofs[key] = makeProof("prepublication-gauntlet", releaseSha, executionId, observedAt,
-      "protected checks and the exact candidate black-box qualification passed before release",
-      { candidateResult: input.candidateResult, protectedChecksPassed: true, blackBoxCheckedAt: blackBox.checkedAt });
+      "candidate source gates and the exact black-box qualification passed before release",
+      { candidateResult: input.candidateResult, candidateGatesPassed: true, blackBoxCheckedAt: blackBox.checkedAt });
   }
 
   if (probes.source === "unified-release-live-probe" && runtimeFacts &&
@@ -100,7 +100,7 @@ function run(env = process.env) {
   const proofs = assembleExternalFaultProofs({
     releaseSha, probes, blackBox,
     candidateResult: required(env.NEXUS_CANDIDATE_RESULT, "NEXUS_CANDIDATE_RESULT"),
-    protectedChecksPassed: env.NEXUS_PROTECTED_CHECKS_PASSED === "true",
+    candidateGatesPassed: env.NEXUS_CANDIDATE_GATES_PASSED === "true",
     pipelineOwner: env.NEXUS_PIPELINE_OWNER,
     pipelineRunId: env.NEXUS_PIPELINE_RUN_ID,
     executionId: required(env.NEXUS_FAULT_EXECUTION_ID, "NEXUS_FAULT_EXECUTION_ID")
