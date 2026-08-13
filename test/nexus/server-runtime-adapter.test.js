@@ -13,9 +13,32 @@ test("request context preserves tenant, identity, role, and permission boundarie
   const context = requestContext({ headers: { "x-request-id": "request-1" } }, {
     id: "user-1", tenantId: "tenant-1", role: "Standard User", permissions: ["task.execute"]
   });
-  assert.equal(context.requestId, "request-1"); assert.equal(context.tenantId, "tenant-1");
+  assert.equal(context.requestId, "request-1"); assert.equal(context.correlationId, "request-1");
+  assert.equal(context.tenantId, "tenant-1");
   assert.equal(context.userId, "user-1"); assert.equal(context.hasRole("Standard User"), true);
   assert.equal(context.can("task.execute"), true); assert.equal(context.can("admin"), false);
+});
+
+test("behavior turns preserve one correlation identifier through governed execution", async () => {
+  let observedContext;
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {
+    turn: async ({ input, context }) => {
+      observedContext = context;
+      assert.equal(input.correlationId, "correlation-request-1");
+      return { schema: "nexus.behavior-turn.v1", authoritative: true, legacyFallbackUsed: false, completed: true };
+    }
+  } };
+  const adapter = createServerRuntimeAdapter({
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", role: "Standard User", permissions: ["tasks:execute"] }),
+    readJson: async () => ({ text: "Check maize water stress", channel: "typed" }),
+    createRuntimeFn: () => runtime
+  });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "correlation-request-1" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/turn"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(observedContext.requestId, "correlation-request-1");
+  assert.equal(observedContext.correlationId, "correlation-request-1");
 });
 
 test("status truthfully refuses a missing authoritative runtime without legacy fallback", async () => {
