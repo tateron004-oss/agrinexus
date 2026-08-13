@@ -66,6 +66,8 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 }
 
 async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
+  const listenerBoundary = await waitForCurrentLoginSubmitListener(page);
+  if (lifecycle) lifecycle.beforeClick = listenerBoundary;
   const loginResponsePromise = page.waitForResponse(response => {
     try {
       const url = new URL(response.url());
@@ -75,12 +77,6 @@ async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
       return false;
     }
   }, { timeout: 30000 });
-  if (lifecycle) lifecycle.beforeClick = await page.evaluate(() => ({
-    loginSubmitListenerRegistrations:
-      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
-    currentFormWasRegisteredTarget:
-      document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm
-  }));
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
   let response;
   try {
@@ -92,6 +88,21 @@ async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
     throw new Error(`Registered Standard User login returned HTTP ${response.status()}.`);
   }
   return Object.freeze({ requestObserved: true, status: response.status() });
+}
+
+async function waitForCurrentLoginSubmitListener(page, timeoutMs = 30000) {
+  await page.waitForFunction(() => {
+    const context = window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__;
+    const form = document.querySelector("#loginForm");
+    return Boolean(form && context?.loginSubmitListenerRegistrations > 0 &&
+      form === context.registeredLoginForm);
+  }, null, { timeout: timeoutMs });
+  return page.evaluate(() => ({
+    loginSubmitListenerRegistrations:
+      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
+    currentFormWasRegisteredTarget:
+      document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm
+  }));
 }
 
 function sanitizeLoginLifecycleValue(value, limit = 1000) {
@@ -608,4 +619,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
