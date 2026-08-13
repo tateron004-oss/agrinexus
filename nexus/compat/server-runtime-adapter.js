@@ -792,7 +792,8 @@ async function acceptancePrincipalForTask(active, taskId) {
 
 function requestContext(req, user) {
   const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
-  return Object.freeze({ requestId: String(req.headers["x-request-id"] || crypto.randomUUID()), tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
+  const requestId = String(req.headers["x-request-id"] || crypto.randomUUID());
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
 }
 
 function acceptanceContext(principal, values = {}) {
