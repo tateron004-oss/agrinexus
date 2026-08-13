@@ -73,6 +73,61 @@ async function authenticatedStandardUserRole(page, base) {
   return shell?.user?.role || "";
 }
 
+async function captureTypedIngressDiagnostic(page, releaseSha, phase, error) {
+  const browserState = await page.evaluate(async () => {
+    const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).visibility !== "hidden" &&
+      getComputedStyle(node).display !== "none");
+    const describe = node => ({
+      visible: visible(node),
+      disabled: Boolean(node.disabled),
+      hidden: Boolean(node.hidden),
+      ariaHidden: node.getAttribute("aria-hidden"),
+      ariaExpanded: node.getAttribute("aria-expanded"),
+      text: String(node.textContent || "").trim().slice(0, 300)
+    });
+    let microphonePermission = "unavailable";
+    try { microphonePermission = (await navigator.permissions.query({ name: "microphone" })).state; }
+    catch (permissionError) { microphonePermission = `error:${permissionError?.name || "unknown"}`; }
+    const inputs = [...document.querySelectorAll('[data-nexus-primary-typed-entry="true"]')];
+    const microphones = [...document.querySelectorAll('[data-nexus-permanent-microphone-control="true"]')];
+    return {
+      url: location.href,
+      readyState: document.readyState,
+      bodyClass: document.body?.className || "",
+      microphonePermission,
+      loginView: describe(document.querySelector("#loginView")),
+      appView: describe(document.querySelector("#appView")),
+      typedEntries: inputs.map(describe),
+      microphoneControls: microphones.map(describe),
+      statusText: [...document.querySelectorAll('[role="status"]')].filter(visible)
+        .map(node => String(node.textContent || "").trim()).filter(Boolean).slice(-20)
+    };
+  });
+  return {
+    schema: "nexus.typed-ingress-diagnostic.v1",
+    releaseSha,
+    phase,
+    observedAt: new Date().toISOString(),
+    error: String(error?.message || error),
+    browserState
+  };
+}
+
+async function preserveTypedIngressDiagnostic(page, releaseSha, phase, error) {
+  const diagnostic = await captureTypedIngressDiagnostic(page, releaseSha, phase, error).catch(diagnosticError => ({
+    schema: "nexus.typed-ingress-diagnostic.v1",
+    releaseSha,
+    phase,
+    observedAt: new Date().toISOString(),
+    error: String(error?.message || error),
+    diagnosticCaptureError: String(diagnosticError?.message || diagnosticError)
+  }));
+  fs.mkdirSync("output", { recursive: true });
+  fs.writeFileSync("output/nexus-production-typed-ingress-diagnostic.json", JSON.stringify(diagnostic, null, 2));
+  console.error(JSON.stringify({ typedIngressDiagnostic: diagnostic }, null, 2));
+  return diagnostic;
+}
+
 async function requireVisibleAuthoritativeTypedIngress(page) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   if (await input.isVisible()) return input;
@@ -137,7 +192,12 @@ async function run(env = process.env) {
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
-  await requireVisibleAuthoritativeTypedIngress(page);
+  try {
+    await requireVisibleAuthoritativeTypedIngress(page);
+  } catch (error) {
+    await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", error);
+    throw error;
+  }
   const shellRole = await authenticatedStandardUserRole(page, base);
   if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
@@ -240,4 +300,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
