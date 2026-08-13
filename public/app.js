@@ -6978,9 +6978,9 @@ const voiceStopTranslations = {
 };
 
 const demoLoginProfiles = [
-  { label: "Admin", role: "Full control", email: "admin@agrinexus.org", password: "Admin2026!" },
-  { label: "User", role: "Simple services", email: "user@agrinexus.org", password: "User2026!" },
-  { label: "Investor", role: "Guided proof view", email: "investor@agrinexus.org", password: "Investor2026!" }
+  { label: "Admin", role: "Password required", email: "admin@agrinexus.org" },
+  { label: "User", role: "Password required", email: "user@agrinexus.org" },
+  { label: "Investor", role: "Password required", email: "investor@agrinexus.org" }
 ];
 
 const countryLanguageLabel = {
@@ -58760,15 +58760,16 @@ async function startGuestUserSession() {
     $("#guestName")?.focus();
     return;
   }
-  localStorage.setItem("agrinexusGuestDisplayName", guestName.slice(0, 80));
   $("#loginMessage").textContent = `${translateText("Hello")} ${guestName.split(/\s+/)[0]}. ${translateText("Nexus is opening your workspace.")}`;
   try {
-    data = await request("/api/login", { method: "POST", body: { email: "user@agrinexus.org", password: "User2026!" } });
-    if (data?.user) data.user.name = guestName.slice(0, 80);
-    if (loginLanguage && loginLanguage !== data?.user?.language) {
-      data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
-      if (data?.user) data.user.name = guestName.slice(0, 80);
+    data = await request("/api/auth/guest-session", {
+      method: "POST",
+      body: { name: guestName.slice(0, 80), language: loginLanguage }
+    });
+    if (data?.auth?.authenticated !== true || data?.auth?.authoritative !== true || data?.auth?.guest !== true) {
+      throw new Error("Nexus could not establish an authoritative Standard User session.");
     }
+    localStorage.setItem("agrinexusGuestDisplayName", guestName.slice(0, 80));
     await loadPublicMapConfig();
     render();
     startAskNexusAfterLogin();

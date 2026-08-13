@@ -14,17 +14,17 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "4ba6d242791a975a670aecb32d1f10f17764d059",
-    "recoveryBranch": "agent/provider-neutral-music-playback",
+    "baseCommit": "30bd5e3be939ce01d9fb56d556c311ca2fe8634b",
+    "recoveryBranch": "agent/authoritative-entry-convergence",
     "files": [
       "server.js",
       "public/app.js"
     ],
-    "purpose": "Implement authorized provider-neutral music playback with official iTunes preview audio, optional YouTube fallback, passive rendering, genuine playback-progress evidence, durable acknowledgement, and unchanged fail-closed certification gates"
+    "purpose": "Fix all confirmed Standard User entry and identity convergence defects by replacing browser-owned guest login with a unique durable server-issued authoritative guest principal, truthful demo password behavior, restricted guest permissions, reload continuity, protected hash updates, and complete live behavioral recertification"
   },
   "protectedFiles": {
-    "server.js": "a9959736ca9dc1647f84108bb2d09427c786b4c9",
-    "public/app.js": "4adb9580f3313da3d4daa0f1da2e6f1ddec45790",
+    "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
+    "public/app.js": "e9f6c5add9ed25337c7f67b9eb4b1c08e76ddad8",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
