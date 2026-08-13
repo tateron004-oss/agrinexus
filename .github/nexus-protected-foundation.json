@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "000389b440968a41412bf68a1200da4520b7639c",
-    "recoveryBranch": "agent/visible-behavior-completion",
+    "baseCommit": "2f57252579c9b1184b502a1b5ae3f6f9e8af74bd",
+    "recoveryBranch": "fix/restore-authoritative-orb-entry",
     "files": [
-      "nexus/compat/server-runtime-adapter.js"
+      "public/app.js"
     ],
-    "purpose": "Add an acceptance-token and exact-SHA guarded production fault-isolation probe for real stale-transition rejection, controlled signed-provider failure handling, safe database-error diagnosis, and unrelated-capability survival"
+    "purpose": "Restore the existing server-issued restricted authoritative Standard User guest entrance so the protected Nexus orb and guarded voice process are reachable without a registered-user password, while preserving exact identity, safety, and certification gates"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "0c2339ecebf6c48c4721a7898fc3648090411857",
+    "public/app.js": "915792842ecaf804b92d5a25abee33931077d928",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "2c0632c86a8d75790903189a0e75812d74cd9cfa",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",

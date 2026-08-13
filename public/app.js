@@ -61709,12 +61709,7 @@ function bindStatic() {
     loginLanguageSelect.onchange = event => setLoginLanguage(event.target.value);
   }
   const guestStartBtn = $("#guestStartBtn");
-  if (guestStartBtn) {
-    const guestEntry = guestStartBtn.closest('[aria-label="Start without a login"]') || guestStartBtn.parentElement;
-    guestStartBtn.disabled = true;
-    guestStartBtn.removeAttribute("onclick");
-    guestEntry?.remove();
-  }
+  if (guestStartBtn) guestStartBtn.onclick = startGuestUserSession;
 
   $("#logoutBtn").onclick = async () => {
     localStorage.removeItem("agrinexusGuestDisplayName");
