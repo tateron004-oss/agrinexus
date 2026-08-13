@@ -14,12 +14,12 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "588a6425f7223371c1043fe2538d0a1133a7b3f0",
-    "recoveryBranch": "fix/authenticated-shell-reload-restoration",
+    "baseCommit": "d53429337cf09001b4e57f36c2f6c1c4fbb9b89f",
+    "recoveryBranch": "diag/browser-login-lifecycle-boundary",
     "files": [
-      "public/app.js"
+      "scripts/nexus-run-browser-capability-probes.js"
     ],
-    "purpose": "Restore the authenticated protected shell on reload by requiring server /api/state proof before rendering the app and showing login only when authenticated state is unavailable, without changing identity, voice, fallback, or certification gates"
+    "purpose": "Capture the safe registered Standard User browser login lifecycle boundary so production evidence distinguishes an unobserved login request, a non-success login response, and post-200 authenticated-state failure without logging credentials, cookies, or authorization values"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
@@ -36,6 +36,7 @@
     "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
     "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
     ".github/workflows/nexus-clean-windows-certification.yml": "b3eca0b4ddfa6be8fe15b08dc688c534e73965f6",
-    "rebuild/tests/nexus-windows-physical-certification.spec.js": "c669d66f5d614d9a48bc1de6fad6b50559672735"
+    "rebuild/tests/nexus-windows-physical-certification.spec.js": "c669d66f5d614d9a48bc1de6fad6b50559672735",
+    "scripts/nexus-run-browser-capability-probes.js": "ef2fceedda88b4bfdcc320d596232d0de8c79df6"
   }
 }

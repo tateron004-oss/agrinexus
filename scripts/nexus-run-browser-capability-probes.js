@@ -64,6 +64,29 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
+async function submitRegisteredStandardUserLogin(page, base) {
+  const loginResponsePromise = page.waitForResponse(response => {
+    try {
+      const url = new URL(response.url());
+      return url.origin === base && url.pathname === "/api/login" &&
+        response.request().method() === "POST";
+    } catch {
+      return false;
+    }
+  }, { timeout: 30000 });
+  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  let response;
+  try {
+    response = await loginResponsePromise;
+  } catch (error) {
+    throw new Error(`Registered Standard User login request was not observed within 30000ms (${error?.name || "timeout"}).`);
+  }
+  if (!response.ok()) {
+    throw new Error(`Registered Standard User login returned HTTP ${response.status()}.`);
+  }
+  return Object.freeze({ requestObserved: true, status: response.status() });
+}
+
 async function authenticatedStandardUserRole(page, base) {
   const response = await page.context().request.get(`${base}/api/state`, {
     headers: { accept: "application/json", "cache-control": "no-cache" }
@@ -215,13 +238,17 @@ async function run(env = process.env) {
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
-  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  let loginBoundary;
   try {
+    loginBoundary = await submitRegisteredStandardUserLogin(page, base);
     await waitForAuthenticatedStandardUserShell(page, base);
     await requireVisibleAuthoritativeTypedIngress(page);
   } catch (error) {
-    await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", error);
-    throw error;
+    const diagnosticError = loginBoundary
+      ? new Error(`${error.message} Login boundary: requestObserved=true, status=${loginBoundary.status}.`)
+      : error;
+    await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", diagnosticError);
+    throw diagnosticError;
   }
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   const visibleIngress = [];
