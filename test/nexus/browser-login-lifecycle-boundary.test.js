@@ -19,6 +19,9 @@ test("production browser evidence classifies the registered login boundary befor
 test("production browser evidence captures same-context login binding and navigation diagnostics", () => {
   assert.match(probe, /installLoginLifecycleDiagnostics\(page, base\)/);
   assert.match(probe, /loginSubmitListenerRegistrations/);
+  assert.match(probe, /currentFormWasRegisteredTarget/);
+  assert.match(probe, /defaultPreventedAtCapture/);
+  assert.match(probe, /defaultPreventedAfterDispatch/);
   assert.match(probe, /window\.addEventListener\("error"/);
   assert.match(probe, /window\.addEventListener\("unhandledrejection"/);
   assert.match(probe, /page\.on\("request"/);
