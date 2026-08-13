@@ -198,6 +198,7 @@ test("shared provider credentials preserve an existing value and repair drift", 
 
 test("unified release binds every production process to the exact release SHA", async () => {
   const writes = [];
+  const deployCalls = [];
   const releaseSha = "a".repeat(40);
   const services = {
     "nexus-genesis-certified": { id: "srv-web", name: "nexus-genesis-certified", type: "web_service", ownerId: "owner", branch: "main", repo: "https://github.com/tateron004-oss/agrinexus" },
@@ -216,7 +217,10 @@ test("unified release binds every production process to the exact release SHA", 
     if (options.method === "PATCH") return services[Object.keys(services).find(name => services[name].id === path.split("/").at(-1))];
     throw new Error(`Unexpected request ${path}`);
   } };
-  const deployExactSha = async (_client, service) => ({ serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha });
+  const deployExactSha = async (_client, service, _releaseSha, options) => {
+    deployCalls.push({ serviceId: service.id, options });
+    return { serviceId: service.id, serviceName: service.name, status: "live", commit: releaseSha };
+  };
   await run({ RENDER_API_KEY: "key", EXPECTED_RELEASE_SHA: releaseSha, NEXUS_BASE_URL: "https://nexus-genesis-certified.onrender.com" },
     { client, deployExactShaImpl: deployExactSha, outputDir: null, captureRuntimeDiagnostics: false,
       acceptanceFetchImpl: async () => ({ status: 503, text: async () => JSON.stringify({ releaseSha, ok: false }) }) });
@@ -247,8 +251,15 @@ test("unified release binds every production process to the exact release SHA", 
     value: "postgres"
   });
   const providerDefinitions = JSON.parse(writes.find(write => write.path === "/services/srv-web/env-vars/NEXUS_TOOL_PROVIDERS_JSON").value);
+  const workerDefinitions = JSON.parse(writes.find(write => write.path === "/services/srv-worker/env-vars/NEXUS_TOOL_PROVIDERS_JSON").value);
   const providerSecret = writes.find(write => write.path === "/services/srv-provider/env-vars/NEXUS_TOOL_RECEIPT_SECRET").value;
-  assert.ok(providerSecret.length >= 48); assert.ok(providerDefinitions.every(item => item.receiptSecret === providerSecret));
+  const webSecret = writes.find(write => write.path === "/services/srv-web/env-vars/NEXUS_TOOL_RECEIPT_SECRET").value;
+  const workerSecret = writes.find(write => write.path === "/services/srv-worker/env-vars/NEXUS_TOOL_RECEIPT_SECRET").value;
+  assert.ok(providerSecret.length >= 48); assert.equal(webSecret, providerSecret); assert.equal(workerSecret, providerSecret);
+  assert.ok(providerDefinitions.every(item => item.receiptSecret === providerSecret));
+  assert.ok(workerDefinitions.every(item => item.receiptSecret === providerSecret));
+  assert.deepEqual(deployCalls.map(call => call.serviceId).sort(), ["srv-provider", "srv-web", "srv-worker"]);
+  assert.ok(deployCalls.every(call => call.options.forceFresh === true), "every signing-contract process must receive a fresh deployment");
   for (const key of ["SESSION_SECRET", "PASSWORD_PEPPER"]) {
     const write = writes.find(item => item.path === `/services/srv-worker/env-vars/${key}`);
     assert.ok(write, `worker ${key} is installed`);
