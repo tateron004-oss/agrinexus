@@ -36,6 +36,7 @@ function assembleExternalFaultProofs(input) {
   const executionId = required(input.executionId, "executionId");
   const component = name => (probes.componentProbes || []).find(item => item.component === name);
   const semantic = component("semanticMemory");
+  const faultIsolation = component("faultIsolation");
   const database = component("database");
   const tools = component("tools");
   const runtimeFacts = [database, tools].every(item => item?.passed === true && item.releaseSha === releaseSha);
@@ -45,6 +46,38 @@ function assembleExternalFaultProofs(input) {
     item.passed === true && item.rendered === true && item.visible === true);
   const browser = probes.browserProbe || {};
   const proofs = {};
+
+  if (faultIsolation?.passed === true && faultIsolation.releaseSha === releaseSha) {
+    const facts = faultIsolation.facts || {};
+    if (facts.staleTransitionRejected === true && facts.staleTaskUnchanged === true) {
+      const key = FAULT_VERIFIERS["stale-transition-isolation"].evidenceKey;
+      proofs[key] = makeProof("stale-transition-isolation", releaseSha, executionId, observedAt,
+        "a stale task save was rejected and the current durable task remained unchanged",
+        { component: "faultIsolation", staleTransitionRejected: true, staleTaskUnchanged: true, receipts: faultIsolation.receipts });
+    }
+    if (facts.providerFailureObserved === true && facts.providerFailureCode === "acceptance_provider_failure" &&
+        facts.providerFailureStage === "provider-execution-maps-view") {
+      const key = FAULT_VERIFIERS["provider-execution"].evidenceKey;
+      proofs[key] = makeProof("provider-execution", releaseSha, executionId, observedAt,
+        "the signed production provider returned the controlled typed failure without a success receipt",
+        { component: "faultIsolation", providerFailureCode: facts.providerFailureCode,
+          providerFailureStage: facts.providerFailureStage, receipts: faultIsolation.receipts });
+    }
+    if (facts.databaseFailureDiagnosed === true && facts.databaseFailureSafe === true && facts.databaseRecovered === true) {
+      const key = FAULT_VERIFIERS["database-diagnosis"].evidenceKey;
+      proofs[key] = makeProof("database-diagnosis", releaseSha, executionId, observedAt,
+        "a real PostgreSQL query error was safely classified and the database recovered",
+        { component: "faultIsolation", databaseFailureDiagnosed: true, databaseFailureSafe: true,
+          databaseRecovered: true, receipts: faultIsolation.receipts });
+    }
+    if (facts.unrelatedCapabilitySurvived === true && facts.recoveryReceiptVerified === true && facts.databaseRecovered === true) {
+      const key = FAULT_VERIFIERS["dependency-failure-isolation"].evidenceKey;
+      proofs[key] = makeProof("dependency-failure-isolation", releaseSha, executionId, observedAt,
+        "a separately signed maps capability and PostgreSQL both survived the controlled provider failure",
+        { component: "faultIsolation", unrelatedCapabilitySurvived: true,
+          recoveryReceiptVerified: true, databaseRecovered: true, receipts: faultIsolation.receipts });
+    }
+  }
 
   if (semantic?.passed === true && semantic.releaseSha === releaseSha &&
       semantic.facts?.restartPersistent === true && semantic.facts?.cleanupVerified === true) {
