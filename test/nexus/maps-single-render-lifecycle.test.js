@@ -49,6 +49,13 @@ test("complete route endpoints take precedence over single destination targeting
   assert.match(openMap, /userMap\.fitBounds\(points/);
 });
 
+test("the certified Nairobi to Nakuru route resolves both catalog endpoints", () => {
+  const catalog = functionSource("africanCityLocationCatalog", "cityLocationFromCommand");
+
+  assert.match(catalog, /aliases:\s*\["nairobi"\]/);
+  assert.match(catalog, /aliases:\s*\["nakuru"\]/);
+});
+
 test("production browser binds maps completion to command-owned visible route geometry", () => {
   const probe = fs.readFileSync(path.join(root, "scripts/nexus-run-browser-capability-probes.js"), "utf8");
   assert.match(probe, /application === "maps"/);
