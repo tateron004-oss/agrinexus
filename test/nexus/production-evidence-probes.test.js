@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, captureTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -84,6 +84,31 @@ test("browser verifier proves Standard User identity through the authenticated s
   assert.equal(await authenticatedStandardUserRole(page, "https://nexus.example"), "Standard User");
   assert.deepEqual(request, { url: "https://nexus.example/api/state",
     options: { headers: { accept: "application/json", "cache-control": "no-cache" } } });
+});
+
+test("typed ingress diagnostics bind the failure to the exact release and browser state", async () => {
+  const page = { evaluate: async evaluator => {
+    assert.equal(typeof evaluator, "function");
+    return {
+      url: "https://nexus.example/",
+      readyState: "complete",
+      bodyClass: "user-mode",
+      microphonePermission: "denied",
+      loginView: { visible: false },
+      appView: { visible: true },
+      typedEntries: [{ visible: false }],
+      microphoneControls: [{ visible: true, disabled: false }],
+      statusText: ["Microphone access denied"]
+    };
+  } };
+  const diagnostic = await captureTypedIngressDiagnostic(page, "a".repeat(40), "post-login", new Error("typed ingress timeout"));
+  assert.equal(diagnostic.schema, "nexus.typed-ingress-diagnostic.v1");
+  assert.equal(diagnostic.releaseSha, "a".repeat(40));
+  assert.equal(diagnostic.phase, "post-login");
+  assert.match(diagnostic.error, /typed ingress timeout/);
+  assert.equal(diagnostic.browserState.microphonePermission, "denied");
+  assert.equal(diagnostic.browserState.appView.visible, true);
+  assert.equal(diagnostic.browserState.typedEntries[0].visible, false);
 });
 
 test("browser verifier returns an already-visible authoritative typed ingress without recursion", async () => {
