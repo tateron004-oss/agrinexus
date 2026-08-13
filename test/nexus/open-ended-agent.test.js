@@ -12,7 +12,7 @@ const command = { correlationId: "trace", tenantId: "tenant", actorId: "user", c
 
 test("application registry covers every production workspace without a second router", () => {
   const registry = new ApplicationRegistry(defaultApplicationManifests());
-  assert.equal(registry.list().length, 16);
+  assert.equal(registry.list().length, 17);
   assert.ok(registry.candidates({ capabilities: ["jobs.search"] }).some(item => item.applicationId === "workforce"));
   assert.throws(() => registry.register(defaultApplicationManifests()[0]), /already registered/);
 });
