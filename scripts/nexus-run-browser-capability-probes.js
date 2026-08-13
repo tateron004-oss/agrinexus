@@ -65,8 +65,8 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 }
 
 async function submitVisibleCommand(page, text, application) {
-  const input = page.getByLabel("Workflow details for Nexus", { exact: true });
-  const send = page.getByRole("button", { name: "Send to Nexus", exact: true });
+  const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
+  const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
   const before = await page.locator('[data-nexus-authoritative-outcome="true"]').getAttribute("data-command-id").catch(() => null);
   await input.fill(text);
   await send.click();
@@ -110,7 +110,7 @@ async function run(env = process.env) {
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
-  await page.getByLabel("Workflow details for Nexus", { exact: true }).waitFor({ state: "visible", timeout: 30000 });
+  await page.locator('[data-nexus-primary-typed-entry="true"]:visible').first().waitFor({ state: "visible", timeout: 30000 });
   const shellRole = await page.evaluate(() => globalThis.data?.user?.role || "");
   if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
@@ -119,7 +119,7 @@ async function run(env = process.env) {
     visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
   }
   await reloadAuthenticatedShell(page);
-  await page.getByLabel("Workflow details for Nexus", { exact: true }).waitFor({ state: "visible", timeout: 30000 });
+  await page.locator('[data-nexus-primary-typed-entry="true"]:visible').first().waitFor({ state: "visible", timeout: 30000 });
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
