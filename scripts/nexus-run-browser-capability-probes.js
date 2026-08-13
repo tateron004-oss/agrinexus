@@ -444,14 +444,25 @@ async function submitVisibleCommand(page, text, application) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
   const before = await page.locator('[data-nexus-authoritative-outcome="true"]').getAttribute("data-command-id").catch(() => null);
+  const beforeMapRequestId = application === "maps"
+    ? await page.locator("body").getAttribute("data-genesis-workspace-request-id").catch(() => null)
+    : null;
   await input.fill(text);
   await send.click();
   try {
-    await page.waitForFunction(previous => {
+    await page.waitForFunction(({ previous, previousMapRequestId, application }) => {
+      if (application === "maps") {
+        const requestId = document.body.dataset.genesisWorkspaceRequestId || "";
+        const canvas = document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas");
+        const route = canvas?.querySelector(".leaflet-overlay-pane svg path");
+        const markers = canvas?.querySelectorAll(".leaflet-marker-pane .leaflet-marker-icon") || [];
+        return Boolean(requestId && requestId !== previousMapRequestId && canvas?.getClientRects().length &&
+          route?.getClientRects().length && markers.length >= 2);
+      }
       const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
       const commandId = surface?.getAttribute("data-command-id") || "";
       return Boolean(commandId && commandId !== previous);
-    }, before, { timeout: 120000 });
+    }, { previous: before, previousMapRequestId: beforeMapRequestId, application }, { timeout: 120000 });
   } catch (error) {
     const status = await page.locator('[role="status"]').allTextContents().catch(() => []);
     const commandError = new Error(`Visible Standard User command failed application=${application}: ${status.join(" | ").slice(-1200) || error.message}`);
@@ -465,9 +476,11 @@ async function submitVisibleCommand(page, text, application) {
     }
     throw commandError;
   }
-  const surface = page.locator('[data-nexus-authoritative-outcome="true"]').first();
+  const surface = application === "maps"
+    ? page.locator("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas").first()
+    : page.locator('[data-nexus-authoritative-outcome="true"]').first();
   if (!await surface.isVisible()) throw new Error(`Visible Standard User outcome was not visible application=${application}.`);
-  const workspace = await surface.getAttribute("data-workspace");
+  const workspace = application === "maps" ? "map" : await surface.getAttribute("data-workspace");
   const textContent = await surface.innerText();
   if (/authoritative Nexus runtime is unavailable|legacy write fallback|behavior spine is unavailable/i.test(textContent)) {
     throw new Error(`Visible Standard User command failed closed application=${application}: ${textContent.slice(0, 500)}`);

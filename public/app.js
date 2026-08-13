@@ -54235,7 +54235,8 @@ function genesisRealtimeMapTarget(payload = {}) {
 
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
   const country = africanMapCountryTarget(payload.country || command);
-  const target = genesisRealtimeMapTarget(payload);
+  const hasRouteEndpoints = Boolean(String(payload.origin || "").trim() && String(payload.destination || "").trim());
+  const target = hasRouteEndpoints ? null : genesisRealtimeMapTarget(payload);
   const response = target
     ? `I opened the real map centered on ${target.name}${payload.country ? `, ${payload.country}` : ""}.`
     : "I opened the real map. You can zoom, drag, inspect places, and plan a route.";
@@ -54244,19 +54245,7 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
     : openFullScaleUserMap(response, { suppressSpeech: true });
   if (!opened) return false;
   document.body.dataset.genesisMapSurface = "full-scale-leaflet";
-  if (target) {
-    document.body.dataset.genesisMapLocation = target.name;
-    window.setTimeout(() => {
-      if (!userMap) return;
-      userMap.setView([target.lat, target.lng], target.zoom);
-      userMapLayers.markers?.clearLayers?.();
-      L.marker([target.lat, target.lng])
-        .addTo(userMapLayers.markers)
-        .bindPopup(`<strong>${escapeHtml(target.name)}</strong>`)
-        .openPopup();
-      safeInvalidateLeafletMap(userMap);
-    }, 360);
-  } else if (payload.origin && payload.destination) {
+  if (hasRouteEndpoints) {
     const places = africanCityLocationCatalog();
     const resolvePlace = value => {
       const normalized = normalizeToolText(value);
@@ -54280,6 +54269,18 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
     } else {
       delete document.body.dataset.genesisMapLocation;
     }
+  } else if (target) {
+    document.body.dataset.genesisMapLocation = target.name;
+    window.setTimeout(() => {
+      if (!userMap) return;
+      userMap.setView([target.lat, target.lng], target.zoom);
+      userMapLayers.markers?.clearLayers?.();
+      L.marker([target.lat, target.lng])
+        .addTo(userMapLayers.markers)
+        .bindPopup(`<strong>${escapeHtml(target.name)}</strong>`)
+        .openPopup();
+      safeInvalidateLeafletMap(userMap);
+    }, 360);
   } else {
     delete document.body.dataset.genesisMapLocation;
   }
