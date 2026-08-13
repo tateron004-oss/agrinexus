@@ -73,6 +73,30 @@ async function authenticatedStandardUserRole(page, base) {
   return shell?.user?.role || "";
 }
 
+async function waitForAuthenticatedStandardUserShell(page, base, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastRole = "";
+  let lastError = "";
+  let shellState = { appVisible: false, loginVisible: true };
+  while (Date.now() < deadline) {
+    try {
+      lastRole = await authenticatedStandardUserRole(page, base);
+      lastError = "";
+    } catch (error) {
+      lastError = String(error?.message || error);
+    }
+    shellState = {
+      appVisible: await page.locator("#appView").isVisible(),
+      loginVisible: await page.locator("#loginView").isVisible()
+    };
+    if (lastRole === "Standard User" && shellState.appVisible && !shellState.loginVisible) {
+      return { role: lastRole, ...shellState };
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(`Authenticated Standard User shell did not settle (role=${lastRole || "missing"}, appVisible=${shellState.appVisible}, loginVisible=${shellState.loginVisible}, lastError=${lastError || "none"}).`);
+}
+
 async function captureTypedIngressDiagnostic(page, releaseSha, phase, error) {
   const browserState = await page.evaluate(async () => {
     const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).visibility !== "hidden" &&
@@ -193,13 +217,12 @@ async function run(env = process.env) {
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   await page.getByRole("button", { name: "Enter platform", exact: true }).click();
   try {
+    await waitForAuthenticatedStandardUserShell(page, base);
     await requireVisibleAuthoritativeTypedIngress(page);
   } catch (error) {
     await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", error);
     throw error;
   }
-  const shellRole = await authenticatedStandardUserRole(page, base);
-  if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   const visibleIngress = [];
   for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
@@ -300,4 +323,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });

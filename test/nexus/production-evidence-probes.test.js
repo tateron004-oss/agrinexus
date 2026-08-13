@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, captureTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, captureTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("production evidence failure preserves sanitized authoritative runtime logs", () => {
   const workflow = fs.readFileSync(".github/workflows/nexus-protected-production-deploy.yml", "utf8");
   const collector = fs.readFileSync("scripts/nexus-capture-render-runtime-diagnostics.js", "utf8");
@@ -98,6 +98,24 @@ test("browser verifier proves Standard User identity through the authenticated s
   assert.equal(await authenticatedStandardUserRole(page, "https://nexus.example"), "Standard User");
   assert.deepEqual(request, { url: "https://nexus.example/api/state",
     options: { headers: { accept: "application/json", "cache-control": "no-cache" } } });
+});
+
+test("browser verifier waits for authenticated Standard User shell before typed ingress", async () => {
+  let roleChecks = 0;
+  const visibility = { app: false, login: true };
+  const page = {
+    context: () => ({ request: { get: async () => {
+      roleChecks += 1;
+      if (roleChecks === 1) return { ok: () => false, status: () => 401 };
+      visibility.app = true;
+      visibility.login = false;
+      return { ok: () => true, status: () => 200, json: async () => ({ user: { role: "Standard User" } }) };
+    } } }),
+    locator: selector => ({ isVisible: async () => selector === "#appView" ? visibility.app : visibility.login })
+  };
+  const settled = await waitForAuthenticatedStandardUserShell(page, "https://nexus.example", 2000);
+  assert.deepEqual(settled, { role: "Standard User", appVisible: true, loginVisible: false });
+  assert.equal(roleChecks, 2);
 });
 
 test("typed ingress diagnostics bind the failure to the exact release and browser state", async () => {
