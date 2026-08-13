@@ -43745,6 +43745,65 @@ async function api(req, res, url) {
     return send(res, 200, state);
   }
 
+  if (url.pathname === "/api/auth/guest-session" && req.method === "POST") {
+    if (!rateLimit(req, 20, 60_000)) {
+      return send(res, 429, { ok: false, error: "Too many guest session requests", code: "guest_session_rate_limited" });
+    }
+    const body = await readBody(req);
+    const displayName = String(body.name || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const language = String(body.language || "en").trim().toLowerCase().slice(0, 12);
+    if (!displayName) {
+      return send(res, 400, { ok: false, error: "Your name is required", code: "guest_name_required" });
+    }
+    const existingUser = currentUser(req, db);
+    if (existingUser?.guest === true) {
+      existingUser.name = displayName;
+      existingUser.language = language;
+      existingUser.updatedAt = new Date().toISOString();
+      await authoritativeRuntimeUser(existingUser);
+      await writeDb(db);
+      return send(res, 200, {
+        ...publicState(db, existingUser),
+        auth: { authenticated: true, authoritative: true, guest: true, resumed: true,
+          restrictions: existingUser.restrictions || [] }
+      });
+    }
+    const guestId = `guest_${crypto.randomUUID()}`;
+    const guest = {
+      id: guestId,
+      email: `${guestId}@guest.agrinexus.invalid`,
+      name: displayName,
+      role: "Standard User",
+      language,
+      guest: true,
+      authType: "authoritative-guest",
+      restrictions: ["health-record-write", "communications-send", "external-transaction", "account-provider-link"],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.users.push(guest);
+    await authoritativeRuntimeUser(guest);
+    await writeDb(db);
+    const sid = crypto.randomBytes(24).toString("hex");
+    sessions.set(sid, guest.id);
+    const durableToken = issueDurableAuthToken(guest.id);
+    const cookies = [
+      setCookieHeader("agrinexus_sid", sid, {
+        maxAge: 43_200,
+        secure: secureCookieAttribute(req)
+      }),
+      ...(durableToken ? [setCookieHeader("agrinexus_auth", durableToken, {
+        maxAge: 43_200,
+        secure: secureCookieAttribute(req)
+      })] : [])
+    ];
+    return send(res, 201, {
+      ...publicState(db, guest),
+      auth: { authenticated: true, authoritative: true, guest: true, resumed: false,
+        restrictions: guest.restrictions }
+    }, { "set-cookie": cookies });
+  }
+
   if (url.pathname === "/api/login" && req.method === "POST") {
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
