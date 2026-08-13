@@ -87,6 +87,99 @@ async function submitRegisteredStandardUserLogin(page, base) {
   return Object.freeze({ requestObserved: true, status: response.status() });
 }
 
+function sanitizeLoginLifecycleValue(value, limit = 1000) {
+  return String(value || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, limit);
+}
+
+async function installLoginLifecycleDiagnostics(page, base) {
+  const lifecycle = {
+    schema: "nexus.browser-login-lifecycle-context.v1",
+    requests: [],
+    responses: [],
+    navigations: []
+  };
+  const sameOriginPath = value => {
+    try {
+      const url = new URL(value);
+      return url.origin === base ? `${url.pathname}${url.search}`.slice(0, 500) : "cross-origin";
+    } catch { return "invalid-url"; }
+  };
+  page.on("request", request => {
+    if (lifecycle.requests.length >= 30) return;
+    const path = sameOriginPath(request.url());
+    if (path === "cross-origin") return;
+    lifecycle.requests.push({ method: request.method(), path, resourceType: request.resourceType() });
+  });
+  page.on("response", response => {
+    if (lifecycle.responses.length >= 30) return;
+    const path = sameOriginPath(response.url());
+    if (path === "cross-origin") return;
+    lifecycle.responses.push({ status: response.status(), path });
+  });
+  page.on("framenavigated", frame => {
+    if (frame !== page.mainFrame() || lifecycle.navigations.length >= 20) return;
+    lifecycle.navigations.push({ path: sameOriginPath(frame.url()) });
+  });
+  await page.addInitScript(() => {
+    const state = window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__ = {
+      loginSubmitListenerRegistrations: 0,
+      errors: []
+    };
+    const record = value => {
+      if (state.errors.length < 20) state.errors.push(value);
+    };
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function nexusLoginLifecycleAddEventListener(type, listener, options) {
+      if (type === "submit" && this instanceof Element && this.id === "loginForm") {
+        state.loginSubmitListenerRegistrations += 1;
+      }
+      return originalAddEventListener.call(this, type, listener, options);
+    };
+    window.addEventListener("error", event => record({
+      type: "error",
+      name: event.error?.name || "Error",
+      message: event.error?.message || event.message || "Unknown startup error",
+      source: event.filename || "",
+      line: event.lineno || 0,
+      column: event.colno || 0
+    }));
+    window.addEventListener("unhandledrejection", event => record({
+      type: "unhandledrejection",
+      name: event.reason?.name || "Error",
+      message: event.reason?.message || String(event.reason || "Unknown unhandled rejection"),
+      source: "",
+      line: 0,
+      column: 0
+    }));
+  });
+  return lifecycle;
+}
+
+async function captureLoginLifecycleDiagnostics(page, lifecycle) {
+  const browser = await page.evaluate(() => ({
+    url: location.href,
+    readyState: document.readyState,
+    loginSubmitListenerRegistrations:
+      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
+    errors: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.errors || []
+  })).catch(error => ({ captureError: String(error?.message || error) }));
+  const errors = Array.isArray(browser.errors) ? browser.errors.map(value => ({
+    type: sanitizeLoginLifecycleValue(value.type || "error", 50),
+    name: sanitizeLoginLifecycleValue(value.name || "Error", 100),
+    message: sanitizeLoginLifecycleValue(value.message),
+    source: sanitizeLoginLifecycleValue(value.source, 500),
+    line: Number.isInteger(value.line) ? value.line : 0,
+    column: Number.isInteger(value.column) ? value.column : 0
+  })) : [];
+  return {
+    schema: lifecycle.schema,
+    browser: { ...browser, errors },
+    requests: lifecycle.requests.slice(-30),
+    responses: lifecycle.responses.slice(-30),
+    navigations: lifecycle.navigations.slice(-20)
+  };
+}
+
 async function authenticatedStandardUserRole(page, base) {
   const response = await page.context().request.get(`${base}/api/state`, {
     headers: { accept: "application/json", "cache-control": "no-cache" }
@@ -227,6 +320,7 @@ async function run(env = process.env) {
     ignoreDefaultArgs: ["--enable-automation"],
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   const permissionSession = await page.context().newCDPSession(page);
   try {
     await permissionSession.send("Browser.setPermission", {
@@ -248,6 +342,9 @@ async function run(env = process.env) {
       ? new Error(`${error.message} Login boundary: requestObserved=true, status=${loginBoundary.status}.`)
       : error;
     await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", diagnosticError);
+    const lifecycleDiagnostic = await captureLoginLifecycleDiagnostics(page, loginLifecycle);
+    fs.writeFileSync("output/nexus-browser-login-lifecycle-context.json", JSON.stringify(lifecycleDiagnostic, null, 2));
+    console.error(JSON.stringify({ loginLifecycleDiagnostic: lifecycleDiagnostic }, null, 2));
     throw diagnosticError;
   }
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
@@ -350,4 +447,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
