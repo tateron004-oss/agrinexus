@@ -260,6 +260,13 @@ jobs:
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
 
+      - name: Capture sanitized authoritative runtime failure logs
+        if: failure()
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
+        run: node scripts/nexus-capture-render-runtime-diagnostics.js
+
       - name: Run three consecutive authenticated exact-SHA production passes
         env:
           EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}
