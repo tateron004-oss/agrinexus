@@ -75,6 +75,17 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
+test("browser verifier returns an already-visible authoritative typed ingress without recursion", async () => {
+  let microphoneRequested = false;
+  const input = { isVisible: async () => true };
+  const page = { locator: selector => ({ first: () => {
+    if (selector.includes("primary-typed-entry")) return input;
+    microphoneRequested = true; return {};
+  } }) };
+  assert.equal(await requireVisibleAuthoritativeTypedIngress(page), input);
+  assert.equal(microphoneRequested, false);
+});
+
 test("browser verifier uses the visible microphone control to establish truthful typed fallback", async () => {
   const calls = []; let visible = false;
   const input = { isVisible: async () => visible, waitFor: async options => {
