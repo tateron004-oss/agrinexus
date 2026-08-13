@@ -116,6 +116,14 @@ async function run(env = process.env) {
     ignoreDefaultArgs: ["--enable-automation"],
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const permissionSession = await page.context().newCDPSession(page);
+  try {
+    await permissionSession.send("Browser.setPermission", {
+      permission: { name: "audioCapture" }, setting: "denied", origin: base
+    });
+  } finally {
+    await permissionSession.detach();
+  }
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
