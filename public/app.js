@@ -53096,7 +53096,6 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
     source: "explicit-voice-map-navigation"
   });
   if (experienceMode === "user") {
-    renderUserSimpleActiveSection("map");
     $(`#map .user-inline-workflow`)?.classList.add("hidden");
   }
   renderLiveVoiceSuggestions(["what map features are available", "show satellite imagery", "is location enabled", "help me plan a route"]);

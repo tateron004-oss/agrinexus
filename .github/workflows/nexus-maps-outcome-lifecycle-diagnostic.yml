@@ -1,0 +1,50 @@
+name: Nexus maps outcome lifecycle diagnostic
+
+on:
+  push:
+    branches:
+      - diag/maps-outcome-lifecycle
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact deployed production SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
+      EXPECTED_RELEASE_SHA: ${{ inputs.release_sha || 'c0c47ad49e8fa52f525255e809148f5c49173c72' }}
+      NEXUS_MAPS_LIFECYCLE_FILE: output/nexus-maps-outcome-lifecycle.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install immutable dependencies
+        run: npm ci
+      - name: Install production verification browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run focused diagnostic tests
+        run: node --test test/nexus/maps-outcome-lifecycle-diagnostic.test.js test/nexus/browser-login-lifecycle-boundary.test.js
+      - name: Require protected foundation
+        run: node scripts/nexus-protected-foundation-guard.js
+      - name: Capture same-context production maps lifecycle
+        run: node scripts/nexus-diagnose-maps-outcome-lifecycle.js
+      - name: Preserve sanitized diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-maps-outcome-lifecycle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/nexus-maps-outcome-lifecycle.json
+          if-no-files-found: warn
+          retention-days: 30
