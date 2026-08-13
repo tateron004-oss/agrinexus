@@ -254,6 +254,7 @@ jobs:
           mkdir -p output
           npm audit --omit=dev --json > output/nexus-production-security-audit.json
           node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
+          node scripts/nexus-diagnose-browser-login-binding.js 2>&1 | tee output/nexus-browser-login-binding-diagnostic.log
           node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log
           node scripts/nexus-assemble-external-fault-proofs.js 2>&1 | tee output/nexus-external-fault-proof-run.log
           node scripts/nexus-run-fault-proof-verifiers.js 2>&1 | tee output/nexus-fault-verifier-run.log
