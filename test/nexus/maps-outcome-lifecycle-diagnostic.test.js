@@ -13,6 +13,8 @@ test("maps lifecycle diagnostic uses the unchanged production command and authen
   assert.match(source, /waitForCurrentLoginSubmitListener\(page\)/);
   assert.match(source, /waitForAuthenticatedStandardUserShell\(page, base\)/);
   assert.match(source, /requireVisibleAuthoritativeTypedIngress\(page\)/);
+  assert.match(source, /Browser\.setPermission/);
+  assert.match(source, /setting: "denied"/);
   assert.match(source, /data-nexus-authoritative-outcome/);
 });
 
@@ -20,6 +22,7 @@ test("maps lifecycle diagnostic records boundaries without secrets or response b
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/turn/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
   assert.doesNotMatch(source, /postData\(|request\.headers\(|authorization|cookie/i);
+  assert.ok(source.indexOf("fs.writeFileSync(outputFile") > source.indexOf("} catch (error)"));
   assert.equal(sameOriginPath("https://example.test/api/nexus/runtime/behavior/turn", "https://example.test"), "/api/nexus/runtime/behavior/turn");
   assert.equal(sameOriginPath("https://other.test/private", "https://example.test"), "cross-origin");
   assert.equal(clean("a\n\tb", 10), "a b");

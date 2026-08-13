@@ -141,7 +141,16 @@ async function run(env = process.env) {
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   const lifecycle = await installMapLifecycleDiagnostics(page, base);
   let failure = "";
+  let loginEvidence = { listenerRegistrations: 0, currentFormWasRegisteredTarget: false, status: 0 };
   try {
+    const permissionSession = await page.context().newCDPSession(page);
+    try {
+      await permissionSession.send("Browser.setPermission", {
+        permission: { name: "microphone" }, setting: "denied", origin: base
+      });
+    } finally {
+      await permissionSession.detach();
+    }
     await page.goto(`${base}/?nexusMapsLifecycleDiagnostic=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
     await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
     await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
@@ -150,6 +159,11 @@ async function run(env = process.env) {
     await page.getByRole("button", { name: "Enter platform", exact: true }).click();
     const login = await loginResponse;
     if (!login.ok()) throw new Error(`Standard User login returned HTTP ${login.status()}.`);
+    loginEvidence = {
+      listenerRegistrations: loginListener.loginSubmitListenerRegistrations,
+      currentFormWasRegisteredTarget: loginListener.currentFormWasRegisteredTarget,
+      status: login.status()
+    };
     await waitForAuthenticatedStandardUserShell(page, base);
     const input = await requireVisibleAuthoritativeTypedIngress(page);
     const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
@@ -166,6 +180,9 @@ async function run(env = process.env) {
       failure = clean(error?.message || error, 1000);
     }
     await page.waitForTimeout(1000);
+  } catch (error) {
+    failure = clean(error?.message || error, 1000);
+  } finally {
     const diagnostic = {
       ...lifecycle,
       releaseSha,
@@ -174,19 +191,19 @@ async function run(env = process.env) {
       observedAt: new Date().toISOString(),
       mapCommand: MAP_COMMAND,
       failure,
-      login: {
-        listenerRegistrations: loginListener.loginSubmitListenerRegistrations,
-        currentFormWasRegisteredTarget: loginListener.currentFormWasRegisteredTarget,
-        status: login.status()
-      },
-      dom: await captureDomState(page)
+      login: loginEvidence,
+      dom: await captureDomState(page).catch(error => ({ captureError: clean(error?.message || error, 1000) }))
     };
     fs.mkdirSync(path.dirname(outputFile), { recursive: true });
     fs.writeFileSync(outputFile, JSON.stringify(diagnostic, null, 2));
     console.log(JSON.stringify({ mapsOutcomeLifecycleDiagnostic: diagnostic }, null, 2));
-    return diagnostic;
-  } finally {
     await browser.close();
+    if (failure) {
+      const error = new Error(`Maps lifecycle diagnostic did not verify a visible outcome: ${failure}`);
+      error.diagnostic = diagnostic;
+      throw error;
+    }
+    return diagnostic;
   }
 }
 
