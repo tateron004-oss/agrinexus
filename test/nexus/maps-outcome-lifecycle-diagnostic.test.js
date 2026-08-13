@@ -38,6 +38,8 @@ test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evide
   assert.match(workflow, /EXPECTED_RELEASE_SHA/);
   assert.match(workflow, /c0c47ad49e8fa52f525255e809148f5c49173c72/);
   assert.match(workflow, /nexus-protected-foundation-guard\.js/);
+  assert.match(workflow, /playwright@1\.55\.0/);
+  assert.match(workflow, /playwright install --with-deps chromium/);
   assert.match(workflow, /nexus-maps-outcome-lifecycle\.json/);
   assert.doesNotMatch(workflow, /render_api_key|render-deploy|manual deploy|permissions:\s*write-all/i);
 });

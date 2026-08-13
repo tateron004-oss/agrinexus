@@ -30,6 +30,10 @@ jobs:
           cache: npm
       - name: Install immutable dependencies
         run: npm ci
+      - name: Install production verification browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
       - name: Run focused diagnostic tests
         run: node --test test/nexus/maps-outcome-lifecycle-diagnostic.test.js test/nexus/browser-login-lifecycle-boundary.test.js
       - name: Require protected foundation
