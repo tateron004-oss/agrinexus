@@ -100,6 +100,14 @@ test("browser verifier uses the visible microphone control to establish truthful
   assert.deepEqual(calls.map(call => call[0]), ["microphone-wait", "microphone-click", "input-wait"]);
 });
 
+test("production browser establishes a real denied microphone permission before proving typed fallback", () => {
+  const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  assert.match(source, /newCDPSession\(page\)/);
+  assert.match(source, /Browser\.setPermission/);
+  assert.match(source, /permission: \{ name: "audioCapture" \}, setting: "denied", origin: base/);
+  assert.match(source, /permissionSession\.detach\(\)/);
+});
+
 test("browser capability verifier binds visible interaction to stable authoritative ingress ownership", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(source, /data-nexus-primary-typed-entry="true":visible/);
