@@ -15,6 +15,7 @@ const DEFINITIONS = [
   ["reminders", "Reminders and Calendar", ["reminders.schedule"], ["low", "medium"]],
   ["offline-queue", "Offline Queue", ["offline.sync"], ["low", "medium", "high", "regulated"]],
   ["live-knowledge", "Live Knowledge", ["knowledge.search"], ["low"]],
+  ["images", "Images", ["images.search"], ["low"]],
   ["communications", "Communications", ["communications.send"], ["medium", "high"]],
   ["operations", "Operations", ["drone.plan"], ["medium", "high", "regulated"]]
 ];

@@ -2,6 +2,7 @@
 
 const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "knowledge.search", domain: "knowledge", description: "Search governed production knowledge" }),
+  Object.freeze({ toolId: "images.search", domain: "images", description: "Search governed production images with source provenance" }),
   Object.freeze({ toolId: "documents.create", domain: "documents", description: "Create a governed production document" }),
   Object.freeze({ toolId: "jobs.search", domain: "jobs", description: "Search governed production jobs" }),
   Object.freeze({ toolId: "resume.create", domain: "resume", description: "Create a governed production resume" }),

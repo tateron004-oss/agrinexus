@@ -2,12 +2,23 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { compileProductionProof } = require("../../nexus/acceptance/evidence-producer.js");
-const { FAULTS } = require("../../nexus/acceptance/fault-register.js");
+const { FAULT_CONTRACTS } = require("../../nexus/acceptance/fault-register.js");
 const { CONTRACTS } = require("../../nexus/apps/capability-completion-contracts.js");
 
 const sha = "a".repeat(40); const observedAt = "2026-08-08T12:00:00.000Z";
 const receipt = key => ({ releaseSha: sha, production: true, simulated: false, passed: true, observedAt, receipts: [`receipt:${key}`] });
-const faultProbes = FAULTS.map(fault => ({ fault, implementation: "implemented", tests: ["test"], ...receipt(fault) }));
+const faultProbes = FAULT_CONTRACTS.map((contract, index) => ({
+  fault: contract.fault, status: "closed", releaseSha: sha,
+  verifierId: contract.verifierId, proofType: contract.proofType,
+  implementation: { owner: contract.owner, contract: "Executed contract for " + contract.fault,
+    location: "nexus/verifiers/" + contract.verifierId + ".js" },
+  tests: [contract.verifierId], proofs: [{
+    proofId: contract.fault + "-proof-" + index, executionId: contract.fault + "-execution-" + index,
+    verifierId: contract.verifierId, method: contract.proofType, releaseSha: sha,
+    passed: true, observedAt,
+    observation: { expected: "control enforced", actual: "control enforced", matched: true }
+  }]
+}));
 const capabilityProbes = Object.entries(CONTRACTS).map(([application, requirements]) => ({ application, ...receipt(application),
   rendered: true, visible: true, evidence: Object.fromEntries(requirements.map(key => [key, key === "playbackState" ? "playing" : "verified"])) }));
 const complete = input => ({ faultProbes, capabilityProbes, ...input });

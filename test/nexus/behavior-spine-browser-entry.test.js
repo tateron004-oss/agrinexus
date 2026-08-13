@@ -46,7 +46,7 @@ test("authoritative browser completion requires typed rendering and server ackno
   const start = source.indexOf("async function handleNexusUnifiedBrainRuntimeCommand");
   const end = source.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand", start);
   const gateway = source.slice(start, end);
-  assert.match(gateway, /result\.render\?\.schema === "nexus\.workspace-outcome\.v1"/);
+  assert.match(gateway, /validateNexusPassivePresentation\(result\.render\)/);
   assert.match(gateway, /renderer\.render\(result\.render\)/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
   assert.doesNotMatch(gateway, /genesisWorkspaceActionFromFinalTranscript\(text\)/);

@@ -536,7 +536,8 @@ async function run(env = process.env, options = {}) {
     validateService(reconciled, service === worker ? "background_worker" : "web_service");
     services.push(reconciled);
   }
-  await installAcceptanceToken(client, services[0].id, token);
+  await Promise.all([installAcceptanceToken(client, services[0].id, token),
+    installAcceptanceToken(client, services[2].id, token)]);
   await installCanonicalToolProviders(client, services[0].id, services[1].id, services[2].id, toolProviderSecret);
   exportWorkflowSecret(token, env);
   const deployments = [];

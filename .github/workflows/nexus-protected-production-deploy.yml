@@ -75,11 +75,31 @@ jobs:
           node scripts/nexus-protected-foundation-guard.js
           node --test test/nexus/system-convergence.test.js
           node --test test/nexus/open-ended-agent.test.js
+          node --test test/nexus/fault-register.test.js
+          node --test test/nexus/fault-verifier-registry.test.js
+          node --test test/nexus/external-fault-proof-assembler.test.js
+          node --test test/nexus/production-evidence-producer.test.js
+          node --test test/nexus/production-release-readiness.test.js
           node --test test/nexus/release-promotion-policy.test.js
           npm run qa:nexus-browser-action-controller
           npm run qa:nexus-production-layer-activation-integration
           node test/nexus/server-runtime-adapter.test.js
           node test/nexus/render-release-controller.test.js
+      - name: Execute source-backed fault verifiers and preserve open production obligations
+        env:
+          EXPECTED_RELEASE_SHA: ${{ github.event.inputs.target_sha || github.sha }}
+          NEXUS_FAULT_PROOF_FILE: output/nexus-candidate-fault-proof-report.json
+          NEXUS_FAULT_ALLOW_OPEN: "true"
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          node scripts/nexus-run-fault-proof-verifiers.js
+          node - <<'NODE'
+          const report=require("./output/nexus-candidate-fault-proof-report.json");
+          if(report.closed!==false||report.proven!==20||report.open.length!==10) {
+            throw new Error(`Unexpected candidate fault inventory: ${report.proven}/${report.required}, open=${report.open.length}`);
+          }
+          NODE
       - name: Install production-equivalent provider contract
         run: node -e 'const fs=require("node:fs");const {canonicalToolProviders}=require("./scripts/nexus-render-release-controller.js");fs.appendFileSync(process.env.GITHUB_ENV,"NEXUS_TOOL_PROVIDERS_JSON="+JSON.stringify(canonicalToolProviders("candidate-provider-receipt-secret-0000000000000000","https://provider.example"))+"\n")'
       - name: Migrate production-equivalent PostgreSQL
@@ -220,6 +240,14 @@ jobs:
           NEXUS_PROBE_FILE: output/nexus-production-probes.json
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
+          NEXUS_FAULT_PROOF_FILE: output/nexus-fault-proof-report.json
+          NEXUS_EXTERNAL_FAULT_PROOFS: output/nexus-external-fault-proofs.json
+          NEXUS_BLACK_BOX_FILE: output/nexus-preproduction-black-box.json
+          NEXUS_CANDIDATE_RESULT: ${{ needs.qualify-release-candidate.result }}
+          NEXUS_CANDIDATE_GATES_PASSED: ${{ needs.qualify-release-candidate.result == 'success' }}
+          NEXUS_PIPELINE_OWNER: github-actions
+          NEXUS_PIPELINE_RUN_ID: ${{ github.run_id }}
+          NEXUS_FAULT_EXECUTION_ID: production-${{ github.run_id }}-${{ github.run_attempt }}
           NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
         run: |
           set -euo pipefail
@@ -227,6 +255,8 @@ jobs:
           npm audit --omit=dev --json > output/nexus-production-security-audit.json
           node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
           node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log
+          node scripts/nexus-assemble-external-fault-proofs.js 2>&1 | tee output/nexus-external-fault-proof-run.log
+          node scripts/nexus-run-fault-proof-verifiers.js 2>&1 | tee output/nexus-fault-verifier-run.log
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
 

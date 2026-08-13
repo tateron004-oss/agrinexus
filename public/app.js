@@ -56049,7 +56049,7 @@ function nexusAuthoritativeCapabilityId(outcome = {}) {
     "mobile-clinic": "mobile-clinic", pharmacy: "pharmacy", learning: "learning",
     workforce: "workforce", trade: "agritrade", map: "maps", media: "music-media",
     documents: "ask-nexus", reminders: "reminders", offline: "offline",
-    "live-knowledge": "ask-nexus", communications: "communications", operations: "global-platform-status"
+    "live-knowledge": "ask-nexus", images: "ask-nexus", communications: "communications", operations: "global-platform-status"
   }[outcome.workspace] || "ask-nexus";
 }
 
@@ -56075,6 +56075,32 @@ function renderNexusAuthoritativeData(outcome = {}) {
     surface.append(row);
   });
   host.prepend(surface);
+  return surface;
+}
+
+async function renderNexusAuthoritativeImages(outcome = {}) {
+  const images = Array.isArray(outcome?.data?.images) ? outcome.data.images : [];
+  if (!images.length) throw new Error("The authoritative image provider returned no images.");
+  const surface = renderNexusAuthoritativeData(outcome);
+  if (!surface) return null;
+  surface.dataset.nexusImageGallery = "true";
+  const gallery = document.createElement("div");
+  gallery.dataset.nexusAuthoritativeImages = "true";
+  const loaded = await Promise.all(images.slice(0, 8).map(item => new Promise(resolve => {
+    const image = document.createElement("img");
+    image.alt = String(item?.title || outcome.data.query || "Nexus image result");
+    image.src = String(item?.url || "");
+    image.dataset.nexusAuthoritativeImage = "true";
+    image.addEventListener("load", () => resolve(image.naturalWidth > 0 && image.naturalHeight > 0), { once: true });
+    image.addEventListener("error", () => resolve(false), { once: true });
+    gallery.append(image);
+  })));
+  surface.append(gallery);
+  if (!loaded.some(Boolean)) {
+    surface.remove();
+    throw new Error("No authoritative image result loaded visibly.");
+  }
+  surface.dataset.loadedImages = String(loaded.filter(Boolean).length);
   return surface;
 }
 
@@ -56273,6 +56299,10 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     opened = openGenesisRealtimeMapWorkspace(data, outcome.response);
     document.body.dataset.genesisWorkspace = "map";
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  } else if (presentation.kind === "image-gallery") {
+    opened = true;
+    document.body.dataset.genesisWorkspace = outcome.workspace;
+    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else if (presentation.kind === "media-player") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
@@ -56326,7 +56356,9 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       ? document.querySelector('[data-nexus-provider-audio="true"], [data-nexus-youtube-player="true"] iframe')
     : presentation.kind === "document"
       ? renderNexusAuthoritativeDocument(outcome)
-      : renderNexusAuthoritativeData(outcome);
+      : presentation.kind === "image-gallery"
+        ? await renderNexusAuthoritativeImages(outcome)
+        : renderNexusAuthoritativeData(outcome);
   const visible = presentation.kind === "map"
     ? nexusMapOutcomeVerified(outcome, data)
     : Boolean(surface && surface.getClientRects?.().length);
@@ -56348,6 +56380,9 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       playbackClass: outcome.workspace === "media" ? (document.body.dataset.nexusMediaPlaybackClass || undefined) : undefined,
       playbackEvidence: outcome.workspace === "media"
         ? (nexusProviderAudioPlayback.telemetry || nexusYouTubePlayback.telemetry || undefined)
+        : undefined,
+      loadedImages: outcome.workspace === "images"
+        ? Number(surface?.dataset?.loadedImages || 0)
         : undefined
     }
   };
@@ -56490,7 +56525,7 @@ window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProduct
 async function nexusAuthoritativeOutcomeRenderer() {
   if (window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__) return window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__;
   const Renderer = await loadNexusAuthoritativeOutcomeRenderer();
-  const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "reminder", "task-list", "source-answer", "communication", "operation"];
+  const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "image-gallery", "reminder", "task-list", "source-answer", "communication", "operation"];
   const adapters = Object.fromEntries(presentationKinds.map(kind => [kind, {
     render: (data, context) => renderNexusPassiveWorkspace(context.outcome, data, context)
   }]));

@@ -15,6 +15,7 @@ const CONTRACTS = Object.freeze({
   reminders: ["resolvedTime", "reminderId", "persisted"],
   "offline-queue": ["operationId", "syncState", "serverAcknowledged"],
   "live-knowledge": ["answer", "sources"],
+  images: ["query", "images", "sources"],
   communications: ["draft", "consentState", "deliveryReceipt"],
   operations: ["operation", "approvalState", "receipt"]
 });

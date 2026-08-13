@@ -92,7 +92,7 @@ async function run(env = process.env) {
   const headers = { authorization: `Bearer ${token}` };
   const { runtime, acceptance } = await waitForExactRelease(base, headers, releaseSha);
   const [health, integrations, provider, taskEngine, semanticMemory, consentAudit, offlineSync, identity, observability, objectStorage,
-    consolidatedBrain, realtimeVoice, realtimeVoiceStatus, documentsLifecycle, healthcareControls, predictiveModel] = await Promise.all([
+    consolidatedBrain, realtimeVoice, realtimeVoiceStatus, documentsLifecycle, healthcareControls, predictiveModel, faultIsolation] = await Promise.all([
     get(`${base}/api/healthz`), get(`${base}/api/integrations`), get(`${providerBase}/healthz`),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/task-engine`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/semantic-memory`, headers, { releaseSha }),
@@ -106,7 +106,8 @@ async function run(env = process.env) {
     get(`${base}/api/voice/realtime/status`),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/documents-lifecycle`, headers, { releaseSha }),
     post(`${base}/api/nexus/runtime/production-acceptance/probes/healthcare-controls`, headers, { releaseSha }),
-    post(`${base}/api/nexus/runtime/production-acceptance/probes/predictive-model`, headers, { releaseSha })
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/predictive-model`, headers, { releaseSha }),
+    post(`${base}/api/nexus/runtime/production-acceptance/probes/fault-isolation`, headers, { releaseSha })
   ]);
   const workerReady = acceptance.body?.components?.worker?.recentHeartbeat === true && acceptance.body.components.worker.releaseSha === releaseSha;
   const providerProfile = classifyProviders(integrations.body);
@@ -114,6 +115,18 @@ async function run(env = process.env) {
   const databaseReady = runtime.ok && runtime.body?.ok === true && runtime.body?.releaseSha === releaseSha &&
     runtime.body?.pgvector === true && runtime.body?.migrationsCurrent === true;
   const componentProbes = [
+    component("faultIsolation", releaseSha, [faultIsolation], {
+      staleTransitionRejected: faultIsolation.body?.staleTransitionRejected === true,
+      staleTaskUnchanged: faultIsolation.body?.staleTaskUnchanged === true,
+      providerFailureObserved: faultIsolation.body?.providerFailureObserved === true,
+      providerFailureCode: faultIsolation.body?.providerFailureCode || null,
+      providerFailureStage: faultIsolation.body?.providerFailureStage || null,
+      databaseFailureDiagnosed: faultIsolation.body?.databaseFailureDiagnosed === true,
+      databaseFailureSafe: faultIsolation.body?.databaseFailureSafe === true,
+      databaseRecovered: faultIsolation.body?.databaseRecovered === true,
+      unrelatedCapabilitySurvived: faultIsolation.body?.unrelatedCapabilitySurvived === true,
+      recoveryReceiptVerified: faultIsolation.body?.recoveryReceiptVerified === true
+    }),
     component("taskEngine", releaseSha, [taskEngine], {
       durableTask: taskEngine.body?.durable === true,
       lifecycleState: taskEngine.body?.state,

@@ -20,6 +20,7 @@ const SCENARIOS = Object.freeze({
   reminders: "Remind me tomorrow at 9 AM to check my crops and save the reminder.",
   "offline-queue": "Queue a crop observation offline, synchronize it, and show the server acknowledgement.",
   "live-knowledge": "Why do maize leaves turn yellow? Answer with current sources.",
+  images: "Show me current images of healthy maize leaves with sources.",
   communications: "Draft a clinic follow-up message, obtain consent, send it, and return the delivery receipt.",
   operations: "Prepare a field operation, record approval state, and return its receipt."
 });
@@ -63,6 +64,37 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
+async function submitVisibleCommand(page, text, application) {
+  const input = page.getByLabel("Workflow details for Nexus", { exact: true });
+  const send = page.getByRole("button", { name: "Send to Nexus", exact: true });
+  const before = await page.locator('[data-nexus-authoritative-outcome="true"]').getAttribute("data-command-id").catch(() => null);
+  await input.fill(text);
+  await send.click();
+  try {
+    await page.waitForFunction(previous => {
+      const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
+      const commandId = surface?.getAttribute("data-command-id") || "";
+      return Boolean(commandId && commandId !== previous);
+    }, before, { timeout: 120000 });
+  } catch (error) {
+    const status = await page.locator('[role="status"]').allTextContents().catch(() => []);
+    throw new Error(`Visible Standard User command failed application=${application}: ${status.join(" | ").slice(-1200) || error.message}`);
+  }
+  const surface = page.locator('[data-nexus-authoritative-outcome="true"]').first();
+  if (!await surface.isVisible()) throw new Error(`Visible Standard User outcome was not visible application=${application}.`);
+  const workspace = await surface.getAttribute("data-workspace");
+  const textContent = await surface.innerText();
+  if (/authoritative Nexus runtime is unavailable|legacy write fallback|behavior spine is unavailable/i.test(textContent)) {
+    throw new Error(`Visible Standard User command failed closed application=${application}: ${textContent.slice(0, 500)}`);
+  }
+  if (application === "images") {
+    const loaded = await page.locator('[data-nexus-authoritative-image="true"]').evaluateAll(nodes =>
+      nodes.filter(node => node.complete && node.naturalWidth > 0 && node.naturalHeight > 0).length);
+    if (loaded < 1) throw new Error("Visible image search produced no genuinely loaded image.");
+  }
+  return { application, workspace, text: textContent.slice(0, 1000) };
+}
+
 async function run(env = process.env) {
   const { chromium } = require("playwright");
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
@@ -75,20 +107,19 @@ async function run(env = process.env) {
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
+  await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
+  await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
+  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  await page.getByLabel("Workflow details for Nexus", { exact: true }).waitFor({ state: "visible", timeout: 30000 });
+  const shellRole = await page.evaluate(() => globalThis.data?.user?.role || "");
+  if (shellRole !== "Standard User") throw new Error(`Visible authenticated Standard User login failed (role=${shellRole || "missing"}).`);
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
-  let loginResponse; let lastLoginError;
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
-    try { loginResponse = await page.context().request.post(`${base}/api/login`, {
-      data: { email: "user@agrinexus.org", password: "User2026!" } }); break; }
-    catch (error) { lastLoginError = error; if (attempt < 4) await new Promise(resolve => setTimeout(resolve, attempt * 500)); }
+  const visibleIngress = [];
+  for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
+    visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
   }
-  if (!loginResponse) throw new Error(`Standard User login transport failed after 4 attempts: ${lastLoginError?.message || "network error"}`);
-  const shell = await loginResponse.json();
-  if (!loginResponse.ok() || shell?.user?.role !== "Standard User" || !shell?.profile) throw new Error(
-    `Authenticated Standard User shell state is required for production rendering (status=${loginResponse.status()}, role=${shell?.user?.role || "missing"}, profile=${Boolean(shell?.profile)}).`);
   await reloadAuthenticatedShell(page);
-  await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
-  await page.evaluate(value => { data = value; }, shell);
+  await page.getByLabel("Workflow details for Nexus", { exact: true }).waitFor({ state: "visible", timeout: 30000 });
   const capabilityProbes = []; const workspaceProbes = [];
   try {
     for (const [application, text] of Object.entries(SCENARIOS)) {
@@ -168,19 +199,18 @@ async function run(env = process.env) {
     if (voice.result?.render?.application !== "live-knowledge" || voice.result?.render?.originalText !== voiceText) {
       throw new Error("Voice and typed input did not preserve equivalent authoritative intent.");
     }
-    const allReceipts = capabilityProbes.flatMap(item => item.receipts);
-    const faultProbes = FAULTS.map(fault => exactRecord(releaseSha,
-      [...allReceipts, `github-actions://exact-release/${releaseSha}/fault/${fault}`],
-      { fault, implementation: `runtime control for ${fault}`, tests: ["authoritative-runtime", "browser-capability-gauntlet"] }));
+    const faultProbes = [];
     Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes,
+      faultProofStatus: { closed: false, releaseSha, required: FAULTS.length, proven: 0,
+        missing: [...FAULTS], reason: "Typed fault verifiers have not executed; capability success receipts cannot prove fault closure." },
       browserProbe: { releaseSha, capabilities: capabilityProbes.length, workspaces: workspaceProbes.length,
-        sequential: true, voiceTypedEquivalent: true, observedAt: new Date().toISOString() } });
+        visibleIngress, visibleAuthenticatedLogin: true, sequential: true, voiceTypedEquivalent: true, observedAt: new Date().toISOString() } });
     fs.writeFileSync(probeFile, JSON.stringify(document, null, 2));
     console.log(JSON.stringify({ ok: true, releaseSha, capabilities: capabilityProbes.length,
-      workspaces: workspaceProbes.length, faults: faultProbes.length }, null, 2));
+      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false }, null, 2));
     return document;
   } finally { await browser.close(); }
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, submitVisibleCommand, post, run });

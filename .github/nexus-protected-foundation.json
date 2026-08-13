@@ -14,18 +14,18 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "f623e6cb3aeacb6679e9f090d70040409ba859a6",
-    "recoveryBranch": "agent/defer-guest-entry-certification",
+    "baseCommit": "000389b440968a41412bf68a1200da4520b7639c",
+    "recoveryBranch": "agent/visible-behavior-completion",
     "files": [
-      "public/app.js"
+      "nexus/compat/server-runtime-adapter.js"
     ],
-    "purpose": "Temporarily remove unsupported no-login guest entry from the release-critical interface while preserving authenticated authoritative Standard User behavior, fail-closed runtime authority, and complete production certification"
+    "purpose": "Add an acceptance-token and exact-SHA guarded production fault-isolation probe for real stale-transition rejection, controlled signed-provider failure handling, safe database-error diagnosis, and unrelated-capability survival"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "8ed0011beb651fb2b739d1ee69105169a4f654a7",
+    "public/app.js": "0c2339ecebf6c48c4721a7898fc3648090411857",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
-    "nexus/compat/server-runtime-adapter.js": "3b09e09895b29af2a9d99facf5006535676d0e61",
+    "nexus/compat/server-runtime-adapter.js": "2c0632c86a8d75790903189a0e75812d74cd9cfa",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
     "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
     "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",

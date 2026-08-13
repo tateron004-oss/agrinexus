@@ -118,6 +118,13 @@ async function nexusToolResponse(req, res) {
     return send(res, 401, { code: "provider_request_unauthorized", message: "Signed Nexus provider request required." });
   if (payload.schema !== "nexus.provider-request.v1" || payload.toolId !== toolId || !payload.tenantId || !payload.taskId || !payload.stepId)
     return send(res, 400, { code: "provider_request_invalid", message: "Nexus provider request contract is invalid." });
+  const acceptanceFault = payload.input?.__nexusAcceptanceFault;
+  if (acceptanceFault?.kind === "provider_failure" &&
+      process.env.NEXUS_ACCEPTANCE_TOKEN &&
+      acceptanceFault.token === process.env.NEXUS_ACCEPTANCE_TOKEN &&
+      acceptanceFault.releaseSha === process.env.NEXUS_RELEASE_SHA) {
+    return send(res, 503, { code: "acceptance_provider_failure", message: "Acceptance-injected provider failure." });
+  }
   const caseId = String(payload.input?.certificationCaseId || "");
   const providerBase = (process.env.RENDER_EXTERNAL_URL || "https://agrinexus-provider-engines.onrender.com").replace(/\/$/, "");
   const outcomeUrl = `${providerBase}/nexus/outcomes/${encodeURIComponent(toolId)}?caseId=${encodeURIComponent(caseId)}`;
@@ -137,6 +144,7 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
   const common = { sources: [source], source };
   const evidence = {
     "knowledge.search": toolId === "knowledge.search" ? await liveKnowledgeEvidence(input, common, id) : null,
+    "images.search": toolId === "images.search" ? await liveImageEvidence(input, common) : null,
     "documents.create": { documentId: id, savedVersion: 1, reopenVerified: true,
       lesson: input.lesson || "Saved learning lesson", content: input.content || "Provider-verified document content", savedProgress: id },
     "jobs.search": { ...common, listings: input.listings || [{ id, title: "Agriculture opportunity" }], selectedListing: input.selectedListing || id },
@@ -170,6 +178,24 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
     "drone.plan": { operation: input.operation || "Field operation prepared", approvalState: "recorded", operationReceipt: id }
   };
   return evidence[toolId] || {};
+}
+
+async function liveImageEvidence(input, common) {
+  const query = String(input.query || "").trim();
+  if (!query) throw Object.assign(new Error("An image query is required."), { code: "image_query_required" });
+  if (!process.env.TAVILY_API_KEY) throw Object.assign(new Error("The governed image provider is unavailable."), { code: "image_provider_unavailable" });
+  const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced",
+      include_images: true, include_image_descriptions: true, max_results: 5 }) });
+  if (!response.ok) throw Object.assign(new Error(`Image provider returned ${response.status}.`), { code: "image_provider_failed" });
+  const body = await response.json();
+  const images = (body.images || []).map(item => typeof item === "string"
+    ? { url: item, title: query, sourceUrl: item }
+    : { url: item.url, title: item.description || query, sourceUrl: item.url })
+    .filter(item => /^https:\/\//i.test(String(item.url || ""))).slice(0, 8);
+  if (!images.length) throw Object.assign(new Error("Image search returned no verifiable images."), { code: "image_outcome_unverified" });
+  const sources = [...(common.sources || []), ...images.map(item => ({ title: item.title, url: item.sourceUrl }))];
+  return { query, images, sources, provider: "tavily" };
 }
 
 async function liveKnowledgeEvidence(input, common, receiptId) {

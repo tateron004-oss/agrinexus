@@ -59,7 +59,7 @@ test("worker and provider configuration use their canonical processes", async ()
 
 test("release controller defines signed production tool coverage for every workspace", () => {
   const tools = canonicalToolProviders("shared-secret");
-  assert.equal(tools.length, 16);
+  assert.equal(tools.length, 17);
   assert.ok(tools.every(tool => tool.receiptSecret === "shared-secret" && tool.endpoint.startsWith("https://agrinexus-provider-engines.onrender.com/nexus/tools/")));
   const manifests = require("../../nexus/apps/default-manifests.js").defaultApplicationManifests();
   const toolIds = new Set(tools.map(tool => tool.toolId));
@@ -226,6 +226,9 @@ test("unified release binds every production process to the exact release SHA", 
       value: releaseSha
     });
   }
+  const webAcceptance = writes.find(write => write.path === "/services/srv-web/env-vars/NEXUS_ACCEPTANCE_TOKEN");
+  const providerAcceptance = writes.find(write => write.path === "/services/srv-provider/env-vars/NEXUS_ACCEPTANCE_TOKEN");
+  assert.ok(webAcceptance?.value); assert.equal(providerAcceptance?.value, webAcceptance.value);
   for (const [key, value] of Object.entries({
     AGRINEXUS_STATE_STORE: "postgres",
     AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
