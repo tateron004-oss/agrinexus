@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const { CONTRACTS } = require("../nexus/apps/capability-completion-contracts.js");
 const { FAULTS } = require("../nexus/acceptance/fault-register.js");
+const liveKnowledgeLifecycleByPage = new WeakMap();
 
 const SCENARIOS = Object.freeze({
   agriculture: "Assess yellow leaves on my maize crop and show sources.",
@@ -214,6 +215,122 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
   };
 }
 
+function sanitizedAuthoritativeLifecyclePayload(value = {}) {
+  const result = value?.result || value;
+  const render = result?.render || null;
+  return {
+    schema: sanitizeLoginLifecycleValue(result?.schema || value?.schema, 100),
+    authoritative: result?.authoritative === true,
+    legacyFallbackUsed: result?.legacyFallbackUsed === true,
+    state: sanitizeLoginLifecycleValue(result?.state, 100),
+    application: sanitizeLoginLifecycleValue(result?.application || render?.application, 100),
+    renderPresent: Boolean(render),
+    renderApplication: sanitizeLoginLifecycleValue(render?.application, 100),
+    renderWorkspace: sanitizeLoginLifecycleValue(render?.workspace, 100),
+    renderOperation: sanitizeLoginLifecycleValue(render?.operation, 100),
+    commandIdPresent: Boolean(result?.commandId || render?.commandId),
+    correlationIdPresent: Boolean(result?.correlationId || render?.correlationId)
+  };
+}
+
+function sanitizedAcknowledgementLifecyclePayload(value = {}) {
+  const receipt = value?.receipt || value?.renderReceipt || value;
+  return {
+    application: sanitizeLoginLifecycleValue(value?.application || receipt?.application, 100),
+    workspace: sanitizeLoginLifecycleValue(value?.workspace || receipt?.workspace, 100),
+    commandIdPresent: Boolean(value?.commandId || receipt?.commandId),
+    correlationIdPresent: Boolean(value?.correlationId || receipt?.correlationId),
+    rendered: receipt?.rendered === true,
+    visible: receipt?.visible === true,
+    audible: receipt?.audible === true,
+    acknowledged: receipt?.acknowledged === true,
+    evidenceFields: receipt?.evidence && typeof receipt.evidence === "object"
+      ? Object.keys(receipt.evidence).sort().slice(0, 30)
+      : []
+  };
+}
+
+async function installLiveKnowledgeLifecycleDiagnostics(page, base) {
+  const lifecycle = {
+    schema: "nexus.live-knowledge-browser-lifecycle.v1",
+    requests: [],
+    responses: [],
+    turn: null,
+    acknowledgementRequest: null,
+    acknowledgementResponse: null
+  };
+  const relevantPath = value => {
+    try {
+      const url = new URL(value);
+      if (url.origin !== base) return "";
+      return ["/api/nexus/runtime/behavior/turn", "/api/nexus/runtime/behavior/acknowledgements",
+        "/api/nexus/realtime/session", "/api/nexus/realtime/token"].includes(url.pathname) ? url.pathname : "";
+    } catch { return ""; }
+  };
+  page.on("request", request => {
+    const path = relevantPath(request.url());
+    if (!path) return;
+    lifecycle.requests.push({ method: request.method(), path });
+    if (path === "/api/nexus/runtime/behavior/acknowledgements") {
+      try { lifecycle.acknowledgementRequest = sanitizedAcknowledgementLifecyclePayload(request.postDataJSON()); }
+      catch { lifecycle.acknowledgementRequest = { parseError: true }; }
+    }
+  });
+  page.on("response", async response => {
+    const path = relevantPath(response.url());
+    if (!path) return;
+    lifecycle.responses.push({ status: response.status(), path });
+    try {
+      const value = await response.json();
+      if (path === "/api/nexus/runtime/behavior/turn") lifecycle.turn = sanitizedAuthoritativeLifecyclePayload(value);
+      if (path === "/api/nexus/runtime/behavior/acknowledgements") {
+        lifecycle.acknowledgementResponse = {
+          status: response.status(),
+          acknowledged: value?.acknowledged === true || value?.result?.acknowledged === true,
+          completed: value?.completed === true || value?.result?.completed === true
+        };
+      }
+    } catch { /* status and path remain sufficient when no JSON body exists */ }
+  });
+  liveKnowledgeLifecycleByPage.set(page, lifecycle);
+  return lifecycle;
+}
+
+async function captureLiveKnowledgeLifecycleDiagnostics(page, lifecycle, error) {
+  const browser = await page.evaluate(() => {
+    const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" &&
+      getComputedStyle(node).visibility !== "hidden");
+    const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
+    const statusText = [...document.querySelectorAll('[role="status"]')].filter(visible)
+      .map(node => String(node.textContent || "").trim()).filter(Boolean).slice(-30);
+    return {
+      authoritativeOutcome: {
+        present: Boolean(surface),
+        visible: visible(surface),
+        application: String(surface?.getAttribute("data-application") || "").slice(0, 100),
+        workspace: String(surface?.getAttribute("data-workspace") || "").slice(0, 100),
+        commandIdPresent: Boolean(surface?.getAttribute("data-command-id"))
+      },
+      voice: {
+        microphoneControlsVisible: [...document.querySelectorAll('[data-nexus-permanent-microphone-control="true"]')].filter(visible).length,
+        bodyVoiceState: String(document.body?.dataset?.nexusVoiceState || "").slice(0, 100),
+        realtimeState: String(document.body?.dataset?.nexusRealtimeState || "").slice(0, 100),
+        relevantStatus: statusText.filter(text => /voice|microphone|realtime|visible|audible|outcome/i.test(text)).slice(-15)
+      }
+    };
+  }).catch(captureError => ({ captureError: sanitizeLoginLifecycleValue(captureError?.message || captureError) }));
+  return {
+    schema: lifecycle.schema,
+    error: sanitizeLoginLifecycleValue(error?.message || error),
+    requests: lifecycle.requests.slice(-20),
+    responses: lifecycle.responses.slice(-20),
+    turn: lifecycle.turn,
+    acknowledgementRequest: lifecycle.acknowledgementRequest,
+    acknowledgementResponse: lifecycle.acknowledgementResponse,
+    browser
+  };
+}
+
 async function authenticatedStandardUserRole(page, base) {
   const response = await page.context().request.get(`${base}/api/state`, {
     headers: { accept: "application/json", "cache-control": "no-cache" }
@@ -326,7 +443,16 @@ async function submitVisibleCommand(page, text, application) {
     }, before, { timeout: 120000 });
   } catch (error) {
     const status = await page.locator('[role="status"]').allTextContents().catch(() => []);
-    throw new Error(`Visible Standard User command failed application=${application}: ${status.join(" | ").slice(-1200) || error.message}`);
+    const commandError = new Error(`Visible Standard User command failed application=${application}: ${status.join(" | ").slice(-1200) || error.message}`);
+    if (application === "live-knowledge") {
+      const lifecycle = liveKnowledgeLifecycleByPage.get(page);
+      if (lifecycle) {
+        const diagnostic = await captureLiveKnowledgeLifecycleDiagnostics(page, lifecycle, commandError);
+        fs.writeFileSync("output/nexus-live-knowledge-browser-lifecycle.json", JSON.stringify(diagnostic, null, 2));
+        console.error(JSON.stringify({ liveKnowledgeLifecycleDiagnostic: diagnostic }, null, 2));
+      }
+    }
+    throw commandError;
   }
   const surface = page.locator('[data-nexus-authoritative-outcome="true"]').first();
   if (!await surface.isVisible()) throw new Error(`Visible Standard User outcome was not visible application=${application}.`);
@@ -355,6 +481,7 @@ async function run(env = process.env) {
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
+  await installLiveKnowledgeLifecycleDiagnostics(page, base);
   const permissionSession = await page.context().newCDPSession(page);
   try {
     await permissionSession.send("Browser.setPermission", {
@@ -481,4 +608,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
