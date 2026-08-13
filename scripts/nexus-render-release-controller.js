@@ -196,6 +196,17 @@ async function ensureSharedEnvSecret(client, serviceIds, key, minimumLength = 24
   return { key, generated: !existing, serviceCount: serviceIds.length };
 }
 
+async function reconcileToolProviderSecret(client, serviceIds) {
+  const key = "NEXUS_TOOL_RECEIPT_SECRET";
+  const environments = await Promise.all(serviceIds.map(serviceId => readServiceEnv(client, serviceId)));
+  const existing = environments.map(environment => environment.get(key) || "").find(value => value.length >= 48);
+  const value = existing || crypto.randomBytes(48).toString("base64url");
+  await Promise.all(serviceIds.map((serviceId, index) => environments[index].get(key) === value
+    ? Promise.resolve()
+    : installEnvValue(client, serviceId, key, value)));
+  return value;
+}
+
 async function installHostedProviderContract(client, webServiceId, providerServiceId) {
   await Promise.all(Object.entries(HOSTED_PROVIDER_ENV)
     .map(([key, value]) => installEnvValue(client, webServiceId, key, value)));
@@ -508,7 +519,6 @@ async function run(env = process.env, options = {}) {
   }
   const client = options.client || createClient({ apiKey, fetchImpl: options.fetchImpl });
   const token = crypto.randomBytes(48).toString("base64url");
-  const toolProviderSecret = crypto.randomBytes(48).toString("base64url");
   const web = await resolveUniqueService(client, "nexus-genesis-certified");
   validateService(web, "web_service");
   const provider = await resolveUniqueService(client, "agrinexus-provider-engines");
@@ -538,12 +548,14 @@ async function run(env = process.env, options = {}) {
   }
   await Promise.all([installAcceptanceToken(client, services[0].id, token),
     installAcceptanceToken(client, services[2].id, token)]);
+  const toolProviderSecret = await reconcileToolProviderSecret(client,
+    [services[2].id, services[0].id, services[1].id]);
   await installCanonicalToolProviders(client, services[0].id, services[1].id, services[2].id, toolProviderSecret);
   exportWorkflowSecret(token, env);
   const deployments = [];
   const deploy = options.deployExactShaImpl || deployExactSha;
-  deployments.push(...await Promise.all(services.map((service, index) => deploy(client, service, releaseSha,
-    index === 0 ? { ...options, forceFresh: true } : options))));
+  deployments.push(...await Promise.all(services.map(service => deploy(client, service, releaseSha,
+    { ...options, forceFresh: true }))));
   const acceptanceAuthentication = await waitForAcceptanceToken({
     baseUrl: nexusBaseUrl,
     token,
