@@ -14,16 +14,16 @@
     "result": "passed"
   },
   "authorizedUpdate": {
-    "baseCommit": "c6d9b83bf4756d6e9e9061f21ca94bdff413f5c0",
-    "recoveryBranch": "recovery/pre-login-listener-wait-c6d9b83",
+    "baseCommit": "c0c47ad49e8fa52f525255e809148f5c49173c72",
+    "recoveryBranch": "recovery/pre-map-render-race-c0c47ad",
     "files": [
-      "scripts/nexus-run-browser-capability-probes.js"
+      "public/app.js"
     ],
-    "purpose": "Wait until the currently mounted login form has its registered submit listener before clicking Enter platform while retaining authenticated api state, Standard User role, visible appView, and hidden loginView gates"
+    "purpose": "Eliminate the duplicate Standard User map render after goSection has rendered the map section while preserving the orb, microphone, Realtime voice, map controls, route rendering, visible-outcome verification, and acknowledgement ordering"
   },
   "protectedFiles": {
     "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "8755f9d5ca6d9cc397cbc1cad77ecc2c1b1f0aa8",
+    "public/app.js": "61b1204c41afce3c9e9a8b6df0158ab8f7919273",
     "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
     "nexus/compat/server-runtime-adapter.js": "a68dd9af4ea92d4922de6c2cb0c5d536e29e0519",
     "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
