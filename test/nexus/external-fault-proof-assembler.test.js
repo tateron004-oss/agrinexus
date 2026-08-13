@@ -62,3 +62,37 @@ test("assembler does not convert missing candidate or candidate-gate results int
   assert.equal(proofs["prepublication-gauntlet-run"], undefined);
   assert.equal(proofs["developer-owned-production-acceptance"], undefined);
 });
+
+
+test("assembler emits four production injection proofs only from the complete exact-SHA fault component", () => {
+  const input = fixture();
+  input.probes.componentProbes.push(component("faultIsolation", {
+    staleTransitionRejected: true, staleTaskUnchanged: true,
+    providerFailureObserved: true, providerFailureCode: "acceptance_provider_failure",
+    providerFailureStage: "provider-execution-maps-view",
+    databaseFailureDiagnosed: true, databaseFailureSafe: true, databaseRecovered: true,
+    unrelatedCapabilitySurvived: true, recoveryReceiptVerified: true
+  }));
+  const proofs = assembleExternalFaultProofs(input);
+  for (const key of ["stale-transition-production-injection", "provider-failure-production-injection",
+    "database-failure-production-injection", "dependency-failure-production-injection"]) {
+    assert.equal(proofs[key].releaseSha, sha);
+    assert.equal(proofs[key].passed, true);
+    assert.equal(proofs[key].observation.matched, true);
+  }
+});
+
+test("assembler leaves production injection obligations open when any required observation is absent", () => {
+  const input = fixture();
+  input.probes.componentProbes.push(component("faultIsolation", {
+    staleTransitionRejected: true, staleTaskUnchanged: false,
+    providerFailureObserved: false, databaseFailureDiagnosed: true,
+    databaseFailureSafe: false, databaseRecovered: true,
+    unrelatedCapabilitySurvived: false, recoveryReceiptVerified: false
+  }));
+  const proofs = assembleExternalFaultProofs(input);
+  assert.equal(proofs["stale-transition-production-injection"], undefined);
+  assert.equal(proofs["provider-failure-production-injection"], undefined);
+  assert.equal(proofs["database-failure-production-injection"], undefined);
+  assert.equal(proofs["dependency-failure-production-injection"], undefined);
+});
