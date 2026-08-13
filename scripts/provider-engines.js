@@ -118,6 +118,13 @@ async function nexusToolResponse(req, res) {
     return send(res, 401, { code: "provider_request_unauthorized", message: "Signed Nexus provider request required." });
   if (payload.schema !== "nexus.provider-request.v1" || payload.toolId !== toolId || !payload.tenantId || !payload.taskId || !payload.stepId)
     return send(res, 400, { code: "provider_request_invalid", message: "Nexus provider request contract is invalid." });
+  const acceptanceFault = payload.input?.__nexusAcceptanceFault;
+  if (acceptanceFault?.kind === "provider_failure" &&
+      process.env.NEXUS_ACCEPTANCE_TOKEN &&
+      acceptanceFault.token === process.env.NEXUS_ACCEPTANCE_TOKEN &&
+      acceptanceFault.releaseSha === process.env.NEXUS_RELEASE_SHA) {
+    return send(res, 503, { code: "acceptance_provider_failure", message: "Acceptance-injected provider failure." });
+  }
   const caseId = String(payload.input?.certificationCaseId || "");
   const providerBase = (process.env.RENDER_EXTERNAL_URL || "https://agrinexus-provider-engines.onrender.com").replace(/\/$/, "");
   const outcomeUrl = `${providerBase}/nexus/outcomes/${encodeURIComponent(toolId)}?caseId=${encodeURIComponent(caseId)}`;
