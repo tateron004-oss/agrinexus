@@ -77,6 +77,7 @@ jobs:
           node --test test/nexus/open-ended-agent.test.js
           node --test test/nexus/fault-register.test.js
           node --test test/nexus/fault-verifier-registry.test.js
+          node --test test/nexus/external-fault-proof-assembler.test.js
           node --test test/nexus/production-evidence-producer.test.js
           node --test test/nexus/production-release-readiness.test.js
           node --test test/nexus/release-promotion-policy.test.js
@@ -240,6 +241,13 @@ jobs:
           NEXUS_PROOF_FILE: output/nexus-production-proof.json
           NEXUS_SECURITY_AUDIT_FILE: output/nexus-production-security-audit.json
           NEXUS_FAULT_PROOF_FILE: output/nexus-fault-proof-report.json
+          NEXUS_EXTERNAL_FAULT_PROOFS: output/nexus-external-fault-proofs.json
+          NEXUS_BLACK_BOX_FILE: output/nexus-preproduction-black-box.json
+          NEXUS_CANDIDATE_RESULT: ${{ needs.qualify-release-candidate.result }}
+          NEXUS_CANDIDATE_GATES_PASSED: ${{ needs.qualify-release-candidate.result == 'success' }}
+          NEXUS_PIPELINE_OWNER: github-actions
+          NEXUS_PIPELINE_RUN_ID: ${{ github.run_id }}
+          NEXUS_FAULT_EXECUTION_ID: production-${{ github.run_id }}-${{ github.run_attempt }}
           NEXUS_ROLLBACK_REF: refs/heads/main@${{ github.event.before || github.sha }}
         run: |
           set -euo pipefail
@@ -247,6 +255,7 @@ jobs:
           npm audit --omit=dev --json > output/nexus-production-security-audit.json
           node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
           node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log
+          node scripts/nexus-assemble-external-fault-proofs.js 2>&1 | tee output/nexus-external-fault-proof-run.log
           node scripts/nexus-run-fault-proof-verifiers.js 2>&1 | tee output/nexus-fault-verifier-run.log
           node scripts/nexus-compile-production-evidence.js
           node scripts/nexus-record-production-proof.js
