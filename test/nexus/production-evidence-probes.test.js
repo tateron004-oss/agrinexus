@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { component, exactReleaseReady, objectStorageComponent, securityComponent, requestWithRetry } = require("../../scripts/nexus-run-production-evidence-probes.js");
-const { pendingConfirmationContinuation, reloadAuthenticatedShell, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
+const { pendingConfirmationContinuation, reloadAuthenticatedShell, authenticatedStandardUserRole, requireVisibleAuthoritativeTypedIngress, post: browserProbePost } = require("../../scripts/nexus-run-browser-capability-probes.js");
 test("exact-release convergence requires both runtime and acceptance identities", () => {
   const sha = "1".repeat(40); const response = value => ({ ok: true, body: { releaseSha: value } });
   assert.equal(exactReleaseReady(response(sha), response(sha), sha), true);
@@ -75,6 +75,17 @@ test("release workflow executes the real browser capability producer before comp
   assert.match(componentProducer, /realtimeVoice\?\.ready === true/);
   assert.doesNotMatch(producer, /workspaceProbes:\s*\[\]/);
 });
+test("browser verifier proves Standard User identity through the authenticated server context", async () => {
+  let request;
+  const page = { context: () => ({ request: { get: async (url, options) => {
+    request = { url, options };
+    return { ok: () => true, status: () => 200, json: async () => ({ user: { role: "Standard User" } }) };
+  } } }) };
+  assert.equal(await authenticatedStandardUserRole(page, "https://nexus.example"), "Standard User");
+  assert.deepEqual(request, { url: "https://nexus.example/api/context",
+    options: { headers: { accept: "application/json", "cache-control": "no-cache" } } });
+});
+
 test("browser verifier returns an already-visible authoritative typed ingress without recursion", async () => {
   let microphoneRequested = false;
   const input = { isVisible: async () => true };
