@@ -114,7 +114,9 @@ async function authoritativeRuntimeUser(user) {
   if (!user) return null;
   const authoritativeUserId = deterministicAuthoritativeUserId(user.id);
   const role = String(user.role || "standard-user").toLowerCase().replace(/\s+/g, "-");
-  const permissions = ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write"];
+  const permissions = user.guest === true
+    ? ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "guest:restricted"]
+    : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write"];
   if (usingPostgresState()) {
     const pool = getPgPool();
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
