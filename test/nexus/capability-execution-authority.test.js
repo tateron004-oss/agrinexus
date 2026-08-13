@@ -19,6 +19,24 @@ test("authoritative execution requires one adapter and one verifier for the same
     error => error.code === "outcome_unverified");
 });
 
+test("governed execution emits the request correlation identifier for durable observability", async () => {
+  const observed = [];
+  const adapters = new CapabilityAdapterRegistry([{ toolId: "knowledge.search", implementation: "provider",
+    execute: async () => ({ answer: "water stress" }) }]);
+  const verifiers = new OutcomeVerifierRegistry([{ toolId: "knowledge.search", method: "result_present",
+    verify: async () => ({ verified: true }) }]);
+  const authority = new CapabilityExecutionAuthority({ adapters, verifiers,
+    observe: async event => observed.push(event) });
+  await authority.execute({ tool: { tool_id: "knowledge.search" }, input: {},
+    context: { tenantId: "tenant-1", userId: "user-1", correlationId: "correlation-request-1" },
+    taskId: "tsk_1", stepId: "stp_1" });
+  assert.equal(observed.length, 2);
+  assert.deepEqual(observed.map(event => event.correlationId),
+    ["correlation-request-1", "correlation-request-1"]);
+  assert.deepEqual(observed.map(event => event.eventType),
+    ["adapter.started", "verification.passed"]);
+});
+
 test("missing ownership fails closed before execution", async () => {
   const adapters = new CapabilityAdapterRegistry();
   const verifiers = new OutcomeVerifierRegistry();
