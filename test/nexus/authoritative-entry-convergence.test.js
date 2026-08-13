@@ -32,3 +32,11 @@ test("demo profile selectors truthfully require a password", () => {
   assert.match(app, /selected\. Type the password to enter\./);
   assert.doesNotMatch(app, /password: "User2026!"/);
 });
+
+
+test("authenticated sessions restore the protected shell before login fallback on reload", () => {
+  assert.match(app, /const publicMapConfigPromise = loadPublicMapConfig\(\)\.catch/);
+  assert.match(app, /data = await request\("\/api\/state"\);\n    await publicMapConfigPromise;\n    render\(\);\n    startAskNexusAfterLogin\(\);/);
+  assert.match(app, /catch \{\n    data = null;\n    \$\("#appView"\)\.classList\.add\("hidden"\);\n    \$\("#loginView"\)\.classList\.remove\("hidden"\);/);
+  assert.doesNotMatch(app, /setLoginLanguage\([\s\S]{0,300}\n  \$\("#loginView"\)\.classList\.remove\("hidden"\);\n  \$\("#password"\)\?\.focus\(\);\n\}/);
+});

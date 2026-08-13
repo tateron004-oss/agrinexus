@@ -62296,13 +62296,22 @@ async function boot() {
   restoreNexusRuntimeMemory();
   installNexusBrainIntelligenceCommandBridge();
   bindStatic();
-  loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);
+  const publicMapConfigPromise = loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);
   installNexusAutonomousRuntimePreview();
   captureOriginalText();
   bindNexusPermanentMicrophoneControl();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
-  $("#loginView").classList.remove("hidden");
-  $("#password")?.focus();
+  try {
+    data = await request("/api/state");
+    await publicMapConfigPromise;
+    render();
+    startAskNexusAfterLogin();
+  } catch {
+    data = null;
+    $("#appView").classList.add("hidden");
+    $("#loginView").classList.remove("hidden");
+    $("#password")?.focus();
+  }
 }
 
 boot();
