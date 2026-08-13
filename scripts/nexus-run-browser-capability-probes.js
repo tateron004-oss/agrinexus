@@ -119,7 +119,7 @@ async function run(env = process.env) {
   const permissionSession = await page.context().newCDPSession(page);
   try {
     await permissionSession.send("Browser.setPermission", {
-      permission: { name: "audioCapture" }, setting: "denied", origin: base
+      permission: { name: "microphone" }, setting: "denied", origin: base
     });
   } finally {
     await permissionSession.detach();
