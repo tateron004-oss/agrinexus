@@ -56146,6 +56146,25 @@ function validateNexusPassivePresentation(outcome = {}) {
   return presentation;
 }
 
+function recordNexusMapCommandBoundRenderTrace(phase, outcome = {}, data = {}, details = {}) {
+  const trace = window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__;
+  if (trace?.schema !== "nexus.maps-command-bound-render.v1" || !Array.isArray(trace.events)) return;
+  if (String(outcome.application || "") !== "maps" && String(outcome.workspace || "") !== "map") return;
+  trace.events.push({
+    phase,
+    observedAt: new Date().toISOString(),
+    payload: {
+      commandId: String(outcome.commandId || "").slice(0, 500),
+      application: String(outcome.application || "").slice(0, 500),
+      workspace: String(outcome.workspace || "").slice(0, 500),
+      operation: String(outcome.operation || "").slice(0, 500),
+      origin: String(data.origin || "").slice(0, 500),
+      destination: String(data.destination || "").slice(0, 500)
+    },
+    ...details
+  });
+}
+
 const nexusProviderAudioPlayback = {
   element: null,
   host: null,
@@ -56559,7 +56578,19 @@ async function nexusAuthoritativeOutcomeRenderer() {
   const Renderer = await loadNexusAuthoritativeOutcomeRenderer();
   const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "image-gallery", "reminder", "task-list", "source-answer", "communication", "operation"];
   const adapters = Object.fromEntries(presentationKinds.map(kind => [kind, {
-    render: (data, context) => renderNexusPassiveWorkspace(context.outcome, data, context)
+    render: async (data, context) => {
+      recordNexusMapCommandBoundRenderTrace("adapter-before", context.outcome, data, { presentationKind: kind });
+      try {
+        const receipt = await renderNexusPassiveWorkspace(context.outcome, data, context);
+        recordNexusMapCommandBoundRenderTrace("adapter-after", context.outcome, data,
+          { presentationKind: kind, adapterResult: receipt });
+        return receipt;
+      } catch (error) {
+        recordNexusMapCommandBoundRenderTrace("adapter-after", context.outcome, data,
+          { presentationKind: kind, adapterError: String(error?.message || error).slice(0, 500) });
+        throw error;
+      }
+    }
   }]));
   const renderer = new Renderer({
     adapters,
@@ -56653,7 +56684,16 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if (result.render) {
       validateNexusPassivePresentation(result.render);
       const renderer = await nexusAuthoritativeOutcomeRenderer();
-      renderReceipt = await renderer.render(result.render);
+      recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
+      try {
+        renderReceipt = await renderer.render(result.render);
+        recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
+          { rendererResult: renderReceipt });
+      } catch (error) {
+        recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
+          { rendererError: String(error?.message || error).slice(0, 500) });
+        throw error;
+      }
       if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
       message = result.render.response || message;
     }

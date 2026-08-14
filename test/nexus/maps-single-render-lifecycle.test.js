@@ -105,3 +105,14 @@ test("the passive Maps dispatcher records its protected launcher boundary when t
   assert.match(render, /phase: "dispatcher-receipt"/);
   assert.match(render, /dispatcherResult: dispatcherReceipt/);
 });
+
+test("the protected Maps diagnostic traces renderer and adapter entry before the passive dispatcher", () => {
+  assert.match(appSource, /function recordNexusMapCommandBoundRenderTrace/);
+  assert.match(appSource, /"renderer-before"/);
+  assert.match(appSource, /"renderer-after"/);
+  assert.match(appSource, /"adapter-before"/);
+  assert.match(appSource, /"adapter-after"/);
+  assert.match(appSource, /rendererError: String\(error\?\.message \|\| error\)\.slice\(0, 500\)/);
+  assert.match(appSource, /adapterError: String\(error\?\.message \|\| error\)\.slice\(0, 500\)/);
+  assert.match(appSource, /recordNexusMapCommandBoundRenderTrace\("renderer-before", result\.render, result\.render\.data \|\| \{\}\)/);
+});
