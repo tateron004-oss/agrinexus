@@ -75,3 +75,18 @@ test("production browser preserves same-browser Maps timeout lifecycle evidence"
   assert.match(probe, /visibleRoutePathCount/);
   assert.match(probe, /application === "maps".*captureMapsLifecycleDiagnostic/s);
 });
+
+test("production browser captures the command-bound Maps payload and dispatcher boundary", () => {
+  const probe = fs.readFileSync(path.join(root, "scripts/nexus-run-browser-capability-probes.js"), "utf8");
+  assert.match(probe, /nexus\.maps-command-bound-render\.v1/);
+  assert.match(probe, /application: text\(outcome\.application\)/);
+  assert.match(probe, /workspace: text\(outcome\.workspace\)/);
+  assert.match(probe, /operation: text\(outcome\.operation\)/);
+  assert.match(probe, /origin: text\(data\.origin\)/);
+  assert.match(probe, /destination: text\(data\.destination\)/);
+  assert.match(probe, /"dispatcher-before"/);
+  assert.match(probe, /"map-launcher-before"/);
+  assert.match(probe, /"map-launcher-after"/);
+  assert.match(probe, /"dispatcher-after"/);
+  assert.match(probe, /commandBoundRender: window\.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
+});
