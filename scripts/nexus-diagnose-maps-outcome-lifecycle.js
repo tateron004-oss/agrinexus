@@ -30,6 +30,15 @@ function sameOriginPath(value, base) {
   }
 }
 
+function sanitizedResourcePath(value, base) {
+  try {
+    const url = new URL(value);
+    return url.origin === base ? url.pathname.slice(0, 500) : `cross-origin:${url.hostname.slice(0, 200)}`;
+  } catch {
+    return "invalid-url";
+  }
+}
+
 function sanitizeTurnPayload(value = {}) {
   const result = value?.result || value;
   const render = result?.render || result?.outcome?.render || null;
@@ -57,6 +66,7 @@ async function installMapLifecycleDiagnostics(page, base) {
     schema: "nexus.maps-outcome-lifecycle-diagnostic.v1",
     requests: [],
     responses: [],
+    failedResources: [],
     pageErrors: [],
     consoleErrors: []
   };
@@ -70,6 +80,13 @@ async function installMapLifecycleDiagnostics(page, base) {
     lifecycle.requests.push({ method: request.method(), path: sameOriginPath(request.url(), base) });
   });
   page.on("response", async response => {
+    if (response.status() >= 400 && lifecycle.failedResources.length < 30) {
+      lifecycle.failedResources.push({
+        status: response.status(),
+        path: sanitizedResourcePath(response.url(), base),
+        resourceType: clean(response.request().resourceType(), 100)
+      });
+    }
     if (!relevant(response.url()) || lifecycle.responses.length >= 20) return;
     let payload = {};
     try { payload = sanitizeTurnPayload(await response.json()); } catch {}
@@ -94,11 +111,12 @@ async function installMapLifecycleDiagnostics(page, base) {
     const record = () => {
       const state = window.__NEXUS_MAPS_LIFECYCLE__;
       if (!state || state.mutations.length >= 50) return;
+      const body = document.body;
       const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
       const maps = [...document.querySelectorAll('[data-nexus-map], [data-nexus-authoritative-map], .leaflet-container')];
       state.mutations.push({
         at: Date.now(),
-        workspaceRequestIdPresent: Boolean(document.body.dataset.genesisWorkspaceRequestId),
+        workspaceRequestIdPresent: Boolean(body?.dataset?.genesisWorkspaceRequestId),
         authoritativeOutcomePresent: Boolean(surface),
         commandIdPresent: Boolean(surface?.getAttribute("data-command-id")),
         workspace: String(surface?.getAttribute("data-workspace") || "").slice(0, 100),
@@ -248,4 +266,4 @@ if (require.main === module) run().catch(error => {
   process.exit(1);
 });
 
-module.exports = Object.freeze({ MAP_COMMAND, clean, sameOriginPath, sanitizeTurnPayload, installMapLifecycleDiagnostics, captureDomState, run });
+module.exports = Object.freeze({ MAP_COMMAND, clean, sameOriginPath, sanitizedResourcePath, sanitizeTurnPayload, installMapLifecycleDiagnostics, captureDomState, run });
