@@ -64,6 +64,7 @@ function sanitizeTurnPayload(value = {}) {
 async function installMapLifecycleDiagnostics(page, base) {
   const lifecycle = {
     schema: "nexus.maps-outcome-lifecycle-diagnostic.v1",
+    phase: "setup",
     requests: [],
     responses: [],
     failedResources: [],
@@ -84,7 +85,8 @@ async function installMapLifecycleDiagnostics(page, base) {
       lifecycle.failedResources.push({
         status: response.status(),
         path: sanitizedResourcePath(response.url(), base),
-        resourceType: clean(response.request().resourceType(), 100)
+        resourceType: clean(response.request().resourceType(), 100),
+        phase: lifecycle.phase
       });
     }
     if (!relevant(response.url()) || lifecycle.responses.length >= 20) return;
@@ -201,11 +203,14 @@ async function run(env = process.env) {
     } finally {
       await permissionSession.detach();
     }
+    lifecycle.phase = "navigation";
     await page.goto(`${base}/?nexusMapsLifecycleDiagnostic=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
+    lifecycle.phase = "login-form";
     await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
     await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
     const loginListener = await waitForCurrentLoginSubmitListener(page);
     const loginResponse = page.waitForResponse(response => sameOriginPath(response.url(), base) === "/api/login" && response.request().method() === "POST", { timeout: 30000 });
+    lifecycle.phase = "login-submit";
     await page.getByRole("button", { name: "Enter platform", exact: true }).click();
     const login = await loginResponse;
     if (!login.ok()) throw new Error(`Standard User login returned HTTP ${login.status()}.`);
@@ -214,10 +219,12 @@ async function run(env = process.env) {
       currentFormWasRegisteredTarget: loginListener.currentFormWasRegisteredTarget,
       status: login.status()
     };
+    lifecycle.phase = "authenticated-shell";
     await waitForAuthenticatedStandardUserShell(page, base);
     const input = await requireVisibleAuthoritativeTypedIngress(page);
     const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
     const beforeRequestId = await page.locator("body").getAttribute("data-genesis-workspace-request-id").catch(() => null);
+    lifecycle.phase = "map-command";
     await input.fill(MAP_COMMAND);
     await send.click();
     try {
@@ -236,6 +243,7 @@ async function run(env = process.env) {
   } catch (error) {
     failure = clean(error?.message || error, 1000);
   } finally {
+    lifecycle.phase = "capture";
     fs.mkdirSync(path.dirname(outputFile), { recursive: true });
     await page.screenshot({ path: screenshotFile, fullPage: true }).catch(() => {});
     const diagnostic = {
