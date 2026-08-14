@@ -90,3 +90,18 @@ test("production browser captures the command-bound Maps payload and dispatcher 
   assert.match(probe, /"dispatcher-after"/);
   assert.match(probe, /commandBoundRender: window\.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
 });
+
+test("the passive Maps dispatcher records its protected launcher boundary when the probe trace is active", () => {
+  const render = functionSource("renderNexusPassiveWorkspace", "verifyNexusYouTubePlaybackStarted");
+  assert.match(render, /__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
+  assert.match(render, /commandId: String\(outcome\.commandId/);
+  assert.match(render, /application: String\(outcome\.application/);
+  assert.match(render, /workspace: String\(outcome\.workspace/);
+  assert.match(render, /operation: String\(outcome\.operation/);
+  assert.match(render, /origin: String\(data\.origin/);
+  assert.match(render, /destination: String\(data\.destination/);
+  assert.ok(render.indexOf('"dispatcher-before-map-launcher"') < render.indexOf("openGenesisRealtimeMapWorkspace(data, outcome.response)"));
+  assert.ok(render.indexOf('"dispatcher-after-map-launcher"') > render.indexOf("openGenesisRealtimeMapWorkspace(data, outcome.response)"));
+  assert.match(render, /phase: "dispatcher-receipt"/);
+  assert.match(render, /dispatcherResult: dispatcherReceipt/);
+});
