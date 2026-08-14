@@ -239,6 +239,8 @@ function sanitizedAuthoritativeLifecyclePayload(value = {}) {
     renderApplication: sanitizeLoginLifecycleValue(render?.application, 100),
     renderWorkspace: sanitizeLoginLifecycleValue(render?.workspace, 100),
     renderOperation: sanitizeLoginLifecycleValue(render?.operation, 100),
+    renderOrigin: sanitizeLoginLifecycleValue(render?.data?.origin, 300),
+    renderDestination: sanitizeLoginLifecycleValue(render?.data?.destination, 300),
     commandIdPresent: Boolean(result?.commandId || render?.commandId),
     correlationIdPresent: Boolean(result?.correlationId || render?.correlationId)
   };
@@ -546,6 +548,16 @@ async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500)).slice(-30)
     };
   }).catch(captureError => ({ captureError: String(captureError?.message || captureError).slice(0, 1000) }));
+  const lifecycle = liveKnowledgeLifecycleByPage.get(page);
+  if (lifecycle) {
+    diagnostic.authoritativeLifecycle = {
+      requests: lifecycle.requests.slice(-20),
+      responses: lifecycle.responses.slice(-20),
+      turn: lifecycle.turn,
+      acknowledgementRequest: lifecycle.acknowledgementRequest,
+      acknowledgementResponse: lifecycle.acknowledgementResponse
+    };
+  }
   const record = { schema: "nexus.maps-sequential-timeout.v1", releaseSha, production: true, simulated: false,
     observedAt: new Date().toISOString(), error: String(error?.message || error).slice(0, 1000), diagnostic };
   fs.mkdirSync("output", { recursive: true });
