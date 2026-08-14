@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - agent/maps-lifecycle-diagnostic-18e65aa2
   workflow_dispatch:
     inputs:
       target_sha:
@@ -49,12 +50,12 @@ jobs:
       AGRINEXUS_STATE_STORE: postgres
       NEXUS_ACCEPTANCE_TOKEN: candidate-only-token
       NEXUS_DISABLE_LOCAL_ENV_FILES: "true"
-      RENDER_GIT_COMMIT: ${{ github.event.inputs.target_sha || github.sha }}
+      RENDER_GIT_COMMIT: ${{ github.ref == 'refs/heads/agent/maps-lifecycle-diagnostic-18e65aa2' && '18e65aa2ca8ec12de1ef81634367c339dd72b5c8' || github.event.inputs.target_sha || github.sha }}
       PORT: "4173"
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.target_sha || github.sha }}
+          ref: ${{ github.ref == 'refs/heads/agent/maps-lifecycle-diagnostic-18e65aa2' && '18e65aa2ca8ec12de1ef81634367c339dd72b5c8' || github.event.inputs.target_sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -87,7 +88,7 @@ jobs:
           node test/nexus/render-release-controller.test.js
       - name: Execute source-backed fault verifiers and preserve open production obligations
         env:
-          EXPECTED_RELEASE_SHA: ${{ github.event.inputs.target_sha || github.sha }}
+          EXPECTED_RELEASE_SHA: ${{ github.ref == 'refs/heads/agent/maps-lifecycle-diagnostic-18e65aa2' && '18e65aa2ca8ec12de1ef81634367c339dd72b5c8' || github.event.inputs.target_sha || github.sha }}
           NEXUS_FAULT_PROOF_FILE: output/nexus-candidate-fault-proof-report.json
           NEXUS_FAULT_ALLOW_OPEN: "true"
         run: |
@@ -136,7 +137,7 @@ jobs:
       - name: Resolve immutable target
         id: target
         env:
-          REQUESTED_SHA: ${{ github.event.inputs.target_sha }}
+          REQUESTED_SHA: ${{ github.ref == 'refs/heads/agent/maps-lifecycle-diagnostic-18e65aa2' && '18e65aa2ca8ec12de1ef81634367c339dd72b5c8' || github.event.inputs.target_sha || github.sha }}
           EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail

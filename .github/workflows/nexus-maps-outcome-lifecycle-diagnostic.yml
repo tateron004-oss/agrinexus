@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - diag/maps-outcome-lifecycle
+      - agent/maps-lifecycle-diagnostic-18e65aa2
   workflow_dispatch:
     inputs:
       release_sha:
@@ -20,8 +21,9 @@ jobs:
     timeout-minutes: 15
     env:
       NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
-      EXPECTED_RELEASE_SHA: ${{ inputs.release_sha || 'c0c47ad49e8fa52f525255e809148f5c49173c72' }}
+      EXPECTED_RELEASE_SHA: ${{ inputs.release_sha || '18e65aa2ca8ec12de1ef81634367c339dd72b5c8' }}
       NEXUS_MAPS_LIFECYCLE_FILE: output/nexus-maps-outcome-lifecycle.json
+      NEXUS_MAPS_LIFECYCLE_SCREENSHOT: output/nexus-maps-outcome-lifecycle.png
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,6 +47,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nexus-maps-outcome-lifecycle-${{ github.run_id }}-${{ github.run_attempt }}
-          path: output/nexus-maps-outcome-lifecycle.json
+          path: |
+            output/nexus-maps-outcome-lifecycle.json
+            output/nexus-maps-outcome-lifecycle.png
           if-no-files-found: warn
           retention-days: 30
