@@ -33,6 +33,8 @@ function sameOriginPath(value, base) {
 function sanitizeTurnPayload(value = {}) {
   const result = value?.result || value;
   const render = result?.render || result?.outcome?.render || null;
+  const data = render?.data || result?.data || result?.outcome?.data || {};
+  const geometry = data?.routeGeometry || render?.routeGeometry || [];
   return Object.freeze({
     code: clean(value?.code || result?.code || "", 100),
     application: clean(result?.application || value?.application || "", 100),
@@ -43,6 +45,9 @@ function sanitizeTurnPayload(value = {}) {
     commandIdPresent: Boolean(result?.commandId || render?.commandId),
     correlationIdPresent: Boolean(result?.correlationId || render?.correlationId),
     taskIdPresent: Boolean(result?.taskId || render?.taskId),
+    origin: clean(data?.origin || "", 200),
+    destination: clean(data?.destination || "", 200),
+    routeGeometryPointCount: Array.isArray(geometry) ? geometry.length : 0,
     error: clean(value?.error || result?.error || "", 500)
   });
 }
@@ -93,11 +98,15 @@ async function installMapLifecycleDiagnostics(page, base) {
       const maps = [...document.querySelectorAll('[data-nexus-map], [data-nexus-authoritative-map], .leaflet-container')];
       state.mutations.push({
         at: Date.now(),
+        workspaceRequestIdPresent: Boolean(document.body.dataset.genesisWorkspaceRequestId),
         authoritativeOutcomePresent: Boolean(surface),
         commandIdPresent: Boolean(surface?.getAttribute("data-command-id")),
         workspace: String(surface?.getAttribute("data-workspace") || "").slice(0, 100),
         mapNodeCount: maps.length,
-        visibleMapNodeCount: maps.filter(node => Boolean(node.getClientRects().length && getComputedStyle(node).display !== "none")).length
+        visibleMapNodeCount: maps.filter(node => Boolean(node.getClientRects().length && getComputedStyle(node).display !== "none")).length,
+        markerCount: document.querySelectorAll("#userMapCanvas .leaflet-marker-pane .leaflet-marker-icon").length,
+        routePathCount: [...document.querySelectorAll("#userMapCanvas .leaflet-overlay-pane svg path")]
+          .filter(node => Boolean(node.getClientRects().length)).length
       });
     };
     new MutationObserver(record).observe(document, { childList: true, subtree: true, attributes: true });
@@ -122,9 +131,27 @@ async function captureDomState(page) {
       text: String(node?.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 1000)
     });
     const mapNodes = [...document.querySelectorAll('[data-nexus-map], [data-nexus-authoritative-map], .leaflet-container')];
+    const markerNodes = [...document.querySelectorAll("#userMapCanvas .leaflet-marker-pane .leaflet-marker-icon")];
+    const routePaths = [...document.querySelectorAll("#userMapCanvas .leaflet-overlay-pane svg path")];
     return {
+      workspaceRequestIdPresent: Boolean(document.body.dataset.genesisWorkspaceRequestId),
+      workspaceRequestId: String(document.body.dataset.genesisWorkspaceRequestId || "").slice(0, 200),
+      mapLocation: String(document.body.dataset.genesisMapLocation || "").slice(0, 300),
       authoritativeOutcome: describe(document.querySelector('[data-nexus-authoritative-outcome="true"]')),
       mapNodes: mapNodes.slice(0, 20).map(describe),
+      leaflet: {
+        canvasPresent: Boolean(document.querySelector("#userMapCanvas.leaflet-container")),
+        canvasVisible: visible(document.querySelector("#userMapCanvas.leaflet-container")),
+        markerCount: markerNodes.length,
+        visibleMarkerCount: markerNodes.filter(visible).length,
+        routePathCount: routePaths.length,
+        visibleRoutePathCount: routePaths.filter(visible).length,
+        routePaths: routePaths.slice(0, 10).map(node => ({
+          visible: visible(node),
+          dLength: String(node.getAttribute("d") || "").length,
+          stroke: String(node.getAttribute("stroke") || "").slice(0, 100)
+        }))
+      },
       relevantStatuses: [...document.querySelectorAll('[role="status"]')].filter(visible)
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500))
         .filter(text => /map|route|Nairobi|Nakuru|voice|microphone|outcome/i.test(text)).slice(-30),
@@ -139,6 +166,7 @@ async function run(env = process.env) {
   const base = required(env.NEXUS_BASE_URL, "NEXUS_BASE_URL").replace(/\/$/, "");
   const releaseSha = required(env.EXPECTED_RELEASE_SHA, "EXPECTED_RELEASE_SHA");
   const outputFile = env.NEXUS_MAPS_LIFECYCLE_FILE || "output/nexus-maps-outcome-lifecycle.json";
+  const screenshotFile = env.NEXUS_MAPS_LIFECYCLE_SCREENSHOT || "output/nexus-maps-outcome-lifecycle.png";
   const browser = await chromium.launch({ channel: "chrome", headless: true,
     ignoreDefaultArgs: ["--enable-automation"], args: ["--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -171,15 +199,18 @@ async function run(env = process.env) {
     await waitForAuthenticatedStandardUserShell(page, base);
     const input = await requireVisibleAuthoritativeTypedIngress(page);
     const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
-    const before = await page.locator('[data-nexus-authoritative-outcome="true"]').getAttribute("data-command-id").catch(() => null);
+    const beforeRequestId = await page.locator("body").getAttribute("data-genesis-workspace-request-id").catch(() => null);
     await input.fill(MAP_COMMAND);
     await send.click();
     try {
-      await page.waitForFunction(previous => {
-        const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
-        const commandId = surface?.getAttribute("data-command-id") || "";
-        return Boolean(commandId && commandId !== previous && surface.getClientRects().length);
-      }, before, { timeout: 120000 });
+      await page.waitForFunction(previousRequestId => {
+        const requestId = document.body.dataset.genesisWorkspaceRequestId || "";
+        const canvas = document.querySelector("#userMapCanvas.leaflet-container");
+        const routePaths = [...document.querySelectorAll("#userMapCanvas .leaflet-overlay-pane svg path")];
+        const markers = document.querySelectorAll("#userMapCanvas .leaflet-marker-pane .leaflet-marker-icon");
+        return Boolean(requestId && requestId !== previousRequestId && canvas?.getClientRects().length &&
+          markers.length >= 2 && routePaths.some(node => node.getClientRects().length && String(node.getAttribute("d") || "").length > 0));
+      }, beforeRequestId, { timeout: 120000 });
     } catch (error) {
       failure = clean(error?.message || error, 1000);
     }
@@ -187,6 +218,8 @@ async function run(env = process.env) {
   } catch (error) {
     failure = clean(error?.message || error, 1000);
   } finally {
+    fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+    await page.screenshot({ path: screenshotFile, fullPage: true }).catch(() => {});
     const diagnostic = {
       ...lifecycle,
       releaseSha,
@@ -198,7 +231,6 @@ async function run(env = process.env) {
       login: loginEvidence,
       dom: await captureDomState(page).catch(error => ({ captureError: clean(error?.message || error, 1000) }))
     };
-    fs.mkdirSync(path.dirname(outputFile), { recursive: true });
     fs.writeFileSync(outputFile, JSON.stringify(diagnostic, null, 2));
     console.log(JSON.stringify({ mapsOutcomeLifecycleDiagnostic: diagnostic }, null, 2));
     await browser.close();
