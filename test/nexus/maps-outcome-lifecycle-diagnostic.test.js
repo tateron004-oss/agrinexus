@@ -3,19 +3,28 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { MAP_COMMAND, clean, sameOriginPath, sanitizeTurnPayload } = require("../../scripts/nexus-diagnose-maps-outcome-lifecycle.js");
+const { MAP_COMMAND, LIVE_KNOWLEDGE_COMMAND, clean, sameOriginPath, sanitizeTurnPayload } = require("../../scripts/nexus-diagnose-maps-outcome-lifecycle.js");
 
 const source = fs.readFileSync("scripts/nexus-diagnose-maps-outcome-lifecycle.js", "utf8");
 const workflow = fs.readFileSync(".github/workflows/nexus-maps-outcome-lifecycle-diagnostic.yml", "utf8");
 
 test("maps lifecycle diagnostic uses the unchanged production command and authenticated shell gates", () => {
   assert.equal(MAP_COMMAND, "Show a route from Nairobi to Nakuru with route geometry.");
+  assert.equal(LIVE_KNOWLEDGE_COMMAND, "Why do maize leaves turn yellow? Answer with current sources.");
   assert.match(source, /waitForCurrentLoginSubmitListener\(page\)/);
   assert.match(source, /waitForAuthenticatedStandardUserShell\(page, base\)/);
   assert.match(source, /requireVisibleAuthoritativeTypedIngress\(page\)/);
   assert.match(source, /Browser\.setPermission/);
   assert.match(source, /setting: "denied"/);
   assert.match(source, /data-nexus-authoritative-outcome/);
+});
+
+test("maps lifecycle diagnostic reproduces the production Live Knowledge to Maps sequence", () => {
+  assert.match(source, /input\.fill\(LIVE_KNOWLEDGE_COMMAND\)/);
+  assert.match(source, /turn\?\.application === "live-knowledge"/);
+  assert.match(source, /sequentialPrelude/);
+  assert.match(source, /state\.commandBinding = \{ turn: null, acknowledgement: null \}/);
+  assert.ok(source.indexOf("input.fill(LIVE_KNOWLEDGE_COMMAND)") < source.indexOf("input.fill(MAP_COMMAND)"));
 });
 
 test("maps lifecycle diagnostic records boundaries without secrets or response bodies", () => {
@@ -76,7 +85,7 @@ test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
 test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evidence", () => {
   assert.match(workflow, /diag\/maps-outcome-lifecycle/);
   assert.match(workflow, /EXPECTED_RELEASE_SHA/);
-  assert.match(workflow, /8bdcd25b7465298b99e0c63a4609ea253a7e4b57/);
+  assert.match(workflow, /206dad95bf228da14fa2b8b5803803c9307a4382/);
   assert.match(workflow, /nexus-protected-foundation-guard\.js/);
   assert.match(workflow, /playwright@1\.55\.0/);
   assert.match(workflow, /playwright install --with-deps chromium/);

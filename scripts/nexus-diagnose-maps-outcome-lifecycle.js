@@ -11,6 +11,7 @@ const {
 } = require("./nexus-run-browser-capability-probes.js");
 
 const MAP_COMMAND = "Show a route from Nairobi to Nakuru with route geometry.";
+const LIVE_KNOWLEDGE_COMMAND = "Why do maize leaves turn yellow? Answer with current sources.";
 
 function required(value, label) {
   if (!value) throw new Error(`${label} is required.`);
@@ -110,7 +111,7 @@ async function installMapLifecycleDiagnostics(page, base) {
     });
     const state = window.__NEXUS_MAPS_LIFECYCLE__ = {
       mutations: [], voiceEvents: [], submitEvents: [], handlerRouting: [], gatewayInvocations: [],
-      commandBinding: { turn: null, acknowledgement: null }, listenerSequence: 0
+      commandBinding: { turn: null, acknowledgement: null }, sequentialPrelude: null, listenerSequence: 0
     };
     const push = (key, value, limit = 100) => {
       const trace = state[key];
@@ -335,6 +336,7 @@ async function captureDomState(page) {
       handlerRouting: (window.__NEXUS_MAPS_LIFECYCLE__?.handlerRouting || []).slice(-100),
       gatewayInvocations: (window.__NEXUS_MAPS_LIFECYCLE__?.gatewayInvocations || []).slice(-20),
       commandBinding: window.__NEXUS_MAPS_LIFECYCLE__?.commandBinding || null
+      ,sequentialPrelude: window.__NEXUS_MAPS_LIFECYCLE__?.sequentialPrelude || null
     };
   });
 }
@@ -376,6 +378,18 @@ async function run(env = process.env) {
     await waitForAuthenticatedStandardUserShell(page, base);
     const input = await requireVisibleAuthoritativeTypedIngress(page);
     const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
+    await input.fill(LIVE_KNOWLEDGE_COMMAND);
+    await send.click();
+    await page.waitForFunction(() => {
+      const state = window.__NEXUS_MAPS_LIFECYCLE__;
+      return Boolean(state?.commandBinding?.turn?.application === "live-knowledge" &&
+        state?.commandBinding?.acknowledgement?.response?.completed === true);
+    }, null, { timeout: 120000 });
+    await page.evaluate(() => {
+      const state = window.__NEXUS_MAPS_LIFECYCLE__;
+      state.sequentialPrelude = JSON.parse(JSON.stringify(state.commandBinding));
+      state.commandBinding = { turn: null, acknowledgement: null };
+    });
     await input.fill(MAP_COMMAND);
     await send.click();
     try {
@@ -419,4 +433,4 @@ if (require.main === module) run().catch(error => {
   process.exit(1);
 });
 
-module.exports = Object.freeze({ MAP_COMMAND, clean, sameOriginPath, sanitizeTurnPayload, installMapLifecycleDiagnostics, captureDomState, run });
+module.exports = Object.freeze({ MAP_COMMAND, LIVE_KNOWLEDGE_COMMAND, clean, sameOriginPath, sanitizeTurnPayload, installMapLifecycleDiagnostics, captureDomState, run });
