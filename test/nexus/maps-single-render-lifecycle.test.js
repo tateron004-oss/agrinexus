@@ -103,6 +103,16 @@ test("Maps timeout evidence identifies the active browser bundle and service-wor
   assert.doesNotMatch(probe, /appScriptEvidence\.push\(\{[^}]*body/s);
 });
 
+test("Maps timeout evidence binds the bounded authoritative turn payload to the browser failure", () => {
+  const probe = fs.readFileSync(path.join(root, "scripts/nexus-run-browser-capability-probes.js"), "utf8");
+  assert.match(probe, /renderOrigin: sanitizeLoginLifecycleValue\(render\?\.data\?\.origin, 300\)/);
+  assert.match(probe, /renderDestination: sanitizeLoginLifecycleValue\(render\?\.data\?\.destination, 300\)/);
+  assert.match(probe, /diagnostic\.authoritativeLifecycle/);
+  assert.match(probe, /turn: lifecycle\.turn/);
+  assert.match(probe, /acknowledgementRequest: lifecycle\.acknowledgementRequest/);
+  assert.match(probe, /acknowledgementResponse: lifecycle\.acknowledgementResponse/);
+});
+
 test("the passive Maps dispatcher records its protected launcher boundary when the probe trace is active", () => {
   const render = functionSource("renderNexusPassiveWorkspace", "verifyNexusYouTubePlaybackStarted");
   assert.match(render, /__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
