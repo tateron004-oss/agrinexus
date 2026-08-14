@@ -56297,7 +56297,22 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   let opened = false;
   let audible = false;
   if (presentation.kind === "map") {
+    const mapTrace = window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__;
+    const mapTracePayload = {
+      commandId: String(outcome.commandId || "").slice(0, 500),
+      application: String(outcome.application || "").slice(0, 500),
+      workspace: String(outcome.workspace || "").slice(0, 500),
+      operation: String(outcome.operation || "").slice(0, 500),
+      origin: String(data.origin || "").slice(0, 500),
+      destination: String(data.destination || "").slice(0, 500)
+    };
+    const recordMapTrace = (phase, details = {}) => {
+      if (mapTrace?.schema !== "nexus.maps-command-bound-render.v1" || !Array.isArray(mapTrace.events)) return;
+      mapTrace.events.push({ phase, observedAt: new Date().toISOString(), payload: { ...mapTracePayload }, ...details });
+    };
+    recordMapTrace("dispatcher-before-map-launcher", { dispatcherResult: opened });
     opened = openGenesisRealtimeMapWorkspace(data, outcome.response);
+    recordMapTrace("dispatcher-after-map-launcher", { dispatcherResult: opened, launcherResult: opened });
     document.body.dataset.genesisWorkspace = "map";
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else if (presentation.kind === "image-gallery") {
@@ -56363,7 +56378,7 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   const visible = presentation.kind === "map"
     ? nexusMapOutcomeVerified(outcome, data)
     : Boolean(surface && surface.getClientRects?.().length);
-  return {
+  const dispatcherReceipt = {
     rendered: visible,
     visible,
     audible,
@@ -56387,6 +56402,22 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
         : undefined
     }
   };
+  if (presentation.kind === "map") {
+    const mapTrace = window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__;
+    if (mapTrace?.schema === "nexus.maps-command-bound-render.v1" && Array.isArray(mapTrace.events)) {
+      const payload = {
+        commandId: String(outcome.commandId || "").slice(0, 500),
+        application: String(outcome.application || "").slice(0, 500),
+        workspace: String(outcome.workspace || "").slice(0, 500),
+        operation: String(outcome.operation || "").slice(0, 500),
+        origin: String(data.origin || "").slice(0, 500),
+        destination: String(data.destination || "").slice(0, 500)
+      };
+      mapTrace.events.push({ phase: "dispatcher-receipt", observedAt: new Date().toISOString(), payload,
+        dispatcherResult: dispatcherReceipt });
+    }
+  }
+  return dispatcherReceipt;
 }
 
 function verifyNexusYouTubePlaybackStarted(frame, timeoutMs = 15000) {
