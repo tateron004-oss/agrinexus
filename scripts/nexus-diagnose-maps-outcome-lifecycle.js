@@ -49,7 +49,7 @@ function sanitizeTurnPayload(value = {}) {
 
 async function installMapLifecycleDiagnostics(page, base) {
   const lifecycle = {
-    schema: "nexus.maps-outcome-lifecycle-diagnostic.v2",
+    schema: "nexus.maps-outcome-lifecycle-diagnostic.v3",
     requests: [],
     responses: [],
     pageErrors: [],
@@ -109,7 +109,8 @@ async function installMapLifecycleDiagnostics(page, base) {
       visible: Boolean(node instanceof Element && node.getClientRects().length && getComputedStyle(node).display !== "none")
     });
     const state = window.__NEXUS_MAPS_LIFECYCLE__ = {
-      mutations: [], voiceEvents: [], submitEvents: [], handlerRouting: [], gatewayInvocations: [], listenerSequence: 0
+      mutations: [], voiceEvents: [], submitEvents: [], handlerRouting: [], gatewayInvocations: [],
+      commandBinding: { turn: null, acknowledgement: null }, listenerSequence: 0
     };
     const push = (key, value, limit = 100) => {
       const trace = state[key];
@@ -209,9 +210,67 @@ async function installMapLifecycleDiagnostics(page, base) {
         }, 20);
         throw error;
       }
+      if (pathname === "/api/nexus/runtime/behavior/acknowledgements") {
+        let body = {};
+        try { body = typeof init.body === "string" ? JSON.parse(init.body) : {}; } catch {}
+        const turn = state.commandBinding.turn;
+        state.commandBinding.acknowledgement = {
+          phase: "request", commandIdPresent: Boolean(body.commandId), correlationIdPresent: Boolean(body.correlationId),
+          taskIdPresent: Boolean(body.taskId), commandIdMatchesTurn: Boolean(turn?.commandId && body.commandId === turn.commandId),
+          correlationIdMatchesTurn: Boolean(turn?.correlationId && body.correlationId === turn.correlationId),
+          taskIdMatchesTurn: Boolean(turn?.taskId && body.taskId === turn.taskId), workspace: boundedText(body.workspace, 100),
+          rendered: body.rendered === true, visible: body.visible === true, audible: body.audible === true,
+          evidence: {
+            workspace: boundedText(body.evidence?.workspace, 100), operation: boundedText(body.evidence?.operation, 100),
+            commandIdMatchesTurn: Boolean(turn?.commandId && body.evidence?.commandId === turn.commandId),
+            routeEndpoints: Array.isArray(body.evidence?.routeEndpoints)
+              ? body.evidence.routeEndpoints.map(value => boundedText(value, 300)).slice(0, 2) : [],
+            routeGeometryObserved: body.evidence?.routeGeometryObserved === true,
+            renderedFields: Array.isArray(body.evidence?.renderedFields)
+              ? body.evidence.renderedFields.map(value => boundedText(value, 100)).slice(0, 30) : []
+          }
+        };
+        push("gatewayInvocations", { phase: "acknowledgement-before", path: pathname,
+          commandIdMatchesTurn: state.commandBinding.acknowledgement.commandIdMatchesTurn,
+          correlationIdMatchesTurn: state.commandBinding.acknowledgement.correlationIdMatchesTurn,
+          taskIdMatchesTurn: state.commandBinding.acknowledgement.taskIdMatchesTurn }, 20);
+      }
       if (pathname === "/api/nexus/runtime/behavior/turn") result.then(
-        response => push("gatewayInvocations", { phase: "fetch-response", path: pathname, status: response.status }, 20),
+        response => {
+          push("gatewayInvocations", { phase: "fetch-response", path: pathname, status: response.status }, 20);
+          response.clone().json().then(value => {
+            const resultValue = value?.result || value || {};
+            const render = resultValue.render || resultValue.outcome?.render || {};
+            state.commandBinding.turn = {
+              status: response.status, commandId: boundedText(resultValue.commandId || render.commandId, 500),
+              correlationId: boundedText(resultValue.correlationId || render.correlationId, 500),
+              taskId: boundedText(resultValue.taskId || render.taskId, 500), application: boundedText(resultValue.application, 100),
+              workspace: boundedText(render.workspace, 100), operation: boundedText(render.operation, 100),
+              origin: boundedText(render.data?.origin, 300), destination: boundedText(render.data?.destination, 300)
+            };
+          }).catch(() => {});
+        },
         error => push("gatewayInvocations", { phase: "fetch-rejected", path: pathname, error: boundedText(error?.message || error, 500) }, 20)
+      );
+      if (pathname === "/api/nexus/runtime/behavior/acknowledgements") result.then(
+        response => {
+          push("gatewayInvocations", { phase: "acknowledgement-response", path: pathname, status: response.status }, 20);
+          response.clone().json().then(value => {
+            const request = state.commandBinding.acknowledgement || {};
+            state.commandBinding.acknowledgement = { ...request, response: {
+              status: response.status, schema: boundedText(value?.schema, 100), completed: value?.completed === true,
+              commandIdMatchesTurn: Boolean(state.commandBinding.turn?.commandId && value?.commandId === state.commandBinding.turn.commandId),
+              outcomeCommandIdMatchesTurn: Boolean(state.commandBinding.turn?.commandId && value?.outcome?.commandId === state.commandBinding.turn.commandId),
+              outcomeWorkspace: boundedText(value?.outcome?.workspace, 100), outcomeVisible: value?.outcome?.visible === true,
+              outcomeRendered: value?.outcome?.rendered === true,
+              routeGeometryObserved: value?.outcome?.evidence?.routeGeometryObserved === true,
+              routeEndpoints: Array.isArray(value?.outcome?.evidence?.routeEndpoints)
+                ? value.outcome.evidence.routeEndpoints.map(item => boundedText(item, 300)).slice(0, 2) : []
+            } };
+          }).catch(() => {});
+        },
+        error => push("gatewayInvocations", { phase: "acknowledgement-rejected", path: pathname,
+          error: boundedText(error?.message || error, 500) }, 20)
       );
       return result;
     };
@@ -251,8 +310,21 @@ async function captureDomState(page) {
       text: String(node?.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 1000)
     });
     const mapNodes = [...document.querySelectorAll('[data-nexus-map], [data-nexus-authoritative-map], .leaflet-container')];
+    const canvas = document.querySelector("#userMapCanvas.leaflet-container");
+    const markerNodes = [...(canvas?.querySelectorAll(".leaflet-marker-pane .leaflet-marker-icon") || [])];
+    const routePaths = [...(canvas?.querySelectorAll('.leaflet-overlay-pane path[stroke="#14b8a6"], .leaflet-overlay-pane path[stroke="rgb(20, 184, 166)"]') || [])];
+    const turn = window.__NEXUS_MAPS_LIFECYCLE__?.commandBinding?.turn || null;
     return {
       authoritativeOutcome: describe(document.querySelector('[data-nexus-authoritative-outcome="true"]')),
+      commandBoundMap: {
+        canvas: describe(canvas), bodyWorkspace: String(document.body.dataset.genesisWorkspace || "").slice(0, 100),
+        bodyLocation: String(document.body.dataset.genesisMapLocation || "").slice(0, 300),
+        requestIdPresent: Boolean(document.body.dataset.genesisWorkspaceRequestId),
+        requestIdMatchesTurn: Boolean(turn?.commandId && document.body.dataset.genesisWorkspaceRequestId === turn.commandId),
+        markerCount: markerNodes.length, visibleMarkerCount: markerNodes.filter(visible).length,
+        routePathCount: routePaths.length, visibleRoutePathCount: routePaths.filter(visible).length,
+        origin: String(turn?.origin || "").slice(0, 300), destination: String(turn?.destination || "").slice(0, 300)
+      },
       mapNodes: mapNodes.slice(0, 20).map(describe),
       relevantStatuses: [...document.querySelectorAll('[role="status"]')].filter(visible)
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500))
@@ -261,7 +333,8 @@ async function captureDomState(page) {
       voiceEvents: (window.__NEXUS_MAPS_LIFECYCLE__?.voiceEvents || []).slice(-30),
       submitEvents: (window.__NEXUS_MAPS_LIFECYCLE__?.submitEvents || []).slice(-100),
       handlerRouting: (window.__NEXUS_MAPS_LIFECYCLE__?.handlerRouting || []).slice(-100),
-      gatewayInvocations: (window.__NEXUS_MAPS_LIFECYCLE__?.gatewayInvocations || []).slice(-20)
+      gatewayInvocations: (window.__NEXUS_MAPS_LIFECYCLE__?.gatewayInvocations || []).slice(-20),
+      commandBinding: window.__NEXUS_MAPS_LIFECYCLE__?.commandBinding || null
     };
   });
 }
@@ -303,15 +376,13 @@ async function run(env = process.env) {
     await waitForAuthenticatedStandardUserShell(page, base);
     const input = await requireVisibleAuthoritativeTypedIngress(page);
     const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
-    const before = await page.locator('[data-nexus-authoritative-outcome="true"]').getAttribute("data-command-id").catch(() => null);
     await input.fill(MAP_COMMAND);
     await send.click();
     try {
-      await page.waitForFunction(previous => {
-        const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
-        const commandId = surface?.getAttribute("data-command-id") || "";
-        return Boolean(commandId && commandId !== previous && surface.getClientRects().length);
-      }, before, { timeout: 120000 });
+      await page.waitForFunction(() => {
+        const state = window.__NEXUS_MAPS_LIFECYCLE__;
+        return Boolean(state?.commandBinding?.acknowledgement?.response?.completed === true);
+      }, null, { timeout: 120000 });
     } catch (error) {
       failure = clean(error?.message || error, 1000);
     }

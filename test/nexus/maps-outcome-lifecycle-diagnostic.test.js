@@ -29,7 +29,7 @@ test("maps lifecycle diagnostic records boundaries without secrets or response b
 });
 
 test("maps lifecycle diagnostic captures the pre-turn submit and handler-routing boundary", () => {
-  assert.match(source, /schema: "nexus\.maps-outcome-lifecycle-diagnostic\.v2"/);
+  assert.match(source, /schema: "nexus\.maps-outcome-lifecycle-diagnostic\.v3"/);
   assert.match(source, /data-nexus-primary-typed-submit/);
   assert.match(source, /data-nexus-primary-typed-entry/);
   assert.match(source, /submitEvents/);
@@ -42,6 +42,22 @@ test("maps lifecycle diagnostic captures the pre-turn submit and handler-routing
   assert.match(source, /phase: "fetch-before"/);
   assert.match(source, /phase: "fetch-response"/);
   assert.doesNotMatch(source, /localStorage\.getItem\(|sessionStorage\.getItem\(|document\.cookie|request\.headers\(/);
+});
+
+test("maps lifecycle diagnostic binds the turn, acknowledgement, and Leaflet route evidence", () => {
+  assert.match(source, /commandBinding/);
+  assert.match(source, /commandIdMatchesTurn/);
+  assert.match(source, /correlationIdMatchesTurn/);
+  assert.match(source, /taskIdMatchesTurn/);
+  assert.match(source, /routeGeometryObserved/);
+  assert.match(source, /routeEndpoints/);
+  assert.match(source, /genesisWorkspaceRequestId/);
+  assert.match(source, /requestIdMatchesTurn/);
+  assert.match(source, /leaflet-marker-pane \.leaflet-marker-icon/);
+  assert.match(source, /#14b8a6/);
+  assert.match(source, /markerCount/);
+  assert.match(source, /routePathCount/);
+  assert.match(source, /acknowledgement\?\.response\?\.completed === true/);
 });
 
 test("maps lifecycle response sanitizer retains only structural outcome evidence", () => {
