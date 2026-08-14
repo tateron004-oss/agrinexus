@@ -28,6 +28,22 @@ test("maps lifecycle diagnostic records boundaries without secrets or response b
   assert.equal(clean("a\n\tb", 10), "a b");
 });
 
+test("maps lifecycle diagnostic captures the pre-turn submit and handler-routing boundary", () => {
+  assert.match(source, /schema: "nexus\.maps-outcome-lifecycle-diagnostic\.v2"/);
+  assert.match(source, /data-nexus-primary-typed-submit/);
+  assert.match(source, /data-nexus-primary-typed-entry/);
+  assert.match(source, /submitEvents/);
+  assert.match(source, /handlerRouting/);
+  assert.match(source, /gatewayInvocations/);
+  assert.match(source, /defaultPrevented/);
+  assert.match(source, /cancelBubble/);
+  assert.match(source, /bodyAuthoritative/);
+  assert.match(source, /returnedPromise/);
+  assert.match(source, /phase: "fetch-before"/);
+  assert.match(source, /phase: "fetch-response"/);
+  assert.doesNotMatch(source, /localStorage\.getItem\(|sessionStorage\.getItem\(|document\.cookie|request\.headers\(/);
+});
+
 test("maps lifecycle response sanitizer retains only structural outcome evidence", () => {
   assert.deepEqual(sanitizeTurnPayload({ result: { application: "maps", state: "render_required", commandId: "secret-id", correlationId: "trace", taskId: "task", render: { workspace: "maps", type: "show_map" } } }), {
     code: "", application: "maps", state: "render_required", renderPresent: true,
@@ -44,7 +60,7 @@ test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
 test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evidence", () => {
   assert.match(workflow, /diag\/maps-outcome-lifecycle/);
   assert.match(workflow, /EXPECTED_RELEASE_SHA/);
-  assert.match(workflow, /c0c47ad49e8fa52f525255e809148f5c49173c72/);
+  assert.match(workflow, /8bdcd25b7465298b99e0c63a4609ea253a7e4b57/);
   assert.match(workflow, /nexus-protected-foundation-guard\.js/);
   assert.match(workflow, /playwright@1\.55\.0/);
   assert.match(workflow, /playwright install --with-deps chromium/);

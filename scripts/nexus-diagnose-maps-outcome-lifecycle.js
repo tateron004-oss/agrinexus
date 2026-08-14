@@ -49,7 +49,7 @@ function sanitizeTurnPayload(value = {}) {
 
 async function installMapLifecycleDiagnostics(page, base) {
   const lifecycle = {
-    schema: "nexus.maps-outcome-lifecycle-diagnostic.v1",
+    schema: "nexus.maps-outcome-lifecycle-diagnostic.v2",
     requests: [],
     responses: [],
     pageErrors: [],
@@ -85,7 +85,136 @@ async function installMapLifecycleDiagnostics(page, base) {
     if (message.type() === "error" && lifecycle.consoleErrors.length < 20) lifecycle.consoleErrors.push(clean(message.text(), 1000));
   });
   await page.addInitScript(() => {
-    window.__NEXUS_MAPS_LIFECYCLE__ = { mutations: [], voiceEvents: [] };
+    const boundedText = (value, limit = 500) => String(value ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, limit);
+    const selectorIdentity = node => {
+      if (!(node instanceof Element)) return { present: false };
+      return {
+        present: true,
+        tag: boundedText(node.tagName, 30).toLowerCase(),
+        id: boundedText(node.id, 100),
+        type: boundedText(node.getAttribute("type"), 30),
+        name: boundedText(node.getAttribute("name"), 100),
+        ariaLabel: boundedText(node.getAttribute("aria-label"), 200),
+        commandCenterSubmit: node.hasAttribute("data-nexus-command-center-submit"),
+        primaryTypedSubmit: node.getAttribute("data-nexus-primary-typed-submit") === "true",
+        primaryTypedEntry: node.getAttribute("data-nexus-primary-typed-entry") === "true"
+      };
+    };
+    const controlState = node => ({
+      ...selectorIdentity(node),
+      value: boundedText(node?.value, 500),
+      disabled: Boolean(node?.disabled),
+      ariaDisabled: boundedText(node?.getAttribute?.("aria-disabled"), 20),
+      pending: Boolean(node?.hasAttribute?.("data-pending") || node?.getAttribute?.("aria-busy") === "true"),
+      visible: Boolean(node instanceof Element && node.getClientRects().length && getComputedStyle(node).display !== "none")
+    });
+    const state = window.__NEXUS_MAPS_LIFECYCLE__ = {
+      mutations: [], voiceEvents: [], submitEvents: [], handlerRouting: [], gatewayInvocations: [], listenerSequence: 0
+    };
+    const push = (key, value, limit = 100) => {
+      const trace = state[key];
+      if (Array.isArray(trace) && trace.length < limit) trace.push({ at: Date.now(), ...value });
+    };
+    const commandControlFor = target => target?.closest?.('[data-nexus-primary-typed-submit="true"], [data-nexus-command-center-submit]') || null;
+    const commandInputFor = target => target?.matches?.('[data-nexus-primary-typed-entry="true"]')
+      ? target
+      : target?.closest?.("form")?.querySelector?.('[data-nexus-primary-typed-entry="true"], #nexusCommandCenterInput')
+        || document.querySelector('[data-nexus-primary-typed-entry="true"]:not([hidden]), #nexusCommandCenterInput');
+    const relevantEvent = event => {
+      if (!event || !["click", "submit", "keydown"].includes(event.type)) return false;
+      if (event.type === "keydown" && (event.key !== "Enter" || event.shiftKey)) return false;
+      const input = commandInputFor(event.target);
+      const control = commandControlFor(event.target);
+      return Boolean(control?.getAttribute?.("data-nexus-primary-typed-submit") === "true" || input?.getAttribute?.("data-nexus-primary-typed-entry") === "true");
+    };
+    const eventSnapshot = (event, phase) => {
+      const input = commandInputFor(event.target);
+      const control = commandControlFor(event.target) || event.submitter || null;
+      return {
+        phase,
+        eventType: event.type,
+        key: boundedText(event.key, 30),
+        target: selectorIdentity(event.target),
+        input: controlState(input),
+        control: controlState(control),
+        form: selectorIdentity(control?.form || event.target?.closest?.("form") || (event.target instanceof HTMLFormElement ? event.target : null)),
+        defaultPrevented: event.defaultPrevented,
+        cancelBubble: event.cancelBubble,
+        bodyAuthoritative: boundedText(document.body?.dataset?.nexusStandardUserAuthority, 100),
+        bodyMode: boundedText(document.body?.className, 300)
+      };
+    };
+    for (const target of [window, document]) {
+      for (const eventName of ["click", "submit", "keydown"]) {
+        target.addEventListener(eventName, event => {
+          if (!relevantEvent(event)) return;
+          push("submitEvents", eventSnapshot(event, `${target === window ? "window" : "document"}-capture`));
+          queueMicrotask(() => push("submitEvents", eventSnapshot(event, `${target === window ? "window" : "document"}-microtask`)));
+        }, true);
+        target.addEventListener(eventName, event => {
+          if (relevantEvent(event)) push("submitEvents", eventSnapshot(event, `${target === window ? "window" : "document"}-bubble`));
+        });
+      }
+    }
+    const nativeAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function nexusDiagnosticAddEventListener(type, listener, options) {
+      if (!["click", "submit", "keydown"].includes(type) || !listener) {
+        return nativeAddEventListener.apply(this, arguments);
+      }
+      const sequence = ++state.listenerSequence;
+      const targetIdentity = this === window ? "window" : this === document ? "document" : boundedText(this?.tagName || this?.constructor?.name, 50);
+      const capture = typeof options === "boolean" ? options : options?.capture === true;
+      const invoke = typeof listener === "function" ? listener : listener.handleEvent?.bind(listener);
+      if (typeof invoke !== "function") return nativeAddEventListener.apply(this, arguments);
+      const wrapped = function nexusDiagnosticEventListener(event) {
+        if (!relevantEvent(event)) return invoke.apply(this, arguments);
+        const before = eventSnapshot(event, "handler-before");
+        let result;
+        try {
+          result = invoke.apply(this, arguments);
+        } catch (error) {
+          push("handlerRouting", { sequence, target: targetIdentity, capture, type, before,
+            after: eventSnapshot(event, "handler-threw"), error: boundedText(error?.message || error, 500) });
+          throw error;
+        }
+        push("handlerRouting", { sequence, target: targetIdentity, capture, type, before,
+          after: eventSnapshot(event, "handler-after"), returnedPromise: Boolean(result && typeof result.then === "function") });
+        if (result && typeof result.then === "function") result.then(
+          value => push("handlerRouting", { sequence, target: targetIdentity, capture, type, settled: "fulfilled", returned: boundedText(value, 100) }),
+          error => push("handlerRouting", { sequence, target: targetIdentity, capture, type, settled: "rejected", error: boundedText(error?.message || error, 500) })
+        );
+        return result;
+      };
+      return nativeAddEventListener.call(this, type, wrapped, options);
+    };
+    const nativeFetch = window.fetch;
+    window.fetch = function nexusDiagnosticFetch(input, init = {}) {
+      const url = typeof input === "string" ? input : input?.url || "";
+      let pathname = "";
+      try { pathname = new URL(url, location.href).pathname; } catch {}
+      if (pathname === "/api/nexus/runtime/behavior/turn") {
+        let body = {};
+        try { body = typeof init.body === "string" ? JSON.parse(init.body) : {}; } catch {}
+        push("gatewayInvocations", {
+          phase: "fetch-before", path: pathname, method: boundedText(init.method || "GET", 20),
+          text: boundedText(body.text, 500), channel: boundedText(body.channel, 30),
+          conversationIdPresent: Boolean(body.conversationId), taskIdPresent: Boolean(body.taskId)
+        }, 20);
+      }
+      let result;
+      try { result = nativeFetch.apply(this, arguments); }
+      catch (error) {
+        if (pathname === "/api/nexus/runtime/behavior/turn") push("gatewayInvocations", {
+          phase: "fetch-threw", path: pathname, error: boundedText(error?.message || error, 500)
+        }, 20);
+        throw error;
+      }
+      if (pathname === "/api/nexus/runtime/behavior/turn") result.then(
+        response => push("gatewayInvocations", { phase: "fetch-response", path: pathname, status: response.status }, 20),
+        error => push("gatewayInvocations", { phase: "fetch-rejected", path: pathname, error: boundedText(error?.message || error, 500) }, 20)
+      );
+      return result;
+    };
     const record = () => {
       const state = window.__NEXUS_MAPS_LIFECYCLE__;
       if (!state || state.mutations.length >= 50) return;
@@ -129,7 +258,10 @@ async function captureDomState(page) {
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500))
         .filter(text => /map|route|Nairobi|Nakuru|voice|microphone|outcome/i.test(text)).slice(-30),
       mutations: (window.__NEXUS_MAPS_LIFECYCLE__?.mutations || []).slice(-50),
-      voiceEvents: (window.__NEXUS_MAPS_LIFECYCLE__?.voiceEvents || []).slice(-30)
+      voiceEvents: (window.__NEXUS_MAPS_LIFECYCLE__?.voiceEvents || []).slice(-30),
+      submitEvents: (window.__NEXUS_MAPS_LIFECYCLE__?.submitEvents || []).slice(-100),
+      handlerRouting: (window.__NEXUS_MAPS_LIFECYCLE__?.handlerRouting || []).slice(-100),
+      gatewayInvocations: (window.__NEXUS_MAPS_LIFECYCLE__?.gatewayInvocations || []).slice(-20)
     };
   });
 }
