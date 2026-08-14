@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const { MAP_COMMAND, clean, sameOriginPath, sanitizeTurnPayload } = require("../../scripts/nexus-diagnose-maps-outcome-lifecycle.js");
+const { MAP_COMMAND, clean, sameOriginPath, sanitizedResourcePath, sanitizeTurnPayload } = require("../../scripts/nexus-diagnose-maps-outcome-lifecycle.js");
 
 const source = fs.readFileSync("scripts/nexus-diagnose-maps-outcome-lifecycle.js", "utf8");
 const workflow = fs.readFileSync(".github/workflows/nexus-maps-outcome-lifecycle-diagnostic.yml", "utf8");
@@ -45,6 +45,13 @@ test("maps lifecycle response sanitizer retains only structural outcome evidence
 
 test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
   assert.match(source, /stack: clean\(error\?\.stack, 2000\)/);
+});
+
+test("maps lifecycle diagnostic tolerates pre-body mutations and identifies failed resources without query data", () => {
+  assert.match(source, /body\?\.dataset\?\.genesisWorkspaceRequestId/);
+  assert.match(source, /failedResources/);
+  assert.equal(sanitizedResourcePath("https://example.test/api/state?token=secret", "https://example.test"), "/api/state");
+  assert.equal(sanitizedResourcePath("https://tiles.example.net/private?token=secret", "https://example.test"), "cross-origin:tiles.example.net");
 });
 
 test("maps lifecycle diagnostic binds completion to the command-owned Leaflet route surface", () => {
