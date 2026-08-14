@@ -440,6 +440,65 @@ async function requireVisibleAuthoritativeTypedIngress(page) {
   return input;
 }
 
+async function installMapsCommandBoundRenderDiagnostics(page) {
+  await page.evaluate(() => {
+    if (window.__NEXUS_MAP_COMMAND_BOUND_RENDER_DIAGNOSTICS_INSTALLED__ === true) return;
+    if (typeof window.renderNexusPassiveWorkspace !== "function" ||
+        typeof window.openGenesisRealtimeMapWorkspace !== "function") {
+      throw new Error("The Maps passive dispatcher or workspace launcher is unavailable.");
+    }
+    const originalDispatcher = window.renderNexusPassiveWorkspace;
+    const originalMapLauncher = window.openGenesisRealtimeMapWorkspace;
+    const trace = { schema: "nexus.maps-command-bound-render.v1", events: [], activePayload: null };
+    const text = value => String(value ?? "").slice(0, 500);
+    const payloadFor = (outcome = {}, data = {}) => ({
+      commandId: text(outcome.commandId),
+      application: text(outcome.application),
+      workspace: text(outcome.workspace),
+      operation: text(outcome.operation),
+      origin: text(data.origin),
+      destination: text(data.destination)
+    });
+    const record = (phase, payload, details = {}) => trace.events.push({
+      phase, observedAt: new Date().toISOString(), payload: { ...payload }, ...details
+    });
+    window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__ = trace;
+    window.renderNexusPassiveWorkspace = async function nexusDiagnosticPassiveDispatcher(outcome = {}, data = {}, context = {}) {
+      const payload = payloadFor(outcome, data);
+      if (payload.application !== "maps" && payload.workspace !== "map") {
+        return originalDispatcher.apply(this, arguments);
+      }
+      trace.activePayload = payload;
+      record("dispatcher-before", payload);
+      try {
+        const receipt = await originalDispatcher.apply(this, arguments);
+        record("dispatcher-after", payload, { dispatcherResult: receipt ?? null });
+        return receipt;
+      } catch (error) {
+        record("dispatcher-after", payload, { dispatcherError: text(error?.message || error) });
+        throw error;
+      } finally {
+        trace.activePayload = null;
+      }
+    };
+    window.openGenesisRealtimeMapWorkspace = function nexusDiagnosticMapLauncher(payload = {}, command = "") {
+      const commandPayload = trace.activePayload || payloadFor({}, payload);
+      record("map-launcher-before", commandPayload, {
+        launcherOrigin: text(payload.origin), launcherDestination: text(payload.destination), command: text(command)
+      });
+      try {
+        const launcherResult = originalMapLauncher.apply(this, arguments);
+        record("map-launcher-after", commandPayload, { launcherResult: launcherResult ?? null });
+        return launcherResult;
+      } catch (error) {
+        record("map-launcher-after", commandPayload, { dispatcherError: text(error?.message || error) });
+        throw error;
+      }
+    };
+    window.__NEXUS_MAP_COMMAND_BOUND_RENDER_DIAGNOSTICS_INSTALLED__ = true;
+  });
+}
+
 async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
   const diagnostic = await page.evaluate(() => {
     const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" && getComputedStyle(node).visibility !== "hidden");
@@ -455,6 +514,7 @@ async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
       routePathCount: paths.length, visibleRoutePathCount: paths.filter(visible).length,
       routePaths: paths.slice(0, 10).map(node => ({ visible: visible(node), dLength: String(node.getAttribute("d") || "").length,
         stroke: String(node.getAttribute("stroke") || "").slice(0, 100) })),
+      commandBoundRender: window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__ || null,
       statuses: [...document.querySelectorAll('[role="status"]')].filter(visible)
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500)).slice(-30)
     };
@@ -562,6 +622,7 @@ async function run(env = process.env) {
     throw diagnosticError;
   }
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
+  await installMapsCommandBoundRenderDiagnostics(page);
   const visibleIngress = [];
   for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
     visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
@@ -661,4 +722,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, captureMapsLifecycleDiagnostic, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, installMapsCommandBoundRenderDiagnostics, captureMapsLifecycleDiagnostic, submitVisibleCommand, post, run });
