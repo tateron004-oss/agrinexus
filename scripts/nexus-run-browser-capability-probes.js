@@ -500,11 +500,27 @@ async function installMapsCommandBoundRenderDiagnostics(page) {
 }
 
 async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
-  const diagnostic = await page.evaluate(() => {
+  const diagnostic = await page.evaluate(async () => {
     const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" && getComputedStyle(node).visibility !== "hidden");
     const canvas = document.querySelector("#userMapCanvas.leaflet-container");
     const markers = [...document.querySelectorAll("#userMapCanvas .leaflet-marker-pane .leaflet-marker-icon")];
     const paths = [...document.querySelectorAll("#userMapCanvas .leaflet-overlay-pane svg path")];
+    const appScripts = [...document.scripts].map(script => script.src).filter(src => /\/app\.js(?:\?|$)/.test(src));
+    const sha256 = async value => [...new Uint8Array(await crypto.subtle.digest("SHA-256", value))]
+      .map(byte => byte.toString(16).padStart(2, "0")).join("");
+    const appScriptEvidence = [];
+    for (const src of appScripts.slice(0, 3)) {
+      try {
+        const response = await fetch(src, { cache: "no-store", credentials: "same-origin" });
+        const bytes = await response.arrayBuffer();
+        const url = new URL(src, location.href);
+        appScriptEvidence.push({ path: url.pathname, status: response.status, sha256: await sha256(bytes), bytes: bytes.byteLength });
+      } catch (error) {
+        appScriptEvidence.push({ path: new URL(src, location.href).pathname,
+          error: String(error?.message || error).slice(0, 500) });
+      }
+    }
+    const appResources = performance.getEntriesByType("resource").filter(entry => /\/app\.js(?:\?|$)/.test(entry.name));
     return {
       workspaceRequestIdPresent: Boolean(document.body?.dataset?.genesisWorkspaceRequestId),
       workspaceRequestId: String(document.body?.dataset?.genesisWorkspaceRequestId || "").slice(0, 200),
@@ -515,6 +531,17 @@ async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
       routePaths: paths.slice(0, 10).map(node => ({ visible: visible(node), dLength: String(node.getAttribute("d") || "").length,
         stroke: String(node.getAttribute("stroke") || "").slice(0, 100) })),
       commandBoundRender: window.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__ || null,
+      browserBundle: {
+        protectedTraceHookPresent: typeof window.recordNexusMapCommandBoundRenderTrace === "function",
+        passiveDispatcherHasProtectedTrace: String(window.renderNexusPassiveWorkspace || "").includes("dispatcher-before-map-launcher"),
+        unifiedHandlerHasRendererTrace: String(window.handleNexusUnifiedBrainRuntimeCommand || "").includes("renderer-before"),
+        serviceWorkerControllerPath: navigator.serviceWorker?.controller
+          ? new URL(navigator.serviceWorker.controller.scriptURL, location.href).pathname : "",
+        appScriptEvidence,
+        appResources: appResources.slice(-5).map(entry => ({ path: new URL(entry.name, location.href).pathname,
+          transferSize: Number(entry.transferSize || 0), encodedBodySize: Number(entry.encodedBodySize || 0),
+          decodedBodySize: Number(entry.decodedBodySize || 0), duration: Number(entry.duration || 0) }))
+      },
       statuses: [...document.querySelectorAll('[role="status"]')].filter(visible)
         .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500)).slice(-30)
     };
