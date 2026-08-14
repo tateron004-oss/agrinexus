@@ -91,6 +91,18 @@ test("production browser captures the command-bound Maps payload and dispatcher 
   assert.match(probe, /commandBoundRender: window\.__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
 });
 
+test("Maps timeout evidence identifies the active browser bundle and service-worker controller", () => {
+  const probe = fs.readFileSync(path.join(root, "scripts/nexus-run-browser-capability-probes.js"), "utf8");
+  assert.match(probe, /protectedTraceHookPresent/);
+  assert.match(probe, /passiveDispatcherHasProtectedTrace/);
+  assert.match(probe, /unifiedHandlerHasRendererTrace/);
+  assert.match(probe, /serviceWorkerControllerPath/);
+  assert.match(probe, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(probe, /fetch\(src, \{ cache: "no-store", credentials: "same-origin" \}\)/);
+  assert.match(probe, /transferSize/);
+  assert.doesNotMatch(probe, /appScriptEvidence\.push\(\{[^}]*body/s);
+});
+
 test("the passive Maps dispatcher records its protected launcher boundary when the probe trace is active", () => {
   const render = functionSource("renderNexusPassiveWorkspace", "verifyNexusYouTubePlaybackStarted");
   assert.match(render, /__NEXUS_MAP_COMMAND_BOUND_RENDER_TRACE__/);
