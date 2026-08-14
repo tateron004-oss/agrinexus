@@ -50,6 +50,10 @@ test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
 test("maps lifecycle diagnostic tolerates pre-body mutations and identifies failed resources without query data", () => {
   assert.match(source, /body\?\.dataset\?\.genesisWorkspaceRequestId/);
   assert.match(source, /failedResources/);
+  assert.match(source, /phase: lifecycle\.phase/);
+  assert.match(source, /lifecycle\.phase = "login-submit"/);
+  assert.match(source, /lifecycle\.phase = "authenticated-shell"/);
+  assert.match(source, /lifecycle\.phase = "map-command"/);
   assert.equal(sanitizedResourcePath("https://example.test/api/state?token=secret", "https://example.test"), "/api/state");
   assert.equal(sanitizedResourcePath("https://tiles.example.net/private?token=secret", "https://example.test"), "cross-origin:tiles.example.net");
 });
