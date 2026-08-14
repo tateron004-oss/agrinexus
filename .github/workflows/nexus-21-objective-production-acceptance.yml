@@ -60,6 +60,8 @@ jobs:
           node-version: "22"
       - name: Install locked acceptance dependencies
         run: npm ci --ignore-scripts
+      - name: Require injected production acceptance credential
+        run: test -n "$NEXUS_ACCEPTANCE_TOKEN"
       - name: Run three-pass streak
         run: |
           set -euo pipefail
