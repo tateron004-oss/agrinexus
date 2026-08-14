@@ -64,3 +64,14 @@ test("production browser binds maps completion to command-owned visible route ge
   assert.match(probe, /leaflet-marker-pane \.leaflet-marker-icon/);
   assert.match(probe, /markers\.length >= 2/);
 });
+
+test("production browser preserves same-browser Maps timeout lifecycle evidence", () => {
+  const probe = fs.readFileSync(path.join(root, "scripts/nexus-run-browser-capability-probes.js"), "utf8");
+  assert.match(probe, /nexus\.maps-sequential-timeout\.v1/);
+  assert.match(probe, /nexus-maps-sequential-timeout\.json/);
+  assert.match(probe, /nexus-maps-sequential-timeout\.png/);
+  assert.match(probe, /workspaceRequestIdPresent/);
+  assert.match(probe, /visibleMarkerCount/);
+  assert.match(probe, /visibleRoutePathCount/);
+  assert.match(probe, /application === "maps".*captureMapsLifecycleDiagnostic/s);
+});

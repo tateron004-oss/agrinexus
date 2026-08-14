@@ -440,6 +440,34 @@ async function requireVisibleAuthoritativeTypedIngress(page) {
   return input;
 }
 
+async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
+  const diagnostic = await page.evaluate(() => {
+    const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" && getComputedStyle(node).visibility !== "hidden");
+    const canvas = document.querySelector("#userMapCanvas.leaflet-container");
+    const markers = [...document.querySelectorAll("#userMapCanvas .leaflet-marker-pane .leaflet-marker-icon")];
+    const paths = [...document.querySelectorAll("#userMapCanvas .leaflet-overlay-pane svg path")];
+    return {
+      workspaceRequestIdPresent: Boolean(document.body?.dataset?.genesisWorkspaceRequestId),
+      workspaceRequestId: String(document.body?.dataset?.genesisWorkspaceRequestId || "").slice(0, 200),
+      mapLocation: String(document.body?.dataset?.genesisMapLocation || "").slice(0, 300),
+      canvasPresent: Boolean(canvas), canvasVisible: visible(canvas),
+      markerCount: markers.length, visibleMarkerCount: markers.filter(visible).length,
+      routePathCount: paths.length, visibleRoutePathCount: paths.filter(visible).length,
+      routePaths: paths.slice(0, 10).map(node => ({ visible: visible(node), dLength: String(node.getAttribute("d") || "").length,
+        stroke: String(node.getAttribute("stroke") || "").slice(0, 100) })),
+      statuses: [...document.querySelectorAll('[role="status"]')].filter(visible)
+        .map(node => String(node.textContent || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 500)).slice(-30)
+    };
+  }).catch(captureError => ({ captureError: String(captureError?.message || captureError).slice(0, 1000) }));
+  const record = { schema: "nexus.maps-sequential-timeout.v1", releaseSha, production: true, simulated: false,
+    observedAt: new Date().toISOString(), error: String(error?.message || error).slice(0, 1000), diagnostic };
+  fs.mkdirSync("output", { recursive: true });
+  fs.writeFileSync("output/nexus-maps-sequential-timeout.json", JSON.stringify(record, null, 2));
+  await page.screenshot({ path: "output/nexus-maps-sequential-timeout.png", fullPage: true }).catch(() => {});
+  console.error(JSON.stringify({ mapsSequentialTimeoutDiagnostic: record }, null, 2));
+  return record;
+}
+
 async function submitVisibleCommand(page, text, application) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
@@ -474,6 +502,7 @@ async function submitVisibleCommand(page, text, application) {
         console.error(JSON.stringify({ liveKnowledgeLifecycleDiagnostic: diagnostic }, null, 2));
       }
     }
+    if (application === "maps") await captureMapsLifecycleDiagnostic(page, process.env.EXPECTED_RELEASE_SHA || "unknown", commandError);
     throw commandError;
   }
   const surface = application === "maps"
@@ -632,4 +661,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, captureMapsLifecycleDiagnostic, submitVisibleCommand, post, run });
