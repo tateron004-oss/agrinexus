@@ -558,9 +558,9 @@ async function run(env = process.env) {
       await permissionSession.detach();
     }
     await page.goto(`${base}/?nexusMapsLifecycleDiagnostic=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
+    const loginListener = await waitForCurrentLoginSubmitListener(page);
     await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
     await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
-    const loginListener = await waitForCurrentLoginSubmitListener(page);
     loginLifecycle.beforeClick = await captureImmutablePreClickSnapshot(page, bootDebugger.events);
     const loginResponse = page.waitForResponse(response => sameOriginPath(response.url(), base) === "/api/login" && response.request().method() === "POST", { timeout: 30000 });
     await page.getByRole("button", { name: "Enter platform", exact: true }).click();
