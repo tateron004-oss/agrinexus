@@ -67,7 +67,8 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 
 async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
   const listenerBoundary = await waitForCurrentLoginSubmitListener(page);
-  if (lifecycle) lifecycle.beforeClick = listenerBoundary;
+  const beforeClick = await page.evaluate(() => window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("before-click") || null);
+  if (lifecycle) lifecycle.beforeClick = { ...listenerBoundary, ...beforeClick };
   const loginResponsePromise = page.waitForResponse(response => {
     try {
       const url = new URL(response.url());
@@ -77,11 +78,16 @@ async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
       return false;
     }
   }, { timeout: 30000 });
-  await page.getByRole("button", { name: "Enter platform", exact: true }).click();
+  const selectedButton = page.getByRole("button", { name: "Enter platform", exact: true });
+  await selectedButton.click();
+  if (lifecycle) lifecycle.afterClick = await page.evaluate(() =>
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-click") || null);
   let response;
   try {
     response = await loginResponsePromise;
   } catch (error) {
+    if (lifecycle) lifecycle.afterTimeout = await page.evaluate(() =>
+      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-timeout") || null).catch(() => null);
     throw new Error(`Registered Standard User login request was not observed within 30000ms (${error?.name || "timeout"}).`);
   }
   if (!response.ok()) {
@@ -148,8 +154,34 @@ async function installLoginLifecycleDiagnostics(page, base) {
       loginSubmitListenerRegistrations: 0,
       registeredLoginForm: null,
       submitEvents: [],
+      clickEvents: [],
+      domTransitions: [],
       errors: []
     };
+    const identities = new WeakMap();
+    let nextIdentity = 1;
+    const identity = element => {
+      if (!(element instanceof Element)) return "";
+      if (!identities.has(element)) identities.set(element, `element-${nextIdentity++}`);
+      return identities.get(element);
+    };
+    const describeLogin = phase => {
+      const form = document.querySelector("#loginForm");
+      const button = form?.querySelector('button[type="submit"], button');
+      const email = document.querySelector("#email");
+      const password = document.querySelector("#password");
+      return {
+        at: Date.now(), phase, formIdentity: identity(form), buttonIdentity: identity(button),
+        registeredFormIdentity: identity(state.registeredLoginForm),
+        currentFormWasRegisteredTarget: form === state.registeredLoginForm,
+        formConnected: Boolean(form?.isConnected), buttonConnected: Boolean(button?.isConnected),
+        buttonDisabled: Boolean(button?.disabled), buttonType: String(button?.type || ""),
+        emailIdentity: identity(email), passwordIdentity: identity(password),
+        emailLength: String(email?.value || "").trim().length,
+        passwordLength: String(password?.value || "").length
+      };
+    };
+    state.describeLogin = describeLogin;
     const record = value => {
       if (state.errors.length < 20) state.errors.push(value);
     };
@@ -161,11 +193,37 @@ async function installLoginLifecycleDiagnostics(page, base) {
       }
       return originalAddEventListener.call(this, type, listener, options);
     };
+    let lastDomSignature = "";
+    const recordDomTransition = phase => {
+      if (state.domTransitions.length >= 50) return;
+      const value = describeLogin(phase);
+      const signature = [value.formIdentity, value.buttonIdentity, value.emailIdentity, value.passwordIdentity,
+        value.formConnected, value.buttonConnected, value.emailLength, value.passwordLength].join(":");
+      if (signature === lastDomSignature) return;
+      lastDomSignature = signature;
+      state.domTransitions.push(value);
+    };
+    new MutationObserver(() => recordDomTransition("mutation")).observe(document, {
+      childList: true, subtree: true, attributes: true
+    });
+    document.addEventListener("DOMContentLoaded", () => recordDomTransition("dom-content-loaded"), true);
+    document.addEventListener("click", event => {
+      const button = event.target?.closest?.("button");
+      if (!button || state.clickEvents.length >= 20) return;
+      const current = describeLogin("click-capture");
+      state.clickEvents.push({ ...current, targetIdentity: identity(event.target),
+        clickedButtonIdentity: identity(button), clickedButtonConnected: Boolean(button.isConnected),
+        clickedButtonIsCurrent: identity(button) === current.buttonIdentity,
+        clickedButtonFormIdentity: identity(button.form), defaultPreventedAtCapture: event.defaultPrevented });
+    }, true);
     document.addEventListener("submit", event => {
       if (event.target?.id !== "loginForm" || state.submitEvents.length >= 10) return;
       state.submitEvents.push({
         currentFormWasRegisteredTarget: event.target === state.registeredLoginForm,
-        defaultPreventedAtCapture: event.defaultPrevented
+        defaultPreventedAtCapture: event.defaultPrevented,
+        formIdentity: identity(event.target), registeredFormIdentity: identity(state.registeredLoginForm),
+        emailLength: String(document.querySelector("#email")?.value || "").trim().length,
+        passwordLength: String(document.querySelector("#password")?.value || "").length
       });
       void window.__NEXUS_REPORT_LOGIN_SUBMIT__?.({
         currentFormWasRegisteredTarget: event.target === state.registeredLoginForm,
@@ -205,6 +263,8 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
     currentFormWasRegisteredTarget:
       document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm,
     submitEvents: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.submitEvents || [],
+    clickEvents: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.clickEvents || [],
+    domTransitions: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.domTransitions || [],
     errors: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.errors || []
   })).catch(error => ({ captureError: String(error?.message || error) }));
   const errors = Array.isArray(browser.errors) ? browser.errors.map(value => ({
@@ -218,6 +278,8 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
   return {
     schema: lifecycle.schema,
     beforeClick: lifecycle.beforeClick || null,
+    afterClick: lifecycle.afterClick || null,
+    afterTimeout: lifecycle.afterTimeout || null,
     submitEvents: lifecycle.submitEvents.slice(-10),
     browser: { ...browser, errors },
     requests: lifecycle.requests.slice(-30),

@@ -58,6 +58,17 @@ test("production browser evidence captures same-context login binding and naviga
   assert.match(probe, /page\.on\("response"/);
   assert.match(probe, /page\.on\("framenavigated"/);
   assert.match(probe, /nexus-browser-login-lifecycle-context\.json/);
+  assert.match(probe, /describeLogin\?\.\("before-click"\)/);
+  assert.match(probe, /describeLogin\?\.\("after-click"\)/);
+  assert.match(probe, /describeLogin\?\.\("after-timeout"\)/);
+  assert.match(probe, /formIdentity/);
+  assert.match(probe, /buttonIdentity/);
+  assert.match(probe, /registeredFormIdentity/);
+  assert.match(probe, /clickedButtonIdentity/);
+  assert.match(probe, /clickedButtonIsCurrent/);
+  assert.match(probe, /clickedButtonFormIdentity/);
+  assert.match(probe, /domTransitions/);
+  assert.match(probe, /passwordLength/);
   assert.doesNotMatch(probe, /lifecycle\.(requests|responses|navigations)[^\n]*(postData|headers|cookies)/i);
 });
 
