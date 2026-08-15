@@ -59,6 +59,8 @@ test("production browser evidence captures same-context login binding and naviga
   assert.match(probe, /page\.on\("framenavigated"/);
   assert.match(probe, /nexus-browser-login-lifecycle-context\.json/);
   assert.match(probe, /describeLogin\?\.\("before-click"\)/);
+  assert.match(probe, /describeLogin\?\.\("after-email-fill"\)/);
+  assert.match(probe, /describeLogin\?\.\("after-password-fill"\)/);
   assert.match(probe, /describeLogin\?\.\("after-click"\)/);
   assert.match(probe, /describeLogin\?\.\("after-timeout"\)/);
   assert.match(probe, /formIdentity/);
