@@ -65,6 +65,7 @@ test("maps lifecycle diagnostic captures immutable pre-click, direct boot progre
   assert.match(source, /phase: "fulfilled"/);
   assert.match(source, /phase: "rejected"/);
   assert.ok(source.indexOf("captureImmutablePreClickSnapshot(page") < source.indexOf("name: \"Enter platform\""));
+  assert.ok(source.indexOf("waitForCurrentLoginSubmitListener(page)") < source.indexOf("getByLabel(\"Email\""));
 });
 test("maps lifecycle diagnostic records boundaries without secrets or response bodies", () => {
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/turn/);
