@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   installLoginLifecycleDiagnostics,
+  captureLoginLifecycleDiagnostics,
   waitForCurrentLoginSubmitListener,
   waitForAuthenticatedStandardUserShell,
   requireVisibleAuthoritativeTypedIngress
@@ -45,6 +46,104 @@ function sanitizeTurnPayload(value = {}) {
     correlationIdPresent: Boolean(result?.correlationId || render?.correlationId),
     taskIdPresent: Boolean(result?.taskId || render?.taskId),
     error: clean(value?.error || result?.error || "", 500)
+  });
+}
+
+async function installBootLoginBoundaryDiagnostics(page) {
+  await page.addInitScript(() => {
+    const text = (value, limit = 500) => String(value ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, limit);
+    const state = window.__NEXUS_BOOT_LOGIN_BOUNDARY__ = {
+      startedAt: Date.now(), events: [], listenerRegistrations: [], scriptEvents: []
+    };
+    const push = (key, value, limit = 200) => {
+      if (state[key].length < limit) state[key].push({ at: Date.now(), ...value });
+    };
+    const targetName = target => target === window ? "window" : target === document ? "document"
+      : target instanceof Element ? `${target.tagName.toLowerCase()}#${text(target.id, 100)}` : text(target?.constructor?.name, 100);
+    const nativeAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function nexusBootBoundaryAddEventListener(type, listener, options) {
+      if (["focusin", "input", "keydown", "click", "submit", "change", "hashchange"].includes(type)) {
+        push("listenerRegistrations", { type, target: targetName(this),
+          capture: typeof options === "boolean" ? options : options?.capture === true });
+      }
+      return nativeAddEventListener.apply(this, arguments);
+    };
+    nativeAddEventListener.call(document, "DOMContentLoaded", () => push("events", { phase: "dom-content-loaded" }), true);
+    nativeAddEventListener.call(window, "load", () => push("events", { phase: "window-load" }), true);
+    nativeAddEventListener.call(document, "readystatechange", () => push("events", {
+      phase: "ready-state", readyState: document.readyState
+    }), true);
+    nativeAddEventListener.call(document, "load", event => {
+      if (event.target instanceof HTMLScriptElement) push("scriptEvents", {
+        phase: "script-load", path: (() => { try { return new URL(event.target.src, location.href).pathname; } catch { return ""; } })()
+      });
+    }, true);
+    nativeAddEventListener.call(document, "error", event => {
+      if (event.target instanceof HTMLScriptElement) push("scriptEvents", {
+        phase: "script-error", path: (() => { try { return new URL(event.target.src, location.href).pathname; } catch { return ""; } })()
+      });
+    }, true);
+    const observe = () => {
+      const body = document.body;
+      if (!body || state.events.length >= 200) return;
+      push("events", {
+        phase: "dom-mutation", loginFormPresent: Boolean(document.querySelector("#loginForm")),
+        authorityFirewall: text(body.dataset.nexusStandardUserAuthority, 100),
+        brainBridgeBound: body.dataset.nexusBrainIntelligenceBound === "true",
+        functionWindowDelegateBound: body.dataset.nexusFunctionWindowDelegateBound === "true"
+      });
+    };
+    new MutationObserver(observe).observe(document, { childList: true, subtree: true, attributes: true });
+  });
+}
+
+async function captureBootLoginBoundary(page) {
+  return page.evaluate(async () => {
+    const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" && getComputedStyle(node).visibility !== "hidden");
+    const form = document.querySelector("#loginForm");
+    const button = form?.querySelector('button[type="submit"], button');
+    const appScripts = [...document.scripts].filter(script => /\/app\.js(?:\?|$)/.test(script.src));
+    const appResources = performance.getEntriesByType("resource").filter(entry => /\/app\.js(?:\?|$)/.test(entry.name));
+    const appScriptEvidence = [];
+    for (const script of appScripts.slice(0, 3)) {
+      try {
+        const response = await fetch(script.src, { cache: "no-store", credentials: "same-origin" });
+        const bytes = await response.arrayBuffer();
+        const digest = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+          .map(byte => byte.toString(16).padStart(2, "0")).join("");
+        appScriptEvidence.push({ path: new URL(script.src, location.href).pathname, status: response.status,
+          bytes: bytes.byteLength, sha256: digest });
+      } catch (error) {
+        appScriptEvidence.push({ path: new URL(script.src, location.href).pathname,
+          error: String(error?.message || error).slice(0, 500) });
+      }
+    }
+    return {
+      readyState: document.readyState,
+      appScriptEvidence,
+      appResources: appResources.slice(-5).map(entry => ({ path: new URL(entry.name, location.href).pathname,
+        transferSize: Number(entry.transferSize || 0), encodedBodySize: Number(entry.encodedBodySize || 0),
+        decodedBodySize: Number(entry.decodedBodySize || 0), duration: Number(entry.duration || 0) })),
+      globalFunctions: { boot: typeof window.boot, bindStatic: typeof window.bindStatic },
+      milestones: {
+        authorityFirewall: String(document.body?.dataset?.nexusStandardUserAuthority || "").slice(0, 100),
+        brainBridgeBound: document.body?.dataset?.nexusBrainIntelligenceBound === "true",
+        functionWindowDelegateBound: document.body?.dataset?.nexusFunctionWindowDelegateBound === "true"
+      },
+      loginForm: {
+        present: Boolean(form), connected: Boolean(form?.isConnected), visible: visible(form),
+        action: String(form?.getAttribute("action") || "").slice(0, 200),
+        method: String(form?.getAttribute("method") || "").slice(0, 30),
+        buttonPresent: Boolean(button), buttonVisible: visible(button), buttonDisabled: Boolean(button?.disabled),
+        currentFormWasRegisteredTarget: form === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm
+      },
+      serviceWorker: {
+        controllerPresent: Boolean(navigator.serviceWorker?.controller),
+        controllerPath: navigator.serviceWorker?.controller
+          ? new URL(navigator.serviceWorker.controller.scriptURL, location.href).pathname : ""
+      },
+      trace: window.__NEXUS_BOOT_LOGIN_BOUNDARY__ || null
+    };
   });
 }
 
@@ -351,6 +450,7 @@ async function run(env = process.env) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   const lifecycle = await installMapLifecycleDiagnostics(page, base);
+  await installBootLoginBoundaryDiagnostics(page);
   let failure = "";
   let loginEvidence = { listenerRegistrations: 0, currentFormWasRegisteredTarget: false, status: 0 };
   try {
@@ -413,6 +513,10 @@ async function run(env = process.env) {
       mapCommand: MAP_COMMAND,
       failure,
       login: loginEvidence,
+      loginLifecycle: await captureLoginLifecycleDiagnostics(page, loginLifecycle)
+        .catch(error => ({ captureError: clean(error?.message || error, 1000) })),
+      bootLoginBoundary: await captureBootLoginBoundary(page)
+        .catch(error => ({ captureError: clean(error?.message || error, 1000) })),
       dom: await captureDomState(page).catch(error => ({ captureError: clean(error?.message || error, 1000) }))
     };
     fs.mkdirSync(path.dirname(outputFile), { recursive: true });
@@ -433,4 +537,5 @@ if (require.main === module) run().catch(error => {
   process.exit(1);
 });
 
-module.exports = Object.freeze({ MAP_COMMAND, LIVE_KNOWLEDGE_COMMAND, clean, sameOriginPath, sanitizeTurnPayload, installMapLifecycleDiagnostics, captureDomState, run });
+module.exports = Object.freeze({ MAP_COMMAND, LIVE_KNOWLEDGE_COMMAND, clean, sameOriginPath, sanitizeTurnPayload,
+  installBootLoginBoundaryDiagnostics, captureBootLoginBoundary, installMapLifecycleDiagnostics, captureDomState, run });

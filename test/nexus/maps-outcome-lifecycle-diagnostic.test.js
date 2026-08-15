@@ -27,6 +27,25 @@ test("maps lifecycle diagnostic reproduces the production Live Knowledge to Maps
   assert.ok(source.indexOf("input.fill(LIVE_KNOWLEDGE_COMMAND)") < source.indexOf("input.fill(MAP_COMMAND)"));
 });
 
+test("maps lifecycle diagnostic captures the full boot and login boundary before clicking", () => {
+  assert.match(source, /installBootLoginBoundaryDiagnostics/);
+  assert.match(source, /captureLoginLifecycleDiagnostics/);
+  assert.match(source, /captureBootLoginBoundary/);
+  assert.match(source, /script-load/);
+  assert.match(source, /script-error/);
+  assert.match(source, /dom-content-loaded/);
+  assert.match(source, /window-load/);
+  assert.match(source, /authorityFirewall/);
+  assert.match(source, /brainBridgeBound/);
+  assert.match(source, /functionWindowDelegateBound/);
+  assert.match(source, /currentFormWasRegisteredTarget/);
+  assert.match(source, /listenerRegistrations/);
+  assert.match(source, /serviceWorker/);
+  assert.match(source, /crypto\.subtle\.digest\("SHA-256", bytes\)/);
+  assert.ok(source.indexOf("installBootLoginBoundaryDiagnostics(page)") < source.indexOf("page.goto"));
+  assert.doesNotMatch(source, /document\.cookie|localStorage\.getItem|sessionStorage\.getItem|request\.headers\(/);
+});
+
 test("maps lifecycle diagnostic records boundaries without secrets or response bodies", () => {
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/turn/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
@@ -85,7 +104,7 @@ test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
 test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evidence", () => {
   assert.match(workflow, /diag\/maps-outcome-lifecycle/);
   assert.match(workflow, /EXPECTED_RELEASE_SHA/);
-  assert.match(workflow, /206dad95bf228da14fa2b8b5803803c9307a4382/);
+  assert.match(workflow, /79b2f6027e985e8bb99600eb658e934484abfd0a/);
   assert.match(workflow, /nexus-protected-foundation-guard\.js/);
   assert.match(workflow, /playwright@1\.55\.0/);
   assert.match(workflow, /playwright install --with-deps chromium/);
