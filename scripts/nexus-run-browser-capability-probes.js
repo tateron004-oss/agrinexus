@@ -278,6 +278,8 @@ async function captureLoginLifecycleDiagnostics(page, lifecycle) {
   return {
     schema: lifecycle.schema,
     beforeClick: lifecycle.beforeClick || null,
+    afterEmailFill: lifecycle.afterEmailFill || null,
+    afterPasswordFill: lifecycle.afterPasswordFill || null,
     afterClick: lifecycle.afterClick || null,
     afterTimeout: lifecycle.afterTimeout || null,
     submitEvents: lifecycle.submitEvents.slice(-10),
@@ -706,7 +708,11 @@ async function run(env = process.env) {
   }
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
+  loginLifecycle.afterEmailFill = await page.evaluate(() =>
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-email-fill") || null);
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
+  loginLifecycle.afterPasswordFill = await page.evaluate(() =>
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-password-fill") || null);
   let loginBoundary;
   try {
     loginBoundary = await submitRegisteredStandardUserLogin(page, base, loginLifecycle);
