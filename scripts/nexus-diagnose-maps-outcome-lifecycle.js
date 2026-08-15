@@ -53,7 +53,7 @@ async function installBootLoginBoundaryDiagnostics(page) {
   await page.addInitScript(() => {
     const text = (value, limit = 500) => String(value ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, limit);
     const state = window.__NEXUS_BOOT_LOGIN_BOUNDARY__ = {
-      startedAt: Date.now(), events: [], listenerRegistrations: [], scriptEvents: []
+      startedAt: Date.now(), events: [], listenerRegistrations: [], scriptEvents: [], loginHandler: []
     };
     const push = (key, value, limit = 200) => {
       if (state[key].length < limit) state[key].push({ at: Date.now(), ...value });
@@ -66,7 +66,43 @@ async function installBootLoginBoundaryDiagnostics(page) {
         push("listenerRegistrations", { type, target: targetName(this),
           capture: typeof options === "boolean" ? options : options?.capture === true });
       }
+      if (type === "submit" && this instanceof Element && this.id === "loginForm" && typeof listener === "function") {
+        const registeredForm = this;
+        const wrapped = function nexusObservedLoginSubmitHandler(event) {
+          const email = document.querySelector("#email");
+          const password = document.querySelector("#password");
+          push("loginHandler", { phase: "entry", currentForm: event?.currentTarget === registeredForm,
+            eventTargetIsForm: event?.target === registeredForm, defaultPrevented: Boolean(event?.defaultPrevented),
+            emailLength: String(email?.value || "").trim().length,
+            passwordLength: String(password?.value || "").length,
+            submitDisabled: Boolean(registeredForm.querySelector('button[type="submit"], button')?.disabled),
+            credentialGuardDecision: String(email?.value || "").trim() && String(password?.value || "").trim()
+              ? "continue" : "early-return-missing-credential" }, 40);
+          let result;
+          try {
+            result = listener.apply(this, arguments);
+          } catch (error) {
+            push("loginHandler", { phase: "throw", name: text(error?.name, 100), message: text(error?.message || error) }, 40);
+            throw error;
+          }
+          push("loginHandler", { phase: "sync-return", defaultPrevented: Boolean(event?.defaultPrevented),
+            promiseReturned: Boolean(result && typeof result.then === "function") }, 40);
+          if (result && typeof result.then === "function") result.then(
+            () => push("loginHandler", { phase: "fulfilled", defaultPrevented: Boolean(event?.defaultPrevented) }, 40),
+            error => push("loginHandler", { phase: "rejected", name: text(error?.name, 100), message: text(error?.message || error) }, 40)
+          );
+          return result;
+        };
+        return nativeAddEventListener.call(this, type, wrapped, options);
+      }
       return nativeAddEventListener.apply(this, arguments);
+    };
+    const nativeFetch = window.fetch;
+    window.fetch = function nexusObservedBootLoginFetch(input, init) {
+      let path = "";
+      try { path = new URL(typeof input === "string" ? input : input?.url, location.href).pathname; } catch {}
+      if (path === "/api/login") push("loginHandler", { phase: "gateway-invocation", method: String(init?.method || "GET").toUpperCase() }, 40);
+      return nativeFetch.apply(this, arguments);
     };
     nativeAddEventListener.call(document, "DOMContentLoaded", () => push("events", { phase: "dom-content-loaded" }), true);
     nativeAddEventListener.call(window, "load", () => push("events", { phase: "window-load" }), true);
@@ -97,6 +133,63 @@ async function installBootLoginBoundaryDiagnostics(page) {
   });
 }
 
+async function installBootFunctionDebugger(page, appSource) {
+  const session = await page.context().newCDPSession(page);
+  const events = [];
+  const lines = String(appSource || "").split("\n");
+  const markers = [
+    ["bindStatic-entry", "function bindStatic() {"],
+    ["boot-entry", "async function boot() {"],
+    ["bindStatic-completed", "  const publicMapConfigPromise = loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);"],
+    ["boot-success-final-statement", "    startAskNexusAfterLogin();"],
+    ["boot-catch-final-statement", "    $(\"#password\")?.focus();"]
+  ];
+  await session.send("Debugger.enable");
+  await session.send("Runtime.enable");
+  session.on("Runtime.exceptionThrown", event => {
+    const details = event.exceptionDetails || {};
+    events.push({ at: Date.now(), phase: "runtime-exception", name: String(details.exception?.className || "Error").slice(0, 100),
+      message: String(details.text || details.exception?.description || "Unknown runtime exception").replace(/[\r\n\t]+/g, " ").slice(0, 500),
+      lineNumber: Number(details.lineNumber || 0) + 1 });
+  });
+  for (const [phase, marker] of markers) {
+    const lineNumber = lines.findIndex(line => line === marker);
+    if (lineNumber < 0) {
+      events.push({ at: Date.now(), phase: "probe-marker-missing", marker: phase });
+      continue;
+    }
+    await session.send("Debugger.setBreakpointByUrl", { lineNumber, urlRegex: "/app\\.js(?:\\?.*)?$" });
+  }
+  session.on("Debugger.paused", async event => {
+    const frame = event.callFrames?.[0];
+    const lineNumber = Number(frame?.location?.lineNumber ?? -1);
+    const marker = markers.find(([, text]) => lines.findIndex(line => line === text) === lineNumber);
+    events.push({ at: Date.now(), phase: marker?.[0] || "unmapped-breakpoint",
+      functionName: String(frame?.functionName || "").slice(0, 100), lineNumber: lineNumber + 1 });
+    await session.send("Debugger.resume").catch(() => {});
+  });
+  return { session, events };
+}
+
+async function captureImmutablePreClickSnapshot(page, debuggerEvents) {
+  const browser = await page.evaluate(() => {
+    const form = document.querySelector("#loginForm");
+    const button = form?.querySelector('button[type="submit"], button');
+    return {
+      capturedAt: Date.now(), url: location.href, readyState: document.readyState,
+      formPresent: Boolean(form), formConnected: Boolean(form?.isConnected),
+      currentFormWasRegisteredTarget: form === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm,
+      loginSubmitListenerRegistrations: window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.loginSubmitListenerRegistrations || 0,
+      emailLength: String(document.querySelector("#email")?.value || "").trim().length,
+      passwordLength: String(document.querySelector("#password")?.value || "").length,
+      buttonPresent: Boolean(button), buttonDisabled: Boolean(button?.disabled),
+      authorityFirewall: String(document.body?.dataset?.nexusStandardUserAuthority || "").slice(0, 100),
+      brainBridgeBound: document.body?.dataset?.nexusBrainIntelligenceBound === "true",
+      functionWindowDelegateBound: document.body?.dataset?.nexusFunctionWindowDelegateBound === "true"
+    };
+  });
+  return Object.freeze({ ...browser, debuggerEvents: debuggerEvents.map(event => Object.freeze({ ...event })) });
+}
 async function captureBootLoginBoundary(page) {
   return page.evaluate(async () => {
     const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" && getComputedStyle(node).visibility !== "hidden");
@@ -451,6 +544,8 @@ async function run(env = process.env) {
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   const lifecycle = await installMapLifecycleDiagnostics(page, base);
   await installBootLoginBoundaryDiagnostics(page);
+  const appResponse = await fetch(`${base}/app.js`, { cache: "no-store" });
+  const bootDebugger = await installBootFunctionDebugger(page, await appResponse.text());
   let failure = "";
   let loginEvidence = { listenerRegistrations: 0, currentFormWasRegisteredTarget: false, status: 0 };
   try {
@@ -466,6 +561,7 @@ async function run(env = process.env) {
     await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
     await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
     const loginListener = await waitForCurrentLoginSubmitListener(page);
+    loginLifecycle.beforeClick = await captureImmutablePreClickSnapshot(page, bootDebugger.events);
     const loginResponse = page.waitForResponse(response => sameOriginPath(response.url(), base) === "/api/login" && response.request().method() === "POST", { timeout: 30000 });
     await page.getByRole("button", { name: "Enter platform", exact: true }).click();
     const login = await loginResponse;
@@ -517,11 +613,13 @@ async function run(env = process.env) {
         .catch(error => ({ captureError: clean(error?.message || error, 1000) })),
       bootLoginBoundary: await captureBootLoginBoundary(page)
         .catch(error => ({ captureError: clean(error?.message || error, 1000) })),
+      bootFunctionDebugger: bootDebugger.events,
       dom: await captureDomState(page).catch(error => ({ captureError: clean(error?.message || error, 1000) }))
     };
     fs.mkdirSync(path.dirname(outputFile), { recursive: true });
     fs.writeFileSync(outputFile, JSON.stringify(diagnostic, null, 2));
     console.log(JSON.stringify({ mapsOutcomeLifecycleDiagnostic: diagnostic }, null, 2));
+    await bootDebugger.session.detach().catch(() => {});
     await browser.close();
     if (failure) {
       const error = new Error(`Maps lifecycle diagnostic did not verify a visible outcome: ${failure}`);
@@ -538,4 +636,5 @@ if (require.main === module) run().catch(error => {
 });
 
 module.exports = Object.freeze({ MAP_COMMAND, LIVE_KNOWLEDGE_COMMAND, clean, sameOriginPath, sanitizeTurnPayload,
-  installBootLoginBoundaryDiagnostics, captureBootLoginBoundary, installMapLifecycleDiagnostics, captureDomState, run });
+  installBootLoginBoundaryDiagnostics, installBootFunctionDebugger, captureImmutablePreClickSnapshot,
+  captureBootLoginBoundary, installMapLifecycleDiagnostics, captureDomState, run });
