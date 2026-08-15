@@ -124,7 +124,7 @@ test("maps lifecycle diagnostic captures a bounded browser error stack", () => {
 test("maps diagnostic workflow is isolated, exact-SHA bound, and preserves evidence", () => {
   assert.match(workflow, /diag\/maps-outcome-lifecycle/);
   assert.match(workflow, /EXPECTED_RELEASE_SHA/);
-  assert.match(workflow, /79b2f6027e985e8bb99600eb658e934484abfd0a/);
+  assert.match(workflow, /21ef8fc98c2d32f892b7ee48bd0f92da1dd1af35/);
   assert.match(workflow, /nexus-protected-foundation-guard\.js/);
   assert.match(workflow, /playwright@1\.55\.0/);
   assert.match(workflow, /playwright install --with-deps chromium/);
