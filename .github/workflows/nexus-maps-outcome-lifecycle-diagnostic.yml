@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     env:
       NEXUS_BASE_URL: https://nexus-genesis-certified.onrender.com
-      EXPECTED_RELEASE_SHA: ${{ inputs.release_sha || '79b2f6027e985e8bb99600eb658e934484abfd0a' }}
+      EXPECTED_RELEASE_SHA: ${{ inputs.release_sha || '21ef8fc98c2d32f892b7ee48bd0f92da1dd1af35' }}
       NEXUS_MAPS_LIFECYCLE_FILE: output/nexus-maps-outcome-lifecycle.json
     steps:
       - uses: actions/checkout@v4
