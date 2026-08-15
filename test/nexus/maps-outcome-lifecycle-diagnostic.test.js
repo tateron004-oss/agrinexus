@@ -46,6 +46,26 @@ test("maps lifecycle diagnostic captures the full boot and login boundary before
   assert.doesNotMatch(source, /document\.cookie|localStorage\.getItem|sessionStorage\.getItem|request\.headers\(/);
 });
 
+test("maps lifecycle diagnostic captures immutable pre-click, direct boot progression, and login handler decisions", () => {
+  assert.match(source, /captureImmutablePreClickSnapshot/);
+  assert.match(source, /Object\.freeze\(\{ \.\.\.browser/);
+  assert.match(source, /installBootFunctionDebugger/);
+  assert.match(source, /Debugger\.setBreakpointByUrl/);
+  assert.match(source, /phase: "runtime-exception"/);
+  assert.match(source, /"boot-entry"/);
+  assert.match(source, /"bindStatic-entry"/);
+  assert.match(source, /"bindStatic-completed"/);
+  assert.match(source, /"boot-success-final-statement"/);
+  assert.match(source, /"boot-catch-final-statement"/);
+  assert.match(source, /phase: "entry"/);
+  assert.match(source, /credentialGuardDecision/);
+  assert.match(source, /early-return-missing-credential/);
+  assert.match(source, /phase: "gateway-invocation"/);
+  assert.match(source, /phase: "sync-return"/);
+  assert.match(source, /phase: "fulfilled"/);
+  assert.match(source, /phase: "rejected"/);
+  assert.ok(source.indexOf("captureImmutablePreClickSnapshot(page") < source.indexOf("name: \"Enter platform\""));
+});
 test("maps lifecycle diagnostic records boundaries without secrets or response bodies", () => {
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/turn/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
