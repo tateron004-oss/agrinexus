@@ -125,11 +125,14 @@ class AuthoritativeTaskEngine {
         correlationId: task.correlationId, taskId, eventType: "tool.completed", outcome: "verified", metadata: receipt });
       return { execution, duplicate: false, receipt };
       } catch (cause) {
-      const error = { code: cause.code || "execution_failed", message: cause.message || "Execution failed" };
+      const error = sanitizeProviderFailure(cause, context);
       const receipt = makeReceipt(started.execution.execution_id, taskId, stepId, tool.tool_id,
         key, "failed", { verified: false, error, selectedTool: toolId, fallbackAttempt: attempt });
       await this.executions.finish({ tenantId: context.tenantId, executionId: started.execution.execution_id,
         stepId, successful: false, error, receipt, verified: false });
+      await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
+        correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
+        metadata: error });
         lastError = cause;
       }
     }
@@ -196,6 +199,13 @@ class AuthoritativeTaskEngine {
   }
 }
 
+function sanitizeProviderFailure(cause, context = {}) {
+  const safe = value => String(value || "").replace(/[^a-z0-9_.-]/gi, "-").slice(0, 80);
+  return Object.freeze({ status: Number(cause?.status || 503), code: safe(cause?.code || "provider_request_failed"),
+    message: "The authoritative source provider could not complete this request.",
+    stage: safe(cause?.stage || "provider-execution"), requestId: safe(context.requestId || context.correlationId || "unavailable") });
+}
+
 function authorize(context, tool, step) {
   if (tool.required_permission && !context.can(tool.required_permission)) throw new NexusRuntimeError("permission_denied", `Missing permission: ${tool.required_permission}`, 403);
   if (tool.required_role && !context.hasRole(tool.required_role)) throw new NexusRuntimeError("role_required", `Required role: ${tool.required_role}`, 403);
@@ -235,4 +245,4 @@ function withTimeout(promise, ms = 30000) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-module.exports = Object.freeze({ AuthoritativeTaskEngine, NexusRuntimeError });
+module.exports = Object.freeze({ AuthoritativeTaskEngine, NexusRuntimeError, sanitizeProviderFailure });

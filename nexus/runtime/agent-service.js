@@ -18,6 +18,16 @@ class AgentService {
       actorId: context.userId, role: "user", content: command.text,
       provenance: { channel: command.channel, locale: command.locale, correlationId: command.correlationId } });
     const plan = await this.planner.plan({ command, context, priorTask, conversationHistory });
+    if (plan.response) {
+      await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
+        actorId: null, role: "assistant", content: plan.response,
+        provenance: { type: "conversation", systemActor: "nexus-brain", correlationId: command.correlationId,
+          sourceRequired: false, providerInvoked: false } });
+      await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: command.correlationId,
+        taskId: priorTask?.taskId || null, eventType: "conversation.responded", outcome: "completed",
+        metadata: { application: "conversation", sourceRequired: false, providerInvoked: false } });
+      return { command, task: priorTask, plan, application: "conversation", action: "respond", response: plan.response };
+    }
     if (plan.clarification) {
       await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
         actorId: null, role: "assistant", content: plan.clarification,

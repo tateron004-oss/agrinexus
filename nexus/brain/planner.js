@@ -10,6 +10,8 @@ class OpenEndedPlanner {
   }
 
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+    const ordinaryConversation = ordinaryConversationPlan(command.text, context);
+    if (ordinaryConversation) return Object.freeze({ ...ordinaryConversation, planningAttempts: 0 });
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
@@ -25,6 +27,8 @@ class OpenEndedPlanner {
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
+    const agricultureAdvice = agricultureAdvicePlan(command.text, catalog);
+    if (agricultureAdvice) return Object.freeze({ ...agricultureAdvice, planningAttempts: 1 });
     const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
@@ -60,6 +64,42 @@ class OpenEndedPlanner {
       confirmationRequired: tool.confirmation_required, consentScope: tool.consent_scope })),
     applications: applications.map(app => ({ applicationId: app.applicationId, capabilities: app.capabilities, riskTiers: app.riskTiers })) };
   }
+}
+
+function ordinaryConversationPlan(text, context = {}) {
+  const goal = String(text || "").trim();
+  const normalized = goal.toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").trim();
+  const greeting = /^(?:(?:hello|hi|hey|good (?:morning|afternoon|evening))\s+)?nexus(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized) ||
+    /^(?:hello|hi|hey|good (?:morning|afternoon|evening))(?:\s+nexus)?(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized);
+  if (greeting) {
+    const suppliedName = String(greeting[1] || "").trim().split(/\s+/)[0];
+    const knownName = String(context.userPreferences?.preferredName || context.preferredName || "").trim().split(/\s+/)[0];
+    const rawName = suppliedName || knownName;
+    const name = rawName ? `${rawName.charAt(0).toUpperCase()}${rawName.slice(1)}` : "";
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
+      response: `Hello${name ? ` ${name}` : ""}, how can I help?`, sourceRequired: false };
+  }
+  if (/^(?:thank you|thanks|thank you nexus|thanks nexus|okay thanks|ok thanks)$/.test(normalized)) {
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
+      response: "You're welcome.", sourceRequired: false };
+  }
+  return null;
+}
+
+function agricultureAdvicePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const agricultureSubject = /\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?|crop|farm|farmer|soil|irrigation|pest|plant disease|livestock|harvest)\b/i.test(goal);
+  const adviceRequest = /[?]|\b(why|what|how|when|where|help|advise|advice|assess|diagnose|inspect|treat|prevent|manage|improve|yellow|wilting|spots?|dying)\b/i.test(goal);
+  if (!agricultureSubject || !adviceRequest) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "knowledge.search") ||
+      !catalog.applications.some(app => app.applicationId === "agriculture")) return null;
+  const crop = goal.match(/\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?)\b/i)?.[1]?.toLowerCase() || "crop";
+  return { goal, application: "agriculture", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "retrieve-agriculture-guidance", title: "Retrieve authoritative agriculture guidance",
+      toolId: "knowledge.search", input: { query: goal, crop, requireCurrentSources: true,
+        sourcePolicy: "authoritative-agriculture", domainFilterRequired: true,
+        includeDomains: ["fao.org", "cgiar.org", "cimmyt.org", "extension.org", "edu"] },
+      dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function emergencyHealthGuidancePlan(text, catalog) {
@@ -277,7 +317,7 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, validatePlan });

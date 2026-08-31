@@ -68,8 +68,9 @@ function toolRecord(item) {
 function createExecutor(definition, { fetchFn }) {
   if (typeof fetchFn !== "function") throw coded("provider_fetch_unavailable", "A provider HTTP client is required.");
   return async ({ input, context, taskId, stepId, idempotencyKey }) => {
+    const requestId = String(context.requestId || context.correlationId || crypto.randomUUID());
     const request = { schema: "nexus.provider-request.v1", toolId: definition.toolId,
-      tenantId: context.tenantId, actorId: context.userId, taskId, stepId, idempotencyKey, input };
+      requestId, tenantId: context.tenantId, actorId: context.userId, taskId, stepId, idempotencyKey, input };
     const requestBody = JSON.stringify(request); const requestSignature = crypto.createHmac("sha256", definition.receiptSecret).update(requestBody).digest("hex");
     let lastError;
     for (let attempt = 1; attempt <= definition.maxAttempts; attempt += 1) {
@@ -77,6 +78,7 @@ function createExecutor(definition, { fetchFn }) {
       try {
         response = await fetchFn(definition.endpoint, { method: "POST", headers: {
           "content-type": "application/json", "accept": "application/json", "idempotency-key": idempotencyKey,
+          "x-nexus-request-id": requestId,
           "x-nexus-tenant-id": context.tenantId, "x-nexus-task-id": taskId, "x-nexus-step-id": stepId,
           "x-nexus-request-signature": requestSignature
         }, body: requestBody });
@@ -97,7 +99,11 @@ function createExecutor(definition, { fetchFn }) {
   };
 }
 
-function providerFailure(error, toolId) { error.stage = `provider-execution-${String(toolId).replace(/[^a-z0-9-]/gi, "-").slice(0, 48)}`; return error; }
+function providerFailure(error, toolId) {
+  error.stage = `provider-execution-${String(toolId).replace(/[^a-z0-9-]/gi, "-").slice(0, 48)}`;
+  error.status = Number(error.status || 503);
+  return error;
+}
 
 function retryDelay(attempt) {
   return new Promise(resolve => setTimeout(resolve, Math.min(250 * (2 ** (attempt - 1)), 1000)));
