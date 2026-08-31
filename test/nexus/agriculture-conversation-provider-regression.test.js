@@ -54,7 +54,9 @@ test("real provider gate proves a signed receipt and filtered agriculture source
   const result = await runGate({ env, fetchFn: async (_url, options) => {
     received = JSON.parse(options.body); const receipt = { schema: "nexus.provider-receipt.v1", receiptId: "receipt-1",
       toolId: "knowledge.search", tenantId: received.tenantId, taskId: received.taskId, stepId: received.stepId,
-      outcome: "completed", occurredAt: "2026-08-31T00:00:00.000Z", evidence: [{ source: "https://www.fao.org/maize" }] };
+      outcome: "completed", occurredAt: "2026-08-31T00:00:00.000Z",
+      evidence: [{ type: "render-target", source: "agrinexus-provider-engines" },
+        { type: "authoritative-source", source: "https://www.fao.org/maize" }] };
     receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
     return { ok: true, status: 200, json: async () => ({ receipt }) };
   } });

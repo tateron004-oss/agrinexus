@@ -130,13 +130,20 @@ async function nexusToolResponse(req, res) {
   const outcomeUrl = `${providerBase}/nexus/outcomes/${encodeURIComponent(toolId)}?caseId=${encodeURIComponent(caseId)}`;
   const receipt = { schema: "nexus.provider-receipt.v1", receiptId: `npr_${crypto.randomUUID()}`, toolId,
     tenantId: payload.tenantId, taskId: payload.taskId, stepId: payload.stepId, outcome: "completed",
-    occurredAt: new Date().toISOString(), evidence: [{ type: "render-target", source: "agrinexus-provider-engines", outcomeUrl, caseId, toolId }] };
+    occurredAt: new Date().toISOString(), evidence: [] };
+  const evidence = await capabilityEvidence(toolId, payload.input || {}, receipt, outcomeUrl);
+  receipt.evidence = [{ type: "render-target", source: "agrinexus-provider-engines", outcomeUrl, caseId, toolId },
+    ...signedSourceEvidence(evidence.sources)];
   receipt.signature = crypto.createHmac("sha256", secret).update(canonicalReceipt(receipt)).digest("hex");
   try { writeEvent({ id: receipt.receiptId, endpoint: req.url, module: "Nexus", action: toolId,
     providerId: "nexus-governed-tools", detail: "Signed governed tool outcome completed.", metadata: { toolId }, receivedAt: receipt.occurredAt }); }
   catch (error) { console.error("Nexus provider diagnostic write failed", { code: error.code || error.name }); }
-  const evidence = await capabilityEvidence(toolId, payload.input || {}, receipt, outcomeUrl);
   return send(res, 200, { receipt, result: { accepted: true, outcomeUrl, toolId }, ...evidence });
+}
+
+function signedSourceEvidence(sources) {
+  return (Array.isArray(sources) ? sources : []).map(item => String(item?.url || "").trim()).filter(url => /^https:\/\//i.test(url))
+    .map(url => ({ type: "authoritative-source", source: url }));
 }
 
 async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
@@ -200,22 +207,27 @@ async function liveImageEvidence(input, common) {
 
 async function liveKnowledgeEvidence(input, common, receiptId) {
   const query = String(input.query || input.question || "").trim();
+  const includeDomains = normalizedDomains(input.includeDomains);
   let lastProviderError = null;
   if (!query) throw Object.assign(new Error("A knowledge question is required."), { code: "knowledge_query_required" });
+  if (input.domainFilterRequired === true && !includeDomains.length)
+    throw Object.assign(new Error("Authoritative knowledge retrieval requires an approved domain filter."), { code: "knowledge_domain_filter_required" });
   if (process.env.TAVILY_API_KEY) {
     try {
       const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5 }) });
+      body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5,
+        ...(includeDomains.length ? { include_domains: includeDomains } : {}) }) });
     if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
     const body = await response.json();
-    const sources = (body.results || []).filter(item => item?.url).map(item => ({ title: item.title || item.url, url: item.url }));
+    const sources = (body.results || []).filter(item => item?.url && (!includeDomains.length || sourceAllowed(item.url, includeDomains)))
+      .map(item => ({ title: item.title || item.url, url: item.url }));
     if (!String(body.answer || "").trim() || !sources.length) throw Object.assign(new Error("Live knowledge returned no answer with sources."), { code: "knowledge_outcome_unverified" });
     return { ...common, sources, source: sources[0], answer: body.answer, assessment: body.answer,
       crop: input.crop || "crop", observations: input.observations || [query], lesson: body.answer,
       content: body.answer, savedProgress: receiptId, provider: "tavily" };
     } catch (error) { lastProviderError = error; }
   }
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.OPENAI_API_KEY && input.domainFilterRequired !== true) {
     try {
     const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: {
       authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json"
@@ -231,6 +243,16 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
   }
   if (lastProviderError) throw lastProviderError;
   throw Object.assign(new Error("No live reasoning or knowledge provider is configured."), { code: "knowledge_provider_unavailable" });
+}
+
+function normalizedDomains(values) {
+  return [...new Set((Array.isArray(values) ? values : []).map(value => String(value || "").trim().toLowerCase())
+    .filter(value => /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i.test(value)))];
+}
+
+function sourceAllowed(value, domains) {
+  try { const host = new URL(value).hostname.toLowerCase(); return domains.some(domain => domain === "edu" ? host.endsWith(".edu") : host === domain || host.endsWith(`.${domain}`)); }
+  catch { return false; }
 }
 
 const server = http.createServer(async (req, res) => {

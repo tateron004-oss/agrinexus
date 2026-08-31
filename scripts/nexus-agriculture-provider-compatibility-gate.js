@@ -19,7 +19,8 @@ async function runGate({ env = process.env, fetchFn = globalThis.fetch } = {}) {
   const verification = await catalog.verify({ tool: { tool_id: "knowledge.search" }, result, context,
     taskId: requestId, stepId: "filtered-agriculture-search" });
   if (!verification.verified) throw coded("agriculture_provider_receipt_unverified", "The provider did not return a verified receipt.");
-  const sources = (verification.evidence || []).map(item => item?.source || item?.url).filter(Boolean);
+  const sources = (verification.evidence || []).filter(item => item?.type === "authoritative-source")
+    .map(item => item?.source || item?.url).filter(Boolean);
   if (!sources.length) throw coded("agriculture_provider_sources_missing", "The provider returned no source evidence.");
   const rejected = sources.filter(source => !allowedSource(source));
   if (rejected.length) throw coded("agriculture_provider_domain_filter_failed", "The provider returned evidence outside the agriculture domain filter.");
