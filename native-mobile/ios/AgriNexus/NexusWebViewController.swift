@@ -1,12 +1,15 @@
 import AVFoundation
+import CoreLocation
 import Speech
+import UserNotifications
 import UIKit
 import WebKit
 
 final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
-    private let appURL = URL(string: "https://agrinexus-platform.onrender.com")!
+    private let appURL = URL(string: "https://nexus-genesis-certified.onrender.com")!
     private var webView: WKWebView!
     private let voiceRuntime = NexusVoiceRuntime()
+    private let deviceRuntime = NexusDeviceRuntime()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -18,9 +21,14 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(webView)
         voiceRuntime.webView = webView
+        deviceRuntime.host = self
+        deviceRuntime.voiceRuntime = voiceRuntime
         webView.load(URLRequest(url: appURL))
         requestNativePermissions()
     }
+
+    override func viewWillAppear(_ animated: Bool) { super.viewWillAppear(animated); deviceRuntime.lifecycle("foreground"); deviceRuntime.flushPending() }
+    override func viewDidDisappear(_ animated: Bool) { deviceRuntime.lifecycle("background"); super.viewDidDisappear(animated) }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "agrinexusNative", let body = message.body as? [String: Any] else { return }
@@ -51,18 +59,13 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
             } else if let language = (body["locale"] as? String) ?? (body["language"] as? String) {
                 voiceRuntime.updateLanguage(language)
             }
-        case "route.track":
-            voiceRuntime.send(type: "location.route_update", data: [
-                "source": "native-location-permission",
-                "status": "ready",
-                "message": "Native GPS route tracking is ready when location permission is granted."
-            ])
-        case "camera.capture":
-            voiceRuntime.send(type: "camera.capture_ready", data: [
-                "source": "native-camera-permission",
-                "status": "ready",
-                "message": "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."
-            ])
+        case "route.track": deviceRuntime.startLocation()
+        case "route.stop": deviceRuntime.stopLocation()
+        case "camera.capture": deviceRuntime.captureCamera()
+        case "file.open": deviceRuntime.openFile()
+        case "notification.schedule": deviceRuntime.scheduleNotification(body["payload"] as? [String:Any] ?? [:])
+        case "push.register": deviceRuntime.registerRemotePush()
+        case "lifecycle.flush": deviceRuntime.flushPending()
         case "call.launch":
             launchConfirmedCall(body["payload"] as? [String: Any] ?? [:])
         default:
@@ -78,32 +81,26 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
     }
 
     private func registerNativePermissions() {
-        let payload: [String: Any] = [
-            "device": ["platform": "ios", "appVersion": "1.0.0"],
-            "wakeMode": "always-on-foreground-audio-session",
-            "permissions": [
-                "microphone": "granted",
-                "speechRecognition": "granted",
-                "backgroundAudio": "granted",
-                "notifications": "prompt",
-                "geolocation": "foreground",
-                "camera": "granted",
-                "secureStorage": "granted"
-            ],
-            "runtime": [
-                "voiceGate": "wake-phrase",
-                "followUpWindowSeconds": 12,
-                "realtimeProvider": "openai-realtime-webrtc",
-                "fallback": "native-speech-recognizer"
-            ],
-            "privacyControls": [
-                "visibleListeningIndicator": true,
-                "oneTapOff": true,
-                "wakeAuditEnabled": true
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            guard let self else { return }
+            let microphone = AVAudioSession.sharedInstance().recordPermission == .granted ? "granted" : "denied"
+            let speech = SFSpeechRecognizer.authorizationStatus() == .authorized ? "granted" : "denied"
+            let camera = AVCaptureDevice.authorizationStatus(for:.video) == .authorized ? "granted" : "denied"
+            let location = CLLocationManager.authorizationStatus()
+            let locationState = location == .authorizedAlways ? "background" : (location == .authorizedWhenInUse ? "foreground" : "denied")
+            let notifications = settings.authorizationStatus == .authorized ? "granted" : (settings.authorizationStatus == .notDetermined ? "prompt" : "denied")
+            let payload: [String: Any] = [
+                "device": ["platform": "ios", "appVersion": "1.0.0"],
+                "wakeMode": "always-on-foreground-audio-session",
+                "permissions": ["microphone":microphone,"speechRecognition":speech,"backgroundAudio":microphone,
+                    "notifications":notifications,"geolocation":locationState,"camera":camera,"secureStorage":"granted"],
+                "runtime": ["voiceGate":"wake-phrase","followUpWindowSeconds":12,
+                    "realtimeProvider":"openai-realtime-webrtc","fallback":"native-speech-recognizer"],
+                "privacyControls": ["visibleListeningIndicator":true,"oneTapOff":true,"wakeAuditEnabled":true]
             ]
-        ]
-        postRuntime(payload)
-        voiceRuntime.send(type: "voice.permission_changed", data: ["permission": "native", "status": "granted"])
+            self.postRuntime(payload)
+            self.voiceRuntime.send(type:"voice.permission_changed", data:["permission":"native","status":microphone])
+        }
     }
 
     private func postRuntime(_ payload: [String: Any]) {

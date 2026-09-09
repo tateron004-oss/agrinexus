@@ -17,8 +17,10 @@ assert.match(server, /\/api\/music\/youtube\/search/, "YouTube music search endp
 assert.match(server, /source\.sourceUrl.*match/, "Only a returned YouTube video ID may be embedded");
 const browserPlaybackBlock = app.slice(app.indexOf("const nexusYouTubePlayback"), app.indexOf("function clearNexusLocalMusicTimers"));
 assert.doesNotMatch(browserPlaybackBlock, /YOUTUBE_API_KEY/, "YouTube playback code must not receive the server-side API key");
-assert.match(app, /youtube-nocookie\.com\/embed/, "Music must play in the privacy-enhanced YouTube embed");
-assert.match(app, /enablejsapi=1/, "The embedded player must support voice controls");
+assert.match(app, /host: "https:\/\/www\.youtube\.com"/, "Use the verified API-owned YouTube host");
+assert.match(app, /new YT\.Player\(frame/, "The provider API must own iframe creation");
+assert.match(app, /autoplay: 0/, "Playback must wait for provider readiness");
+assert.match(app, /enablejsapi: 1/, "The embedded player must support voice controls");
 assert.match(app, /youtubePlayerCommand\("pauseVideo"\)/, "Pause voice control must reach YouTube");
 assert.match(app, /youtubePlayerCommand\("playVideo"\)/, "Resume voice control must reach YouTube");
 assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Next voice control must request another selection");

@@ -129,7 +129,7 @@ check("unified runtime routes help/status/follow-up before generic processing", 
   "const routedText = normalizeNexusPresenceRoutableCommand(text) || text",
   "/api/nexus/runtime/behavior/turn",
   "conversationId: nexusAuthoritativeConversationId()",
-  'result.render?.schema === "nexus.workspace-outcome.v1"',
+  "validateNexusPassivePresentation(result.render)",
   "renderer.render(result.render)",
   "legacyFallbackUsed !== false"
 ]));

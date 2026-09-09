@@ -2,7 +2,8 @@ async function checkRuntimeHealth(runtime, { env = process.env } = {}) {
   const result = await runtime.db.query(`select current_database() as database,
     current_setting('server_version_num')::int as version_num,
     exists(select 1 from pg_extension where extname='vector') as pgvector,
-    exists(select 1 from schema_migrations where name='010_nexus_production_acceptance.sql') as migrated`);
+    (exists(select 1 from schema_migrations where name='010_nexus_production_acceptance.sql') and
+      exists(select 1 from schema_migrations where name='016_nexus_operations_consolidation.sql')) as migrated`);
   const state = result.rows[0];
   const databaseReadWrite = await verifyReadWrite(runtime.db);
   const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";

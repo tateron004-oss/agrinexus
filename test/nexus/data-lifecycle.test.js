@@ -7,3 +7,16 @@ test("legal hold blocks erasure before any protected data is changed",async()=>{
 test("verified deletion erases record content and object pointers transactionally",async()=>{const x=db([{rows:[{subject_id:"user"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant",requestId:"request"});assert.equal(result.state,"verified");assert.match(x.calls[2].sql,/data='\{\}'::jsonb/);assert.match(x.calls[3].sql,/object_key=null/);});
 test("retention sweeps skip legal holds and use locked bounded batches",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);const rows=await new DataLifecycleRepository(x).purgeExpired({limit:900});assert.equal(rows.length,1);assert.match(x.calls[0].sql,/not exists/);assert.match(x.calls[0].sql,/for update skip locked/);assert.equal(x.calls[0].params[0],500);});
 test("backup evidence rejects unverifiable claims",async()=>{const repo=new DataLifecycleRepository(db());await assert.rejects(repo.recordBackupEvidence({releaseSha:"sha",backupId:"id",state:"restore_verified"}),/Valid backup evidence/);});
+
+test("account deletion clears version history within the same tenant and subject boundary", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  const historical = x.calls.find(call => /update nexus_record_versions/.test(call.sql));
+  assert.ok(historical); assert.deepEqual(historical.params,['tenant-a','owner-a']);
+  assert.match(historical.sql,/v.record_id=r.record_id and r.tenant_id=\$1 and r.subject_id=\$2/);
+  assert.match(historical.sql,/provenance='\{\}'::jsonb/);
+  assert.equal(result.verification.recordVersionsErased,true);
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  assert.equal(held.calls.some(call=>/update nexus_record_versions/.test(call.sql)),false);
+});

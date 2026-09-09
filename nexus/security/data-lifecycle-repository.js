@@ -15,9 +15,11 @@ class DataLifecycleRepository {
       const request=(locked.rows||locked)[0]; if(!request) throw new Error("Deletion request not found.");
       const holds=await trx.query(`select hold_id from nexus_legal_holds where tenant_id=$1 and state='active' and (subject_id is null or subject_id=$2) limit 1`,[tenantId,request.subject_id]);
       if((holds.rows||holds)[0]) { await trx.query(`update nexus_deletion_requests set state='blocked',verification=$3 where tenant_id=$1 and request_id=$2`,[tenantId,requestId,{reason:"legal_hold"}]); return {state:"blocked",reason:"legal_hold"}; }
-      await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and subject_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
+      await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and subject_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_artifacts set state='deleted',object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
-      const verification={recordsErased:true,artifactPointersErased:true,verifiedAt:new Date().toISOString()};
+      await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
+        from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and r.subject_id=$2`,[tenantId,request.subject_id]);
+      const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
     });

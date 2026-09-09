@@ -61,6 +61,19 @@ const explicitSwitch = routeCommand("Show me today's weather in Nairobi, Kenya",
 assert.equal(explicitSwitch.workspace, "live-knowledge");
 assert.equal(explicitSwitch.contextual, false);
 
+const staleWorkforceContext = completed(
+  createConversationContext(),
+  "Search farming jobs in Kenya",
+  "workforce-stale"
+).context;
+const explicitAgricultureReopen = routeCommand(
+  "Nexus, reopen Agriculture Help and keep the visible workspace synchronized.",
+  "connected",
+  staleWorkforceContext
+);
+assert.equal(explicitAgricultureReopen.workspace, "agriculture");
+assert.equal(explicitAgricultureReopen.contextual, false);
+
 context = rememberCompletedTurn(context, { ...explicitSwitch, transactionId: "weather-1" });
 followUp = routeCommand("What about tomorrow?", "connected", context);
 assert.equal(followUp.workspace, "live-knowledge");

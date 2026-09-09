@@ -249,13 +249,10 @@ check("production readiness panels include Internet Resource status", hasAll(ser
 ]));
 
 check("service worker and cache versions are consistent", (() => {
-  const appBuild = app.match(/AGRINEXUS_BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1];
-  const appCache = app.match(/AGRINEXUS_PWA_CACHE_VERSION\s*=\s*"([^"]+)"/)?.[1];
-  const serverBuild = server.match(/AGRINEXUS_WEB_BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1];
-  const serverCache = server.match(/AGRINEXUS_PWA_CACHE_VERSION\s*=\s*"([^"]+)"/)?.[1];
-  const swBuild = sw.match(/BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1];
-  const swCache = sw.match(/CACHE_NAME\s*=\s*"([^"]+)"/)?.[1];
-  return Boolean(appBuild && appCache && appBuild === serverBuild && appBuild === swBuild && appCache === serverCache && appCache === swCache);
+  try {
+    require("./lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
+    return true;
+  } catch (_) { return false; }
 })());
 
 check("key browser selectors and accessibility hooks exist", hasAll(app, [

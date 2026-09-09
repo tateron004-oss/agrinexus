@@ -1,6 +1,6 @@
 {
   "name": "AgriNexus Native Voice Bridge",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "purpose": "Contract for Android, iOS, and desktop shells that wrap the AgriNexus web platform with deeper device permissions.",
   "wakePhrases": ["Hey AgriNexus", "Hey Nexus", "Nexus", "Agri"],
   "assistantNames": {
@@ -61,9 +61,13 @@
     "voice.clarify",
     "camera.capture_ready",
     "camera.media_attached",
+    "file.attached",
+    "file.selection_failed",
     "notification.opened",
     "notification.permission_changed",
     "push.token_registered",
+    "push.registration_requested",
+    "push.registration_unavailable",
     "location.route_update",
     "location.region_changed",
     "offline.queue_flushed",
@@ -91,10 +95,12 @@
     "wake.start",
     "wake.stop",
     "camera.capture",
+    "file.open",
     "media.attach",
     "route.track",
     "route.stop",
     "notification.schedule"
+    , "lifecycle.flush"
   ],
   "commandEnvelope": {
     "command": "string user's phrase or typed request",

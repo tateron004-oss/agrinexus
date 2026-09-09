@@ -1,0 +1,143 @@
+name: Nexus Authoritative Runtime
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-authoritative-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministic-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source without retained credentials
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Install Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.15.0'
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+      - name: Prepare deterministic validation
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/nexus-validation.sh" <<'NEXUS_VALIDATION'
+          set -euo pipefail
+          umask 077
+          mkdir -p "$CI_LOG_DIR"
+          cat > "$CI_LOG_DIR/integrity.cjs" <<'NEXUS_INTEGRITY'
+          const fs=require('fs'),assert=require('assert/strict'),cp=require('child_process');
+          const p=require(process.cwd()+'/package.json'),l=require(process.cwd()+'/package-lock.json');
+          assert.equal(l.lockfileVersion,3); assert.equal(p.scripts['qa:all-safe'],'node scripts/qa-suite.js all-safe');
+          for(const key of ['dependencies','devDependencies']) assert.deepEqual(p[key],l.packages[''][key]);
+          for(const file of ['server.js','public/app.js','scripts/qa-suite.js','nexus/compat/server-runtime-adapter.js','nexus/runtime/health.js','public/business-services.js','rebuild/browser/nexus-clean-entry.js','rebuild/scripts/build-browser.js','scripts/nexus-protected-foundation-guard.js']) {
+           assert.ok(fs.statSync(file).isFile()); cp.execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
+          }
+          assert.ok(fs.statSync('.github/nexus-protected-foundation.json').isFile());
+          for(const directory of ['test/nexus','rebuild/tests']) assert.ok(fs.readdirSync(directory).some(p=>p.endsWith('.test.js')));
+          require.resolve('esbuild',{paths:[process.cwd()]}); console.log('Lockfile, scripts, paths and entry-point syntax verified');
+          NEXUS_INTEGRITY
+          cat > "$CI_LOG_DIR/sensitive.cjs" <<'NEXUS_SENSITIVE'
+          const fs=require('fs'),cp=require('child_process'),crypto=require('crypto');
+          // Reviewed inherited examples, documentation and scanner assertions; only CRLF/LF normalized.
+          // Any edit invalidates the exception. New files have no exception.
+          const reviewed={
+            ".env.example": "fafe864a65b2a81579f6e4b83a46788d00ba2ced9968cb6d3bd86c090b496ac1",
+            ".github/workflows/nexus-protected-production-deploy.yml": "d7f7101007edb302312c3a18adc262ba8d8a6e564ef3b4a23669ef9390507e0a",
+            "AGRINEXUS_INVESTOR_DEMO_VIDEO_PACKAGE.md": "39a7f80172177ed7c538c99ff24838aabb66bb94c940691eeac6aaeaea2bd566",
+            "AGRINEXUS_STEP_BY_STEP_TRAINING_VIDEO_SCRIPT.md": "3675ded7c2f7017670127ff20fa418c46204cf02b86645b3789adba90e07543f",
+            "README.md": "2fc011922eb426a2d3e91de1317b3a3146bd7c4acd40ef8792021c3643a37be0",
+            "docs/NEXUS_STANDARD_USER_MANUAL_BROWSER_VALIDATION.md": "796d7ba84370b1e7ab9c50e78f9771a23e9c529437219b9185dba0dce6cf131c",
+            "scripts/github-ready-check.js": "e5077339130ca95d20edee77c292077f08beaac0d4aa95110f043d3286584f6c",
+            "scripts/nexus-demo-data-sandbox-mode-qa.js": "5db80c43c290308ec7d2163f1978b720bb0a7f42d887cd204ebf336f1446e029",
+            "scripts/nexus-learning-provider-bridge-qa.js": "763cf42536be2e80cedb97b7e0f1700d04e2b876059732cd80f876ddd667e318",
+            "scripts/nexus-marketplace-bridge-qa.js": "7081da948a57d226cbe800176f4e8c54596346836d443b36a33009acf5f9ab67",
+            "scripts/nexus-premium-miniapp-agentic-ui-qa.js": "d88b86ec8a971dd84575b4f45bdc240f12aaff21e0e4539753bc563cdb32810e",
+            "scripts/nexus-provider-contact-bridge-qa.js": "a4bec042d1928cd6ade9f866e444906f0ef454c999065724ec98319b08506f7c",
+            "scripts/nexus-real-provider-integrations-qa.js": "2dbf0d07de23befd826613b90ebace90863acec1eb7e5c36115faae0587eec49",
+            "scripts/nexus-render-credential-activation-guide-qa.js": "8eb005b39c0e694cf5e481953b471be7b793d91e7d934d0ee36321210d325622",
+            "scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js": "4f003d0bb7cbf112a6338aea637eba73877db9b68d525edd610054e66bf9fe2e",
+            "scripts/nexus-sandbox-click-path-mode-audit-qa.js": "7b814623c0a8454f05edb6e0a35d6274e46e8a92b055aeeef4545b49d5229b11",
+            "test/nexus/deployment-contracts.test.js": "03b915bd50bb24aaac08378210aebd7b7653359800847d5d85086e0b50d4034a",
+            "test/nexus/render-release-controller.test.js": "847ffd5b97fbfac695daeba9957b3fa1a5499c11d6e067c11c35dbf197c7863f"
+          };
+          const patterns={privateKey:/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,providerKey:/\b(?:sk-proj-|sk_live_|rk_live_|ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_-]{20,}/,aws:/\bAKIA[A-Z0-9]{16}\b/,credentialDsn:/\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s:'"]+:[^\s@'"]+@/,machinePath:/[A-Z]:[\\/]+Users[\\/]+tater/i};
+          const paths=cp.execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{encoding:'utf8'}).split('\0').filter(Boolean);
+          let scanned=0,failed=0,exceptions=0;
+          for(const p of paths){
+           if(/(^|\/)(node_modules|backups|logs|\.cache)\//.test(p)||/(^|\/)\.env($|\.(?!.*example$))|\.(?:sqlite3?|db|log|pid)$/.test(p)){console.error('Prohibited repository artifact: '+p);failed++;}
+           const b=fs.readFileSync(p);if(b.includes(0))continue;scanned++;
+           const matches=Object.keys(patterns).filter(k=>patterns[k].test(b.toString()));if(!matches.length)continue;
+           if(reviewed[p]===crypto.createHash('sha256').update(b.toString().replace(/\r\n/g,'\n')).digest('hex')){exceptions++;continue;}
+           console.error('Sensitive-data pattern: '+p+' ['+matches.join(',')+']');failed++;
+          }
+          console.log(JSON.stringify({scanned,reviewedInheritedFiles:exceptions,failures:failed}));process.exitCode=failed?1:0;
+          NEXUS_SENSITIVE
+          cat > "$CI_LOG_DIR/totals.cjs" <<'NEXUS_TOTALS'
+          const fs=require('fs'),assert=require('assert/strict'),path=require('path');
+          const read=n=>fs.readFileSync(path.join(process.env.CI_LOG_DIR,n+'.log'),'utf8');
+          assert.match(read('all-safe'),/Running "all-safe" \(816 commands\)/);assert.match(read('all-safe'),/"all-safe" passed\./);
+          for(const [name,count]of [['nexus',400],['rebuild',40]]){const t=read(name).replace(/^ℹ /gm,'# ');assert.match(t,new RegExp('# tests '+count+'(?:\\r?\\n|$)'));assert.match(t,/# fail 0(?:\r?\n|$)/);assert.match(t,/# skipped 0(?:\r?\n|$)/);assert.match(t,/# cancelled 0(?:\r?\n|$)/);assert.match(t,new RegExp('# pass '+count+'(?:\\r?\\n|$)'));}
+          console.log('816 all-safe commands, 400 Nexus tests, 40 rebuild tests passed');
+          NEXUS_TOTALS
+          # Fail closed if isolation is absent; these checks send no network requests.
+          test "$(ip -o link show | cut -d: -f2 | tr -d ' ')" = lo
+          test -z "$(ip route show)"
+          test -z "$(ip -6 route show default)"
+          test "$(awk '/NoNewPrivs/ {print $2}' /proc/self/status)" = 1
+          failed=0
+          run_check() {
+            local name="$1"
+            shift
+            if "$@" >"$CI_LOG_DIR/$name.log" 2>&1; then
+              printf '%s: PASS\n' "$name"
+            else
+              printf '%s: FAIL (raw output retained only on ephemeral runner)\n' "$name"
+              failed=1
+            fi
+          }
+          run_check integrity node "$CI_LOG_DIR/integrity.cjs"
+          run_check sensitive node "$CI_LOG_DIR/sensitive.cjs"
+          run_check all-safe node scripts/qa-suite.js all-safe
+          run_check nexus node --test test/nexus/*.test.js
+          run_check rebuild node --test rebuild/tests/*.test.js
+          run_check rebuild-build node rebuild/scripts/build-browser.js
+          run_check realtime-build node -e "require('esbuild').buildSync({entryPoints:['public/nexus-openai-realtime-agent.js'],outfile:process.env.CI_LOG_DIR+'/realtime-agent.mjs',bundle:true,format:'esm',platform:'browser',target:'es2020'})"
+          run_check totals node "$CI_LOG_DIR/totals.cjs"
+          # A changed protected baseline remains a real failure; never rewrite it here.
+          run_check protected node scripts/nexus-protected-foundation-guard.js
+          exit "$failed"
+          NEXUS_VALIDATION
+      - name: Validate with loopback-only networking and no inherited credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in unshare setpriv ip mount bash node git; do command -v "$tool" >/dev/null; done
+          mkdir -p "$RUNNER_TEMP/nexus-ci-home" "$RUNNER_TEMP/nexus-ci-logs"
+          # Only dependency download above has network access. Repository code runs
+          # in new network/PID/mount namespaces, without capabilities or sudo.
+          # Hide host IPC sockets; preserve only loopback for local test servers.
+          sudo env -i PATH="$PATH" unshare --net --mount --pid --fork --mount-proc bash -c '
+            set -euo pipefail
+            mount --make-rprivate /
+            mount -t tmpfs -o mode=755 tmpfs /run
+            mount -t tmpfs -o mode=1777 tmpfs /tmp
+            ip link set lo up
+            exec setpriv --reuid="$1" --regid="$2" --clear-groups --bounding-set=-all --no-new-privs \
+              env -i PATH="$3" HOME="$4/nexus-ci-home" TMPDIR=/tmp CI=true \
+              CI_LOG_DIR="$4/nexus-ci-logs" NODE_ENV=test \
+              NEXUS_DISABLE_LOCAL_ENV_FILES=true NEXUS_REAL_PROVIDER_EXECUTION_ENABLED=false \
+              NEXUS_OPENAI_NATIVE_ENABLED=false NEXUS_OPENAI_REALTIME_ENABLED=false \
+              bash "$4/nexus-validation.sh"
+          ' nexus-isolation "$(id -u)" "$(id -g)" "$PATH" "$RUNNER_TEMP"
+# Separate gates, intentionally absent: PostgreSQL migrations, physical voice,
+# real providers/recipients, browser permissions, mobile hardware and deployments.

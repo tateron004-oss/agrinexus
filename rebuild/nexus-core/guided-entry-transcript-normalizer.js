@@ -38,7 +38,7 @@ function normalizeGuidedEntryTranscript(command, { fields = [], schema = null } 
 
   const aliases = fieldAliases(fields, schema);
   const wake = original.match(
-    /^(?:(hey|hello)\s*[,;:!?.-]*\s*)?(nexus|next(?:\s+(?:us|is))?)\b[\s,;:!?.-]*/i
+    /^(?:(hey|hello)\s*[,;:!?.-]*\s*)?(nexus|next(?:\s+(?:us|is))?|next(?:us|is))\b[\s,;:!?.-]*/i
   );
   if (!wake) return Object.freeze({ original, normalized: original, changed: false, rules: Object.freeze([]) });
 

@@ -28,5 +28,6 @@
             android:name=".NexusVoiceService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <receiver android:name=".NexusNotificationReceiver" android:exported="false" />
     </application>
 </manifest>

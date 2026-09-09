@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("crypto");
+const { createBusinessApi } = require("../business/api.js");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
@@ -25,7 +26,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     return runtimePromise;
   }
   async function status() {
-    try { const active = await runtime(); await active.ready; return await checkHealthFn(active); }
+    try { const active = await runtime(); await active.ready; return await checkHealthFn(active, { env }); }
     catch (error) { const failure = classifyRuntimeError(error); return { ok: false, authoritative: true, durable: false,
       category: failure.category, code: failure.code, retryable: failure.retryable,
       message: `${failure.message} No legacy write fallback was used.`,
@@ -40,7 +41,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       try {
         const active = await runtime();
         acceptanceStage = "runtime-ready"; await active.ready;
-        acceptanceStage = "runtime-health"; const health = await checkHealthFn(active);
+        acceptanceStage = "runtime-health"; const health = await checkHealthFn(active, { env });
         const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
         acceptanceStage = "acceptance-report";
         const report = await active.acceptance.report({ releaseSha, applications: active.applications, health });
@@ -505,6 +506,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       return true;
     }
+    if (url.pathname === "/api/nexus/runtime/business/webhooks/stripe" && req.method === "POST") {
+      if (env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED !== "true" || env.NEXUS_BUSINESS_BILLING_ENABLED !== "true" || !env.STRIPE_WEBHOOK_SECRET) {
+        send(res, 503, { code: "business_provider_unavailable", error: "Business billing webhooks are disabled or unconfigured." }); return true;
+      }
+      try { const active = await runtime(); await active.ready; const result = await createBusinessApi(active, { env }).webhook(req); send(res, 200, result); }
+      catch (error) { send(res, error.status || 503, { code: error.code || "business_webhook_unavailable", error: error.status ? error.message : "Business webhook processing is unavailable." }); }
+      return true;
+    }
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
@@ -513,7 +522,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
         query: Object.fromEntries(url.searchParams.entries()) };
       let result = null;
-      if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
+      if (url.pathname.startsWith("/api/nexus/runtime/business/")) {
+        result = await createBusinessApi(active, { env }).handle({ method: req.method, pathname: url.pathname, context, body });
+      } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         const result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
@@ -571,6 +582,24 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const statuses = await Promise.all(active.applications.list().map(async application => ({ ...application,
           migration: await active.workspaceMigrations.status(application.applicationId) })));
         send(res, 200, { authoritative: true, workspaces: statuses }); return true;
+      }
+      else if (url.pathname === "/api/nexus/runtime/devices" && req.method === "GET") result = await controls.listDevices(request);
+      else if (/^\/api\/nexus\/runtime\/devices\/[^/]+\/(lifecycle|push)$/.test(url.pathname) && req.method === "POST") {
+        request.params.deviceId = decodeURIComponent(url.pathname.split("/").at(-2));
+        result = url.pathname.endsWith("/lifecycle") ? await controls.deviceLifecycle(request) : await controls.registerPush(request);
+      }
+      else if (url.pathname === "/api/nexus/runtime/observability" && req.method === "GET") {
+        if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
+        result = { status: 200, body: { authoritative: true, ...(await active.observability.snapshot({ tenantId: context.tenantId })) } };
+      }
+      else if (/^\/api\/nexus\/runtime\/tasks\/[^/]+\/progress$/.test(url.pathname) && req.method === "GET") {
+        const taskId = decodeURIComponent(url.pathname.split("/").at(-2));
+        const task = await active.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
+        if (!task) { send(res, 404, { error: "Task not found.", code: "task_not_found" }); return true; }
+        if (task.ownerId !== context.userId && !context.hasRole("admin")) { send(res, 403, { error: "Task owner is required.", code: "permission_denied" }); return true; }
+        // Ordinary owners receive only task progress, never tenant-wide alerts or costs.
+        const snapshot = await active.observability.snapshot({ tenantId: context.tenantId, taskId });
+        result = { status: 200, body: { authoritative: true, progress: snapshot.progress } };
       }
       else if (url.pathname === "/api/nexus/runtime/devices" && req.method === "POST") result = await controls.registerDevice(request);
       else if (/^\/api\/nexus\/runtime\/devices\/[^/]+$/.test(url.pathname) && req.method === "DELETE") { request.params.deviceId=decodeURIComponent(url.pathname.split("/").pop()); result=await controls.revokeDevice(request); }

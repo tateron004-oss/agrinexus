@@ -10,8 +10,10 @@ const androidManifest = read("native-mobile/android/app/src/main/AndroidManifest
 const androidGradle = read("native-mobile/android/app/build.gradle");
 const androidController = read("native-mobile/android/app/src/main/java/com/agrinexus/mobile/NexusNativeController.kt");
 const androidService = read("native-mobile/android/app/src/main/java/com/agrinexus/mobile/NexusVoiceService.kt");
+const androidDeviceRuntime = read("native-mobile/android/app/src/main/java/com/agrinexus/mobile/NexusDeviceRuntime.kt");
 const iosController = read("native-mobile/ios/AgriNexus/NexusWebViewController.swift");
 const iosRuntime = read("native-mobile/ios/AgriNexus/NexusVoiceRuntime.swift");
+const iosDeviceRuntime = read("native-mobile/ios/AgriNexus/NexusDeviceRuntime.swift");
 const injectedBridge = read("native-mobile/bridge/agrinexus-native-voice.js");
 const readme = read("native-mobile/README.md");
 const desktopRuntime = JSON.parse(read("native-desktop/desktop-runtime.json"));
@@ -23,11 +25,13 @@ const checks = [
   ["android permissions", androidManifest.includes("RECORD_AUDIO") && androidManifest.includes("FOREGROUND_SERVICE_MICROPHONE") && androidManifest.includes("ACCESS_FINE_LOCATION") && androidManifest.includes("CAMERA")],
   ["android core dependency", androidGradle.includes("androidx.core:core-ktx")],
   ["android webview bridge", androidController.includes("addJavascriptInterface") && androidController.includes("AndroidAgriNexus") && androidController.includes("window.AgriNexusNativeBridge")],
-  ["android native runtime registration", androidController.includes("/api/native/voice-runtime") && androidController.includes("\"wakeMode\", \"foreground\"") && androidController.includes("\"microphone\", \"granted\"")],
+  ["android native runtime registration", androidController.includes("/api/native/voice-runtime") && androidController.includes("\"wakeMode\", \"foreground\"") && androidController.includes("permissionState(Manifest.permission.RECORD_AUDIO)") && androidController.includes("microphone-permission-denied")],
   ["android voice service", androidService.includes("SpeechRecognizer") && androidService.includes("EXTRA_PARTIAL_RESULTS") && androidService.includes("startForeground") && androidService.includes("ACTION_TRANSCRIPT") && androidService.includes("broadcastTranscript")],
+  ["android device capabilities", androidDeviceRuntime.includes("LocationManager") && androidDeviceRuntime.includes("ACTION_IMAGE_CAPTURE") && androidDeviceRuntime.includes("ACTION_OPEN_DOCUMENT") && androidDeviceRuntime.includes("AlarmManager")],
   ["ios permissions", read("native-mobile/ios/AgriNexus/Info.plist").includes("NSSpeechRecognitionUsageDescription") && read("native-mobile/ios/AgriNexus/Info.plist").includes("UIBackgroundModes")],
   ["ios webview bridge", iosController.includes("WKScriptMessageHandler") && iosController.includes("agrinexusNative") && iosController.includes("/api/native/voice-runtime")],
   ["ios voice runtime", iosRuntime.includes("SFSpeechRecognizer") && iosRuntime.includes("AVAudioEngine") && iosRuntime.includes("voice.final_transcript")],
+  ["ios device capabilities", iosDeviceRuntime.includes("CLLocationManager") && iosDeviceRuntime.includes("UIImagePickerController") && iosDeviceRuntime.includes("UIDocumentPickerViewController") && iosDeviceRuntime.includes("UNUserNotificationCenter")],
   ["web to native shim", injectedBridge.includes("window.AgriNexusNativeVoice") && injectedBridge.includes("wake.start") && injectedBridge.includes("permissions.request")],
   ["documentation", readme.includes("OS microphone permission") && readme.includes("visible listening indicator")],
   ["desktop runtime contract", bridge.nativeRuntimeSource?.desktop === "native-desktop" && desktopRuntime.platforms.windows.entrypoint === "native-desktop/windows/NexusWakeListener.ps1"],

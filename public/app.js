@@ -21170,6 +21170,7 @@ function renderNexusVirtualCareTelehealthPanel() {
     <section class="nexus-home-mode-panel-form nexus-virtual-care-telehealth-panel" data-testid="nexus-virtual-care-telehealth-panel" data-nexus-virtual-care-telehealth="true">
       <strong>${escapeHtml(translateText("Virtual Care + Telehealth Encounter"))}</strong>
       <p>${escapeHtml(translateText("Prepare a provider-ready encounter packet for diabetes, hypertension, obesity, RPM/RTM readings, or general concerns."))}</p>
+      <button type="button" class="nexus-provider-question-workspace-button" data-nexus-provider-question-report-open="doctor" data-nexus-provider-question-source="health-workspace">❓ ${escapeHtml(translateText("Show questions for my doctor or nurse"))}</button>
       <div class="nexus-home-mode-field-grid">
         <label>
           <span>${escapeHtml(translateText("Condition area"))}</span>
@@ -21366,6 +21367,7 @@ function renderNexusPharmacyActivationPanel() {
     <section class="nexus-home-mode-panel-form nexus-pharmacy-activation-panel" data-testid="nexus-pharmacy-activation-panel" data-nexus-pharmacy-activation="true">
       <strong>${escapeHtml(translateText("Pharmacy Review + Referral Packet"))}</strong>
       <p>${escapeHtml(translateText("Prepare medication review, refill coordination, adherence, diabetes supplies, and pharmacist review packets. Nexus does not prescribe or approve refills."))}</p>
+      <button type="button" class="nexus-provider-question-workspace-button" data-nexus-provider-question-report-open="pharmacist" data-nexus-provider-question-source="pharmacy-workspace">❓ ${escapeHtml(translateText("Show questions for my pharmacist"))}</button>
       <div class="nexus-home-mode-field-grid">
         <label><span>${escapeHtml(translateText("Pharmacy need"))}</span><select data-testid="nexus-pharmacy-need"><option value="medication-review">${escapeHtml(translateText("Medication review"))}</option><option value="refill-coordination">${escapeHtml(translateText("Refill coordination question"))}</option><option value="adherence-support">${escapeHtml(translateText("Adherence support"))}</option><option value="supplies-question">${escapeHtml(translateText("Diabetes supplies question"))}</option><option value="pharmacist-consult">${escapeHtml(translateText("Pharmacist consult prep"))}</option><option value="other">${escapeHtml(translateText("Other"))}</option></select></label>
         <label><span>${escapeHtml(translateText("Condition"))}</span><select data-testid="nexus-pharmacy-condition"><option value="diabetes">${escapeHtml(translateText("Diabetes"))}</option><option value="hypertension">${escapeHtml(translateText("Hypertension"))}</option><option value="obesity">${escapeHtml(translateText("Obesity"))}</option><option value="general">${escapeHtml(translateText("General"))}</option><option value="other">${escapeHtml(translateText("Other"))}</option></select></label>
@@ -21529,6 +21531,339 @@ async function handleNexusProviderCoordinationClick(event) {
   if (experienceMode === "user") renderUserWorkspace();
   return true;
 }
+
+let nexusVisualProviderQuestionReportState = null;
+
+function isNexusVisualProviderQuestionReportCommand(command = "") {
+  const normalized = normalizedWakeText(command);
+  if (!normalized || !/\bquestions?\b|\bwhat should i ask\b/.test(normalized)) return false;
+  const provider = /\b(doctor|physician|clinician|nurse|pharmacist|pharmacy)\b/.test(normalized);
+  const visibleRequest = /\b(show|list|display|open|prepare|create|give me)\b/.test(normalized)
+    || /\b(what|which) questions\b/.test(normalized)
+    || /\bwhat should i ask\b/.test(normalized);
+  return provider && visibleRequest;
+}
+
+function nexusVisualProviderQuestionAudience(command = "") {
+  const normalized = normalizedWakeText(command);
+  if (/\b(pharmacist|pharmacy)\b/.test(normalized)) return "pharmacist";
+  if (/\bnurse\b/.test(normalized)) return "nurse";
+  return "doctor";
+}
+
+function nexusVisualProviderQuestionContext() {
+  const value = selector => String(document.querySelector(selector)?.value || "").trim();
+  const pharmacyPacket = nexusPharmacyLastResult?.packet || {};
+  const telehealthPacket = nexusTelehealthLastResult?.packet || nexusTelehealthLastEncounter?.packet || {};
+  const firstValue = (...values) => values.map(item => String(item || "").trim()).find(Boolean) || "";
+  return {
+    symptoms: firstValue(
+      value('[data-testid="nexus-virtual-care-symptoms"]'),
+      value('[data-testid="nexus-mobile-clinic-symptoms"]'),
+      telehealthPacket.symptoms,
+      telehealthPacket.concern,
+      nexusPharmacyLastResult?.packet?.concern
+    ),
+    medications: firstValue(
+      value('[data-testid="nexus-pharmacy-medications"]'),
+      Array.isArray(pharmacyPacket.medicationList) ? pharmacyPacket.medicationList.join(", ") : pharmacyPacket.medications
+    ),
+    allergies: firstValue(
+      value('[data-testid="nexus-pharmacy-allergies"]'),
+      Array.isArray(pharmacyPacket.allergies) ? pharmacyPacket.allergies.join(", ") : pharmacyPacket.allergies
+    ),
+    readings: firstValue(
+      value('[data-testid="nexus-pharmacy-readings"]'),
+      [
+        value('[data-testid="nexus-virtual-care-reading-type"]'),
+        value('[data-testid="nexus-virtual-care-reading-value"]')
+      ].filter(Boolean).join(": "),
+      telehealthPacket.readings
+    )
+  };
+}
+
+function nexusVisualProviderQuestions(audience = "doctor", context = {}) {
+  const providerLabel = audience === "pharmacist" ? "pharmacist" : audience === "nurse" ? "nurse" : "doctor";
+  const questions = audience === "pharmacist"
+    ? [
+        "What is each medicine for, and how should I take it exactly as prescribed?",
+        "Could any of my medicines, foods, drinks, or supplements interact?",
+        "Do my allergies change which medicines or ingredients are safe for me?",
+        "Which side effects are common, and which need urgent medical help?",
+        "What should I ask my prescriber if I miss a dose or cannot take this medicine?",
+        "Do I need any monitoring, such as blood pressure, glucose, or laboratory checks?",
+        "How should I store these medicines, and what should I do if access or cost is a problem?",
+        "Before I leave, can you help me repeat back the medicine plan in plain language?"
+      ]
+    : [
+        `What could be causing my symptoms, and what important possibilities should my ${providerLabel} rule out?`,
+        "Which warning signs mean I should seek urgent or emergency care?",
+        "What examinations or tests might help, and what would each one tell us?",
+        "How do my recent readings compare with the goals that apply to me?",
+        "Could my medicines or allergies affect my symptoms or treatment options?",
+        "What are the benefits, risks, and alternatives for the options we discuss?",
+        "What can I safely do while waiting, and what should I avoid?",
+        "When should I follow up, and who should I contact if my symptoms change?"
+      ];
+  const personalized = [];
+  if (context.symptoms) personalized.push(`How should we evaluate these symptoms or concerns: ${context.symptoms}?`);
+  if (context.medications) personalized.push(`Please review these medicines with me: ${context.medications}. Are there questions I should take to my prescriber?`);
+  if (context.allergies) personalized.push(`My reported allergies are: ${context.allergies}. How should they affect my care or medicine review?`);
+  if (context.readings) personalized.push(`Please help me understand the pattern and next steps for these readings: ${context.readings}.`);
+  return [...personalized, ...questions].slice(0, 12);
+}
+
+function nexusVisualProviderQuestionSafetyWarning() {
+  return "This report helps you prepare for a conversation. It does not diagnose, prescribe, change medicines, or replace a qualified medical professional. If you have chest pain, severe trouble breathing, signs of stroke, severe bleeding, confusion, a severe allergic reaction, or feel in immediate danger, seek local emergency help now.";
+}
+
+function nexusVisualProviderQuestionReportText(state = nexusVisualProviderQuestionReportState) {
+  if (!state) return "";
+  const providerLabel = state.audience === "pharmacist" ? "Pharmacist" : state.audience === "nurse" ? "Nurse" : "Doctor";
+  const contextLines = [
+    state.context.symptoms ? `Symptoms or concerns: ${state.context.symptoms}` : "",
+    state.context.medications ? `Medications: ${state.context.medications}` : "",
+    state.context.allergies ? `Allergies: ${state.context.allergies}` : "",
+    state.context.readings ? `Readings: ${state.context.readings}` : ""
+  ].filter(Boolean);
+  return [
+    `Questions for my ${providerLabel}`,
+    contextLines.length ? contextLines.join("\n") : "Add any symptoms, medicines, allergies, or readings you want to discuss.",
+    ...state.questions.map((question, index) => `${index + 1}. ${question}`),
+    nexusVisualProviderQuestionSafetyWarning()
+  ].join("\n\n");
+}
+
+function renderNexusVisualProviderQuestionReport() {
+  const state = nexusVisualProviderQuestionReportState;
+  document.getElementById("nexusVisualProviderQuestionReport")?.remove();
+  if (!state?.open) {
+    document.body.classList.remove("nexus-provider-question-report-open");
+    return;
+  }
+  const providerLabel = state.audience === "pharmacist" ? "Pharmacist" : state.audience === "nurse" ? "Nurse" : "Doctor";
+  const report = document.createElement("div");
+  report.id = "nexusVisualProviderQuestionReport";
+  report.className = `nexus-provider-question-report-shell${state.largeText ? " nexus-provider-question-report-large" : ""}`;
+  report.dataset.nexusProviderQuestionReport = state.audience;
+  report.dataset.visible = "true";
+  report.dataset.multilingual = "true";
+  report.dataset.listeningResumeOwner = "existing-voice-runtime";
+  report.setAttribute("role", "dialog");
+  report.setAttribute("aria-modal", "true");
+  report.setAttribute("aria-labelledby", "nexusProviderQuestionReportTitle");
+  report.innerHTML = `
+    <article class="nexus-provider-question-report" lang="${escapeHtml(languageCode())}">
+      <header class="nexus-provider-question-report-header">
+        <div class="nexus-provider-question-report-title">
+          <span class="nexus-provider-question-report-icon" aria-hidden="true">${state.audience === "pharmacist" ? "💊" : "🩺"}</span>
+          <div>
+            <span class="eyebrow">${escapeHtml(translateText("Nexus Visual Provider Question Report"))}</span>
+            <h2 id="nexusProviderQuestionReportTitle" tabindex="-1">${escapeHtml(translateText(`Questions for my ${providerLabel}`))}</h2>
+            <p>${escapeHtml(translateText("Bring this report to your visit or place it where your provider can read it with you."))}</p>
+          </div>
+        </div>
+        <button type="button" class="nexus-provider-question-report-close" data-nexus-provider-question-action="close" aria-label="${escapeHtml(translateText("Close report"))}">×</button>
+      </header>
+      <nav class="nexus-provider-question-report-controls" aria-label="${escapeHtml(translateText("Report controls"))}">
+        <button type="button" data-nexus-provider-question-action="read">🔊 ${escapeHtml(translateText("Read aloud"))}</button>
+        <button type="button" data-nexus-provider-question-action="large-text" aria-pressed="${state.largeText ? "true" : "false"}">Aa ${escapeHtml(translateText("Large text"))}</button>
+        <button type="button" data-nexus-provider-question-action="fullscreen">⛶ ${escapeHtml(translateText("Full screen"))}</button>
+        <button type="button" data-nexus-provider-question-action="print">🖨 ${escapeHtml(translateText("Print"))}</button>
+        <button type="button" data-nexus-provider-question-action="download">⬇ ${escapeHtml(translateText("Download"))}</button>
+        <button type="button" data-nexus-provider-question-action="share">↗ ${escapeHtml(translateText("Share"))}</button>
+      </nav>
+      <section class="nexus-provider-question-context" aria-labelledby="nexusProviderQuestionContextTitle">
+        <h3 id="nexusProviderQuestionContextTitle">👤 ${escapeHtml(translateText("My details for this conversation"))}</h3>
+        <div class="nexus-provider-question-context-grid">
+          ${[
+            ["symptoms", "Symptoms or concerns", "Example: dizziness for three days"],
+            ["medications", "Medications", "Names and doses as written on the label"],
+            ["allergies", "Allergies", "Known medicine or ingredient allergies"],
+            ["readings", "Readings", "Example: BP 138/86; glucose 142"]
+          ].map(([name, label, placeholder]) => `
+            <label>
+              <span>${escapeHtml(translateText(label))}</span>
+              <textarea rows="2" data-nexus-provider-question-context="${name}" placeholder="${escapeHtml(translateText(placeholder))}">${escapeHtml(state.context[name] || "")}</textarea>
+            </label>
+          `).join("")}
+        </div>
+        <dl class="nexus-provider-question-print-context">
+          ${[
+            ["Symptoms or concerns", state.context.symptoms],
+            ["Medications", state.context.medications],
+            ["Allergies", state.context.allergies],
+            ["Readings", state.context.readings]
+          ].filter(([, value]) => value).map(([label, value]) => `<div><dt>${escapeHtml(translateText(label))}</dt><dd>${escapeHtml(value)}</dd></div>`).join("") || `<div><dt>${escapeHtml(translateText("Details"))}</dt><dd>${escapeHtml(translateText("No personal details were added."))}</dd></div>`}
+        </dl>
+      </section>
+      <section class="nexus-provider-question-list" aria-labelledby="nexusProviderQuestionListTitle">
+        <h3 id="nexusProviderQuestionListTitle">❓ ${escapeHtml(translateText("Questions to ask"))}</h3>
+        <ol>
+          ${state.questions.map(question => `<li><span>${escapeHtml(translateText(question))}</span></li>`).join("")}
+        </ol>
+      </section>
+      <aside class="nexus-provider-question-safety" role="note" aria-label="${escapeHtml(translateText("Medical safety warning"))}">
+        <strong>⚠ ${escapeHtml(translateText("Medical safety warning"))}</strong>
+        <p>${escapeHtml(translateText(nexusVisualProviderQuestionSafetyWarning()))}</p>
+      </aside>
+      <footer>
+        <span>${escapeHtml(translateText("Prepared locally for patient-provider discussion. Nexus did not contact a provider or change medical care."))}</span>
+        <output data-nexus-provider-question-status aria-live="polite"></output>
+      </footer>
+    </article>
+  `;
+  document.body.appendChild(report);
+  document.body.classList.add("nexus-provider-question-report-open");
+  requestAnimationFrame(() => report.querySelector("h2")?.focus?.());
+}
+
+function openNexusVisualProviderQuestionReport(audience = "doctor", options = {}) {
+  const normalizedAudience = ["doctor", "nurse", "pharmacist"].includes(audience) ? audience : "doctor";
+  const context = { ...nexusVisualProviderQuestionContext(), ...(options.context || {}) };
+  nexusVisualProviderQuestionReportState = {
+    open: true,
+    audience: normalizedAudience,
+    context,
+    questions: nexusVisualProviderQuestions(normalizedAudience, context),
+    largeText: options.largeText !== false,
+    openedFrom: options.source || "provider-question-report"
+  };
+  renderNexusVisualProviderQuestionReport();
+  const providerLabel = normalizedAudience === "pharmacist" ? "pharmacist" : normalizedAudience === "nurse" ? "nurse" : "doctor";
+  const response = `I opened your visual question report for the ${providerLabel}. You can read it, hear it aloud, use full screen, print, download, or share it. This is preparation only, not medical advice.`;
+  if (!options.visualOnly) updateNexusBehaviorLayer(options.speak === false ? "ready" : "speaking", response);
+  if (options.speak !== false) {
+    setVoiceResponse(response, true, {
+      allowHandoff: false,
+      command: options.command || "",
+      source: options.source || "visual-provider-question-report",
+      turnToken: options.turnToken
+    });
+  }
+  return true;
+}
+
+function handleNexusVisualProviderQuestionReportCommand(command = "", options = {}) {
+  if (!isNexusVisualProviderQuestionReportCommand(command)) return false;
+  if (window.NexusMentalHealthBehavioralWellness?.shouldHandle?.(command)) {
+    if (options.visualOnly) return false;
+    if (handleNexusMentalHealthBehavioralWellnessCommand(command, options)) return true;
+  }
+  return openNexusVisualProviderQuestionReport(nexusVisualProviderQuestionAudience(command), {
+    ...options,
+    command
+  });
+}
+
+function closeNexusVisualProviderQuestionReport() {
+  nexusVisualProviderQuestionReportState = null;
+  renderNexusVisualProviderQuestionReport();
+}
+
+async function handleNexusVisualProviderQuestionReportClick(event) {
+  const opener = event.target?.closest?.("[data-nexus-provider-question-report-open]");
+  if (opener) {
+    event.preventDefault();
+    event.stopPropagation();
+    return openNexusVisualProviderQuestionReport(opener.dataset.nexusProviderQuestionReportOpen || "doctor", {
+      source: opener.dataset.nexusProviderQuestionSource || "health-pharmacy-workspace",
+      speak: false
+    });
+  }
+  const actionButton = event.target?.closest?.("[data-nexus-provider-question-action]");
+  if (!actionButton) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = actionButton.dataset.nexusProviderQuestionAction || "";
+  const report = document.getElementById("nexusVisualProviderQuestionReport");
+  const status = report?.querySelector?.("[data-nexus-provider-question-status]");
+  if (action === "close") {
+    closeNexusVisualProviderQuestionReport();
+    return true;
+  }
+  if (action === "large-text") {
+    nexusVisualProviderQuestionReportState.largeText = !nexusVisualProviderQuestionReportState.largeText;
+    renderNexusVisualProviderQuestionReport();
+    return true;
+  }
+  if (action === "read") {
+    setVoiceResponse(nexusVisualProviderQuestionReportText(), true, {
+      allowHandoff: false,
+      allowLongResponse: true,
+      longForm: true,
+      source: "visual-provider-question-report-read-aloud"
+    });
+    return true;
+  }
+  if (action === "fullscreen") {
+    try {
+      if (typeof report?.requestFullscreen !== "function") throw new Error("Fullscreen unavailable");
+      await report.requestFullscreen();
+      if (status) status.textContent = translateText("Full screen opened.");
+    } catch {
+      if (status) status.textContent = translateText("Full screen is not available in this browser.");
+    }
+    return true;
+  }
+  if (action === "print") {
+    window.print();
+    return true;
+  }
+  const text = nexusVisualProviderQuestionReportText();
+  if (action === "download") {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nexus-${nexusVisualProviderQuestionReportState.audience}-questions.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+    if (status) status.textContent = translateText("Report downloaded.");
+    return true;
+  }
+  if (action === "share") {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Nexus Provider Questions", text });
+        if (status) status.textContent = translateText("Share options opened. You choose the recipient.");
+      } else {
+        if (typeof navigator.clipboard?.writeText !== "function") throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(text);
+        if (status) status.textContent = translateText("Report copied. You choose where to share it.");
+      }
+    } catch (error) {
+      if (status && error?.name !== "AbortError") status.textContent = translateText("Sharing was not completed.");
+    }
+    return true;
+  }
+  return false;
+}
+
+function handleNexusVisualProviderQuestionReportInput(event) {
+  const field = event.target?.closest?.("[data-nexus-provider-question-context]");
+  if (!field || !nexusVisualProviderQuestionReportState) return;
+  const key = field.dataset.nexusProviderQuestionContext;
+  if (!["symptoms", "medications", "allergies", "readings"].includes(key)) return;
+  nexusVisualProviderQuestionReportState.context[key] = String(field.value || "").trim();
+  nexusVisualProviderQuestionReportState.questions = nexusVisualProviderQuestions(
+    nexusVisualProviderQuestionReportState.audience,
+    nexusVisualProviderQuestionReportState.context
+  );
+  const printed = document.querySelector(".nexus-provider-question-print-context");
+  if (printed) printed.innerHTML = Object.entries(nexusVisualProviderQuestionReportState.context)
+    .filter(([, value]) => value).map(([name, value]) => `<div><dt>${escapeHtml(translateText(name))}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+  const list = document.querySelector(".nexus-provider-question-list ol");
+  if (list) {
+    list.innerHTML = nexusVisualProviderQuestionReportState.questions
+      .map(question => `<li><span>${escapeHtml(translateText(question))}</span></li>`)
+      .join("");
+  }
+}
+
+document.addEventListener("click", handleNexusVisualProviderQuestionReportClick, true);
+document.addEventListener("input", handleNexusVisualProviderQuestionReportInput, true);
 
 async function runNexusVirtualCareTelehealthCommand(command = "") {
   const question = String(command || "").trim();
@@ -30142,6 +30477,14 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
   const input = nexusCommandInputForSubmit(submit);
   const command = input?.value?.trim() || "";
   if (!command) return false;
+  if (handleNexusVisualProviderQuestionReportCommand(command, { source, speak: false })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -30977,7 +31320,7 @@ function nexusPresenceUserName() {
 }
 
 function isNexusPresenceWakePhrase(input = "") {
-  const normalized = String(input || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  const normalized = normalizedWakeText(input);
   return /^(nexus|hello nexus|hey nexus)$/.test(normalized);
 }
 
@@ -33076,6 +33419,7 @@ function renderNexusOperationsShelf() {
     <details class="nexus-operations-shelf" data-nexus-operations-shelf="true" open>
       <summary>${escapeHtml(translateText("Review workspace details"))}</summary>
       <div class="nexus-operations-shelf-grid">
+        <a href="/business-services.html" target="_blank" rel="noopener noreferrer">${escapeHtml(translateText("Business services"))}</a>
         ${renderNexusEndgameCommandCenter()}
         ${renderNexusActivationCenter()}
         ${renderNexusReviewQueues()}
@@ -39256,6 +39600,7 @@ function userModulePreviewHtml(sectionId) {
           ${userPreviewActionsHtml([
             { label: "Start Intake", command: "start telehealth intake" },
             { label: "Check Region", command: "check health risk in my region" },
+            { label: "Doctor Questions", command: "show questions I should ask my doctor" },
             { label: "Accessibility Help", command: "create audio guide and captions" }
           ])}
         </div>
@@ -56654,6 +56999,12 @@ async function restoreNexusAuthoritativeRuntime() {
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
+  // Local support and visit preparation cannot authorize or execute provider actions.
+  // These explicit requests remain available even when the durable runtime is unavailable.
+  if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
+  if (handleNexusVisualProviderQuestionReportCommand(text, options)) return true;
+  if (/\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources|professional version|clinician version)\b/i.test(text)
+      && handleNexusEnterpriseHealthEvidenceTrustCommand(text, options)) return true;
   const routedText = normalizeNexusPresenceRoutableCommand(text) || text;
   authoritativeGenesisTranscriptRoute = null;
   pendingAgentClarification = null;
@@ -57081,6 +57432,11 @@ document.addEventListener("click", handleNexusAgricultureCollaborationRuntimeDel
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   clearLevelOneAgentActionSuggestionLabel();
+  if (handleNexusVisualProviderQuestionReportCommand(rawCommand, {
+    source: options.source || "voice-provider-question-report",
+    speak: true,
+    turnToken: options.turnToken
+  })) return;
   const companionUnderstanding = rememberCompanionUnderstanding(rawCommand, { source: options.source || "voice", mode: conversationPlatformMode() });
   const turnToken = options.turnToken || null;
   const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);
@@ -59267,6 +59623,9 @@ function processFinalVoiceCommand(command = "", options = {}) {
   request("/api/voice/transcribe", { method: "POST", body: { transcript: finalCommand, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
   const submittedCommand = cleanedCommand || localizedCommand || finalCommand;
   if (realtimeVoiceActive()) {
+    handleNexusVisualProviderQuestionReportCommand(localizedCommand, {
+      source: "realtime-voice-provider-question-report", speak: false, visualOnly: true
+    });
     nexusGenesisVoiceDebugLog("legacy-transcript-ignored-realtime-active", {
       source: options.source || "voice",
       transcriptLength: String(submittedCommand || "").length,
@@ -61785,6 +62144,7 @@ function bindStatic() {
 
   $("#logoutBtn").onclick = async () => {
     localStorage.removeItem("agrinexusGuestDisplayName");
+    closeNexusVisualProviderQuestionReport();
     resetNexusAuthoritativeIdentityContext();
     await request("/api/logout", { method: "POST" });
     location.reload();

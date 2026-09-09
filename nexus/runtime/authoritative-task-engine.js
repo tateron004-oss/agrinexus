@@ -8,8 +8,8 @@ class NexusRuntimeError extends Error {
 }
 
 class AuthoritativeTaskEngine {
-  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null }) {
-    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority });
+  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null, observability = null }) {
+    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority, observability });
     this.verifier = verifier || (async ({ result }) => ({ verified: result !== undefined, method: "result_present" }));
   }
 
@@ -67,7 +67,7 @@ class AuthoritativeTaskEngine {
       for (const [attempt, toolId] of [step.tool_id, ...(step.fallback_tool_ids || [])].entries()) {
         for (const key of executionKeys(step, toolId, attempt)) {
           const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
-          if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+          if (previous?.state === "completed") return verifiedDuplicate(previous);
         }
       }
       throw new NexusRuntimeError("completed_receipt_missing", "The step is complete but its verified execution receipt is unavailable.", 409);
@@ -96,10 +96,19 @@ class AuthoritativeTaskEngine {
       const baseKey = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
       const key = retryOrdinal > 1 ? `${baseKey}:retry:${retryOrdinal}` : baseKey;
       const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
-      if (previous?.state === "completed") return { execution: previous, duplicate: true, receipt: previous.receipt || null };
+      if (previous?.state === "completed") return verifiedDuplicate(previous);
+      const estimatedCostCents = Number(tool.metadata?.estimatedCostCents || 0);
+      // Budget refusal occurs before claiming an execution or contacting its provider.
+      if (this.observability) await this.observability.assertCostAllowed({ tenantId: context.tenantId,
+        estimatedCostCents, operationLimitCents: tool.cost_limit_cents });
       const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
         toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
-      if (started.duplicate) { lastError = new NexusRuntimeError("prior_attempt_failed", `Prior ${toolId} attempt did not complete.`, 409); continue; }
+      if (started.duplicate) return verifiedDuplicate(started.execution);
+      const observedAt = Date.now();
+      const span = this.observability ? await observeSafely(() => this.observability.startSpan({
+        traceId: context.requestId, tenantId: context.tenantId, taskId, operation: "tool.execute",
+        attributes: { stepId, toolId: tool.tool_id } })) : null;
+      const providerId = tool.metadata?.provider || tool.domain || tool.tool_id;
       try {
       const dependencyOutputs = Object.fromEntries((taskWithSteps?.steps || [])
         .filter(candidate => dependencies.has(candidate.step_id))
@@ -123,6 +132,14 @@ class AuthoritativeTaskEngine {
       const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
       await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
         correlationId: task.correlationId, taskId, eventType: "tool.completed", outcome: "verified", metadata: receipt });
+      if (this.observability) {
+        await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+          toolId: tool.tool_id, provider: providerId, estimatedCostCents: result?.costCents ?? estimatedCostCents,
+          metadata: { executionId: started.execution.execution_id } }));
+        await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
+          providerId, successful: true, latencyMs: Date.now() - observedAt }));
+        if (span) await observeSafely(() => this.observability.finishSpan(span, { attributes: { verified: true } }));
+      }
       return { execution, duplicate: false, receipt };
       } catch (cause) {
       const error = sanitizeProviderFailure(cause, context);
@@ -133,6 +150,13 @@ class AuthoritativeTaskEngine {
       await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
         correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
         metadata: error });
+        if (this.observability) {
+          await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
+            providerId, successful: false, latencyMs: Date.now() - observedAt, errorCode: error.code }));
+          if (span) await observeSafely(() => this.observability.finishSpan(span, { state: "error", error }));
+          await observeSafely(() => this.observability.alert({ tenantId: context.tenantId,
+            alertKey: `provider:${providerId}`, summary: "A governed provider attempt failed.", evidence: error }));
+        }
         lastError = cause;
       }
     }
@@ -234,6 +258,15 @@ function makeReceipt(executionId, taskId, stepId, toolId, key, state, verificati
   return { schema: "nexus.receipt.v1", receiptId: createId("receipt"), executionId, taskId, stepId,
     toolId, idempotencyKey: key, state, verification, occurredAt: new Date().toISOString() };
 }
+function verifiedDuplicate(execution) {
+  if (execution?.state === "completed" && execution.receipt?.verification?.verified === true) {
+    return { execution, duplicate: true, receipt: execution.receipt };
+  }
+  if (execution?.state === "completed") throw new NexusRuntimeError("completed_receipt_missing", "The prior execution has no verified completion receipt.", 409);
+  if (execution?.state === "failed") throw new NexusRuntimeError("previous_execution_failed", "The prior failed execution requires the governed recovery path.", 409);
+  // A concurrent claim must never cause another provider to execute the same action.
+  throw new NexusRuntimeError("execution_in_progress", "The idempotent execution is still in progress.", 409);
+}
 function executionKeys(step, toolId, fallbackAttempt) {
   const base = fallbackAttempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;
   const keys = [base];
@@ -246,3 +279,5 @@ function withTimeout(promise, ms = 30000) {
 }
 
 module.exports = Object.freeze({ AuthoritativeTaskEngine, NexusRuntimeError, sanitizeProviderFailure });
+
+async function observeSafely(work) { try { return await work(); } catch { return null; } }

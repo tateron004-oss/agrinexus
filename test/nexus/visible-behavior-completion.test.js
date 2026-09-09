@@ -23,8 +23,10 @@ test("production browser certification uses visible login and visible command in
   const probe = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   assert.match(probe, /getByLabel\("Email"/);
   assert.match(probe, /getByRole\("button", \{ name: "Enter platform"/);
-  assert.match(probe, /getByLabel\("Workflow details for Nexus"/);
-  assert.match(probe, /getByRole\("button", \{ name: "Send to Nexus"/);
+  assert.ok(probe.includes('[data-nexus-primary-typed-entry="true"]:visible'));
+  assert.match(probe, /await input\.fill\(text\)/);
+  assert.ok(probe.includes('[data-nexus-primary-typed-submit="true"]:visible'));
+  assert.match(probe, /await send\.click\(\)/);
   assert.match(probe, /visibleAuthenticatedLogin: true/);
   assert.doesNotMatch(probe, /context\(\)\.request\.post\(\`\$\{base\}\/api\/login/);
 });

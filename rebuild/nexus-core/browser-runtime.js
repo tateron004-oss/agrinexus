@@ -23,8 +23,13 @@ class NexusBrowserRuntime {
     realtime,
     audioElement,
     openWorkspace,
+    interceptCommand = null,
     onReceipt = () => {},
-    instructions = DEFAULT_INSTRUCTIONS
+    instructions = DEFAULT_INSTRUCTIONS,
+    realtimeRetryLimit = 2,
+    realtimeRetryDelayMs = 350,
+    schedule = (callback, delay) => setTimeout(callback, delay),
+    cancelSchedule = timer => clearTimeout(timer)
   } = {}) {
     if (!foundation || typeof foundation.start !== "function") throw new Error("A voice foundation is required.");
     if (!realtime || typeof realtime.send !== "function") throw new Error("A Realtime connector is required.");
@@ -34,8 +39,20 @@ class NexusBrowserRuntime {
     this.realtime = realtime;
     this.audioElement = audioElement;
     this.openWorkspace = openWorkspace;
+    this.interceptCommand = typeof interceptCommand === "function" ? interceptCommand : null;
+    this.transcriptCommands = new Map();
+    this.lastTranscriptCommand = null;
+    this.transcriptSequence = 0;
+    this.commandGeneration = 0;
     this.onReceipt = onReceipt;
     this.instructions = instructions;
+    this.realtimeRetryLimit = Math.min(2, Math.max(0, Math.floor(Number(realtimeRetryLimit)) || 0));
+    this.realtimeRetryDelayMs = Math.min(2000, Math.max(0, Number(realtimeRetryDelayMs) || 0));
+    this.schedule = schedule;
+    this.cancelSchedule = cancelSchedule;
+    this.responseRetryTimer = null;
+    this.responseRetryCount = 0;
+    this.lastResponseRequest = null;
     this.preferences = DEFAULT_EXPERIENCE_PREFERENCES;
     this.started = false;
     this.unsubscribe = null;
@@ -191,6 +208,9 @@ class NexusBrowserRuntime {
       });
       return false;
     }
+    this.clearResponseRetry();
+    this.responseRetryCount = 0;
+    this.lastResponseRequest = { event: { ...event }, reason };
     this.responseRequestPending = true;
     this.realtime.send({ type: "response.create", ...event });
     this.receipt("conversation.response-requested", { reason });
@@ -198,6 +218,8 @@ class NexusBrowserRuntime {
   }
 
   cancelActiveResponse(reason = "barge-in") {
+    this.clearResponseRetry();
+    this.lastResponseRequest = null;
     if (!this.responseActive && !this.responseRequestPending) return false;
     const event = { type: "response.cancel" };
     if (this.activeResponseId) event.response_id = this.activeResponseId;
@@ -229,6 +251,8 @@ class NexusBrowserRuntime {
       this.completedResponseKeys.delete(this.completedResponseKeys.values().next().value);
     }
     this.clearResponseFallback();
+    this.clearResponseRetry();
+    this.lastResponseRequest = null;
     this.activeResponseId = null;
     this.responseActive = false;
     this.responseRequestPending = false;
@@ -270,7 +294,7 @@ class NexusBrowserRuntime {
 
     if (event.type === "response.function_call_arguments.done" && event.name === "route_nexus_command") {
       const args = JSON.parse(event.arguments || "{}");
-      return this.route(args.command, event.call_id);
+      return this.handleCommand(args.command, event.call_id);
     }
     if (event.type === "conversation.item.input_audio_transcription.completed") {
       const transcript = event.transcript || "";
@@ -282,8 +306,8 @@ class NexusBrowserRuntime {
         this.foundation.machine.snapshot().state,
         this.conversationContext
       );
-      if (resolution.accepted) {
-        this.route(transcript).catch((error) => {
+      if (resolution.accepted || this.interceptCommand) {
+        this.handleCommand(transcript, null, event.item_id || null).catch((error) => {
           this.receipt("workspace.route-failed", {
             name: error.name,
             message: error.message,
@@ -354,12 +378,59 @@ class NexusBrowserRuntime {
         this.responseActive = false;
         this.responseRequestPending = false;
       }
+      const transient = ["server_error", "rate_limit_exceeded", "service_unavailable", "timeout", "temporarily_unavailable"].includes(detail.code);
+      // Retry only an unaccepted response request, never a response already producing output/tools.
+      if (transient && this.responseRequestPending && !this.responseActive && !this.activeResponseId && this.lastResponseRequest) {
+        this.responseRequestPending = false;
+        if (this.responseRetryCount < this.realtimeRetryLimit) {
+          const retry = this.lastResponseRequest;
+          const attempt = ++this.responseRetryCount;
+          this.clearResponseRetry();
+          this.receipt("realtime.response-retry-scheduled", { code: detail.code, attempt });
+          this.responseRetryTimer = this.schedule(() => {
+            this.responseRetryTimer = null;
+            if (!this.started || this.foundation.machine.snapshot().state !== "connected" || this.lastResponseRequest !== retry || this.responseActive || this.responseRequestPending) return;
+            this.responseRequestPending = true;
+            this.realtime.send({ type: "response.create", ...retry.event });
+            this.receipt("realtime.response-retried", { code: detail.code, attempt });
+          }, this.realtimeRetryDelayMs * attempt);
+        } else {
+          this.lastResponseRequest = null;
+          this.receipt("realtime.response-retry-exhausted", { code: detail.code, attempts: this.responseRetryCount });
+        }
+      }
       this.receipt("realtime.error", {
         code: detail.code || "unknown",
         message: detail.message || "Realtime voice request failed."
       });
     }
     return null;
+  }
+
+  async handleCommand(command, callId = null, transcriptId = null) {
+    const generation = this.commandGeneration;
+    const key = String(command || "").toLocaleLowerCase().replace(/\s+/g, " ").trim();
+    let entry = callId && this.lastTranscriptCommand?.key === key && Date.now() - this.lastTranscriptCommand.at < 15000
+      ? this.lastTranscriptCommand : null;
+    if (!entry && !callId && transcriptId) entry = this.transcriptCommands.get(transcriptId);
+    if (!entry) {
+      const requestId = callId || transcriptId || ("guided-transcript-" + ++this.transcriptSequence);
+      entry = { key, at: Date.now(), promise: Promise.resolve().then(() => this.commandGeneration === generation ? this.interceptCommand?.(command, { requestId }) : { handled: true, cancelled: true }).then(value => value || { handled: false }) };
+      if (!callId) {
+        this.lastTranscriptCommand = entry;
+        if (transcriptId) this.transcriptCommands.set(transcriptId, entry);
+        while (this.transcriptCommands.size > 32) this.transcriptCommands.delete(this.transcriptCommands.keys().next().value);
+      }
+    }
+    const owned = await entry.promise;
+    if (this.commandGeneration !== generation) return { handled: true, cancelled: true };
+    if (!owned.handled) return this.route(command, callId);
+    this.receipt("command.consumed-by-guided-entry", { command, action: owned.action || null, requestId: owned.requestId || null });
+    if (callId) {
+      this.realtime.send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(owned) } });
+      this.requestResponse({}, "guided-entry-result", { defer: true });
+    }
+    return owned;
   }
 
   async route(command, callId = null) {
@@ -424,7 +495,14 @@ class NexusBrowserRuntime {
     this.responseFallbackTimer = null;
   }
 
+  clearResponseRetry() {
+    if (this.responseRetryTimer !== null) this.cancelSchedule(this.responseRetryTimer);
+    this.responseRetryTimer = null;
+  }
+
   stop(reason = "user-stop") {
+    this.clearResponseRetry();
+    this.lastResponseRequest = null;
     this.clearResponseFallback();
     this.foundation.stop(reason);
     if (this.unsubscribe) this.unsubscribe();
@@ -438,6 +516,9 @@ class NexusBrowserRuntime {
     this.deferredResponse = null;
     this.completedResponseKeys.clear();
     this.visualRoutes.clear();
+    this.commandGeneration += 1;
+    this.transcriptCommands.clear();
+    this.lastTranscriptCommand = null;
     this.conversationContext = clearConversationContext();
     this.receipt("runtime.closed", { reason });
   }

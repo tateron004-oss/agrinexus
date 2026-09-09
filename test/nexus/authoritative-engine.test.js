@@ -172,3 +172,43 @@ test("failed provider work resumes with a bounded new idempotency identity and n
   const duplicate = await engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId });
   assert.equal(duplicate.duplicate, true); assert.equal(calls, 2);
 });
+
+
+test("budget refusal precedes execution and telemetry outages never erase verified results", async () => {
+  const { engine, store } = fixture();
+  store.task = { tenantId:"tenant", correlationId:"trace" };
+  store.steps = [{ step_id:"s",tool_id:"documents.save",confirmation_state:"approved",idempotency_key:"one",state:"pending",input:{} }];
+  const context={tenantId:"tenant",userId:"user",can:()=>true,hasRole:()=>false};
+  engine.observability={assertCostAllowed:async()=>{throw Object.assign(new Error("Budget exceeded"),{code:"cost_limit_exceeded"});}};
+  await assert.rejects(()=>engine.execute({context,taskId:"task",stepId:"s"}),{code:"cost_limit_exceeded"});
+  assert.equal(store.execution,null); assert.equal(store.calls,0);
+  const fail=async()=>{throw Error("Telemetry unavailable");};
+  engine.observability={assertCostAllowed:async()=>{},startSpan:fail,recordCost:fail,recordProviderHealth:fail,finishSpan:fail};
+  const result=await engine.execute({context,taskId:"task",stepId:"s"});
+  assert.equal(result.receipt.verification.verified,true); assert.equal(store.execution.state,"completed"); assert.equal(store.calls,1);
+  engine.observability.assertCostAllowed=fail;
+  assert.equal((await engine.execute({context,taskId:"task",stepId:"s"})).duplicate,true);
+  assert.equal(store.calls,1);
+});
+
+test('completed execution cannot be replayed as success without a verified receipt',async()=>{
+ const {engine,store}=fixture();store.task={tenantId:'tenant'};
+ store.steps=[{step_id:'step',tool_id:'documents.save',idempotency_key:'key',state:'completed'}];
+ store.execution={idempotency_key:'key',state:'completed',receipt:{verification:{verified:false}}};
+ await assert.rejects(()=>engine.execute({context:{tenantId:'tenant'},taskId:'task',stepId:'step'}),error=>error.code==='completed_receipt_missing');
+ assert.equal(store.calls,0);
+});
+
+test('concurrent idempotent claims never trigger a second provider while work is running',async()=>{
+ for(const state of ['running','failed','completed']){
+  const {engine,store}=fixture();store.task={tenantId:'tenant'};let starts=0;
+  store.steps=[{step_id:'step',tool_id:'documents.save',fallback_tool_ids:['backup'],idempotency_key:'key',state:'pending',confirmation_state:'approved',input:{}}];
+  engine.tools.get=async id=>({tool_id:id,availability:'available',required_permission:'tasks:execute',max_attempts:3});
+  engine.executors.backup=async()=>{store.calls++;return {persisted:true}};
+  engine.executions.start=async()=>{starts++;return {duplicate:true,execution:{state,receipt:state==='completed'?{verification:{verified:true}}:null}}};
+  const work=()=>engine.execute({context:{tenantId:'tenant',userId:'user',can:()=>true},taskId:'task',stepId:'step'});
+  if(state==='completed')assert.equal((await work()).duplicate,true);
+  else await assert.rejects(work,error=>error.code===(state==='running'?'execution_in_progress':'previous_execution_failed'));
+  assert.equal(starts,1);assert.equal(store.calls,0);
+ }
+});

@@ -133,8 +133,8 @@ assert.match(
 );
 assert.match(
   browserEntry,
-  /if \(!isDraftReopenCommand\(transcript\)[\s\S]*guidedEntryController\?\.execute/,
-  "The final transcript path must leave reopen exclusively to the rendered-document transaction."
+  /interceptCommand: async \(command[\s\S]*if \(isDraftReopenCommand\(command\)[\s\S]*return \{ handled: false \}[\s\S]*guidedEntryController\?\.execute/,
+  "The command interceptor must leave reopen exclusively to the rendered-document transaction."
 );
 assert.match(
   browserEntry,

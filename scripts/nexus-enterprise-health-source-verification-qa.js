@@ -89,7 +89,7 @@ includes(app, "const isExplicitBrainLaneCommand = command => !isNexusEnterpriseH
 includes(app, "function routeNexusCommandCenterCommunicationSubmit", "communication submit bridge exists");
 includes(app, "if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {\n    event?.preventDefault?.();", "communication bridge routes evidence commands before mission advancement");
 includes(app, "if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: \"typed-command-submit\" })) {\n        event.preventDefault();", "early submit routes evidence commands before workflow routing");
-includes(app, "advanceNexusOsMissionForCommand(command, { source: \"typed-command-keyboard\" });\n    if (await handleNexusUnifiedBrainRuntimeCommand", "keyboard mission advancement waits until after evidence command handling");
+includes(app.slice(app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand"), app.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand")), "handleNexusEnterpriseHealthEvidenceTrustCommand(text, options)", "shared authoritative entrance retains explicit local source inspection");
 includes(app, "typed-command-keyboard", "keyboard command route remains covered");
 
 assert(packageJson.scripts["qa:nexus-enterprise-health-source-verification"], "package alias exists");

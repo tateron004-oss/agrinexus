@@ -18125,7 +18125,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-backed image results for ${imageQuery} from Wikimedia Commons.`, images, sources: images.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
         }
       } catch (error) {
-        // Continue into the configured vision provider, which returns a truthful blocked state.
+        // Try the recovered source-attributed image fallback before truthful vision refusal.
+      }
+      try {
+        const images = await require("./server/nexus-open-image-fallback").searchOpenImages(imageQuery);
+        if (images.length) {
+          const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-images", [`Retrieved ${images.length} image result(s) through Openverse with source pages and license metadata.`], ["Nexus did not analyze an unseen image, open the camera, or diagnose a crop or health condition."]);
+          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-linked image results for ${imageQuery} through Openverse after the primary search returned no usable result.`, images, sources: images.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
+        }
+      } catch {
+        // Preserve the configured vision provider's truthful unavailable result.
       }
     }
     const visionResult = await nexusRealProviders.vision.analyze({

@@ -18,6 +18,7 @@ async function runYouTubeDataApiLiveProviderQa() {
     YOUTUBE_API_KEY: "test-secret-key",
     NEXUS_MUSIC_MEDIA_FETCH_IMPL: async url => {
       calls.push(String(url));
+      if (String(url).startsWith(media.YOUTUBE_OEMBED_URL)) return buildResponse({ type: "video", html: "<iframe></iframe>" });
       if (String(url).startsWith(media.YOUTUBE_VIDEOS_URL)) return buildResponse({
         items: [
           { id: "abc123", status: { embeddable: true, privacyStatus: "public" } },
@@ -52,7 +53,8 @@ async function runYouTubeDataApiLiveProviderQa() {
     mediaRequest: "show me how to plant maize"
   }, env);
 
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
+  assert.equal(calls.filter(url => url.startsWith(media.YOUTUBE_OEMBED_URL)).length, 2);
   const requestUrl = new URL(calls[0]);
   assert.equal(requestUrl.origin + requestUrl.pathname, media.YOUTUBE_SEARCH_URL);
   assert.equal(requestUrl.searchParams.get("part"), "snippet");
@@ -64,7 +66,7 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.equal(requestUrl.searchParams.get("key"), "test-secret-key");
   const statusUrl = new URL(calls[1]);
   assert.equal(statusUrl.origin + statusUrl.pathname, media.YOUTUBE_VIDEOS_URL);
-  assert.equal(statusUrl.searchParams.get("part"), "status");
+  assert.equal(statusUrl.searchParams.get("part"), "status,contentDetails");
   assert.equal(statusUrl.searchParams.get("id"), "abc123,def456");
 
   assert.equal(isSafeReadOnlySourceResult(result), true);
@@ -83,13 +85,13 @@ async function runYouTubeDataApiLiveProviderQa() {
   assert.equal(recovered.sourceStatus, "source-result-available");
   assert.equal(recovered.sourceUrl, "https://www.youtube.com/watch?v=def456");
   assert.match(recovered.resultSummary, /How to Plant Maize Live/);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 8);
 
   await media.getMusicMediaSourceResultAsync({
     mediaRequest: "show me how to plant maize",
     creativeCommonsOnly: true
   }, env);
-  const rightsAwareUrl = new URL(calls[4]);
+  const rightsAwareUrl = new URL(calls[8]);
   assert.equal(rightsAwareUrl.searchParams.get("videoLicense"), "creativeCommon");
 
   const exhausted = await media.getMusicMediaSourceResultAsync({

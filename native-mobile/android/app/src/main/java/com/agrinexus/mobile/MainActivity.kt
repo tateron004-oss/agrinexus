@@ -37,6 +37,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        controller.onForeground()
         val filter = IntentFilter(NexusVoiceService.ACTION_TRANSCRIPT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(speechReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else registerReceiver(speechReceiver, filter)
@@ -44,11 +45,17 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         runCatching { unregisterReceiver(speechReceiver) }
+        controller.onBackground()
         super.onPause()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (controller.onActivityResult(requestCode, resultCode, data)) return
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 8104) controller.registerPermissions()
+        if (requestCode == 8104) controller.onPermissionsResult()
     }
 }

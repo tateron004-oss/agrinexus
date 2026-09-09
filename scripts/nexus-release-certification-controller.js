@@ -8,6 +8,8 @@ const {
   sha256File
 } = require("../rebuild/nexus-core/certification-identity");
 
+const { requireCanonicalProductionUrl, productionUrlFromEnv } = require("./nexus-canonical-production-target");
+
 const outputDir = path.resolve("output/nexus-release-certification");
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -18,22 +20,21 @@ function normalizeSha(value) {
 function sameCommit(expected, actual) {
   expected = normalizeSha(expected);
   actual = normalizeSha(actual);
-  return expected.length >= 7 && actual.length >= 7 &&
-    (expected === actual || expected.startsWith(actual) || actual.startsWith(expected));
+  return /^[a-f0-9]{40}$/.test(expected) && /^[a-f0-9]{40}$/.test(actual) && expected === actual;
 }
 
 async function fetchIdentity(baseUrl, acceptanceToken, publicAssetPath = "/app.js") {
   const headers = { "cache-control": "no-cache" };
-  const base = baseUrl.replace(/\/+$/, "");
+  const base = requireCanonicalProductionUrl(baseUrl, "certification target");
   if (acceptanceToken) {
     headers.authorization = `Bearer ${acceptanceToken}`;
-    const response = await fetch(`${base}/api/certification/identity`, { headers });
+    const response = await fetch(`${base}/api/certification/identity`, { headers, redirect: "error", signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`identity endpoint returned HTTP ${response.status}`);
     return response.json();
   }
   const [runtimeResponse, bundleResponse] = await Promise.all([
-    fetch(`${base}/api/nexus/runtime/status`, { headers }),
-    fetch(`${base}/${String(publicAssetPath).replace(/^\/+/, "")}`, { headers })
+    fetch(`${base}/api/nexus/runtime/status`, { headers, redirect: "error", signal: AbortSignal.timeout(20000) }),
+    fetch(`${base}/${String(publicAssetPath).replace(/^\/+/, "")}`, { headers, redirect: "error", signal: AbortSignal.timeout(20000) })
   ]);
   if (!runtimeResponse.ok) throw new Error(`runtime status returned HTTP ${runtimeResponse.status}`);
   if (!bundleResponse.ok) throw new Error(`browser bundle returned HTTP ${bundleResponse.status}`);
@@ -65,6 +66,8 @@ async function verifyDeployment({
   timeoutMs = 12 * 60 * 1000,
   intervalMs = 15000
 }) {
+  baseUrl = requireCanonicalProductionUrl(baseUrl, "certification target");
+  if (!/^[a-f0-9]{40}$/.test(normalizeSha(expectedSha))) throw new Error("INVALID_EXPECTED_RELEASE_SHA: exact 40-character Git SHA required");
   fs.mkdirSync(outputDir, { recursive: true });
   const expectedBundle = sha256File(bundlePath);
   const startedAt = new Date().toISOString();
@@ -118,7 +121,7 @@ async function main() {
     throw new Error("Usage: node scripts/nexus-release-certification-controller.js verify-deployment");
   }
   await verifyDeployment({
-    baseUrl: process.env.NEXUS_CLEAN_BASE_URL,
+    baseUrl: productionUrlFromEnv(),
     expectedSha: process.env.NEXUS_EXPECTED_RELEASE_SHA,
     bundlePath: process.env.NEXUS_EXPECTED_BUNDLE || "rebuild/browser/nexus-clean.bundle.js",
     acceptanceToken: process.env.NEXUS_ACCEPTANCE_TOKEN,
