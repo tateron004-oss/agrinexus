@@ -38,16 +38,15 @@ test("production exposes one authoritative durable runtime for all 17 workspaces
 test("authoritative persistence and semantic memory have one migration chain", () => {
   const migrations = fs.readdirSync(path.join(root, "foundation/migrations"))
     .filter(name => /^\d+_.+\.sql$/.test(name)).sort();
-  assert.deepEqual(migrations, [
-    "001_initial_schema.sql", "002_seed_demo.sql", "003_nexus_unified_runtime.sql",
-    "004_nexus_production_controls.sql", "005_nexus_model_governance.sql",
-    "006_nexus_resilient_execution.sql", "007_nexus_workspace_records.sql",
-    "008_nexus_device_delivery.sql", "009_nexus_data_lifecycle.sql",
-    "010_nexus_production_acceptance.sql", "011_nexus_production_acceptance_identity.sql",
-    "012_nexus_path2_certification.sql", "013_nexus_path2_certification_ledger.sql",
-    "014_nexus_path2_machine_cases.sql", "015_nexus_tool_registry_reconciliation.sql", "016_nexus_operations_consolidation.sql",
-    "017_auth_password_reset_fields.sql"
-  ]);
+  assert.ok(migrations.length > 0, "must have at least one migration");
+  // Sequential, gap-free numbering (not a hardcoded exact list) is what "one
+  // migration chain" actually means -- a hardcoded list breaks on every
+  // routine new migration, the same fragility already fixed once in this
+  // repo's CI totals check.
+  migrations.forEach((name, index) => {
+    const number = Number(name.match(/^(\d+)_/)[1]);
+    assert.equal(number, index + 1, `migrations must be sequentially numbered with no gaps or duplicates (expected ${index + 1}, found "${name}")`);
+  });
   assert.match(read("foundation/migrations/003_nexus_unified_runtime.sql"), /vector\(/i);
 });
 
