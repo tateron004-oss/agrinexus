@@ -50,6 +50,24 @@ test("verifyPassword accepts the correct password and records last_login_at, rej
   assert.equal(pool2.calls.length, 1, "a failed login must not update last_login_at");
 });
 
+test("verifyPassword still returns the user when the last_login_at bookkeeping update fails (e.g. migration 017 not applied yet)", async () => {
+  const storedHash = pgUsers.hashPassword("Correct-Horse-1");
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    const pool = stubPool([
+      [/^select id, tenant_id, email, display_name, password_hash, status from users/, () => ({
+        rows: [{ id: "user-1", tenant_id: "tenant-1", email: "demo@agrinexus.org", display_name: "Demo", password_hash: storedHash, status: "active" }]
+      })],
+      [/^update users set last_login_at = now\(\)/, () => { throw new Error('column "last_login_at" does not exist'); }]
+    ]);
+    const user = await pgUsers.verifyPassword(pool, "demo@agrinexus.org", "Correct-Horse-1");
+    assert.equal(user.id, "user-1", "a correct password must still succeed even if the last_login_at write fails");
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
 test("verifyPassword rejects a non-active account even with the correct password", async () => {
   const storedHash = pgUsers.hashPassword("Correct-Horse-1");
   const pool = stubPool([

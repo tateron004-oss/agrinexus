@@ -11771,9 +11771,14 @@ function ensureVoiceHealthIntake(db, user, { needSummary, force = false } = {}) 
   const { country, route } = activeContext(db);
   let intake = force ? null : db.profile.healthIntakes[0];
   if (!intake) {
+    const intakeId = crypto.randomUUID();
     intake = {
-      id: crypto.randomUUID(),
-      patientRef: `AN-PAT-${country.id.toUpperCase()}-VOICE`,
+      id: intakeId,
+      // Unique per intake (not just per country): the Postgres shadow-write
+      // upserts on patientRef, so a constant suffix here would make every
+      // repeat voice intake for the same country silently overwrite the
+      // previous one's Postgres row instead of creating a new record.
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-VOICE-${intakeId.slice(0, 8)}`,
       patientName: "Voice-supported patient",
       countryId: country.id,
       needSummary: needSummary || `${country.name} voice intake for telehealth access`,
@@ -44490,14 +44495,17 @@ async function api(req, res, url) {
         user.resetTokenExpiresAt = expiresAt;
       }
     }
-    const emailResult = accountExists
-      ? await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt })
-      : { configured: false, executed: false };
+    // Only send a real email (with a real, usable token) when the account exists.
+    // The response status below is computed from the provider's configured state
+    // alone -- never from accountExists or the per-request send outcome -- so it
+    // cannot be used to enumerate which emails are registered.
+    if (accountExists) await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt });
+    const providerConfigured = nexusEmailProviderStatus().configured;
     addActivity(db.profile, `Password reset requested for ${email}.`);
     await writeDb(db);
     // Always respond identically whether or not the email is registered, so this endpoint
     // cannot be used to enumerate accounts.
-    return send(res, 200, { ok: true, status: emailResult.configured ? (emailResult.executed ? "sent" : "queued-needs-provider") : "queued-needs-provider" });
+    return send(res, 200, { ok: true, status: providerConfigured ? "sent" : "queued-needs-provider" });
   }
 
   if (url.pathname === "/api/auth/password-reset/confirm" && req.method === "POST") {
@@ -44509,6 +44517,11 @@ async function api(req, res, url) {
     if (usingPostgresAuth()) {
       const consumed = await pgUsers.consumeResetToken(getPgPool(), email, token, newPassword).catch(() => false);
       if (!consumed) return send(res, 400, { error: "Invalid or expired reset code" });
+      // Keep the blob shadow copy in sync too, so a later AUTH_STORE rollback to
+      // "blob", or any code path that still reads the blob's password field,
+      // doesn't see the pre-reset value.
+      const shadowUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      if (shadowUser) shadowUser.password = newPassword;
     } else {
       const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -45124,7 +45137,8 @@ async function api(req, res, url) {
     account.lastUpdatedAt = new Date().toISOString();
     if (!db.users.some(item => item.id === account.id)) db.users.push(account);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password: account.password }).catch(() => null);
+      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password: account.password })
+        .catch(error => console.error("[admin] test-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "test_user.created", detail: `${account.email} User-only test login created.` });
     logIntegration(db, {
@@ -45165,7 +45179,8 @@ async function api(req, res, url) {
     adminAccount.lastUpdatedAt = new Date().toISOString();
     if (!account) db.users.push(adminAccount);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password: adminAccount.password }).catch(() => null);
+      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password: adminAccount.password })
+        .catch(error => console.error("[admin] admin-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "admin_user.created", detail: `${adminAccount.email} Admin test login created.` });
     logIntegration(db, {

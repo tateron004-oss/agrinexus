@@ -34,7 +34,16 @@ async function findUserByEmail(pool, email) {
 async function verifyPassword(pool, email, password) {
   const user = await findUserByEmail(pool, email);
   if (!user || user.status !== "active" || !verifyPasswordHash(password, user.password_hash)) return null;
-  await pool.query("update users set last_login_at = now() where id = $1", [user.id]);
+  try {
+    await pool.query("update users set last_login_at = now() where id = $1", [user.id]);
+  } catch (error) {
+    // Non-critical bookkeeping: a correctly-verified login must not fail just
+    // because this column is missing (e.g. migration 017 not applied yet) or
+    // the update otherwise errors. The caller wraps this whole function in a
+    // .catch that treats any rejection as "invalid credentials" -- letting
+    // that happen here would misreport a DB/migration problem as a bad password.
+    console.error("[pg-users] failed to record last_login_at:", error.message);
+  }
   return user;
 }
 
@@ -89,10 +98,16 @@ async function consumeResetToken(pool, email, token, newPassword) {
   );
   const row = current.rows[0];
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const suppliedBuffer = Buffer.from(tokenHash, "hex");
+  const storedBuffer = row && row.password_reset_token_hash ? Buffer.from(row.password_reset_token_hash, "hex") : null;
+  const tokenMatches = Boolean(
+    storedBuffer
+    && storedBuffer.length === suppliedBuffer.length
+    && crypto.timingSafeEqual(storedBuffer, suppliedBuffer)
+  );
   const valid = Boolean(
     row
-    && row.password_reset_token_hash
-    && row.password_reset_token_hash === tokenHash
+    && tokenMatches
     && row.password_reset_expires_at
     && new Date(row.password_reset_expires_at).getTime() > Date.now()
   );

@@ -21,7 +21,11 @@ function pgCountryId(blobCountryId) {
 
 async function createIntake(pool, { countryId, patientRef, needSummary, riskLevel, tenantId = DEMO_TENANT_ID }) {
   const pgCountry = pgCountryId(countryId);
-  if (!pgCountry) return null;
+  // Throw rather than resolve null: the caller's shadow-write wrapper only
+  // logs on a rejected promise, so a silent null here would mean an
+  // unmapped country (e.g. one the blob supports but the Postgres seed data
+  // doesn't yet) fails with zero observability.
+  if (!pgCountry) throw new Error(`pg-health-intakes: no Postgres country mapping for "${countryId}"`);
   const result = await pool.query(
     `insert into patient_intakes (tenant_id, country_id, patient_ref, need_summary, risk_level, queue_status)
      values ($1, $2, $3, $4, $5, 'Intake')
