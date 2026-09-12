@@ -16,8 +16,8 @@ Prove that the default-off Approval Center feature flag contract behaves predict
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/approval-center-feature-flags.json`
-- Harness: `scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-f3-approval-center-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -68,7 +68,7 @@ The harness must not:
 Sprint F3 does not load:
 
 - `public/nexus-approval-center-feature-flag.js`;
-- `scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`;
 - `fixtures/nexus/approval-center-feature-flags.json`.
 
 The Standard User build remains unchanged.

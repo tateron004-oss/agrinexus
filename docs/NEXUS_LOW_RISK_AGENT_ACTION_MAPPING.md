@@ -115,7 +115,7 @@ Allowed `frontendConsumptionPolicy` values:
 
 ## QA Guardrails
 
-Phase 7G adds `scripts/nexus-low-risk-agent-mapping-qa.js` and `qa:nexus-low-risk-mapping`.
+Phase 7G adds `archive/qa-scripts/nexus-low-risk-agent-mapping-qa.js` and `qa:nexus-low-risk-mapping`.
 
 The QA must prove:
 

@@ -52,4 +52,4 @@ AUT4 does not persist state. It does not use `localStorage`, `sessionStorage`, f
 
 ## QA
 
-`scripts/nexus-aut4-workflow-session-state-qa.js` verifies state creation, continuation, selected item references, restart, cancel, missing/expired context handling, blocked high-risk continuation commands, no sensitive persistence, package alias wiring, safe-suite wiring, and absence of runtime hooks.
+`archive/qa-scripts/nexus-aut4-workflow-session-state-qa.js` verifies state creation, continuation, selected item references, restart, cancel, missing/expired context handling, blocked high-risk continuation commands, no sensitive persistence, package alias wiring, safe-suite wiring, and absence of runtime hooks.

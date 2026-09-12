@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-consent-center-contract.js`;
 - `public/nexus-consent-center-feature-flag.js`;
-- `scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`;
 - `fixtures/nexus/consent-center-feature-flags.json`;
 - Sprint H QA scripts.
 

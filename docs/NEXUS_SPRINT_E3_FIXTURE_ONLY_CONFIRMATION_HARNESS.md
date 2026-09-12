@@ -13,8 +13,8 @@ E3 remains non-runtime and non-executing. It does not import confirmations into 
 ## Files
 
 - Fixture file: `fixtures/nexus/confirmations.json`
-- Harness: `scripts/nexus-sprint-e3-confirmation-harness.js`
-- QA guard: `scripts/nexus-sprint-e3-confirmation-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-e3-confirmation-harness.js`
+- QA guard: `archive/qa-scripts/nexus-sprint-e3-confirmation-harness-qa.js`
 
 ## Fixture Examples
 

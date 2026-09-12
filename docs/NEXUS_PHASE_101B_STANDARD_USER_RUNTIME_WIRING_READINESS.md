@@ -80,8 +80,8 @@ node --check public/app.js
 node --check public/index.html
 node --check public/nexus-agriculture-support-response-card.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node --check archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
 node scripts/qa-suite.js nexus-workforce
 node scripts/qa-suite.js all-safe

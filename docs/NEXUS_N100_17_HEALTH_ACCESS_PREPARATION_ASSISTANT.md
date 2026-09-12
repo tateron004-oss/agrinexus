@@ -36,4 +36,4 @@ This module is not loaded by `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-17-health-access-preparation-assistant-qa.js` verifies supported health access preparation artifact types, blocked health execution prompts, emergency boundary language, static runtime absence, no unsafe provider/medical/payment/location APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-17-health-access-preparation-assistant-qa.js` verifies supported health access preparation artifact types, blocked health execution prompts, emergency boundary language, static runtime absence, no unsafe provider/medical/payment/location APIs, package alias wiring, and local-safe suite inclusion.

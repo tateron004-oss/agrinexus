@@ -15,7 +15,12 @@ class NativeBridge(private val controller: NexusNativeController) {
             "voice.realtime.start" -> controller.startRealtimeVoiceRuntime()
             "voice.realtime.stop" -> controller.stopRealtimeVoiceRuntime()
             "route.track" -> controller.startRouteTracking()
+            "route.stop" -> controller.stopRouteTracking()
             "camera.capture" -> controller.prepareCameraCapture()
+            "file.open" -> controller.openFilePicker()
+            "notification.schedule" -> controller.scheduleNotification(payload.optJSONObject("payload") ?: JSONObject())
+            "push.register" -> controller.registerRemotePush()
+            "lifecycle.flush" -> controller.flushPendingEvents()
             "call.launch" -> controller.launchConfirmedCall(payload.optJSONObject("payload") ?: JSONObject())
             "voice.state" -> controller.onWebVoiceState(payload.optJSONObject("payload") ?: payload)
         }

@@ -11,8 +11,8 @@ const paths = {
 
 const loaderLine = '  <script src="/nexus-agriculture-support-response-card.js?v=nexus-phase-101"></script>';
 const appScriptLine = '  <script src="/app.js?v=nexus-behavior-305"></script>';
-const phase101RuntimeQa = 'scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js';
-const phase101bQa = 'scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js';
+const phase101RuntimeQa = 'archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js';
+const phase101bQa = 'archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js';
 
 function fail(message) {
   console.error(`[apply-phase-101c-local-wiring] ${message}`);
@@ -46,8 +46,8 @@ function insertIndexLoader() {
 function updatePackageScripts() {
   const packageData = JSON.parse(read(paths.packageJson));
   packageData.scripts = packageData.scripts || {};
-  packageData.scripts["qa:nexus-phase-101-agriculture-support-response-card-runtime"] = "node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js";
-  packageData.scripts["qa:nexus-phase-101b-standard-user-runtime-wiring-readiness"] = "node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js";
+  packageData.scripts["qa:nexus-phase-101-agriculture-support-response-card-runtime"] = "node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js";
+  packageData.scripts["qa:nexus-phase-101b-standard-user-runtime-wiring-readiness"] = "node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js";
   write(paths.packageJson, `${JSON.stringify(packageData, null, 2)}\n`);
 }
 
@@ -73,7 +73,7 @@ function addScriptAfterAnchor(source, anchor, script) {
 
 function updateQaSuite() {
   let suite = read(paths.qaSuite);
-  suite = addScriptAfterAnchor(suite, "scripts/nexus-100-completion-system-audit-readiness-qa.js", phase101RuntimeQa);
+  suite = addScriptAfterAnchor(suite, "archive/qa-scripts/nexus-100-completion-system-audit-readiness-qa.js", phase101RuntimeQa);
   suite = addScriptAfterAnchor(suite, phase101RuntimeQa, phase101bQa);
   const runtimeCount = (suite.match(/nexus-phase-101-agriculture-support-response-card-runtime-qa\.js/g) || []).length;
   const readinessCount = (suite.match(/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa\.js/g) || []).length;

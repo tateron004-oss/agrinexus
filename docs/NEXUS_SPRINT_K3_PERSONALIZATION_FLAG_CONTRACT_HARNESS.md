@@ -16,8 +16,8 @@ Prove that the default-off Personalization feature flag contract behaves predict
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/personalization-feature-flags.json`
-- Harness: `scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -84,7 +84,7 @@ The harness must not:
 Sprint K3 does not load:
 
 - `public/nexus-personalization-feature-flag.js`;
-- `scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`;
 - `fixtures/nexus/personalization-feature-flags.json`.
 
 The Standard User build remains unchanged.

@@ -72,7 +72,7 @@ Existing routers, workflow buttons, Companion confirmation gates, role checks, a
 
 ## QA Strategy
 
-`scripts/nexus-selected-tool-id-alignment-qa.js` verifies:
+`archive/qa-scripts/nexus-selected-tool-id-alignment-qa.js` verifies:
 
 - representative low-risk prompts receive the expected canonical `selectedToolId`;
 - broad assistant prompts remain null;

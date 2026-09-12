@@ -119,7 +119,7 @@ git diff --check
 node --check server.js
 node --check public/app.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-connect-everything-provider-activation-qa.js
+node --check archive/qa-scripts/nexus-connect-everything-provider-activation-qa.js
 npm run qa:nexus-connect-everything-provider-activation
 npm run qa:nexus-full-internet-services-activation
 node scripts/qa-suite.js nexus-workforce

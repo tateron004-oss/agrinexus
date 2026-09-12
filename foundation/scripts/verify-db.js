@@ -28,7 +28,7 @@ async function main() {
   try {
     const migrations = await db.query("select name from schema_migrations order by name");
     const migrationNames = (migrations.rows || []).map(row => row.name);
-    for (const expected of ["001_initial_schema.sql", "002_seed_demo.sql", "003_nexus_unified_runtime.sql"]) {
+    for (const expected of ["001_initial_schema.sql", "002_seed_demo.sql", "003_nexus_unified_runtime.sql", "010_nexus_production_acceptance.sql", "016_nexus_operations_consolidation.sql"]) {
       if (!migrationNames.includes(expected)) throw new Error(`Migration not applied: ${expected}`);
     }
 
@@ -37,7 +37,12 @@ async function main() {
       to_regclass('public.nexus_tasks') is not null as tasks,
       to_regclass('public.nexus_memory_items') is not null as memory,
       to_regclass('public.nexus_worker_jobs') is not null as jobs,
-      to_regclass('public.nexus_audit_events') is not null as audit`);
+      to_regclass('public.nexus_audit_events') is not null as audit,
+      to_regclass('public.nexus_device_events') is not null as device_events,
+      to_regclass('public.nexus_cost_events') is not null as costs,
+      to_regclass('public.nexus_trace_spans') is not null as traces,
+      to_regclass('public.nexus_provider_health') is not null as providers,
+      to_regclass('public.nexus_alert_events') is not null as alerts`);
     if (!Object.values(nexus.rows[0]).every(Boolean)) {
       throw new Error(`Nexus durability verification failed: ${JSON.stringify(nexus.rows[0])}`);
     }

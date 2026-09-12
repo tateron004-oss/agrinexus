@@ -113,7 +113,7 @@ When browser validation is performed in a later phase:
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-standard-user-validation-plan-qa.js`
+- `archive/qa-scripts/nexus-communications-standard-user-validation-plan-qa.js`
 
 The package alias is:
 

@@ -6,6 +6,8 @@
     <string>AgriNexus uses the camera for telehealth video handoff, crop evidence, and buyer proof.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>AgriNexus uses location for clinic, pharmacy, route, shipment, and field support.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>When explicitly enabled, Nexus uses background location for an active field route and shows that tracking is active.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>AgriNexus uses the microphone so Nexus can listen to user requests.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
@@ -15,7 +17,7 @@
         <string>audio</string>
         <string>fetch</string>
         <string>location</string>
+        <string>remote-notification</string>
     </array>
 </dict>
 </plist>
-

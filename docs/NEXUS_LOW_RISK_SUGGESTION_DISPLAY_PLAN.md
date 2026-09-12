@@ -114,7 +114,7 @@ Phase 8F: Visible Level 1 display-only labels.
 - Labels render beside existing Nexus suggestion chips as category context only.
 - Labels are not buttons, do not carry click handlers, and cannot execute, route, open workflows, stage actions, or confirm actions.
 - High-risk, privacy-sensitive, permission-sensitive, null, and excluded `selectedToolId` values still produce no label.
-- Added `scripts/nexus-level-one-suggestion-label-qa.js` and `qa:nexus-level-one-suggestion-label` to protect the display-only boundary.
+- Added `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js` and `qa:nexus-level-one-suggestion-label` to protect the display-only boundary.
 
 Phase 8G: Level 2 user-click-required suggestions.
 

@@ -55,7 +55,7 @@ Natural follow-ups require an active safe workflow session. If the user says “
 
 ## QA
 
-`scripts/nexus-aut7-workflow-follow-up-commands-qa.js` verifies:
+`archive/qa-scripts/nexus-aut7-workflow-follow-up-commands-qa.js` verifies:
 
 - supported natural commands route correctly
 - active workflow context is used

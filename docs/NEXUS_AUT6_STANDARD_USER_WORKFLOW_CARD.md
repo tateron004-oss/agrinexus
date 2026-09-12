@@ -69,4 +69,4 @@ AUT6 does not add backend action writes, provider contact, permission prompts, a
 
 ## QA
 
-`scripts/nexus-aut6-standard-user-workflow-card-qa.js` verifies flag-off absence, flag-on low-risk workflow card creation, progress/step and artifact contract fields, disabled safe controls, blocked unsafe controls, read-only attributes, no backend write, no provider contact, no permission prompt, no auto-navigation, package alias wiring, and local-safe suite wiring.
+`archive/qa-scripts/nexus-aut6-standard-user-workflow-card-qa.js` verifies flag-off absence, flag-on low-risk workflow card creation, progress/step and artifact contract fields, disabled safe controls, blocked unsafe controls, read-only attributes, no backend write, no provider contact, no permission prompt, no auto-navigation, package alias wiring, and local-safe suite wiring.

@@ -7,7 +7,7 @@ Sprint X3 adds fixture, harness, documentation, and QA only. It does not load Fa
 ## Added Artifacts
 
 - `fixtures/nexus/farmer-mode-feature-flags.json`
-- `scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

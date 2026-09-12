@@ -16,8 +16,8 @@ Prove that the default-off Consent Center feature flag contract behaves predicta
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/consent-center-feature-flags.json`
-- Harness: `scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -72,7 +72,7 @@ The harness must not:
 Sprint H3 does not load:
 
 - `public/nexus-consent-center-feature-flag.js`;
-- `scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js`;
 - `fixtures/nexus/consent-center-feature-flags.json`.
 
 The Standard User build remains unchanged.

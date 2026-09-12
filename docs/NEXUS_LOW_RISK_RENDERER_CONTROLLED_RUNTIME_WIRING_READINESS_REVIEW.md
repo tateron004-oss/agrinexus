@@ -67,7 +67,7 @@ Phase 12Q wiring plan evidence:
 
 Phase 12R static QA scaffold evidence:
 
-- Added `scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js`.
+- Added `archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js`.
 - Guard verifies `public/app.js` and `public/index.html` remain unwired.
 - Guard verifies unsafe APIs are absent from the renderer.
 - Guard verifies flag-off, eligibility-false, flag-only, low-risk, and excluded fixture behavior.
@@ -192,10 +192,10 @@ Before Phase 12T:
 - `node --check public/app.js`
 - `node --check public/index.html` is not applicable, but index should be statically inspected
 - `node --check public/nexus-low-risk-inert-renderer.js`
-- `node scripts/nexus-low-risk-inert-renderer-prototype-implementation-qa.js`
-- `node scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js`
-- `node scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js`
-- `node scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js`
+- `node archive/qa-scripts/nexus-low-risk-inert-renderer-prototype-implementation-qa.js`
+- `node archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js`
+- `node archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js`
+- `node archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js`
 - `npm.cmd run qa:nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review`
 - `node scripts/qa-suite.js nexus-workforce`
 - `node scripts/qa-suite.js all-safe`

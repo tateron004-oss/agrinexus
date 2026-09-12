@@ -57,7 +57,7 @@ Future runtime-visible confirmation preview work must remain default-off, low-ri
 
 ## Regression Guard
 
-QA script: `scripts/nexus-sprint-e5-confirmation-flag-off-regression-guard-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-e5-confirmation-flag-off-regression-guard-qa.js`
 
 The QA guard verifies:
 

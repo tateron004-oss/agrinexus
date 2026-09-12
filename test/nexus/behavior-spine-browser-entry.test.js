@@ -58,9 +58,13 @@ test("media completion requires observed player state instead of a provider play
   const end = source.indexOf("// Production certification invokes this", start);
   const renderer = source.slice(start, end);
   assert.match(renderer, /verifyNexusYouTubePlaybackStarted/);
-  assert.match(renderer, /playback did not start/);
+  assert.match(renderer, /playNexusProviderNeutralMusic/);
+  assert.match(renderer, /if \(!audible\)/);
+  assert.match(renderer, /genuine provider-owned audible progress/);
+  assert.match(renderer, /advancedSeconds \|\| 0\) >= 3/);
+  assert.match(renderer, /playback\?\.telemetry\?\.playerState === 1/);
   assert.match(renderer, /playbackStarted: outcome\.workspace === "media" \? audible/);
-  assert.match(source, /state === 1\) finish\(true\)/);
+  assert.match(source, /playerState === 1\) \{[\s\S]{0,100}finish\(true, "playing"/);
 });
 
 test("map and document completion require complete user-observable outcomes", () => {

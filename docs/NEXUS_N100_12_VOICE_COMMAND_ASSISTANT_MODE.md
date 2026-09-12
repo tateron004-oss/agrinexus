@@ -54,4 +54,4 @@ This file is not loaded into `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-12-voice-command-assistant-mode-qa.js` verifies the contract, static runtime absence, command classification, speakable safe summaries, blocked high-risk prompts, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-12-voice-command-assistant-mode-qa.js` verifies the contract, static runtime absence, command classification, speakable safe summaries, blocked high-risk prompts, package alias wiring, and local-safe suite inclusion.

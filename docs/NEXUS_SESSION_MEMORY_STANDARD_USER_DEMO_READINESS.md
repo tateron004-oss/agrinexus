@@ -39,10 +39,10 @@ This validation keeps the demo posture unchanged: Nexus may show low-risk guidan
   - Non-executing context and pending task behavior.
 
 - Existing 11G QA scripts:
-  - `scripts/nexus-session-memory-qa.js`
-  - `scripts/nexus-session-memory-observation-qa.js`
-  - `scripts/nexus-session-memory-ui-readiness-qa.js`
-  - `scripts/nexus-session-memory-reset-consent-qa.js`
+  - `archive/qa-scripts/nexus-session-memory-qa.js`
+  - `archive/qa-scripts/nexus-session-memory-observation-qa.js`
+  - `archive/qa-scripts/nexus-session-memory-ui-readiness-qa.js`
+  - `archive/qa-scripts/nexus-session-memory-reset-consent-qa.js`
 
 ## Standard User Build Findings
 

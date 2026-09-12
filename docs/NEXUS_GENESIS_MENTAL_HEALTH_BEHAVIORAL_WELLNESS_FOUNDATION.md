@@ -119,7 +119,7 @@ Mental-health memory defaults to session-only. Sharing, persistent memory, corre
 
 Focused QA:
 
-- `scripts/nexus-mental-health-behavioral-wellness-qa.js`
+- `archive/qa-scripts/nexus-mental-health-behavioral-wellness-qa.js`
 
 Package alias:
 

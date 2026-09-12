@@ -9,8 +9,8 @@ This phase does not add live provider calls, runtime wiring, backend writes, bro
 ## Files
 
 - `fixtures/nexus/live-source-results.json`
-- `scripts/nexus-sprint-live3-mock-source-provider-harness.js`
-- `scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness.js`
+- `archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js`
 
 ## Fixture Cases
 

@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-field-agent-mode-readiness-contract.js`;
 - `public/nexus-field-agent-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js`;
 - `fixtures/nexus/field-agent-mode-feature-flags.json`;
 - Sprint AG QA scripts.
 

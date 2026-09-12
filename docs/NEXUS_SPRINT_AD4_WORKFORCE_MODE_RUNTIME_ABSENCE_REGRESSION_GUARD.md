@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-workforce-mode-readiness-contract.js`;
 - `public/nexus-workforce-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js`;
 - `fixtures/nexus/workforce-mode-feature-flags.json`;
 - Sprint AD QA scripts.
 

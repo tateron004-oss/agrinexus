@@ -15,7 +15,7 @@ Sprint C remains non-executing. It does not grant permission, stage actions, wri
 - `server.js`
 - `public/nexus-permission-review-contract.js`
 - `public/nexus-audit-event-contract.js`
-- `scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
+- `archive/qa-scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
 - `package.json`
 - `scripts/qa-suite.js`
 - `docs/NEXUS_SPRINT_C_PERMISSION_UI_AUDIT_TRAIL_FOUNDATION.md`
@@ -130,17 +130,17 @@ Required QA for Sprint C:
 - `node --check public/nexus-planner-preview-contract.js`
 - `node --check public/nexus-permission-review-contract.js`
 - `node --check public/nexus-audit-event-contract.js`
-- `node --check scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
-- `node --check scripts/nexus-autonomous-runtime-preview-integration-qa.js`
-- `node --check scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
-- `node --check scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
-- `node --check scripts/nexus-phase-104-voice-text-intent-router-qa.js`
+- `node --check archive/qa-scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
+- `node --check archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js`
 - `node --check scripts/qa-suite.js`
-- `node scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
-- `node scripts/nexus-autonomous-runtime-preview-integration-qa.js`
-- `node scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
-- `node scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
-- `node scripts/nexus-phase-104-voice-text-intent-router-qa.js`
+- `node archive/qa-scripts/nexus-sprint-c-permission-audit-foundation-qa.js`
+- `node archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js`
+- `node archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
+- `node archive/qa-scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
+- `node archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js`
 - `npm.cmd run qa:nexus-sprint-c-permission-audit-foundation`
 - `npm.cmd run qa:nexus-autonomous-runtime-preview-integration`
 - `npm.cmd run qa:nexus-phase-102-agriculture-source-registry-hardening`

@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-farmer-agriculture-intelligence-readiness-contract.js`;
 - `public/nexus-farmer-agriculture-intelligence-feature-flag.js`;
-- `scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js`;
 - `fixtures/nexus/farmer-agriculture-intelligence-feature-flags.json`;
 - Sprint S QA scripts.
 

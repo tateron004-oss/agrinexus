@@ -79,9 +79,9 @@ Before runtime integration, the app must prove:
 
 The deterministic QA scripts are:
 
-- `scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
-- `scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js`
-- `scripts/nexus-phase-104-agriculture-intent-router-local-qa.js`
-- `scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js`
+- `archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
+- `archive/qa-scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js`
+- `archive/qa-scripts/nexus-phase-104-agriculture-intent-router-local-qa.js`
+- `archive/qa-scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js`
 
 These scripts verify the contracts are present, inert, package aliases exist, safe-suite wiring exists, and active runtime files do not import the new local modules.

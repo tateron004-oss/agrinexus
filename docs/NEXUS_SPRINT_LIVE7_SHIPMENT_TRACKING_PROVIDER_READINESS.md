@@ -9,7 +9,7 @@ This phase does not wire shipment tracking into Standard User runtime and does n
 ## Files
 
 - `server/nexus-shipment-tracking-source-provider.js`
-- `scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js`
 
 ## Supported Behavior
 

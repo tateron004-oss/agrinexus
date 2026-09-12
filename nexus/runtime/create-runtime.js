@@ -13,7 +13,7 @@ const { AuthoritativeTaskEngine } = require("./authoritative-task-engine.js");
 const { AccessControl } = require("../identity/access-control.js");
 const { ArtifactRepository } = require("../storage/artifact-repository.js");
 const { SyncRepository } = require("../sync/repository.js");
-const { ObservabilityRepository } = require("../observability/event-repository.js");
+const { ObservabilityRepository } = require("../observability/operations-repository.js");
 const { ModelGovernanceRepository } = require("../models/repository.js");
 const { OutcomeRepository } = require("../verification/outcome-repository.js");
 const { ApplicationRegistry } = require("../apps/registry.js");
@@ -56,7 +56,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const access = new AccessControl(db);
   const artifacts = new ArtifactRepository(db);
   const sync = new SyncRepository(db);
-  const observability = new ObservabilityRepository(db);
+  const observability = new ObservabilityRepository(db, { dailyCostLimitCents: env.NEXUS_DAILY_COST_LIMIT_CENTS || 0 });
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
@@ -88,7 +88,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const authorityCoverage = new AuthorityCoverage({ applications, tools, adapters, verifiers });
   const cutover = new WorkspaceCutoverPolicy({ migrations: workspaceMigrations, applications, authorityCoverage });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
-    audit, executors: governedExecutors, verifier: verifyOutcome, authority });
+    audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;

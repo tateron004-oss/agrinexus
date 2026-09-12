@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-transportation-mode-readiness-contract.js`;
 - `public/nexus-transportation-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness.js`;
 - `fixtures/nexus/transportation-mode-feature-flags.json`;
 - Sprint AC QA scripts.
 

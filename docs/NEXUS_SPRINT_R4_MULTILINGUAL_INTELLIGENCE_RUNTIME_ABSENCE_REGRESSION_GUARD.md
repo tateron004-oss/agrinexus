@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-multilingual-intelligence-readiness-contract.js`;
 - `public/nexus-multilingual-intelligence-feature-flag.js`;
-- `scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js`;
 - `fixtures/nexus/multilingual-intelligence-feature-flags.json`;
 - Sprint R QA scripts.
 

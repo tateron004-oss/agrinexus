@@ -7,8 +7,8 @@ Sprint S3 adds fixture, harness, documentation, and QA only for the Farmer Agric
 ## Artifacts
 
 - `fixtures/nexus/farmer-agriculture-intelligence-feature-flags.json`
-- `scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js`
-- `scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

@@ -124,12 +124,12 @@ Low-risk repeated prompts replace the old prototype instead of stacking duplicat
 
 Phase 8T is protected by:
 
-- `scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
 - `npm run qa:nexus-controlled-action-confirmation-ui-prototype`
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
 - `node scripts/qa-suite.js nexus-workforce`
 
 The QA verifies Ask-only placement, caption preview-only behavior, safe button labels, non-executing Phase 8X navigation behavior, high-risk exclusions, clearing behavior, and absence of raw metadata leaks.

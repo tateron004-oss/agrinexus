@@ -16,8 +16,8 @@ Prove that the default-off User Profile feature flag contract behaves predictabl
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/user-profile-feature-flags.json`
-- Harness: `scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -85,7 +85,7 @@ The harness must not:
 Sprint J3 does not load:
 
 - `public/nexus-user-profile-feature-flag.js`;
-- `scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`;
 - `fixtures/nexus/user-profile-feature-flags.json`.
 
 The Standard User build remains unchanged.

@@ -309,7 +309,7 @@ Output:
 Phase 12F adds:
 
 ```text
-scripts/nexus-staged-action-state-qa.js
+archive/qa-scripts/nexus-staged-action-state-qa.js
 ```
 
 The QA verifies:

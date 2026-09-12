@@ -11,8 +11,8 @@ Sprint G2 defined the record contract. Sprint G3 proves the contract behaves saf
 ## Artifacts
 
 - `fixtures/nexus/approval-audit-persistence-lifecycle.json`;
-- `scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness.js`;
-- `scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js`.
+- `archive/qa-scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness.js`;
+- `archive/qa-scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js`.
 
 The harness is local-safe and deterministic. It is not loaded by Standard User runtime.
 

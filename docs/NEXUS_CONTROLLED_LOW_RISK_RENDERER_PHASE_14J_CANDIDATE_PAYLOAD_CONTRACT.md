@@ -179,8 +179,8 @@ Phase 14J validation includes:
 - `node --check public/nexus-controlled-low-risk-renderer-eligibility-adapter.js`
 - `node --check public/nexus-controlled-low-risk-renderer-candidate-contract.js`
 - `node --check scripts/qa-suite.js`
-- `node --check scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js`
-- `node scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js`
+- `node --check archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js`
+- `node archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js`
 - `npm.cmd run qa:nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract`
 - Phase 14A through Phase 14I QA scripts and aliases
 - `node scripts/qa-suite.js all-safe`

@@ -227,7 +227,7 @@ Healthcare remains no-diagnosis, no-prescription, and not a replacement for prof
 Required focused QA:
 
 ```bash
-node --check scripts/nexus-all-modes-activation-runtime-qa.js
+node --check archive/qa-scripts/nexus-all-modes-activation-runtime-qa.js
 npm run qa:nexus-all-modes-activation-runtime
 ```
 

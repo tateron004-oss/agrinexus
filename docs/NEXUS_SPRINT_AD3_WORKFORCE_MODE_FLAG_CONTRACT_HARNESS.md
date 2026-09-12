@@ -7,7 +7,7 @@ Sprint AD3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/workforce-mode-feature-flags.json`
-- `scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

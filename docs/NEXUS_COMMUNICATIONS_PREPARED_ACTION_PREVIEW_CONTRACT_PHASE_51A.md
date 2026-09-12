@@ -133,7 +133,7 @@ The Standard User build may eventually show a prepared communication preview, bu
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-prepared-action-preview-contract-qa.js`
+- `archive/qa-scripts/nexus-communications-prepared-action-preview-contract-qa.js`
 
 The package alias is:
 

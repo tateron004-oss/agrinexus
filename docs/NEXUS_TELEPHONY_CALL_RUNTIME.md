@@ -138,4 +138,4 @@ The Standard User voice area includes a compact call-preparation workspace with:
 
 ## QA
 
-`scripts/nexus-telephony-call-runtime-qa.js` verifies provider detection, missing-config behavior, secret redaction, local preparation, emergency blocking, multilingual scripts, server routes, UI wiring, voice/typed command bridge, package alias, and safe-suite wiring.
+`archive/qa-scripts/nexus-telephony-call-runtime-qa.js` verifies provider detection, missing-config behavior, secret redaction, local preparation, emergency blocking, multilingual scripts, server routes, UI wiring, voice/typed command bridge, package alias, and safe-suite wiring.

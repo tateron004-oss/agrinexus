@@ -146,8 +146,8 @@ Required QA for this phase:
 - `node --check public/app.js`
 - `node --check public/nexus-voice-demo-shell.js`
 - `node --check scripts/qa-suite.js`
-- `node --check scripts/nexus-music-icon-media-mode-qa.js`
-- `node scripts/nexus-music-icon-media-mode-qa.js`
+- `node --check archive/qa-scripts/nexus-music-icon-media-mode-qa.js`
+- `node archive/qa-scripts/nexus-music-icon-media-mode-qa.js`
 - `npm.cmd run qa:nexus-music-icon-media-mode`
 - existing command center, onboarding, all-modes, language, performance, safety, chronic/provider/agriculture/workforce/multilingual QA
 - `node scripts/qa-suite.js nexus-workforce`

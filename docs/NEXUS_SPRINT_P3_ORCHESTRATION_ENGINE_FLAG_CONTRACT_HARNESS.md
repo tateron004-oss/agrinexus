@@ -7,8 +7,8 @@ Sprint P3 adds fixture, harness, documentation, and QA only for the Sprint P2 Or
 ## Harness Artifacts
 
 - `fixtures/nexus/orchestration-engine-feature-flags.json`
-- `scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js`
-- `scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

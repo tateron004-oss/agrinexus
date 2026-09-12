@@ -249,7 +249,7 @@ Phase 50 must not change:
 
 The deterministic QA lives in:
 
-- `scripts/nexus-provider-contact-preparation-contract-qa.js`
+- `archive/qa-scripts/nexus-provider-contact-preparation-contract-qa.js`
 
 The package alias is:
 

@@ -51,6 +51,30 @@
       "ok": true
     },
     {
+      "name": "final transcript enters workspace executor",
+      "ok": true
+    },
+    {
+      "name": "final transcript execution is model independent",
+      "ok": true
+    },
+    {
+      "name": "final transcript activates Genesis mission renderer",
+      "ok": true
+    },
+    {
+      "name": "final transcript covers required workspaces",
+      "ok": true
+    },
+    {
+      "name": "mobile clinic support phrase activates workspace",
+      "ok": true
+    },
+    {
+      "name": "duplicate transcript execution guarded",
+      "ok": true
+    },
+    {
       "name": "registered workforce launcher",
       "ok": true
     },
@@ -67,6 +91,18 @@
       "ok": true
     },
     {
+      "name": "map location extraction",
+      "ok": true
+    },
+    {
+      "name": "real map launcher",
+      "ok": true
+    },
+    {
+      "name": "real map verification",
+      "ok": true
+    },
+    {
       "name": "non-map field population",
       "ok": true
     },
@@ -80,6 +116,22 @@
     },
     {
       "name": "matching request id",
+      "ok": true
+    },
+    {
+      "name": "Realtime adapter preserves final spoken item",
+      "ok": true
+    },
+    {
+      "name": "Realtime history preserves finalized spoken transcript",
+      "ok": true
+    },
+    {
+      "name": "offline queue phrase activates without transcription-sensitive open verb",
+      "ok": true
+    },
+    {
+      "name": "non-map voice route closes full map surface",
       "ok": true
     }
   ],

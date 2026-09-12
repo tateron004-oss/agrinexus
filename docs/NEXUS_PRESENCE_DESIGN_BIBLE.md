@@ -2,7 +2,7 @@
 
 Nexus Presence Standard 1.0 defines the shared voice, listening, captions, orb state, mission state, conversation style, regionalization, accessibility, and honesty rules for Nexus OS.
 
-This standard is implemented in [public/app.js](../public/app.js) and enforced by [scripts/nexus-presence-enforcement-qa.js](../scripts/nexus-presence-enforcement-qa.js). It applies to AgriNexus, HealthNexus reference deployments, and future Nexus deployments without copying or fragmenting the voice engine.
+This standard is implemented in [public/app.js](../public/app.js) and enforced by [archive/qa-scripts/nexus-presence-enforcement-qa.js](../archive/qa-scripts/nexus-presence-enforcement-qa.js). It applies to AgriNexus, HealthNexus reference deployments, and future Nexus deployments without copying or fragmenting the voice engine.
 
 ## Runtime Contracts
 
@@ -121,17 +121,17 @@ Nexus Presence has no workflow execution authority. It may describe and guide, b
 
 Presence changes must run focused QA plus safe regression:
 
-- `node scripts/nexus-presence-runtime-baseline-qa.js`
-- `node scripts/nexus-presence-profile-registry-qa.js`
-- `node scripts/nexus-voice-capability-registry-qa.js`
-- `node scripts/nexus-regional-voice-resolution-qa.js`
-- `node scripts/nexus-conversation-style-engine-qa.js`
-- `node scripts/nexus-domain-tone-safety-adapters-qa.js`
-- `node scripts/nexus-speech-synthesis-controller-qa.js`
-- `node scripts/nexus-listening-wake-runtime-qa.js`
-- `node scripts/nexus-presence-synchronization-qa.js`
-- `node scripts/nexus-voice-preferences-accessibility-qa.js`
-- `node scripts/nexus-presence-enforcement-qa.js`
+- `node archive/qa-scripts/nexus-presence-runtime-baseline-qa.js`
+- `node archive/qa-scripts/nexus-presence-profile-registry-qa.js`
+- `node archive/qa-scripts/nexus-voice-capability-registry-qa.js`
+- `node archive/qa-scripts/nexus-regional-voice-resolution-qa.js`
+- `node archive/qa-scripts/nexus-conversation-style-engine-qa.js`
+- `node archive/qa-scripts/nexus-domain-tone-safety-adapters-qa.js`
+- `node archive/qa-scripts/nexus-speech-synthesis-controller-qa.js`
+- `node archive/qa-scripts/nexus-listening-wake-runtime-qa.js`
+- `node archive/qa-scripts/nexus-presence-synchronization-qa.js`
+- `node archive/qa-scripts/nexus-voice-preferences-accessibility-qa.js`
+- `node archive/qa-scripts/nexus-presence-enforcement-qa.js`
 - `node scripts/qa-suite.js nexus-workforce`
 - `node scripts/qa-suite.js all-safe`
 

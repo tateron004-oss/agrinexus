@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-admin-mode-readiness-contract.js`;
 - `public/nexus-admin-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ai3-admin-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ai3-admin-mode-flag-contract-harness.js`;
 - `fixtures/nexus/admin-mode-feature-flags.json`;
 - Sprint AI QA scripts.
 

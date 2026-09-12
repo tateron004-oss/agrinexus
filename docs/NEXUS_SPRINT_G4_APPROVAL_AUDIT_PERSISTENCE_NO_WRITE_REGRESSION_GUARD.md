@@ -48,7 +48,7 @@ The approval-audit persistence lane must not introduce:
 The following must not be loaded by `public/index.html`, `public/app.js`, or `server.js`:
 
 - `public/nexus-approval-audit-persistence-contract.js`;
-- `scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness.js`;
+- `archive/qa-scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness.js`;
 - `fixtures/nexus/approval-audit-persistence-records.json`;
 - `fixtures/nexus/approval-audit-persistence-lifecycle.json`;
 - Sprint G QA scripts.

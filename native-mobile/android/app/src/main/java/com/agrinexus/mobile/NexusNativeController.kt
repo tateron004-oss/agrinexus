@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
@@ -15,20 +16,29 @@ import java.util.Locale
 
 class NexusNativeController(private val activity: Activity, private val webView: WebView) {
     private var tts: TextToSpeech? = null
-    private val appUrl = "https://agrinexus-platform.onrender.com"
+    private val appUrl = "https://nexus-genesis-certified.onrender.com"
     private var selectedLanguageTag = "en-US"
+    private var webReady = false
+    private var appForeground = false
+    private var pendingWakeStart = false
+    private val eventStore = activity.getSharedPreferences("nexus-native-events", Activity.MODE_PRIVATE)
+    private val deviceRuntime = NexusDeviceRuntime(activity, ::sendToWeb)
 
     fun load() {
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
+        webView.settings.cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
         webView.addJavascriptInterface(NativeBridge(this), "AndroidAgriNexus")
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) { webReady = true; flushPendingEvents() }
+        }
         webView.loadUrl(appUrl)
         tts = TextToSpeech(activity) { status ->
             if (status == TextToSpeech.SUCCESS) tts?.language = Locale.US
         }
     }
 
-    fun requestNativePermissions() {
+    fun requestNativePermissions(): Boolean {
         val permissions = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA,
@@ -40,8 +50,10 @@ class NexusNativeController(private val activity: Activity, private val webView:
         }
         if (missing.isNotEmpty()) {
             ActivityCompat.requestPermissions(activity, missing.toTypedArray(), 8104)
+            return false
         } else {
             registerPermissions()
+            return true
         }
     }
 
@@ -50,13 +62,13 @@ class NexusNativeController(private val activity: Activity, private val webView:
             .put("device", JSONObject().put("platform", "android").put("appVersion", "1.0.0"))
             .put("wakeMode", "always-on-foreground-service")
             .put("permissions", JSONObject()
-                .put("microphone", "granted")
-                .put("speechRecognition", "granted")
-                .put("backgroundAudio", "granted")
-                .put("notifications", "granted")
-                .put("geolocation", "foreground")
+                .put("microphone", permissionState(Manifest.permission.RECORD_AUDIO))
+                .put("speechRecognition", permissionState(Manifest.permission.RECORD_AUDIO))
+                .put("backgroundAudio", permissionState(Manifest.permission.RECORD_AUDIO))
+                .put("notifications", if (Build.VERSION.SDK_INT < 33) "granted" else permissionState(Manifest.permission.POST_NOTIFICATIONS))
+                .put("geolocation", if (permissionGranted(Manifest.permission.ACCESS_FINE_LOCATION)) "foreground" else "denied")
                 .put("backgroundLocation", "optional")
-                .put("camera", "granted")
+                .put("camera", permissionState(Manifest.permission.CAMERA))
                 .put("secureStorage", "granted"))
             .put("runtime", JSONObject()
                 .put("voiceGate", "wake-phrase")
@@ -69,11 +81,25 @@ class NexusNativeController(private val activity: Activity, private val webView:
                 .put("wakeAuditEnabled", true))
 
         fetchNativeRuntime(payload)
-        sendToWeb("voice.permission_changed", JSONObject().put("permission", "native").put("status", "granted"))
+        sendToWeb("voice.permission_changed", JSONObject().put("permission", "native")
+            .put("status", if (permissionGranted(Manifest.permission.RECORD_AUDIO)) "granted" else "denied"))
     }
 
     fun startWakeRuntime() {
-        requestNativePermissions()
+        pendingWakeStart = true
+        if (!requestNativePermissions()) return
+        launchWakeService()
+    }
+
+    fun onPermissionsResult() {
+        registerPermissions()
+        if (!pendingWakeStart) return
+        if (permissionGranted(Manifest.permission.RECORD_AUDIO)) launchWakeService()
+        else sendToWeb("voice.always_on_stopped", JSONObject().put("reason", "microphone-permission-denied"))
+    }
+
+    private fun launchWakeService() {
+        pendingWakeStart = false
         ContextCompat.startForegroundService(activity, Intent(activity, NexusVoiceService::class.java)
             .putExtra("languageTag", selectedLanguageTag))
         sendToWeb("voice.always_on_started", JSONObject().put("wakeMode", "foreground"))
@@ -102,18 +128,21 @@ class NexusNativeController(private val activity: Activity, private val webView:
     }
 
     fun startRouteTracking() {
-        sendToWeb("location.route_update", JSONObject()
-            .put("source", "native-location-permission")
-            .put("status", "ready")
-            .put("message", "Native GPS route tracking is ready when location permission is granted."))
+        deviceRuntime.startLocationTracking()
     }
 
+    fun stopRouteTracking() = deviceRuntime.stopLocationTracking()
+
     fun prepareCameraCapture() {
-        sendToWeb("camera.capture_ready", JSONObject()
-            .put("source", "native-camera-permission")
-            .put("status", "ready")
-            .put("message", "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."))
+        deviceRuntime.captureCamera()
     }
+
+    fun openFilePicker() = deviceRuntime.openFile()
+    fun scheduleNotification(payload: JSONObject) = deviceRuntime.scheduleNotification(payload)
+    fun registerRemotePush() = deviceRuntime.registerRemotePush()
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean = deviceRuntime.handleActivityResult(requestCode, resultCode, data)
+    fun onForeground() { appForeground = true; sendToWeb("app.foreground", JSONObject().put("occurredAt", System.currentTimeMillis())); flushPendingEvents() }
+    fun onBackground() { sendToWeb("app.background", JSONObject().put("occurredAt", System.currentTimeMillis())); appForeground = false }
 
     fun launchConfirmedCall(payload: JSONObject) {
         val provider = payload.optString("provider", "").trim()
@@ -194,6 +223,9 @@ class NexusNativeController(private val activity: Activity, private val webView:
         }
     }
 
+    private fun permissionGranted(permission: String) = ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
+    private fun permissionState(permission: String) = if (permissionGranted(permission)) "granted" else "denied"
+
     private fun fetchNativeRuntime(payload: JSONObject) {
         Thread {
             runCatching {
@@ -209,8 +241,27 @@ class NexusNativeController(private val activity: Activity, private val webView:
         }.start()
     }
 
+    fun flushPendingEvents() {
+        if (!webReady) return
+        val pending = org.json.JSONArray(eventStore.getString("pending", "[]"))
+        eventStore.edit().remove("pending").apply()
+        for (index in 0 until pending.length()) evaluateEnvelope(pending.getJSONObject(index))
+        evaluateEnvelope(JSONObject().put("type", "offline.queue_flushed").put("count", pending.length()))
+    }
+
     private fun sendToWeb(type: String, data: JSONObject) {
         val envelope = JSONObject(data.toString()).put("type", type)
+        if (!webReady || !appForeground) {
+            val pending = org.json.JSONArray(eventStore.getString("pending", "[]"))
+            if (pending.length() >= 100) pending.remove(0)
+            pending.put(envelope)
+            eventStore.edit().putString("pending", pending.toString()).apply()
+            return
+        }
+        evaluateEnvelope(envelope)
+    }
+
+    private fun evaluateEnvelope(envelope: JSONObject) {
         activity.runOnUiThread {
             webView.evaluateJavascript("window.AgriNexusNativeBridge && window.AgriNexusNativeBridge.receive($envelope);", null)
         }

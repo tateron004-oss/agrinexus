@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-trust-fraud-risk-detection-readiness-contract.js`;
 - `public/nexus-trust-fraud-risk-detection-feature-flag.js`;
-- `scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js`;
 - `fixtures/nexus/trust-fraud-risk-detection-feature-flags.json`;
 - Sprint W QA scripts.
 

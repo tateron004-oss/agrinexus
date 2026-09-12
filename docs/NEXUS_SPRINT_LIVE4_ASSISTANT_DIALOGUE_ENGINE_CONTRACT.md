@@ -10,7 +10,7 @@ This phase does not wire the dialogue engine into the Standard User runtime, doe
 
 - `public/nexus-assistant-dialogue-engine-contract.js`
 - `fixtures/nexus/assistant-dialogue-chains.json`
-- `scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js`
+- `archive/qa-scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js`
 
 ## Contract Helpers
 

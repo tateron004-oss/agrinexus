@@ -110,7 +110,7 @@ The harness must reject payloads related to:
 The Phase 14C guard is:
 
 ```text
-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
+archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
 ```
 
 The package alias is:

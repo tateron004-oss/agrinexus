@@ -26,10 +26,10 @@ node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check public/nexus-agriculture-support-response-card.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
-node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node --check archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node --check archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 npm.cmd run qa:nexus-phase-101-agriculture-support-response-card-runtime
 npm.cmd run qa:nexus-phase-101b-standard-user-runtime-wiring-readiness
 node scripts/qa-suite.js nexus-workforce
@@ -138,7 +138,7 @@ Narrow runtime fix:
 
 QA guard update:
 
-- `scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js` now verifies capture-phase rendering, visible Standard User global command support, self-clearing stale cards, and post-route repaint behavior.
+- `archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js` now verifies capture-phase rendering, visible Standard User global command support, self-clearing stale cards, and post-route repaint behavior.
 
 ## Pass/Fail Conclusion
 

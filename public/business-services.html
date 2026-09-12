@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Business services · AgriNexus</title>
+  <link rel="stylesheet" href="/business-services.css">
+  <script src="/business-services.js" defer></script>
+</head>
+<body>
+  <header><a href="/">← Nexus</a><div><p class="eyebrow">AgriNexus</p><h1>Business services</h1></div><p>Client workspaces, launch drafts and assistant packages.</p></header>
+  <p id="notice" role="status" aria-live="polite">Checking your signed-in workspace…</p>
+  <main>
+    <aside>
+      <section><h2>Your clients</h2><div id="clients"></div><button id="reload" type="button">Refresh clients</button></section>
+      <section><h2>Create a client workspace</h2><form id="create-client">
+        <label>Business name<input name="businessName" required maxlength="160"></label>
+        <label>Industry<input name="industry" maxlength="160"></label>
+        <label>Location<input name="location" maxlength="160"></label>
+        <label>Who you serve<input name="customer" maxlength="500"></label>
+        <label>Goal<textarea name="objective" maxlength="4000"></textarea></label>
+        <label class="check"><input name="consent" type="checkbox" required>I consent to storing these business details in my AgriNexus workspace.</label>
+        <button type="submit">Create workspace</button>
+      </form></section>
+      <section><h2>Data controls</h2><p>Only use client information you are authorized to manage.</p><button id="grant-consent" type="button">Grant business-storage consent</button><button id="revoke-consent" type="button">Withdraw business-storage consent</button></section>
+    </aside>
+    <article id="editor" hidden>
+      <div class="section-heading"><h2 id="client-name"></h2><button id="save" type="button">Save changes</button></div>
+      <section><h3>Business details</h3><div id="business-fields" class="fields"></div></section>
+      <section><h3>Leads</h3><div id="leads" class="rows"></div><button id="add-lead" type="button">Add lead</button></section>
+      <section><h3>Social drafts</h3><div id="posts" class="rows"></div><button id="add-post" type="button">Add social draft</button></section>
+      <section><h3>Tasks</h3><div id="tasks" class="rows"></div><button id="add-task" type="button">Add task</button></section>
+      <section><h3>Landing page</h3><div id="landing-fields" class="fields"></div><p>Generated pages are draft files. They are not published, and their contact forms are not connected.</p></section>
+      <section><h3>Assistant studio</h3><div id="assistant-fields" class="fields"></div><label>Knowledge notes, one per line<textarea id="knowledge" rows="5"></textarea></label>
+        <h4>Customer scripts</h4><div id="scripts-fields" class="fields"></div>
+        <h4>Draft channels</h4><p>These settings describe the package; they do not activate calls or message delivery.</p><div id="channels"></div><button id="add-channel" type="button">Add draft channel</button>
+        <h4>Workflows</h4><div id="workflows"></div><button id="add-workflow" type="button">Add workflow</button>
+        <h4>Owner review</h4><div id="deployment"></div><button id="add-review" type="button">Add review item</button>
+        <label>Test message<textarea id="test-message" rows="3"></textarea></label>
+        <div class="actions"><button id="preview" type="button">Preview template response</button><button id="ai-plan" type="button" disabled>Draft an AI workflow plan</button><button id="ai-test" type="button" disabled>Test with configured AI</button></div>
+        <label class="check"><input id="ai-consent" type="checkbox">Allow these business details, assistant draft and test message to be shared with the configured AI provider.</label>
+        <p id="assistant-result" class="result" aria-live="polite"></p>
+      </section>
+      <section><h3>Planning templates</h3><label>Perspective<select id="strategy-profile"><option value="coach">Coach</option><option value="strategy">Strategy</option><option value="investor">Investor preparation</option><option value="product">Product</option><option value="operations">Operations</option><option value="research">Research framing</option><option value="content">Content</option><option value="partnerships">Partnerships</option><option value="technical">Technical</option><option value="business">Business builder</option></select></label><button type="button" data-generate="strategy">Create planning outline</button><p>Uses this workspace's notes to make a template outline; no live research is performed.</p></section>
+      <section><h3>Generate drafts</h3><p>These actions create files in your workspace. They do not publish pages, send messages or contact clients.</p><div class="actions">
+        <button type="button" data-generate="launch-kit">Launch kit</button><button type="button" data-generate="landing-page">Landing page</button><button type="button" data-generate="assistant-package">Assistant package</button><button type="button" data-generate="workflow">Full draft workflow</button>
+      </div><button id="download-package" type="button">Download all drafts as ZIP</button><ul id="files"></ul></section>
+      <section><h3>Communication drafts</h3><p>Review the generated outreach and phone guides before contacting anyone. Use Nexus communications for its existing consent and confirmation controls.</p><a href="/" target="_blank" rel="noopener noreferrer">Open Nexus to review communications</a></section>
+      <section><h3>Subscription</h3><p id="billing-status">Billing is not configured.</p><label>Plan<select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option><option value="pro">Pro</option></select></label>
+        <label class="check"><input id="billing-consent" type="checkbox">Allow a checkout for this workspace with the configured billing provider. I will review the provider's price and terms before paying.</label>
+        <div class="actions"><button id="checkout" type="button" disabled>Create checkout</button><button id="refresh-subscription" type="button" disabled>Verify payment status</button></div><a id="checkout-link" hidden target="_blank" rel="noopener noreferrer">Review provider checkout</a>
+      </section>
+      <section><h3>Export or delete</h3><div class="actions"><button id="export" type="button">Export this workspace</button><button id="delete" type="button" class="danger">Delete this workspace</button></div><p>Deletion clears saved content and its historical versions unless a legal hold applies.</p></section>
+    </article>
+    <section id="empty"><h2>A workspace for your next business project</h2><p>Create or choose a client to prepare a launch kit, organize leads and draft your website and assistant.</p><p>Use your existing AgriNexus sign-in. No separate subscriber password is created.</p></section>
+  </main>
+</body>
+</html>

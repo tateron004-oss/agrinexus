@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-personalization-readiness-contract.js`;
 - `public/nexus-personalization-feature-flag.js`;
-- `scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-k3-personalization-flag-contract-harness.js`;
 - `fixtures/nexus/personalization-feature-flags.json`;
 - Sprint K QA scripts.
 

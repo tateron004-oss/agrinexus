@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-observability-monitoring-readiness-contract.js`;
 - `public/nexus-observability-monitoring-feature-flag.js`;
-- `scripts/nexus-sprint-am3-observability-monitoring-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-am3-observability-monitoring-flag-contract-harness.js`;
 - `fixtures/nexus/observability-monitoring-feature-flags.json`;
 - Sprint AM QA scripts.
 

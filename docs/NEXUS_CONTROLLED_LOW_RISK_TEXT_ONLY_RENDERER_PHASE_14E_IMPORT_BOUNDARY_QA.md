@@ -8,7 +8,7 @@ This is a QA/documentation safety-boundary phase. It does not activate the loade
 
 ## What Changed
 
-- Added `scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js`.
+- Added `archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js`.
 - Added `qa:nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary`.
 - Added Phase 14E QA to the `nexus-workforce` local-safe suite.
 - Added this import-boundary documentation artifact.
@@ -111,16 +111,16 @@ node --check public/app.js
 node --check public/nexus-controlled-low-risk-text-only-renderer.js
 node --check public/nexus-controlled-low-risk-text-only-renderer-loader.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js
-node --check scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
-node --check scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
-node --check scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js
-node --check scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js
-node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js
-node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
-node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
-node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js
-node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js
+node --check archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js
+node --check archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
+node --check archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
+node --check archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js
+node --check archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js
 npm.cmd run qa:nexus-controlled-low-risk-text-only-renderer-phase-14a
 npm.cmd run qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary
 npm.cmd run qa:nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness

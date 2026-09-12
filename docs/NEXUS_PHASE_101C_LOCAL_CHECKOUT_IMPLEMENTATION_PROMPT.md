@@ -8,15 +8,15 @@ Current remote work through Phase 101B/101C readiness has added:
 
 - `public/nexus-agriculture-support-response-card.js`
 - `docs/NEXUS_PHASE_101_SOURCE_BACKED_AGRICULTURE_SUPPORT_RESPONSE_CARD_RUNTIME_ACTIVATION.md`
-- `scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
+- `archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
 - `docs/NEXUS_PHASE_101B_STANDARD_USER_RUNTIME_WIRING_READINESS.md`
-- `scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
+- `archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
 - `scripts/apply-phase-101c-local-wiring.js`
-- `scripts/phase-101c-local-wiring-patcher-qa.js`
-- `scripts/phase-101c-local-wiring-patcher-fixture-qa.js`
-- `scripts/phase-101c-post-wiring-validation-qa.js`
+- `archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js`
+- `archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js`
+- `archive/qa-scripts/phase-101c-post-wiring-validation-qa.js`
 - `docs/NEXUS_PHASE_101C_STANDARD_USER_BROWSER_VALIDATION_CHECKLIST.md`
-- `scripts/phase-101c-browser-validation-checklist-qa.js`
+- `archive/qa-scripts/phase-101c-browser-validation-checklist-qa.js`
 
 The Phase 101 card module is present and runtime-capable, but the normal Standard User build still needs a safe local loader patch.
 
@@ -30,15 +30,15 @@ From a complete local checkout, run:
 
 ```bash
 node --check scripts/apply-phase-101c-local-wiring.js
-node --check scripts/phase-101c-local-wiring-patcher-qa.js
-node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node --check scripts/phase-101c-post-wiring-validation-qa.js
-node --check scripts/phase-101c-browser-validation-checklist-qa.js
-node scripts/phase-101c-local-wiring-patcher-qa.js
-node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
+node --check archive/qa-scripts/phase-101c-browser-validation-checklist-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
 node scripts/apply-phase-101c-local-wiring.js
-node scripts/phase-101c-post-wiring-validation-qa.js
-node scripts/phase-101c-browser-validation-checklist-qa.js
+node archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
+node archive/qa-scripts/phase-101c-browser-validation-checklist-qa.js
 ```
 
 Then inspect the diff carefully before running the full QA list below.
@@ -66,8 +66,8 @@ If repo audit shows a safer already-loaded shell insertion point, document why a
 3. Add package alias:
 
 ```json
-"qa:nexus-phase-101-agriculture-support-response-card-runtime": "node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js",
-"qa:nexus-phase-101b-standard-user-runtime-wiring-readiness": "node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js"
+"qa:nexus-phase-101-agriculture-support-response-card-runtime": "node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js",
+"qa:nexus-phase-101b-standard-user-runtime-wiring-readiness": "node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js"
 ```
 
 4. Update `scripts/qa-suite.js`:
@@ -97,19 +97,19 @@ node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check public/nexus-agriculture-support-response-card.js
 node --check scripts/apply-phase-101c-local-wiring.js
-node --check scripts/phase-101c-local-wiring-patcher-qa.js
-node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node --check scripts/phase-101c-post-wiring-validation-qa.js
-node --check scripts/phase-101c-browser-validation-checklist-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
+node --check archive/qa-scripts/phase-101c-browser-validation-checklist-qa.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
-node scripts/phase-101c-local-wiring-patcher-qa.js
-node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node scripts/phase-101c-post-wiring-validation-qa.js
-node scripts/phase-101c-browser-validation-checklist-qa.js
-node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node --check archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node --check archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
+node archive/qa-scripts/phase-101c-browser-validation-checklist-qa.js
+node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
 npm run qa:nexus-phase-101b-standard-user-runtime-wiring-readiness
 node scripts/qa-suite.js nexus-workforce

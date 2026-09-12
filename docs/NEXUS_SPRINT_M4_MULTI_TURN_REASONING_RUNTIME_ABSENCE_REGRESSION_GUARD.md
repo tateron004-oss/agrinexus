@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-multi-turn-reasoning-readiness-contract.js`;
 - `public/nexus-multi-turn-reasoning-feature-flag.js`;
-- `scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`;
 - `fixtures/nexus/multi-turn-reasoning-feature-flags.json`;
 - Sprint M QA scripts.
 

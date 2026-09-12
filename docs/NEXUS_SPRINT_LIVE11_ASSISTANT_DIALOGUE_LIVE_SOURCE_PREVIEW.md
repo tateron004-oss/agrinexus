@@ -11,7 +11,7 @@ This phase does not wire the integration into Standard User runtime. The feature
 ## Files
 
 - `server/nexus-assistant-live-source-preview.js`
-- `scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js`
+- `archive/qa-scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js`
 
 ## Supported Preview Examples
 

@@ -172,22 +172,22 @@ The current system blocks or avoids:
 
 Relevant QA includes:
 
-- `scripts/nexus-agent-action-schema-qa.js`
-- `scripts/nexus-agent-action-observation-qa.js`
-- `scripts/nexus-agent-action-frontend-observation-qa.js`
-- `scripts/nexus-selected-tool-id-alignment-qa.js`
-- `scripts/nexus-low-risk-agent-mapping-qa.js`
-- `scripts/nexus-agent-action-suggestion-policy-qa.js`
-- `scripts/nexus-low-risk-suggestion-display-plan-qa.js`
-- `scripts/nexus-low-risk-suggestion-builder-qa.js`
-- `scripts/nexus-low-risk-suggestion-observation-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-agent-action-schema-qa.js`
+- `archive/qa-scripts/nexus-agent-action-observation-qa.js`
+- `archive/qa-scripts/nexus-agent-action-frontend-observation-qa.js`
+- `archive/qa-scripts/nexus-selected-tool-id-alignment-qa.js`
+- `archive/qa-scripts/nexus-low-risk-agent-mapping-qa.js`
+- `archive/qa-scripts/nexus-agent-action-suggestion-policy-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-display-plan-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-builder-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-observation-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
 - `scripts/companion-confirmation-gate-smoke.js`
 - `scripts/call-intent-smoke.js`
-- `scripts/pending-call-ui-qa.js`
-- `scripts/confirmed-call-handoff-qa.js`
-- `scripts/telehealth-camera-discoverability-qa.js`
-- `scripts/telehealth-video-handoff-qa.js`
+- `archive/qa-scripts/pending-call-ui-qa.js`
+- `archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `archive/qa-scripts/telehealth-camera-discoverability-qa.js`
+- `archive/qa-scripts/telehealth-video-handoff-qa.js`
 - `scripts/workflow-button-audit.js`
 - `scripts/app-behavior-audit.js`
 
@@ -332,7 +332,7 @@ Phase 8I should not:
 
 ## Phase 8I Implementation Note
 
-Phase 8I added `docs/NEXUS_CONTROLLED_ACTION_METADATA_SCHEMA.md`, a frontend-only `controlled-action-metadata.v1` observation helper, and `scripts/nexus-controlled-action-metadata-schema-qa.js`.
+Phase 8I added `docs/NEXUS_CONTROLLED_ACTION_METADATA_SCHEMA.md`, a frontend-only `controlled-action-metadata.v1` observation helper, and `archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js`.
 
 The implementation remains intentionally non-executing:
 
@@ -352,16 +352,16 @@ Recommended next phase: **Phase 8J: Controlled Action Metadata Observation Harde
 - `server.js`
 - `package.json`
 - `scripts/qa-suite.js`
-- `scripts/nexus-agent-action-schema-qa.js`
-- `scripts/nexus-agent-action-observation-qa.js`
-- `scripts/nexus-agent-action-frontend-observation-qa.js`
-- `scripts/nexus-selected-tool-id-alignment-qa.js`
-- `scripts/nexus-low-risk-agent-mapping-qa.js`
-- `scripts/nexus-agent-action-suggestion-policy-qa.js`
-- `scripts/nexus-low-risk-suggestion-display-plan-qa.js`
-- `scripts/nexus-low-risk-suggestion-builder-qa.js`
-- `scripts/nexus-low-risk-suggestion-observation-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-agent-action-schema-qa.js`
+- `archive/qa-scripts/nexus-agent-action-observation-qa.js`
+- `archive/qa-scripts/nexus-agent-action-frontend-observation-qa.js`
+- `archive/qa-scripts/nexus-selected-tool-id-alignment-qa.js`
+- `archive/qa-scripts/nexus-low-risk-agent-mapping-qa.js`
+- `archive/qa-scripts/nexus-agent-action-suggestion-policy-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-display-plan-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-builder-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-observation-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
 - `scripts/companion-confirmation-gate-smoke.js`
 - `docs/nexus-tool-registry.v1.json`
 - `docs/NEXUS_TOOL_REGISTRY_SPEC.md`

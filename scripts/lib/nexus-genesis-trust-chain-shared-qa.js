@@ -11,7 +11,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 1,
     suiteId: "nexus-trust-chain-trace",
     suiteName: "Nexus Genesis Trust Chain Rail 1 QA",
-    wrapper: "scripts/nexus-trust-chain-trace-qa.js",
+    wrapper: "archive/qa-scripts/nexus-trust-chain-trace-qa.js",
     alias: "qa:nexus-trust-chain-trace",
     groups: ["ownership", "transcript", "synchronization"]
   },
@@ -19,7 +19,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 2,
     suiteId: "nexus-conversation-acknowledgement",
     suiteName: "Nexus Genesis Trust Chain Rail 2 QA",
-    wrapper: "scripts/nexus-conversation-acknowledgement-qa.js",
+    wrapper: "archive/qa-scripts/nexus-conversation-acknowledgement-qa.js",
     alias: "qa:nexus-conversation-acknowledgement",
     groups: ["transcript", "acknowledgement", "fallback", "companion"]
   },
@@ -27,7 +27,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 3,
     suiteId: "nexus-audible-response",
     suiteName: "Nexus Genesis Trust Chain Rail 3 QA",
-    wrapper: "scripts/nexus-audible-response-qa.js",
+    wrapper: "archive/qa-scripts/nexus-audible-response-qa.js",
     alias: "qa:nexus-audible-response",
     groups: ["synthesis", "fallback", "synchronization"]
   },
@@ -35,7 +35,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 4,
     suiteId: "nexus-orb-deterministic-activation",
     suiteName: "Nexus Genesis Trust Chain Rail 4 QA",
-    wrapper: "scripts/nexus-orb-deterministic-activation-qa.js",
+    wrapper: "archive/qa-scripts/nexus-orb-deterministic-activation-qa.js",
     alias: "qa:nexus-orb-deterministic-activation",
     groups: ["ownership", "orbActivation", "adminIsolation"]
   },
@@ -43,7 +43,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 5,
     suiteId: "nexus-conversation-first-routing",
     suiteName: "Nexus Genesis Trust Chain Rail 5 QA",
-    wrapper: "scripts/nexus-conversation-first-routing-qa.js",
+    wrapper: "archive/qa-scripts/nexus-conversation-first-routing-qa.js",
     alias: "qa:nexus-conversation-first-routing",
     groups: ["routing", "acknowledgement", "companion"]
   },
@@ -51,7 +51,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 6,
     suiteId: "nexus-admin-preview-isolation",
     suiteName: "Nexus Genesis Trust Chain Rail 6 QA",
-    wrapper: "scripts/nexus-admin-preview-isolation-qa.js",
+    wrapper: "archive/qa-scripts/nexus-admin-preview-isolation-qa.js",
     alias: "qa:nexus-admin-preview-isolation",
     groups: ["adminIsolation", "ownership", "fallback"]
   },
@@ -59,7 +59,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 7,
     suiteId: "nexus-first-response-synchronization",
     suiteName: "Nexus Genesis Trust Chain Rail 7 QA",
-    wrapper: "scripts/nexus-first-response-synchronization-qa.js",
+    wrapper: "archive/qa-scripts/nexus-first-response-synchronization-qa.js",
     alias: "qa:nexus-first-response-synchronization",
     groups: ["transcript", "acknowledgement", "synthesis", "synchronization", "fallback"]
   },
@@ -67,7 +67,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 8,
     suiteId: "nexus-genesis-trust-chain-acceptance",
     suiteName: "Nexus Genesis Trust Chain Rail 8 Acceptance QA",
-    wrapper: "scripts/nexus-genesis-trust-chain-acceptance-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-trust-chain-acceptance-qa.js",
     alias: "qa:nexus-genesis-trust-chain-acceptance",
     groups: [
       "ownership",
@@ -88,7 +88,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 9,
     suiteId: "nexus-genesis-rail-09-understanding",
     suiteName: "Nexus Genesis Rail 9 Understanding QA",
-    wrapper: "scripts/nexus-genesis-rail-09-understanding-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-09-understanding-qa.js",
     alias: "qa:nexus-genesis-rail-09-understanding",
     groups: ["understanding", "routing", "companion"]
   },
@@ -96,7 +96,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 10,
     suiteId: "nexus-genesis-rail-10-context",
     suiteName: "Nexus Genesis Rail 10 Context QA",
-    wrapper: "scripts/nexus-genesis-rail-10-context-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-10-context-qa.js",
     alias: "qa:nexus-genesis-rail-10-context",
     groups: ["context", "synchronization", "companion"]
   },
@@ -104,7 +104,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 11,
     suiteId: "nexus-genesis-rail-11-memory",
     suiteName: "Nexus Genesis Rail 11 Memory QA",
-    wrapper: "scripts/nexus-genesis-rail-11-memory-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-11-memory-qa.js",
     alias: "qa:nexus-genesis-rail-11-memory",
     groups: ["memory", "privacy"]
   },
@@ -112,7 +112,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 12,
     suiteId: "nexus-genesis-rail-12-planning",
     suiteName: "Nexus Genesis Rail 12 Planning QA",
-    wrapper: "scripts/nexus-genesis-rail-12-planning-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-12-planning-qa.js",
     alias: "qa:nexus-genesis-rail-12-planning",
     groups: ["planning", "context"]
   },
@@ -120,7 +120,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 13,
     suiteId: "nexus-genesis-rail-13-capability-readiness",
     suiteName: "Nexus Genesis Rail 13 Capability Readiness QA",
-    wrapper: "scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-13-capability-readiness-qa.js",
     alias: "qa:nexus-genesis-rail-13-capability-readiness",
     groups: ["capabilityReadiness", "fallback"]
   },
@@ -128,7 +128,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 14,
     suiteId: "nexus-genesis-rail-14-consent-confirmation",
     suiteName: "Nexus Genesis Rail 14 Consent Confirmation QA",
-    wrapper: "scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-14-consent-confirmation-qa.js",
     alias: "qa:nexus-genesis-rail-14-consent-confirmation",
     groups: ["consent", "safety"]
   },
@@ -136,7 +136,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 15,
     suiteId: "nexus-genesis-rail-15-execution-integrity",
     suiteName: "Nexus Genesis Rail 15 Execution Integrity QA",
-    wrapper: "scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-15-execution-integrity-qa.js",
     alias: "qa:nexus-genesis-rail-15-execution-integrity",
     groups: ["execution", "consent"]
   },
@@ -144,7 +144,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 16,
     suiteId: "nexus-genesis-rail-16-outcome-receipts",
     suiteName: "Nexus Genesis Rail 16 Outcome Receipts QA",
-    wrapper: "scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-16-outcome-receipts-qa.js",
     alias: "qa:nexus-genesis-rail-16-outcome-receipts",
     groups: ["receipts", "execution"]
   },
@@ -152,7 +152,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 17,
     suiteId: "nexus-genesis-rail-17-privacy-isolation",
     suiteName: "Nexus Genesis Rail 17 Privacy Isolation QA",
-    wrapper: "scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-17-privacy-isolation-qa.js",
     alias: "qa:nexus-genesis-rail-17-privacy-isolation",
     groups: ["privacy", "adminIsolation"]
   },
@@ -160,7 +160,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 18,
     suiteId: "nexus-genesis-rail-18-safety-escalation",
     suiteName: "Nexus Genesis Rail 18 Safety Escalation QA",
-    wrapper: "scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-18-safety-escalation-qa.js",
     alias: "qa:nexus-genesis-rail-18-safety-escalation",
     groups: ["safety", "companion"]
   },
@@ -168,7 +168,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 19,
     suiteId: "nexus-genesis-rail-19-accessibility",
     suiteName: "Nexus Genesis Rail 19 Accessibility QA",
-    wrapper: "scripts/nexus-genesis-rail-19-accessibility-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-19-accessibility-qa.js",
     alias: "qa:nexus-genesis-rail-19-accessibility",
     groups: ["accessibility", "fallback"]
   },
@@ -176,7 +176,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 20,
     suiteId: "nexus-genesis-rail-20-multilingual",
     suiteName: "Nexus Genesis Rail 20 Multilingual QA",
-    wrapper: "scripts/nexus-genesis-rail-20-multilingual-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-20-multilingual-qa.js",
     alias: "qa:nexus-genesis-rail-20-multilingual",
     groups: ["multilingual", "synthesis"]
   },
@@ -184,7 +184,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 21,
     suiteId: "nexus-genesis-rail-21-concurrency",
     suiteName: "Nexus Genesis Rail 21 Concurrency QA",
-    wrapper: "scripts/nexus-genesis-rail-21-concurrency-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-21-concurrency-qa.js",
     alias: "qa:nexus-genesis-rail-21-concurrency",
     groups: ["concurrency", "synchronization"]
   },
@@ -192,7 +192,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 22,
     suiteId: "nexus-genesis-rail-22-recovery",
     suiteName: "Nexus Genesis Rail 22 Recovery QA",
-    wrapper: "scripts/nexus-genesis-rail-22-recovery-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-22-recovery-qa.js",
     alias: "qa:nexus-genesis-rail-22-recovery",
     groups: ["recovery", "fallback"]
   },
@@ -200,7 +200,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 23,
     suiteId: "nexus-genesis-rail-23-companion-emotional-safety",
     suiteName: "Nexus Genesis Rail 23 Companion Emotional Safety QA",
-    wrapper: "scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-23-companion-emotional-safety-qa.js",
     alias: "qa:nexus-genesis-rail-23-companion-emotional-safety",
     groups: ["companionEmotionalSafety", "companion"]
   },
@@ -208,7 +208,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 24,
     suiteId: "nexus-genesis-rail-24-physical-browser-voice-proof",
     suiteName: "Nexus Genesis Rail 24 Physical Browser Voice Proof QA",
-    wrapper: "scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-24-physical-browser-voice-proof-qa.js",
     alias: "qa:nexus-genesis-rail-24-physical-browser-voice-proof",
     groups: ["physicalVoiceProof", "synthesis", "fallback"]
   },
@@ -216,7 +216,7 @@ const TRUST_CHAIN_RAILS = Object.freeze([
     railNumber: 25,
     suiteId: "nexus-genesis-rail-25-end-to-end-standard-user-acceptance",
     suiteName: "Nexus Genesis Rail 25 End-to-End Standard User Acceptance QA",
-    wrapper: "scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
+    wrapper: "archive/qa-scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js",
     alias: "qa:nexus-genesis-rail-25-end-to-end-standard-user-acceptance",
     groups: [
       "registration",
@@ -586,7 +586,7 @@ function assertRegistration(context, label) {
   for (let railNumber = 1; railNumber <= 25; railNumber += 1) {
     assert(railNumbers.has(railNumber), `${label}: missing rail number ${railNumber}.`);
   }
-  assert(context.qaSuite.includes("scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"), `${label}: safe suite wiring must include final acceptance wrapper.`);
+  assert(context.qaSuite.includes("archive/qa-scripts/nexus-genesis-rail-25-end-to-end-standard-user-acceptance-qa.js"), `${label}: safe suite wiring must include final acceptance wrapper.`);
 }
 
 function assertAcceptance(context, label) {

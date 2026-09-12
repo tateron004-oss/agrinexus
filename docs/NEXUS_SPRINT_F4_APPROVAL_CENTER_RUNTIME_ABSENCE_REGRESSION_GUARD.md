@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-approval-center-contract.js`;
 - `public/nexus-approval-center-feature-flag.js`;
-- `scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js`;
 - `fixtures/nexus/approval-center-feature-flags.json`;
 - Sprint F QA scripts.
 

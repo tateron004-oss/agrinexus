@@ -337,7 +337,7 @@ Files and patterns reviewed for this plan:
 - `public/nexus-low-risk-inert-renderer-eligibility.js`
 - `docs/NEXUS_LOW_RISK_INERT_RENDERER_PROTOTYPE_IMPLEMENTATION.md`
 - `docs/NEXUS_LOW_RISK_RENDERER_BROWSER_VALIDATION.md`
-- `scripts/nexus-low-risk-inert-renderer-prototype-implementation-qa.js`
+- `archive/qa-scripts/nexus-low-risk-inert-renderer-prototype-implementation-qa.js`
 - `public/nexus-action-decision-mapper.js`
 - `public/nexus-staged-action-state.js`
 - `public/nexus-staged-action-inert-renderer.js`

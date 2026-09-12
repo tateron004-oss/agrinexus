@@ -7,8 +7,8 @@ Sprint U3 adds fixture, harness, documentation, and QA only for the Workforce In
 ## Artifacts
 
 - `fixtures/nexus/workforce-intelligence-feature-flags.json`
-- `scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js`
-- `scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

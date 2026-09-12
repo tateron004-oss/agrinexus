@@ -1,0 +1,314 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..", "..");
+const paths = {
+  registry: path.join(root, "public", "nexus-real-data-source-registry.js"),
+  doc: path.join(root, "docs", "NEXUS_REAL_DATA_REGULATED_ACTION_ROADMAP.md"),
+  foundationDoc: path.join(root, "docs", "NEXUS_REAL_PROTOTYPE_FOUNDATION_PHASE_17.md"),
+  index: path.join(root, "public", "index.html"),
+  app: path.join(root, "public", "app.js"),
+  server: path.join(root, "server.js"),
+  packageJson: path.join(root, "package.json"),
+  qaSuite: path.join(root, "scripts", "qa-suite.js")
+};
+
+function read(filePath) {
+  return fs.readFileSync(filePath, "utf8");
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    console.error(`[nexus-real-data-regulated-action-roadmap-qa] ${message}`);
+    process.exit(1);
+  }
+}
+
+Object.values(paths).forEach(filePath => {
+  assert(fs.existsSync(filePath), `${path.relative(root, filePath)} must exist.`);
+});
+
+const registryModule = require(paths.registry);
+const registrySource = read(paths.registry);
+const doc = read(paths.doc);
+const foundationDoc = read(paths.foundationDoc);
+const index = read(paths.index);
+const app = read(paths.app);
+const server = read(paths.server);
+const packageJson = read(paths.packageJson);
+const qaSuite = read(paths.qaSuite);
+
+const registry = registryModule.getRealDataSourceRegistry();
+const connectors = registryModule.getRealTimeConnectorRegistry();
+const requiredIds = [
+  "provider.directory",
+  "telehealth.provider",
+  "pharmacy.prescription_refill",
+  "mobile_clinic.schedule",
+  "transportation.resources",
+  "location.sharing",
+  "payments.transaction",
+  "medical_records.fhir",
+  "provider.contact",
+  "emergency.dispatch"
+];
+
+const requiredConnectorIds = [
+  "connector.provider_directory",
+  "connector.clinic",
+  "connector.telehealth",
+  "connector.mobile_clinic_schedule",
+  "connector.pharmacy_directory",
+  "connector.prescription_refill",
+  "connector.transportation",
+  "connector.location",
+  "connector.payment",
+  "connector.medical_records_fhir",
+  "connector.emergency_response",
+  "connector.workforce_program",
+  "connector.agriculture_resource",
+  "connector.community_services"
+];
+
+assert(Array.isArray(registry), "Registry must export an array.");
+assert(registry.length === requiredIds.length, "Registry must include every required source/action category exactly once.");
+assert(Array.isArray(connectors), "Connector registry must export an array.");
+assert(connectors.length === requiredConnectorIds.length, "Connector registry must include every required real-time connector category exactly once.");
+
+const allowedPrototypeReadiness = new Set([
+  "available-now",
+  "source-ready",
+  "partner-required",
+  "compliance-required",
+  "future-execution"
+]);
+
+const requiredFields = [
+  "id",
+  "label",
+  "dataOwner",
+  "sourceType",
+  "publicPartnerRegulatedStatus",
+  "prototypeReadiness",
+  "integrationMethod",
+  "dataFreshness",
+  "permissionRequirements",
+  "complianceRequirements",
+  "actionRiskLevel",
+  "liveActionEnabled",
+  "userApprovalRequired",
+  "approvalGates",
+  "auditRequirements",
+  "futureImplementationPhase"
+];
+
+const requiredConnectorFields = [
+  "id",
+  "connectorName",
+  "providerSourceName",
+  "providerSourceType",
+  "integrationMethod",
+  "liveConnectionStatus",
+  "dataFreshnessModel",
+  "authenticationRequirements",
+  "consentRequirements",
+  "permissionRequirements",
+  "complianceRequirements",
+  "auditRequirements",
+  "actionCapabilities",
+  "actionRiskTier",
+  "executionCurrentlyEnabled",
+  "userApprovalRequired",
+  "providerConfirmationRequired",
+  "futureImplementationPhase"
+];
+
+requiredIds.forEach(id => {
+  const entry = registry.find(item => item.id === id);
+  assert(entry, `Registry must include ${id}.`);
+  requiredFields.forEach(field => {
+    assert(Object.prototype.hasOwnProperty.call(entry, field), `${id} must include ${field}.`);
+  });
+  assert(registryModule.SOURCE_TYPES.includes(entry.sourceType), `${id} must use a known sourceType.`);
+  assert(registryModule.STATUS_TYPES.includes(entry.publicPartnerRegulatedStatus), `${id} must use a known public/partner/regulated status.`);
+  assert(allowedPrototypeReadiness.has(entry.prototypeReadiness), `${id} must use a known prototype readiness status.`);
+  assert(registryModule.RISK_LEVELS.includes(entry.actionRiskLevel), `${id} must use a known action risk level.`);
+  assert(entry.liveActionEnabled === false, `${id} must not enable live action in Phase 17.`);
+  assert(entry.userApprovalRequired === true, `${id} must require user approval before future action.`);
+  assert(Array.isArray(entry.permissionRequirements) && entry.permissionRequirements.length > 0, `${id} must document permission requirements.`);
+  assert(Array.isArray(entry.complianceRequirements) && entry.complianceRequirements.length > 0, `${id} must document compliance requirements.`);
+  assert(Array.isArray(entry.approvalGates) && entry.approvalGates.length > 0, `${id} must document approval gates.`);
+  assert(Array.isArray(entry.auditRequirements) && entry.auditRequirements.length > 0, `${id} must document audit requirements.`);
+  assert(/^17[A-K]-/.test(entry.futureImplementationPhase), `${id} must map to a future Phase 17 implementation phase.`);
+  ["expectedUpdateCadence", "freshnessField", "staleAfter", "displayRequirement"].forEach(field => {
+    assert(entry.dataFreshness && entry.dataFreshness[field], `${id} must include dataFreshness.${field}.`);
+  });
+});
+
+requiredConnectorIds.forEach(id => {
+  const connector = connectors.find(item => item.id === id);
+  assert(connector, `Connector registry must include ${id}.`);
+  requiredConnectorFields.forEach(field => {
+    assert(Object.prototype.hasOwnProperty.call(connector, field), `${id} must include ${field}.`);
+  });
+  assert(registryModule.CONNECTOR_TYPES.includes(connector.providerSourceType), `${id} must use a known providerSourceType.`);
+  assert(registryModule.LIVE_CONNECTION_STATUSES.includes(connector.liveConnectionStatus), `${id} must use a known liveConnectionStatus.`);
+  assert(registryModule.RISK_LEVELS.includes(connector.actionRiskTier), `${id} must use a known actionRiskTier.`);
+  assert(connector.executionCurrentlyEnabled === false, `${id} must not enable execution in Phase 17.`);
+  assert(connector.userApprovalRequired === true, `${id} must require user approval.`);
+  assert(typeof connector.providerConfirmationRequired === "boolean", `${id} must state whether provider confirmation is required.`);
+  assert(Array.isArray(connector.authenticationRequirements) && connector.authenticationRequirements.length > 0, `${id} must document authentication requirements.`);
+  assert(Array.isArray(connector.consentRequirements) && connector.consentRequirements.length > 0, `${id} must document consent requirements.`);
+  assert(Array.isArray(connector.permissionRequirements) && connector.permissionRequirements.length > 0, `${id} must document permission requirements.`);
+  assert(Array.isArray(connector.complianceRequirements) && connector.complianceRequirements.length > 0, `${id} must document compliance requirements.`);
+  assert(Array.isArray(connector.auditRequirements) && connector.auditRequirements.length > 0, `${id} must document audit requirements.`);
+  assert(Array.isArray(connector.actionCapabilities) && connector.actionCapabilities.length > 0, `${id} must document action capabilities.`);
+  assert(/^17[A-O]-/.test(connector.futureImplementationPhase), `${id} must map to a future Phase 17 connector implementation phase.`);
+  ["freshnessField", "staleAfter", "displayRequirement"].forEach(field => {
+    assert(connector.dataFreshnessModel && connector.dataFreshnessModel[field], `${id} must include dataFreshnessModel.${field}.`);
+  });
+});
+
+[
+  "public source-backed data",
+  "partner-provided operational data",
+  "live API integrations",
+  "regulated patient/medical data",
+  "approved high-risk actions",
+  "provider directory data",
+  "telehealth provider data",
+  "pharmacy data and prescription/refill workflows",
+  "mobile clinic schedules",
+  "transportation resources",
+  "location sharing",
+  "payments",
+  "medical records/FHIR",
+  "provider contact",
+  "emergency dispatch",
+  "Phase 17 does not implement live regulated actions",
+  "No raw prompt may call an adapter directly",
+  "Audit logging must not itself trigger execution"
+].forEach(phrase => {
+  assert(doc.toLowerCase().includes(phrase.toLowerCase()), `Roadmap doc must include: ${phrase}`);
+});
+
+[
+  "Nexus Real Prototype Foundation Sprint",
+  "real prototype foundation",
+  "source-backed answers",
+  "provider-ready workflows",
+  "permission-gated actions",
+  "audit-controlled future execution",
+  "Real Source Registry",
+  "Source-Backed Answer Contract",
+  "Provider/Action Readiness Model",
+  "Permission And Consent Model",
+  "Audit-Controlled Action Model",
+  "Real Data Acquisition Roadmap",
+  "Public Data Source Path",
+  "Partner Data Source Path",
+  "Regulated Data Path",
+  "Future Provider Integrations",
+  "Healthcare Access Prototype Workflows",
+  "Location-Sharing Path",
+  "Payment Path",
+  "Prescription/Pharmacy Path",
+  "Medical Records/FHIR Path",
+  "Emergency Dispatch Path",
+  "Real-Time Connector Registry",
+  "Real-Time Connector Answer Posture",
+  "Provider directory connector",
+  "Clinic connector",
+  "Telehealth connector",
+  "Mobile clinic schedule connector",
+  "Pharmacy directory connector",
+  "Prescription/refill workflow connector",
+  "Transportation connector",
+  "Location connector",
+  "Payment connector",
+  "Medical records / FHIR connector",
+  "Emergency response connector",
+  "Workforce program connector",
+  "Agriculture resource connector",
+  "Community services connector",
+  "Nexus, what real providers can you connect to?",
+  "Nexus, what data sources do you need?",
+  "Nexus, can you use real-time data?",
+  "Nexus, can you schedule with a provider?",
+  "Nexus, can you access medical records?",
+  "Nexus, can you process payments?",
+  "Nexus, can you share my location?",
+  "Nexus, can you dispatch emergency help?",
+  "available-now",
+  "source-ready",
+  "partner-required",
+  "compliance-required",
+  "future-execution",
+  "not connected yet",
+  "requires a verified source",
+  "requires a provider integration",
+  "requires your approval",
+  "requires consent and audit logging",
+  "I can prepare the next step",
+  "I cannot execute that action until the required connection is active"
+].forEach(phrase => {
+  assert(foundationDoc.toLowerCase().includes(phrase.toLowerCase()), `Prototype foundation doc must include: ${phrase}`);
+});
+
+requiredFields.forEach(field => {
+  assert(doc.includes(field), `Roadmap doc must document field ${field}.`);
+});
+
+requiredConnectorFields.forEach(field => {
+  assert(foundationDoc.includes(field) || foundationDoc.toLowerCase().includes(field.toLowerCase()), `Prototype foundation doc must document connector field ${field}.`);
+});
+
+[
+  "liveActionEnabled: false",
+  "userApprovalRequired: true",
+  "metadata-only",
+  "real prototype foundation",
+  "getRealDataSourceRegistry",
+  "REAL_TIME_CONNECTOR_REGISTRY",
+  "getRealTimeConnectorRegistry",
+  "PROTOTYPE_ANSWER_CONTRACT"
+].forEach(phrase => {
+  assert(registrySource.includes(phrase), `Registry source must include ${phrase}.`);
+});
+
+[
+  "toy system",
+  "preview toy",
+  "fake workflow"
+].forEach(unsupportedTone => {
+  assert(!foundationDoc.toLowerCase().includes(unsupportedTone), `Prototype foundation doc must avoid unsupported toy/demo posture: ${unsupportedTone}`);
+});
+
+[
+  "/nexus-real-data-source-registry.js",
+  "NexusRealDataSourceRegistry",
+  "getRealDataSourceRegistry"
+].forEach(runtimeHook => {
+  assert(!index.includes(runtimeHook), `index.html must not load real data registry runtime hook: ${runtimeHook}`);
+  assert(!app.includes(runtimeHook), `app.js must not consume real data registry runtime hook: ${runtimeHook}`);
+  assert(!server.includes(runtimeHook), `server.js must not consume real data registry runtime hook: ${runtimeHook}`);
+});
+
+[
+  "liveActionEnabled: true",
+  "executionCurrentlyEnabled: true",
+  "executePayment",
+  "dispatchEmergency",
+  "submitRefill",
+  "sendMedicalRecords",
+  "openProviderContact",
+  "requestLocationNow"
+].forEach(forbidden => {
+  assert(!registrySource.includes(forbidden), `Registry must not introduce live regulated action behavior: ${forbidden}`);
+});
+
+const packageData = JSON.parse(packageJson);
+assert(packageData.scripts["qa:nexus-real-data-regulated-action-roadmap"] === "node archive/qa-scripts/nexus-real-data-regulated-action-roadmap-qa.js", "package.json must include real data roadmap QA alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-real-data-regulated-action-roadmap-qa.js"), "nexus-workforce QA suite must include real data roadmap QA.");
+
+console.log("[nexus-real-data-regulated-action-roadmap-qa] passed");

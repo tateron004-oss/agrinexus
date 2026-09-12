@@ -38,8 +38,23 @@
     requestLocation() {
       return postNative({ command: "route.track" });
     },
+    stopLocation() {
+      return postNative({ command: "route.stop" });
+    },
     captureMedia() {
       return postNative({ command: "camera.capture" });
+    },
+    openFile() {
+      return postNative({ command: "file.open" });
+    },
+    scheduleNotification(payload) {
+      return postNative({ command: "notification.schedule", payload });
+    },
+    registerPush() {
+      return postNative({ command: "push.register" });
+    },
+    flushLifecycleQueue() {
+      return postNative({ command: "lifecycle.flush" });
     },
     launchCall(payload) {
       return postNative({ command: "call.launch", payload });

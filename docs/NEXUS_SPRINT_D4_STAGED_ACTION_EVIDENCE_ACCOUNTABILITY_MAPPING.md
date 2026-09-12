@@ -106,7 +106,7 @@ D4 does not wire evidence mapping into `public/app.js`, `public/index.html`, or 
 
 ## QA Guard
 
-QA script: `scripts/nexus-sprint-d4-staged-action-evidence-accountability-mapping-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-d4-staged-action-evidence-accountability-mapping-qa.js`
 
 The QA guard validates:
 

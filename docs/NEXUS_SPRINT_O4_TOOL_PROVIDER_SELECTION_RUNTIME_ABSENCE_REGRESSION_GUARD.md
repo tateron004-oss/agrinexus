@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-tool-provider-selection-readiness-contract.js`;
 - `public/nexus-tool-provider-selection-feature-flag.js`;
-- `scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js`;
 - `fixtures/nexus/tool-provider-selection-feature-flags.json`;
 - Sprint O QA scripts.
 

@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-mobile-clinic-mode-readiness-contract.js`;
 - `public/nexus-mobile-clinic-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js`;
 - `fixtures/nexus/mobile-clinic-mode-feature-flags.json`;
 - Sprint AB QA scripts.
 

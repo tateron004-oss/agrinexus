@@ -7,8 +7,8 @@ Sprint Q3 adds fixture, harness, documentation, and QA only for the Sprint Q2 Na
 ## Harness Artifacts
 
 - `fixtures/nexus/natural-response-generation-feature-flags.json`
-- `scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js`
-- `scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

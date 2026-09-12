@@ -263,7 +263,7 @@ Phase 48 must not change:
 
 The deterministic QA lives in:
 
-- `scripts/nexus-audit-log-runtime-contract-qa.js`
+- `archive/qa-scripts/nexus-audit-log-runtime-contract-qa.js`
 
 The package alias is:
 

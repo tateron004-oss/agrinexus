@@ -129,7 +129,7 @@ Standard User may see a prepared communication action only as a review artifact 
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-approval-audit-handoff-contract-qa.js`
+- `archive/qa-scripts/nexus-communications-approval-audit-handoff-contract-qa.js`
 
 The package alias is:
 

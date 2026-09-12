@@ -25,7 +25,7 @@ Ownership:
 - `public/nexus-action-decision-mapper.js` owns `prompt` to `actionDecision`.
 - `public/nexus-staged-action-state.js` owns `actionDecision` to `stagedActionState`.
 - `public/nexus-staged-action-inert-renderer.js` owns `stagedActionState` to `inertRenderModel`.
-- `scripts/nexus-staged-action-inert-renderer-observation-qa.js` owns hidden/debug-only QA observation of the full chain.
+- `archive/qa-scripts/nexus-staged-action-inert-renderer-observation-qa.js` owns hidden/debug-only QA observation of the full chain.
 
 Planner metadata is not execution authority. selectedToolId must not directly execute. agentAction must not directly execute. missingInputs must block execution. restricted actions must not execute. provider_handoff_only must not mean execution happened. confirmationRequired must be honored.
 

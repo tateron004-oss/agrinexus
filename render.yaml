@@ -87,7 +87,7 @@ services:
     name: nexus-genesis-certified
     env: node
     plan: starter
-    buildCommand: npm install && node rebuild/scripts/build-browser.js
+    buildCommand: npm install
     preDeployCommand: node foundation/scripts/migrate.js
     startCommand: npm start
     healthCheckPath: /api/healthz
@@ -145,7 +145,13 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: NEXUS_EMAIL_PROVIDER
+        value: sendgrid
       - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: SENDGRID_REPLY_TO
         sync: false
       - key: MAILGUN_API_KEY
         sync: false

@@ -7,7 +7,7 @@ Sprint AM3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/observability-monitoring-feature-flags.json`
-- `scripts/nexus-sprint-am3-observability-monitoring-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-am3-observability-monitoring-flag-contract-harness.js`
 
 ## Fixture Coverage
 

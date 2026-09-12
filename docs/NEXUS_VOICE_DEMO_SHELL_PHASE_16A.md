@@ -13,7 +13,7 @@ This phase is not a full autonomous voice agent. It is a push-to-talk demo shell
 - A small transcript/status preview for the most recent voice interaction.
 - A standalone browser module: `public/nexus-voice-demo-shell.js`.
 - A narrow frontend bridge in `public/app.js` that returns safe demo responses and may navigate only to safe low-risk sections.
-- Static QA: `scripts/nexus-voice-demo-shell-phase-16a-qa.js`.
+- Static QA: `archive/qa-scripts/nexus-voice-demo-shell-phase-16a-qa.js`.
 - Package alias: `qa:nexus-voice-demo-shell-phase-16a`.
 
 ## What Was Not Added
@@ -339,12 +339,12 @@ node --check server.js
 node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-voice-demo-shell-phase-16a-qa.js
-node scripts/nexus-voice-demo-shell-phase-16a-qa.js
+node --check archive/qa-scripts/nexus-voice-demo-shell-phase-16a-qa.js
+node archive/qa-scripts/nexus-voice-demo-shell-phase-16a-qa.js
 npm.cmd run qa:nexus-voice-demo-shell-phase-16a
-node scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js
-node scripts/nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js
-node scripts/nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js
+node archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js
 node scripts/qa-suite.js all-safe
 node scripts/qa-suite.js nexus-workforce
 ```

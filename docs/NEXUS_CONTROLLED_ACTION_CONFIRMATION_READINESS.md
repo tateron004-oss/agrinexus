@@ -138,8 +138,8 @@ It is not a replacement for existing confirmation gates.
 
 Phase 8Q and Phase 8T are protected by:
 
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
 - `npm run qa:nexus-controlled-action-confirmation-readiness`
 - `npm run qa:nexus-controlled-action-confirmation-ui-prototype`
 - `node scripts/qa-suite.js nexus-workforce`

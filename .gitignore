@@ -21,6 +21,7 @@ tmp-*.json
 reports/
 test-results/
 exports/investor-screenshots/chrome-profile/
+output/nexus-exports/
 
 # Local generated backups and machine state
 backups/

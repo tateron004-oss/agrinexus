@@ -195,15 +195,15 @@ Phase 8Q may derive `controlled-action-confirmation-readiness.v1` only from prev
 
 Phase 8M through Phase 8Q are protected by:
 
-- `scripts/nexus-controlled-action-metadata-schema-qa.js`
-- `scripts/nexus-controlled-action-preview-readiness-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
-- `scripts/nexus-low-risk-suggestion-builder-qa.js`
-- `scripts/nexus-low-risk-suggestion-observation-qa.js`
-- `scripts/nexus-selected-tool-id-alignment-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-builder-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-observation-qa.js`
+- `archive/qa-scripts/nexus-selected-tool-id-alignment-qa.js`
 - `node scripts/qa-suite.js nexus-workforce`
 
 ## Recommended Phase 8P Scope

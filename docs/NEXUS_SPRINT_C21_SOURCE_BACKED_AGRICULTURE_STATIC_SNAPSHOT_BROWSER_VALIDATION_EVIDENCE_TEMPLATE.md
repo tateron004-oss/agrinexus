@@ -38,11 +38,11 @@ Record pass/fail output for:
 - `node --check server.js`;
 - `node --check public/app.js`;
 - `node --check scripts/qa-suite.js`;
-- `node scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js`;
-- `node scripts/nexus-sprint-c18-source-backed-agriculture-visual-semantics-review-plan-qa.js`;
-- `node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js`;
-- `node scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js`;
-- `node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c18-source-backed-agriculture-visual-semantics-review-plan-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js`;
 - `node scripts/qa-suite.js nexus-workforce`;
 - `node scripts/qa-suite.js all-safe`.
 

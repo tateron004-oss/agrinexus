@@ -7,7 +7,7 @@ Sprint AI3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/admin-mode-feature-flags.json`
-- `scripts/nexus-sprint-ai3-admin-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ai3-admin-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

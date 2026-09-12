@@ -7,7 +7,7 @@ Sprint AA3 adds fixture, harness, documentation, and QA only. It does not load P
 ## Added Artifacts
 
 - `fixtures/nexus/pharmacy-mode-feature-flags.json`
-- `scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

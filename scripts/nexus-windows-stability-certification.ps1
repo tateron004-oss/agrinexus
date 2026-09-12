@@ -59,6 +59,7 @@ try {
     error = $_.Exception.Message
     finishedAt = (Get-Date).ToUniversalTime().ToString("o")
   }
+  $summary.completedPasses = 0
   $summary.failure = $_.Exception.Message
   throw
 } finally {

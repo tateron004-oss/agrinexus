@@ -12,7 +12,7 @@ The implementation artifact is:
 
 The QA artifact is:
 
-- `scripts/nexus-session-memory-qa.js`
+- `archive/qa-scripts/nexus-session-memory-qa.js`
 
 This phase does not wire session memory into the live app, backend router, provider handoff, native bridge, call flow, health flow, marketplace flow, account flow, camera flow, location flow, or visible UI.
 
@@ -172,7 +172,7 @@ Recommended rollout:
 
 ## QA Coverage
 
-`scripts/nexus-session-memory-qa.js` verifies:
+`archive/qa-scripts/nexus-session-memory-qa.js` verifies:
 
 - safe context defaults
 - reset and clear behavior

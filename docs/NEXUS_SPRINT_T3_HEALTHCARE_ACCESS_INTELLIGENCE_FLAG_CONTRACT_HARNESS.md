@@ -7,8 +7,8 @@ Sprint T3 adds fixture, harness, documentation, and QA only for the Healthcare A
 ## Artifacts
 
 - `fixtures/nexus/healthcare-access-intelligence-feature-flags.json`
-- `scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js`
-- `scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

@@ -16,8 +16,8 @@ Prove that the default-off Advanced Intent Understanding feature flag contract b
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/advanced-intent-understanding-feature-flags.json`
-- Harness: `scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -91,7 +91,7 @@ The harness must not:
 Sprint L3 does not load:
 
 - `public/nexus-advanced-intent-understanding-feature-flag.js`;
-- `scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`;
 - `fixtures/nexus/advanced-intent-understanding-feature-flags.json`.
 
 The Standard User build remains unchanged.

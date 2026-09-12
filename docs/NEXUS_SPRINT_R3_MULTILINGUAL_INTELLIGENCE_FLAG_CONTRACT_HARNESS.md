@@ -7,8 +7,8 @@ Sprint R3 adds fixture, harness, documentation, and QA only for the Sprint R2 Mu
 ## Harness Artifacts
 
 - `fixtures/nexus/multilingual-intelligence-feature-flags.json`
-- `scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js`
-- `scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

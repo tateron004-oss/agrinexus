@@ -127,7 +127,7 @@ E2 does not load the contract into active Standard User runtime. The Standard Us
 
 ## QA Guard
 
-QA script: `scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js`
 
 The QA guard validates:
 

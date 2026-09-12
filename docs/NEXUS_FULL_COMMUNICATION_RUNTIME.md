@@ -129,7 +129,7 @@ Example receipt results:
 Run:
 
 ```bash
-node scripts/nexus-full-communication-runtime-qa.js
+node archive/qa-scripts/nexus-full-communication-runtime-qa.js
 npm.cmd run qa:nexus-full-communication-runtime
 node scripts/qa-suite.js nexus-workforce
 node scripts/qa-suite.js all-safe

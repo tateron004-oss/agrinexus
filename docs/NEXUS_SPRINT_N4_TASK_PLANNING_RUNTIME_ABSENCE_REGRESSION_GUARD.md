@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-task-planning-readiness-contract.js`;
 - `public/nexus-task-planning-feature-flag.js`;
-- `scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`;
 - `fixtures/nexus/task-planning-feature-flags.json`;
 - Sprint N QA scripts.
 

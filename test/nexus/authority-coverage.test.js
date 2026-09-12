@@ -33,8 +33,8 @@ test("all production application manifests expose only capabilities with complet
     toolId: item.toolId, method: "signed_provider_receipt", verify: async () => ({ verified: true })
   })));
   const report = await new AuthorityCoverage({ applications, tools, adapters, verifiers }).report();
-  assert.equal(report.applicationCount, 16);
-  assert.equal(report.authoritativeApplications, 16);
+  assert.equal(report.applicationCount, 17);
+  assert.equal(report.authoritativeApplications, 17);
   assert.equal(report.complete, true);
   assert.deepEqual(report.applications.filter(item => !item.authoritative), []);
 });

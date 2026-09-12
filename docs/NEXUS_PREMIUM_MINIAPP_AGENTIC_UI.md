@@ -63,7 +63,7 @@ The premium layer adds single-column mobile layouts, large touch targets, focus-
 Primary QA:
 
 ```bash
-node scripts/nexus-premium-miniapp-agentic-ui-qa.js
+node archive/qa-scripts/nexus-premium-miniapp-agentic-ui-qa.js
 npm.cmd run qa:nexus-premium-miniapp-agentic-ui
 node scripts/qa-suite.js all-safe
 ```

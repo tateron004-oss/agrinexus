@@ -85,16 +85,16 @@ Caption/global surfaces remain passive preview-only. They do not receive confirm
 
 Phase 8X is protected by:
 
-- `scripts/nexus-controlled-action-navigation-behavior-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-navigation-behavior-qa.js`
 - `npm run qa:nexus-controlled-action-navigation-behavior`
-- `scripts/nexus-controlled-action-navigation-readiness-qa.js`
-- `scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-controlled-action-preview-readiness-qa.js`
-- `scripts/nexus-controlled-action-metadata-schema-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-navigation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
 
 The `nexus-workforce` QA suite includes the navigation behavior check.
 

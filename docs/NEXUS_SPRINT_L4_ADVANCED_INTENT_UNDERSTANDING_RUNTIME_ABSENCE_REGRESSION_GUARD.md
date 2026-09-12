@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-advanced-intent-understanding-readiness-contract.js`;
 - `public/nexus-advanced-intent-understanding-feature-flag.js`;
-- `scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js`;
 - `fixtures/nexus/advanced-intent-understanding-feature-flags.json`;
 - Sprint L QA scripts.
 

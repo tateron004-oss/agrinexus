@@ -98,7 +98,7 @@ There is no visible UI rendered, no DOM rendering, no click handlers, no live ex
 
 ## 7. Why This Is Not Runtime UI
 
-The harness exists only in `scripts/nexus-staged-action-inert-renderer-observation-qa.js`. It is not loaded by `public/index.html`, `public/app.js`, or `server.js`. It does not create DOM nodes, add event listeners, mount panels, open modals, or show Standard User UI.
+The harness exists only in `archive/qa-scripts/nexus-staged-action-inert-renderer-observation-qa.js`. It is not loaded by `public/index.html`, `public/app.js`, or `server.js`. It does not create DOM nodes, add event listeners, mount panels, open modals, or show Standard User UI.
 
 ## 8. Why This Is Not Execution Authority
 

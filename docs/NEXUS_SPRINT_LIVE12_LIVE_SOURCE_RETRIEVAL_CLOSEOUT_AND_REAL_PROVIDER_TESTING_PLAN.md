@@ -46,7 +46,7 @@ The contract supports assistant-style command recognition, follow-up context, cl
 LIVE3 added:
 
 - `fixtures/nexus/live-source-results.json`
-- `scripts/nexus-sprint-live3-mock-source-provider-harness.js`
+- `archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness.js`
 
 The harness validates weather, news/security, shipment, job, agriculture, music/media, stale, conflicting, rate-limited, error, unsupported, and source-unavailable source result states.
 
@@ -123,18 +123,18 @@ Each LIVE phase has deterministic QA and is wired into `nexus-workforce` and `al
 
 Required closeout QA:
 
-- `scripts/nexus-sprint-live1-live-source-retrieval-assistant-product-boundary-qa.js`
-- `scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js`
-- `scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js`
-- `scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js`
-- `scripts/nexus-sprint-live5-weather-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js`
-- `scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js`
-- `scripts/nexus-sprint-live12-live-source-retrieval-closeout-qa.js`
+- `archive/qa-scripts/nexus-sprint-live1-live-source-retrieval-assistant-product-boundary-qa.js`
+- `archive/qa-scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js`
+- `archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js`
+- `archive/qa-scripts/nexus-sprint-live5-weather-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js`
+- `archive/qa-scripts/nexus-sprint-live12-live-source-retrieval-closeout-qa.js`
 
 ## Browser Validation Posture
 

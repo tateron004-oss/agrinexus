@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-africa-regional-deployment-mode-readiness-contract.js`;
 - `public/nexus-africa-regional-deployment-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js`;
 - `fixtures/nexus/africa-regional-deployment-mode-feature-flags.json`;
 - Sprint AK QA scripts.
 

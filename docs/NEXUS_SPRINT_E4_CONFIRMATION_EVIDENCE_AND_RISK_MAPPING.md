@@ -110,7 +110,7 @@ Future runtime-visible confirmation work must pass browser validation and remain
 
 ## QA Guard
 
-QA script: `scripts/nexus-sprint-e4-confirmation-evidence-risk-mapping-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-e4-confirmation-evidence-risk-mapping-qa.js`
 
 The QA guard validates:
 

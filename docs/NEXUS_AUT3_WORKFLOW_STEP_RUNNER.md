@@ -53,4 +53,4 @@ AUT3 is not wired into `public/app.js`, `public/index.html`, or `server.js`. It 
 
 ## QA
 
-`scripts/nexus-aut3-workflow-step-runner-qa.js` verifies safe provider/source lookup metadata, comparison, checklist, draft generation, blocked action handling, provider unavailable fallback, provider error fallback, package alias wiring, safe-suite wiring, and absence of runtime hooks.
+`archive/qa-scripts/nexus-aut3-workflow-step-runner-qa.js` verifies safe provider/source lookup metadata, comparison, checklist, draft generation, blocked action handling, provider unavailable fallback, provider error fallback, package alias wiring, safe-suite wiring, and absence of runtime hooks.

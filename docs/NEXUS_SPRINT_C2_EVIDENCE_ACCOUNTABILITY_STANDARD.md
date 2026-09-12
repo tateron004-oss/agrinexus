@@ -13,7 +13,7 @@ This sprint does not enable live connectors, provider execution, storage writes,
 - `public/nexus-mode-evidence-requirements.js`
 - `public/nexus-professional-evidence-packet.js`
 - `docs/NEXUS_SPRINT_C2_EVIDENCE_ACCOUNTABILITY_STANDARD.md`
-- `scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js`
+- `archive/qa-scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js`
 - `package.json`
 - `scripts/qa-suite.js`
 

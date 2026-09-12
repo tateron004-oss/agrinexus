@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-healthcare-access-intelligence-readiness-contract.js`;
 - `public/nexus-healthcare-access-intelligence-feature-flag.js`;
-- `scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js`;
 - `fixtures/nexus/healthcare-access-intelligence-feature-flags.json`;
 - Sprint T QA scripts.
 

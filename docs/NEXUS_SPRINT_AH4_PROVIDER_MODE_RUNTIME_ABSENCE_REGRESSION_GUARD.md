@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-provider-mode-readiness-contract.js`;
 - `public/nexus-provider-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ah3-provider-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ah3-provider-mode-flag-contract-harness.js`;
 - `fixtures/nexus/provider-mode-feature-flags.json`;
 - Sprint AH QA scripts.
 

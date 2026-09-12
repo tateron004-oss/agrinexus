@@ -70,7 +70,7 @@ N100-1 does not activate Standard User runtime behavior. It creates a source con
 
 The focused QA script is:
 
-- `scripts/nexus-n100-1-real-provider-data-core-qa.js`
+- `archive/qa-scripts/nexus-n100-1-real-provider-data-core-qa.js`
 
 It verifies:
 

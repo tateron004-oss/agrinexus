@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-telehealth-mode-readiness-contract.js`;
 - `public/nexus-telehealth-mode-feature-flag.js`;
-- `scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js`;
 - `fixtures/nexus/telehealth-mode-feature-flags.json`;
 - Sprint Z QA scripts.
 
