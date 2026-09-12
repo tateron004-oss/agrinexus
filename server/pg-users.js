@@ -53,6 +53,23 @@ async function createUser(pool, { email, displayName, password, tenantId = DEMO_
   return result.rows[0];
 }
 
+// A Postgres `users` row has no role/country/language columns (those stay
+// blob-only for now). Builds a blob shadow row with safe defaults for a
+// verified Postgres account that has no blob row yet (seed data, or an
+// account created before the AUTH_STORE=postgres cutover), matching the
+// same default shape the admin test-user/admin-user endpoints already use.
+function buildBlobShadowFromPostgresUser(pgUser, { defaultCountry = "Nigeria", defaultLanguage = "en" } = {}) {
+  return {
+    id: crypto.randomUUID(),
+    email: pgUser.email,
+    name: pgUser.display_name || pgUser.email,
+    role: "Standard User",
+    country: defaultCountry,
+    language: defaultLanguage,
+    createdAt: new Date().toISOString()
+  };
+}
+
 async function setPasswordResetToken(pool, email, { tokenHash, expiresAt }) {
   const result = await pool.query(
     `update users set password_reset_token_hash = $2, password_reset_expires_at = $3
@@ -94,6 +111,7 @@ module.exports = {
   verifyPasswordHash,
   findUserByEmail,
   verifyPassword,
+  buildBlobShadowFromPostgresUser,
   createUser,
   setPasswordResetToken,
   consumeResetToken

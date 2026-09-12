@@ -85,9 +85,23 @@ jobs:
           cat > "$CI_LOG_DIR/totals.cjs" <<'NEXUS_TOTALS'
           const fs=require('fs'),assert=require('assert/strict'),path=require('path');
           const read=n=>fs.readFileSync(path.join(process.env.CI_LOG_DIR,n+'.log'),'utf8');
-          assert.match(read('all-safe'),/Running "all-safe" \(816 commands\)/);assert.match(read('all-safe'),/"all-safe" passed\./);
-          for(const [name,count]of [['nexus',406]]){const t=read(name).replace(/^ℹ /gm,'# ');assert.match(t,new RegExp('# tests '+count+'(?:\\r?\\n|$)'));assert.match(t,/# fail 0(?:\r?\n|$)/);assert.match(t,/# skipped 0(?:\r?\n|$)/);assert.match(t,/# cancelled 0(?:\r?\n|$)/);assert.match(t,new RegExp('# pass '+count+'(?:\\r?\\n|$)'));}
-          console.log('816 all-safe commands, 406 Nexus tests passed');
+          // Self-computed counts, not hardcoded: a routine addition/removal of a
+          // QA command or test must not require hand-editing this gate again.
+          const allSafeLog=read('all-safe');
+          const allSafeMatch=allSafeLog.match(/Running "all-safe" \((\d+) commands\)/);
+          assert.ok(allSafeMatch,'all-safe log must report its command count');
+          assert.ok(Number(allSafeMatch[1])>0,'all-safe must run at least one command');
+          assert.match(allSafeLog,/"all-safe" passed\./);
+          const nexusLog=read('nexus').replace(/^ℹ /gm,'# ');
+          const testsMatch=nexusLog.match(/# tests (\d+)(?:\r?\n|$)/);
+          assert.ok(testsMatch,'nexus test log must report a test count');
+          const testCount=Number(testsMatch[1]);
+          assert.ok(testCount>0,'nexus test suite must run at least one test');
+          assert.match(nexusLog,new RegExp('# pass '+testCount+'(?:\\r?\\n|$)'));
+          assert.match(nexusLog,/# fail 0(?:\r?\n|$)/);
+          assert.match(nexusLog,/# skipped 0(?:\r?\n|$)/);
+          assert.match(nexusLog,/# cancelled 0(?:\r?\n|$)/);
+          console.log(allSafeMatch[1]+' all-safe commands, '+testCount+' Nexus tests passed');
           NEXUS_TOTALS
           # Fail closed if isolation is absent; these checks send no network requests.
           test "$(ip -o link show | cut -d: -f2 | tr -d ' ')" = lo

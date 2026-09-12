@@ -44422,18 +44422,29 @@ async function api(req, res, url) {
     const password = String(body.password || "");
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
     let found;
+    let blobBackfilled = false;
     if (usingPostgresAuth()) {
       const pgUser = await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null);
       if (!pgUser) return send(res, 401, { error: "Invalid demo credentials" });
       // Postgres is authoritative for the credential check; profile fields
       // (name, role, restrictions, etc.) still come from the blob shadow copy.
       found = db.users.find(item => String(item.email || "").toLowerCase() === email);
-      if (!found) return send(res, 401, { error: "Invalid demo credentials" });
+      if (!found) {
+        // A Postgres-verified account with no blob row yet (seed data, or an
+        // account created before this cutover) — backfill a shadow row with
+        // safe defaults instead of rejecting a correct credential.
+        found = pgUsers.buildBlobShadowFromPostgresUser(pgUser, {
+          defaultCountry: "Nigeria",
+          defaultLanguage: COUNTRY_LANGUAGE.nigeria || "en"
+        });
+        db.users.push(found);
+        blobBackfilled = true;
+      }
     } else {
       found = db.users.find(item => String(item.email || "").toLowerCase() === email && String(item.password || "") === password);
       if (!found) return send(res, 401, { error: "Invalid demo credentials" });
     }
-    if (usersChanged) await writeDb(db);
+    if (usersChanged || blobBackfilled) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     sessions.set(sid, found.id);
     const durableToken = issueDurableAuthToken(found.id);
