@@ -58,15 +58,15 @@ jobs:
             "README.md": "2fc011922eb426a2d3e91de1317b3a3146bd7c4acd40ef8792021c3643a37be0",
             "docs/NEXUS_STANDARD_USER_MANUAL_BROWSER_VALIDATION.md": "796d7ba84370b1e7ab9c50e78f9771a23e9c529437219b9185dba0dce6cf131c",
             "scripts/github-ready-check.js": "e5077339130ca95d20edee77c292077f08beaac0d4aa95110f043d3286584f6c",
-            "scripts/nexus-demo-data-sandbox-mode-qa.js": "5db80c43c290308ec7d2163f1978b720bb0a7f42d887cd204ebf336f1446e029",
-            "scripts/nexus-learning-provider-bridge-qa.js": "763cf42536be2e80cedb97b7e0f1700d04e2b876059732cd80f876ddd667e318",
-            "scripts/nexus-marketplace-bridge-qa.js": "7081da948a57d226cbe800176f4e8c54596346836d443b36a33009acf5f9ab67",
-            "scripts/nexus-premium-miniapp-agentic-ui-qa.js": "d88b86ec8a971dd84575b4f45bdc240f12aaff21e0e4539753bc563cdb32810e",
-            "scripts/nexus-provider-contact-bridge-qa.js": "a4bec042d1928cd6ade9f866e444906f0ef454c999065724ec98319b08506f7c",
-            "scripts/nexus-real-provider-integrations-qa.js": "2dbf0d07de23befd826613b90ebace90863acec1eb7e5c36115faae0587eec49",
-            "scripts/nexus-render-credential-activation-guide-qa.js": "8eb005b39c0e694cf5e481953b471be7b793d91e7d934d0ee36321210d325622",
-            "scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js": "4f003d0bb7cbf112a6338aea637eba73877db9b68d525edd610054e66bf9fe2e",
-            "scripts/nexus-sandbox-click-path-mode-audit-qa.js": "7b814623c0a8454f05edb6e0a35d6274e46e8a92b055aeeef4545b49d5229b11",
+            "archive/qa-scripts/nexus-demo-data-sandbox-mode-qa.js": "09050a36113696a0b5ed920b741db01cd692227d7c8f7916d3c9ca2a04ee15a6",
+            "archive/qa-scripts/nexus-learning-provider-bridge-qa.js": "973191b30e5057502ecbef2f2eea306e0cdd12dd162c4fca93a0c932bd30a60c",
+            "archive/qa-scripts/nexus-marketplace-bridge-qa.js": "e41a4c358ccebde089ab900bf783149c46e06b36eb1bae7fbb514e2b59395e69",
+            "archive/qa-scripts/nexus-premium-miniapp-agentic-ui-qa.js": "2afe9cceec995f2429458e7bbce81a63c04e8c7a964656fcdd25aa8aa1ed4ffc",
+            "archive/qa-scripts/nexus-provider-contact-bridge-qa.js": "aaea652af0a25996cdd225476e699eee39ee8f881b777da9905fd3bdca3a2220",
+            "archive/qa-scripts/nexus-real-provider-integrations-qa.js": "e7f67df5bdd3e82479ea12b45be4e7ae096908c9688da87be809d66037817f3e",
+            "archive/qa-scripts/nexus-render-credential-activation-guide-qa.js": "6003fe8836488ff03ea367de4c10877f0966f89ae7e0c16c0c484cf5d49fe70c",
+            "archive/qa-scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js": "1354a0cfcc1ba412229ac036a58db776f3f323a6ce2c82f5ea872435ccf2dbc6",
+            "archive/qa-scripts/nexus-sandbox-click-path-mode-audit-qa.js": "bb5459f3128f7afe8f622cdbc65d6530a1e07fce7c1d68f5a4ac13121992c0dd",
             "test/nexus/deployment-contracts.test.js": "03b915bd50bb24aaac08378210aebd7b7653359800847d5d85086e0b50d4034a",
             "test/nexus/render-release-controller.test.js": "847ffd5b97fbfac695daeba9957b3fa1a5499c11d6e067c11c35dbf197c7863f"
           };
@@ -86,8 +86,8 @@ jobs:
           const fs=require('fs'),assert=require('assert/strict'),path=require('path');
           const read=n=>fs.readFileSync(path.join(process.env.CI_LOG_DIR,n+'.log'),'utf8');
           assert.match(read('all-safe'),/Running "all-safe" \(816 commands\)/);assert.match(read('all-safe'),/"all-safe" passed\./);
-          for(const [name,count]of [['nexus',400]]){const t=read(name).replace(/^ℹ /gm,'# ');assert.match(t,new RegExp('# tests '+count+'(?:\\r?\\n|$)'));assert.match(t,/# fail 0(?:\r?\n|$)/);assert.match(t,/# skipped 0(?:\r?\n|$)/);assert.match(t,/# cancelled 0(?:\r?\n|$)/);assert.match(t,new RegExp('# pass '+count+'(?:\\r?\\n|$)'));}
-          console.log('816 all-safe commands, 400 Nexus tests passed');
+          for(const [name,count]of [['nexus',406]]){const t=read(name).replace(/^ℹ /gm,'# ');assert.match(t,new RegExp('# tests '+count+'(?:\\r?\\n|$)'));assert.match(t,/# fail 0(?:\r?\n|$)/);assert.match(t,/# skipped 0(?:\r?\n|$)/);assert.match(t,/# cancelled 0(?:\r?\n|$)/);assert.match(t,new RegExp('# pass '+count+'(?:\\r?\\n|$)'));}
+          console.log('816 all-safe commands, 406 Nexus tests passed');
           NEXUS_TOTALS
           # Fail closed if isolation is absent; these checks send no network requests.
           test "$(ip -o link show | cut -d: -f2 | tr -d ' ')" = lo
@@ -102,6 +102,7 @@ jobs:
               printf '%s: PASS\n' "$name"
             else
               printf '%s: FAIL (raw output retained only on ephemeral runner)\n' "$name"
+              echo "TEMP-DEBUG tail of $name.log:"; tail -n 40 "$CI_LOG_DIR/$name.log" || true
               failed=1
             fi
           }
