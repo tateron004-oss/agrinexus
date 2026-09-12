@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const serverSource = read("server.js");
 const packageJson = JSON.parse(read("package.json"));
@@ -196,7 +196,7 @@ async function run() {
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-production-layer-activation-integration"],
-    "node scripts/nexus-production-layer-activation-integration-qa.js",
+    "node archive/qa-scripts/nexus-production-layer-activation-integration-qa.js",
     "package alias should run layer activation integration QA"
   );
   assert(qaSuite.includes("scripts/nexus-production-layer-activation-integration-qa.js"), "qa suite should include layer activation integration QA");

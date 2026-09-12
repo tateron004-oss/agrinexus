@@ -7,6 +7,8 @@
     "certify:nexus": "node scripts/certify-nexus.js",
     "qa:nexus-genesis-production-exact-build-smoke": "node scripts/nexus-genesis-production-exact-build-smoke.js",
     "qa:nexus-genesis-final-runtime-audit": "node scripts/nexus-genesis-final-runtime-audit.js",
+    "qa:nexus-browser-action-controller": "node archive/qa-scripts/nexus-browser-action-controller-qa.js",
+    "qa:nexus-production-layer-activation-integration": "node archive/qa-scripts/nexus-production-layer-activation-integration-qa.js",
     "start": "node server.js",
     "dev": "node server.js",
     "dev:local": "node -e \"process.env.AGRINEXUS_DB_PATH='tmp-local-db.json'; require('./server.js')\"",
