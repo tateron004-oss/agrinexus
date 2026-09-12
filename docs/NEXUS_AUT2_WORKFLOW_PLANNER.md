@@ -59,4 +59,4 @@ Plans must not:
 
 ## QA
 
-`scripts/nexus-aut2-workflow-planner-qa.js` verifies job, agriculture training, crop issue, marketplace browse, shipment, missing-reference, and blocked workflows. It also proves the planner remains unwired to Standard User runtime and contains no network, storage, geolocation, navigation, provider handoff, or execution hooks.
+`archive/qa-scripts/nexus-aut2-workflow-planner-qa.js` verifies job, agriculture training, crop issue, marketplace browse, shipment, missing-reference, and blocked workflows. It also proves the planner remains unwired to Standard User runtime and contains no network, storage, geolocation, navigation, provider handoff, or execution hooks.

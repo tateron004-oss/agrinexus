@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const dryRunModule = "nexus-provider-dispatch-dry-run-contract.js";
 const dryRunHarness = "nexus-sprint-g7-provider-dispatch-dry-run-harness.js";
 
 assert(exists("docs", docName), "Sprint G8 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint G8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint G8 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -32,7 +32,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
-const dryRunContract = require("../public/nexus-provider-dispatch-dry-run-contract.js");
+const dryRunContract = require("../../public/nexus-provider-dispatch-dry-run-contract.js");
 const dryRunHarnessModule = require("./nexus-sprint-g7-provider-dispatch-dry-run-harness.js");
 
 assertIncludes(doc, [
@@ -92,13 +92,13 @@ assertIncludes(doc, [
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `G8 requires prior Sprint G artifact: ${relative}`));
 
 [
-  "scripts/nexus-sprint-g1-approval-audit-persistence-readiness-gate-qa.js",
-  "scripts/nexus-sprint-g2-approval-audit-persistence-contract-qa.js",
-  "scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js",
-  "scripts/nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard-qa.js",
-  "scripts/nexus-sprint-g5-approval-audit-persistence-lane-closeout-qa.js",
-  "scripts/nexus-sprint-g6-provider-dispatch-dry-run-contract-qa.js",
-  "scripts/nexus-sprint-g7-provider-dispatch-dry-run-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-g1-approval-audit-persistence-readiness-gate-qa.js",
+  "archive/qa-scripts/nexus-sprint-g2-approval-audit-persistence-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-g5-approval-audit-persistence-lane-closeout-qa.js",
+  "archive/qa-scripts/nexus-sprint-g6-provider-dispatch-dry-run-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-g7-provider-dispatch-dry-run-harness-qa.js"
 ].forEach(relative => assert(qaSuite.includes(relative), `G8 requires prior Sprint G QA in qa-suite: ${relative}`));
 
 assert.equal(typeof dryRunContract.createProviderDispatchDryRun, "function", "G8 requires G6 dry-run contract factory.");
@@ -118,7 +118,7 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-g8-provider-dispatch-dry-run-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint G8 QA.");
 

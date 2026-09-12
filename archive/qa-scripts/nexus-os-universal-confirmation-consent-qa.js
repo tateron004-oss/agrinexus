@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -117,10 +117,10 @@ const handler = app.slice(handlerStart, handlerEnd);
 ].forEach(token => includes(styles, token, `universal review CSS ${token}`));
 
 assert(
-  pkg.scripts["qa:nexus-os-universal-confirmation-consent"] === "node scripts/nexus-os-universal-confirmation-consent-qa.js",
+  pkg.scripts["qa:nexus-os-universal-confirmation-consent"] === "node archive/qa-scripts/nexus-os-universal-confirmation-consent-qa.js",
   "package alias exists"
 );
-assert(suite.includes("scripts/nexus-os-universal-confirmation-consent-qa.js"), "safe QA suite includes Rail 11 QA");
+assert(suite.includes("archive/qa-scripts/nexus-os-universal-confirmation-consent-qa.js"), "safe QA suite includes Rail 11 QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

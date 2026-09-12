@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -254,7 +254,7 @@ const realProviderUi = realProviderUiStart >= 0 && realProviderUiEnd > realProvi
 ].forEach(text => includes(auditDoc, text, "audit doc"));
 
 includes(packageJson, "qa:nexus-real-provider-integrations", "package.json");
-includes(qaSuite, "scripts/nexus-real-provider-integrations-qa.js", "qa-suite.js");
+includes(qaSuite, "archive/qa-scripts/nexus-real-provider-integrations-qa.js", "qa-suite.js");
 
 const providerSources = providerFiles.map(read).join("\n");
 ["sk_live_", "AIzaSy", "xoxb-", "-----BEGIN PRIVATE KEY-----"].forEach(secretPattern => {

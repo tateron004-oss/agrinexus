@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_E7_FLAG_GATED_CONFIRMATION_UI_PREVIEW_BROWSER_VALI
 const qaName = "nexus-sprint-e7-flag-gated-confirmation-ui-preview-browser-validation-qa.js";
 
 assert(exists("docs", docName), "Sprint E7 browser validation doc must exist.");
-assert(exists("scripts", qaName), "Sprint E7 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E7 QA script must exist.");
 
 const doc = read("docs", docName);
 const app = read("public", "app.js");
@@ -132,9 +132,9 @@ const painter = app.slice(painterStart, clearStart);
 });
 
 const alias = "qa:nexus-sprint-e7-flag-gated-confirmation-ui-preview-browser-validation";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e6-flag-gated-confirmation-ui-preview-qa.js"), "E6 QA must remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e6-flag-gated-confirmation-ui-preview-qa.js"), "E6 QA must remain in qa-suite.");
 
 console.log("[nexus-sprint-e7-flag-gated-confirmation-ui-preview-browser-validation-qa] passed");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -40,7 +40,7 @@ const docName = "NEXUS_SPRINT_E6_FLAG_GATED_CONFIRMATION_UI_PREVIEW.md";
 const qaName = "nexus-sprint-e6-flag-gated-confirmation-ui-preview-qa.js";
 
 assert(exists("docs", docName), "Sprint E6 doc must exist.");
-assert(exists("scripts", qaName), "Sprint E6 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E6 QA script must exist.");
 
 const doc = read("docs", docName);
 const app = read("public", "app.js");
@@ -185,7 +185,7 @@ assert(styles.includes(".nexus-user-confirmation-label"), "E6 styles must includ
 ].forEach(term => assert(!server.includes(term), `server.js must not wire E6 runtime term: ${term}`));
 
 const alias = "qa:nexus-sprint-e6-flag-gated-confirmation-ui-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E6 QA.");
 

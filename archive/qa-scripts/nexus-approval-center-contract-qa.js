@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_APPROVAL_CENTER_CONTRACT_PHASE_49.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -10,8 +10,8 @@ const paths = {
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
   confirmationDoc: path.join(root, "docs", "NEXUS_UNIFIED_CONFIRMATION_UI_ARCHITECTURE.md"),
-  confirmationQa: path.join(root, "scripts", "nexus-confirmation-ui-contract-qa.js"),
-  controlledConfirmationQa: path.join(root, "scripts", "nexus-controlled-action-confirmation-readiness-qa.js"),
+  confirmationQa: path.join(root, "archive", "qa-scripts", "nexus-confirmation-ui-contract-qa.js"),
+  controlledConfirmationQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-action-confirmation-readiness-qa.js"),
   auditRuntimeContract: path.join(root, "public", "nexus-audit-log-runtime-contract.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
@@ -320,7 +320,7 @@ assert(invalid.pendingActionCategories.length === 0, "invalid pending action cat
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-approval-center-contract"] === "node scripts/nexus-approval-center-contract-qa.js", "package.json must expose qa:nexus-approval-center-contract");
-assert(qaSuite.includes("scripts/nexus-approval-center-contract-qa.js"), "qa-suite.js must include approval center contract QA");
+assert(packageData.scripts["qa:nexus-approval-center-contract"] === "node archive/qa-scripts/nexus-approval-center-contract-qa.js", "package.json must expose qa:nexus-approval-center-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-approval-center-contract-qa.js"), "qa-suite.js must include approval center contract QA");
 
 console.log("[nexus-approval-center-contract-qa] passed");

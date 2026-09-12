@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_MULTILINGUAL_DATA_LABELING_CONTRACT_PHASE_30.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -236,11 +236,11 @@ assert(invalid.translationSourceType === "not_provided", "invalid translation so
 });
 
 assert(
-  packageData.scripts["qa:nexus-multilingual-data-labeling-contract"] === "node scripts/nexus-multilingual-data-labeling-contract-qa.js",
+  packageData.scripts["qa:nexus-multilingual-data-labeling-contract"] === "node archive/qa-scripts/nexus-multilingual-data-labeling-contract-qa.js",
   "package.json must expose qa:nexus-multilingual-data-labeling-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-multilingual-data-labeling-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-multilingual-data-labeling-contract-qa.js"),
   "qa-suite.js must include multilingual data labeling contract QA"
 );
 

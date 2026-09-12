@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ function runRt11RealTimeLaneCloseoutQa() {
   const docName = "NEXUS_RT11_REAL_TIME_LANE_CLOSEOUT.md";
   const qaName = "nexus-rt11-real-time-lane-closeout-qa.js";
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -25,17 +25,17 @@ function runRt11RealTimeLaneCloseoutQa() {
 
   [
     ["docs", docName],
-    ["scripts", qaName],
-    ["scripts", "nexus-rt1-weather-provider-credential-completion-qa.js"],
-    ["scripts", "nexus-rt2-live-provider-capability-registry-qa.js"],
-    ["scripts", "nexus-rt3-unified-live-source-orchestrator-qa.js"],
-    ["scripts", "nexus-rt4-provider-specific-live-adoption-harnesses-qa.js"],
-    ["scripts", "nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js"],
-    ["scripts", "nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"],
-    ["scripts", "nexus-rt7-source-trust-citation-freshness-policy-qa.js"],
-    ["scripts", "nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"],
-    ["scripts", "nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js"],
-    ["scripts", "nexus-rt10-real-provider-adoption-runbook-qa.js"]
+    ["archive", "qa-scripts", qaName],
+    ["archive", "qa-scripts", "nexus-rt1-weather-provider-credential-completion-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt2-live-provider-capability-registry-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt3-unified-live-source-orchestrator-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt4-provider-specific-live-adoption-harnesses-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt7-source-trust-citation-freshness-policy-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt10-real-provider-adoption-runbook-qa.js"]
   ].forEach(parts => assert(exists(...parts), `${parts.join("/")} must exist for RT11 closeout.`));
 
   [
@@ -103,10 +103,10 @@ function runRt11RealTimeLaneCloseoutQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt11-real-time-lane-closeout"],
-    "node scripts/nexus-rt11-real-time-lane-closeout-qa.js",
+    "node archive/qa-scripts/nexus-rt11-real-time-lane-closeout-qa.js",
     "RT11 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt11-real-time-lane-closeout-qa.js"), "RT11 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt11-real-time-lane-closeout-qa.js"), "RT11 QA must be in safe suites.");
 
   console.log("[nexus-rt11-real-time-lane-closeout-qa] passed");
 }

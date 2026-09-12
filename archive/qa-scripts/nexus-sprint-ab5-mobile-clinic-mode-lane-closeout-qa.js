@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_MOBILE_CLINIC_MODE_FEATURE_FLAG_STATE,
   normalizeMobileClinicModeFeatureFlagState
-} = require("../public/nexus-mobile-clinic-mode-feature-flag.js");
+} = require("../../public/nexus-mobile-clinic-mode-feature-flag.js");
 const {
   protectedFields,
   loadMobileClinicModeFlagFixtures,
   validateMobileClinicModeFlagFixtures
 } = require("./nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_AB5_MOBILE_CLINIC_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AB5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AB5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AB5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-mobile-clinic-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-mobile-clinic-mode-feature-flag.js");
-const ab3Harness = read("scripts", "nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js");
+const ab3Harness = read("archive", "qa-scripts", "nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js");
 const ab4Doc = read("docs", "NEXUS_SPRINT_AB4_MOBILE_CLINIC_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
 const fixtures = loadMobileClinicModeFlagFixtures();
 
@@ -193,7 +193,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint AB5 requires prior Sprint AB QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint AB5 requires prior Sprint AB QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint AB QA: ${requiredScript}`);
 }
 
@@ -303,9 +303,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-ab5-mobile-clinic-mode-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa.js",
   "package.json must expose Sprint AB5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AB5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AB5 QA.");
 
 console.log("[nexus-sprint-ab5-mobile-clinic-mode-lane-closeout-qa] passed");

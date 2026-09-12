@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 let port = Number(process.env.NEXUS_SYSTEM_WIDE_INTEGRITY_QA_PORT || 0);
 let base = "";
 const tempDb = path.join(root, `tmp-nexus-system-wide-integrity-hardening-qa-db-${process.pid}-${Date.now()}.json`);

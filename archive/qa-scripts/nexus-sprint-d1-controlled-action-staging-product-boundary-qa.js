@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_D1_CONTROLLED_ACTION_STAGING_PRODUCT_BOUNDARY.md";
 const qaName = "nexus-sprint-d1-controlled-action-staging-product-boundary-qa.js";
 
 assert(exists("docs", docName), "Sprint D1 product boundary doc must exist.");
-assert(exists("scripts", qaName), "Sprint D1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint D1 QA script must exist.");
 
 const doc = read("docs", docName);
 const packageJson = JSON.parse(read("package.json"));
@@ -144,7 +144,7 @@ assertIncludes(doc, [
 ].forEach(term => assert(doc.includes(term), `D1 D2 readiness note must include: ${term}`));
 
 const alias = "qa:nexus-sprint-d1-controlled-action-staging-product-boundary";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint D1 QA.");
 

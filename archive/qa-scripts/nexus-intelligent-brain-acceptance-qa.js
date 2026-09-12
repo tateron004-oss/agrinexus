@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
 const brain = require(path.join(root, "server/nexusAgenticBrainRuntime.js"));

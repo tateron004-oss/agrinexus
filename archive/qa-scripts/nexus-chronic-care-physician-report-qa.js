@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -156,7 +156,7 @@ assert(reportSource.includes("Nexus prepared this report for review only. Nexus 
   assert(!source.includes("dispatchProviderWebhook"), `Physician report source ${index} must not dispatch providers.`);
 });
 
-assert.equal(pkg.scripts["qa:nexus-chronic-care-physician-report"], "node scripts/nexus-chronic-care-physician-report-qa.js", "Package script should expose physician report QA.");
-assert(qaSuite.includes("scripts/nexus-chronic-care-physician-report-qa.js"), "Physician report QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-chronic-care-physician-report"], "node archive/qa-scripts/nexus-chronic-care-physician-report-qa.js", "Package script should expose physician report QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-chronic-care-physician-report-qa.js"), "Physician report QA should be wired into qa-suite.");
 
 console.log("[nexus-chronic-care-physician-report-qa] passed");

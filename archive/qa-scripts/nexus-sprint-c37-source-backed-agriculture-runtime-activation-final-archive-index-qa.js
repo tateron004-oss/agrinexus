@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -48,7 +48,7 @@ const docs = [
 ];
 
 assert(exists("docs", docName), "Sprint C37 final archive index must exist");
-assert(exists("scripts", qaName), "Sprint C37 final archive index QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C37 final archive index QA must exist");
 
 for (const prior of docs) {
   assert(exists("docs", prior), `${prior} must remain present`);
@@ -134,7 +134,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c37-source-backed-agriculture-runtime-activation-final-archive-index";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C37 QA.");
 

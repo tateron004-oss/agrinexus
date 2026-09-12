@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const qaName = "nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js";
 
 assert(exists("docs", docName), "N4 doc must exist.");
 assert(exists("public", moduleName), "N4 mapping module must exist.");
-assert(exists("scripts", qaName), "N4 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N4 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -28,8 +28,8 @@ const serverSource = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = JSON.parse(read("fixtures", "nexus", "marketplace-requests.json"));
-const contract = require("../public/nexus-marketplace-request-contract.js");
-const mapper = require("../public/nexus-marketplace-request-risk-evidence-mapping.js");
+const contract = require("../../public/nexus-marketplace-request-contract.js");
+const mapper = require("../../public/nexus-marketplace-request-risk-evidence-mapping.js");
 
 [
   "product identity requirement",
@@ -115,9 +115,9 @@ const cases = new Map(fixtures.map(fixture => [fixture.fixtureId, fixture]));
 });
 
 const alias = "qa:nexus-sprint-n4-product-seller-risk-evidence-mapping";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include N4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-n3-marketplace-request-harness-qa.js"), "N4 requires N3 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-n3-marketplace-request-harness-qa.js"), "N4 requires N3 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-n4-product-seller-risk-evidence-mapping-qa] passed");

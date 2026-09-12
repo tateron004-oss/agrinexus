@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
+const dialogue = require("../../public/nexus-assistant-dialogue-engine-contract.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const SAFE_PROMPTS = Object.freeze([
   { prompt: "What is the weather in Stockton, CA?", provider: "weather" },
@@ -32,7 +32,7 @@ function exists(...parts) {
 
 function assertStaticContract() {
   assert(exists("server", "nexus-assistant-runtime-entrypoint.js"), "AR1 assistant runtime entrypoint module must exist.");
-  assert(exists("scripts", "nexus-ar1-assistant-runtime-entrypoint-qa.js"), "AR1 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-ar1-assistant-runtime-entrypoint-qa.js"), "AR1 QA must exist.");
 
   const runtimeSource = read("server", "nexus-assistant-runtime-entrypoint.js");
   const app = read("public", "app.js");
@@ -84,10 +84,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar1-assistant-runtime-entrypoint"],
-    "node scripts/nexus-ar1-assistant-runtime-entrypoint-qa.js",
+    "node archive/qa-scripts/nexus-ar1-assistant-runtime-entrypoint-qa.js",
     "AR1 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar1-assistant-runtime-entrypoint-qa.js"), "AR1 QA must be wired into safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar1-assistant-runtime-entrypoint-qa.js"), "AR1 QA must be wired into safe suites.");
 }
 
 function assertSafeRuntimeResponse(response, label) {

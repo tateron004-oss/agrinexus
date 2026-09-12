@@ -4,7 +4,7 @@ const path = require("node:path");
 const weatherValidation = require("./nexus-weather-live-provider-validation-qa.js");
 const weatherSmoke = require("./nexus-weather-live-provider-smoke-qa.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const TEST_LOCATION = "Stockton, CA";
 
 function read(...parts) {
@@ -19,10 +19,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP2_WEATHER_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp2-weather-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP2 weather activation doc must exist.");
-  assert(exists("scripts", qaName), "RP2 weather activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP2 weather activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -91,10 +91,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp2-weather-real-provider-activation"],
-    "node scripts/nexus-rp2-weather-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp2-weather-real-provider-activation-qa.js",
     "RP2 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp2-weather-real-provider-activation-qa.js"), "RP2 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp2-weather-real-provider-activation-qa.js"), "RP2 QA must be in safe suites.");
 }
 
 async function runRp2WeatherRealProviderActivationQa(env = process.env) {

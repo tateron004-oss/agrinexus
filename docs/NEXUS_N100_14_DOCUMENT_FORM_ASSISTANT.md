@@ -38,4 +38,4 @@ This module is not loaded by `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-14-document-form-assistant-qa.js` verifies supported artifact types, blocked document execution prompts, static runtime absence, no unsafe file/form APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-14-document-form-assistant-qa.js` verifies supported artifact types, blocked document execution prompts, static runtime absence, no unsafe file/form APIs, package alias wiring, and local-safe suite inclusion.

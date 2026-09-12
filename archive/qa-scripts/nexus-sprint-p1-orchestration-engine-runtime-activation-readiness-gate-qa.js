@@ -7,9 +7,9 @@ const {
   ORCHESTRATION_ENGINE_NO_EXECUTION_DEFAULTS,
   ORCHESTRATION_ENGINE_READINESS_CONTRACT,
   createOrchestrationEngineReadinessContract
-} = require("../public/nexus-orchestration-engine-readiness-contract.js");
+} = require("../../public/nexus-orchestration-engine-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,7 +30,7 @@ const docName = "NEXUS_SPRINT_P1_ORCHESTRATION_ENGINE_RUNTIME_ACTIVATION_READINE
 const qaName = "nexus-sprint-p1-orchestration-engine-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint P1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint P1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint P1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -294,13 +294,13 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_O5_TOOL_PROVIDER_SELECTION_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_ORCHESTRATION_ENGINE_READINESS_CONTRACT_PHASE_68.md"],
   ["public", "nexus-orchestration-engine-readiness-contract.js"],
-  ["scripts", "nexus-orchestration-engine-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-orchestration-engine-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `P1 requires artifact: ${requiredPath.join("/")}`);
 }
 
 const alias = "qa:nexus-sprint-p1-orchestration-engine-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint P1 QA.");
 

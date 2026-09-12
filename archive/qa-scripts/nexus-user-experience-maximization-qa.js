@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -178,9 +178,9 @@ includes(app, "Secret values are never rendered.", "secret-safe environment-name
 
 assert.equal(
   packageJson.scripts["qa:nexus-user-experience-maximization"],
-  "node scripts/nexus-user-experience-maximization-qa.js",
+  "node archive/qa-scripts/nexus-user-experience-maximization-qa.js",
   "package.json must expose qa:nexus-user-experience-maximization"
 );
-assert(qaSuite.includes("scripts/nexus-user-experience-maximization-qa.js"), "qa-suite.js must include UX maximization QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-user-experience-maximization-qa.js"), "qa-suite.js must include UX maximization QA.");
 
 console.log("Nexus user experience maximization QA passed.");

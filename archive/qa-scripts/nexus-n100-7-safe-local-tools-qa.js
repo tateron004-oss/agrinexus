@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const localTools = require("../server/nexus-n100-safe-local-tools.js");
+const localTools = require("../../server/nexus-n100-safe-local-tools.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-safe-local-tools.js"), "N100-7 safe local tools module must exist.");
   assert(exists("docs", "NEXUS_N100_7_SAFE_LOCAL_TOOLS.md"), "N100-7 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-7-safe-local-tools-qa.js"), "N100-7 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-7-safe-local-tools-qa.js"), "N100-7 QA must exist.");
 
   [
     "SAFE_LOCAL_ACTION_TYPES",
@@ -79,10 +79,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-7-safe-local-tools"],
-    "node scripts/nexus-n100-7-safe-local-tools-qa.js",
+    "node archive/qa-scripts/nexus-n100-7-safe-local-tools-qa.js",
     "N100-7 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-7-safe-local-tools-qa.js"), "N100-7 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-7-safe-local-tools-qa.js"), "N100-7 QA must be wired into local-safe suites.");
 }
 
 function assertPreparedAction(actionType, expectedConfirmation) {

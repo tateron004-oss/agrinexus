@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 const exists = relative => fs.existsSync(path.join(root, relative));
 
@@ -33,18 +33,18 @@ const requiredDocs = [
 ];
 
 const requiredQa = [
-  "scripts/nexus-global-live-knowledge-qa.js",
-  "scripts/nexus-global-agriculture-intelligence-qa.js",
-  "scripts/nexus-global-training-workforce-qa.js",
-  "scripts/nexus-global-chronic-care-health-qa.js",
-  "scripts/nexus-global-provider-access-qa.js",
-  "scripts/nexus-global-communications-engine-qa.js",
-  "scripts/nexus-global-marketplace-logistics-qa.js",
-  "scripts/nexus-global-activation-center-qa.js",
-  "scripts/nexus-global-review-queue-audit-qa.js",
-  "scripts/nexus-global-offline-access-qa.js",
-  "scripts/nexus-global-assistant-brain-qa.js",
-  "scripts/nexus-global-platform-final-qa.js"
+  "archive/qa-scripts/nexus-global-live-knowledge-qa.js",
+  "archive/qa-scripts/nexus-global-agriculture-intelligence-qa.js",
+  "archive/qa-scripts/nexus-global-training-workforce-qa.js",
+  "archive/qa-scripts/nexus-global-chronic-care-health-qa.js",
+  "archive/qa-scripts/nexus-global-provider-access-qa.js",
+  "archive/qa-scripts/nexus-global-communications-engine-qa.js",
+  "archive/qa-scripts/nexus-global-marketplace-logistics-qa.js",
+  "archive/qa-scripts/nexus-global-activation-center-qa.js",
+  "archive/qa-scripts/nexus-global-review-queue-audit-qa.js",
+  "archive/qa-scripts/nexus-global-offline-access-qa.js",
+  "archive/qa-scripts/nexus-global-assistant-brain-qa.js",
+  "archive/qa-scripts/nexus-global-platform-final-qa.js"
 ];
 
 requiredDocs.forEach(file => assert(exists(file), `Missing closeout/global doc ${file}`));

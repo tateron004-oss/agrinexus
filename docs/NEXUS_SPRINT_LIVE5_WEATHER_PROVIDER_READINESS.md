@@ -9,7 +9,7 @@ This phase does not wire weather retrieval into the Standard User runtime and do
 ## Files
 
 - `server/nexus-weather-source-provider.js`
-- `scripts/nexus-sprint-live5-weather-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live5-weather-provider-readiness-qa.js`
 
 ## Supported Weather Behavior
 

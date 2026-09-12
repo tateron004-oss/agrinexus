@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -21,11 +21,11 @@ const harnessName = "nexus-sprint-k3-contact-provider-identity-harness.js";
 const qaName = "nexus-sprint-k3-contact-provider-identity-harness-qa.js";
 
 assert(exists("docs", docName), "K3 doc must exist.");
-assert(exists("scripts", harnessName), "K3 harness must exist.");
-assert(exists("scripts", qaName), "K3 QA must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "K3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K3 QA must exist.");
 
 const doc = read("docs", docName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -127,9 +127,9 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-k3-contact-provider-identity-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js"), "K3 requires K2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js"), "K3 requires K2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-k3-contact-provider-identity-harness-qa] passed");

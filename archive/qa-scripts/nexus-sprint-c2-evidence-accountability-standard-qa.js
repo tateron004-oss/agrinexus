@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -164,8 +164,8 @@ const inertSurface = [modeSource, packetSource].join("\n");
 });
 
 const alias = "qa:nexus-sprint-c2-evidence-accountability-standard";
-const script = "node scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js";
+const script = "node archive/qa-scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === script, `${alias} package script must run Sprint C2 QA.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js"), "qa-suite must include Sprint C2 evidence QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c2-evidence-accountability-standard-qa.js"), "qa-suite must include Sprint C2 evidence QA.");
 
 console.log("[nexus-sprint-c2-evidence-accountability-standard-qa] passed");

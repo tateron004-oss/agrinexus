@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const plannerPath = path.join(root, "public", "nexus-planner.js");
 const appPath = path.join(root, "public", "app.js");
 const serverPath = path.join(root, "server.js");

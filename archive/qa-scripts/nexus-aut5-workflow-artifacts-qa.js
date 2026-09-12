@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const planner = require("../server/nexus-autonomy-workflow-planner.js");
-const session = require("../server/nexus-autonomy-workflow-session-state.js");
-const artifacts = require("../server/nexus-autonomy-workflow-artifacts.js");
+const planner = require("../../server/nexus-autonomy-workflow-planner.js");
+const session = require("../../server/nexus-autonomy-workflow-session-state.js");
+const artifacts = require("../../server/nexus-autonomy-workflow-artifacts.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -87,7 +87,7 @@ function assertPlanAndSessionIntegration() {
 
 function assertStaticSafety() {
   const moduleSource = read("server", "nexus-autonomy-workflow-artifacts.js");
-  const qaSource = read("scripts", "nexus-aut5-workflow-artifacts-qa.js");
+  const qaSource = read("archive", "qa-scripts", "nexus-aut5-workflow-artifacts-qa.js");
   const appSource = read("public", "app.js");
   const indexSource = read("public", "index.html");
   const serverSource = read("server.js");
@@ -124,10 +124,10 @@ function assertStaticSafety() {
   assert(qaSource.includes("call_script_text_only"), "AUT5 QA must cover call script text only.");
   assert.equal(
     pkg.scripts["qa:nexus-aut5-workflow-artifacts"],
-    "node scripts/nexus-aut5-workflow-artifacts-qa.js",
+    "node archive/qa-scripts/nexus-aut5-workflow-artifacts-qa.js",
     "AUT5 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut5-workflow-artifacts-qa.js"), "AUT5 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut5-workflow-artifacts-qa.js"), "AUT5 QA must be wired into local-safe suites.");
 }
 
 function runAut5WorkflowArtifactsQa() {

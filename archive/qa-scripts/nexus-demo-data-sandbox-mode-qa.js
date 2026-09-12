@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 
 const app = read("public", "app.js");
@@ -182,9 +182,9 @@ rejects(demoAppSlice, /NEXUS_ALLOW_LIVE_EXECUTION=true/, "demo app live executio
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-demo-data-sandbox-mode"],
-  "node scripts/nexus-demo-data-sandbox-mode-qa.js",
+  "node archive/qa-scripts/nexus-demo-data-sandbox-mode-qa.js",
   "package.json must expose qa:nexus-demo-data-sandbox-mode"
 );
-includes(qaSuite, "scripts/nexus-demo-data-sandbox-mode-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-demo-data-sandbox-mode-qa.js", "qa-suite wiring");
 
 console.log("Nexus demo data sandbox mode QA passed.");

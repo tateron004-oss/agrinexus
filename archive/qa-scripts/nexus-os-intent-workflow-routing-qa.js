@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const suite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -131,8 +131,8 @@ assert(app.includes("mission.goal || mission.command") && app.includes("agentic-
 assert(app.includes("prepare_review_confirm_before_any_external_action"), "high-risk paths require review and confirmation before action");
 assert(!/nexus_intent_workflow_route[\s\S]{0,260}(dispatch|sent successfully|payment made|appointment booked|provider contacted)/i.test(app), "route card avoids false execution claims");
 
-assert(pkg.scripts["qa:nexus-os-intent-workflow-routing"] === "node scripts/nexus-os-intent-workflow-routing-qa.js", "package alias exists");
-assert(suite.includes("scripts/nexus-os-intent-workflow-routing-qa.js"), "safe QA suite includes Rail 8 QA");
+assert(pkg.scripts["qa:nexus-os-intent-workflow-routing"] === "node archive/qa-scripts/nexus-os-intent-workflow-routing-qa.js", "package alias exists");
+assert(suite.includes("archive/qa-scripts/nexus-os-intent-workflow-routing-qa.js"), "safe QA suite includes Rail 8 QA");
 
 if (process.exitCode) {
   process.exit(process.exitCode);

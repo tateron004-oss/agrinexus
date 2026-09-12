@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_NO_EXECUTION_REGRESSION_CONTRACT_PHASE_51B.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -189,7 +189,7 @@ assert(attempted.boundaries.blocksSilentSend === true, "factory must preserve bl
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-no-execution-regression-contract"] === "node scripts/nexus-communications-no-execution-regression-contract-qa.js", "package.json must expose qa:nexus-communications-no-execution-regression-contract.");
-assert(qaSuite.includes("scripts/nexus-communications-no-execution-regression-contract-qa.js"), "qa-suite.js must include communications no-execution regression QA.");
+assert(packageData.scripts["qa:nexus-communications-no-execution-regression-contract"] === "node archive/qa-scripts/nexus-communications-no-execution-regression-contract-qa.js", "package.json must expose qa:nexus-communications-no-execution-regression-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-no-execution-regression-contract-qa.js"), "qa-suite.js must include communications no-execution regression QA.");
 
 console.log("[nexus-communications-no-execution-regression-contract-qa] passed");

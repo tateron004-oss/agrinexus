@@ -3,13 +3,13 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NEXUS_GENESIS_STABILIZATION_REPAIR_QA_PORT || 4601);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-genesis-stabilization-repair-qa-db.json");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const appSource = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
-const weatherProvider = require("../server/nexus-weather-source-provider.js");
+const weatherProvider = require("../../server/nexus-weather-source-provider.js");
 let cookie = "";
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -166,7 +166,7 @@ async function mockOpenMeteoWeatherResult() {
     const identity = await runCommand("Tell me about yourself.");
     assertConversationOnly(identity, "identity question");
     assert.equal(identity.intent, "conversation.identity");
-    assert.match(identity.response, /Nexus Genesis/i);
+    assert.match(identity.response, /Kyro Genesis/i);
 
     const dayPlan = await runCommand("Help me plan my day.");
     assertConversationOnly(dayPlan, "day planning question");

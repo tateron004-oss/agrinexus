@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -50,6 +50,6 @@ function excludes(source, token, label) {
   "resume sent successfully"
 ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe workforce claim ${token}`));
 
-assert.strictEqual(packageJson.scripts["qa:nexus-workforce-predictive-intelligence"], "node scripts/nexus-workforce-predictive-intelligence-qa.js");
-includes(qaSuite, "scripts/nexus-workforce-predictive-intelligence-qa.js", "qa-suite workforce wiring");
+assert.strictEqual(packageJson.scripts["qa:nexus-workforce-predictive-intelligence"], "node archive/qa-scripts/nexus-workforce-predictive-intelligence-qa.js");
+includes(qaSuite, "archive/qa-scripts/nexus-workforce-predictive-intelligence-qa.js", "qa-suite workforce wiring");
 console.log("Nexus workforce predictive intelligence QA passed.");

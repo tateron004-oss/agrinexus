@@ -54,4 +54,4 @@ This contract is not loaded into `public/app.js`, `public/index.html`, or `serve
 
 ## QA
 
-`scripts/nexus-n100-13-multilingual-command-assistant-qa.js` verifies supported language coverage, high-risk blocking in each supported language, local-only behavior, absence of translation/provider APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-13-multilingual-command-assistant-qa.js` verifies supported language coverage, high-risk blocking in each supported language, local-only behavior, absence of translation/provider APIs, package alias wiring, and local-safe suite inclusion.

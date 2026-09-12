@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -184,9 +184,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-agriculture-predictive-intelligence"],
-  "node scripts/nexus-agriculture-predictive-intelligence-qa.js",
+  "node archive/qa-scripts/nexus-agriculture-predictive-intelligence-qa.js",
   "package alias should run agriculture predictive intelligence QA"
 );
-includes(qaSuite, "scripts/nexus-agriculture-predictive-intelligence-qa.js", "qa-suite should include agriculture predictive intelligence QA");
+includes(qaSuite, "archive/qa-scripts/nexus-agriculture-predictive-intelligence-qa.js", "qa-suite should include agriculture predictive intelligence QA");
 
 console.log("Nexus agriculture predictive intelligence modeler QA passed.");

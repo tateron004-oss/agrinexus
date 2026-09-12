@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -49,7 +49,7 @@ assert(!renderUserWorkspace.includes('renderNexusUserWorkspaceSegment("Review wo
 assert(app.includes('data-nexus-os-deferred-legacy-surfaces="true"'), "deferred legacy host remains marked");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(renderUserWorkspace), "render root does not claim live execution");
 
-assert(packageJson.scripts["qa:nexus-experience-render-root"] === "node scripts/nexus-experience-render-root-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-experience-render-root-qa.js"), "safe QA suite includes render root QA");
+assert(packageJson.scripts["qa:nexus-experience-render-root"] === "node archive/qa-scripts/nexus-experience-render-root-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-experience-render-root-qa.js"), "safe QA suite includes render root QA");
 
 console.log("Nexus Genesis experience render root QA passed.");

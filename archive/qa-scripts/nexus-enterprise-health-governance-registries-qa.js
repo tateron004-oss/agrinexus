@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-enterprise-health-evidence-trust.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -139,6 +139,6 @@ includes(app, "Execution enabled", "Standard User registry card shows execution-
 includes(app, "Inspector role", "Standard User evidence card mentions inspector role");
 includes(app, "Source version", "Standard User evidence card mentions source version");
 assert(packageJson.scripts["qa:nexus-enterprise-health-governance-registries"], "package alias exists");
-includes(qaSuite, "scripts/nexus-enterprise-health-governance-registries-qa.js", "safe suites include governance registries QA");
+includes(qaSuite, "archive/qa-scripts/nexus-enterprise-health-governance-registries-qa.js", "safe suites include governance registries QA");
 
 console.log("Nexus enterprise health governance registries QA passed.");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -103,7 +103,7 @@ assert(app.includes("getNexusCoreRuntimeState"), "state runtime getter is expose
 assert(app.includes("exposeNexusCoreStateRuntime();"), "state runtime exposure is initialized during app load");
 assert(!/executing.*sent successfully|completed.*payment completed|completed.*provider contacted/i.test(contractBlock), "core state contract does not claim fake execution");
 
-assert(packageJson.scripts["qa:nexus-core-state"] === "node scripts/nexus-core-state-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-core-state-qa.js"), "safe QA suite includes Nexus Core state QA");
+assert(packageJson.scripts["qa:nexus-core-state"] === "node archive/qa-scripts/nexus-core-state-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-core-state-qa.js"), "safe QA suite includes Nexus Core state QA");
 
 console.log("Nexus Core state QA passed.");

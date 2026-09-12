@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -147,7 +147,7 @@ const gateSource = sourceBetween(app, "function a100HighRiskActionGates", "funct
   assert(!source.includes("dispatchProviderWebhook"), `Navigator source ${index} must not dispatch providers.`);
 });
 
-assert.equal(pkg.scripts["qa:nexus-chronic-care-navigator-foundation"], "node scripts/nexus-chronic-care-navigator-foundation-qa.js", "Package script should expose navigator foundation QA.");
-assert(qaSuite.includes("scripts/nexus-chronic-care-navigator-foundation-qa.js"), "Navigator foundation QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-chronic-care-navigator-foundation"], "node archive/qa-scripts/nexus-chronic-care-navigator-foundation-qa.js", "Package script should expose navigator foundation QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-chronic-care-navigator-foundation-qa.js"), "Navigator foundation QA should be wired into qa-suite.");
 
 console.log("[nexus-chronic-care-navigator-foundation-qa] passed");

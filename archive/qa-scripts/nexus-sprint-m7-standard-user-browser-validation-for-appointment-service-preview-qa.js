@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const previewModuleName = "nexus-appointment-service-request-preview.js";
 const flagModuleName = "nexus-appointment-service-preview-flag-guard.js";
 
 assert(exists("docs", docName), "M7 browser validation doc must exist.");
-assert(exists("scripts", qaName), "M7 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "M7 QA must exist.");
 
 const doc = read("docs", docName);
 const indexHtml = read("public", "index.html");
@@ -55,9 +55,9 @@ const qaSuite = read("scripts", "qa-suite.js");
 });
 
 const alias = "qa:nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include M7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js"), "M7 requires M6 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js"), "M7 requires M6 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview-qa] passed");

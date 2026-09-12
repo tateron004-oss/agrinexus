@@ -7,7 +7,7 @@ const {
   validateAdvancedIntentUnderstandingFlagFixtures
 } = require("./nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-l3-advanced-intent-understanding-flag-contract-harn
 
 assert(exists("docs", docName), "Sprint L3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint L3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint L3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint L3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint L3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint L3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "7f1f6ec1b5b2551e12d1f62310ec9f52d3683f44",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/advanced-intent-understanding-feature-flags.json",
-  "scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness.js",
   "classifierContextAllowed: false",
   "classifierRuntimeAllowed: false",
   "liveClassifierReplacementAllowed: false",
@@ -163,7 +163,7 @@ assert(exists("docs", "NEXUS_SPRINT_L2_ADVANCED_INTENT_UNDERSTANDING_FEATURE_FLA
 assert(exists("public", "nexus-advanced-intent-understanding-feature-flag.js"), "L3 requires L2 feature flag module.");
 
 const alias = "qa:nexus-sprint-l3-advanced-intent-understanding-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint L3 QA.");
 

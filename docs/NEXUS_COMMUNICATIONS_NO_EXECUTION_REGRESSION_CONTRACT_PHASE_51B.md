@@ -116,7 +116,7 @@ Phase 51B adds the regression matrix that raw communications prompts must satisf
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-no-execution-regression-contract-qa.js`
+- `archive/qa-scripts/nexus-communications-no-execution-regression-contract-qa.js`
 
 The package alias is:
 

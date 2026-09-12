@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -26,7 +26,7 @@ function excludes(haystack, needle, message) {
   );
 }
 
-const liveKnowledge = spawnSync(process.execPath, ["scripts/nexus-global-live-knowledge-qa.js"], {
+const liveKnowledge = spawnSync(process.execPath, ["archive/qa-scripts/nexus-global-live-knowledge-qa.js"], {
   cwd: root,
   encoding: "utf8"
 });
@@ -208,9 +208,9 @@ assert.strictEqual(
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-global-training-workforce"],
-  "node scripts/nexus-global-training-workforce-qa.js",
+  "node archive/qa-scripts/nexus-global-training-workforce-qa.js",
   "package script should expose global training/workforce QA"
 );
-includes(qaSuite, "scripts/nexus-global-training-workforce-qa.js", "qa suite should include global training/workforce QA");
+includes(qaSuite, "archive/qa-scripts/nexus-global-training-workforce-qa.js", "qa suite should include global training/workforce QA");
 
 console.log("nexus-global-training-workforce QA passed");

@@ -7,9 +7,9 @@ const {
   PROTECTED_AFRICA_REGIONAL_DEPLOYMENT_MODE_FLAG_FIELDS,
   normalizeAfricaRegionalDeploymentModeFeatureFlagState,
   isAfricaRegionalDeploymentModeVisibleFeatureEnabled
-} = require("../public/nexus-africa-regional-deployment-mode-feature-flag.js");
+} = require("../../public/nexus-africa-regional-deployment-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-africa-regional-deployment-mode-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AK2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AK2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AK2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AK2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -174,10 +174,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ak2-africa-regional-deployment-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AK2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ak1-africa-regional-deployment-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AK1 QA.");
-assert(qaSuite.includes("scripts/nexus-africa-regional-deployment-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 89 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ak1-africa-regional-deployment-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AK1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-africa-regional-deployment-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 89 QA.");
 
 console.log("[nexus-sprint-ak2-africa-regional-deployment-mode-feature-flag-contract-qa] passed");

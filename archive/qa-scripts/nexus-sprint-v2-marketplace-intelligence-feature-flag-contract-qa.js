@@ -7,9 +7,9 @@ const {
   PROTECTED_MARKETPLACE_INTELLIGENCE_FLAG_FIELDS,
   normalizeMarketplaceIntelligenceFeatureFlagState,
   isMarketplaceIntelligenceVisibleFeatureEnabled
-} = require("../public/nexus-marketplace-intelligence-feature-flag.js");
+} = require("../../public/nexus-marketplace-intelligence-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const qaName = "nexus-sprint-v2-marketplace-intelligence-feature-flag-contract-q
 
 assert(exists("docs", docName), "Sprint V2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint V2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint V2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint V2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -194,9 +194,9 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-v2-marketplace-intelligence-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint V2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint V1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint V1 QA.");
 
 console.log("[nexus-sprint-v2-marketplace-intelligence-feature-flag-contract-qa] passed");

@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-education-mode-readiness-contract.js`;
 - `public/nexus-education-mode-feature-flag.js`;
-- `scripts/nexus-sprint-ae3-education-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-ae3-education-mode-flag-contract-harness.js`;
 - `fixtures/nexus/education-mode-feature-flags.json`;
 - Sprint AE QA scripts.
 

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_PREPARED_ACTION_PREVIEW_CONTRACT_PHASE_51A.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -201,7 +201,7 @@ assert(invalid.provider === "unsupported", "invalid providers must normalize to 
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-prepared-action-preview-contract"] === "node scripts/nexus-communications-prepared-action-preview-contract-qa.js", "package.json must expose qa:nexus-communications-prepared-action-preview-contract.");
-assert(qaSuite.includes("scripts/nexus-communications-prepared-action-preview-contract-qa.js"), "qa-suite.js must include communications prepared action preview QA.");
+assert(packageData.scripts["qa:nexus-communications-prepared-action-preview-contract"] === "node archive/qa-scripts/nexus-communications-prepared-action-preview-contract-qa.js", "package.json must expose qa:nexus-communications-prepared-action-preview-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-prepared-action-preview-contract-qa.js"), "qa-suite.js must include communications prepared action preview QA.");
 
 console.log("[nexus-communications-prepared-action-preview-contract-qa] passed");

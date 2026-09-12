@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
@@ -131,16 +131,16 @@ assert(html.includes("data-nexus-safe-task-history=\"true\""), "Safe task histor
 assert(html.includes("no backend write, provider handoff, permission request, or external action"), "Safe task history should display no-execution copy.");
 
 assert(app.includes("__NEXUS_RELEASE_SHA__") && index.includes("__NEXUS_RELEASE_SHA__") && server.includes("NEXUS_EFFECTIVE_RELEASE_SHA"), "Sprint 17 should preserve coordinated immutable release identity.");
-require("./lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
+require("../../scripts/lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-17-safe-task-history"],
-  "node scripts/nexus-capability-sprint-17-safe-task-history-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-17-safe-task-history-qa.js",
   "package alias should expose Sprint 17 QA."
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-17-safe-task-history-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-17-safe-task-history-qa.js"),
   "qa-suite should include Sprint 17 QA."
 );
 

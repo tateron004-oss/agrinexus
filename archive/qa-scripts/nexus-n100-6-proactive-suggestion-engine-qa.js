@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const suggestions = require("../server/nexus-n100-proactive-suggestion-engine.js");
+const suggestions = require("../../server/nexus-n100-proactive-suggestion-engine.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-proactive-suggestion-engine.js"), "N100-6 suggestion module must exist.");
   assert(exists("docs", "NEXUS_N100_6_PROACTIVE_SUGGESTION_ENGINE.md"), "N100-6 doc must exist.");
-  assert(exists("scripts", "nexus-n100-6-proactive-suggestion-engine-qa.js"), "N100-6 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-6-proactive-suggestion-engine-qa.js"), "N100-6 QA must exist.");
 
   [
     "suggestionId",
@@ -73,10 +73,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-6-proactive-suggestion-engine"],
-    "node scripts/nexus-n100-6-proactive-suggestion-engine-qa.js",
+    "node archive/qa-scripts/nexus-n100-6-proactive-suggestion-engine-qa.js",
     "N100-6 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-6-proactive-suggestion-engine-qa.js"), "N100-6 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-6-proactive-suggestion-engine-qa.js"), "N100-6 QA must be wired into local-safe suites.");
 }
 
 function assertSuggestion(context, expectedType) {

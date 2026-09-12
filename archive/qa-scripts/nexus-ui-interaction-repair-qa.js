@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -102,10 +102,10 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-ui-interaction-repair"],
-  "node scripts/nexus-ui-interaction-repair-qa.js",
+  "node archive/qa-scripts/nexus-ui-interaction-repair-qa.js",
   "package alias should run UI interaction repair QA"
 );
 
-includes(qaSuite, "scripts/nexus-ui-interaction-repair-qa.js", "qa-suite local-safe wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-ui-interaction-repair-qa.js", "qa-suite local-safe wiring");
 
 console.log("Nexus UI interaction repair QA passed.");

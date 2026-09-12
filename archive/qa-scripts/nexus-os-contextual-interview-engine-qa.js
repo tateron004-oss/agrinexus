@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -155,10 +155,10 @@ const handlerSource = app.slice(
 ].forEach(token => includes(app, token, `interview safety boundary copy ${token}`));
 
 assert(
-  pkg.scripts["qa:nexus-os-contextual-interview-engine"] === "node scripts/nexus-os-contextual-interview-engine-qa.js",
+  pkg.scripts["qa:nexus-os-contextual-interview-engine"] === "node archive/qa-scripts/nexus-os-contextual-interview-engine-qa.js",
   "package alias exists"
 );
-assert(suite.includes("scripts/nexus-os-contextual-interview-engine-qa.js"), "safe QA suite includes Rail 10 QA");
+assert(suite.includes("archive/qa-scripts/nexus-os-contextual-interview-engine-qa.js"), "safe QA suite includes Rail 10 QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

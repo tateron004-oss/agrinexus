@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C10_SOURCE_BACKED_AGRICULTURE_DEFAULT_OFF_WIRING_READINESS_AUDIT.md"),
   c8Doc: path.join(root, "docs", "NEXUS_SPRINT_C8_SOURCE_BACKED_AGRICULTURE_VISIBLE_PREVIEW_MAPPER.md"),
@@ -160,8 +160,8 @@ assert(!activeRuntime.includes(futureFlagName), "active runtime must not contain
 assert(!activeRuntime.includes(auditFragment), "active runtime must not contain the C10 audit-only document fragment.");
 
 const alias = "qa:nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit";
-const command = "node scripts/nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa.js"), "qa-suite must include Sprint C10 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa.js"), "qa-suite must include Sprint C10 QA.");
 
 console.log("[nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa] passed");

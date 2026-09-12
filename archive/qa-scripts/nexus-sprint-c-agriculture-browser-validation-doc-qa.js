@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C_AGRICULTURE_RESPONSE_CARD_STANDARD_USER_BROWSER_VALIDATION.md"),
   packageJson: path.join(root, "package.json"),
@@ -61,8 +61,8 @@ const qaSuite = fs.readFileSync(files.qaSuite, "utf8");
 ].forEach(boundary => assert(doc.toLowerCase().includes(boundary), `browser validation doc must include safety boundary: ${boundary}`));
 
 const alias = "qa:nexus-sprint-c-agriculture-browser-validation-doc";
-const script = "node scripts/nexus-sprint-c-agriculture-browser-validation-doc-qa.js";
+const script = "node archive/qa-scripts/nexus-sprint-c-agriculture-browser-validation-doc-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === script, `${alias} package script must run browser validation doc QA.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c-agriculture-browser-validation-doc-qa.js"), "qa-suite must include Sprint C browser validation doc QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c-agriculture-browser-validation-doc-qa.js"), "qa-suite must include Sprint C browser validation doc QA.");
 
 console.log("[nexus-sprint-c-agriculture-browser-validation-doc-qa] passed");

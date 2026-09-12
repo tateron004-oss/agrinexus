@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const marketplace = require("../server/nexus-n100-marketplace-review-assistant.js");
+const marketplace = require("../../server/nexus-n100-marketplace-review-assistant.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-marketplace-review-assistant.js"), "N100-16 marketplace review module must exist.");
   assert(exists("docs", "NEXUS_N100_16_MARKETPLACE_REVIEW_ASSISTANT.md"), "N100-16 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-16-marketplace-review-assistant-qa.js"), "N100-16 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-16-marketplace-review-assistant-qa.js"), "N100-16 QA must exist.");
 
   [
     "SUPPORTED_MARKETPLACE_ARTIFACTS",
@@ -73,10 +73,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-16-marketplace-review-assistant"],
-    "node scripts/nexus-n100-16-marketplace-review-assistant-qa.js",
+    "node archive/qa-scripts/nexus-n100-16-marketplace-review-assistant-qa.js",
     "N100-16 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-16-marketplace-review-assistant-qa.js"), "N100-16 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-16-marketplace-review-assistant-qa.js"), "N100-16 QA must be wired into local-safe suites.");
 }
 
 function assertArtifact(prompt, expectedType) {

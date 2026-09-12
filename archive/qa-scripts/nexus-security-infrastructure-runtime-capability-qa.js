@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
@@ -138,12 +138,12 @@ assert(server.includes("PRODUCT_IDENTITY") && server.includes("productIdentityMe
 
 assert.equal(
   pkg.scripts["qa:nexus-security-infrastructure-runtime-capability"],
-  "node scripts/nexus-security-infrastructure-runtime-capability-qa.js",
+  "node archive/qa-scripts/nexus-security-infrastructure-runtime-capability-qa.js",
   "package.json should expose security infrastructure runtime capability QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-security-infrastructure-runtime-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-security-infrastructure-runtime-capability-qa.js"),
   "qa-suite should include security infrastructure runtime capability QA in safe suites"
 );
 

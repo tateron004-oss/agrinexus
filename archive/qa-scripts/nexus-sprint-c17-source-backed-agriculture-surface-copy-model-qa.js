@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C17_SOURCE_BACKED_AGRICULTURE_SURFACE_COPY_MODEL.md"),
   c16Doc: path.join(root, "docs", "NEXUS_SPRINT_C16_SOURCE_BACKED_AGRICULTURE_VISIBLE_SURFACE_COPY_LAYOUT_REVIEW_PLAN.md"),
@@ -240,8 +240,8 @@ blockedRuntimeFragments.forEach(fragment => {
 });
 
 const alias = "qa:nexus-sprint-c17-source-backed-agriculture-surface-copy-model";
-const command = "node scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js"), "qa-suite must include Sprint C17 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js"), "qa-suite must include Sprint C17 QA.");
 
 console.log("[nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa] passed");

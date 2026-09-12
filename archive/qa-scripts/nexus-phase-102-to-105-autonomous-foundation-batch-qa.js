@@ -1,14 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   batchDoc: path.join(root, "docs", "NEXUS_PHASE_102_TO_105_AUTONOMOUS_ASSISTANT_FOUNDATION_BATCH.md"),
   sourceRegistry: path.join(root, "public", "nexus-agriculture-source-registry.js"),
   actionContract: path.join(root, "public", "nexus-permission-gated-action-contract.js"),
   intentRouter: path.join(root, "public", "nexus-voice-text-intent-router.js"),
   plannerPreview: path.join(root, "public", "nexus-planner-preview-contract.js"),
-  phase102Qa: path.join(root, "scripts", "nexus-phase-102-agriculture-source-registry-hardening-qa.js")
+  phase102Qa: path.join(root, "archive", "qa-scripts", "nexus-phase-102-agriculture-source-registry-hardening-qa.js")
 };
 
 function assert(condition, message) {

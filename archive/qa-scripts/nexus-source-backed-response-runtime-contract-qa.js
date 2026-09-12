@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SOURCE_BACKED_RESPONSE_RUNTIME_CONTRACT_AUDIT.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -217,11 +217,11 @@ responseStates.forEach(state => {
 });
 
 assert(
-  packageData.scripts["qa:nexus-source-backed-response-runtime-contract"] === "node scripts/nexus-source-backed-response-runtime-contract-qa.js",
+  packageData.scripts["qa:nexus-source-backed-response-runtime-contract"] === "node archive/qa-scripts/nexus-source-backed-response-runtime-contract-qa.js",
   "package.json must expose qa:nexus-source-backed-response-runtime-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-source-backed-response-runtime-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-source-backed-response-runtime-contract-qa.js"),
   "qa-suite.js must include source-backed response runtime contract QA"
 );
 

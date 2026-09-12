@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const contractFileName = "nexus-controlled-low-risk-renderer-candidate-contract.js";
 const adapterFileName = "nexus-controlled-low-risk-renderer-eligibility-adapter.js";
 const loaderFileName = "nexus-controlled-low-risk-text-only-renderer-loader.js";
@@ -20,15 +20,15 @@ const paths = {
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
   doc: path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_PHASE_14J_CANDIDATE_PAYLOAD_CONTRACT.md"),
-  phase14aQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"),
-  phase14bQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"),
-  phase14cQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"),
-  phase14dQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js"),
-  phase14eQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js"),
-  phase14fQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js"),
-  phase14gQa: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14g-eligibility-adapter-stub-qa.js"),
-  phase14hQa: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js"),
-  phase14iQa: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js")
+  phase14aQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"),
+  phase14bQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"),
+  phase14cQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"),
+  phase14dQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js"),
+  phase14eQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js"),
+  phase14fQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js"),
+  phase14gQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14g-eligibility-adapter-stub-qa.js"),
+  phase14hQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js"),
+  phase14iQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js")
 };
 
 function read(filePath) {
@@ -210,7 +210,7 @@ assertNoRuntimeSymbols(index, "public/index.html");
 assertNoRuntimeSymbols(app, "public/app.js");
 assertNoRuntimeSymbols(server, "server.js");
 
-assert(packageJson.scripts[qaAlias] === `node scripts/${qaScriptName}`, "package.json must expose the Phase 14J QA alias.");
+assert(packageJson.scripts[qaAlias] === `node archive/qa-scripts/${qaScriptName}`, "package.json must expose the Phase 14J QA alias.");
 assert(qaSuite.includes(`scripts/${qaScriptName}`), "nexus-workforce QA suite must include Phase 14J QA.");
 
 [

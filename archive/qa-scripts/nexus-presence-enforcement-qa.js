@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -40,7 +40,7 @@ const exposureBlock = sectionBetween(app, "function exposeNexusAppWindowApis", "
   "schemaVersion: \"nexus-presence-design-enforcement.v1\"",
   "Nexus Presence Standard 1.0",
   "docs/NEXUS_PRESENCE_DESIGN_BIBLE.md",
-  "scripts/nexus-presence-enforcement-qa.js",
+  "archive/qa-scripts/nexus-presence-enforcement-qa.js",
   "NEXUS_PRESENCE_RUNTIME_BASELINE",
   "NEXUS_PRESENCE_PROFILE_CONTRACT",
   "NEXUS_VOICE_CAPABILITY_REGISTRY",
@@ -155,7 +155,7 @@ const exposureBlock = sectionBetween(app, "function exposeNexusAppWindowApis", "
 [
   "Nexus Presence Design Bible",
   "public/app.js",
-  "scripts/nexus-presence-enforcement-qa.js",
+  "archive/qa-scripts/nexus-presence-enforcement-qa.js",
   "NEXUS_PRESENCE_RUNTIME_BASELINE",
   "NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT",
   "Delivery Modes",
@@ -165,7 +165,7 @@ const exposureBlock = sectionBetween(app, "function exposeNexusAppWindowApis", "
   "Accessibility And Memory",
   "Execution Honesty",
   "Testing Requirements",
-  "node scripts/nexus-presence-enforcement-qa.js"
+  "node archive/qa-scripts/nexus-presence-enforcement-qa.js"
 ].forEach(token => assert(bible.includes(token), `Design Bible references ${token}`));
 
 [
@@ -191,7 +191,7 @@ const exposureBlock = sectionBetween(app, "function exposeNexusAppWindowApis", "
   /const\s+.*Health.*Voice.*Engine/i
 ].forEach(pattern => assert(!pattern.test(app), `no domain-specific duplicate voice runtime matches ${pattern}`));
 
-assert(packageJson.scripts["qa:nexus-presence-enforcement"] === "node scripts/nexus-presence-enforcement-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-presence-enforcement-qa.js"), "safe QA suite includes presence enforcement QA");
+assert(packageJson.scripts["qa:nexus-presence-enforcement"] === "node archive/qa-scripts/nexus-presence-enforcement-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-presence-enforcement-qa.js"), "safe QA suite includes presence enforcement QA");
 
 console.log("Nexus Presence enforcement QA passed.");

@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_MULTI_TURN_REASONING_FEATURE_FLAG_STATE,
   normalizeMultiTurnReasoningFeatureFlagState
-} = require("../public/nexus-multi-turn-reasoning-feature-flag.js");
+} = require("../../public/nexus-multi-turn-reasoning-feature-flag.js");
 const {
   protectedFields,
   loadMultiTurnReasoningFlagFixtures,
   validateMultiTurnReasoningFlagFixtures
 } = require("./nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_M5_MULTI_TURN_REASONING_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-m5-multi-turn-reasoning-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint M5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint M5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint M5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-multi-turn-reasoning-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-multi-turn-reasoning-feature-flag.js");
-const m3Harness = read("scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
+const m3Harness = read("archive", "qa-scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
 const fixtures = loadMultiTurnReasoningFlagFixtures();
 
 assertIncludes(doc, [
@@ -180,7 +180,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint M5 requires prior Sprint M QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint M5 requires prior Sprint M QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint M QA: ${requiredScript}`);
 }
 
@@ -317,7 +317,7 @@ for (const source of [featureFlagModule, m3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-m5-multi-turn-reasoning-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint M5 QA.");
 

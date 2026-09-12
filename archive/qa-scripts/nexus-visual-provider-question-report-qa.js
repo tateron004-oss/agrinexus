@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -152,7 +152,7 @@ assert.ok(realtimeEvents.includes('updateRealtimeControllerState("listening"'), 
 
 assert.ok(/does not diagnose, prescribe, change medicines/i.test(functionSource("nexusVisualProviderQuestionSafetyWarning")), "report has medical scope warning");
 assert.ok(/seek local emergency help now/i.test(functionSource("nexusVisualProviderQuestionSafetyWarning")), "report has urgent emergency warning");
-assert.equal(pkg.scripts["qa:nexus-visual-provider-question-report"], "node scripts/nexus-visual-provider-question-report-qa.js", "package QA alias exists");
-assert.ok(qaSuite.includes("scripts/nexus-visual-provider-question-report-qa.js"), "QA suite includes visual provider report regression");
+assert.equal(pkg.scripts["qa:nexus-visual-provider-question-report"], "node archive/qa-scripts/nexus-visual-provider-question-report-qa.js", "package QA alias exists");
+assert.ok(qaSuite.includes("archive/qa-scripts/nexus-visual-provider-question-report-qa.js"), "QA suite includes visual provider report regression");
 
 console.log("Nexus visual provider question report QA passed.");

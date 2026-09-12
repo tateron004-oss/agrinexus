@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const qaName = "nexus-sprint-c21-source-backed-agriculture-static-snapshot-brows
 const fixtureName = "nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot.html";
 
 assert(exists("docs", docName), "Sprint C21 browser validation evidence template must exist");
-assert(exists("scripts", qaName), "Sprint C21 evidence template QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C21 evidence template QA must exist");
 assert(exists("docs", "NEXUS_SPRINT_C20_SOURCE_BACKED_AGRICULTURE_STATIC_SNAPSHOT_BROWSER_VALIDATION_PLAN.md"), "Sprint C20 plan must remain present");
 assert(exists("test-fixtures", fixtureName), "Sprint C19 static snapshot fixture must remain present");
 
@@ -76,11 +76,11 @@ assertIncludes(doc, [
   "node --check server.js",
   "node --check public/app.js",
   "node --check scripts/qa-suite.js",
-  "node scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js",
-  "node scripts/nexus-sprint-c18-source-backed-agriculture-visual-semantics-review-plan-qa.js",
-  "node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js",
-  "node scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js",
-  "node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c18-source-backed-agriculture-visual-semantics-review-plan-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
   "node scripts/qa-suite.js nexus-workforce",
   "node scripts/qa-suite.js all-safe"
 ], "Sprint C21 required QA list");
@@ -150,7 +150,7 @@ assertIncludes(fixture, [
 });
 
 const alias = "qa:nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C21 QA.");
 

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -36,7 +36,7 @@ const exposureBlock = sectionBetween(app, "function exposeNexusAppWindowApis", "
   'releaseName: "Full Presence Acceptance And Release"',
   'releaseStatus: "accepted-for-safe-runtime"',
   'enforcementContract: "NEXUS_PRESENCE_DESIGN_ENFORCEMENT_CONTRACT"',
-  'acceptanceQa: "scripts/nexus-presence-acceptance-qa.js"'
+  'acceptanceQa: "archive/qa-scripts/nexus-presence-acceptance-qa.js"'
 ].forEach(token => check(`acceptance contract includes ${token}`, acceptanceBlock.includes(token)));
 
 [
@@ -178,9 +178,9 @@ check("no duplicate domain voice runtime patterns", [
   /const\s+.*Health.*Voice.*Engine/i
 ].every(pattern => !pattern.test(app)));
 
-check("package alias exists", pkg.scripts["qa:nexus-presence-acceptance"] === "node scripts/nexus-presence-acceptance-qa.js");
-check("nexus-workforce suite includes acceptance QA", qaSuite.includes("scripts/nexus-presence-acceptance-qa.js"));
-check("all-safe suite includes acceptance QA", qaSuite.includes("scripts/nexus-presence-acceptance-qa.js"));
+check("package alias exists", pkg.scripts["qa:nexus-presence-acceptance"] === "node archive/qa-scripts/nexus-presence-acceptance-qa.js");
+check("nexus-workforce suite includes acceptance QA", qaSuite.includes("archive/qa-scripts/nexus-presence-acceptance-qa.js"));
+check("all-safe suite includes acceptance QA", qaSuite.includes("archive/qa-scripts/nexus-presence-acceptance-qa.js"));
 
 const failures = checks.filter(item => !item.condition);
 if (failures.length) {

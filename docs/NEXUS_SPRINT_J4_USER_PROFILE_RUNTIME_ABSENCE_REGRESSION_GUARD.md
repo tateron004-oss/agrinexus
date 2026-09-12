@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-user-profile-readiness-contract.js`;
 - `public/nexus-user-profile-feature-flag.js`;
-- `scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-j3-user-profile-flag-contract-harness.js`;
 - `fixtures/nexus/user-profile-feature-flags.json`;
 - Sprint J QA scripts.
 

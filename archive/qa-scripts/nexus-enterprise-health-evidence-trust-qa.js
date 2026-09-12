@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const modulePath = path.join(root, "public", "nexus-enterprise-health-evidence-trust.js");
 const runtime = require(modulePath);
 const moduleSource = fs.readFileSync(modulePath, "utf8");
@@ -98,6 +98,6 @@ includes(doc, "does not diagnose", "documentation preserves diagnosis boundary")
 includes(doc, "does not execute live provider actions", "documentation preserves no-execution boundary");
 
 assert(packageJson.scripts["qa:nexus-enterprise-health-evidence-trust"], "package alias exists");
-includes(qaSuite, "scripts/nexus-enterprise-health-evidence-trust-qa.js", "safe suites include enterprise evidence QA");
+includes(qaSuite, "archive/qa-scripts/nexus-enterprise-health-evidence-trust-qa.js", "safe suites include enterprise evidence QA");
 
 console.log("Nexus enterprise health evidence trust QA passed.");

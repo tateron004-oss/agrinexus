@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const rendererFileName = "nexus-controlled-low-risk-text-only-renderer.js";
 const loaderFileName = "nexus-controlled-low-risk-text-only-renderer-loader.js";
 const mountId = "nexus-controlled-low-risk-renderer-root";
@@ -17,11 +17,11 @@ const paths = {
   package: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
   doc: path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_TEXT_ONLY_RENDERER_PHASE_14F_LOADER_TEST_HARNESS.md"),
-  phase14aQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"),
-  phase14bQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"),
-  phase14cQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"),
-  phase14dQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js"),
-  phase14eQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js")
+  phase14aQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"),
+  phase14bQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"),
+  phase14cQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"),
+  phase14dQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js"),
+  phase14eQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js")
 };
 
 function read(filePath) {
@@ -483,7 +483,7 @@ assert(!mountHtml.replace(/<div[^>]*>/, "").replace("</div>", "").trim(), "Hidde
   assert(doc.includes(term), `Phase 14F document must mention ${term}.`);
 });
 
-assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness"] === "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js", "package.json must expose Phase 14F QA alias.");
+assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness"] === "node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js", "package.json must expose Phase 14F QA alias.");
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"], "Phase 14A QA alias must remain present.");
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary"], "Phase 14B QA alias must remain present.");
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness"], "Phase 14C QA alias must remain present.");
@@ -491,12 +491,12 @@ assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phas
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary"], "Phase 14E QA alias must remain present.");
 
 [
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js",
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js",
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js",
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js",
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js",
-  "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js"
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14e-import-boundary-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14f-loader-test-harness-qa.js"
 ].forEach(script => {
   assert(qaSuite.includes(script), `nexus-workforce suite must include ${script}.`);
 });

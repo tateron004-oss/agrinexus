@@ -243,7 +243,7 @@ Contract audit requirement identifiers:
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-provider-execution-readiness-gate-qa.js`
+- `archive/qa-scripts/nexus-communications-provider-execution-readiness-gate-qa.js`
 
 The package alias is:
 

@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -158,10 +158,10 @@ function staticAssertions() {
 
   assert.equal(
     packageJson.scripts["qa:nexus-openai-native-genesis"],
-    "node scripts/nexus-openai-native-genesis-qa.js",
+    "node archive/qa-scripts/nexus-openai-native-genesis-qa.js",
     "package alias should run OpenAI-native Genesis QA"
   );
-  assert(qaSuite.includes("scripts/nexus-openai-native-genesis-qa.js"), "qa-suite should include OpenAI-native Genesis QA");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-openai-native-genesis-qa.js"), "qa-suite should include OpenAI-native Genesis QA");
 }
 
 async function routeAssertions() {

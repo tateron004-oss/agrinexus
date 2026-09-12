@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_STALE_DATA_ALERTS_FLAG_FIELDS,
   normalizeStaleDataAlertsFeatureFlagState
-} = require("../public/nexus-stale-data-alerts-feature-flag.js");
+} = require("../../public/nexus-stale-data-alerts-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -13,7 +13,7 @@ const {
   validateStaleDataAlertsFlagFixtures
 } = require("./nexus-sprint-ao3-stale-data-alerts-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -36,12 +36,12 @@ const harnessName = "nexus-sprint-ao3-stale-data-alerts-flag-contract-harness.js
 const fixtureName = "stale-data-alerts-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AO3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AO3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AO3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AO3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AO3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AO3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const ao2Doc = read("docs", "NEXUS_SPRINT_AO2_STALE_DATA_ALERTS_FEATURE_FLAG_CONTRACT.md");
 const runtime = [read("public", "index.html"), read("public", "app.js"), read("server.js")].join("\n");
@@ -148,11 +148,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ao3-stale-data-alerts-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AO3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ao2-stale-data-alerts-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AO2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AO1 QA.");
-assert(qaSuite.includes("scripts/nexus-stale-data-alerts-readiness-contract-qa.js"), "qa-suite must continue to include Stale Data Alerts readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ao2-stale-data-alerts-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AO2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AO1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-stale-data-alerts-readiness-contract-qa.js"), "qa-suite must continue to include Stale Data Alerts readiness QA.");
 
 console.log("[nexus-sprint-ao3-stale-data-alerts-flag-contract-harness-qa] passed");

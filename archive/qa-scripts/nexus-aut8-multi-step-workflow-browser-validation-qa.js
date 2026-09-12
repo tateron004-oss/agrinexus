@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const standardUserAgentExperience = require("../server/nexus-standard-user-agent-experience.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const standardUserAgentExperience = require("../../server/nexus-standard-user-agent-experience.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -92,10 +92,10 @@ function assertQaWiring() {
   const suite = read("scripts", "qa-suite.js");
   assert.equal(
     pkg.scripts["qa:nexus-aut8-multi-step-workflow-browser-validation"],
-    "node scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js",
+    "node archive/qa-scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js",
     "AUT8 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js"), "AUT8 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js"), "AUT8 QA must be wired into local-safe suites.");
 }
 
 function runAut8MultiStepWorkflowBrowserValidationQa() {

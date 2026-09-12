@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_OFFLINE_LOW_BANDWIDTH_MODE_FLAG_FIELDS,
   normalizeOfflineLowBandwidthModeFeatureFlagState
-} = require("../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
+} = require("../../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -13,7 +13,7 @@ const {
   validateOfflineLowBandwidthModeFlagFixtures
 } = require("./nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -36,12 +36,12 @@ const harnessName = "nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-h
 const fixtureName = "offline-low-bandwidth-mode-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AJ3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AJ3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AJ3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AJ3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AJ3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AJ3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const aj2Doc = read("docs", "NEXUS_SPRINT_AJ2_OFFLINE_LOW_BANDWIDTH_MODE_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -152,11 +152,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AJ3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AJ2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
-assert(qaSuite.includes("scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Offline Low-Bandwidth Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AJ2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Offline Low-Bandwidth Mode readiness QA.");
 
 console.log("[nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness-qa] passed");

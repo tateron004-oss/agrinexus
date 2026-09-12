@@ -1,8 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
-const registryModule = require("../public/nexus-os-migration-registry.js");
+const root = path.resolve(__dirname, "..", "..");
+const registryModule = require("../../public/nexus-os-migration-registry.js");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -68,8 +68,8 @@ assert(app.includes("function startVoiceListening") && app.includes("window.Spee
 assert(server.includes("createServer") || server.includes("http.createServer"), "backend startup remains Node server based");
 assert(server.includes("/api/health") || server.includes("health"), "backend health path remains represented");
 
-assert(packageJson.scripts["qa:nexus-os-repository-architecture-baseline"] === "node scripts/nexus-os-repository-architecture-baseline-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-repository-architecture-baseline-qa.js"), "safe QA suite includes Rail 1 QA");
+assert(packageJson.scripts["qa:nexus-os-repository-architecture-baseline"] === "node archive/qa-scripts/nexus-os-repository-architecture-baseline-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-repository-architecture-baseline-qa.js"), "safe QA suite includes Rail 1 QA");
 assert(registry.consolidationRules.standardUserTechnicalLeakage.prohibitedAtStartup.includes("API keys"), "registry blocks API key display at Standard User startup");
 assert(!/TWILIO_AUTH_TOKEN\s*=\s*['\"][^'\"]+['\"]/.test(app + index), "Standard User frontend does not expose Twilio secret values");
 assert(!/TAVILY_API_KEY\s*=\s*['\"][^'\"]+['\"]/.test(app + index), "Standard User frontend does not expose live knowledge secret values");

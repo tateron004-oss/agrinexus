@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -153,9 +153,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-live-knowledge-all-modes"],
-  "node scripts/nexus-live-knowledge-all-modes-qa.js",
+  "node archive/qa-scripts/nexus-live-knowledge-all-modes-qa.js",
   "package alias should run all-mode live knowledge QA"
 );
-includes(qaSuite, "scripts/nexus-live-knowledge-all-modes-qa.js", "qa-suite safe wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-live-knowledge-all-modes-qa.js", "qa-suite safe wiring");
 
 console.log("nexus-live-knowledge-all-modes QA passed");

@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -163,9 +163,9 @@ assertAll([
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-real-global-agent-platform"],
-  "node scripts/nexus-real-global-agent-platform-qa.js",
+  "node archive/qa-scripts/nexus-real-global-agent-platform-qa.js",
   "package alias should run Nexus real global agent platform QA"
 );
-includes(qaSuite, "scripts/nexus-real-global-agent-platform-qa.js", "safe QA suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-real-global-agent-platform-qa.js", "safe QA suite wiring");
 
 console.log("Nexus real global agent platform QA passed.");

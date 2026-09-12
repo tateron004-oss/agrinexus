@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_C39_PRODUCT_OWNER_APPROVAL_FOR_CONTROLLED_AGRICULT
 const qaName = "nexus-sprint-c39-product-owner-approval-controlled-agriculture-runtime-activation-qa.js";
 
 assert(exists("docs", docName), "Sprint C39 product-owner approval doc must exist.");
-assert(exists("scripts", qaName), "Sprint C39 product-owner approval QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C39 product-owner approval QA must exist.");
 
 const doc = read("docs", docName);
 const packageJson = JSON.parse(read("package.json"));
@@ -76,7 +76,7 @@ assert(
 );
 
 const alias = "qa:nexus-sprint-c39-product-owner-approval-controlled-agriculture-runtime-activation";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C39 QA.");
 

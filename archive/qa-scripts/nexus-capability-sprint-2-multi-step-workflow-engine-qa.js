@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -100,11 +100,11 @@ assert(app.includes("nexusAutonomousWorkflowState = null"), "Workflow state must
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-capability-sprint-2-multi-step-workflow-engine"],
-  "node scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js",
   "package.json must expose Sprint 2 QA alias."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js"),
   "qa-suite.js must include Sprint 2 QA."
 );
 

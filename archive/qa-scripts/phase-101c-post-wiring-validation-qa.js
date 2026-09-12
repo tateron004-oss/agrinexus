@@ -1,14 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   index: path.join(root, "public", "index.html"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
   phase101Module: path.join(root, "public", "nexus-agriculture-support-response-card.js"),
-  phase101Qa: path.join(root, "scripts", "nexus-phase-101-agriculture-support-response-card-runtime-qa.js"),
-  phase101bQa: path.join(root, "scripts", "nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js")
+  phase101Qa: path.join(root, "archive", "qa-scripts", "nexus-phase-101-agriculture-support-response-card-runtime-qa.js"),
+  phase101bQa: path.join(root, "archive", "qa-scripts", "nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js")
 };
 
 function assert(condition, message) {
@@ -30,8 +30,8 @@ const loaderMatches = index.match(/<script\s+src=["']\/nexus-agriculture-support
 assert(loaderMatches.length === 1, `public/index.html must include exactly one Phase 101 loader; found ${loaderMatches.length}.`);
 assert(index.indexOf("nexus-agriculture-support-response-card.js?v=nexus-phase-101") < index.indexOf("/app.js?v=nexus-behavior-305"), "Phase 101 loader must appear before app.js.");
 
-assert(packageData.scripts && packageData.scripts["qa:nexus-phase-101-agriculture-support-response-card-runtime"] === "node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js", "package.json must include Phase 101 runtime QA alias.");
-assert(packageData.scripts && packageData.scripts["qa:nexus-phase-101b-standard-user-runtime-wiring-readiness"] === "node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js", "package.json must include Phase 101B readiness QA alias.");
+assert(packageData.scripts && packageData.scripts["qa:nexus-phase-101-agriculture-support-response-card-runtime"] === "node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js", "package.json must include Phase 101 runtime QA alias.");
+assert(packageData.scripts && packageData.scripts["qa:nexus-phase-101b-standard-user-runtime-wiring-readiness"] === "node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js", "package.json must include Phase 101B readiness QA alias.");
 
 const runtimeQaCount = (qaSuite.match(/scripts\/nexus-phase-101-agriculture-support-response-card-runtime-qa\.js/g) || []).length;
 const readinessQaCount = (qaSuite.match(/scripts\/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa\.js/g) || []).length;

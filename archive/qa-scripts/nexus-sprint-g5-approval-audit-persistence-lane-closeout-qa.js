@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   DEFAULT_APPROVAL_AUDIT_PERSISTENCE_RECORD,
   createApprovalAuditPersistenceRecord
-} = require("../public/nexus-approval-audit-persistence-contract.js");
+} = require("../../public/nexus-approval-audit-persistence-contract.js");
 const {
   loadApprovalAuditPersistenceFixtures,
   validateApprovalAuditPersistenceFixtures
 } = require("./nexus-sprint-g3-approval-audit-persistence-fixture-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_G5_APPROVAL_AUDIT_PERSISTENCE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-g5-approval-audit-persistence-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint G5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint G5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint G5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -40,7 +40,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const contractSource = read("public", "nexus-approval-audit-persistence-contract.js");
-const g3Harness = read("scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js");
+const g3Harness = read("archive", "qa-scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js");
 
 assertIncludes(doc, [
   "Sprint G5",
@@ -136,14 +136,14 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint G5 requires prior Sprint G QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint G5 requires prior Sprint G QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint G QA: ${requiredScript}`);
 }
 
 assert(exists("public", "nexus-approval-audit-persistence-contract.js"), "Sprint G5 requires G2 persistence contract.");
 assert(exists("fixtures", "nexus", "approval-audit-persistence-records.json"), "Sprint G5 requires G2 record fixture.");
 assert(exists("fixtures", "nexus", "approval-audit-persistence-lifecycle.json"), "Sprint G5 requires G3 lifecycle fixture.");
-assert(exists("scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js"), "Sprint G5 requires G3 fixture harness.");
+assert(exists("archive", "qa-scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js"), "Sprint G5 requires G3 fixture harness.");
 
 assertIncludes(contractSource, [
   "DEFAULT_APPROVAL_AUDIT_PERSISTENCE_RECORD",
@@ -274,7 +274,7 @@ for (const source of [contractSource, g3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-g5-approval-audit-persistence-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint G5 QA.");
 

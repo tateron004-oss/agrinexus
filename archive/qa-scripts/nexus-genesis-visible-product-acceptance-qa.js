@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
 const index = read("public/index.html");
@@ -39,24 +39,24 @@ for (const [label, source] of Object.entries(runtimeSurfaces)) {
   excludes(source, "Nexus is blocked from executing externally", label);
 }
 
-includes(index, "<title>Nexus Genesis | AgriNexus</title>", "index title");
-includes(index, '<meta name="application-name" content="Nexus Genesis | AgriNexus">', "application name meta");
-includes(index, '<meta name="apple-mobile-web-app-title" content="Nexus Genesis | AgriNexus">', "apple app title meta");
-includes(index, '<h1 id="loginTitle">Nexus Genesis | AgriNexus</h1>', "login title");
-includes(index, "<strong>Nexus Genesis | AgriNexus</strong>", "visible topbar identity");
-includes(index, "Nexus Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided Nexus assistance.", "visible hero description");
+includes(index, "<title>Kyro Genesis | AgriNexus</title>", "index title");
+includes(index, '<meta name="application-name" content="Kyro Genesis | AgriNexus">', "application name meta");
+includes(index, '<meta name="apple-mobile-web-app-title" content="Kyro Genesis | AgriNexus">', "apple app title meta");
+includes(index, '<h1 id="loginTitle">Kyro Genesis | AgriNexus</h1>', "login title");
+includes(index, "<strong>Kyro Genesis | AgriNexus</strong>", "visible topbar identity");
+includes(index, "Kyro Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided Kyro assistance.", "visible hero description");
 
 const parsedManifest = JSON.parse(manifest);
-assert.strictEqual(parsedManifest.name, "Nexus Genesis | AgriNexus", "manifest name must use current product identity");
-assert.strictEqual(parsedManifest.short_name, "Nexus", "manifest short name must stay compact");
-includes(parsedManifest.description, "Nexus Genesis access platform", "manifest description");
+assert.strictEqual(parsedManifest.name, "Kyro Genesis | AgriNexus", "manifest name must use current product identity");
+assert.strictEqual(parsedManifest.short_name, "Kyro", "manifest short name must stay compact");
+includes(parsedManifest.description, "Kyro Genesis access platform", "manifest description");
 
-includes(app, 'productName: "Nexus Genesis | AgriNexus"', "app product identity");
+includes(app, 'productName: "Kyro Genesis | AgriNexus"', "app product identity");
 includes(app, 'edition: "genesis"', "app edition");
 includes(app, 'legacyProductName: "AgriNexus"', "app legacy compatibility identity");
-includes(server, 'productName: "Nexus Genesis | AgriNexus"', "server product identity");
+includes(server, 'productName: "Kyro Genesis | AgriNexus"', "server product identity");
 includes(server, 'edition: "genesis"', "server edition");
-assert.strictEqual(registry.productName, "Nexus Genesis | AgriNexus", "tool registry product identity");
+assert.strictEqual(registry.productName, "Kyro Genesis | AgriNexus", "tool registry product identity");
 assert.strictEqual(registry.edition, "genesis", "tool registry edition");
 
 includes(index, "/manifest.webmanifest?v=__NEXUS_RELEASE_SHA__", "manifest cache marker");
@@ -90,9 +90,9 @@ includes(transitionEngine, "providerHandoffAuthorized: false", "no provider hand
 const acceptanceAlias = "qa:nexus-genesis-visible-product-acceptance";
 assert.strictEqual(
   packageJson.scripts[acceptanceAlias],
-  "node scripts/nexus-genesis-visible-product-acceptance-qa.js",
+  "node archive/qa-scripts/nexus-genesis-visible-product-acceptance-qa.js",
   "package alias must run visible product acceptance QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-visible-product-acceptance-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-visible-product-acceptance-qa.js", "qa-suite wiring");
 
 console.log("Nexus Genesis visible product acceptance QA passed.");

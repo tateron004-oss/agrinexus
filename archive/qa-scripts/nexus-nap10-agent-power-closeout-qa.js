@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -73,11 +73,11 @@ function runNap10AgentPowerCloseoutQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap10-agent-power-closeout"],
-    "node scripts/nexus-nap10-agent-power-closeout-qa.js",
+    "node archive/qa-scripts/nexus-nap10-agent-power-closeout-qa.js",
     "NAP10 package alias must exist."
   );
   assert(
-    qaSuite.includes("scripts/nexus-nap10-agent-power-closeout-qa.js"),
+    qaSuite.includes("archive/qa-scripts/nexus-nap10-agent-power-closeout-qa.js"),
     "NAP10 QA must be wired into local-safe suites."
   );
 

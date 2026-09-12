@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function readText(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -122,7 +122,7 @@ for (const phrase of [
 }
 
 for (const scriptName of [
-  "scripts/nexus-audit-log-architecture-qa.js",
+  "archive/qa-scripts/nexus-audit-log-architecture-qa.js",
   "scripts/nexus-audit-redaction-contract-qa.js",
   "scripts/nexus-high-risk-audit-required-qa.js",
   "scripts/nexus-provider-audit-event-qa.js",
@@ -241,7 +241,7 @@ for (const qaSignal of [
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-audit-log-architecture"],
-  "node scripts/nexus-audit-log-architecture-qa.js",
+  "node archive/qa-scripts/nexus-audit-log-architecture-qa.js",
   "package should expose audit log architecture QA alias"
 );
 

@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-connector-reliability-readiness-contract.js`;
 - `public/nexus-connector-reliability-feature-flag.js`;
-- `scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js`;
 - `fixtures/nexus/connector-reliability-feature-flags.json`;
 - Sprint AN QA scripts.
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-l2-inert-call-message-intent-contract-qa.js";
 
 assert(exists("docs", docName), "L2 doc must exist.");
 assert(exists("public", moduleName), "L2 contract module must exist.");
-assert(exists("scripts", qaName), "L2 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "L2 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -31,7 +31,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-call-message-intent-contract.js");
+const contract = require("../../public/nexus-call-message-intent-contract.js");
 
 assertIncludes(doc, [
   "Sprint L2",
@@ -227,8 +227,8 @@ assert.equal(complete.intent.backendWriteAllowed, false, "L2 factory must force 
 });
 
 const alias = "qa:nexus-sprint-l2-inert-call-message-intent-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes(`"scripts/${qaName}"`), "L2 QA must be wired into qa-suite.js.");
+assert(qaSuite.includes(`"archive/qa-scripts/${qaName}"`), "L2 QA must be wired into qa-suite.js.");
 
 console.log("Nexus Sprint L2 inert call/message intent contract QA passed");

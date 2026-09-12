@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -69,21 +69,21 @@ function assertQaIndex() {
   const pkg = JSON.parse(read("package.json"));
   const suite = read("scripts", "qa-suite.js");
   const requiredScripts = [
-    "scripts/nexus-aut1-workflow-goal-classifier-qa.js",
-    "scripts/nexus-aut2-workflow-planner-qa.js",
-    "scripts/nexus-aut3-workflow-step-runner-qa.js",
-    "scripts/nexus-aut4-workflow-session-state-qa.js",
-    "scripts/nexus-aut5-workflow-artifacts-qa.js",
-    "scripts/nexus-aut6-standard-user-workflow-card-qa.js",
-    "scripts/nexus-aut7-workflow-follow-up-commands-qa.js",
-    "scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js",
-    "scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
-    "scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js"
+    "archive/qa-scripts/nexus-aut1-workflow-goal-classifier-qa.js",
+    "archive/qa-scripts/nexus-aut2-workflow-planner-qa.js",
+    "archive/qa-scripts/nexus-aut3-workflow-step-runner-qa.js",
+    "archive/qa-scripts/nexus-aut4-workflow-session-state-qa.js",
+    "archive/qa-scripts/nexus-aut5-workflow-artifacts-qa.js",
+    "archive/qa-scripts/nexus-aut6-standard-user-workflow-card-qa.js",
+    "archive/qa-scripts/nexus-aut7-workflow-follow-up-commands-qa.js",
+    "archive/qa-scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js",
+    "archive/qa-scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
+    "archive/qa-scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js"
   ];
 
   assert.equal(
     pkg.scripts["qa:nexus-aut10-controlled-multi-step-workflow-closeout"],
-    "node scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js",
+    "node archive/qa-scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js",
     "AUT10 package alias must exist."
   );
 

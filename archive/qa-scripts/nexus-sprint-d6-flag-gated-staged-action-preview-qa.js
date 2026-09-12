@@ -4,9 +4,9 @@ const path = require("node:path");
 const {
   CONTROLLED_STAGED_ACTIONS_FLAG_NAME,
   isControlledStagedActionsEnabled
-} = require("../public/nexus-controlled-staged-actions-flag.js");
+} = require("../../public/nexus-controlled-staged-actions-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -45,7 +45,7 @@ const docName = "NEXUS_SPRINT_D6_FLAG_GATED_STAGED_ACTION_PREVIEW.md";
 const qaName = "nexus-sprint-d6-flag-gated-staged-action-preview-qa.js";
 
 assert(exists("docs", docName), "Sprint D6 doc must exist.");
-assert(exists("scripts", qaName), "Sprint D6 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint D6 QA script must exist.");
 
 const doc = read("docs", docName);
 const app = read("public", "app.js");
@@ -187,7 +187,7 @@ assert(styles.includes(".nexus-controlled-staged-action-label"), "D6 styles must
 ].forEach(term => assert(!server.includes(term), `server.js must not wire D6 runtime term: ${term}`));
 
 const alias = "qa:nexus-sprint-d6-flag-gated-staged-action-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint D6 QA.");
 

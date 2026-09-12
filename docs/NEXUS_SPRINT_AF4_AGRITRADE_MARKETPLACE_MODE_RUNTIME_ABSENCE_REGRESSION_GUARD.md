@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-agritrade-marketplace-mode-readiness-contract.js`;
 - `public/nexus-agritrade-marketplace-mode-feature-flag.js`;
-- `scripts/nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness.js`;
 - `fixtures/nexus/agritrade-marketplace-mode-feature-flags.json`;
 - Sprint AF QA scripts.
 

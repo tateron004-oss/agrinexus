@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const handoffModule = "nexus-first-narrow-provider-handoff-readiness-contract.js
 const handoffHarness = "nexus-sprint-h7-first-narrow-provider-handoff-readiness-harness.js";
 
 assert(exists("docs", docName), "Sprint H8 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint H8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H8 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -32,7 +32,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
-const handoffContract = require("../public/nexus-first-narrow-provider-handoff-readiness-contract.js");
+const handoffContract = require("../../public/nexus-first-narrow-provider-handoff-readiness-contract.js");
 const handoffHarnessModule = require("./nexus-sprint-h7-first-narrow-provider-handoff-readiness-harness.js");
 
 assertIncludes(doc, [
@@ -101,13 +101,13 @@ assertIncludes(doc, [
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `H8 requires prior Sprint H artifact: ${relative}`));
 
 [
-  "scripts/nexus-sprint-h1-consent-center-runtime-activation-readiness-gate-qa.js",
-  "scripts/nexus-sprint-h2-consent-center-feature-flag-contract-qa.js",
-  "scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js",
-  "scripts/nexus-sprint-h4-consent-center-runtime-absence-regression-guard-qa.js",
-  "scripts/nexus-sprint-h5-consent-center-lane-closeout-qa.js",
-  "scripts/nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract-qa.js",
-  "scripts/nexus-sprint-h7-first-narrow-provider-handoff-readiness-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-h1-consent-center-runtime-activation-readiness-gate-qa.js",
+  "archive/qa-scripts/nexus-sprint-h2-consent-center-feature-flag-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-h4-consent-center-runtime-absence-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-h5-consent-center-lane-closeout-qa.js",
+  "archive/qa-scripts/nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-h7-first-narrow-provider-handoff-readiness-harness-qa.js"
 ].forEach(relative => assert(qaSuite.includes(relative), `H8 requires prior Sprint H QA in qa-suite: ${relative}`));
 
 assert.equal(typeof handoffContract.createProviderHandoffReadiness, "function", "H8 requires H6 handoff readiness contract factory.");
@@ -127,7 +127,7 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-h8-first-narrow-provider-handoff-readiness-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H8 QA.");
 

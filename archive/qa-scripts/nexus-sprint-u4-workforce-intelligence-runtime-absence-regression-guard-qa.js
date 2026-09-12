@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_WORKFORCE_INTELLIGENCE_FEATURE_FLAG_STATE,
   normalizeWorkforceIntelligenceFeatureFlagState
-} = require("../public/nexus-workforce-intelligence-feature-flag.js");
+} = require("../../public/nexus-workforce-intelligence-feature-flag.js");
 const {
   protectedFields,
   loadWorkforceIntelligenceFlagFixtures,
   validateWorkforceIntelligenceFlagFixtures
 } = require("./nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_U4_WORKFORCE_INTELLIGENCE_RUNTIME_ABSENCE_REGRESSI
 const qaName = "nexus-sprint-u4-workforce-intelligence-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint U4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint U4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint U4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-workforce-intelligence-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-workforce-intelligence-feature-flag.js");
-const u3Harness = read("scripts", "nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js");
+const u3Harness = read("archive", "qa-scripts", "nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js");
 const fixtures = loadWorkforceIntelligenceFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-workforce-intelligence-readiness-contract.js",
   "public/nexus-workforce-intelligence-feature-flag.js",
-  "scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js",
   "fixtures/nexus/workforce-intelligence-feature-flags.json",
   "Sprint U QA scripts"
 ], "U4 runtime absence artifact list");
@@ -141,7 +141,7 @@ for (const requiredPath of [
   ["public", "nexus-workforce-intelligence-readiness-contract.js"],
   ["public", "nexus-workforce-intelligence-feature-flag.js"],
   ["fixtures", "nexus", "workforce-intelligence-feature-flags.json"],
-  ["scripts", "nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `U4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -277,7 +277,7 @@ for (const source of [featureFlagModule, u3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-u4-workforce-intelligence-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint U4 QA.");
 

@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -246,9 +246,9 @@ assertAll(doc, [
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-activation-verification"],
-  "node scripts/nexus-activation-verification-qa.js",
+  "node archive/qa-scripts/nexus-activation-verification-qa.js",
   "package alias should run activation verification QA"
 );
-includes(qaSuite, "scripts/nexus-activation-verification-qa.js", "safe QA suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-activation-verification-qa.js", "safe QA suite wiring");
 
 console.log("Nexus activation verification QA passed.");

@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const policyPath = path.join(root, "docs", "NEXUS_AGENT_ACTION_SUGGESTION_POLICY.md");
 const registryPath = path.join(root, "docs", "nexus-tool-registry.v1.json");
 const serverPath = path.join(root, "server.js");
@@ -50,7 +50,7 @@ for (const unsafe of [
 
 assert.match(registry.runtimeStatus || "", /static|spec/i, "registry must remain static/spec-only");
 assert.match(registry.warning || "", /not runtime-authoritative/i, "registry warning must remain non-runtime-authoritative");
-assert.ok(registry.qaCoverage.includes("scripts/nexus-agent-action-suggestion-policy-qa.js"), "registry qaCoverage should include suggestion policy QA");
+assert.ok(registry.qaCoverage.includes("archive/qa-scripts/nexus-agent-action-suggestion-policy-qa.js"), "registry qaCoverage should include suggestion policy QA");
 
 const eligibleIds = new Set([
   "workforce.training",

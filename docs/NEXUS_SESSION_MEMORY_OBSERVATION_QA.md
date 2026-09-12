@@ -8,7 +8,7 @@ This document describes the read-only QA guard for the Nexus session memory skel
 
 The QA artifact is:
 
-- `scripts/nexus-session-memory-observation-qa.js`
+- `archive/qa-scripts/nexus-session-memory-observation-qa.js`
 
 ## Read-Only Boundary
 
@@ -119,7 +119,7 @@ Future runtime wiring requires a separate reviewed phase.
 
 ## QA Coverage
 
-`scripts/nexus-session-memory-observation-qa.js` verifies:
+`archive/qa-scripts/nexus-session-memory-observation-qa.js` verifies:
 
 - the module loads safely in Node
 - read-only observation snapshots can be produced

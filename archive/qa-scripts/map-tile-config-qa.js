@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -61,7 +61,7 @@ assert(app.includes("drawRuralHealthNetwork"), "Rural health overlay should rema
 assert(readme.includes("/api/config"), "README should document the public map config contract.");
 assert(readme.includes("Offline tile caching is not implemented yet"), "README should document offline tile caching remains out of scope.");
 assert(sw.includes("APP_SHELL") && !/tile\.openstreetmap|ArcGIS\/rest\/services|openstreetmap\.fr\/hot/i.test(sw), "Service worker should not cache third-party tile URLs yet.");
-assert(pkg.scripts["map:tile-config-qa"] === "node scripts/map-tile-config-qa.js", "package script should expose Phase 2 map tile config QA.");
+assert(pkg.scripts["map:tile-config-qa"] === "node archive/qa-scripts/map-tile-config-qa.js", "package script should expose Phase 2 map tile config QA.");
 
 const paidKeyPatterns = [
   /pk\.[A-Za-z0-9._-]{20,}/,

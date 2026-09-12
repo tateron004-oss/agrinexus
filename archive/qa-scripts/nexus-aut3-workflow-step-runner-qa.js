@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const planner = require("../server/nexus-autonomy-workflow-planner.js");
-const runner = require("../server/nexus-autonomy-workflow-step-runner.js");
+const planner = require("../../server/nexus-autonomy-workflow-planner.js");
+const runner = require("../../server/nexus-autonomy-workflow-step-runner.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -140,10 +140,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-aut3-workflow-step-runner"],
-    "node scripts/nexus-aut3-workflow-step-runner-qa.js",
+    "node archive/qa-scripts/nexus-aut3-workflow-step-runner-qa.js",
     "AUT3 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut3-workflow-step-runner-qa.js"), "AUT3 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut3-workflow-step-runner-qa.js"), "AUT3 QA must be wired into local-safe suites.");
 }
 
 function runAut3WorkflowStepRunnerQa() {

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -9,9 +9,9 @@ const paths = {
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
   doc: path.join(root, "docs", "NEXUS_VOICE_DEMO_SHELL_PHASE_16A.md"),
-  phase14h: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js"),
-  phase14i: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js"),
-  phase14j: path.join(root, "scripts", "nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js")
+  phase14h: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js"),
+  phase14i: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js"),
+  phase14j: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js")
 };
 
 function read(filePath) {
@@ -314,6 +314,6 @@ assert(doc.includes("This demo is intentionally safety-controlled."), "Doc must 
 assert(doc.includes("Today Nexus is voice-capable and safety-controlled."), "Doc must include the meeting closing line.");
 
 assert(packageJson.includes("\"qa:nexus-voice-demo-shell-phase-16a\""), "package.json must include Phase 16A QA alias.");
-assert(qaSuite.includes("scripts/nexus-voice-demo-shell-phase-16a-qa.js"), "qa-suite nexus-workforce must include Phase 16A QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-voice-demo-shell-phase-16a-qa.js"), "qa-suite nexus-workforce must include Phase 16A QA.");
 
 console.log("[nexus-voice-demo-shell-phase-16a-qa] passed");

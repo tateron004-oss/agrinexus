@@ -7,7 +7,7 @@ const {
   validateNaturalResponseGenerationFlagFixtures
 } = require("./nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-q3-natural-response-generation-flag-contract-harnes
 
 assert(exists("docs", docName), "Sprint Q3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint Q3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint Q3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint Q3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint Q3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Q3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "08f1fae5e79e44b127ab56fed1e93175c81dd6a2",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/natural-response-generation-feature-flags.json",
-  "scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js",
   "responseReviewAllowed: false",
   "plainLanguagePreviewAllowed: false",
   "sourceTraceReviewAllowed: false",
@@ -177,10 +177,10 @@ assert(exists("docs", "NEXUS_SPRINT_Q2_NATURAL_RESPONSE_GENERATION_FEATURE_FLAG_
 assert(exists("public", "nexus-natural-response-generation-feature-flag.js"), "Q3 requires Q2 feature flag module.");
 
 const alias = "qa:nexus-sprint-q3-natural-response-generation-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Q3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Q1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-q2-natural-response-generation-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Q2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Q1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-q2-natural-response-generation-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Q2 QA.");
 
 console.log("[nexus-sprint-q3-natural-response-generation-flag-contract-harness-qa] passed");

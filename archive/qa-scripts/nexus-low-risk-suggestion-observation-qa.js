@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NEXUS_LOW_RISK_SUGGESTION_OBSERVATION_PORT || 4593);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-nexus-low-risk-suggestion-observation-db.json");

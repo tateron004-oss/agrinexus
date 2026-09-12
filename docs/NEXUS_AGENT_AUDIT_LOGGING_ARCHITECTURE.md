@@ -25,10 +25,10 @@ The audit layer should eventually make each stage observable, accountable, and p
 - `docs/NEXUS_CONTACT_CALL_PERMISSION_ARCHITECTURE.md`
 - `docs/NEXUS_COMMUNICATION_PROVIDER_HANDOFF_PLAN.md`
 - `docs/NEXUS_UNIFIED_CONFIRMATION_UI_ARCHITECTURE.md`
-- `scripts/nexus-contact-call-permission-qa.js`
-- `scripts/nexus-contact-resolution-qa.js`
-- `scripts/nexus-provider-handoff-boundary-qa.js`
-- `scripts/nexus-confirmation-ui-contract-qa.js`
+- `archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `archive/qa-scripts/nexus-contact-resolution-qa.js`
+- `archive/qa-scripts/nexus-provider-handoff-boundary-qa.js`
+- `archive/qa-scripts/nexus-confirmation-ui-contract-qa.js`
 - existing call, confirmation, controlled-action, telehealth, and app QA scripts
 
 ### Current Audit-Like Behavior
@@ -648,7 +648,7 @@ Notes:
 
 ### Recommended Future QA Scripts
 
-- `scripts/nexus-audit-log-architecture-qa.js`
+- `archive/qa-scripts/nexus-audit-log-architecture-qa.js`
 - `scripts/nexus-audit-redaction-contract-qa.js`
 - `scripts/nexus-high-risk-audit-required-qa.js`
 - `scripts/nexus-provider-audit-event-qa.js`
@@ -671,12 +671,12 @@ Notes:
 
 ### Existing QA To Keep Running
 
-- `node scripts/nexus-contact-call-permission-qa.js`
-- `node scripts/nexus-contact-resolution-qa.js`
-- `node scripts/nexus-provider-handoff-boundary-qa.js`
-- `node scripts/nexus-confirmation-ui-contract-qa.js`
-- `node scripts/confirmed-call-handoff-qa.js`
-- `node scripts/native-call-bridge-dispatch-qa.js`
+- `node archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `node archive/qa-scripts/nexus-contact-resolution-qa.js`
+- `node archive/qa-scripts/nexus-provider-handoff-boundary-qa.js`
+- `node archive/qa-scripts/nexus-confirmation-ui-contract-qa.js`
+- `node archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `node archive/qa-scripts/native-call-bridge-dispatch-qa.js`
 - `node scripts/companion-confirmation-gate-smoke.js`
 - `node scripts/qa-suite.js all-safe`
 
@@ -684,7 +684,7 @@ Notes:
 
 ### Phase 10E1: Static Audit Architecture QA
 
-Create `scripts/nexus-audit-log-architecture-qa.js` to verify this document exists and protects event types, schema fields, redaction rules, storage model, and no-execution boundaries.
+Create `archive/qa-scripts/nexus-audit-log-architecture-qa.js` to verify this document exists and protects event types, schema fields, redaction rules, storage model, and no-execution boundaries.
 
 ### Phase 10E2: Redaction Contract QA
 

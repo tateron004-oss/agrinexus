@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const weather = require("../server/nexus-weather-source-provider.js");
+const weather = require("../../server/nexus-weather-source-provider.js");
 
 function response(status, payload = {}) {
   return { ok: status >= 200 && status < 300, status, json: async () => payload };

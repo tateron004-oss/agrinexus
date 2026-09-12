@@ -7,9 +7,9 @@ const {
   PROTECTED_FIELD_AGENT_MODE_FLAG_FIELDS,
   normalizeFieldAgentModeFeatureFlagState,
   isFieldAgentModeVisibleFeatureEnabled
-} = require("../public/nexus-field-agent-mode-feature-flag.js");
+} = require("../../public/nexus-field-agent-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const qaName = "nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa.js";
 
 assert(exists("docs", docName), "Sprint AG2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint AG2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AG2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AG2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -171,10 +171,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ag2-field-agent-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AG2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AG1 QA.");
-assert(qaSuite.includes("scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AG1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
 
 console.log("[nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa] passed");

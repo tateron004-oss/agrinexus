@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const previewModuleName = "nexus-payment-preview.js";
 const flagModuleName = "nexus-payment-preview-flag-guard.js";
 
 assert(exists("docs", docName), "O7 browser validation doc must exist.");
-assert(exists("scripts", qaName), "O7 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "O7 QA must exist.");
 
 const doc = read("docs", docName);
 const indexHtml = read("public", "index.html");
@@ -57,9 +57,9 @@ const qaSuite = read("scripts", "qa-suite.js");
 });
 
 const alias = "qa:nexus-sprint-o7-standard-user-browser-validation-for-payment-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include O7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-o6-flag-gated-payment-preview-qa.js"), "O7 requires O6 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-o6-flag-gated-payment-preview-qa.js"), "O7 requires O6 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-o7-standard-user-browser-validation-for-payment-preview-qa] passed");

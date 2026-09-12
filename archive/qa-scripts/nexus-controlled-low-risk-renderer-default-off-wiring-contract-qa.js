@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -214,23 +214,23 @@ for (const source of [index, app, server]) {
   }
 }
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-default-off-wiring-contract": "node scripts/${scriptName}"`), "package.json must expose Phase 13N QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-default-off-wiring-contract": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13N QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13N QA guard");
 
 for (const priorScript of [
-  "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js",
-  "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-standard-user-readiness-review-before-visible-activation-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-browser-regression-standard-user-absence-enforcement-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-mount-point-readiness-review-before-runtime-wiring-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation-qa.js"
+  "archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js",
+  "archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-standard-user-readiness-review-before-visible-activation-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-browser-regression-standard-user-absence-enforcement-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-mount-point-readiness-review-before-runtime-wiring-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation-qa.js"
 ]) {
   assert(suite.includes(priorScript), `nexus-workforce suite must keep prior renderer guard ${priorScript}`);
 }

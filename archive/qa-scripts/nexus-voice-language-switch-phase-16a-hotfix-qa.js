@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -9,7 +9,7 @@ const paths = {
   server: path.join(root, "server.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
-  phase16aQa: path.join(root, "scripts", "nexus-voice-demo-shell-phase-16a-qa.js"),
+  phase16aQa: path.join(root, "archive", "qa-scripts", "nexus-voice-demo-shell-phase-16a-qa.js"),
   doc: path.join(root, "docs", "NEXUS_VOICE_DEMO_SHELL_PHASE_16A.md")
 };
 
@@ -174,9 +174,9 @@ assert(shell.includes("utterance.lang = config.speechLang"), "SpeechSynthesis mu
 });
 
 const packageData = JSON.parse(packageJson);
-assert(packageData.scripts["qa:nexus-voice-language-switch-phase-16a-hotfix"] === "node scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js", "package.json must include hotfix QA alias.");
+assert(packageData.scripts["qa:nexus-voice-language-switch-phase-16a-hotfix"] === "node archive/qa-scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js", "package.json must include hotfix QA alias.");
 assert(!Object.keys(packageData.dependencies || {}).some(name => /translate|speech|voice|tts/i.test(name)), "No translation/speech dependency should be added.");
-assert(qaSuite.includes("scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js"), "nexus-workforce QA suite must include language switch hotfix QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js"), "nexus-workforce QA suite must include language switch hotfix QA.");
 assert(phase16aQa.includes("nexusVoiceDemoLanguageSelect"), "Existing Phase 16A QA must cover the language selector.");
 
 console.log("[nexus-voice-language-switch-phase-16a-hotfix-qa] passed");

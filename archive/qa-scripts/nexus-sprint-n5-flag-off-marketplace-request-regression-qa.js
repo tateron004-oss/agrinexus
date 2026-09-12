@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const qaName = "nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js";
 
 assert(exists("docs", docName), "N5 doc must exist.");
 assert(exists("public", moduleName), "N5 flag guard module must exist.");
-assert(exists("scripts", qaName), "N5 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N5 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -28,8 +28,8 @@ const serverSource = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = JSON.parse(read("fixtures", "nexus", "marketplace-requests.json"));
-const mapper = require("../public/nexus-marketplace-request-risk-evidence-mapping.js");
-const guard = require("../public/nexus-marketplace-request-preview-flag-guard.js");
+const mapper = require("../../public/nexus-marketplace-request-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-marketplace-request-preview-flag-guard.js");
 
 [
   "NEXUS_MARKETPLACE_REQUEST_PREVIEW_ENABLED",
@@ -106,9 +106,9 @@ assert.equal(result.executionAllowed, false, "N5 restricted fixtures must not ex
 });
 
 const alias = "qa:nexus-sprint-n5-flag-off-marketplace-request-regression";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include N5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js"), "N5 requires N4 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js"), "N5 requires N4 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-n5-flag-off-marketplace-request-regression-qa] passed");

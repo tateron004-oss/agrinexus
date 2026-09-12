@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -15,7 +15,7 @@ const telehealthSources = telehealthProviderSource + telehealthDailySource + tel
 const envExample = read(".env.example");
 const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
-const telehealth = require("../server/telehealth/provider.js");
+const telehealth = require("../../server/telehealth/provider.js");
 
 function includes(source, token, label) {
   assert(source.includes(token), `${label} should include ${token}`);
@@ -176,10 +176,10 @@ assert.strictEqual(status.provider.videoCreationAllowed, false, "zoom execution 
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-virtual-care-telehealth-activation"],
-    "node scripts/nexus-virtual-care-telehealth-activation-qa.js",
+    "node archive/qa-scripts/nexus-virtual-care-telehealth-activation-qa.js",
     "package alias should run virtual care telehealth QA"
   );
-  includes(qaSuite, "scripts/nexus-virtual-care-telehealth-activation-qa.js", "qa suite should include virtual care telehealth QA");
+  includes(qaSuite, "archive/qa-scripts/nexus-virtual-care-telehealth-activation-qa.js", "qa suite should include virtual care telehealth QA");
   console.log("nexus-virtual-care-telehealth-activation QA passed");
 })().catch(error => {
   console.error(error);

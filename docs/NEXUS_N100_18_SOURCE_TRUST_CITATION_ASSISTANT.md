@@ -33,4 +33,4 @@ This module is not loaded by `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-18-source-trust-citation-assistant-qa.js` verifies supported source trust artifact types, blocked source-trust execution prompts, static runtime absence, no unsafe network/source mutation/backend APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-18-source-trust-citation-assistant-qa.js` verifies supported source trust artifact types, blocked source-trust execution prompts, static runtime absence, no unsafe network/source mutation/backend APIs, package alias wiring, and local-safe suite inclusion.

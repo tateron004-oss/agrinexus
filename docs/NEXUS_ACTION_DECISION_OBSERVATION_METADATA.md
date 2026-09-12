@@ -114,7 +114,7 @@ The `actionDecision` object contains:
 Phase 12D observation lives in:
 
 ```text
-scripts/nexus-action-decision-observation-qa.js
+archive/qa-scripts/nexus-action-decision-observation-qa.js
 ```
 
 The observation layer is QA-only. It imports the mapper in Node, wraps the returned action decision in hidden/debug-only observation metadata, and asserts safety invariants.

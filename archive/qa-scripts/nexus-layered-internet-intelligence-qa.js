@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -174,10 +174,10 @@ includes(index, "/app.js?v=__NEXUS_RELEASE_SHA__", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-layered-internet-intelligence"],
-  "node scripts/nexus-layered-internet-intelligence-qa.js",
+  "node archive/qa-scripts/nexus-layered-internet-intelligence-qa.js",
   "package script should run layered internet intelligence QA"
 );
-includes(qaSuite, "scripts/nexus-layered-internet-intelligence-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-layered-internet-intelligence-qa.js", "qa-suite wiring");
 
 [
   "fake live retrieval",

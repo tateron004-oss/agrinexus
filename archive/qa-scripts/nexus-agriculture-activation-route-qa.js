@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 function assert(condition, message) {
   if (!condition) {

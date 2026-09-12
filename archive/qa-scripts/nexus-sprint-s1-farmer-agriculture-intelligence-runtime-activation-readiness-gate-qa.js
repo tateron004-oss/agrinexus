@@ -8,9 +8,9 @@ const {
   FARMER_AGRICULTURE_INTELLIGENCE_NO_EXECUTION_DEFAULTS,
   FARMER_AGRICULTURE_INTELLIGENCE_READINESS_CONTRACT,
   createFarmerAgricultureIntelligenceReadinessContract
-} = require("../public/nexus-farmer-agriculture-intelligence-readiness-contract.js");
+} = require("../../public/nexus-farmer-agriculture-intelligence-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_S1_FARMER_AGRICULTURE_INTELLIGENCE_RUNTIME_ACTIVAT
 const qaName = "nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint S1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint S1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint S1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -274,9 +274,9 @@ for (const term of [
 const alias = "qa:nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js",
+  "node archive/qa-scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js",
   "package.json must expose Sprint S1 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must include Sprint S1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must include Sprint S1 QA.");
 
 console.log("[nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa] passed");

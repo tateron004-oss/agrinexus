@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -50,6 +50,6 @@ function excludes(source, token, label) {
   "route provider executed successfully"
 ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe logistics claim ${token}`));
 
-assert.strictEqual(packageJson.scripts["qa:nexus-logistics-predictive-intelligence"], "node scripts/nexus-logistics-predictive-intelligence-qa.js");
-includes(qaSuite, "scripts/nexus-logistics-predictive-intelligence-qa.js", "qa-suite logistics wiring");
+assert.strictEqual(packageJson.scripts["qa:nexus-logistics-predictive-intelligence"], "node archive/qa-scripts/nexus-logistics-predictive-intelligence-qa.js");
+includes(qaSuite, "archive/qa-scripts/nexus-logistics-predictive-intelligence-qa.js", "qa-suite logistics wiring");
 console.log("Nexus logistics predictive intelligence QA passed.");

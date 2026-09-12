@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -143,12 +143,12 @@ assert(handlerSource.includes("buildNexusAutonomousTaskPlan(command, { category:
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-15-care-team-report-copy-view"],
-  "node scripts/nexus-capability-sprint-15-care-team-report-copy-view-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-15-care-team-report-copy-view-qa.js",
   "package alias should expose Sprint 15 QA."
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-15-care-team-report-copy-view-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-15-care-team-report-copy-view-qa.js"),
   "qa-suite should include Sprint 15 QA."
 );
 

@@ -44,12 +44,12 @@ Intent detection
 - `native-mobile/android/app/src/main/java/com/agrinexus/mobile/NexusNativeController.kt`
 - `native-mobile/ios/AgriNexus/NexusWebViewController.swift`
 - `scripts/call-intent-smoke.js`
-- `scripts/confirmed-call-handoff-qa.js`
-- `scripts/native-call-bridge-dispatch-qa.js`
-- `scripts/android-call-launch-qa.js`
-- `scripts/ios-call-launch-qa.js`
-- `scripts/nexus-contact-call-permission-qa.js`
-- `scripts/nexus-contact-resolution-qa.js`
+- `archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `archive/qa-scripts/native-call-bridge-dispatch-qa.js`
+- `archive/qa-scripts/android-call-launch-qa.js`
+- `archive/qa-scripts/ios-call-launch-qa.js`
+- `archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `archive/qa-scripts/nexus-contact-resolution-qa.js`
 - `docs/NEXUS_CONTACT_CALL_PERMISSION_ARCHITECTURE.md`
 
 ### Current Provider / Call / Native / Browser Surfaces
@@ -684,13 +684,13 @@ Side-effect exclusions:
 
 ### Existing QA To Keep Running
 
-- `node scripts/nexus-contact-call-permission-qa.js`
-- `node scripts/nexus-contact-resolution-qa.js`
+- `node archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `node archive/qa-scripts/nexus-contact-resolution-qa.js`
 - `node scripts/call-intent-smoke.js`
-- `node scripts/confirmed-call-handoff-qa.js`
-- `node scripts/native-call-bridge-dispatch-qa.js`
-- `node scripts/android-call-launch-qa.js`
-- `node scripts/ios-call-launch-qa.js`
+- `node archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `node archive/qa-scripts/native-call-bridge-dispatch-qa.js`
+- `node archive/qa-scripts/android-call-launch-qa.js`
+- `node archive/qa-scripts/ios-call-launch-qa.js`
 - `node scripts/companion-confirmation-gate-smoke.js`
 - `node scripts/qa-suite.js all-safe`
 

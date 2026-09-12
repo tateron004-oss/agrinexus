@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -81,7 +81,7 @@ for (const risk of ["low", "medium", "high", "restricted"]) {
 }
 
 assert(packageJson.includes("\"qa:nexus-action-decision-staging-ui-contract\""), "package.json must expose qa:nexus-action-decision-staging-ui-contract");
-assert(suite.includes("scripts/nexus-action-decision-staging-ui-contract-qa.js"), "nexus-workforce suite should include staging UI contract QA");
+assert(suite.includes("archive/qa-scripts/nexus-action-decision-staging-ui-contract-qa.js"), "nexus-workforce suite should include staging UI contract QA");
 
 assert(observationDoc.includes("Action Decision Observation Metadata"), "Phase 12D observation doc must remain present");
 assert(mapper.includes("mapNexusPromptToActionDecision"), "Phase 12C mapper must remain present");

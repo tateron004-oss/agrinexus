@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -230,11 +230,11 @@ assert(status.includes("write backend data"), "draft confirmation status should 
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-9-draft-message-generation"],
-  "node scripts/nexus-capability-sprint-9-draft-message-generation-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-9-draft-message-generation-qa.js",
   "package alias should expose Sprint 9 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-9-draft-message-generation-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-9-draft-message-generation-qa.js"),
   "qa-suite should include Sprint 9 draft message generation QA."
 );
 

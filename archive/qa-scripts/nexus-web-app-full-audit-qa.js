@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -233,7 +233,7 @@ check("language is consistent for Standard User source-backed UX", hasAll(app + 
 check("Standard User first screen remains conversation-first, not tab-heavy", hasAll(app, [
   'data-nexus-os-standard-startup="true-conversation"',
   'data-nexus-true-conversational-root="true"',
-  "Hello. I'm Nexus.",
+  "Hello. I'm Kyro.",
   "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && hasAll(css, [
@@ -250,7 +250,7 @@ check("production readiness panels include Internet Resource status", hasAll(ser
 
 check("service worker and cache versions are consistent", (() => {
   try {
-    require("./lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
+    require("../../scripts/lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
     return true;
   } catch (_) { return false; }
 })());
@@ -288,16 +288,16 @@ check("unsafe or false claims are absent from runtime source", hasNone(server + 
 ]));
 
 check("existing adjacent QA scripts remain wired", [
-  "scripts/nexus-internet-resource-assistant-platform-qa.js",
-  "scripts/nexus-layered-internet-intelligence-qa.js",
-  "scripts/nexus-live-knowledge-retrieval-qa.js",
-  "scripts/nexus-production-platform-rails-qa.js",
-  "scripts/nexus-pilot-platform-foundation-qa.js",
-  "scripts/nexus-safety-trust-boundary-hardening-qa.js"
+  "archive/qa-scripts/nexus-internet-resource-assistant-platform-qa.js",
+  "archive/qa-scripts/nexus-layered-internet-intelligence-qa.js",
+  "archive/qa-scripts/nexus-live-knowledge-retrieval-qa.js",
+  "archive/qa-scripts/nexus-production-platform-rails-qa.js",
+  "archive/qa-scripts/nexus-pilot-platform-foundation-qa.js",
+  "archive/qa-scripts/nexus-safety-trust-boundary-hardening-qa.js"
 ].every(script => qaSuite.includes(script)));
 
-check("package alias and safe-suite wiring exist", packageJson.scripts["qa:nexus-web-app-full-audit"] === "node scripts/nexus-web-app-full-audit-qa.js"
-  && qaSuite.includes("scripts/nexus-web-app-full-audit-qa.js"));
+check("package alias and safe-suite wiring exist", packageJson.scripts["qa:nexus-web-app-full-audit"] === "node archive/qa-scripts/nexus-web-app-full-audit-qa.js"
+  && qaSuite.includes("archive/qa-scripts/nexus-web-app-full-audit-qa.js"));
 
 const failures = checks.filter(item => !item.condition);
 if (failures.length) {

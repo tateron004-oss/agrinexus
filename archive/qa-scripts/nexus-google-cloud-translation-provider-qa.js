@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
-const provider = require("../server/google-cloud-translation-provider.js");
+const provider = require("../../server/google-cloud-translation-provider.js");
 
 function response(payload, status = 200) {
   return {

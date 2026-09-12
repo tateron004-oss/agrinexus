@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_E6_STAGED_ACTION_APPROVAL_NO_EXECUTION_REGRESSION_
 const qaName = "nexus-sprint-e6-staged-action-approval-no-execution-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint E6 no-execution regression guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint E6 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E6 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -51,17 +51,17 @@ assertIncludes(doc, [
 
 const requiredArtifacts = [
   ["docs", "NEXUS_SPRINT_E1_STAGED_ACTION_APPROVAL_AUDIT_PRODUCT_BOUNDARY.md"],
-  ["scripts", "nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js"],
   ["docs", "NEXUS_SPRINT_E2_STAGED_ACTION_APPROVAL_RECORD_CONTRACT.md"],
   ["public", "nexus-staged-action-approval-record.js"],
-  ["scripts", "nexus-sprint-e2-staged-action-approval-record-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-e2-staged-action-approval-record-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_E3_STAGED_ACTION_APPROVAL_RECORD_HARNESS.md"],
-  ["scripts", "nexus-sprint-e3-staged-action-approval-record-harness-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-e3-staged-action-approval-record-harness-qa.js"],
   ["docs", "NEXUS_SPRINT_E4_STAGED_ACTION_APPROVAL_AUDIT_EVENT_CONTRACT.md"],
   ["public", "nexus-staged-action-approval-audit-event.js"],
-  ["scripts", "nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_E5_STAGED_ACTION_APPROVAL_LIFECYCLE_HARNESS.md"],
-  ["scripts", "nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa.js"]
+  ["archive", "qa-scripts", "nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa.js"]
 ];
 
 for (const parts of requiredArtifacts) {
@@ -189,16 +189,16 @@ assertIncludes(auditModule, [
 });
 
 const alias = "qa:nexus-sprint-e6-staged-action-approval-no-execution-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E6 QA.");
 
 [
-  "scripts/nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js",
-  "scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js",
-  "scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js",
-  "scripts/nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js",
-  "scripts/nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa.js"
 ].forEach(script => {
   assert(qaSuite.includes(script), `qa-suite must preserve prior Sprint E QA: ${script}`);
 });

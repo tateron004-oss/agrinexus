@@ -7,9 +7,9 @@ const {
   PROTECTED_WORKFORCE_MODE_FLAG_FIELDS,
   normalizeWorkforceModeFeatureFlagState,
   isWorkforceModeVisibleFeatureEnabled
-} = require("../public/nexus-workforce-mode-feature-flag.js");
+} = require("../../public/nexus-workforce-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const qaName = "nexus-sprint-ad2-workforce-mode-feature-flag-contract-qa.js";
 
 assert(exists("docs", docName), "Sprint AD2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint AD2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AD2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AD2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -169,10 +169,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ad2-workforce-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AD2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AD1 QA.");
-assert(qaSuite.includes("scripts/nexus-workforce-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 82 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AD1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-workforce-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 82 QA.");
 
 console.log("[nexus-sprint-ad2-workforce-mode-feature-flag-contract-qa] passed");

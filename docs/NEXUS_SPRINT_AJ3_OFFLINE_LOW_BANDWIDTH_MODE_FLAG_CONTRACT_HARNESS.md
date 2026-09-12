@@ -7,7 +7,7 @@ Sprint AJ3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/offline-low-bandwidth-mode-feature-flags.json`
-- `scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

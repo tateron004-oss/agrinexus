@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   audit: path.join(root, "docs", "NEXUS_100_COMPLETION_SYSTEM_AUDIT_AND_RUNTIME_READINESS.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -146,7 +146,7 @@ realDataRegistry.getRealDataSourceRegistry().forEach(source => {
   assert(source.liveActionEnabled === false, `${source.id} must keep live action disabled.`);
 });
 
-assert(packageData.scripts["qa:nexus-100-completion-system-audit-readiness"] === "node scripts/nexus-100-completion-system-audit-readiness-qa.js", "package.json must expose completion audit QA alias.");
-assert(qaSuite.includes("scripts/nexus-100-completion-system-audit-readiness-qa.js"), "qa-suite.js must include completion audit QA.");
+assert(packageData.scripts["qa:nexus-100-completion-system-audit-readiness"] === "node archive/qa-scripts/nexus-100-completion-system-audit-readiness-qa.js", "package.json must expose completion audit QA alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-100-completion-system-audit-readiness-qa.js"), "qa-suite.js must include completion audit QA.");
 
 console.log("[nexus-100-completion-system-audit-readiness-qa] passed");

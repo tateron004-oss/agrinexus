@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const followUp = require("../server/nexus-assistant-follow-up-context.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const followUp = require("../../server/nexus-assistant-follow-up-context.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -36,7 +36,7 @@ function assertSafeFollowUpResponse(response, label) {
 
 function assertStaticContract() {
   assert(exists("server", "nexus-assistant-follow-up-context.js"), "AR4 follow-up context module must exist.");
-  assert(exists("scripts", "nexus-ar4-follow-up-context-qa.js"), "AR4 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-ar4-follow-up-context-qa.js"), "AR4 QA must exist.");
 
   const followUpSource = read("server", "nexus-assistant-follow-up-context.js");
   const runtimeSource = read("server", "nexus-assistant-runtime-entrypoint.js");
@@ -72,10 +72,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar4-follow-up-context"],
-    "node scripts/nexus-ar4-follow-up-context-qa.js",
+    "node archive/qa-scripts/nexus-ar4-follow-up-context-qa.js",
     "AR4 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar4-follow-up-context-qa.js"), "AR4 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar4-follow-up-context-qa.js"), "AR4 QA must be wired into local-safe suites.");
 }
 
 function buildContextForPrompt(prompt) {

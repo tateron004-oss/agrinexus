@@ -7,7 +7,7 @@ const {
   validateTelehealthModeFlagFixtures
 } = require("./nexus-sprint-z3-telehealth-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-z3-telehealth-mode-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint Z3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint Z3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint Z3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint Z3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint Z3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Z3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "bdf1f9dfdb0efdff18fbe1f14e99a5f9352b8e92",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/telehealth-mode-feature-flags.json",
-  "scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js",
   "telehealthModeReviewAllowed: false",
   "telehealthAccessGuidancePreviewAllowed: false",
   "providerDirectoryPreviewAllowed: false",
@@ -213,14 +213,14 @@ assert(exists("docs", "NEXUS_SPRINT_Z2_TELEHEALTH_MODE_FEATURE_FLAG_CONTRACT.md"
 assert(exists("public", "nexus-telehealth-mode-feature-flag.js"), "Z3 requires Z2 feature flag module.");
 
 const alias = "qa:nexus-sprint-z3-telehealth-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Z3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Z1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-z2-telehealth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Z2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Z1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-z2-telehealth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Z2 QA.");
 
 for (const field of protectedFields) {
-  const visibleOnly = require("../public/nexus-telehealth-mode-feature-flag.js").normalizeTelehealthModeFeatureFlagState({
+  const visibleOnly = require("../../public/nexus-telehealth-mode-feature-flag.js").normalizeTelehealthModeFeatureFlagState({
     enabled: true,
     visibleUiAllowed: true,
     [field]: true

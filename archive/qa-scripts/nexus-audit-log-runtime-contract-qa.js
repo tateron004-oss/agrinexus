@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_AUDIT_LOG_RUNTIME_CONTRACT_PHASE_48.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -10,9 +10,9 @@ const paths = {
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
   auditArchitectureDoc: path.join(root, "docs", "NEXUS_AGENT_AUDIT_LOGGING_ARCHITECTURE.md"),
-  auditArchitectureQa: path.join(root, "scripts", "nexus-audit-log-architecture-qa.js"),
-  confirmationQa: path.join(root, "scripts", "nexus-confirmation-ui-contract-qa.js"),
-  providerBoundaryQa: path.join(root, "scripts", "nexus-provider-handoff-boundary-qa.js"),
+  auditArchitectureQa: path.join(root, "archive", "qa-scripts", "nexus-audit-log-architecture-qa.js"),
+  confirmationQa: path.join(root, "archive", "qa-scripts", "nexus-confirmation-ui-contract-qa.js"),
+  providerBoundaryQa: path.join(root, "archive", "qa-scripts", "nexus-provider-handoff-boundary-qa.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
 };
@@ -321,7 +321,7 @@ assert(invalid.auditEventCategories.length === 0, "invalid event categories must
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-audit-log-runtime-contract"] === "node scripts/nexus-audit-log-runtime-contract-qa.js", "package.json must expose qa:nexus-audit-log-runtime-contract");
-assert(qaSuite.includes("scripts/nexus-audit-log-runtime-contract-qa.js"), "qa-suite.js must include audit log runtime contract QA");
+assert(packageData.scripts["qa:nexus-audit-log-runtime-contract"] === "node archive/qa-scripts/nexus-audit-log-runtime-contract-qa.js", "package.json must expose qa:nexus-audit-log-runtime-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-audit-log-runtime-contract-qa.js"), "qa-suite.js must include audit log runtime contract QA");
 
 console.log("[nexus-audit-log-runtime-contract-qa] passed");

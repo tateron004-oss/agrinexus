@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
-const deploymentModule = require("../public/nexus-os-agrinexus-deployment-profile.js");
+const root = path.resolve(__dirname, "..", "..");
+const deploymentModule = require("../../public/nexus-os-agrinexus-deployment-profile.js");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -113,10 +113,10 @@ assert(server.includes("noExecutionAuthorized: true"), "deployment endpoints rem
 });
 
 assert(
-  packageJson.scripts["qa:nexus-os-agrinexus-deployment"] === "node scripts/nexus-os-agrinexus-deployment-qa.js",
+  packageJson.scripts["qa:nexus-os-agrinexus-deployment"] === "node archive/qa-scripts/nexus-os-agrinexus-deployment-qa.js",
   "package alias exists"
 );
-assert(qaSuite.includes("scripts/nexus-os-agrinexus-deployment-qa.js"), "safe QA suite includes AgriNexus deployment QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-agrinexus-deployment-qa.js"), "safe QA suite includes AgriNexus deployment QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

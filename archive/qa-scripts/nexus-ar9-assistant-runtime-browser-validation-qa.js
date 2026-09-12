@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -49,10 +49,10 @@ function runAr9AssistantRuntimeBrowserValidationQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar9-assistant-runtime-browser-validation"],
-    "node scripts/nexus-ar9-assistant-runtime-browser-validation-qa.js",
+    "node archive/qa-scripts/nexus-ar9-assistant-runtime-browser-validation-qa.js",
     "AR9 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar9-assistant-runtime-browser-validation-qa.js"), "AR9 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar9-assistant-runtime-browser-validation-qa.js"), "AR9 QA must be wired into local-safe suites.");
 
   console.log(JSON.stringify({
     defaultOffBrowserValidated: true,

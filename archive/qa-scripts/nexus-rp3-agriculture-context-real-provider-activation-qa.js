@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const agriculture = require("../server/nexus-agriculture-context-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const agriculture = require("../../server/nexus-agriculture-context-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const TEST_QUERIES = Object.freeze([
   "What crop disease updates should tomato farmers know?",
@@ -25,10 +25,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP3_AGRICULTURE_CONTEXT_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp3-agriculture-context-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP3 agriculture activation doc must exist.");
-  assert(exists("scripts", qaName), "RP3 agriculture activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP3 agriculture activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -91,10 +91,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp3-agriculture-context-real-provider-activation"],
-    "node scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js",
     "RP3 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js"), "RP3 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js"), "RP3 QA must be in safe suites.");
 }
 
 function assertSafeAgricultureResult(result, label, options = {}) {

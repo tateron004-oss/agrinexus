@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const mentalHealthModule = fs.readFileSync(path.join(root, "public", "nexus-mental-health-behavioral-wellness.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -123,6 +123,6 @@ includes(app, "defaultMemoryMode", "app displays mental-health memory mode");
 });
 
 assert(packageJson.scripts["qa:nexus-mental-health-behavioral-wellness"], "package alias exists");
-includes(qaSuite, "scripts/nexus-mental-health-behavioral-wellness-qa.js", "safe suites include mental-health QA");
+includes(qaSuite, "archive/qa-scripts/nexus-mental-health-behavioral-wellness-qa.js", "safe suites include mental-health QA");
 
 console.log("Nexus mental health behavioral wellness QA passed.");

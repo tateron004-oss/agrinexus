@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C4_SOURCE_BACKED_AGRICULTURE_STANDARD_USER_BROWSER_VALIDATION.md"),
   c2Doc: path.join(root, "docs", "NEXUS_SPRINT_C2_EVIDENCE_ACCOUNTABILITY_STANDARD.md"),
@@ -175,8 +175,8 @@ assert(c2Doc.includes("Evidence & Verification"), "Sprint C2 doc must remain ava
 assert(c3Doc.includes("Source-Backed Agriculture Activation Hardening"), "Sprint C3 doc must remain available for C4 validation context.");
 
 const alias = "qa:nexus-sprint-c4-source-backed-agriculture-browser-validation";
-const command = "node scripts/nexus-sprint-c4-source-backed-agriculture-browser-validation-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c4-source-backed-agriculture-browser-validation-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c4-source-backed-agriculture-browser-validation-qa.js"), "qa-suite must include Sprint C4 browser validation QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c4-source-backed-agriculture-browser-validation-qa.js"), "qa-suite must include Sprint C4 browser validation QA.");
 
 console.log("[nexus-sprint-c4-source-backed-agriculture-browser-validation-qa] passed");

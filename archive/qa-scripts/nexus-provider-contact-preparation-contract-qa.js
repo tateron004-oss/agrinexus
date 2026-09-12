@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PROVIDER_CONTACT_PREPARATION_CONTRACT_PHASE_50.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -9,10 +9,10 @@ const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
-  contactPermissionQa: path.join(root, "scripts", "nexus-contact-call-permission-qa.js"),
-  contactResolutionQa: path.join(root, "scripts", "nexus-contact-resolution-qa.js"),
-  providerBoundaryQa: path.join(root, "scripts", "nexus-provider-handoff-boundary-qa.js"),
-  approvalCenterQa: path.join(root, "scripts", "nexus-approval-center-contract-qa.js"),
+  contactPermissionQa: path.join(root, "archive", "qa-scripts", "nexus-contact-call-permission-qa.js"),
+  contactResolutionQa: path.join(root, "archive", "qa-scripts", "nexus-contact-resolution-qa.js"),
+  providerBoundaryQa: path.join(root, "archive", "qa-scripts", "nexus-provider-handoff-boundary-qa.js"),
+  approvalCenterQa: path.join(root, "archive", "qa-scripts", "nexus-approval-center-contract-qa.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
 };
@@ -327,7 +327,7 @@ assert(invalid.contactCategories.length === 0, "invalid contact categories must 
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-provider-contact-preparation-contract"] === "node scripts/nexus-provider-contact-preparation-contract-qa.js", "package.json must expose qa:nexus-provider-contact-preparation-contract");
-assert(qaSuite.includes("scripts/nexus-provider-contact-preparation-contract-qa.js"), "qa-suite.js must include provider contact preparation contract QA");
+assert(packageData.scripts["qa:nexus-provider-contact-preparation-contract"] === "node archive/qa-scripts/nexus-provider-contact-preparation-contract-qa.js", "package.json must expose qa:nexus-provider-contact-preparation-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-provider-contact-preparation-contract-qa.js"), "qa-suite.js must include provider contact preparation contract QA");
 
 console.log("[nexus-provider-contact-preparation-contract-qa] passed");

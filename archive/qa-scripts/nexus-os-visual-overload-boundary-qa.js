@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -76,7 +76,7 @@ assert(app.includes("Nexus Genesis home is audio-only."), "Standard User startup
 assert(app.includes("[data-nexus-os-core-orb]") && app.includes("pointer-events: none"), "orb is non-interactive under the visual boundary");
 assert(app.includes("No provider handoff") || app.includes("noProviderHandoff"), "no-provider-handoff safety remains represented");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(renderBlock), "startup copy does not claim fake execution");
-assert(packageJson.scripts["qa:nexus-os-visual-overload-boundary"] === "node scripts/nexus-os-visual-overload-boundary-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-visual-overload-boundary-qa.js"), "safe QA suite includes Rail 2 QA");
+assert(packageJson.scripts["qa:nexus-os-visual-overload-boundary"] === "node archive/qa-scripts/nexus-os-visual-overload-boundary-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-visual-overload-boundary-qa.js"), "safe QA suite includes Rail 2 QA");
 
 console.log("Nexus OS visual overload boundary QA passed.");

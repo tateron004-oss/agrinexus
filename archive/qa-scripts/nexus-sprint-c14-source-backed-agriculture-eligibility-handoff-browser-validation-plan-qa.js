@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C14_SOURCE_BACKED_AGRICULTURE_ELIGIBILITY_HANDOFF_BROWSER_VALIDATION_PLAN.md"),
   c13Doc: path.join(root, "docs", "NEXUS_SPRINT_C13_SOURCE_BACKED_AGRICULTURE_ELIGIBILITY_HANDOFF_CONTRACT.md"),
@@ -177,8 +177,8 @@ assert(!app.includes(c13FileName), "public/app.js must not reference C13 module.
 assert(!server.includes(c13FileName), "server.js must not explicitly inject or special-case C13 module.");
 
 const alias = "qa:nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan";
-const command = "node scripts/nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan-qa.js"), "qa-suite must include Sprint C14 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan-qa.js"), "qa-suite must include Sprint C14 QA.");
 
 console.log("[nexus-sprint-c14-source-backed-agriculture-eligibility-handoff-browser-validation-plan-qa] passed");

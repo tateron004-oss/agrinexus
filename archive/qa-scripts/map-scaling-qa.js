@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -53,7 +53,7 @@ assert(mobileBridge.includes("mapsAndLocation"), "Native/mobile map and location
 assert(foundationConfig.includes("MAP_TILE_PROVIDER"), "Foundation map provider config should remain available.");
 assert(mapsService.includes("tileProvider()"), "Foundation maps service should expose provider metadata.");
 assert(server.includes("/api/config") && server.includes("publicMapConfig()") && server.includes("leaflet-"), "Server config should report public Leaflet map runtime metadata.");
-assert(pkg.scripts["map:scaling-qa"] === "node scripts/map-scaling-qa.js", "package script should expose map scaling QA.");
+assert(pkg.scripts["map:scaling-qa"] === "node archive/qa-scripts/map-scaling-qa.js", "package script should expose map scaling QA.");
 
 const mapCss = css
   .split(/\r?\n/)

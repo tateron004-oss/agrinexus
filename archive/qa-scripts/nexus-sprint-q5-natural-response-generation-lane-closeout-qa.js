@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_NATURAL_RESPONSE_GENERATION_FEATURE_FLAG_STATE,
   normalizeNaturalResponseGenerationFeatureFlagState
-} = require("../public/nexus-natural-response-generation-feature-flag.js");
+} = require("../../public/nexus-natural-response-generation-feature-flag.js");
 const {
   protectedFields,
   loadNaturalResponseGenerationFlagFixtures,
   validateNaturalResponseGenerationFlagFixtures
 } = require("./nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_Q5_NATURAL_RESPONSE_GENERATION_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-q5-natural-response-generation-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint Q5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint Q5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Q5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-natural-response-generation-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-natural-response-generation-feature-flag.js");
-const q3Harness = read("scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
+const q3Harness = read("archive", "qa-scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
 const fixtures = loadNaturalResponseGenerationFlagFixtures();
 
 assertIncludes(doc, [
@@ -185,7 +185,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint Q5 requires prior Sprint Q QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint Q5 requires prior Sprint Q QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint Q QA: ${requiredScript}`);
 }
 
@@ -327,7 +327,7 @@ for (const source of [featureFlagModule, q3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-q5-natural-response-generation-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Q5 QA.");
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const bridge = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "java", "com", "agrinexus", "mobile", "NativeBridge.kt"), "utf8");
 const controller = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "java", "com", "agrinexus", "mobile", "NexusNativeController.kt"), "utf8");
 const manifest = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");

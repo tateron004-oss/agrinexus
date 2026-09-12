@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_USER_PROFILE_FEATURE_FLAG_STATE,
   normalizeUserProfileFeatureFlagState
-} = require("../public/nexus-user-profile-feature-flag.js");
+} = require("../../public/nexus-user-profile-feature-flag.js");
 const {
   protectedFields,
   loadUserProfileFlagFixtures,
   validateUserProfileFlagFixtures
 } = require("./nexus-sprint-j3-user-profile-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_J5_USER_PROFILE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-j5-user-profile-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint J5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint J5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint J5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-user-profile-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-user-profile-feature-flag.js");
-const j3Harness = read("scripts", "nexus-sprint-j3-user-profile-flag-contract-harness.js");
+const j3Harness = read("archive", "qa-scripts", "nexus-sprint-j3-user-profile-flag-contract-harness.js");
 const fixtures = loadUserProfileFlagFixtures();
 
 assertIncludes(doc, [
@@ -164,7 +164,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint J5 requires prior Sprint J QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint J5 requires prior Sprint J QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint J QA: ${requiredScript}`);
 }
 
@@ -291,7 +291,7 @@ for (const source of [featureFlagModule, j3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-j5-user-profile-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint J5 QA.");
 

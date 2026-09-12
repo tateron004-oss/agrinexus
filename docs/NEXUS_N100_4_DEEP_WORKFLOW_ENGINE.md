@@ -17,7 +17,7 @@ The new deep workflow engine defines reusable workflow templates with:
 - approval checkpoints
 - cancel, restart, recover, and safe retry after provider failure
 
-The engine is implemented in `server/nexus-n100-deep-workflow-engine.js` and tested by `scripts/nexus-n100-4-deep-workflow-engine-qa.js`.
+The engine is implemented in `server/nexus-n100-deep-workflow-engine.js` and tested by `archive/qa-scripts/nexus-n100-4-deep-workflow-engine-qa.js`.
 
 ## Supported Templates
 

@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const stylesPath = path.join(root, "public", "styles.css");
 const serverPath = path.join(root, "server.js");

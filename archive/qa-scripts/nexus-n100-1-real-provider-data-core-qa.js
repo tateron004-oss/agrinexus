@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const n100 = require("../server/nexus-n100-real-provider-data-core.js");
+const n100 = require("../../server/nexus-n100-real-provider-data-core.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -90,7 +90,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-real-provider-data-core.js"), "N100-1 core module must exist.");
   assert(exists("docs", "NEXUS_N100_1_REAL_PROVIDER_DATA_CONNECTION_CORE.md"), "N100-1 doc must exist.");
-  assert(exists("scripts", "nexus-n100-1-real-provider-data-core-qa.js"), "N100-1 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-1-real-provider-data-core-qa.js"), "N100-1 QA must exist.");
 
   [
     "N100_REAL_PROVIDER_PROMPTS",
@@ -136,10 +136,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-1-real-provider-data-core"],
-    "node scripts/nexus-n100-1-real-provider-data-core-qa.js",
+    "node archive/qa-scripts/nexus-n100-1-real-provider-data-core-qa.js",
     "N100-1 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-1-real-provider-data-core-qa.js"), "N100-1 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-1-real-provider-data-core-qa.js"), "N100-1 QA must be wired into local-safe suites.");
 }
 
 async function assertPromptCoverage() {

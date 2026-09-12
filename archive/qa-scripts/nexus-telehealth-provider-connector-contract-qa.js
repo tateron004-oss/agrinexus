@@ -1,15 +1,15 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_TELEHEALTH_PROVIDER_CONNECTOR_CONTRACT_PHASE_37.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
   module: path.join(root, "public", "nexus-telehealth-provider-connector-contract.js"),
   providerUniverse: path.join(root, "public", "nexus-provider-source-universe.js"),
-  telehealthCameraQa: path.join(root, "scripts", "telehealth-camera-discoverability-qa.js"),
-  telehealthVideoQa: path.join(root, "scripts", "telehealth-video-handoff-qa.js"),
-  telehealthPrivacyQa: path.join(root, "scripts", "telehealth-privacy-role-qa.js"),
+  telehealthCameraQa: path.join(root, "archive", "qa-scripts", "telehealth-camera-discoverability-qa.js"),
+  telehealthVideoQa: path.join(root, "archive", "qa-scripts", "telehealth-video-handoff-qa.js"),
+  telehealthPrivacyQa: path.join(root, "archive", "qa-scripts", "telehealth-privacy-role-qa.js"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
@@ -274,7 +274,7 @@ assert(invalid.connectorStatus === "not_configured", "invalid connector status m
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-telehealth-provider-connector-contract"] === "node scripts/nexus-telehealth-provider-connector-contract-qa.js", "package.json must expose qa:nexus-telehealth-provider-connector-contract");
-assert(qaSuite.includes("scripts/nexus-telehealth-provider-connector-contract-qa.js"), "qa-suite.js must include telehealth provider connector contract QA");
+assert(packageData.scripts["qa:nexus-telehealth-provider-connector-contract"] === "node archive/qa-scripts/nexus-telehealth-provider-connector-contract-qa.js", "package.json must expose qa:nexus-telehealth-provider-connector-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-telehealth-provider-connector-contract-qa.js"), "qa-suite.js must include telehealth provider connector contract QA");
 
 console.log("[nexus-telehealth-provider-connector-contract-qa] passed");

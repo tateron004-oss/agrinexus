@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -115,7 +115,7 @@ const runtimeSource = functionNames.map(name => extracted[name]).join("\n");
 ].forEach(term => assert(!runtimeSource.includes(term), `Nexus Intelligence Brain v1 must not introduce ${term}`));
 
 assert(pkg.scripts["qa:nexus-intelligence-brain-v1"], "package alias should run Nexus Intelligence Brain v1 QA");
-assert(qaSuite.includes("scripts/nexus-intelligence-brain-v1-qa.js"), "qa-suite should include Nexus Intelligence Brain v1 QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-intelligence-brain-v1-qa.js"), "qa-suite should include Nexus Intelligence Brain v1 QA");
 assert(
   app.indexOf("if (handleNexusOpenDialogueAgentCommand(command)) return true;") < app.indexOf("if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;")
     && app.indexOf("if (handleNexusOpenDialogueAgentCommand(command)) return true;") < app.indexOf("if (handleNexusSimulationCaptionCommand(command)) return true;"),

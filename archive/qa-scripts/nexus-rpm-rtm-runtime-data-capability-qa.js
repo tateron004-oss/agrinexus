@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -112,12 +112,12 @@ assert(app.includes("document.addEventListener(\"input\"") && app.includes("upda
 
 assert.equal(
   pkg.scripts["qa:nexus-rpm-rtm-runtime-data-capability"],
-  "node scripts/nexus-rpm-rtm-runtime-data-capability-qa.js",
+  "node archive/qa-scripts/nexus-rpm-rtm-runtime-data-capability-qa.js",
   "package.json should expose RPM/RTM runtime data QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-rpm-rtm-runtime-data-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-rpm-rtm-runtime-data-capability-qa.js"),
   "qa-suite should include RPM/RTM runtime data QA in safe suites"
 );
 

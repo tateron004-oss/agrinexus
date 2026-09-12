@@ -7,9 +7,9 @@ const {
 const {
   buildStagedActionEvidenceAccountability,
   validateStagedActionEvidenceAccountability
-} = require("../public/nexus-staged-action-evidence-mapping.js");
+} = require("../../public/nexus-staged-action-evidence-mapping.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const qaName = "nexus-sprint-d4-staged-action-evidence-accountability-mapping-qa
 
 assert(exists("docs", docName), "Sprint D4 evidence accountability doc must exist.");
 assert(exists("public", moduleName), "Sprint D4 evidence mapping module must exist.");
-assert(exists("scripts", qaName), "Sprint D4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint D4 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -115,7 +115,7 @@ fixtures.forEach(action => {
 });
 
 const alias = "qa:nexus-sprint-d4-staged-action-evidence-accountability-mapping";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint D4 QA.");
 

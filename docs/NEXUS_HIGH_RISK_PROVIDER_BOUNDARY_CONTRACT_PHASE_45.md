@@ -202,7 +202,7 @@ Nexus may say a provider connection is not configured yet, requires a verified p
 
 ## QA Expectations
 
-`scripts/nexus-high-risk-provider-boundary-contract-qa.js` verifies:
+`archive/qa-scripts/nexus-high-risk-provider-boundary-contract-qa.js` verifies:
 
 - the Phase 45 roadmap row remains present;
 - provider source universe payment and emergency partner categories remain execution-disabled by default;

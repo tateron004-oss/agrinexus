@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -132,10 +132,10 @@ includesAll(server, [
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-world-demonstration-release"],
-  "node scripts/nexus-world-demonstration-release-qa.js",
+  "node archive/qa-scripts/nexus-world-demonstration-release-qa.js",
   "package alias must point to focused world demonstration release QA"
 );
-assert(qaSuite.includes("\"scripts/nexus-world-demonstration-release-qa.js\""), "qa-suite must include world demonstration release QA");
+assert(qaSuite.includes("\"archive/qa-scripts/nexus-world-demonstration-release-qa.js\""), "qa-suite must include world demonstration release QA");
 
 console.log(JSON.stringify({
   ok: true,

@@ -2,11 +2,11 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const includes = (haystack, needle, label) => assert(haystack.includes(needle), `${label} must include ${needle}`);
 const excludes = (haystack, needle, label) => assert(!haystack.includes(needle), `${label} must not include ${needle}`);
-const runtime = require("../public/nexus-message-preparation-runtime.js");
+const runtime = require("../../public/nexus-message-preparation-runtime.js");
 
 assert(runtime, "message preparation runtime should load");
 assert.equal(typeof runtime.prepareMessage, "function");
@@ -205,10 +205,10 @@ const doc = read("docs/NEXUS_MESSAGE_PREPARATION_RUNTIME.md");
 ].forEach(text => includes(doc, text, "message prep doc"));
 
 const pkg = JSON.parse(read("package.json"));
-assert.equal(pkg.scripts["qa:nexus-message-preparation-runtime"], "node scripts/nexus-message-preparation-runtime-qa.js");
+assert.equal(pkg.scripts["qa:nexus-message-preparation-runtime"], "node archive/qa-scripts/nexus-message-preparation-runtime-qa.js");
 
 const qaSuite = read("scripts/qa-suite.js");
-includes(qaSuite, "scripts/nexus-message-preparation-runtime-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-message-preparation-runtime-qa.js", "qa-suite wiring");
 
 const forbiddenClaims = [
   "Email sent successfully",

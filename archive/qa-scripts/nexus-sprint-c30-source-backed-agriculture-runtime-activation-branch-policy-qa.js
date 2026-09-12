@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C30 runtime activation branch policy must exist");
-assert(exists("scripts", qaName), "Sprint C30 runtime activation branch policy QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C30 runtime activation branch policy QA must exist");
 
 for (const prior of [
   "NEXUS_SPRINT_C29_SOURCE_BACKED_AGRICULTURE_RUNTIME_WIRING_ISSUE_TEMPLATE.md",
@@ -176,7 +176,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c30-source-backed-agriculture-runtime-activation-branch-policy";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C30 QA.");
 

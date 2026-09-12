@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -130,11 +130,11 @@ includesAll(audioCompanion, [
 assert(!audioCompanion.includes("renderNexusTrueCommandComposer()"), "audio companion must not mount a general composer");
 
 assert(
-  packageJson.scripts["qa:nexus-companion-voice-activation-flow"] === "node scripts/nexus-companion-voice-activation-flow-qa.js",
+  packageJson.scripts["qa:nexus-companion-voice-activation-flow"] === "node archive/qa-scripts/nexus-companion-voice-activation-flow-qa.js",
   "package alias must run companion voice activation QA"
 );
 assert(
-  qaSuite.includes("scripts/nexus-companion-voice-activation-flow-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-companion-voice-activation-flow-qa.js"),
   "qa-suite must include companion voice activation QA"
 );
 

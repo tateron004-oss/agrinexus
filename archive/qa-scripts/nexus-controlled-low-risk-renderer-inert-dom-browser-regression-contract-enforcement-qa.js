@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -105,10 +105,10 @@ for (const parts of [
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_INERT_DOM_PROTOTYPE_TEST_FIXTURE_ONLY.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_ON_TEST_HARNESS_IMPLEMENTATION.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_ON_BROWSER_REGRESSION_VALIDATION.md"],
-  ["scripts", "nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"],
-  ["scripts", "nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"]
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -271,11 +271,11 @@ assert.equal(createCard({
 }), null, "helper must require injected test document fixture and must not use real document implicitly");
 
 assert(packageJson.includes("\"qa:nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement\""), "package.json must expose Phase 13C QA alias");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"), "nexus-workforce suite must include Phase 13C QA");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"), "nexus-workforce suite must keep Phase 13B QA");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must keep Phase 13A QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must keep Phase 12Y QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"), "nexus-workforce suite must keep Phase 12Z QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"), "nexus-workforce suite must include Phase 13C QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"), "nexus-workforce suite must keep Phase 13B QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must keep Phase 13A QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must keep Phase 12Y QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"), "nexus-workforce suite must keep Phase 12Z QA");
 
 console.log("Nexus controlled low-risk renderer inert DOM browser regression and contract enforcement QA passed");
 console.log("- Standard User index remains unwired and the helper is not invoked during startup");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C_CONTROLLED_AGRICULTURE_RESPONSE_CARD_ACTIVATION_PLAN.md"),
   packageJson: path.join(root, "package.json"),
@@ -71,8 +71,8 @@ const qaSuite = fs.readFileSync(files.qaSuite, "utf8");
 ].forEach(prompt => assert(doc.includes(prompt), `manual validation prompt must be documented: ${prompt}`));
 
 const alias = "qa:nexus-sprint-c-agriculture-response-card-plan";
-const script = "node scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js";
+const script = "node archive/qa-scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === script, `${alias} package script must run the Sprint C activation plan QA.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js"), "qa-suite must include Sprint C activation plan QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js"), "qa-suite must include Sprint C activation plan QA.");
 
 console.log("[nexus-sprint-c-agriculture-response-card-activation-plan-qa] passed");

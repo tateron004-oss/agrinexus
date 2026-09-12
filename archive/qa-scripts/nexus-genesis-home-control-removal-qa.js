@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -116,8 +116,8 @@ includesAll(speechResume, [
   "recognition-restart-requested"
 ], "speech-to-listening restart");
 
-assert(pkg.scripts["qa:nexus-genesis-home-control-removal"] === "node scripts/nexus-genesis-home-control-removal-qa.js", "package alias missing");
-assert(qaSuite.includes("scripts/nexus-genesis-home-control-removal-qa.js"), "qa-suite missing home control removal QA");
+assert(pkg.scripts["qa:nexus-genesis-home-control-removal"] === "node archive/qa-scripts/nexus-genesis-home-control-removal-qa.js", "package alias missing");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-home-control-removal-qa.js"), "qa-suite missing home control removal QA");
 
 console.log(JSON.stringify({
   ok: true,

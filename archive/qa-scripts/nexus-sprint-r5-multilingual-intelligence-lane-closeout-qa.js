@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_MULTILINGUAL_INTELLIGENCE_FEATURE_FLAG_STATE,
   normalizeMultilingualIntelligenceFeatureFlagState
-} = require("../public/nexus-multilingual-intelligence-feature-flag.js");
+} = require("../../public/nexus-multilingual-intelligence-feature-flag.js");
 const {
   protectedFields,
   loadMultilingualIntelligenceFlagFixtures,
   validateMultilingualIntelligenceFlagFixtures
 } = require("./nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_R5_MULTILINGUAL_INTELLIGENCE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint R5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint R5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint R5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-multilingual-intelligence-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-multilingual-intelligence-feature-flag.js");
-const r3Harness = read("scripts", "nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js");
+const r3Harness = read("archive", "qa-scripts", "nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js");
 const fixtures = loadMultilingualIntelligenceFlagFixtures();
 
 assertIncludes(doc, [
@@ -191,7 +191,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint R5 requires prior Sprint R QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint R5 requires prior Sprint R QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint R QA: ${requiredScript}`);
 }
 
@@ -304,9 +304,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-r5-multilingual-intelligence-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js",
   "package.json must expose Sprint R5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js"), "qa-suite must include Sprint R5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js"), "qa-suite must include Sprint R5 QA.");
 
 console.log("[nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa] passed");

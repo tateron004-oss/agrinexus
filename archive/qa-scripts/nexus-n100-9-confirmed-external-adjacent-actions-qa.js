@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const adjacent = require("../server/nexus-n100-confirmed-external-adjacent-actions.js");
-const permissions = require("../server/nexus-n100-permission-consent-manager.js");
+const adjacent = require("../../server/nexus-n100-confirmed-external-adjacent-actions.js");
+const permissions = require("../../server/nexus-n100-permission-consent-manager.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -26,7 +26,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-confirmed-external-adjacent-actions.js"), "N100-9 module must exist.");
   assert(exists("docs", "NEXUS_N100_9_CONFIRMED_EXTERNAL_ADJACENT_ACTIONS.md"), "N100-9 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-9-confirmed-external-adjacent-actions-qa.js"), "N100-9 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-9-confirmed-external-adjacent-actions-qa.js"), "N100-9 QA must exist.");
 
   [
     "LOW_RISK_EXTERNAL_ADJACENT_ACTIONS",
@@ -77,10 +77,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-9-confirmed-external-adjacent-actions"],
-    "node scripts/nexus-n100-9-confirmed-external-adjacent-actions-qa.js",
+    "node archive/qa-scripts/nexus-n100-9-confirmed-external-adjacent-actions-qa.js",
     "N100-9 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-9-confirmed-external-adjacent-actions-qa.js"), "N100-9 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-9-confirmed-external-adjacent-actions-qa.js"), "N100-9 QA must be wired into local-safe suites.");
 }
 
 function grantedPermission(capability) {

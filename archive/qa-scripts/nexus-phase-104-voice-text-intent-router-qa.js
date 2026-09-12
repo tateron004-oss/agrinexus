@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const routerPath = path.join(root, "public", "nexus-voice-text-intent-router.js");
 const indexPath = path.join(root, "public", "index.html");
 const appPath = path.join(root, "public", "app.js");
@@ -123,7 +123,7 @@ assert(runtimeSource.includes("nexus-voice-text-intent-router.js?v=nexus-phase-1
 assert(runtimeSource.includes("NexusVoiceTextIntentRouter"), "app runtime must reference the router API.");
 assert(runtimeSource.indexOf("nexus-voice-text-intent-router.js?v=nexus-phase-104") < runtimeSource.indexOf("/app.js?v="), "router must load before app.js.");
 
-assert(packageData.scripts["qa:nexus-phase-104-voice-text-intent-router"] === "node scripts/nexus-phase-104-voice-text-intent-router-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-phase-104-voice-text-intent-router-qa.js"), "qa-suite must include router QA.");
+assert(packageData.scripts["qa:nexus-phase-104-voice-text-intent-router"] === "node archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js"), "qa-suite must include router QA.");
 
 console.log("[nexus-phase-104-voice-text-intent-router-qa] passed");

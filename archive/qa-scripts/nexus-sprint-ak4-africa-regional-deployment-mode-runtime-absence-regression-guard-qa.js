@@ -5,7 +5,7 @@ const {
   DEFAULT_AFRICA_REGIONAL_DEPLOYMENT_MODE_FEATURE_FLAG_STATE,
   PROTECTED_AFRICA_REGIONAL_DEPLOYMENT_MODE_FLAG_FIELDS,
   normalizeAfricaRegionalDeploymentModeFeatureFlagState
-} = require("../public/nexus-africa-regional-deployment-mode-feature-flag.js");
+} = require("../../public/nexus-africa-regional-deployment-mode-feature-flag.js");
 const {
   protectedFields,
   loadAfricaRegionalDeploymentModeFlagFixtures,
@@ -13,7 +13,7 @@ const {
   validateAfricaRegionalDeploymentModeFlagFixtures
 } = require("./nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -34,7 +34,7 @@ const docName = "NEXUS_SPRINT_AK4_AFRICA_REGIONAL_DEPLOYMENT_MODE_RUNTIME_ABSENC
 const qaName = "nexus-sprint-ak4-africa-regional-deployment-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AK4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AK4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AK4 QA script must exist.");
 
 const doc = read("docs", docName);
 const runtime = [read("public", "index.html"), read("public", "app.js"), read("server.js")].join("\n");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-africa-regional-deployment-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-africa-regional-deployment-mode-feature-flag.js");
-const ak3Harness = read("scripts", "nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js");
+const ak3Harness = read("archive", "qa-scripts", "nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js");
 const fixtures = loadAfricaRegionalDeploymentModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -66,7 +66,7 @@ assertIncludes(doc, [
   "Phase 89 Africa Regional Deployment Mode readiness contract",
   "public/nexus-africa-regional-deployment-mode-readiness-contract.js",
   "public/nexus-africa-regional-deployment-mode-feature-flag.js",
-  "scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js",
   "fixtures/nexus/africa-regional-deployment-mode-feature-flags.json",
   "Sprint AK QA scripts"
 ], "AK4 protected artifacts");
@@ -149,7 +149,7 @@ for (const requiredPath of [
   ["public", "nexus-africa-regional-deployment-mode-readiness-contract.js"],
   ["public", "nexus-africa-regional-deployment-mode-feature-flag.js"],
   ["fixtures", "nexus", "africa-regional-deployment-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AK4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -266,12 +266,12 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ak4-africa-regional-deployment-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AK4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AK3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ak2-africa-regional-deployment-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AK2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ak1-africa-regional-deployment-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AK1 QA.");
-assert(qaSuite.includes("scripts/nexus-africa-regional-deployment-mode-readiness-contract-qa.js"), "qa-suite must continue to include Africa Regional Deployment Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AK3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ak2-africa-regional-deployment-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AK2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ak1-africa-regional-deployment-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AK1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-africa-regional-deployment-mode-readiness-contract-qa.js"), "qa-suite must continue to include Africa Regional Deployment Mode readiness QA.");
 
 console.log("[nexus-sprint-ak4-africa-regional-deployment-mode-runtime-absence-regression-guard-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -90,7 +90,7 @@ const composerBlock = blockBetween(app, "function composeNexusConversationStyleR
 ].forEach(token => includes(app, token, `domain adapter API exposure ${token}`));
 
 assert(!/(we diagnosed|we prescribed|i diagnosed|i prescribed|i sent the message|i started the call|i completed payment|i booked the appointment|i dispatched|provider accepted)/i.test(contractBlock + composerBlock), "domain adapters avoid unsafe completion assertions");
-assert(pkg.scripts["qa:nexus-domain-tone-safety-adapters"] === "node scripts/nexus-domain-tone-safety-adapters-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-domain-tone-safety-adapters-qa.js"), "safe QA suite includes domain tone safety adapter QA");
+assert(pkg.scripts["qa:nexus-domain-tone-safety-adapters"] === "node archive/qa-scripts/nexus-domain-tone-safety-adapters-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-domain-tone-safety-adapters-qa.js"), "safe QA suite includes domain tone safety adapter QA");
 
 console.log("Nexus domain tone safety adapters QA passed.");

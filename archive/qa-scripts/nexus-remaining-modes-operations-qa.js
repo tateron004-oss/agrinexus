@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -123,10 +123,10 @@ const operationsBlock = server.slice(
 
 assert.equal(
   packageJson.scripts["qa:nexus-remaining-modes-operations"],
-  "node scripts/nexus-remaining-modes-operations-qa.js",
+  "node archive/qa-scripts/nexus-remaining-modes-operations-qa.js",
   "package.json must expose qa:nexus-remaining-modes-operations"
 );
-assert(qaSuite.includes("scripts/nexus-remaining-modes-operations-qa.js"), "qa-suite.js must include remaining modes operations QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-remaining-modes-operations-qa.js"), "qa-suite.js must include remaining modes operations QA.");
 
 async function waitForHealth(port, child) {
   const deadline = Date.now() + 12000;

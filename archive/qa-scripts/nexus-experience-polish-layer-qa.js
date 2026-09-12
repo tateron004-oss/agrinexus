@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -159,12 +159,12 @@ check("no fake external execution claims introduced", hasAll(polishBlock, [
   "No flight, imaging, or operator dispatch will start"
 ]) && !/(was sent successfully|provider accepted|payment completed|appointment booked|dispatch started|diagnosed|prescribed)/i.test(polishBlock));
 
-check("package alias exists", packageJson.scripts["qa:nexus-experience-polish-layer"] === "node scripts/nexus-experience-polish-layer-qa.js");
+check("package alias exists", packageJson.scripts["qa:nexus-experience-polish-layer"] === "node archive/qa-scripts/nexus-experience-polish-layer-qa.js");
 
 check("safe suites include experience polish QA", hasAll(qaSuite, [
-  "scripts/nexus-experience-polish-layer-qa.js",
-  "scripts/nexus-conversational-presence-layer-qa.js",
-  "scripts/nexus-platform-predictive-intelligence-qa.js"
+  "archive/qa-scripts/nexus-experience-polish-layer-qa.js",
+  "archive/qa-scripts/nexus-conversational-presence-layer-qa.js",
+  "archive/qa-scripts/nexus-platform-predictive-intelligence-qa.js"
 ]));
 
 check("build token bumped with frontend change", hasAll(app, [

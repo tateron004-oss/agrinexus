@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TRUST_FRAUD_RISK_DETECTION_FEATURE_FLAG_STATE,
   normalizeTrustFraudRiskDetectionFeatureFlagState
-} = require("../public/nexus-trust-fraud-risk-detection-feature-flag.js");
+} = require("../../public/nexus-trust-fraud-risk-detection-feature-flag.js");
 const {
   protectedFields,
   loadTrustFraudRiskDetectionFlagFixtures,
   validateTrustFraudRiskDetectionFlagFixtures
 } = require("./nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_W5_TRUST_FRAUD_RISK_DETECTION_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint W5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint W5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint W5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-trust-fraud-risk-detection-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-trust-fraud-risk-detection-feature-flag.js");
-const w3Harness = read("scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
+const w3Harness = read("archive", "qa-scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
 const fixtures = loadTrustFraudRiskDetectionFlagFixtures();
 
 assertIncludes(doc, [
@@ -197,7 +197,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint W5 requires prior Sprint W QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint W5 requires prior Sprint W QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint W QA: ${requiredScript}`);
 }
 
@@ -330,9 +330,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js",
   "package.json must expose Sprint W5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js"), "qa-suite must include Sprint W5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js"), "qa-suite must include Sprint W5 QA.");
 
 console.log("[nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa] passed");

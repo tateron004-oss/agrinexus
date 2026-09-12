@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -47,9 +47,9 @@ for (const parts of [
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_VISIBLE_UI_DESIGN_CONTRACT.md"],
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_INERT_DOM_PROTOTYPE_TEST_FIXTURE_ONLY.md"],
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_INERT_DOM_BROWSER_REGRESSION_AND_CONTRACT_ENFORCEMENT.md"],
-  ["scripts", "nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"],
-  ["scripts", "nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"],
-  ["scripts", "nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"]
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"],
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -158,10 +158,10 @@ assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not 
 assert(!app.includes("buildNexusLowRiskInertRendererPrototype"), "public/app.js must not invoke renderer prototype builder");
 
 assert(packageJson.includes("\"qa:nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture\""), "package.json must expose Phase 13D QA alias");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js"), "nexus-workforce suite must include Phase 13D QA");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"), "nexus-workforce suite must keep Phase 13C QA");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"), "nexus-workforce suite must keep Phase 13B QA");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must keep Phase 13A QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js"), "nexus-workforce suite must include Phase 13D QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js"), "nexus-workforce suite must keep Phase 13C QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js"), "nexus-workforce suite must keep Phase 13B QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must keep Phase 13A QA");
 
 console.log("Nexus controlled low-risk renderer test-only visual snapshot fixture QA passed");
 console.log("- snapshot fixture is test-only, static, inert, and outside public runtime loading");

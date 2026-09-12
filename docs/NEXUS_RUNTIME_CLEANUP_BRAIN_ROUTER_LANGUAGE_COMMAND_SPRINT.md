@@ -20,9 +20,9 @@ Changed runtime files:
 
 Changed QA/wiring files:
 
-- `scripts/nexus-standard-user-ui-cleanup-qa.js`
-- `scripts/nexus-brain-router-strengthening-qa.js`
-- `scripts/nexus-language-command-mode-qa.js`
+- `archive/qa-scripts/nexus-standard-user-ui-cleanup-qa.js`
+- `archive/qa-scripts/nexus-brain-router-strengthening-qa.js`
+- `archive/qa-scripts/nexus-language-command-mode-qa.js`
 - `scripts/qa-suite.js`
 - `package.json`
 
@@ -170,9 +170,9 @@ Browser notes:
 
 New scripts:
 
-- `scripts/nexus-standard-user-ui-cleanup-qa.js`
-- `scripts/nexus-brain-router-strengthening-qa.js`
-- `scripts/nexus-language-command-mode-qa.js`
+- `archive/qa-scripts/nexus-standard-user-ui-cleanup-qa.js`
+- `archive/qa-scripts/nexus-brain-router-strengthening-qa.js`
+- `archive/qa-scripts/nexus-language-command-mode-qa.js`
 
 New package aliases:
 

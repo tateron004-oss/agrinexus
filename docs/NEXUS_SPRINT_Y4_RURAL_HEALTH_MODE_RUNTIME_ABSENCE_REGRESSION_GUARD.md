@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-rural-health-mode-readiness-contract.js`;
 - `public/nexus-rural-health-mode-feature-flag.js`;
-- `scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js`;
 - `fixtures/nexus/rural-health-mode-feature-flags.json`;
 - Sprint Y QA scripts.
 

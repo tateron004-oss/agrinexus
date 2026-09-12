@@ -6,7 +6,7 @@ const {
   validateApprovalAuditPersistenceFixtures
 } = require("./nexus-sprint-g3-approval-audit-persistence-fixture-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -27,12 +27,12 @@ const qaName = "nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js
 const harnessName = "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js";
 
 assert(exists("docs", docName), "Sprint G3 doc must exist.");
-assert(exists("scripts", qaName), "Sprint G3 QA script must exist.");
-assert(exists("scripts", harnessName), "Sprint G3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint G3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint G3 harness must exist.");
 assert(exists("fixtures", "nexus", "approval-audit-persistence-lifecycle.json"), "Sprint G3 lifecycle fixture must exist.");
 
 const doc = read("docs", docName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -130,7 +130,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-g3-approval-audit-persistence-fixture-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint G3 QA.");
 

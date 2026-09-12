@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const preview = require("../server/nexus-assistant-live-source-orchestrator-preview.js");
+const preview = require("../../server/nexus-assistant-live-source-orchestrator-preview.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -134,10 +134,10 @@ function runRt5AssistantDialogueLiveSourceOrchestratorPreviewQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt5-assistant-dialogue-live-source-orchestrator-preview"],
-    "node scripts/nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js",
+    "node archive/qa-scripts/nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js",
     "RT5 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js"), "RT5 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js"), "RT5 QA must be in safe suites.");
 
   console.log("[nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa] passed");
 }

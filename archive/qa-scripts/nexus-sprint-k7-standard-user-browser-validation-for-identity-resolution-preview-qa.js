@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const mapperModule = "nexus-contact-provider-identity-evidence-mapper.js";
 const contractModule = "nexus-contact-provider-identity-contract.js";
 
 assert(exists("docs", docName), "K7 validation doc must exist.");
-assert(exists("scripts", qaName), "K7 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K7 QA must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -84,9 +84,9 @@ assert(exists("public", guardModule), "K5 flag guard must remain present.");
 assert(exists("public", previewModule), "K6 preview model must remain present.");
 
 const alias = "qa:nexus-sprint-k7-standard-user-browser-validation-for-identity-resolution-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-k6-flag-gated-identity-resolution-preview-qa.js"), "K7 requires K6 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-k6-flag-gated-identity-resolution-preview-qa.js"), "K7 requires K6 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-k7-standard-user-browser-validation-for-identity-resolution-preview-qa] passed");

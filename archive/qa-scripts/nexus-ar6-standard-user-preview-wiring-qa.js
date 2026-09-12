@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -70,10 +70,10 @@ function assertStaticWiring() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar6-standard-user-preview-wiring"],
-    "node scripts/nexus-ar6-standard-user-preview-wiring-qa.js",
+    "node archive/qa-scripts/nexus-ar6-standard-user-preview-wiring-qa.js",
     "AR6 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar6-standard-user-preview-wiring-qa.js"), "AR6 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar6-standard-user-preview-wiring-qa.js"), "AR6 QA must be wired into local-safe suites.");
 }
 
 function assertRuntimeResponsesRemainPreviewOnly() {

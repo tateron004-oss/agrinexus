@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const modulePath = path.join(root, "public", "nexus-provider-adapter-contracts.js");
 const indexPath = path.join(root, "public", "index.html");
 const appPath = path.join(root, "public", "app.js");
@@ -124,11 +124,11 @@ assert.equal(snapshot.adapters.length, adapters.length, "snapshot should include
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-6-provider-adapter-contracts"],
-  "node scripts/nexus-capability-sprint-6-provider-adapter-contracts-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-6-provider-adapter-contracts-qa.js",
   "package alias should expose Sprint 6 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-6-provider-adapter-contracts-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-6-provider-adapter-contracts-qa.js"),
   "qa-suite should include Sprint 6 provider adapter contracts QA."
 );
 

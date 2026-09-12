@@ -144,7 +144,7 @@ These fields are not runtime-authoritative and must not be imported by `server.j
 
 ## QA Guardrails
 
-Phase 7H adds `scripts/nexus-agent-action-suggestion-policy-qa.js` and `qa:nexus-agent-suggestion-policy`.
+Phase 7H adds `archive/qa-scripts/nexus-agent-action-suggestion-policy-qa.js` and `qa:nexus-agent-suggestion-policy`.
 
 The QA must prove:
 

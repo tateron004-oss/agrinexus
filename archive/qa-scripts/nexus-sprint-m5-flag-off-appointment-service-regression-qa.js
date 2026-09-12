@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const qaName = "nexus-sprint-m5-flag-off-appointment-service-regression-qa.js";
 
 assert(exists("docs", docName), "M5 doc must exist.");
 assert(exists("public", moduleName), "M5 flag guard module must exist.");
-assert(exists("scripts", qaName), "M5 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "M5 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -28,8 +28,8 @@ const serverSource = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = JSON.parse(read("fixtures", "nexus", "appointment-service-requests.json"));
-const mapper = require("../public/nexus-appointment-service-risk-evidence-mapping.js");
-const guard = require("../public/nexus-appointment-service-preview-flag-guard.js");
+const mapper = require("../../public/nexus-appointment-service-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-appointment-service-preview-flag-guard.js");
 
 [
   "NEXUS_APPOINTMENT_SERVICE_REQUEST_PREVIEW_ENABLED",
@@ -101,9 +101,9 @@ assert.equal(result.executionAllowed, false, "M5 restricted fixtures must not ex
 });
 
 const alias = "qa:nexus-sprint-m5-flag-off-appointment-service-regression";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include M5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-m4-provider-time-risk-evidence-mapping-qa.js"), "M5 requires M4 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-m4-provider-time-risk-evidence-mapping-qa.js"), "M5 requires M4 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-m5-flag-off-appointment-service-regression-qa] passed");

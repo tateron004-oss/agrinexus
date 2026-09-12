@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const harness = require("../server/nexus-live-provider-adoption-harness.js");
+const harness = require("../../server/nexus-live-provider-adoption-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -94,10 +94,10 @@ function runRt4ProviderSpecificLiveAdoptionHarnessesQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt4-provider-specific-live-adoption-harnesses"],
-    "node scripts/nexus-rt4-provider-specific-live-adoption-harnesses-qa.js",
+    "node archive/qa-scripts/nexus-rt4-provider-specific-live-adoption-harnesses-qa.js",
     "RT4 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt4-provider-specific-live-adoption-harnesses-qa.js"), "RT4 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt4-provider-specific-live-adoption-harnesses-qa.js"), "RT4 QA must be in safe suites.");
 
   console.log("[nexus-rt4-provider-specific-live-adoption-harnesses-qa] passed");
 }

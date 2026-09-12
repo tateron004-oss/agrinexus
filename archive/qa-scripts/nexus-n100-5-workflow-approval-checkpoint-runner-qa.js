@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runner = require("../server/nexus-n100-workflow-approval-checkpoint-runner.js");
-const deep = require("../server/nexus-n100-deep-workflow-engine.js");
+const runner = require("../../server/nexus-n100-workflow-approval-checkpoint-runner.js");
+const deep = require("../../server/nexus-n100-deep-workflow-engine.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -26,7 +26,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-workflow-approval-checkpoint-runner.js"), "N100-5 runner module must exist.");
   assert(exists("docs", "NEXUS_N100_5_WORKFLOW_APPROVAL_CHECKPOINT_RUNNER.md"), "N100-5 doc must exist.");
-  assert(exists("scripts", "nexus-n100-5-workflow-approval-checkpoint-runner-qa.js"), "N100-5 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-5-workflow-approval-checkpoint-runner-qa.js"), "N100-5 QA must exist.");
 
   [
     "ALLOWED_AUTOMATIC_STEP_TYPES",
@@ -73,10 +73,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-5-workflow-approval-checkpoint-runner"],
-    "node scripts/nexus-n100-5-workflow-approval-checkpoint-runner-qa.js",
+    "node archive/qa-scripts/nexus-n100-5-workflow-approval-checkpoint-runner-qa.js",
     "N100-5 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-5-workflow-approval-checkpoint-runner-qa.js"), "N100-5 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-5-workflow-approval-checkpoint-runner-qa.js"), "N100-5 QA must be wired into local-safe suites.");
 }
 
 function assertAllowedAndApprovalLists() {

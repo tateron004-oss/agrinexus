@@ -1,12 +1,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_K1_PERSONALIZATION_RUNTIME_ACTIVATION_READINESS_GATE.md"),
   phase63Doc: path.join(root, "docs", "NEXUS_PERSONALIZATION_READINESS_CONTRACT_PHASE_63.md"),
   phase63Contract: path.join(root, "public", "nexus-personalization-readiness-contract.js"),
-  phase63Qa: path.join(root, "scripts", "nexus-personalization-readiness-contract-qa.js"),
+  phase63Qa: path.join(root, "archive", "qa-scripts", "nexus-personalization-readiness-contract-qa.js"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
@@ -208,9 +208,9 @@ const attemptedOverride = contract.createPersonalizationReadinessContract({
 });
 
 const alias = "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate";
-const scriptPath = "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js";
+const scriptPath = "archive/qa-scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js";
 assert(packageData.scripts[alias] === `node ${scriptPath}`, `package.json must expose ${alias}.`);
 assert(qaSuite.includes(scriptPath), "qa-suite.js must include Sprint K1 QA.");
-assert(qaSuite.includes("scripts/nexus-personalization-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 63 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-personalization-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 63 QA.");
 
 console.log("[nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa] passed");

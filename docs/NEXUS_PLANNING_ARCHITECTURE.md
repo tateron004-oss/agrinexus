@@ -378,7 +378,7 @@ Recommended next phase:
 Likely files:
 
 - `public/nexus-planner.js`
-- `scripts/nexus-planner-qa.js`
+- `archive/qa-scripts/nexus-planner-qa.js`
 - `docs/NEXUS_PLANNER_MODEL.md`
 - package alias `qa:nexus-planner`
 - possible `scripts/qa-suite.js` update

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_IDENTITY_FOUNDATION_CONTRACT_PHASE_46.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -9,9 +9,9 @@ const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
-  authLoginGateQa: path.join(root, "scripts", "auth-login-gate-qa.js"),
-  intentClassifierQa: path.join(root, "scripts", "nexus-intent-classifier-qa.js"),
-  policyEngineQa: path.join(root, "scripts", "nexus-policy-engine-qa.js"),
+  authLoginGateQa: path.join(root, "archive", "qa-scripts", "auth-login-gate-qa.js"),
+  intentClassifierQa: path.join(root, "archive", "qa-scripts", "nexus-intent-classifier-qa.js"),
+  policyEngineQa: path.join(root, "archive", "qa-scripts", "nexus-policy-engine-qa.js"),
   toolRegistry: path.join(root, "public", "nexus-tool-registry.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
@@ -296,7 +296,7 @@ assert(invalid.identityStatus === "not_configured", "invalid identity status mus
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-identity-foundation-contract"] === "node scripts/nexus-identity-foundation-contract-qa.js", "package.json must expose qa:nexus-identity-foundation-contract");
-assert(qaSuite.includes("scripts/nexus-identity-foundation-contract-qa.js"), "qa-suite.js must include identity foundation contract QA");
+assert(packageData.scripts["qa:nexus-identity-foundation-contract"] === "node archive/qa-scripts/nexus-identity-foundation-contract-qa.js", "package.json must expose qa:nexus-identity-foundation-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-identity-foundation-contract-qa.js"), "qa-suite.js must include identity foundation contract QA");
 
 console.log("[nexus-identity-foundation-contract-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C9_SOURCE_BACKED_AGRICULTURE_RUNTIME_MAPPING_BROWSER_VALIDATION_PLAN.md"),
   c8Doc: path.join(root, "docs", "NEXUS_SPRINT_C8_SOURCE_BACKED_AGRICULTURE_VISIBLE_PREVIEW_MAPPER.md"),
@@ -150,8 +150,8 @@ assert(c6Harness.buildFixtureSourceBackedAgriculturePacket("Call an extension wo
 });
 
 const alias = "qa:nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan";
-const command = "node scripts/nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa.js"), "qa-suite must include Sprint C9 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa.js"), "qa-suite must include Sprint C9 QA.");
 
 console.log("[nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa] passed");

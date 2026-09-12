@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const manifestPath = path.join(root, ".github", "nexus-protected-experience.json");
 const releaseMode = process.argv.includes("--release");
 const expectedLanguages = ["en", "es", "fr", "sw", "ar", "pt"];

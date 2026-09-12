@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_E7_STAGED_ACTION_APPROVAL_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-e7-staged-action-approval-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint E7 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint E7 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E7 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -119,7 +119,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint E7 requires prior Sprint E QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint E7 requires prior Sprint E QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint E QA: ${requiredScript}`);
 }
 
@@ -171,7 +171,7 @@ for (const term of forbiddenRuntimeAuthority) {
 }
 
 const alias = "qa:nexus-sprint-e7-staged-action-approval-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E7 QA.");
 

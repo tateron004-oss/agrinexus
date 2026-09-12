@@ -2,12 +2,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const dialogue = require("../public/nexus-open-dialogue-runtime.js");
-const voice = require("../public/nexus-conversational-voice-runtime.js");
-const navigation = require("../public/nexus-universal-navigation-runtime.js");
+const dialogue = require("../../public/nexus-open-dialogue-runtime.js");
+const voice = require("../../public/nexus-conversational-voice-runtime.js");
+const navigation = require("../../public/nexus-universal-navigation-runtime.js");
 
 function assertIncludes(text, expected, label) {
   assert.ok(String(text).includes(expected), `${label} should include ${expected}`);
@@ -155,9 +155,9 @@ assertNotIncludes(dialogueSource, "payment completed", "dialogue runtime");
 assertNotIncludes(dialogueSource, "appointment booked", "dialogue runtime");
 
 const pkg = JSON.parse(read("package.json"));
-assert.equal(pkg.scripts["qa:nexus-voice-open-dialogue-runtime"], "node scripts/nexus-voice-open-dialogue-runtime-qa.js");
+assert.equal(pkg.scripts["qa:nexus-voice-open-dialogue-runtime"], "node archive/qa-scripts/nexus-voice-open-dialogue-runtime-qa.js");
 
 const qaSuite = read("scripts/qa-suite.js");
-assertIncludes(qaSuite, "scripts/nexus-voice-open-dialogue-runtime-qa.js", "qa-suite voice wiring");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-voice-open-dialogue-runtime-qa.js", "qa-suite voice wiring");
 
 console.log("Nexus voice/open-dialogue runtime QA passed.");

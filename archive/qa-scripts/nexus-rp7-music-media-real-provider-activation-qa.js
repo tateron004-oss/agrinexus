@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const musicMedia = require("../server/nexus-music-media-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const musicMedia = require("../../server/nexus-music-media-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const TEST_QUERIES = Object.freeze([
   "Find music about farming.",
@@ -24,10 +24,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP7_MUSIC_MEDIA_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp7-music-media-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP7 music/media activation doc must exist.");
-  assert(exists("scripts", qaName), "RP7 music/media activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP7 music/media activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -89,10 +89,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp7-music-media-real-provider-activation"],
-    "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
     "RP7 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp7-music-media-real-provider-activation-qa.js"), "RP7 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp7-music-media-real-provider-activation-qa.js"), "RP7 QA must be in safe suites.");
 }
 
 function assertSafeMusicMediaResult(result, label) {

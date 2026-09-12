@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -20,7 +20,7 @@ function runRt9StandardUserLiveSourceBrowserValidationPlanQa() {
   const docName = "NEXUS_RT9_STANDARD_USER_LIVE_SOURCE_BROWSER_VALIDATION_PLAN.md";
   const qaName = "nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js";
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -32,9 +32,9 @@ function runRt9StandardUserLiveSourceBrowserValidationPlanQa() {
     ["public", "nexus-live-source-trust-freshness-policy.js"],
     ["public", "nexus-live-source-audit-logging-contract.js"],
     ["server", "nexus-live-source-orchestrator.js"],
-    ["scripts", "nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"],
-    ["scripts", "nexus-rt7-source-trust-citation-freshness-policy-qa.js"],
-    ["scripts", "nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt7-source-trust-citation-freshness-policy-qa.js"],
+    ["archive", "qa-scripts", "nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"],
     ["docs", docName]
   ].forEach(parts => assert(exists(...parts), `${parts.join("/")} must exist for RT9.`));
 
@@ -82,10 +82,10 @@ function runRt9StandardUserLiveSourceBrowserValidationPlanQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt9-standard-user-live-source-browser-validation-plan"],
-    "node scripts/nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js",
+    "node archive/qa-scripts/nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js",
     "RT9 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js"), "RT9 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt9-standard-user-live-source-browser-validation-plan-qa.js"), "RT9 QA must be in safe suites.");
 
   console.log("[nexus-rt9-standard-user-live-source-browser-validation-plan-qa] passed");
 }

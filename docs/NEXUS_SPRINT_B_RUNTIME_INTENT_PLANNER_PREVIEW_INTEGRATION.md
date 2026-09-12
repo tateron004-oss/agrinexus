@@ -11,8 +11,8 @@ Sprint B integrates the inert autonomous brain helpers into the normal Standard 
 - `public/styles.css`
 - `public/nexus-agriculture-support-response-card.js`
 - `public/nexus-voice-text-intent-router.js`
-- `scripts/nexus-autonomous-runtime-preview-integration-qa.js`
-- `scripts/nexus-phase-104-voice-text-intent-router-qa.js`
+- `archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js`
+- `archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js`
 - `package.json`
 - `scripts/qa-suite.js`
 
@@ -61,19 +61,19 @@ Required QA was run for the Sprint B implementation:
 - `node --check public/nexus-permission-gated-action-contract.js`
 - `node --check public/nexus-voice-text-intent-router.js`
 - `node --check public/nexus-planner-preview-contract.js`
-- `node --check scripts/nexus-autonomous-runtime-preview-integration-qa.js`
-- `node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
-- `node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
-- `node --check scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
-- `node --check scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
-- `node --check scripts/nexus-phase-104-voice-text-intent-router-qa.js`
+- `node --check archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
+- `node --check archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js`
 - `node --check scripts/qa-suite.js`
-- `node scripts/nexus-autonomous-runtime-preview-integration-qa.js`
-- `node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
-- `node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
-- `node scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
-- `node scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
-- `node scripts/nexus-phase-104-voice-text-intent-router-qa.js`
+- `node archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js`
+- `node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
+- `node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
+- `node archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js`
+- `node archive/qa-scripts/nexus-phase-102-to-105-autonomous-foundation-batch-qa.js`
+- `node archive/qa-scripts/nexus-phase-104-voice-text-intent-router-qa.js`
 - `npm.cmd run qa:nexus-autonomous-runtime-preview-integration`
 - `npm.cmd run qa:nexus-phase-102-agriculture-source-registry-hardening`
 - `npm.cmd run qa:nexus-phase-102-to-105-autonomous-foundation-batch`

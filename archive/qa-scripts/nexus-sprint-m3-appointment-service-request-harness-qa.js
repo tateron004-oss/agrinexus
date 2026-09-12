@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -19,15 +19,15 @@ const qaName = "nexus-sprint-m3-appointment-service-request-harness-qa.js";
 
 assert(exists("docs", docName), "M3 doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "M3 fixtures must exist.");
-assert(exists("scripts", harnessName), "M3 harness must exist.");
-assert(exists("scripts", qaName), "M3 QA must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "M3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "M3 QA must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-appointment-service-request-contract.js");
+const contract = require("../../public/nexus-appointment-service-request-contract.js");
 const harness = require("./nexus-sprint-m3-appointment-service-request-harness.js");
 
 [
@@ -103,9 +103,9 @@ results.forEach(result => {
 ].forEach(term => assert(!harnessSource.includes(term), `M3 harness must not include side-effect API: ${term}`));
 
 const alias = "qa:nexus-sprint-m3-appointment-service-request-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include M3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-m2-inert-appointment-service-request-contract-qa.js"), "M3 requires M2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-m2-inert-appointment-service-request-contract-qa.js"), "M3 requires M2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-m3-appointment-service-request-harness-qa] passed");

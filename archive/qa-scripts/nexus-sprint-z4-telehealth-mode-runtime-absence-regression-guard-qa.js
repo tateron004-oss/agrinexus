@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TELEHEALTH_MODE_FEATURE_FLAG_STATE,
   normalizeTelehealthModeFeatureFlagState
-} = require("../public/nexus-telehealth-mode-feature-flag.js");
+} = require("../../public/nexus-telehealth-mode-feature-flag.js");
 const {
   protectedFields,
   loadTelehealthModeFlagFixtures,
   validateTelehealthModeFlagFixtures
 } = require("./nexus-sprint-z3-telehealth-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_Z4_TELEHEALTH_MODE_RUNTIME_ABSENCE_REGRESSION_GUAR
 const qaName = "nexus-sprint-z4-telehealth-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint Z4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint Z4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Z4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-telehealth-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-telehealth-mode-feature-flag.js");
-const z3Harness = read("scripts", "nexus-sprint-z3-telehealth-mode-flag-contract-harness.js");
+const z3Harness = read("archive", "qa-scripts", "nexus-sprint-z3-telehealth-mode-flag-contract-harness.js");
 const fixtures = loadTelehealthModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-telehealth-mode-readiness-contract.js",
   "public/nexus-telehealth-mode-feature-flag.js",
-  "scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js",
   "fixtures/nexus/telehealth-mode-feature-flags.json",
   "Sprint Z QA scripts"
 ], "Z4 runtime absence artifact list");
@@ -143,7 +143,7 @@ for (const requiredPath of [
   ["public", "nexus-telehealth-mode-readiness-contract.js"],
   ["public", "nexus-telehealth-mode-feature-flag.js"],
   ["fixtures", "nexus", "telehealth-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-z3-telehealth-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-z3-telehealth-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `Z4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -269,11 +269,11 @@ for (const source of [featureFlagModule, z3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-z4-telehealth-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Z4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Z1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-z2-telehealth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Z2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint Z3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Z1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-z2-telehealth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Z2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint Z3 QA.");
 
 console.log("[nexus-sprint-z4-telehealth-mode-runtime-absence-regression-guard-qa] passed");

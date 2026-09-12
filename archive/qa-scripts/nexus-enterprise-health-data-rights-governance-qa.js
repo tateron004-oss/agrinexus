@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-enterprise-health-evidence-trust.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -58,9 +58,9 @@ includes(docs, "It cannot share health data", "documentation preserves no-sharin
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-enterprise-health-data-rights-governance"],
-  "node scripts/nexus-enterprise-health-data-rights-governance-qa.js",
+  "node archive/qa-scripts/nexus-enterprise-health-data-rights-governance-qa.js",
   "package alias exists"
 );
-includes(qaSuite, "scripts/nexus-enterprise-health-data-rights-governance-qa.js", "safe suites include data-rights QA");
+includes(qaSuite, "archive/qa-scripts/nexus-enterprise-health-data-rights-governance-qa.js", "safe suites include data-rights QA");
 
 console.log("Nexus enterprise health data rights governance QA passed.");

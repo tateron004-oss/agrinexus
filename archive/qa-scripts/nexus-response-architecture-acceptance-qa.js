@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const appSource = read("public/app.js");
@@ -276,8 +276,8 @@ async function run() {
   assert(appSource.includes("isNexusInternalStatusOnlyResponse"), "frontend rejects internal status-only answers");
   assert(serverSource.includes("function nexusActivationTraceForResponse"), "backend activation trace exists");
   assert(serverSource.includes("function rememberGenesisSpokenResponse"), "backend bounded spoken memory exists");
-  assert(packageJson.scripts["qa:nexus-response-architecture-acceptance"] === "node scripts/nexus-response-architecture-acceptance-qa.js", "package alias should exist");
-  assert(qaSuite.includes("scripts/nexus-response-architecture-acceptance-qa.js"), "qa suite should include response architecture acceptance");
+  assert(packageJson.scripts["qa:nexus-response-architecture-acceptance"] === "node archive/qa-scripts/nexus-response-architecture-acceptance-qa.js", "package alias should exist");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-response-architecture-acceptance-qa.js"), "qa suite should include response architecture acceptance");
 
   const ordinaryPrompts = [
     "Nexus, are you with me today?",

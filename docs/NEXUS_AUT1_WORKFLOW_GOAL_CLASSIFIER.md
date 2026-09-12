@@ -67,4 +67,4 @@ AUT1 does not:
 
 ## QA
 
-`scripts/nexus-aut1-workflow-goal-classifier-qa.js` verifies taxonomy coverage, required output fields, supported and blocked prompt behavior, non-execution invariants, package alias wiring, and safe-suite wiring.
+`archive/qa-scripts/nexus-aut1-workflow-goal-classifier-qa.js` verifies taxonomy coverage, required output fields, supported and blocked prompt behavior, non-execution invariants, package alias wiring, and safe-suite wiring.

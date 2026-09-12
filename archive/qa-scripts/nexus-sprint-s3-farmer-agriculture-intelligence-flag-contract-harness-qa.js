@@ -7,7 +7,7 @@ const {
   validateFarmerAgricultureIntelligenceFlagFixtures
 } = require("./nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-ha
 
 assert(exists("docs", docName), "Sprint S3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint S3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint S3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint S3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint S3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint S3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "ecb2851a7662e33621917025373ab4edd356c1b3",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/farmer-agriculture-intelligence-feature-flags.json",
-  "scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js",
   "agricultureReviewAllowed: false",
   "sourceBackedGuidancePreviewAllowed: false",
   "liveAgricultureAdvisorAllowed: false",
@@ -157,10 +157,10 @@ assert(exists("docs", "NEXUS_SPRINT_S2_FARMER_AGRICULTURE_INTELLIGENCE_FEATURE_F
 assert(exists("public", "nexus-farmer-agriculture-intelligence-feature-flag.js"), "S3 requires S2 feature flag module.");
 
 const alias = "qa:nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint S3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint S1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-s2-farmer-agriculture-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint S2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint S1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-s2-farmer-agriculture-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint S2 QA.");
 
 console.log("[nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness-qa] passed");

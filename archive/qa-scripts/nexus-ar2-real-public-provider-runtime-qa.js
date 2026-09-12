@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const weather = require("../server/nexus-weather-source-provider.js");
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
+const weather = require("../../server/nexus-weather-source-provider.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -77,7 +77,7 @@ function assertNoUnsafeRuntimeActivation() {
 
   assert(exists("server", "nexus-weather-source-provider.js"), "Weather provider source must exist.");
   assert(exists("server", "nexus-assistant-runtime-entrypoint.js"), "Assistant runtime entrypoint must exist.");
-  assert(exists("scripts", "nexus-ar2-real-public-provider-runtime-qa.js"), "AR2 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-ar2-real-public-provider-runtime-qa.js"), "AR2 QA must exist.");
 
   assert(weatherSource.includes("OPEN_METEO_GEOCODING_URL"), "Weather provider must declare the Open-Meteo geocoding boundary.");
   assert(weatherSource.includes("OPEN_METEO_FORECAST_URL"), "Weather provider must declare the Open-Meteo forecast boundary.");
@@ -116,10 +116,10 @@ function assertNoUnsafeRuntimeActivation() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar2-real-public-provider-runtime"],
-    "node scripts/nexus-ar2-real-public-provider-runtime-qa.js",
+    "node archive/qa-scripts/nexus-ar2-real-public-provider-runtime-qa.js",
     "AR2 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar2-real-public-provider-runtime-qa.js"), "AR2 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar2-real-public-provider-runtime-qa.js"), "AR2 QA must be wired into local-safe suites.");
 }
 
 async function assertOpenMeteoProviderPath() {

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ function runRt10RealProviderAdoptionRunbookQa() {
   const docName = "NEXUS_RT10_REAL_PROVIDER_ADOPTION_RUNBOOK.md";
   const qaName = "nexus-rt10-real-provider-adoption-runbook-qa.js";
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -25,7 +25,7 @@ function runRt10RealProviderAdoptionRunbookQa() {
 
   [
     ["docs", docName],
-    ["scripts", qaName],
+    ["archive", "qa-scripts", qaName],
     ["docs", "NEXUS_RT4_PROVIDER_SPECIFIC_LIVE_ADOPTION_HARNESSES.md"],
     ["docs", "NEXUS_RT7_SOURCE_TRUST_CITATION_FRESHNESS_POLICY.md"],
     ["docs", "NEXUS_RT8_LIVE_SOURCE_RETRIEVAL_AUDIT_LOGGING_CONTRACT.md"],
@@ -99,10 +99,10 @@ function runRt10RealProviderAdoptionRunbookQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt10-real-provider-adoption-runbook"],
-    "node scripts/nexus-rt10-real-provider-adoption-runbook-qa.js",
+    "node archive/qa-scripts/nexus-rt10-real-provider-adoption-runbook-qa.js",
     "RT10 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt10-real-provider-adoption-runbook-qa.js"), "RT10 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt10-real-provider-adoption-runbook-qa.js"), "RT10 QA must be in safe suites.");
 
   console.log("[nexus-rt10-real-provider-adoption-runbook-qa] passed");
 }

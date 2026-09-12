@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -84,7 +84,7 @@ assert(deferredLegacyHost.includes("data-nexus-os-deferred-legacy-surfaces=\"tru
 assert(!renderUserWorkspace.includes("renderNexusPlatformDashboard()"), "old dashboard is not rendered under Nexus OS shell");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked/i.test(shellPanel), "shell copy does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-os-shell"] === "node scripts/nexus-os-shell-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-shell-qa.js"), "safe QA suite includes Nexus OS shell QA");
+assert(packageJson.scripts["qa:nexus-os-shell"] === "node archive/qa-scripts/nexus-os-shell-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-shell-qa.js"), "safe QA suite includes Nexus OS shell QA");
 
 console.log("Nexus OS shell QA passed.");

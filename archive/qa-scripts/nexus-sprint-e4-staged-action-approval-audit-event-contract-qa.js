@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const qaName = "nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.j
 
 assert(exists("docs", docName), "Sprint E4 approval audit event contract doc must exist.");
 assert(exists("public", moduleName), "Sprint E4 inert audit event module must exist.");
-assert(exists("scripts", qaName), "Sprint E4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E4 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -294,12 +294,12 @@ assert(!("email" in created.event.redactedPayload), "factory must remove email f
 });
 
 assert(exists("docs", "NEXUS_SPRINT_E3_STAGED_ACTION_APPROVAL_RECORD_HARNESS.md"), "E4 requires E3 harness doc.");
-assert(exists("scripts", "nexus-sprint-e3-staged-action-approval-record-harness-qa.js"), "E4 requires E3 QA.");
+assert(exists("archive", "qa-scripts", "nexus-sprint-e3-staged-action-approval-record-harness-qa.js"), "E4 requires E3 QA.");
 
 const alias = "qa:nexus-sprint-e4-staged-action-approval-audit-event-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js"), "E4 requires E3 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js"), "E4 requires E3 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e4-staged-action-approval-audit-event-contract-qa] passed");

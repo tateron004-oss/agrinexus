@@ -21,17 +21,17 @@ node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check public/nexus-agriculture-support-response-card.js
 node --check scripts/apply-phase-101c-local-wiring.js
-node --check scripts/phase-101c-local-wiring-patcher-qa.js
-node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node --check scripts/phase-101c-post-wiring-validation-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node --check archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
 node --check scripts/qa-suite.js
-node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
-node scripts/phase-101c-local-wiring-patcher-qa.js
-node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node scripts/phase-101c-post-wiring-validation-qa.js
-node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
-node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node --check archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node --check archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-qa.js
+node archive/qa-scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node archive/qa-scripts/phase-101c-post-wiring-validation-qa.js
+node archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
+node archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
 npm run qa:nexus-phase-101b-standard-user-runtime-wiring-readiness
 node scripts/qa-suite.js nexus-workforce

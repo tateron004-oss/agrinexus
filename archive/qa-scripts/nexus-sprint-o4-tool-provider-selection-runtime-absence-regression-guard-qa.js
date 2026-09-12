@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TOOL_PROVIDER_SELECTION_FEATURE_FLAG_STATE,
   normalizeToolProviderSelectionFeatureFlagState
-} = require("../public/nexus-tool-provider-selection-feature-flag.js");
+} = require("../../public/nexus-tool-provider-selection-feature-flag.js");
 const {
   protectedFields,
   loadToolProviderSelectionFlagFixtures,
   validateToolProviderSelectionFlagFixtures
 } = require("./nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_O4_TOOL_PROVIDER_SELECTION_RUNTIME_ABSENCE_REGRESS
 const qaName = "nexus-sprint-o4-tool-provider-selection-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint O4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint O4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint O4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-tool-provider-selection-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-tool-provider-selection-feature-flag.js");
-const o3Harness = read("scripts", "nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js");
+const o3Harness = read("archive", "qa-scripts", "nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js");
 const fixtures = loadToolProviderSelectionFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-tool-provider-selection-readiness-contract.js",
   "public/nexus-tool-provider-selection-feature-flag.js",
-  "scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js",
   "fixtures/nexus/tool-provider-selection-feature-flags.json",
   "Sprint O QA scripts"
 ], "O4 runtime absence artifact list");
@@ -150,7 +150,7 @@ for (const requiredPath of [
   ["public", "nexus-tool-provider-selection-readiness-contract.js"],
   ["public", "nexus-tool-provider-selection-feature-flag.js"],
   ["fixtures", "nexus", "tool-provider-selection-feature-flags.json"],
-  ["scripts", "nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `O4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -272,7 +272,7 @@ for (const source of [featureFlagModule, o3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-o4-tool-provider-selection-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint O4 QA.");
 

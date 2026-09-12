@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -79,7 +79,7 @@ assert(intentSource.includes("capability.id === \"agriculture\" ? a100Agricultur
 });
 
 assert(styles.includes(".a100-domain-guidance"), "Sprint 7 styles should cover domain guidance cards.");
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-7"], "node scripts/nexus-a100-runtime-activation-7-qa.js", "Sprint 7 QA alias should exist.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-7-qa.js"), "Sprint 7 QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-7"], "node archive/qa-scripts/nexus-a100-runtime-activation-7-qa.js", "Sprint 7 QA alias should exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-7-qa.js"), "Sprint 7 QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-7-qa] passed");

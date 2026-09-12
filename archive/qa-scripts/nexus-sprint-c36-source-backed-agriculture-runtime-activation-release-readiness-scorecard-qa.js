@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C36 release readiness scorecard must exist");
-assert(exists("scripts", qaName), "Sprint C36 release readiness scorecard QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C36 release readiness scorecard QA must exist");
 
 for (const prior of [
   "NEXUS_SPRINT_C35_SOURCE_BACKED_AGRICULTURE_RUNTIME_ACTIVATION_IMPLEMENTATION_HANDOFF_PACKET.md",
@@ -253,7 +253,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c36-source-backed-agriculture-runtime-activation-release-readiness-scorecard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C36 QA.");
 

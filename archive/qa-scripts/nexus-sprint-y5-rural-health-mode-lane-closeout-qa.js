@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_RURAL_HEALTH_MODE_FEATURE_FLAG_STATE,
   normalizeRuralHealthModeFeatureFlagState
-} = require("../public/nexus-rural-health-mode-feature-flag.js");
+} = require("../../public/nexus-rural-health-mode-feature-flag.js");
 const {
   protectedFields,
   loadRuralHealthModeFlagFixtures,
   validateRuralHealthModeFlagFixtures
 } = require("./nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_Y5_RURAL_HEALTH_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint Y5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint Y5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Y5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-rural-health-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-rural-health-mode-feature-flag.js");
-const y3Harness = read("scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
+const y3Harness = read("archive", "qa-scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
 const fixtures = loadRuralHealthModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -183,7 +183,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint Y5 requires prior Sprint Y QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint Y5 requires prior Sprint Y QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint Y QA: ${requiredScript}`);
 }
 
@@ -283,9 +283,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-y5-rural-health-mode-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js",
   "package.json must expose Sprint Y5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js"), "qa-suite must include Sprint Y5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js"), "qa-suite must include Sprint Y5 QA.");
 
 console.log("[nexus-sprint-y5-rural-health-mode-lane-closeout-qa] passed");

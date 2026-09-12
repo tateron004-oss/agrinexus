@@ -6,9 +6,9 @@ const {
   DEFAULT_ADVANCED_INTENT_UNDERSTANDING_FEATURE_FLAG_STATE,
   normalizeAdvancedIntentUnderstandingFeatureFlagState,
   isAdvancedIntentUnderstandingVisibleFeatureEnabled
-} = require("../public/nexus-advanced-intent-understanding-feature-flag.js");
+} = require("../../public/nexus-advanced-intent-understanding-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const qaName = "nexus-sprint-l2-advanced-intent-understanding-feature-flag-contr
 
 assert(exists("docs", docName), "Sprint L2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint L2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint L2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint L2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -203,9 +203,9 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-l2-advanced-intent-understanding-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint L2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint L1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint L1 QA.");
 
 console.log("[nexus-sprint-l2-advanced-intent-understanding-feature-flag-contract-qa] passed");

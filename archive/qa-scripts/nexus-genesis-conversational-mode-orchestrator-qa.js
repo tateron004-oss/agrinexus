@@ -4,10 +4,10 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
 
-const orchestrator = require("../public/nexus-genesis-conversational-mode-orchestrator.js");
+const orchestrator = require("../../public/nexus-genesis-conversational-mode-orchestrator.js");
 const app = read("public/app.js");
 const html = read("public/index.html");
 const server = read("server.js");
@@ -191,9 +191,9 @@ assert(!html.includes("data-nexus-genesis-orb-entry"), "orb must remain non-clic
 
 assert.equal(
   pkg.scripts["qa:nexus-genesis-conversational-mode-orchestrator"],
-  "node scripts/nexus-genesis-conversational-mode-orchestrator-qa.js",
+  "node archive/qa-scripts/nexus-genesis-conversational-mode-orchestrator-qa.js",
   "package alias must exist"
 );
-assert(qaSuite.includes("scripts/nexus-genesis-conversational-mode-orchestrator-qa.js"), "qa-suite must include the orchestrator QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-conversational-mode-orchestrator-qa.js"), "qa-suite must include the orchestrator QA");
 
 console.log("Nexus Genesis conversational mode orchestrator QA passed.");

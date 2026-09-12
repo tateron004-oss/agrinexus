@@ -58,4 +58,4 @@ Real execution still requires approved credentials, provider configuration, cons
 
 ## QA verifies provider coverage
 
-`scripts/nexus-demo-provider-dataset-qa.js` verifies required schema fields, service-lane coverage, truthful demo/test flags, no live-connected defaults, UI/status endpoint wiring, safe labels, and no fake execution claims.
+`archive/qa-scripts/nexus-demo-provider-dataset-qa.js` verifies required schema fields, service-lane coverage, truthful demo/test flags, no live-connected defaults, UI/status endpoint wiring, safe labels, and no fake execution claims.

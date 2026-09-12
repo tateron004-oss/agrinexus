@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const brain = require("../server/nexus-internal-knowledge-brain.js");
+const brain = require("../../server/nexus-internal-knowledge-brain.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -39,7 +39,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-internal-knowledge-brain.js"), "Internal knowledge brain module must exist.");
   assert(exists("docs", "NEXUS_N100_2_INTERNAL_AGRINEXUS_KNOWLEDGE_BRAIN.md"), "N100-2 doc must exist.");
-  assert(exists("scripts", "nexus-n100-2-internal-knowledge-brain-qa.js"), "N100-2 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-2-internal-knowledge-brain-qa.js"), "N100-2 QA must exist.");
 
   [
     "INTERNAL_KNOWLEDGE_ENTRIES",
@@ -86,10 +86,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-2-internal-knowledge-brain"],
-    "node scripts/nexus-n100-2-internal-knowledge-brain-qa.js",
+    "node archive/qa-scripts/nexus-n100-2-internal-knowledge-brain-qa.js",
     "N100-2 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-2-internal-knowledge-brain-qa.js"), "N100-2 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-2-internal-knowledge-brain-qa.js"), "N100-2 QA must be wired into local-safe suites.");
 }
 
 function assertKnowledgeCoverage() {

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_STANDARD_USER_VALIDATION_PLAN_PHASE_51E.md"),
   readinessDoc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_PROVIDER_EXECUTION_READINESS_GATE.md"),
@@ -170,7 +170,7 @@ assert(doc.includes("safe inert form"), "doc must state Phase 51 completion is i
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-standard-user-validation-plan"] === "node scripts/nexus-communications-standard-user-validation-plan-qa.js", "package.json must expose qa:nexus-communications-standard-user-validation-plan.");
-assert(qaSuite.includes("scripts/nexus-communications-standard-user-validation-plan-qa.js"), "qa-suite.js must include communications Standard User validation plan QA.");
+assert(packageData.scripts["qa:nexus-communications-standard-user-validation-plan"] === "node archive/qa-scripts/nexus-communications-standard-user-validation-plan-qa.js", "package.json must expose qa:nexus-communications-standard-user-validation-plan.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-standard-user-validation-plan-qa.js"), "qa-suite.js must include communications Standard User validation plan QA.");
 
 console.log("[nexus-communications-standard-user-validation-plan-qa] passed");

@@ -61,7 +61,7 @@ AUT9 does not require browser validation because no Standard User-visible runtim
 
 ## QA
 
-`scripts/nexus-aut9-autonomy-reliability-recovery-qa.js` verifies:
+`archive/qa-scripts/nexus-aut9-autonomy-reliability-recovery-qa.js` verifies:
 
 - all recovery reasons are represented
 - every recovery object is safe and non-executing

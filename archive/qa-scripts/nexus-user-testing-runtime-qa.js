@@ -4,8 +4,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
-const runtime = require("../server/nexus-user-testing-runtime.js");
+const root = path.resolve(__dirname, "..", "..");
+const runtime = require("../../server/nexus-user-testing-runtime.js");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -159,7 +159,7 @@ const packageJson = read("package.json");
 assertIncludes(packageJson, "qa:nexus-user-testing-runtime", "package.json");
 
 const qaSuite = read("scripts/qa-suite.js");
-assertIncludes(qaSuite, "scripts/nexus-user-testing-runtime-qa.js", "qa-suite.js");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-user-testing-runtime-qa.js", "qa-suite.js");
 
 const doc = read("docs/NEXUS_USER_TESTING_RUNTIME.md");
 assertIncludes(doc, "Local memory active. Production database not connected.", "runtime doc");

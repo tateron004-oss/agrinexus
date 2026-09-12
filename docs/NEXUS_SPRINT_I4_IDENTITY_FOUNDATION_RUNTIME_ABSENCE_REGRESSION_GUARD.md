@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-identity-foundation-contract.js`;
 - `public/nexus-identity-foundation-feature-flag.js`;
-- `scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`;
 - `fixtures/nexus/identity-foundation-feature-flags.json`;
 - Sprint I QA scripts.
 

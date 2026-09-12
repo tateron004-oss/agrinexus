@@ -6,7 +6,7 @@ const {
   validateConsentCenterFlagFixtures
 } = require("./nexus-sprint-h3-consent-center-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,12 +30,12 @@ const qaName = "nexus-sprint-h3-consent-center-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint H3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint H3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint H3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint H3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint H3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -48,7 +48,7 @@ assertIncludes(doc, [
   "5ae1d41c32ea9d0b2cc3eb2a79df257eb8323676",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/consent-center-feature-flags.json",
-  "scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js",
   "consentPersistenceAllowed: false",
   "consentRevocationAllowed: false",
   "auditWriteAllowed: false",
@@ -132,7 +132,7 @@ assert(exists("docs", "NEXUS_SPRINT_H2_CONSENT_CENTER_FEATURE_FLAG_CONTRACT.md")
 assert(exists("public", "nexus-consent-center-feature-flag.js"), "H3 requires H2 feature flag module.");
 
 const alias = "qa:nexus-sprint-h3-consent-center-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H3 QA.");
 

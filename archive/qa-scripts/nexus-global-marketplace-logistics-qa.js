@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -20,7 +20,7 @@ function excludes(haystack, needle, message) {
   assert(!haystack.toLowerCase().includes(needle.toLowerCase()), message || `Did not expect to find ${needle}`);
 }
 
-const liveKnowledge = spawnSync(process.execPath, ["scripts/nexus-global-live-knowledge-qa.js"], {
+const liveKnowledge = spawnSync(process.execPath, ["archive/qa-scripts/nexus-global-live-knowledge-qa.js"], {
   cwd: root,
   encoding: "utf8"
 });
@@ -142,9 +142,9 @@ assert.strictEqual(
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-global-marketplace-logistics"],
-  "node scripts/nexus-global-marketplace-logistics-qa.js",
+  "node archive/qa-scripts/nexus-global-marketplace-logistics-qa.js",
   "package script should expose global marketplace/logistics QA"
 );
-includes(qaSuite, "scripts/nexus-global-marketplace-logistics-qa.js", "qa suite should include global marketplace/logistics QA");
+includes(qaSuite, "archive/qa-scripts/nexus-global-marketplace-logistics-qa.js", "qa suite should include global marketplace/logistics QA");
 
 console.log("nexus-global-marketplace-logistics QA passed");

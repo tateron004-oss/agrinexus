@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const registryPath = path.join(root, "docs", "nexus-tool-registry.v1.json");
 const specPath = path.join(root, "docs", "NEXUS_LOW_RISK_AGENT_ACTION_MAPPING.md");
 const serverPath = path.join(root, "server.js");
@@ -38,7 +38,7 @@ const lowRiskCandidates = new Set([
 assert.match(registry.runtimeStatus || "", /static|spec/i, "registry must remain static/spec-only");
 assert.match(registry.warning || "", /not runtime-authoritative/i, "registry warning must remain non-runtime-authoritative");
 assert.ok(Array.isArray(registry.tools), "registry must expose tools");
-assert.ok(registry.qaCoverage.includes("scripts/nexus-low-risk-agent-mapping-qa.js"), "registry qaCoverage should include low-risk mapping QA");
+assert.ok(registry.qaCoverage.includes("archive/qa-scripts/nexus-low-risk-agent-mapping-qa.js"), "registry qaCoverage should include low-risk mapping QA");
 
 for (const tool of registry.tools) {
   assert.ok(readinessValues.has(tool.mappingReadiness), `${tool.canonicalToolId} has unsupported mappingReadiness`);

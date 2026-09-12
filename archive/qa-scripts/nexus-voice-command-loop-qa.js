@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -102,7 +102,7 @@ const runtimeSource = functionNames.map(name => extractFunction(app, name)).join
 ].forEach(term => assert(app.includes(term), `voice command loop should include ${term}`));
 
 assert(pkg.scripts["qa:nexus-voice-command-loop"], "package alias should run voice command loop QA");
-assert(qaSuite.includes("scripts/nexus-voice-command-loop-qa.js"), "qa-suite should include voice command loop QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-voice-command-loop-qa.js"), "qa-suite should include voice command loop QA");
 
 [
   "SpeechRecognition",

@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 
 const app = read("public", "app.js");
@@ -177,9 +177,9 @@ function rejects(source, pattern, label) {
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-premium-miniapp-agentic-ui"],
-  "node scripts/nexus-premium-miniapp-agentic-ui-qa.js",
+  "node archive/qa-scripts/nexus-premium-miniapp-agentic-ui-qa.js",
   "package.json must expose qa:nexus-premium-miniapp-agentic-ui"
 );
-includes(qaSuite, "scripts/nexus-premium-miniapp-agentic-ui-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-premium-miniapp-agentic-ui-qa.js", "qa-suite wiring");
 
 console.log("Nexus premium mini-app agentic UI QA passed.");

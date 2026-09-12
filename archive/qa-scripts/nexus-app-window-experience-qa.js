@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -130,9 +130,9 @@ function excludes(source, token, label) {
 
 assert.equal(
   packageJson.scripts["qa:nexus-app-window-experience"],
-  "node scripts/nexus-app-window-experience-qa.js",
+  "node archive/qa-scripts/nexus-app-window-experience-qa.js",
   "package.json must expose qa:nexus-app-window-experience"
 );
-assert(qaSuite.includes("scripts/nexus-app-window-experience-qa.js"), "qa-suite.js must include app window experience QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-app-window-experience-qa.js"), "qa-suite.js must include app window experience QA.");
 
 console.log("Nexus app window experience QA passed.");

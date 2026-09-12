@@ -75,7 +75,7 @@ Any future Sprint D runtime-visible phase must prove:
 
 ## QA Guard
 
-QA script: `scripts/nexus-sprint-d5-controlled-staged-actions-flag-off-runtime-regression-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-d5-controlled-staged-actions-flag-off-runtime-regression-qa.js`
 
 The QA guard verifies:
 

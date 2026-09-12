@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const stack = require("../server/nexus-n100-memory-personalization-stack.js");
-const sessionMemory = require("../public/nexus-session-memory.js");
+const stack = require("../../server/nexus-n100-memory-personalization-stack.js");
+const sessionMemory = require("../../public/nexus-session-memory.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-memory-personalization-stack.js"), "N100-3 memory stack module must exist.");
   assert(exists("docs", "NEXUS_N100_3_MEMORY_PERSONALIZATION_STACK.md"), "N100-3 doc must exist.");
-  assert(exists("scripts", "nexus-n100-3-memory-personalization-stack-qa.js"), "N100-3 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-3-memory-personalization-stack-qa.js"), "N100-3 QA must exist.");
 
   [
     "createN100MemoryState",
@@ -87,10 +87,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-3-memory-personalization-stack"],
-    "node scripts/nexus-n100-3-memory-personalization-stack-qa.js",
+    "node archive/qa-scripts/nexus-n100-3-memory-personalization-stack-qa.js",
     "N100-3 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-3-memory-personalization-stack-qa.js"), "N100-3 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-3-memory-personalization-stack-qa.js"), "N100-3 QA must be wired into local-safe suites.");
 }
 
 function buildSeedMemory() {

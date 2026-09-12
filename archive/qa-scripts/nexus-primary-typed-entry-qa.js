@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -50,7 +50,7 @@ assert(rail3Styles.includes(".nexus-primary-typed-submit"), "typed submit receiv
 assert(rail3Styles.includes(".nexus-primary-typed-hint"), "typed hint receives first-viewport styling");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(hero), "typed entry does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-primary-typed-entry"] === "node scripts/nexus-primary-typed-entry-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-primary-typed-entry-qa.js"), "safe QA suite includes primary typed entry QA");
+assert(packageJson.scripts["qa:nexus-primary-typed-entry"] === "node archive/qa-scripts/nexus-primary-typed-entry-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-primary-typed-entry-qa.js"), "safe QA suite includes primary typed entry QA");
 
 console.log("Nexus primary typed entry QA passed.");

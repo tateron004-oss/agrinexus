@@ -7,9 +7,9 @@ const {
   NATURAL_RESPONSE_GENERATION_NO_EXECUTION_DEFAULTS,
   NATURAL_RESPONSE_GENERATION_READINESS_CONTRACT,
   createNaturalResponseGenerationReadinessContract
-} = require("../public/nexus-natural-response-generation-readiness-contract.js");
+} = require("../../public/nexus-natural-response-generation-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,7 +30,7 @@ const docName = "NEXUS_SPRINT_Q1_NATURAL_RESPONSE_GENERATION_RUNTIME_ACTIVATION_
 const qaName = "nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint Q1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint Q1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Q1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -281,13 +281,13 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_P5_ORCHESTRATION_ENGINE_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_NATURAL_RESPONSE_GENERATION_READINESS_CONTRACT_PHASE_69.md"],
   ["public", "nexus-natural-response-generation-readiness-contract.js"],
-  ["scripts", "nexus-natural-response-generation-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-natural-response-generation-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `Q1 requires artifact: ${requiredPath.join("/")}`);
 }
 
 const alias = "qa:nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Q1 QA.");
 

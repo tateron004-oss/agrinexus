@@ -7,9 +7,9 @@ const {
   PROTECTED_CONNECTOR_RELIABILITY_FLAG_FIELDS,
   normalizeConnectorReliabilityFeatureFlagState,
   isConnectorReliabilityVisibleFeatureEnabled
-} = require("../public/nexus-connector-reliability-feature-flag.js");
+} = require("../../public/nexus-connector-reliability-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-connector-reliability-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AN2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AN2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AN2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AN2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -167,10 +167,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-an2-connector-reliability-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AN2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-an1-connector-reliability-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AN1 QA.");
-assert(qaSuite.includes("scripts/nexus-connector-reliability-readiness-contract-qa.js"), "qa-suite must continue to include Phase 92 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-an1-connector-reliability-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AN1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-connector-reliability-readiness-contract-qa.js"), "qa-suite must continue to include Phase 92 QA.");
 
 console.log("[nexus-sprint-an2-connector-reliability-feature-flag-contract-qa] passed");

@@ -7,7 +7,7 @@ const {
   validateMultilingualIntelligenceFlagFixtures
 } = require("./nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-r3-multilingual-intelligence-flag-contract-harness-
 
 assert(exists("docs", docName), "Sprint R3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint R3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint R3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint R3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint R3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint R3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "dbe6ce4e3ade19b9fafd51bfd070f37f1b26059f",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/multilingual-intelligence-feature-flags.json",
-  "scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-r3-multilingual-intelligence-flag-contract-harness.js",
   "languageReviewAllowed: false",
   "localizedResponsePreviewAllowed: false",
   "sourceTraceLanguageReviewAllowed: false",
@@ -173,10 +173,10 @@ assert(exists("docs", "NEXUS_SPRINT_R2_MULTILINGUAL_INTELLIGENCE_FEATURE_FLAG_CO
 assert(exists("public", "nexus-multilingual-intelligence-feature-flag.js"), "R3 requires R2 feature flag module.");
 
 const alias = "qa:nexus-sprint-r3-multilingual-intelligence-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint R3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-r1-multilingual-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint R1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-r2-multilingual-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint R2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-r1-multilingual-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint R1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-r2-multilingual-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint R2 QA.");
 
 console.log("[nexus-sprint-r3-multilingual-intelligence-flag-contract-harness-qa] passed");

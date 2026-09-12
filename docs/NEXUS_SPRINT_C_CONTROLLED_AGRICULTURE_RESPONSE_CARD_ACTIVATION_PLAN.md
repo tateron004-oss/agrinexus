@@ -111,6 +111,6 @@ Flag-on validation must confirm:
 
 The Sprint C activation plan is protected by:
 
-- `scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js`
+- `archive/qa-scripts/nexus-sprint-c-agriculture-response-card-activation-plan-qa.js`
 - `npm run qa:nexus-sprint-c-agriculture-response-card-plan`
 - local-safe suite wiring

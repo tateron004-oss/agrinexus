@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -180,11 +180,11 @@ assert(status.includes("request phone permission"), "confirmed call prep should 
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-10-call-preparation-workflow"],
-  "node scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js",
   "package alias should expose Sprint 10 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js"),
   "qa-suite should include Sprint 10 call preparation workflow QA."
 );
 

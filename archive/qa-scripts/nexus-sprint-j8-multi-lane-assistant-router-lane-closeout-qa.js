@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const routerModule = "nexus-multi-lane-assistant-router-readiness-contract.js";
 const routerHarness = "nexus-sprint-j7-multi-lane-assistant-router-readiness-harness.js";
 
 assert(exists("docs", docName), "Sprint J8 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint J8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint J8 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -32,7 +32,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
-const routerContract = require("../public/nexus-multi-lane-assistant-router-readiness-contract.js");
+const routerContract = require("../../public/nexus-multi-lane-assistant-router-readiness-contract.js");
 const routerHarnessModule = require("./nexus-sprint-j7-multi-lane-assistant-router-readiness-harness.js");
 
 assertIncludes(doc, [
@@ -112,13 +112,13 @@ assertIncludes(doc, [
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `J8 requires prior Sprint J artifact: ${relative}`));
 
 [
-  "scripts/nexus-sprint-j1-user-profile-runtime-activation-readiness-gate-qa.js",
-  "scripts/nexus-sprint-j2-user-profile-feature-flag-contract-qa.js",
-  "scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js",
-  "scripts/nexus-sprint-j4-user-profile-runtime-absence-regression-guard-qa.js",
-  "scripts/nexus-sprint-j5-user-profile-lane-closeout-qa.js",
-  "scripts/nexus-sprint-j6-multi-lane-assistant-router-readiness-contract-qa.js",
-  "scripts/nexus-sprint-j7-multi-lane-assistant-router-readiness-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-j1-user-profile-runtime-activation-readiness-gate-qa.js",
+  "archive/qa-scripts/nexus-sprint-j2-user-profile-feature-flag-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-j4-user-profile-runtime-absence-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-j5-user-profile-lane-closeout-qa.js",
+  "archive/qa-scripts/nexus-sprint-j6-multi-lane-assistant-router-readiness-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-j7-multi-lane-assistant-router-readiness-harness-qa.js"
 ].forEach(relative => assert(qaSuite.includes(relative), `J8 requires prior Sprint J QA in qa-suite: ${relative}`));
 
 assert.equal(typeof routerContract.createMultiLaneAssistantRouterReadiness, "function", "J8 requires J6 router readiness contract factory.");
@@ -151,7 +151,7 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-j8-multi-lane-assistant-router-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint J8 QA.");
 

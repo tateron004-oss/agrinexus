@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -20,7 +20,7 @@ const docName = "NEXUS_SPRINT_K8_CONTACT_PROVIDER_IDENTITY_CLOSEOUT_AND_SPRINT_L
 const qaName = "nexus-sprint-k8-contact-provider-identity-closeout-and-sprint-l-readiness-qa.js";
 
 assert(exists("docs", docName), "K8 closeout doc must exist.");
-assert(exists("scripts", qaName), "K8 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K8 QA must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -99,12 +99,12 @@ assertIncludes(doc, [
   "nexus-sprint-k6-flag-gated-identity-resolution-preview-qa.js",
   "nexus-sprint-k7-standard-user-browser-validation-for-identity-resolution-preview-qa.js",
   qaName
-].forEach(name => assert(exists("scripts", name), `${name} must exist.`));
+].forEach(name => assert(exists("archive", "qa-scripts", name), `${name} must exist.`));
 
-const contract = require("../public/nexus-contact-provider-identity-contract.js");
-const mapper = require("../public/nexus-contact-provider-identity-evidence-mapper.js");
-const guard = require("../public/nexus-contact-provider-identity-flag-guard.js");
-const preview = require("../public/nexus-contact-provider-identity-preview.js");
+const contract = require("../../public/nexus-contact-provider-identity-contract.js");
+const mapper = require("../../public/nexus-contact-provider-identity-evidence-mapper.js");
+const guard = require("../../public/nexus-contact-provider-identity-flag-guard.js");
+const preview = require("../../public/nexus-contact-provider-identity-preview.js");
 const harness = require("./nexus-sprint-k3-contact-provider-identity-harness.js");
 
 assert.equal(typeof contract.validateContactProviderIdentityCandidate, "function", "K2 contract must remain callable.");
@@ -174,7 +174,7 @@ const unsafeTerms = [
   "public/nexus-contact-provider-identity-evidence-mapper.js",
   "public/nexus-contact-provider-identity-flag-guard.js",
   "public/nexus-contact-provider-identity-preview.js",
-  "scripts/nexus-sprint-k3-contact-provider-identity-harness.js"
+  "archive/qa-scripts/nexus-sprint-k3-contact-provider-identity-harness.js"
 ].forEach(relativePath => {
   const source = read(...relativePath.split("/"));
   unsafeTerms.forEach(term => assert(!source.includes(term), `${relativePath} must not include side-effect API: ${term}`));
@@ -192,13 +192,13 @@ const unsafeTerms = [
 ].forEach(alias => assert(pkg.scripts && pkg.scripts[alias], `${alias} package script must exist.`));
 
 [
-  "scripts/nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js",
-  "scripts/nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js",
-  "scripts/nexus-sprint-k3-contact-provider-identity-harness-qa.js",
-  "scripts/nexus-sprint-k4-identity-confidence-risk-evidence-mapping-qa.js",
-  "scripts/nexus-sprint-k5-flag-off-identity-resolution-regression-guard-qa.js",
-  "scripts/nexus-sprint-k6-flag-gated-identity-resolution-preview-qa.js",
-  "scripts/nexus-sprint-k7-standard-user-browser-validation-for-identity-resolution-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-k3-contact-provider-identity-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-k4-identity-confidence-risk-evidence-mapping-qa.js",
+  "archive/qa-scripts/nexus-sprint-k5-flag-off-identity-resolution-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-k6-flag-gated-identity-resolution-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-k7-standard-user-browser-validation-for-identity-resolution-preview-qa.js",
   `scripts/${qaName}`
 ].forEach(script => assert(qaSuite.includes(script), `qa-suite must include ${script}.`));
 

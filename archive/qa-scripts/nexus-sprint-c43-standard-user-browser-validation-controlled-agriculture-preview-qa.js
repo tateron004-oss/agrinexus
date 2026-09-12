@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_C43_STANDARD_USER_BROWSER_VALIDATION_CONTROLLED_AG
 const qaName = "nexus-sprint-c43-standard-user-browser-validation-controlled-agriculture-preview-qa.js";
 
 assert(exists("docs", docName), "Sprint C43 browser validation doc must exist.");
-assert(exists("scripts", qaName), "Sprint C43 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C43 QA script must exist.");
 
 const doc = read("docs", docName);
 const packageJson = JSON.parse(read("package.json"));
@@ -75,7 +75,7 @@ assert(sourceBackedSection.length > 1000, "C43 QA must inspect the source-backed
 });
 
 const alias = "qa:nexus-sprint-c43-standard-user-browser-validation-controlled-agriculture-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C43 QA.");
 

@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   DEFAULT_APPROVAL_AUDIT_PERSISTENCE_RECORD,
   createApprovalAuditPersistenceRecord
-} = require("../public/nexus-approval-audit-persistence-contract.js");
+} = require("../../public/nexus-approval-audit-persistence-contract.js");
 const {
   loadApprovalAuditPersistenceFixtures,
   validateApprovalAuditPersistenceFixtures
 } = require("./nexus-sprint-g3-approval-audit-persistence-fixture-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_G4_APPROVAL_AUDIT_PERSISTENCE_NO_WRITE_REGRESSION_
 const qaName = "nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint G4 no-write guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint G4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint G4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 
 const protectedImplementationSources = [
   read("public", "nexus-approval-audit-persistence-contract.js"),
-  read("scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js")
+  read("archive", "qa-scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js")
 ];
 
 assertIncludes(doc, [
@@ -90,7 +90,7 @@ for (const prior of [
   ["public", "nexus-approval-audit-persistence-contract.js"],
   ["fixtures", "nexus", "approval-audit-persistence-records.json"],
   ["fixtures", "nexus", "approval-audit-persistence-lifecycle.json"],
-  ["scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-g3-approval-audit-persistence-fixture-harness.js"]
 ]) {
   assert(exists(...prior), `Sprint G4 requires prior artifact: ${prior.join("/")}`);
 }
@@ -183,7 +183,7 @@ for (const source of protectedImplementationSources) {
 }
 
 const alias = "qa:nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint G4 QA.");
 

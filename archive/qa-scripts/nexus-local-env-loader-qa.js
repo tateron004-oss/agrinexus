@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -12,7 +12,7 @@ const {
   isUsableEnvValue,
   loadLocalEnvFiles,
   resolveLocalEnvPaths
-} = require("../server/local-env-loader.js");
+} = require("../../server/local-env-loader.js");
 
 const LOCAL_FIXTURE = "local-valid-fixture";
 const PROCESS_FIXTURE = "process-valid-fixture";
@@ -78,8 +78,8 @@ const publicReport = withTempRoot({ ".env": `OPENAI_API_KEY=${LOCAL_FIXTURE}\n` 
 const serialized = JSON.stringify(publicReport);
 assert(!serialized.includes(LOCAL_FIXTURE), "loader report never exposes environment values");
 assert.deepEqual(Object.keys(publicReport[0]).sort(), ["applied", "exists", "filePath", "skipped"], "loader report contains metadata only");
-assert.equal(pkg.scripts["qa:nexus-local-env-loader"], "node scripts/nexus-local-env-loader-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-local-env-loader-qa.js"), "qa-suite includes local env loader QA");
+assert.equal(pkg.scripts["qa:nexus-local-env-loader"], "node archive/qa-scripts/nexus-local-env-loader-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-local-env-loader-qa.js"), "qa-suite includes local env loader QA");
 
 console.log(JSON.stringify({
   ok: true,

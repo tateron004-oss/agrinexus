@@ -453,7 +453,7 @@ No future phase should make planner output, `selectedToolId`, `agentAction`, or 
 Phase 12C adds:
 
 ```text
-scripts/nexus-planner-action-decision-mapper-qa.js
+archive/qa-scripts/nexus-planner-action-decision-mapper-qa.js
 ```
 
 The QA verifies:

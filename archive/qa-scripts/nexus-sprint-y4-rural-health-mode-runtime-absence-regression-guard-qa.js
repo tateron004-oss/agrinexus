@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_RURAL_HEALTH_MODE_FEATURE_FLAG_STATE,
   normalizeRuralHealthModeFeatureFlagState
-} = require("../public/nexus-rural-health-mode-feature-flag.js");
+} = require("../../public/nexus-rural-health-mode-feature-flag.js");
 const {
   protectedFields,
   loadRuralHealthModeFlagFixtures,
   validateRuralHealthModeFlagFixtures
 } = require("./nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_Y4_RURAL_HEALTH_MODE_RUNTIME_ABSENCE_REGRESSION_GU
 const qaName = "nexus-sprint-y4-rural-health-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint Y4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint Y4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Y4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-rural-health-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-rural-health-mode-feature-flag.js");
-const y3Harness = read("scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
+const y3Harness = read("archive", "qa-scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
 const fixtures = loadRuralHealthModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-rural-health-mode-readiness-contract.js",
   "public/nexus-rural-health-mode-feature-flag.js",
-  "scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js",
   "fixtures/nexus/rural-health-mode-feature-flags.json",
   "Sprint Y QA scripts"
 ], "Y4 runtime absence artifact list");
@@ -139,7 +139,7 @@ for (const requiredPath of [
   ["public", "nexus-rural-health-mode-readiness-contract.js"],
   ["public", "nexus-rural-health-mode-feature-flag.js"],
   ["fixtures", "nexus", "rural-health-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-y3-rural-health-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `Y4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -258,11 +258,11 @@ for (const source of [featureFlagModule, y3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-y4-rural-health-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Y4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Y1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Y2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint Y3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Y1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Y2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint Y3 QA.");
 
 console.log("[nexus-sprint-y4-rural-health-mode-runtime-absence-regression-guard-qa] passed");

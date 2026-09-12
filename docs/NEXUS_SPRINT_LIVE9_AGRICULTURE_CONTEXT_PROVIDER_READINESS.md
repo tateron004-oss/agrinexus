@@ -9,7 +9,7 @@ This phase does not wire agriculture context retrieval into Standard User runtim
 ## Files
 
 - `server/nexus-agriculture-context-source-provider.js`
-- `scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js`
 
 ## Supported Categories
 

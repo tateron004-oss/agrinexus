@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -142,7 +142,7 @@ includesAll(css, [
   "cursor: default !important"
 ], "orb inner-piece safety css");
 
-assert(pkg.scripts["qa:nexus-genesis-voice-first-conversational-presence"] === "node scripts/nexus-genesis-voice-first-conversational-presence-qa.js", "package alias must exist");
-assert(qaSuite.includes("scripts/nexus-genesis-voice-first-conversational-presence-qa.js"), "qa-suite must include focused presence QA");
+assert(pkg.scripts["qa:nexus-genesis-voice-first-conversational-presence"] === "node archive/qa-scripts/nexus-genesis-voice-first-conversational-presence-qa.js", "package alias must exist");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-voice-first-conversational-presence-qa.js"), "qa-suite must include focused presence QA");
 
 console.log("Nexus Genesis voice-first conversational presence QA passed.");

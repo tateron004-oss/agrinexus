@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_DATA_QUALITY_MONITORING_CONTRACT_PHASE_26.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -240,11 +240,11 @@ assert(invalid.conflictSeverity === "none", "invalid conflict severity must fall
 });
 
 assert(
-  packageData.scripts["qa:nexus-data-quality-monitoring-contract"] === "node scripts/nexus-data-quality-monitoring-contract-qa.js",
+  packageData.scripts["qa:nexus-data-quality-monitoring-contract"] === "node archive/qa-scripts/nexus-data-quality-monitoring-contract-qa.js",
   "package.json must expose qa:nexus-data-quality-monitoring-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-data-quality-monitoring-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-data-quality-monitoring-contract-qa.js"),
   "qa-suite.js must include data quality monitoring contract QA"
 );
 

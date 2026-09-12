@@ -7,9 +7,9 @@ const {
   PROTECTED_HEALTHCARE_ACCESS_INTELLIGENCE_FLAG_FIELDS,
   normalizeHealthcareAccessIntelligenceFeatureFlagState,
   isHealthcareAccessIntelligenceVisibleFeatureEnabled
-} = require("../public/nexus-healthcare-access-intelligence-feature-flag.js");
+} = require("../../public/nexus-healthcare-access-intelligence-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const qaName = "nexus-sprint-t2-healthcare-access-intelligence-feature-flag-cont
 
 assert(exists("docs", docName), "Sprint T2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint T2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint T2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint T2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -189,9 +189,9 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-t2-healthcare-access-intelligence-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint T2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint T1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint T1 QA.");
 
 console.log("[nexus-sprint-t2-healthcare-access-intelligence-feature-flag-contract-qa] passed");

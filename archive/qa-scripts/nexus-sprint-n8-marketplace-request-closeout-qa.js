@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docName = "NEXUS_SPRINT_N8_MARKETPLACE_REQUEST_CLOSEOUT_AND_SPRINT_O_READI
 const qaName = "nexus-sprint-n8-marketplace-request-closeout-qa.js";
 
 assert(exists("docs", docName), "N8 closeout doc must exist.");
-assert(exists("scripts", qaName), "N8 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N8 QA must exist.");
 
 [
   "NEXUS_SPRINT_N1_MARKETPLACE_REQUEST_PRODUCT_BOUNDARY.md",
@@ -38,7 +38,7 @@ assert(exists("scripts", qaName), "N8 QA must exist.");
   "nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js",
   "nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview-qa.js",
   qaName
-].forEach(file => assert(exists("scripts", file), `Sprint N QA must exist: ${file}`));
+].forEach(file => assert(exists("archive", "qa-scripts", file), `Sprint N QA must exist: ${file}`));
 
 [
   "nexus-marketplace-request-contract.js",
@@ -80,22 +80,22 @@ const aliases = [
 aliases.forEach(alias => assert(pkg.scripts && pkg.scripts[alias], `${alias} package script must exist.`));
 
 [
-  "scripts/nexus-sprint-n1-marketplace-request-product-boundary-qa.js",
-  "scripts/nexus-sprint-n2-inert-marketplace-request-contract-qa.js",
-  "scripts/nexus-sprint-n3-marketplace-request-harness-qa.js",
-  "scripts/nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js",
-  "scripts/nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js",
-  "scripts/nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js",
-  "scripts/nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-n1-marketplace-request-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-n2-inert-marketplace-request-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-n3-marketplace-request-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js",
+  "archive/qa-scripts/nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js",
+  "archive/qa-scripts/nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview-qa.js",
   `scripts/${qaName}`
 ].forEach(script => assert(qaSuite.includes(script), `qa-suite must include ${script}.`));
 
 const fixtures = JSON.parse(read("fixtures", "nexus", "marketplace-requests.json"));
-const contract = require("../public/nexus-marketplace-request-contract.js");
+const contract = require("../../public/nexus-marketplace-request-contract.js");
 const harness = require("./nexus-sprint-n3-marketplace-request-harness.js");
-const mapper = require("../public/nexus-marketplace-request-risk-evidence-mapping.js");
-const guard = require("../public/nexus-marketplace-request-preview-flag-guard.js");
-const preview = require("../public/nexus-marketplace-request-preview.js");
+const mapper = require("../../public/nexus-marketplace-request-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-marketplace-request-preview-flag-guard.js");
+const preview = require("../../public/nexus-marketplace-request-preview.js");
 
 fixtures.forEach(fixture => {
   const validation = contract.validateMarketplaceRequestIntent(fixture);

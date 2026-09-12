@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docName = "NEXUS_SPRINT_M8_APPOINTMENT_SERVICE_REQUEST_CLOSEOUT_AND_SPRINT
 const qaName = "nexus-sprint-m8-appointment-service-request-closeout-qa.js";
 
 assert(exists("docs", docName), "M8 closeout doc must exist.");
-assert(exists("scripts", qaName), "M8 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "M8 QA must exist.");
 
 [
   "NEXUS_SPRINT_M1_APPOINTMENT_SERVICE_REQUEST_PRODUCT_BOUNDARY.md",
@@ -38,7 +38,7 @@ assert(exists("scripts", qaName), "M8 QA must exist.");
   "nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js",
   "nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview-qa.js",
   qaName
-].forEach(file => assert(exists("scripts", file), `Sprint M QA must exist: ${file}`));
+].forEach(file => assert(exists("archive", "qa-scripts", file), `Sprint M QA must exist: ${file}`));
 
 [
   "nexus-appointment-service-request-contract.js",
@@ -80,22 +80,22 @@ const aliases = [
 aliases.forEach(alias => assert(pkg.scripts && pkg.scripts[alias], `${alias} package script must exist.`));
 
 [
-  "scripts/nexus-sprint-m1-appointment-service-request-product-boundary-qa.js",
-  "scripts/nexus-sprint-m2-inert-appointment-service-request-contract-qa.js",
-  "scripts/nexus-sprint-m3-appointment-service-request-harness-qa.js",
-  "scripts/nexus-sprint-m4-provider-time-risk-evidence-mapping-qa.js",
-  "scripts/nexus-sprint-m5-flag-off-appointment-service-regression-qa.js",
-  "scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js",
-  "scripts/nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-m1-appointment-service-request-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-m2-inert-appointment-service-request-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-m3-appointment-service-request-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-m4-provider-time-risk-evidence-mapping-qa.js",
+  "archive/qa-scripts/nexus-sprint-m5-flag-off-appointment-service-regression-qa.js",
+  "archive/qa-scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview-qa.js",
   `scripts/${qaName}`
 ].forEach(script => assert(qaSuite.includes(script), `qa-suite must include ${script}.`));
 
 const fixtures = JSON.parse(read("fixtures", "nexus", "appointment-service-requests.json"));
-const contract = require("../public/nexus-appointment-service-request-contract.js");
+const contract = require("../../public/nexus-appointment-service-request-contract.js");
 const harness = require("./nexus-sprint-m3-appointment-service-request-harness.js");
-const mapper = require("../public/nexus-appointment-service-risk-evidence-mapping.js");
-const guard = require("../public/nexus-appointment-service-preview-flag-guard.js");
-const preview = require("../public/nexus-appointment-service-request-preview.js");
+const mapper = require("../../public/nexus-appointment-service-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-appointment-service-preview-flag-guard.js");
+const preview = require("../../public/nexus-appointment-service-request-preview.js");
 
 fixtures.forEach(fixture => {
   const validation = contract.validateAppointmentServiceRequestIntent(fixture);

@@ -7,7 +7,7 @@ const {
   validateFarmerModeFlagFixtures
 } = require("./nexus-sprint-x3-farmer-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-x3-farmer-mode-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint X3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint X3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint X3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint X3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint X3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint X3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "40e42444eb91490aa590d32fe85303d21fd2b4f3",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/farmer-mode-feature-flags.json",
-  "scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js",
   "farmerModeReviewAllowed: false",
   "sourceBackedFarmerGuidancePreviewAllowed: false",
   "farmerProfileSummaryPreviewAllowed: false",
@@ -191,10 +191,10 @@ assert(exists("docs", "NEXUS_SPRINT_X2_FARMER_MODE_FEATURE_FLAG_CONTRACT.md"), "
 assert(exists("public", "nexus-farmer-mode-feature-flag.js"), "X3 requires X2 feature flag module.");
 
 const alias = "qa:nexus-sprint-x3-farmer-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint X3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-x1-farmer-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint X1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-x2-farmer-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint X2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-x1-farmer-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint X1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-x2-farmer-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint X2 QA.");
 
 console.log("[nexus-sprint-x3-farmer-mode-flag-contract-harness-qa] passed");

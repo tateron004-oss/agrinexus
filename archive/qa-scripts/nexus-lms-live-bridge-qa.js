@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
-const provider = require("../server/providers/lmsLiveBridgeProvider");
+const provider = require("../../server/providers/lmsLiveBridgeProvider");
 
 const server = fs.readFileSync("server.js", "utf8");
 const app = fs.readFileSync("public/app.js", "utf8");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   registry: path.join(root, "public", "nexus-real-data-source-registry.js"),
   doc: path.join(root, "docs", "NEXUS_REAL_DATA_REGULATED_ACTION_ROADMAP.md"),
@@ -308,7 +308,7 @@ requiredConnectorFields.forEach(field => {
 });
 
 const packageData = JSON.parse(packageJson);
-assert(packageData.scripts["qa:nexus-real-data-regulated-action-roadmap"] === "node scripts/nexus-real-data-regulated-action-roadmap-qa.js", "package.json must include real data roadmap QA alias.");
-assert(qaSuite.includes("scripts/nexus-real-data-regulated-action-roadmap-qa.js"), "nexus-workforce QA suite must include real data roadmap QA.");
+assert(packageData.scripts["qa:nexus-real-data-regulated-action-roadmap"] === "node archive/qa-scripts/nexus-real-data-regulated-action-roadmap-qa.js", "package.json must include real data roadmap QA alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-real-data-regulated-action-roadmap-qa.js"), "nexus-workforce QA suite must include real data roadmap QA.");
 
 console.log("[nexus-real-data-regulated-action-roadmap-qa] passed");

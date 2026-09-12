@@ -7,9 +7,9 @@ const {
   PROTECTED_PROVIDER_MODE_FLAG_FIELDS,
   normalizeProviderModeFeatureFlagState,
   isProviderModeVisibleFeatureEnabled
-} = require("../public/nexus-provider-mode-feature-flag.js");
+} = require("../../public/nexus-provider-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-provider-mode-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AH2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AH2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AH2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AH2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -168,10 +168,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ah2-provider-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AH2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ah1-provider-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AH1 QA.");
-assert(qaSuite.includes("scripts/nexus-provider-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 86 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ah1-provider-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AH1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-provider-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 86 QA.");
 
 console.log("[nexus-sprint-ah2-provider-mode-feature-flag-contract-qa] passed");

@@ -108,7 +108,7 @@ For those domains, unavailable providers must produce a safe fallback explanatio
 
 The deterministic QA lives in:
 
-- `scripts/nexus-communications-provider-availability-fallback-contract-qa.js`
+- `archive/qa-scripts/nexus-communications-provider-availability-fallback-contract-qa.js`
 
 The package alias is:
 

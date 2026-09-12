@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_FIELD_AGENT_MODE_FEATURE_FLAG_STATE,
   normalizeFieldAgentModeFeatureFlagState
-} = require("../public/nexus-field-agent-mode-feature-flag.js");
+} = require("../../public/nexus-field-agent-mode-feature-flag.js");
 const {
   protectedFields,
   loadFieldAgentModeFlagFixtures,
   validateFieldAgentModeFlagFixtures
 } = require("./nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_AG5_FIELD_AGENT_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-ag5-field-agent-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AG5 lane closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AG5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AG5 QA script must exist.");
 
 const doc = read("docs", docName);
 const ag4Doc = read("docs", "NEXUS_SPRINT_AG4_FIELD_AGENT_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
@@ -43,7 +43,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-field-agent-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-field-agent-mode-feature-flag.js");
-const harness = read("scripts", "nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js");
+const harness = read("archive", "qa-scripts", "nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js");
 const fixtures = loadFieldAgentModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -84,12 +84,12 @@ for (const requiredPath of [
   ["public", "nexus-field-agent-mode-feature-flag.js"],
   ["public", "nexus-provider-mode-readiness-contract.js"],
   ["fixtures", "nexus", "field-agent-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"],
-  ["scripts", "nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa.js"],
-  ["scripts", "nexus-sprint-ag3-field-agent-mode-flag-contract-harness-qa.js"],
-  ["scripts", "nexus-sprint-ag4-field-agent-mode-runtime-absence-regression-guard-qa.js"],
-  ["scripts", "nexus-field-agent-mode-readiness-contract-qa.js"],
-  ["scripts", "nexus-provider-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-ag3-field-agent-mode-flag-contract-harness-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-ag4-field-agent-mode-runtime-absence-regression-guard-qa.js"],
+  ["archive", "qa-scripts", "nexus-field-agent-mode-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-provider-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AG5 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -220,14 +220,14 @@ for (const source of [featureFlagModule, harness]) {
 }
 
 const alias = "qa:nexus-sprint-ag5-field-agent-mode-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AG5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AG1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AG2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AG3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ag4-field-agent-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AG4 QA.");
-assert(qaSuite.includes("scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
-assert(qaSuite.includes("scripts/nexus-provider-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 86 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ag1-field-agent-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AG1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ag2-field-agent-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AG2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AG3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ag4-field-agent-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AG4 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-provider-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 86 QA.");
 
 console.log("[nexus-sprint-ag5-field-agent-mode-lane-closeout-qa] passed");

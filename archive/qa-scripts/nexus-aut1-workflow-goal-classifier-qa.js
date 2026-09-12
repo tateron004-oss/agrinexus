@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const classifier = require("../server/nexus-autonomy-workflow-goal-classifier.js");
+const classifier = require("../../server/nexus-autonomy-workflow-goal-classifier.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -153,10 +153,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-aut1-workflow-goal-classifier"],
-    "node scripts/nexus-aut1-workflow-goal-classifier-qa.js",
+    "node archive/qa-scripts/nexus-aut1-workflow-goal-classifier-qa.js",
     "AUT1 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut1-workflow-goal-classifier-qa.js"), "AUT1 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut1-workflow-goal-classifier-qa.js"), "AUT1 QA must be wired into local-safe suites.");
 }
 
 function runAut1WorkflowGoalClassifierQa() {

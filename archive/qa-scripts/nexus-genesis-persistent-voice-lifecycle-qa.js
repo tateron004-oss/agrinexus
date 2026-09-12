@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert/strict");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -91,10 +91,10 @@ notIncludes(
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-genesis-persistent-voice-lifecycle"],
-  "node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js",
+  "node archive/qa-scripts/nexus-genesis-persistent-voice-lifecycle-qa.js",
   "package alias should run persistent voice lifecycle QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "qa-suite persistent lifecycle wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "qa-suite persistent lifecycle wiring");
 
 function createLifecycle() {
   return {

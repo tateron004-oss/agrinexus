@@ -78,16 +78,16 @@ All future execution lanes require explicit product approval, provider integrati
 
 The NAP train is protected by deterministic QA for:
 
-- `scripts/nexus-nap1-assistant-capability-router-qa.js`
-- `scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js`
-- `scripts/nexus-nap3-agent-task-planner-qa.js`
-- `scripts/nexus-nap4-safe-action-preparation-qa.js`
-- `scripts/nexus-nap5-strong-follow-up-memory-qa.js`
-- `scripts/nexus-nap6-standard-user-agent-experience-qa.js`
-- `scripts/nexus-nap7-voice-command-layer-integration-qa.js`
-- `scripts/nexus-nap8-reliability-provider-health-qa.js`
-- `scripts/nexus-nap9-browser-validation-qa.js`
-- `scripts/nexus-nap10-agent-power-closeout-qa.js`
+- `archive/qa-scripts/nexus-nap1-assistant-capability-router-qa.js`
+- `archive/qa-scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js`
+- `archive/qa-scripts/nexus-nap3-agent-task-planner-qa.js`
+- `archive/qa-scripts/nexus-nap4-safe-action-preparation-qa.js`
+- `archive/qa-scripts/nexus-nap5-strong-follow-up-memory-qa.js`
+- `archive/qa-scripts/nexus-nap6-standard-user-agent-experience-qa.js`
+- `archive/qa-scripts/nexus-nap7-voice-command-layer-integration-qa.js`
+- `archive/qa-scripts/nexus-nap8-reliability-provider-health-qa.js`
+- `archive/qa-scripts/nexus-nap9-browser-validation-qa.js`
+- `archive/qa-scripts/nexus-nap10-agent-power-closeout-qa.js`
 
 These checks are wired into local-safe QA suites and must continue to pass with `nexus-workforce` and `all-safe`.
 

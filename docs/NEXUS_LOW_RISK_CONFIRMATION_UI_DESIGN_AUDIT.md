@@ -263,8 +263,8 @@ Suggested future QA scripts:
 
 - `scripts/nexus-low-risk-confirmation-ui-qa.js`
 - `scripts/nexus-low-risk-confirmation-ui-browser-checklist.md` or a docs checklist
-- Update `scripts/nexus-controlled-action-confirmation-readiness-qa.js` only if the schema changes.
-- Keep `scripts/nexus-controlled-action-preview-clear-qa.js` as a clearing regression guard.
+- Update `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js` only if the schema changes.
+- Keep `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js` as a clearing regression guard.
 
 ## 15. Recommended Phase 8T Scope
 
@@ -297,11 +297,11 @@ Phase 8T implementation is documented in `docs/NEXUS_LOW_RISK_CONFIRMATION_UI_PR
 - `docs/NEXUS_CONTROLLED_ACTION_CONFIRMATION_READINESS.md`
 - `docs/NEXUS_CONTROLLED_ACTION_PREVIEW_READINESS.md`
 - `docs/NEXUS_CONTROLLED_ACTION_METADATA_SCHEMA.md`
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-controlled-action-preview-readiness-qa.js`
-- `scripts/nexus-controlled-action-metadata-schema-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js`
 - `package.json`
 - `scripts/qa-suite.js`
 

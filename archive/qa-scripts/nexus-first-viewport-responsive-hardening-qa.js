@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -47,7 +47,7 @@ assert(app.includes('data-nexus-primary-voice-entry="true"'), "responsive harden
 assert(app.includes('data-nexus-primary-typed-entry="true"'), "responsive hardening preserves typed entry");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(workspace), "responsive first viewport does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-first-viewport-responsive-hardening"] === "node scripts/nexus-first-viewport-responsive-hardening-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-first-viewport-responsive-hardening-qa.js"), "safe QA suite includes responsive hardening QA");
+assert(packageJson.scripts["qa:nexus-first-viewport-responsive-hardening"] === "node archive/qa-scripts/nexus-first-viewport-responsive-hardening-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-first-viewport-responsive-hardening-qa.js"), "safe QA suite includes responsive hardening QA");
 
 console.log("Nexus first viewport responsive hardening QA passed.");

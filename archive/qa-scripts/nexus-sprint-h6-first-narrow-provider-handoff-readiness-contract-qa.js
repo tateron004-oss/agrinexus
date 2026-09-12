@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const qaName = "nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract
 
 assert(exists("docs", docName), "Sprint H6 doc must exist.");
 assert(exists("public", moduleName), "Sprint H6 contract module must exist.");
-assert(exists("scripts", qaName), "Sprint H6 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H6 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -33,7 +33,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-first-narrow-provider-handoff-readiness-contract.js");
+const contract = require("../../public/nexus-first-narrow-provider-handoff-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint H6",
@@ -205,7 +205,7 @@ assert.equal(completeCandidate.candidate.executionAuthority, false, "H6 candidat
 });
 
 const alias = "qa:nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H6 QA.");
 

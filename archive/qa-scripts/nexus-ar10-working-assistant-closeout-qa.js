@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -111,11 +111,11 @@ function runAr10WorkingAssistantCloseoutQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar10-working-assistant-closeout"],
-    "node scripts/nexus-ar10-working-assistant-closeout-qa.js",
+    "node archive/qa-scripts/nexus-ar10-working-assistant-closeout-qa.js",
     "AR10 package alias must exist."
   );
   assert(
-    qaSuite.includes("scripts/nexus-ar10-working-assistant-closeout-qa.js"),
+    qaSuite.includes("archive/qa-scripts/nexus-ar10-working-assistant-closeout-qa.js"),
     "AR10 QA must be wired into local-safe suites."
   );
 

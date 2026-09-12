@@ -71,7 +71,7 @@ The stack exposes helpers to:
 
 Focused QA:
 
-- `scripts/nexus-n100-3-memory-personalization-stack-qa.js`
+- `archive/qa-scripts/nexus-n100-3-memory-personalization-stack-qa.js`
 
 The QA verifies prompt behavior, redaction, explicit consent, explicit location, clear/forget, package alias, safe-suite wiring, and absence from Standard User runtime.
 

@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_MULTI_TURN_REASONING_FEATURE_FLAG_STATE,
   normalizeMultiTurnReasoningFeatureFlagState
-} = require("../public/nexus-multi-turn-reasoning-feature-flag.js");
+} = require("../../public/nexus-multi-turn-reasoning-feature-flag.js");
 const {
   protectedFields,
   loadMultiTurnReasoningFlagFixtures,
   validateMultiTurnReasoningFlagFixtures
 } = require("./nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_M4_MULTI_TURN_REASONING_RUNTIME_ABSENCE_REGRESSION
 const qaName = "nexus-sprint-m4-multi-turn-reasoning-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint M4 runtime absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint M4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint M4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -41,7 +41,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const featureFlagModule = read("public", "nexus-multi-turn-reasoning-feature-flag.js");
-const harnessSource = read("scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
+const harnessSource = read("archive", "qa-scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js");
 const fixtures = loadMultiTurnReasoningFlagFixtures();
 
 assertIncludes(doc, [
@@ -59,7 +59,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-multi-turn-reasoning-readiness-contract.js",
   "public/nexus-multi-turn-reasoning-feature-flag.js",
-  "scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js",
   "fixtures/nexus/multi-turn-reasoning-feature-flags.json",
   "It intentionally does not ban generic words such as reasoning, context, route, memory, language, or settings"
 ], "M4 protected artifact list");
@@ -122,7 +122,7 @@ for (const prior of [
   ["public", "nexus-multi-turn-reasoning-readiness-contract.js"],
   ["public", "nexus-multi-turn-reasoning-feature-flag.js"],
   ["fixtures", "nexus", "multi-turn-reasoning-feature-flags.json"],
-  ["scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js"]
 ]) {
   assert(exists(...prior), `Sprint M4 requires prior artifact: ${prior.join("/")}`);
 }
@@ -232,7 +232,7 @@ for (const source of [featureFlagModule, harnessSource]) {
 }
 
 const alias = "qa:nexus-sprint-m4-multi-turn-reasoning-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint M4 QA.");
 

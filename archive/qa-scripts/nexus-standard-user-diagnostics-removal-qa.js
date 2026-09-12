@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -55,7 +55,7 @@ assert(deferredLegacyHost.includes("hidden aria-hidden=\"true\""), "deferred hos
 });
 
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(renderUserWorkspace), "startup copy still avoids fake execution claims");
-assert(packageJson.scripts["qa:nexus-standard-user-diagnostics-removal"] === "node scripts/nexus-standard-user-diagnostics-removal-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-standard-user-diagnostics-removal-qa.js"), "safe QA suite includes diagnostics removal QA");
+assert(packageJson.scripts["qa:nexus-standard-user-diagnostics-removal"] === "node archive/qa-scripts/nexus-standard-user-diagnostics-removal-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-standard-user-diagnostics-removal-qa.js"), "safe QA suite includes diagnostics removal QA");
 
 console.log("Nexus Standard User diagnostics removal QA passed.");

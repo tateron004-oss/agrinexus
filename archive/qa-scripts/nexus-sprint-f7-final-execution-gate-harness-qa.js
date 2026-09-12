@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -21,17 +21,17 @@ const harnessName = "nexus-sprint-f7-final-execution-gate-harness.js";
 const qaName = "nexus-sprint-f7-final-execution-gate-harness-qa.js";
 
 assert(exists("docs", docName), "F7 doc must exist.");
-assert(exists("scripts", harnessName), "F7 harness must exist.");
-assert(exists("scripts", qaName), "F7 QA must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "F7 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "F7 QA must exist.");
 
 const doc = read("docs", docName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const app = read("public", "app.js");
 const index = read("public", "index.html");
 const server = read("server.js");
-const harness = require(path.join(root, "scripts", harnessName));
+const harness = require(path.join(root, "archive", "qa-scripts", harnessName));
 
 assertIncludes(doc, [
   "Sprint F7",
@@ -94,9 +94,9 @@ assert(!app.includes(harnessName), "F7 harness must not be loaded by app.js.");
 assert(!server.includes(harnessName), "F7 harness must not be loaded by server.js.");
 
 const alias = "qa:nexus-sprint-f7-final-execution-gate-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include F7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-f6-final-execution-gate-contract-qa.js"), "F7 requires F6 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-f6-final-execution-gate-contract-qa.js"), "F7 requires F6 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-f7-final-execution-gate-harness-qa] passed");

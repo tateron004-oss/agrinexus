@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -261,7 +261,7 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   ".a100-clinician-report"
 ].forEach(selector => assert(styles.includes(selector), `Chronic care styles should include ${selector}.`));
 
-assert.equal(pkg.scripts["qa:nexus-chronic-care-assistant-preview"], "node scripts/nexus-chronic-care-assistant-preview-qa.js", "Package script should expose chronic care QA.");
-assert(qaSuite.includes("scripts/nexus-chronic-care-assistant-preview-qa.js"), "Chronic care QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-chronic-care-assistant-preview"], "node archive/qa-scripts/nexus-chronic-care-assistant-preview-qa.js", "Package script should expose chronic care QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-chronic-care-assistant-preview-qa.js"), "Chronic care QA should be wired into qa-suite.");
 
 console.log("[nexus-chronic-care-assistant-preview-qa] passed");

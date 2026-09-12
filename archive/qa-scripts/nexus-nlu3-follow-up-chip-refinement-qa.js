@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -97,10 +97,10 @@ function runNlu3FollowUpChipRefinementQa() {
   assert(styles.includes(".nexus-assistant-runtime-preview-followups button"), "Follow-up chip buttons must have compact styling.");
   assert.equal(
     packageJson.scripts["qa:nexus-nlu3-follow-up-chip-refinement"],
-    "node scripts/nexus-nlu3-follow-up-chip-refinement-qa.js",
+    "node archive/qa-scripts/nexus-nlu3-follow-up-chip-refinement-qa.js",
     "NLU3 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nlu3-follow-up-chip-refinement-qa.js"), "NLU3 QA must be wired into safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nlu3-follow-up-chip-refinement-qa.js"), "NLU3 QA must be wired into safe suites.");
 
   console.log(JSON.stringify({
     safeFollowUpChips: 8,

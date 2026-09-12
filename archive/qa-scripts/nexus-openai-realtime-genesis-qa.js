@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -216,9 +216,9 @@ function staticAssertions() {
   assert(agentSource.includes("microphone_track_live"), "Realtime agent should emit verified live microphone-track events");
   assert(agentSource.includes("getMicrophoneProof"), "Realtime agent controller should expose microphone proof to the app");
   assert(!agentBundle.includes("OPENAI_API_KEY"), "browser bundle must not include permanent OpenAI key names");
-  assert.equal(packageJson.scripts["qa:nexus-openai-realtime-genesis"], "node scripts/nexus-openai-realtime-genesis-qa.js");
+  assert.equal(packageJson.scripts["qa:nexus-openai-realtime-genesis"], "node archive/qa-scripts/nexus-openai-realtime-genesis-qa.js");
   assert.equal(packageJson.scripts["build:nexus-openai-realtime-agent"], "esbuild public/nexus-openai-realtime-agent.js --bundle --format=esm --platform=browser --target=es2020 --outfile=public/vendor/nexus-openai-realtime-agent.bundle.mjs");
-  assert(qaSuite.includes("scripts/nexus-openai-realtime-genesis-qa.js"), "qa-suite should include Realtime Genesis QA");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-openai-realtime-genesis-qa.js"), "qa-suite should include Realtime Genesis QA");
 }
 
 async function routeAssertions() {
@@ -235,7 +235,7 @@ async function routeAssertions() {
       assert.equal(req.headers.authorization, "Bearer test-openai-secret", "permanent key should only be sent server-to-server");
       const body = JSON.parse(raw || "{}");
       assert.equal(body.session?.type, "realtime", "client-secret request should wrap the Realtime configuration in session");
-      assert.equal(body.session?.model, "gpt-realtime-2", "Realtime session should target gpt-realtime-2 by default");
+      assert.equal(body.session?.model, "gpt-realtime-2.1", "Realtime session should target gpt-realtime-2.1 by default");
       assert.equal(body.session?.audio?.input?.turn_detection?.type, "semantic_vad", "Realtime session should use semantic VAD by default");
       assert.equal(body.session?.audio?.input?.turn_detection?.threshold, undefined, "semantic VAD must not receive server-VAD-only threshold");
       assert.equal(body.session?.audio?.input?.turn_detection?.prefix_padding_ms, undefined, "semantic VAD must not receive server-VAD-only padding");

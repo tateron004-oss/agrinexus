@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TRANSPORTATION_MODE_FEATURE_FLAG_STATE,
   normalizeTransportationModeFeatureFlagState
-} = require("../public/nexus-transportation-mode-feature-flag.js");
+} = require("../../public/nexus-transportation-mode-feature-flag.js");
 const {
   protectedFields,
   loadTransportationModeFlagFixtures,
   validateTransportationModeFlagFixtures
 } = require("./nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_AC4_TRANSPORTATION_MODE_RUNTIME_ABSENCE_REGRESSION
 const qaName = "nexus-sprint-ac4-transportation-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AC4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AC4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AC4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-transportation-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-transportation-mode-feature-flag.js");
-const ac3Harness = read("scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
+const ac3Harness = read("archive", "qa-scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
 const fixtures = loadTransportationModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-transportation-mode-readiness-contract.js",
   "public/nexus-transportation-mode-feature-flag.js",
-  "scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness.js",
   "fixtures/nexus/transportation-mode-feature-flags.json",
   "Sprint AC QA scripts"
 ], "AC4 runtime absence artifact list");
@@ -150,7 +150,7 @@ for (const requiredPath of [
   ["public", "nexus-transportation-mode-readiness-contract.js"],
   ["public", "nexus-transportation-mode-feature-flag.js"],
   ["fixtures", "nexus", "transportation-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AC4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -277,11 +277,11 @@ for (const source of [featureFlagModule, ac3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-ac4-transportation-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AC4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ac1-transportation-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AC1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ac2-transportation-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AC2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AC3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac1-transportation-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AC1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac2-transportation-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AC2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AC3 QA.");
 
 console.log("[nexus-sprint-ac4-transportation-mode-runtime-absence-regression-guard-qa] passed");

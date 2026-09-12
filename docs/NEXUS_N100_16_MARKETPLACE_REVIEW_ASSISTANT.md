@@ -40,4 +40,4 @@ This module is not loaded by `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-16-marketplace-review-assistant-qa.js` verifies supported review artifact types, blocked marketplace execution prompts, static runtime absence, no unsafe marketplace/payment/contact APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-16-marketplace-review-assistant-qa.js` verifies supported review artifact types, blocked marketplace execution prompts, static runtime absence, no unsafe marketplace/payment/contact APIs, package alias wiring, and local-safe suite inclusion.

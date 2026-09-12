@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -12,7 +12,7 @@ const docPath = path.join(root, "docs", "NEXUS_STAGED_ACTION_RENDERER_RUNTIME_RE
 assert(fs.existsSync(docPath), "docs/NEXUS_STAGED_ACTION_RENDERER_RUNTIME_READINESS_AUDIT.md must exist");
 
 const doc = read("docs", "NEXUS_STAGED_ACTION_RENDERER_RUNTIME_READINESS_AUDIT.md");
-const qaSource = read("scripts", "nexus-staged-action-renderer-readiness-audit-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-staged-action-renderer-readiness-audit-qa.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -95,7 +95,7 @@ for (const goNoGo of [
 }
 
 assert(packageJson.includes("\"qa:nexus-staged-action-renderer-readiness-audit\""), "package.json must expose qa:nexus-staged-action-renderer-readiness-audit");
-assert(suite.includes("scripts/nexus-staged-action-renderer-readiness-audit-qa.js"), "nexus-workforce suite should include renderer readiness audit QA");
+assert(suite.includes("archive/qa-scripts/nexus-staged-action-renderer-readiness-audit-qa.js"), "nexus-workforce suite should include renderer readiness audit QA");
 
 assert(!fs.existsSync(path.join(root, "public", "nexus-staged-action-renderer.js")), "visible runtime renderer file must not be added in Phase 12J");
 assert(!index.includes("nexus-staged-action-inert-renderer.js"), "Standard User page must not load inert renderer helper");

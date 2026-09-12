@@ -6,7 +6,7 @@ const {
   validateApprovalCenterFlagFixtures
 } = require("./nexus-sprint-f3-approval-center-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,12 +29,12 @@ const qaName = "nexus-sprint-f3-approval-center-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint F3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint F3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint F3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint F3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint F3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint F3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -47,7 +47,7 @@ assertIncludes(doc, [
   "3b1be2fc0185ec61ac6ff3e8af647e5e673260ab",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/approval-center-feature-flags.json",
-  "scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js",
   "approvalPersistenceAllowed: false",
   "auditWriteAllowed: false",
   "providerHandoffAllowed: false",
@@ -126,7 +126,7 @@ assert(exists("docs", "NEXUS_SPRINT_F2_APPROVAL_CENTER_FEATURE_FLAG_CONTRACT.md"
 assert(exists("public", "nexus-approval-center-feature-flag.js"), "F3 requires F2 feature flag module.");
 
 const alias = "qa:nexus-sprint-f3-approval-center-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint F3 QA.");
 

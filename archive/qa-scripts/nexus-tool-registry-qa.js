@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const registryPath = path.join(root, "docs", "nexus-tool-registry.v1.json");
 const serverPath = path.join(root, "server.js");
 const appPath = path.join(root, "public", "app.js");
@@ -56,13 +56,13 @@ const requiredDomains = [
   "reports"
 ];
 const requiredRegistryQaCoverage = [
-  "scripts/nexus-tool-registry-qa.js",
-  "scripts/nexus-workforce-branding-qa.js",
-  "scripts/nexus-workforce-standard-user-qa.js",
-  "scripts/nexus-workforce-alias-qa.js",
-  "scripts/nexus-workforce-metadata-qa.js",
-  "scripts/nexus-low-risk-agent-mapping-qa.js",
-  "scripts/nexus-agent-action-suggestion-policy-qa.js"
+  "archive/qa-scripts/nexus-tool-registry-qa.js",
+  "archive/qa-scripts/nexus-workforce-branding-qa.js",
+  "archive/qa-scripts/nexus-workforce-standard-user-qa.js",
+  "archive/qa-scripts/nexus-workforce-alias-qa.js",
+  "archive/qa-scripts/nexus-workforce-metadata-qa.js",
+  "archive/qa-scripts/nexus-low-risk-agent-mapping-qa.js",
+  "archive/qa-scripts/nexus-agent-action-suggestion-policy-qa.js"
 ];
 const riskyIntentPattern = /health|provider|video|camera|call|dispatch|outbound|share|export|application|apply|order|payment|wallet|settlement|certificate|transcript|drone|admin|document|report/i;
 const unsupportedLiveClaimPattern = /live (medical diagnosis|provider dispatch|payment execution|job application submission|external messaging|webrtc|ehr|fhir)/i;

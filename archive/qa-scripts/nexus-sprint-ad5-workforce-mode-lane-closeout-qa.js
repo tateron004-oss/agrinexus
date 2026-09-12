@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_WORKFORCE_MODE_FEATURE_FLAG_STATE,
   normalizeWorkforceModeFeatureFlagState
-} = require("../public/nexus-workforce-mode-feature-flag.js");
+} = require("../../public/nexus-workforce-mode-feature-flag.js");
 const {
   protectedFields,
   loadWorkforceModeFlagFixtures,
   validateWorkforceModeFlagFixtures
 } = require("./nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_AD5_WORKFORCE_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-ad5-workforce-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AD5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AD5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AD5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-workforce-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-workforce-mode-feature-flag.js");
-const ad3Harness = read("scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
+const ad3Harness = read("archive", "qa-scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
 const ad4Doc = read("docs", "NEXUS_SPRINT_AD4_WORKFORCE_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
 const fixtures = loadWorkforceModeFlagFixtures();
 
@@ -210,7 +210,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint AD5 requires prior Sprint AD QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint AD5 requires prior Sprint AD QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint AD QA: ${requiredScript}`);
 }
 
@@ -325,9 +325,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-ad5-workforce-mode-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-ad5-workforce-mode-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-ad5-workforce-mode-lane-closeout-qa.js",
   "package.json must expose Sprint AD5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-ad5-workforce-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AD5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ad5-workforce-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AD5 QA.");
 
 console.log("[nexus-sprint-ad5-workforce-mode-lane-closeout-qa] passed");

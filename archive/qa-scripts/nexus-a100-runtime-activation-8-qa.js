@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -71,7 +71,7 @@ assert(intentSource.includes("capability.id === \"learning\" ? a100TrainingLearn
   assert(!source.includes("fetch("), `Sprint 8 source ${index} must not add external/backend calls.`);
 });
 
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-8"], "node scripts/nexus-a100-runtime-activation-8-qa.js", "Sprint 8 QA alias should exist.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-8-qa.js"), "Sprint 8 QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-8"], "node archive/qa-scripts/nexus-a100-runtime-activation-8-qa.js", "Sprint 8 QA alias should exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-8-qa.js"), "Sprint 8 QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-8-qa] passed");

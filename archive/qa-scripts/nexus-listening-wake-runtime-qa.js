@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -67,7 +67,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
 ].forEach(token => includes(voiceTransportBlock, token, `voice runtime transport controller wiring ${token}`));
 
 [
-  "model: sessionPayload.model || status.model || \"gpt-realtime-2\"",
+  "model: sessionPayload.model || status.model || \"gpt-realtime-2.1\"",
   "preverifiedMicrophoneStream",
   "normalizeRealtimeMicrophoneProof(controller)",
   "recordNexusAudioPipelineEvent(\"openai-realtime-connected\"",
@@ -86,7 +86,7 @@ const exposeBlock = blockBetween(app, "function exposeNexusAppWindowApis()", "fu
 ].forEach(token => includes(exposeBlock, token, `listening/wake API exposure ${token}`));
 
 assert(!/always-on listening is enabled|silent microphone start|hidden microphone|nexus heard you.*permission-denied/i.test(contractBlock + voiceTransportBlock + startBlock), "listening controller avoids unsafe microphone and heard claims");
-assert(pkg.scripts["qa:nexus-listening-wake-runtime"] === "node scripts/nexus-listening-wake-runtime-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-listening-wake-runtime-qa.js"), "safe QA suite includes listening/wake runtime QA");
+assert(pkg.scripts["qa:nexus-listening-wake-runtime"] === "node archive/qa-scripts/nexus-listening-wake-runtime-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-listening-wake-runtime-qa.js"), "safe QA suite includes listening/wake runtime QA");
 
 console.log("Nexus listening and wake runtime QA passed.");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -116,12 +116,12 @@ assert(reportRenderSource.includes("RPM/RTM Manual Session Data"), "Sprint 14 vi
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-14-rpm-rtm-manual-data-intake"],
-  "node scripts/nexus-capability-sprint-14-rpm-rtm-manual-data-intake-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-14-rpm-rtm-manual-data-intake-qa.js",
   "package alias should expose Sprint 14 QA."
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-14-rpm-rtm-manual-data-intake-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-14-rpm-rtm-manual-data-intake-qa.js"),
   "qa-suite should include Sprint 14 QA."
 );
 

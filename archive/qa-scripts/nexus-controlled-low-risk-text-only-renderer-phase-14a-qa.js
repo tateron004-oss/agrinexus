@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const rendererPath = path.join(root, "public", "nexus-controlled-low-risk-text-only-renderer.js");
 const docPath = path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_TEXT_ONLY_RENDERER_PHASE_14A.md");
 const indexPath = path.join(root, "public", "index.html");
@@ -243,7 +243,7 @@ assert(renderer.isControlledLowRiskRendererVisibleUiEnabled({ enableControlledLo
   assert(mount.childNodes.length === 0, "Flag-off mount must remain empty.");
 }
 
-assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"] === "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js", "package.json must expose Phase 14A QA alias.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must include Phase 14A QA.");
+assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"] === "node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js", "package.json must expose Phase 14A QA alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must include Phase 14A QA.");
 
 console.log("[nexus-controlled-low-risk-text-only-renderer-phase-14a-qa] passed");

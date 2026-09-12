@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -144,8 +144,8 @@ check("standard user first screen remains icon-first", [
 check("false live claims remain blocked", !/\b(Nexus|we|I)\s+(sent|called|processed|dispatched|fulfilled|connected you to a live provider|completed payment|placed a call)\b/i.test(app + server));
 
 check("service worker/cache bumped", server.includes("__NEXUS_RELEASE_SHA__") && app.includes("__NEXUS_RELEASE_SHA__") && sw.includes("agrinexus-pwa-__NEXUS_RELEASE_SHA__"));
-check("package alias exists", pkg.scripts["qa:nexus-internet-resource-provider-pathway"] === "node scripts/nexus-internet-resource-provider-pathway-qa.js");
-check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-provider-pathway-qa.js"));
+check("package alias exists", pkg.scripts["qa:nexus-internet-resource-provider-pathway"] === "node archive/qa-scripts/nexus-internet-resource-provider-pathway-qa.js");
+check("qa-suite safe wiring exists", qaSuite.includes("archive/qa-scripts/nexus-internet-resource-provider-pathway-qa.js"));
 
 const failures = checks.filter(item => !item.condition);
 if (failures.length) {

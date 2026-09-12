@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const multilingual = require("../server/nexus-n100-multilingual-command-assistant.js");
+const multilingual = require("../../server/nexus-n100-multilingual-command-assistant.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-multilingual-command-assistant.js"), "N100-13 multilingual module must exist.");
   assert(exists("docs", "NEXUS_N100_13_MULTILINGUAL_COMMAND_ASSISTANT.md"), "N100-13 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-13-multilingual-command-assistant-qa.js"), "N100-13 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-13-multilingual-command-assistant-qa.js"), "N100-13 QA must exist.");
 
   [
     "SUPPORTED_LANGUAGES",
@@ -69,10 +69,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-13-multilingual-command-assistant"],
-    "node scripts/nexus-n100-13-multilingual-command-assistant-qa.js",
+    "node archive/qa-scripts/nexus-n100-13-multilingual-command-assistant-qa.js",
     "N100-13 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-13-multilingual-command-assistant-qa.js"), "N100-13 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-13-multilingual-command-assistant-qa.js"), "N100-13 QA must be wired into local-safe suites.");
 }
 
 function assertLanguageCommand(command, locale, expectedLanguage, expectedIntent) {

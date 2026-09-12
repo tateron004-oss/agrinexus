@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -221,7 +221,7 @@ for (const [key, unsafeValue] of [
   assert.equal(passesHiddenMountPreflight({ ...safePreflight, [key]: unsafeValue }), false, `preflight helper must fail closed for ${key}`);
 }
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract": "node scripts/${scriptName}"`), "package.json must expose Phase 13V QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13V QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13V QA guard");
 
 console.log("Nexus controlled low-risk renderer hidden mount preflight guard contract QA passed.");

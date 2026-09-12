@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-workforce-intelligence-readiness-contract.js`;
 - `public/nexus-workforce-intelligence-feature-flag.js`;
-- `scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js`;
 - `fixtures/nexus/workforce-intelligence-feature-flags.json`;
 - Sprint U QA scripts.
 

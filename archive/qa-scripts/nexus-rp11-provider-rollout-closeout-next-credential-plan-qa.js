@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const RP_DOCS = Object.freeze([
   "NEXUS_RP1_PROVIDER_CREDENTIAL_INVENTORY_SAFE_CONFIG_CONTRACT.md",
@@ -28,17 +28,17 @@ const PROVIDERS = Object.freeze([
 ]);
 
 const REQUIRED_QA = Object.freeze([
-  "scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js",
-  "scripts/nexus-rp2-weather-real-provider-activation-qa.js",
-  "scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js",
-  "scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js",
-  "scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
-  "scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
-  "scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
-  "scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
-  "scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
-  "scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
-  "scripts/nexus-rp11-provider-rollout-closeout-next-credential-plan-qa.js"
+  "archive/qa-scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js",
+  "archive/qa-scripts/nexus-rp2-weather-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp3-agriculture-context-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
+  "archive/qa-scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
+  "archive/qa-scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+  "archive/qa-scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
+  "archive/qa-scripts/nexus-rp11-provider-rollout-closeout-next-credential-plan-qa.js"
 ]);
 
 function read(...parts) {
@@ -165,7 +165,7 @@ function assertPackageAndSuiteWiring() {
   const qaSuite = read("scripts", "qa-suite.js");
   assert.equal(
     pkg.scripts["qa:nexus-rp11-provider-rollout-closeout-next-credential-plan"],
-    "node scripts/nexus-rp11-provider-rollout-closeout-next-credential-plan-qa.js",
+    "node archive/qa-scripts/nexus-rp11-provider-rollout-closeout-next-credential-plan-qa.js",
     "RP11 package alias must exist."
   );
   REQUIRED_QA.forEach(script => {

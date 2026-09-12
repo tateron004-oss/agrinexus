@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const dialogue = require("../../public/nexus-assistant-dialogue-engine-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -115,10 +115,10 @@ async function runNlu2ProviderBackedPromptExpansionQa() {
   assert(dialogueSource.includes("isMarketplaceReviewOnlyRequest"), "NLU2 must preserve marketplace browse-only classification.");
   assert.equal(
     packageJson.scripts["qa:nexus-nlu2-provider-backed-prompt-expansion"],
-    "node scripts/nexus-nlu2-provider-backed-prompt-expansion-qa.js",
+    "node archive/qa-scripts/nexus-nlu2-provider-backed-prompt-expansion-qa.js",
     "NLU2 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nlu2-provider-backed-prompt-expansion-qa.js"), "NLU2 QA must be wired into safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nlu2-provider-backed-prompt-expansion-qa.js"), "NLU2 QA must be wired into safe suites.");
 
   await assertSupportedPrompt("What is the weather in Stockton, CA?", "weather", env, { ready: true });
   await assertSupportedPrompt("Find agriculture training resources.", "agriculture-context", env, { ready: true });

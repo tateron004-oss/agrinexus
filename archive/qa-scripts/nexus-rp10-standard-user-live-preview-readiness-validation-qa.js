@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const PROVIDERS = Object.freeze([
   "weather",
@@ -71,7 +71,7 @@ function assertStaticReadinessContract() {
   const docName = "NEXUS_RP10_STANDARD_USER_LIVE_PREVIEW_READINESS_VALIDATION.md";
   const qaName = "nexus-rp10-standard-user-live-preview-readiness-validation-qa.js";
   assert(exists("docs", docName), "RP10 Standard User live preview readiness document must exist.");
-  assert(exists("scripts", qaName), "RP10 Standard User live preview readiness QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP10 Standard User live preview readiness QA must exist.");
 
   const doc = read("docs", docName);
   const app = read("public", "app.js");
@@ -114,11 +114,11 @@ function assertStaticReadinessContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp10-standard-user-live-preview-readiness-validation"],
-    "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
+    "node archive/qa-scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
     "RP10 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js"), "RP10 QA must be in safe suites.");
-  assert(qaSuite.includes("scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js"), "RP10 requires RP9 sweep to remain in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js"), "RP10 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js"), "RP10 requires RP9 sweep to remain in safe suites.");
 }
 
 function assertSafeResult(result, label) {

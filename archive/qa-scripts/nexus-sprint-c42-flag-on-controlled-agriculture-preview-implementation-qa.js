@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -50,7 +50,7 @@ const moduleName = "nexus-agriculture-support-response-card.js";
 const flagName = "NEXUS_SOURCE_BACKED_AGRICULTURE_PREVIEW_ENABLED";
 
 assert(exists("docs", docName), "Sprint C42 implementation doc must exist.");
-assert(exists("scripts", qaName), "Sprint C42 implementation QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C42 implementation QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -171,7 +171,7 @@ assertIncludes(moduleSource, [
 ], "C42 runtime implementation");
 
 const alias = "qa:nexus-sprint-c42-flag-on-controlled-agriculture-preview-implementation";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C42 QA.");
 

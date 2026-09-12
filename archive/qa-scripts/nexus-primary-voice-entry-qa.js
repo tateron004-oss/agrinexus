@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -49,7 +49,7 @@ assert(rail3Styles.includes("min-width: 96px !important"), "primary voice entry 
 assert(rail3Styles.includes("auto minmax(0, 1fr) auto"), "command row puts voice entry before text input");
 assert(!/always-on|always listening|background microphone|silent microphone/i.test(hero), "voice copy does not imply always-on microphone behavior");
 
-assert(packageJson.scripts["qa:nexus-primary-voice-entry"] === "node scripts/nexus-primary-voice-entry-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-primary-voice-entry-qa.js"), "safe QA suite includes primary voice entry QA");
+assert(packageJson.scripts["qa:nexus-primary-voice-entry"] === "node archive/qa-scripts/nexus-primary-voice-entry-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-primary-voice-entry-qa.js"), "safe QA suite includes primary voice entry QA");
 
 console.log("Nexus primary voice entry QA passed.");

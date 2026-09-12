@@ -3,7 +3,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const port = Number(process.env.OFFLINE_REASONING_QA_PORT || 4414);
 const base = `http://127.0.0.1:${port}`;
 const sourceDb = path.join(root, "db.json");

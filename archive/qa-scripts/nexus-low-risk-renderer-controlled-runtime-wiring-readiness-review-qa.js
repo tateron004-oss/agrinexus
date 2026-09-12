@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -27,7 +27,7 @@ for (const parts of [
   ["public", "nexus-low-risk-inert-renderer.js"],
   ["public", "nexus-low-risk-inert-renderer-flag.js"],
   ["public", "nexus-low-risk-inert-renderer-eligibility.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"]
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -130,8 +130,8 @@ for (const forbidden of [
 
 assert(!index.includes("nexus-low-risk-inert-renderer"), "public/index.html must not load low-risk inert renderer");
 assert(packageJson.includes("\"qa:nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review\""), "package.json must expose qa:nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"), "nexus-workforce suite must include readiness review QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"), "nexus-workforce suite must continue to include Phase 12R static guard");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"), "nexus-workforce suite must include readiness review QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"), "nexus-workforce suite must continue to include Phase 12R static guard");
 
 console.log("Nexus low-risk renderer controlled runtime wiring readiness review QA passed");
 console.log("- readiness scorecard and Phase 12T decision are documented");

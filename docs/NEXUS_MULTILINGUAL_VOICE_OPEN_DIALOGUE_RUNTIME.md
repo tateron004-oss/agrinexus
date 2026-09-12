@@ -80,7 +80,7 @@ The control is intentionally compact so the Ask Nexus command center remains the
 
 ## QA Coverage
 
-`scripts/nexus-voice-open-dialogue-runtime-qa.js` verifies:
+`archive/qa-scripts/nexus-voice-open-dialogue-runtime-qa.js` verifies:
 
 - both runtime modules exist and parse,
 - multilingual locale mappings exist,

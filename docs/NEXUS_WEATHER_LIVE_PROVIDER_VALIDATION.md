@@ -23,7 +23,7 @@ This lane validates live weather readiness only. It does not broadly activate th
 
 The focused harness is:
 
-- `scripts/nexus-weather-live-provider-validation-qa.js`
+- `archive/qa-scripts/nexus-weather-live-provider-validation-qa.js`
 
 It validates:
 

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_LONG_TERM_MEMORY_READINESS_CONTRACT_PHASE_61.md"),
   contract: path.join(root, "public", "nexus-long-term-memory-readiness-contract.js"),
@@ -172,7 +172,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-long-term-memory-readiness-contract"] === "node scripts/nexus-long-term-memory-readiness-contract-qa.js", "package.json must expose qa:nexus-long-term-memory-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-long-term-memory-readiness-contract-qa.js"), "qa-suite.js must include long-term memory readiness QA.");
+assert(packageData.scripts["qa:nexus-long-term-memory-readiness-contract"] === "node archive/qa-scripts/nexus-long-term-memory-readiness-contract-qa.js", "package.json must expose qa:nexus-long-term-memory-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-long-term-memory-readiness-contract-qa.js"), "qa-suite.js must include long-term memory readiness QA.");
 
 console.log("[nexus-long-term-memory-readiness-contract-qa] passed");

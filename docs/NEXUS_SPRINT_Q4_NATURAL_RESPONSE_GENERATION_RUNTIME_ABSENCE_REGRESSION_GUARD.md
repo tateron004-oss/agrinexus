@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-natural-response-generation-readiness-contract.js`;
 - `public/nexus-natural-response-generation-feature-flag.js`;
-- `scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js`;
 - `fixtures/nexus/natural-response-generation-feature-flags.json`;
 - Sprint Q QA scripts.
 

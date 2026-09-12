@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const qaName = "nexus-sprint-e3-staged-action-approval-record-harness-qa.js";
 const moduleName = "nexus-staged-action-approval-record.js";
 
 assert(exists("docs", docName), "Sprint E3 approval record harness doc must exist.");
-assert(exists("scripts", qaName), "Sprint E3 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E3 QA script must exist.");
 assert(exists("public", moduleName), "Sprint E3 requires Sprint E2 approval record module.");
 
 const doc = read("docs", docName);
@@ -248,12 +248,12 @@ assert.equal(normalized.record.providerHandoffAllowed, false, "factory-normalize
 });
 
 assert(exists("docs", "NEXUS_SPRINT_E2_STAGED_ACTION_APPROVAL_RECORD_CONTRACT.md"), "E3 requires E2 contract doc.");
-assert(exists("scripts", "nexus-sprint-e2-staged-action-approval-record-contract-qa.js"), "E3 requires E2 QA.");
+assert(exists("archive", "qa-scripts", "nexus-sprint-e2-staged-action-approval-record-contract-qa.js"), "E3 requires E2 QA.");
 
 const alias = "qa:nexus-sprint-e3-staged-action-approval-record-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js"), "E3 requires E2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js"), "E3 requires E2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e3-staged-action-approval-record-harness-qa] passed");

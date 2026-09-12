@@ -2,11 +2,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
-const mediaMode = require("../server/nexusMediaMode");
-const agenticBrain = require("../server/nexusAgenticBrainRuntime");
+const mediaMode = require("../../server/nexusMediaMode");
+const agenticBrain = require("../../server/nexusAgenticBrainRuntime");
 
 function assertIncludes(source, expected, label) {
   assert(source.includes(expected), `${label} should include ${expected}`);
@@ -114,10 +114,10 @@ assertIncludes(doc, "Apple Music", "media documentation");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-media-mode-music-provider"],
-  "node scripts/nexus-media-mode-music-provider-qa.js",
+  "node archive/qa-scripts/nexus-media-mode-music-provider-qa.js",
   "package alias should run media mode QA"
 );
-assertIncludes(qaSuite, "scripts/nexus-media-mode-music-provider-qa.js", "qa suite");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-media-mode-music-provider-qa.js", "qa suite");
 
 const unsafeSources = { "server/nexusMediaMode.js": mediaSource, "public/app.js": app, "public/nexus-voice-demo-shell.js": voiceShell };
 const forbiddenPatterns = [

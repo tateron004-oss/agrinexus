@@ -7,7 +7,7 @@ const {
   validateToolProviderSelectionFlagFixtures
 } = require("./nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-o3-tool-provider-selection-flag-contract-harness-qa
 
 assert(exists("docs", docName), "Sprint O3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint O3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint O3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint O3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint O3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint O3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "ab757670c8ad10dd0384b8d8b03729f108517a58",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/tool-provider-selection-feature-flags.json",
-  "scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js",
   "selectionReviewAllowed: false",
   "providerPathPreviewAllowed: false",
   "selectionRuntimeAllowed: false",
@@ -176,10 +176,10 @@ assert(exists("docs", "NEXUS_SPRINT_O2_TOOL_PROVIDER_SELECTION_FEATURE_FLAG_CONT
 assert(exists("public", "nexus-tool-provider-selection-feature-flag.js"), "O3 requires O2 feature flag module.");
 
 const alias = "qa:nexus-sprint-o3-tool-provider-selection-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint O3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-o1-tool-provider-selection-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint O1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-o2-tool-provider-selection-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint O2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-o1-tool-provider-selection-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint O1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-o2-tool-provider-selection-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint O2 QA.");
 
 console.log("[nexus-sprint-o3-tool-provider-selection-flag-contract-harness-qa] passed");

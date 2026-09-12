@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-genesis-provider-orchestration.js"));
 const abstraction = require(path.join(root, "public", "nexus-genesis-provider-abstraction.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
@@ -337,10 +337,10 @@ includes(app, "providerOrchestrationPacket", "app");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-provider-orchestration"],
-  "node scripts/nexus-genesis-provider-orchestration-qa.js",
+  "node archive/qa-scripts/nexus-genesis-provider-orchestration-qa.js",
   "package alias should run focused QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-provider-orchestration-qa.js", "qa-suite");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-provider-orchestration-qa.js", "qa-suite");
 
 assert(runtime.shouldHandle("Show provider console and retry history"), "provider console command should route");
 assert(runtime.shouldHandle("Which adapter handles SMS?"), "adapter command should route");

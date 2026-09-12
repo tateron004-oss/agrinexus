@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -125,7 +125,7 @@ assert(app.includes("if (handleNexusOpenDialogueAgentCommand(command)) return tr
 assert(app.includes("handleNexusOpenDialogueAgentClick(event)"), "Standard User click handler should wire Nexus Agent controls");
 assert(app.includes("${renderNexusOpenDialogueAgentCard()}"), "Standard User workspace should render the Nexus Agent card");
 assert(pkg.scripts["qa:nexus-open-dialogue-agentic-brain"], "package alias should run open dialogue agent QA");
-assert(qaSuite.includes("scripts/nexus-open-dialogue-agentic-brain-qa.js"), "qa-suite should include open dialogue agent QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-open-dialogue-agentic-brain-qa.js"), "qa-suite should include open dialogue agent QA");
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";

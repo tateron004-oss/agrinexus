@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -230,8 +230,8 @@ check("service worker/cache bumped", server.includes("__NEXUS_RELEASE_SHA__")
   && app.includes("__NEXUS_RELEASE_SHA__")
   && sw.includes("agrinexus-pwa-__NEXUS_RELEASE_SHA__"));
 
-check("package alias exists", pkg.scripts["qa:nexus-endgame-production-platform"] === "node scripts/nexus-endgame-production-platform-qa.js");
-check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-endgame-production-platform-qa.js"));
+check("package alias exists", pkg.scripts["qa:nexus-endgame-production-platform"] === "node archive/qa-scripts/nexus-endgame-production-platform-qa.js");
+check("qa-suite safe wiring exists", qaSuite.includes("archive/qa-scripts/nexus-endgame-production-platform-qa.js"));
 
 const failures = checks.filter(item => !item.condition);
 if (failures.length) {

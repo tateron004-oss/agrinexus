@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const appSource = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const port = Number(process.env.NEXUS_MUSIC_CALL_QA_PORT || 4471);

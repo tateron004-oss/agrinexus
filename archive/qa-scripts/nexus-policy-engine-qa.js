@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const policyPath = path.join(root, "public", "nexus-policy-engine.js");
 const classifierPath = path.join(root, "public", "nexus-intent-classifier.js");
 const registryPath = path.join(root, "public", "nexus-tool-registry.js");

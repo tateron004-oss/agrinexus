@@ -247,7 +247,7 @@ Phase 49 must not change:
 
 The deterministic QA lives in:
 
-- `scripts/nexus-approval-center-contract-qa.js`
+- `archive/qa-scripts/nexus-approval-center-contract-qa.js`
 
 The package alias is:
 

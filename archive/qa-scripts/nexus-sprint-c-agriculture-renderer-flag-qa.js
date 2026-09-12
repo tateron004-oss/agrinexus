@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   module: path.join(root, "public", "nexus-agriculture-support-response-card.js"),
   packageJson: path.join(root, "package.json"),
@@ -109,8 +109,8 @@ assert(source.includes("data-nexus-sprint-c-agriculture-card"), "Sprint C render
 assert(source.includes("disabled aria-disabled=\"true\""), "Sprint C review control must be disabled.");
 
 const alias = "qa:nexus-sprint-c-agriculture-renderer-flag";
-const script = "node scripts/nexus-sprint-c-agriculture-renderer-flag-qa.js";
+const script = "node archive/qa-scripts/nexus-sprint-c-agriculture-renderer-flag-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === script, `${alias} package script must run Sprint C renderer flag QA.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c-agriculture-renderer-flag-qa.js"), "qa-suite must include Sprint C renderer flag QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c-agriculture-renderer-flag-qa.js"), "qa-suite must include Sprint C renderer flag QA.");
 
 console.log("[nexus-sprint-c-agriculture-renderer-flag-qa] passed");

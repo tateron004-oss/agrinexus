@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const modulePath = path.join(root, "public", "nexus-agriculture-intent-router-phase-104.js");
 const packagePath = path.join(root, "package.json");
 const qaSuitePath = path.join(root, "scripts", "qa-suite.js");
@@ -75,7 +75,7 @@ assert(router.ROUTER_VERSION === "nexus.agricultureIntentRouter.phase104.v1", "r
   "NexusAgricultureIntentRouterPhase104"
 ].forEach(hook => assert(!activeRuntime.includes(hook), `active runtime must not load ${hook}.`));
 
-assert(packageData.scripts["qa:nexus-phase-104-agriculture-intent-router-local"] === "node scripts/nexus-phase-104-agriculture-intent-router-local-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-phase-104-agriculture-intent-router-local-qa.js"), "qa-suite must include Phase 104 QA.");
+assert(packageData.scripts["qa:nexus-phase-104-agriculture-intent-router-local"] === "node archive/qa-scripts/nexus-phase-104-agriculture-intent-router-local-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-phase-104-agriculture-intent-router-local-qa.js"), "qa-suite must include Phase 104 QA.");
 
 console.log("[nexus-phase-104-agriculture-intent-router-local-qa] passed");

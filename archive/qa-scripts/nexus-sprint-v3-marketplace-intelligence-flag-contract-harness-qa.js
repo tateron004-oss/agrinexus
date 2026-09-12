@@ -7,7 +7,7 @@ const {
   validateMarketplaceIntelligenceFlagFixtures
 } = require("./nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-v3-marketplace-intelligence-flag-contract-harness-q
 
 assert(exists("docs", docName), "Sprint V3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint V3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint V3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint V3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint V3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint V3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "b524db53432bb90da8a5d10d4bd4e4d7ab870cfa",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/marketplace-intelligence-feature-flags.json",
-  "scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js",
   "marketplaceReviewAllowed: false",
   "sourceBackedMarketplaceGuidancePreviewAllowed: false",
   "liveMarketplaceAdvisorAllowed: false",
@@ -180,10 +180,10 @@ assert(exists("docs", "NEXUS_SPRINT_V2_MARKETPLACE_INTELLIGENCE_FEATURE_FLAG_CON
 assert(exists("public", "nexus-marketplace-intelligence-feature-flag.js"), "V3 requires V2 feature flag module.");
 
 const alias = "qa:nexus-sprint-v3-marketplace-intelligence-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint V3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint V1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-v2-marketplace-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint V2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint V1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-v2-marketplace-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint V2 QA.");
 
 console.log("[nexus-sprint-v3-marketplace-intelligence-flag-contract-harness-qa] passed");

@@ -7,7 +7,7 @@ Sprint Z3 adds fixture, harness, documentation, and QA only. It does not load Te
 ## Added Artifacts
 
 - `fixtures/nexus/telehealth-mode-feature-flags.json`
-- `scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

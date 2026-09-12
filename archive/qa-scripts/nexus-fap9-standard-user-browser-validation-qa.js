@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -64,12 +64,12 @@ function assertWiring() {
 
   assert.equal(
     pkg.scripts["qa:nexus-fap9-standard-user-browser-validation"],
-    "node scripts/nexus-fap9-standard-user-browser-validation-qa.js",
+    "node archive/qa-scripts/nexus-fap9-standard-user-browser-validation-qa.js",
     "FAP9 package alias must exist."
   );
 
   assert(
-    suite.includes("scripts/nexus-fap9-standard-user-browser-validation-qa.js"),
+    suite.includes("archive/qa-scripts/nexus-fap9-standard-user-browser-validation-qa.js"),
     "FAP9 QA must be wired into local-safe suites."
   );
 }

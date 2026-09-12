@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -23,7 +23,7 @@ const qaSuite = read("scripts/qa-suite.js");
 
 [
   "server/providers/marketplaceBridgeProvider.js",
-  "scripts/nexus-marketplace-bridge-qa.js"
+  "archive/qa-scripts/nexus-marketplace-bridge-qa.js"
 ].forEach(relativePath => assert(fs.existsSync(path.join(root, relativePath)), `${relativePath} must exist`));
 
 [
@@ -91,7 +91,7 @@ const qaSuite = read("scripts/qa-suite.js");
 
 [
   "qa:nexus-marketplace-bridge",
-  "scripts/nexus-marketplace-bridge-qa.js"
+  "archive/qa-scripts/nexus-marketplace-bridge-qa.js"
 ].forEach(text => includes(packageJson + qaSuite, text, "marketplace bridge QA wiring"));
 
 const bridge = require(path.join(root, "server/providers/marketplaceBridgeProvider.js"));

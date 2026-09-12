@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const newsSecurity = require("../server/nexus-news-security-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const newsSecurity = require("../../server/nexus-news-security-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const TEST_QUERIES = Object.freeze([
   "What security issues are affecting farmers right now?",
@@ -24,10 +24,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP4_NEWS_SECURITY_CONFLICT_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp4-news-security-conflict-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP4 news/security activation doc must exist.");
-  assert(exists("scripts", qaName), "RP4 news/security activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP4 news/security activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -86,10 +86,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp4-news-security-conflict-real-provider-activation"],
-    "node scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js",
     "RP4 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js"), "RP4 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js"), "RP4 QA must be in safe suites.");
 }
 
 function assertSafeNewsSecurityResult(result, label) {

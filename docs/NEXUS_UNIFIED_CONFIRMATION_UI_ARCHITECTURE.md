@@ -24,15 +24,15 @@ The Standard User demo remains stable. Current low-risk previews, controlled-act
 - `public/index.html`
 - `public/styles.css`
 - `server.js`
-- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
-- `scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-contact-call-permission-qa.js`
-- `scripts/nexus-contact-resolution-qa.js`
-- `scripts/nexus-provider-handoff-boundary-qa.js`
-- `scripts/confirmed-call-handoff-qa.js`
-- `scripts/native-call-bridge-dispatch-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `archive/qa-scripts/nexus-contact-resolution-qa.js`
+- `archive/qa-scripts/nexus-provider-handoff-boundary-qa.js`
+- `archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `archive/qa-scripts/native-call-bridge-dispatch-qa.js`
 - `docs/NEXUS_CONTACT_CALL_PERMISSION_ARCHITECTURE.md`
 - `docs/NEXUS_COMMUNICATION_PROVIDER_HANDOFF_PLAN.md`
 - `docs/NEXUS_CONTROLLED_ACTION_CONFIRMATION_READINESS.md`
@@ -603,7 +603,7 @@ Demo stability rules:
 
 ### Recommended Future QA Scripts
 
-- `scripts/nexus-confirmation-ui-contract-qa.js`
+- `archive/qa-scripts/nexus-confirmation-ui-contract-qa.js`
 - `scripts/nexus-confirmation-copy-qa.js`
 - `scripts/nexus-high-risk-confirmation-modal-qa.js`
 - `scripts/nexus-vague-confirmation-block-qa.js`
@@ -656,11 +656,11 @@ Payload contract:
 
 ### Existing QA To Keep Running
 
-- `node scripts/nexus-contact-call-permission-qa.js`
-- `node scripts/nexus-contact-resolution-qa.js`
-- `node scripts/nexus-provider-handoff-boundary-qa.js`
-- `node scripts/confirmed-call-handoff-qa.js`
-- `node scripts/native-call-bridge-dispatch-qa.js`
+- `node archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `node archive/qa-scripts/nexus-contact-resolution-qa.js`
+- `node archive/qa-scripts/nexus-provider-handoff-boundary-qa.js`
+- `node archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `node archive/qa-scripts/native-call-bridge-dispatch-qa.js`
 - `node scripts/companion-confirmation-gate-smoke.js`
 - `node scripts/qa-suite.js all-safe`
 
@@ -668,7 +668,7 @@ Payload contract:
 
 ### Phase 10D1: Static Confirmation UI Contract QA
 
-Create `scripts/nexus-confirmation-ui-contract-qa.js` that verifies this document exists, approved/discouraged labels are present, risk tiers are documented, and future payload fields are defined.
+Create `archive/qa-scripts/nexus-confirmation-ui-contract-qa.js` that verifies this document exists, approved/discouraged labels are present, risk tiers are documented, and future payload fields are defined.
 
 ### Phase 10D2: Confirmation Copy QA
 

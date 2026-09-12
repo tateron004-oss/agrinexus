@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PROVIDER_ONBOARDING_PORTAL_CONTRACT_PHASE_28.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -269,11 +269,11 @@ existingOnboarding.forEach(item => {
 });
 
 assert(
-  packageData.scripts["qa:nexus-provider-onboarding-portal-contract"] === "node scripts/nexus-provider-onboarding-portal-contract-qa.js",
+  packageData.scripts["qa:nexus-provider-onboarding-portal-contract"] === "node archive/qa-scripts/nexus-provider-onboarding-portal-contract-qa.js",
   "package.json must expose qa:nexus-provider-onboarding-portal-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-provider-onboarding-portal-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-provider-onboarding-portal-contract-qa.js"),
   "qa-suite.js must include provider onboarding portal contract QA"
 );
 

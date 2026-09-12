@@ -12,12 +12,12 @@ Nexus remains a preparation-first assistant unless a verified connector, consent
 - `public/app.js`
 - `package.json`
 - `scripts/qa-suite.js`
-- `scripts/nexus-high-performance-assistant-brain-qa.js`
-- `scripts/nexus-chronic-care-intake-provider-package-qa.js`
-- `scripts/nexus-provider-onboarding-readiness-qa.js`
-- `scripts/nexus-agriculture-workforce-depth-qa.js`
-- `scripts/nexus-multilingual-performance-hardening-qa.js`
-- `scripts/nexus-safety-trust-boundary-hardening-qa.js`
+- `archive/qa-scripts/nexus-high-performance-assistant-brain-qa.js`
+- `archive/qa-scripts/nexus-chronic-care-intake-provider-package-qa.js`
+- `archive/qa-scripts/nexus-provider-onboarding-readiness-qa.js`
+- `archive/qa-scripts/nexus-agriculture-workforce-depth-qa.js`
+- `archive/qa-scripts/nexus-multilingual-performance-hardening-qa.js`
+- `archive/qa-scripts/nexus-safety-trust-boundary-hardening-qa.js`
 - `docs/NEXUS_HIGH_PERFORMANCE_PRE_PROVIDER_BUILD_CLOSEOUT.md`
 
 ## Runtime Capabilities Added Or Strengthened
@@ -160,12 +160,12 @@ Credential-gated or not connected:
 
 Required focused QA:
 
-- `node scripts/nexus-high-performance-assistant-brain-qa.js`
-- `node scripts/nexus-chronic-care-intake-provider-package-qa.js`
-- `node scripts/nexus-provider-onboarding-readiness-qa.js`
-- `node scripts/nexus-agriculture-workforce-depth-qa.js`
-- `node scripts/nexus-multilingual-performance-hardening-qa.js`
-- `node scripts/nexus-safety-trust-boundary-hardening-qa.js`
+- `node archive/qa-scripts/nexus-high-performance-assistant-brain-qa.js`
+- `node archive/qa-scripts/nexus-chronic-care-intake-provider-package-qa.js`
+- `node archive/qa-scripts/nexus-provider-onboarding-readiness-qa.js`
+- `node archive/qa-scripts/nexus-agriculture-workforce-depth-qa.js`
+- `node archive/qa-scripts/nexus-multilingual-performance-hardening-qa.js`
+- `node archive/qa-scripts/nexus-safety-trust-boundary-hardening-qa.js`
 
 Required npm aliases:
 

@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const permissions = require("../server/nexus-n100-permission-consent-manager.js");
+const permissions = require("../../server/nexus-n100-permission-consent-manager.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-permission-consent-manager.js"), "N100-8 permission module must exist.");
   assert(exists("docs", "NEXUS_N100_8_PERMISSION_CONSENT_MANAGER.md"), "N100-8 permission documentation must exist.");
-  assert(exists("scripts", "nexus-n100-8-permission-consent-manager-qa.js"), "N100-8 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-8-permission-consent-manager-qa.js"), "N100-8 QA must exist.");
 
   [
     "permissionId",
@@ -81,10 +81,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-8-permission-consent-manager"],
-    "node scripts/nexus-n100-8-permission-consent-manager-qa.js",
+    "node archive/qa-scripts/nexus-n100-8-permission-consent-manager-qa.js",
     "N100-8 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-8-permission-consent-manager-qa.js"), "N100-8 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-8-permission-consent-manager-qa.js"), "N100-8 QA must be wired into local-safe suites.");
 }
 
 function assertPermissionLifecycle(capability) {

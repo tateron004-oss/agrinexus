@@ -33,7 +33,7 @@ The Standard User UI shows a compact Memory & Records card and a full memory pan
 Run:
 
 ```bash
-node scripts/nexus-persistent-memory-layer-qa.js
+node archive/qa-scripts/nexus-persistent-memory-layer-qa.js
 npm.cmd run qa:nexus-persistent-memory-layer
 node scripts/qa-suite.js nexus-workforce
 node scripts/qa-suite.js all-safe

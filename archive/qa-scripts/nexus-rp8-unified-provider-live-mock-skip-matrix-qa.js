@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const harness = require("../server/nexus-live-provider-adoption-harness.js");
+const harness = require("../../server/nexus-live-provider-adoption-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const PROVIDER_MATRIX_META = Object.freeze({
   weather: Object.freeze({
@@ -83,10 +83,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP8_UNIFIED_PROVIDER_LIVE_MOCK_SKIP_MATRIX.md";
   const qaName = "nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js";
   assert(exists("docs", docName), "RP8 unified provider matrix doc must exist.");
-  assert(exists("scripts", qaName), "RP8 unified provider matrix QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP8 unified provider matrix QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -139,10 +139,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp8-unified-provider-live-mock-skip-matrix"],
-    "node scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
+    "node archive/qa-scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
     "RP8 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js"), "RP8 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js"), "RP8 QA must be in safe suites.");
 }
 
 function runRp8UnifiedProviderLiveMockSkipMatrixQa() {

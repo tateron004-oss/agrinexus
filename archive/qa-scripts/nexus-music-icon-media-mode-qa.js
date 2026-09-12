@@ -2,11 +2,11 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
-const mediaMode = require("../server/nexusMediaMode");
-const agenticBrain = require("../server/nexusAgenticBrainRuntime");
+const mediaMode = require("../../server/nexusMediaMode");
+const agenticBrain = require("../../server/nexusAgenticBrainRuntime");
 
 const app = read("public/app.js");
 const styles = read("public/styles.css");
@@ -158,10 +158,10 @@ assertIncludes(doc, "does not", "music icon doc safety boundaries");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-music-icon-media-mode"],
-  "node scripts/nexus-music-icon-media-mode-qa.js",
+  "node archive/qa-scripts/nexus-music-icon-media-mode-qa.js",
   "package alias should run music icon QA"
 );
-assertIncludes(qaSuite, "scripts/nexus-music-icon-media-mode-qa.js", "safe QA suite");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-music-icon-media-mode-qa.js", "safe QA suite");
 
 async function assertBrainRouting() {
   for (const command of ["Play R&B.", "Play African music.", "Play Afrobeats on YouTube.", "Pause music.", "Download this song."]) {

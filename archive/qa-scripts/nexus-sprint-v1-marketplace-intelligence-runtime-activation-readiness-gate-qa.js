@@ -5,9 +5,9 @@ const {
   MARKETPLACE_INTELLIGENCE_READINESS_CONTRACT,
   MARKETPLACE_INTELLIGENCE_NO_EXECUTION_DEFAULTS,
   createMarketplaceIntelligenceReadinessContract
-} = require("../public/nexus-marketplace-intelligence-readiness-contract.js");
+} = require("../../public/nexus-marketplace-intelligence-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,7 +28,7 @@ const docName = "NEXUS_SPRINT_V1_MARKETPLACE_INTELLIGENCE_RUNTIME_ACTIVATION_REA
 const qaName = "nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint V1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint V1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint V1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -239,7 +239,7 @@ for (const field of [
 for (const requiredPath of [
   ["docs", "NEXUS_MARKETPLACE_INTELLIGENCE_READINESS_CONTRACT_PHASE_74.md"],
   ["public", "nexus-marketplace-intelligence-readiness-contract.js"],
-  ["scripts", "nexus-marketplace-intelligence-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-marketplace-intelligence-readiness-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_U5_WORKFORCE_INTELLIGENCE_LANE_CLOSEOUT.md"]
 ]) {
   assert(exists(...requiredPath), `V1 requires artifact: ${requiredPath.join("/")}`);
@@ -295,7 +295,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-v1-marketplace-intelligence-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint V1 QA.");
 

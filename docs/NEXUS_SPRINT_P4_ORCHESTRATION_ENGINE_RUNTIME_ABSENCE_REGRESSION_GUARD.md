@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-orchestration-engine-readiness-contract.js`;
 - `public/nexus-orchestration-engine-feature-flag.js`;
-- `scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js`;
 - `fixtures/nexus/orchestration-engine-feature-flags.json`;
 - Sprint P QA scripts.
 

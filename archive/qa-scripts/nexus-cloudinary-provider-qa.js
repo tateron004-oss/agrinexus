@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("assert");
-const provider = require("../server/cloudinary-provider.js");
+const provider = require("../../server/cloudinary-provider.js");
 
 async function main() {
   const env = { CLOUDINARY_URL: "cloudinary://test-key:test-secret@nexus-test" };

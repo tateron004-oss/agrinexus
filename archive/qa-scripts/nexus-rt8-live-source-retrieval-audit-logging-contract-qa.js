@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const audit = require("../public/nexus-live-source-audit-logging-contract.js");
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
+const audit = require("../../public/nexus-live-source-audit-logging-contract.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -159,10 +159,10 @@ function runRt8LiveSourceRetrievalAuditLoggingContractQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt8-live-source-retrieval-audit-logging-contract"],
-    "node scripts/nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js",
+    "node archive/qa-scripts/nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js",
     "RT8 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"), "RT8 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js"), "RT8 QA must be in safe suites.");
 
   console.log("[nexus-rt8-live-source-retrieval-audit-logging-contract-qa] passed");
 }

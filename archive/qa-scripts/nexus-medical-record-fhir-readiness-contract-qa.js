@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_MEDICAL_RECORD_FHIR_READINESS_CONTRACT_PHASE_58.md"),
   contract: path.join(root, "public", "nexus-medical-record-fhir-readiness-contract.js"),
@@ -171,7 +171,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-medical-record-fhir-readiness-contract"] === "node scripts/nexus-medical-record-fhir-readiness-contract-qa.js", "package.json must expose qa:nexus-medical-record-fhir-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-medical-record-fhir-readiness-contract-qa.js"), "qa-suite.js must include medical record/FHIR readiness QA.");
+assert(packageData.scripts["qa:nexus-medical-record-fhir-readiness-contract"] === "node archive/qa-scripts/nexus-medical-record-fhir-readiness-contract-qa.js", "package.json must expose qa:nexus-medical-record-fhir-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-medical-record-fhir-readiness-contract-qa.js"), "qa-suite.js must include medical record/FHIR readiness QA.");
 
 console.log("[nexus-medical-record-fhir-readiness-contract-qa] passed");

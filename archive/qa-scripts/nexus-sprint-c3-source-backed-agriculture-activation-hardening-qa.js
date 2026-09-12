@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C3_SOURCE_BACKED_AGRICULTURE_ACTIVATION_HARDENING.md"),
   c2Doc: path.join(root, "docs", "NEXUS_SPRINT_C2_EVIDENCE_ACCOUNTABILITY_STANDARD.md"),
@@ -250,8 +250,8 @@ forbiddenRuntimeEdits.forEach(fragment => {
 });
 
 const alias = "qa:nexus-sprint-c3-source-backed-agriculture-activation-hardening";
-const command = "node scripts/nexus-sprint-c3-source-backed-agriculture-activation-hardening-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c3-source-backed-agriculture-activation-hardening-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c3-source-backed-agriculture-activation-hardening-qa.js"), "qa-suite must include Sprint C3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c3-source-backed-agriculture-activation-hardening-qa.js"), "qa-suite must include Sprint C3 QA.");
 
 console.log("[nexus-sprint-c3-source-backed-agriculture-activation-hardening-qa] passed");

@@ -351,9 +351,9 @@ The registry should start as static metadata, then become the shared source for 
   resultSchema: "healthIntakeRecord",
   auditEvent: "health.intake.created",
   qaCoverage: [
-    "scripts/telehealth-contract-qa.js",
-    "scripts/telehealth-privacy-role-qa.js",
-    "scripts/telehealth-demo-boundary-qa.js"
+    "archive/qa-scripts/telehealth-contract-qa.js",
+    "archive/qa-scripts/telehealth-privacy-role-qa.js",
+    "archive/qa-scripts/telehealth-demo-boundary-qa.js"
   ],
   protectedCompatibilityNotes: "Do not rename data-health, endpoint, action type, or stored record shape during early registry phases."
 }
@@ -483,7 +483,7 @@ Acceptance criteria:
 - No endpoint or workflow behavior changes.
 - New QA verifies schema validity and protected compatibility fields.
 
-Phase 7B introduced `docs/nexus-tool-registry.v1.json` as a machine-readable static artifact generated from this specification and `scripts/nexus-tool-registry-qa.js` as its validator. The artifact is explicitly marked `runtimeStatus: "static-spec-only"` and is not runtime-authoritative. `server.js`, `public/app.js`, command routing, workflow routing, native bridge behavior, endpoint contracts, and confirmation gates must not consume this registry until a later additive metadata phase.
+Phase 7B introduced `docs/nexus-tool-registry.v1.json` as a machine-readable static artifact generated from this specification and `archive/qa-scripts/nexus-tool-registry-qa.js` as its validator. The artifact is explicitly marked `runtimeStatus: "static-spec-only"` and is not runtime-authoritative. `server.js`, `public/app.js`, command routing, workflow routing, native bridge behavior, endpoint contracts, and confirmation gates must not consume this registry until a later additive metadata phase.
 
 ### Phase 7C: Registry Drift QA
 
@@ -496,7 +496,7 @@ Acceptance criteria:
 - Protected internal rename attempts fail QA.
 - Existing app/core/voice/telehealth/music/call QA remains green.
 
-Phase 7C hardened `scripts/nexus-tool-registry-qa.js` so the static registry is checked for required field quality, domain coverage, alias compatibility, risk and confirmation policy, live-status honesty, QA ownership, protected compatibility notes, and the static-only runtime boundary. The registry remains `static-spec-only`; no runtime behavior, command routing, endpoint contract, native bridge behavior, workflow routing, or confirmation gate consumes it yet.
+Phase 7C hardened `archive/qa-scripts/nexus-tool-registry-qa.js` so the static registry is checked for required field quality, domain coverage, alias compatibility, risk and confirmation policy, live-status honesty, QA ownership, protected compatibility notes, and the static-only runtime boundary. The registry remains `static-spec-only`; no runtime behavior, command routing, endpoint contract, native bridge behavior, workflow routing, or confirmation gate consumes it yet.
 
 ### Phase 7D: Additive Agent Action Metadata
 
@@ -520,7 +520,7 @@ Acceptance criteria:
 - Health video, music controls, call confirmation, learning routing, and map behavior are unchanged.
 - Frontend can show safer "what will happen next" language from metadata.
 
-Phase 7E added observation QA for representative backend agent command responses. `scripts/nexus-agent-action-observation-qa.js` confirms `metadata.agentAction` is present, additive, metadata-only, and descriptive of existing router outcomes. At the Phase 7E checkpoint the frontend did not consume `agentAction`, the static registry remained spec-only and non-authoritative, and existing routers remained the only execution authority. Phase 7F adds display-only frontend observation after this response metadata remains stable.
+Phase 7E added observation QA for representative backend agent command responses. `archive/qa-scripts/nexus-agent-action-observation-qa.js` confirms `metadata.agentAction` is present, additive, metadata-only, and descriptive of existing router outcomes. At the Phase 7E checkpoint the frontend did not consume `agentAction`, the static registry remained spec-only and non-authoritative, and existing routers remained the only execution authority. Phase 7F adds display-only frontend observation after this response metadata remains stable.
 
 ### Phase 7F: Low-Risk Registry-Driven Routing
 
@@ -586,10 +586,10 @@ Acceptance criteria:
 
 Add future QA in this order:
 
-- `scripts/nexus-tool-registry-qa.js`: validates registry schema, required fields, and protected compatibility notes.
+- `archive/qa-scripts/nexus-tool-registry-qa.js`: validates registry schema, required fields, and protected compatibility notes.
 - `scripts/nexus-tool-risk-policy-qa.js`: verifies high-risk/privacy-sensitive tools require confirmation or permission gates.
 - `scripts/nexus-tool-alias-coverage-qa.js`: verifies major existing aliases map to registry entries.
-- `scripts/nexus-agent-action-schema-qa.js`: validates additive agent action metadata shape.
+- `archive/qa-scripts/nexus-agent-action-schema-qa.js`: validates additive agent action metadata shape.
 - `scripts/nexus-agent-metadata-emission-qa.js`: confirms selected low-risk responses include metadata without breaking current fields.
 - `scripts/nexus-registry-workflow-routing-qa.js`: confirms selected frontend workflows can be opened from registry metadata while preserving current fallbacks.
 

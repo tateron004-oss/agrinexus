@@ -2,13 +2,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const agriculture = require("../server/nexus-agriculture-context-source-provider.js");
-const news = require("../server/nexus-news-security-source-provider.js");
-const jobs = require("../server/nexus-job-search-source-provider.js");
-const media = require("../server/nexus-music-media-source-provider.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const agriculture = require("../../server/nexus-agriculture-context-source-provider.js");
+const news = require("../../server/nexus-news-security-source-provider.js");
+const jobs = require("../../server/nexus-job-search-source-provider.js");
+const media = require("../../server/nexus-music-media-source-provider.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");

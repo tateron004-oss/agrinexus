@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -65,9 +65,9 @@ assertNotIncludes(app, "localStorage.setItem(\"nexusOnboarding", "onboarding sho
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-onboarding-video-entrypoint"],
-  "node scripts/nexus-onboarding-video-entrypoint-qa.js",
+  "node archive/qa-scripts/nexus-onboarding-video-entrypoint-qa.js",
   "package script should expose onboarding video entrypoint QA"
 );
-assertIncludes(qaSuite, "scripts/nexus-onboarding-video-entrypoint-qa.js", "qa suite should include onboarding video entrypoint QA");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-onboarding-video-entrypoint-qa.js", "qa suite should include onboarding video entrypoint QA");
 
 console.log("Nexus onboarding video entrypoint QA passed.");

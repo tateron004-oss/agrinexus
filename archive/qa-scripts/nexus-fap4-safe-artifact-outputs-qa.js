@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const standardUserAgentExperience = require("../server/nexus-standard-user-agent-experience.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const standardUserAgentExperience = require("../../server/nexus-standard-user-agent-experience.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -82,10 +82,10 @@ function assertStaticContracts() {
 
   assert.equal(
     pkg.scripts["qa:nexus-fap4-safe-artifact-outputs"],
-    "node scripts/nexus-fap4-safe-artifact-outputs-qa.js",
+    "node archive/qa-scripts/nexus-fap4-safe-artifact-outputs-qa.js",
     "FAP4 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-fap4-safe-artifact-outputs-qa.js"), "FAP4 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-fap4-safe-artifact-outputs-qa.js"), "FAP4 QA must be wired into local-safe suites.");
 }
 
 function assertSafeArtifact(artifact, prompt) {

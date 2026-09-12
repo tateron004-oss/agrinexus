@@ -5,9 +5,9 @@ const {
   HEALTHCARE_ACCESS_INTELLIGENCE_READINESS_CONTRACT,
   HEALTHCARE_ACCESS_INTELLIGENCE_NO_EXECUTION_DEFAULTS,
   createHealthcareAccessIntelligenceReadinessContract
-} = require("../public/nexus-healthcare-access-intelligence-readiness-contract.js");
+} = require("../../public/nexus-healthcare-access-intelligence-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,7 +28,7 @@ const docName = "NEXUS_SPRINT_T1_HEALTHCARE_ACCESS_INTELLIGENCE_RUNTIME_ACTIVATI
 const qaName = "nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint T1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint T1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint T1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -230,7 +230,7 @@ for (const field of [
 for (const requiredPath of [
   ["docs", "NEXUS_HEALTHCARE_ACCESS_INTELLIGENCE_READINESS_CONTRACT_PHASE_72.md"],
   ["public", "nexus-healthcare-access-intelligence-readiness-contract.js"],
-  ["scripts", "nexus-healthcare-access-intelligence-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-healthcare-access-intelligence-readiness-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_S5_FARMER_AGRICULTURE_INTELLIGENCE_LANE_CLOSEOUT.md"]
 ]) {
   assert(exists(...requiredPath), `T1 requires artifact: ${requiredPath.join("/")}`);
@@ -287,7 +287,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint T1 QA.");
 

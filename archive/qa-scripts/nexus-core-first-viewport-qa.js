@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -57,7 +57,7 @@ assert(app.includes('data-nexus-os-core-orb="true"'), "Nexus Core orb remains re
 assert(app.includes('data-nexus-command-composer="true"'), "typed command composer remains rendered");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(renderUserWorkspace), "first viewport does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-core-first-viewport"] === "node scripts/nexus-core-first-viewport-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-core-first-viewport-qa.js"), "safe QA suite includes core first viewport QA");
+assert(packageJson.scripts["qa:nexus-core-first-viewport"] === "node archive/qa-scripts/nexus-core-first-viewport-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-core-first-viewport-qa.js"), "safe QA suite includes core first viewport QA");
 
 console.log("Nexus Core first viewport QA passed.");

@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 
 const renderMatch = app.match(/function renderUserWorkspace\(\) \{[\s\S]*?function renderUserAccessibilityPanel\(\)/);

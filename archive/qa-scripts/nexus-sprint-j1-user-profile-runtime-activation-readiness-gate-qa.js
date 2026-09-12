@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const profile = require("../public/nexus-user-profile-readiness-contract.js");
+const profile = require("../../public/nexus-user-profile-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const docName = "NEXUS_SPRINT_J1_USER_PROFILE_RUNTIME_ACTIVATION_READINESS_GATE.
 const qaName = "nexus-sprint-j1-user-profile-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint J1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint J1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint J1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -116,7 +116,7 @@ for (const required of [
   ["docs", "NEXUS_SPRINT_I5_IDENTITY_FOUNDATION_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_USER_PROFILE_READINESS_CONTRACT_PHASE_62.md"],
   ["public", "nexus-user-profile-readiness-contract.js"],
-  ["scripts", "nexus-user-profile-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-user-profile-readiness-contract-qa.js"]
 ]) {
   assert(exists(...required), `Sprint J1 requires artifact: ${required.join("/")}`);
 }
@@ -201,7 +201,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-j1-user-profile-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint J1 QA.");
 

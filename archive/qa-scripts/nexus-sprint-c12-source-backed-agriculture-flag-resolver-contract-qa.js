@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C12_SOURCE_BACKED_AGRICULTURE_FLAG_RESOLVER_CONTRACT.md"),
   c11Doc: path.join(root, "docs", "NEXUS_SPRINT_C11_SOURCE_BACKED_AGRICULTURE_DEFAULT_OFF_RUNTIME_WIRING_CONTRACT.md"),
@@ -182,8 +182,8 @@ assert(!index.includes(c8MapperFileName), "public/index.html must still not load
 assert(!server.includes(c8MapperFileName), "server.js must still not special-case C8 mapper.");
 
 const alias = "qa:nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract";
-const command = "node scripts/nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract-qa.js"), "qa-suite must include Sprint C12 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract-qa.js"), "qa-suite must include Sprint C12 QA.");
 
 console.log("[nexus-sprint-c12-source-backed-agriculture-flag-resolver-contract-qa] passed");

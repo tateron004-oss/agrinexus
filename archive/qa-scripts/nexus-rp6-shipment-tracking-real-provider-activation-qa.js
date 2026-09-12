@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const shipment = require("../server/nexus-shipment-tracking-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const shipment = require("../../server/nexus-shipment-tracking-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const TEST_PROMPTS = Object.freeze([
   { trackingNumber: "AB12345678", query: "Track this shipment AB12345678.", label: "Track this shipment AB12345678." },
@@ -24,10 +24,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP6_SHIPMENT_TRACKING_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp6-shipment-tracking-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP6 shipment tracking activation doc must exist.");
-  assert(exists("scripts", qaName), "RP6 shipment tracking activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP6 shipment tracking activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -88,10 +88,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp6-shipment-tracking-real-provider-activation"],
-    "node scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
     "RP6 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js"), "RP6 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js"), "RP6 QA must be in safe suites.");
 }
 
 function assertSafeShipmentResult(result, label) {

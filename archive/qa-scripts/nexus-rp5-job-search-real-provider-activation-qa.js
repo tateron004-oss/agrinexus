@@ -1,10 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const jobs = require("../server/nexus-job-search-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const jobs = require("../../server/nexus-job-search-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const TEST_QUERIES = Object.freeze([
   { query: "farm jobs", locationText: "Stockton, CA", label: "Find farm jobs near Stockton, CA." },
@@ -25,10 +25,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP5_JOB_SEARCH_REAL_PROVIDER_ACTIVATION.md";
   const qaName = "nexus-rp5-job-search-real-provider-activation-qa.js";
   assert(exists("docs", docName), "RP5 job search activation doc must exist.");
-  assert(exists("scripts", qaName), "RP5 job search activation QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP5 job search activation QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -88,10 +88,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp5-job-search-real-provider-activation"],
-    "node scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
+    "node archive/qa-scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
     "RP5 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp5-job-search-real-provider-activation-qa.js"), "RP5 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp5-job-search-real-provider-activation-qa.js"), "RP5 QA must be in safe suites.");
 }
 
 function assertSafeJobResult(result, label) {

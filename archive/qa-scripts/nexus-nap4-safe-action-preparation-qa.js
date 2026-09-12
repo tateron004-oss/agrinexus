@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const prep = require("../server/nexus-safe-action-preparation.js");
+const prep = require("../../server/nexus-safe-action-preparation.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -60,10 +60,10 @@ function runNap4SafeActionPreparationQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap4-safe-action-preparation"],
-    "node scripts/nexus-nap4-safe-action-preparation-qa.js",
+    "node archive/qa-scripts/nexus-nap4-safe-action-preparation-qa.js",
     "NAP4 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap4-safe-action-preparation-qa.js"), "NAP4 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap4-safe-action-preparation-qa.js"), "NAP4 QA must be wired into local-safe suites.");
 
   assertPrep("Draft questions for this training provider.", "provider-questions");
   assertPrep("Create a checklist for applying.", "application-checklist");

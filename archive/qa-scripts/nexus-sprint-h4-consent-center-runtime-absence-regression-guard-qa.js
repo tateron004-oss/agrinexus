@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   DEFAULT_CONSENT_CENTER_FEATURE_FLAG_STATE,
   normalizeConsentCenterFeatureFlagState
-} = require("../public/nexus-consent-center-feature-flag.js");
+} = require("../../public/nexus-consent-center-feature-flag.js");
 const {
   loadConsentCenterFlagFixtures,
   validateConsentCenterFlagFixtures
 } = require("./nexus-sprint-h3-consent-center-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_H4_CONSENT_CENTER_RUNTIME_ABSENCE_REGRESSION_GUARD
 const qaName = "nexus-sprint-h4-consent-center-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint H4 runtime absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint H4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -40,7 +40,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const featureFlagModule = read("public", "nexus-consent-center-feature-flag.js");
-const harnessSource = read("scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js");
+const harnessSource = read("archive", "qa-scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js");
 const fixtures = loadConsentCenterFlagFixtures();
 
 assertIncludes(doc, [
@@ -58,7 +58,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-consent-center-contract.js",
   "public/nexus-consent-center-feature-flag.js",
-  "scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-h3-consent-center-flag-contract-harness.js",
   "fixtures/nexus/consent-center-feature-flags.json",
   "It intentionally does not ban the generic word consent"
 ], "H4 protected artifact list");
@@ -102,7 +102,7 @@ for (const prior of [
   ["public", "nexus-consent-center-contract.js"],
   ["public", "nexus-consent-center-feature-flag.js"],
   ["fixtures", "nexus", "consent-center-feature-flags.json"],
-  ["scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js"]
 ]) {
   assert(exists(...prior), `Sprint H4 requires prior artifact: ${prior.join("/")}`);
 }
@@ -199,7 +199,7 @@ for (const source of [featureFlagModule, harnessSource]) {
 }
 
 const alias = "qa:nexus-sprint-h4-consent-center-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H4 QA.");
 

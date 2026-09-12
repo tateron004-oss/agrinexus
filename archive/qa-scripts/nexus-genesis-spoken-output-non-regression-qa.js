@@ -3,7 +3,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -82,8 +82,8 @@ includesAll(serverSource, [
 ], "server TTS sanitation and diagnostics");
 assert(!speechOutput.includes("startVoiceListening({ source: \"speech-output"), "spoken output must not invent a new recognition architecture");
 assert(!serverSource.includes("OPENAI_API_KEY:"), "server must not serialize secret values");
-assert.strictEqual(pkg.scripts["qa:nexus-genesis-spoken-output-non-regression"], "node scripts/nexus-genesis-spoken-output-non-regression-qa.js", "package alias missing");
-assert(qaSuite.includes("scripts/nexus-genesis-spoken-output-non-regression-qa.js"), "qa-suite missing spoken-output non-regression QA");
+assert.strictEqual(pkg.scripts["qa:nexus-genesis-spoken-output-non-regression"], "node archive/qa-scripts/nexus-genesis-spoken-output-non-regression-qa.js", "package alias missing");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-spoken-output-non-regression-qa.js"), "qa-suite missing spoken-output non-regression QA");
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 

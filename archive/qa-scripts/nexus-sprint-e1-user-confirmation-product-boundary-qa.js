@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_E1_USER_CONFIRMATION_PRODUCT_BOUNDARY.md";
 const qaName = "nexus-sprint-e1-user-confirmation-product-boundary-qa.js";
 
 assert(exists("docs", docName), "Sprint E1 user confirmation product boundary doc must exist.");
-assert(exists("scripts", qaName), "Sprint E1 user confirmation QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E1 user confirmation QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -104,9 +104,9 @@ assertIncludes(doc, [
 ].forEach(term => assert(doc.includes(term), `E1 browser validation requirements must include ${term}`));
 
 const alias = "qa:nexus-sprint-e1-user-confirmation-product-boundary";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E1 user confirmation QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"), "E1 requires D8 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"), "E1 requires D8 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e1-user-confirmation-product-boundary-qa] passed");

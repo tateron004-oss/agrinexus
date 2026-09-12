@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const serverPath = path.join(root, "server.js");
 const appPath = path.join(root, "public", "app.js");
 const registryPath = path.join(root, "docs", "nexus-tool-registry.v1.json");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const qaName = "nexus-sprint-h2-consent-center-feature-flag-contract-qa.js";
 const moduleName = "nexus-consent-center-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint H2 feature flag contract doc must exist.");
-assert(exists("scripts", qaName), "Sprint H2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H2 QA script must exist.");
 assert(exists("public", moduleName), "Sprint H2 inert feature flag module must exist.");
 
 const doc = read("docs", docName);
@@ -185,7 +185,7 @@ assert(exists("docs", "NEXUS_CONSENT_CENTER_CONTRACT_PHASE_47.md"), "H2 requires
 assert(exists("public", "nexus-consent-center-contract.js"), "H2 requires Phase 47 Consent Center contract module.");
 
 const alias = "qa:nexus-sprint-h2-consent-center-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H2 QA.");
 

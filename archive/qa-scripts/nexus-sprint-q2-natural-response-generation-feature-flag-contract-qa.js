@@ -6,9 +6,9 @@ const {
   DEFAULT_NATURAL_RESPONSE_GENERATION_FEATURE_FLAG_STATE,
   normalizeNaturalResponseGenerationFeatureFlagState,
   isNaturalResponseGenerationVisibleFeatureEnabled
-} = require("../public/nexus-natural-response-generation-feature-flag.js");
+} = require("../../public/nexus-natural-response-generation-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const qaName = "nexus-sprint-q2-natural-response-generation-feature-flag-contrac
 
 assert(exists("docs", docName), "Sprint Q2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint Q2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint Q2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Q2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -213,9 +213,9 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-q2-natural-response-generation-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Q2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Q1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-q1-natural-response-generation-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Q1 QA.");
 
 console.log("[nexus-sprint-q2-natural-response-generation-feature-flag-contract-qa] passed");

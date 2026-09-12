@@ -3,7 +3,7 @@
 const {
   runTrustChainAssertions,
   runTrustChainQa
-} = require("./lib/nexus-genesis-trust-chain-shared-qa");
+} = require("../../scripts/lib/nexus-genesis-trust-chain-shared-qa");
 
 module.exports = { runTrustChainAssertions, runTrustChainQa };
 

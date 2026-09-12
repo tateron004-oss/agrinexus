@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 
 const app = read("public", "app.js");
@@ -162,10 +162,10 @@ includes(demoSlice, "data-nexus-agentic-mission-workspace=\"true\"", "mission wo
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-sandbox-click-path-mode-audit"],
-  "node scripts/nexus-sandbox-click-path-mode-audit-qa.js",
+  "node archive/qa-scripts/nexus-sandbox-click-path-mode-audit-qa.js",
   "package alias missing"
 );
-includes(qaSuite, "scripts/nexus-sandbox-click-path-mode-audit-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-sandbox-click-path-mode-audit-qa.js", "qa-suite wiring");
 
 const idMatches = demoSlice.match(/\sid=\"([A-Za-z0-9_-]+)\"/g) || [];
 const duplicateLiteralIds = idMatches

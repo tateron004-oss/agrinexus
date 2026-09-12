@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -118,7 +118,7 @@ const runtimeSource = functionNames.map(name => extracted[name]).join("\n");
 ].forEach(term => assert(!runtimeSource.includes(term), `capability executor must not introduce ${term}`));
 
 assert(pkg.scripts["qa:nexus-agentic-capability-execution"], "package alias should run capability execution QA");
-assert(qaSuite.includes("scripts/nexus-agentic-capability-execution-qa.js"), "qa-suite should include capability execution QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-agentic-capability-execution-qa.js"), "qa-suite should include capability execution QA");
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";

@@ -7,9 +7,9 @@ const {
   PROTECTED_PHARMACY_MODE_FLAG_FIELDS,
   normalizePharmacyModeFeatureFlagState,
   isPharmacyModeVisibleFeatureEnabled
-} = require("../public/nexus-pharmacy-mode-feature-flag.js");
+} = require("../../public/nexus-pharmacy-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const qaName = "nexus-sprint-aa2-pharmacy-mode-feature-flag-contract-qa.js";
 
 assert(exists("docs", docName), "Sprint AA2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint AA2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AA2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AA2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -163,10 +163,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-aa2-pharmacy-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AA2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aa1-pharmacy-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AA1 QA.");
-assert(qaSuite.includes("scripts/nexus-pharmacy-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 79 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aa1-pharmacy-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AA1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-pharmacy-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 79 QA.");
 
 console.log("[nexus-sprint-aa2-pharmacy-mode-feature-flag-contract-qa] passed");

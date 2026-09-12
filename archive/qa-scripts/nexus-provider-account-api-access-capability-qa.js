@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
@@ -225,11 +225,11 @@ assert(styles.includes("body.user-mode .a100-provider-account-api-access-grid"),
 
 assert.equal(
   pkg.scripts["qa:nexus-provider-account-api-access-capability"],
-  "node scripts/nexus-provider-account-api-access-capability-qa.js",
+  "node archive/qa-scripts/nexus-provider-account-api-access-capability-qa.js",
   "package alias should expose provider account/API access QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-provider-account-api-access-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-provider-account-api-access-capability-qa.js"),
   "qa-suite should include provider account/API access QA."
 );
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const docName = "NEXUS_SPRINT_AJ1_OFFLINE_LOW_BANDWIDTH_MODE_RUNTIME_ACTIVATION_
 const qaName = "nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint AJ1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint AJ1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AJ1 QA script must exist.");
 
 const doc = read("docs", docName);
 const ai5Doc = read("docs", "NEXUS_SPRINT_AI5_ADMIN_MODE_LANE_CLOSEOUT.md");
@@ -33,7 +33,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const offlineContractSource = read("public", "nexus-offline-low-bandwidth-mode-readiness-contract.js");
-const offlineContract = require("../public/nexus-offline-low-bandwidth-mode-readiness-contract.js");
+const offlineContract = require("../../public/nexus-offline-low-bandwidth-mode-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint AJ1",
@@ -151,7 +151,7 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_AI5_ADMIN_MODE_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_OFFLINE_LOW_BANDWIDTH_MODE_READINESS_CONTRACT_PHASE_88.md"],
   ["public", "nexus-offline-low-bandwidth-mode-readiness-contract.js"],
-  ["scripts", "nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AJ1 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -269,10 +269,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AJ1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ai5-admin-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AI5 QA.");
-assert(qaSuite.includes("scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 88 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ai5-admin-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AI5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 88 QA.");
 
 console.log("[nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa] passed");

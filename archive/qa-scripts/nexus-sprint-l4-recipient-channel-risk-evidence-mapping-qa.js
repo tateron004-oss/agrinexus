@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa.js";
 
 assert(exists("docs", docName), "L4 doc must exist.");
 assert(exists("public", moduleName), "L4 mapping module must exist.");
-assert(exists("scripts", qaName), "L4 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "L4 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -31,7 +31,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const mapping = require("../public/nexus-call-message-risk-evidence-mapping.js");
+const mapping = require("../../public/nexus-call-message-risk-evidence-mapping.js");
 
 assertIncludes(doc, [
   "Sprint L4",
@@ -157,9 +157,9 @@ function baseInput(overrides = {}) {
 });
 
 const alias = "qa:nexus-sprint-l4-recipient-channel-risk-evidence-mapping";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint L4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-l3-call-message-intent-harness-qa.js"), "L4 requires L3 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-l3-call-message-intent-harness-qa.js"), "L4 requires L3 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa] passed");

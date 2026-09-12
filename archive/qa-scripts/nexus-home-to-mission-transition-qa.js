@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -48,7 +48,7 @@ assert(rail3Styles.includes(".nexus-home-to-mission-banner"), "transition banner
 assert(rail3Styles.includes("scroll-margin-top: 18px !important"), "focused mission window supports clean scroll landing");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(missionWorkspace), "mission transition does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-home-to-mission-transition"] === "node scripts/nexus-home-to-mission-transition-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-home-to-mission-transition-qa.js"), "safe QA suite includes home-to-mission transition QA");
+assert(packageJson.scripts["qa:nexus-home-to-mission-transition"] === "node archive/qa-scripts/nexus-home-to-mission-transition-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-home-to-mission-transition-qa.js"), "safe QA suite includes home-to-mission transition QA");
 
 console.log("Nexus home-to-mission transition QA passed.");

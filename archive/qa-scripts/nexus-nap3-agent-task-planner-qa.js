@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const planner = require("../server/nexus-agent-task-planner.js");
+const planner = require("../../server/nexus-agent-task-planner.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -58,10 +58,10 @@ function runNap3AgentTaskPlannerQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap3-agent-task-planner"],
-    "node scripts/nexus-nap3-agent-task-planner-qa.js",
+    "node archive/qa-scripts/nexus-nap3-agent-task-planner-qa.js",
     "NAP3 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap3-agent-task-planner-qa.js"), "NAP3 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap3-agent-task-planner-qa.js"), "NAP3 QA must be wired into local-safe suites.");
 
   assertPlan("Help me get a farm job.", "farm-job", ["job-search", "agriculture-context"]);
   assertPlan("Help me prepare for agriculture training.", "agriculture-training", ["agriculture-context", "music-media"]);

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docPath = path.join(root, "docs", "NEXUS_LOW_RISK_INERT_RENDERER_FLAG_GUAR
 assert(fs.existsSync(docPath), "docs/NEXUS_LOW_RISK_INERT_RENDERER_FLAG_GUARD.md must exist");
 
 const doc = read("docs", "NEXUS_LOW_RISK_INERT_RENDERER_FLAG_GUARD.md");
-const qaSource = read("scripts", "nexus-low-risk-inert-renderer-flag-guard-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-low-risk-inert-renderer-flag-guard-qa.js");
 const flagSource = read("public", "nexus-low-risk-inert-renderer-flag.js");
 const flag = require(path.join(root, "public", "nexus-low-risk-inert-renderer-flag.js"));
 const index = read("public", "index.html");
@@ -104,7 +104,7 @@ assert.equal(
 assert.equal(flag.getNexusLowRiskInertRendererFlag({ enabled: "true", testOnly: "true" }).enabled, true, "flag may accept explicit test-only string context");
 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-flag-guard\""), "package.json must expose qa:nexus-low-risk-inert-renderer-flag-guard");
-assert(suite.includes("scripts/nexus-low-risk-inert-renderer-flag-guard-qa.js"), "nexus-workforce suite should include flag guard QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-inert-renderer-flag-guard-qa.js"), "nexus-workforce suite should include flag guard QA");
 
 if (exists("public", "nexus-low-risk-inert-renderer.js")) {
   const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");

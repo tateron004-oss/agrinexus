@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C7_FIXTURE_TO_VISIBLE_PREVIEW_REVIEW_PLAN.md"),
   c6Doc: path.join(root, "docs", "NEXUS_SPRINT_C6_SOURCE_BACKED_AGRICULTURE_PACKET_HARNESS.md"),
@@ -156,8 +156,8 @@ Object.keys(harness.NO_EXECUTION_AUTHORITY).forEach(flag => {
 });
 
 const alias = "qa:nexus-sprint-c7-fixture-to-visible-preview-review-plan";
-const command = "node scripts/nexus-sprint-c7-fixture-to-visible-preview-review-plan-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c7-fixture-to-visible-preview-review-plan-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c7-fixture-to-visible-preview-review-plan-qa.js"), "qa-suite must include Sprint C7 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c7-fixture-to-visible-preview-review-plan-qa.js"), "qa-suite must include Sprint C7 QA.");
 
 console.log("[nexus-sprint-c7-fixture-to-visible-preview-review-plan-qa] passed");

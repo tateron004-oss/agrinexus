@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -176,11 +176,11 @@ assert(sandbox.getAuditEvents().some(event => event.eventType === "action_confir
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-8-internal-navigation-execution"],
-  "node scripts/nexus-capability-sprint-8-internal-navigation-execution-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-8-internal-navigation-execution-qa.js",
   "package alias should expose Sprint 8 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-8-internal-navigation-execution-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-8-internal-navigation-execution-qa.js"),
   "qa-suite should include Sprint 8 internal navigation execution QA."
 );
 

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_CONSENT_CENTER_CONTRACT_PHASE_47.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -10,7 +10,7 @@ const paths = {
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
   memoryConsentDoc: path.join(root, "docs", "NEXUS_SESSION_MEMORY_RESET_CONSENT_UX_PLAN.md"),
-  memoryConsentQa: path.join(root, "scripts", "nexus-session-memory-reset-consent-qa.js"),
+  memoryConsentQa: path.join(root, "archive", "qa-scripts", "nexus-session-memory-reset-consent-qa.js"),
   realDataRegistry: path.join(root, "public", "nexus-real-data-source-registry.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
@@ -282,7 +282,7 @@ assert(invalid.purposeCategory === "restricted_consent_boundary", "invalid purpo
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-consent-center-contract"] === "node scripts/nexus-consent-center-contract-qa.js", "package.json must expose qa:nexus-consent-center-contract");
-assert(qaSuite.includes("scripts/nexus-consent-center-contract-qa.js"), "qa-suite.js must include consent center contract QA");
+assert(packageData.scripts["qa:nexus-consent-center-contract"] === "node archive/qa-scripts/nexus-consent-center-contract-qa.js", "package.json must expose qa:nexus-consent-center-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-consent-center-contract-qa.js"), "qa-suite.js must include consent center contract QA");
 
 console.log("[nexus-consent-center-contract-qa] passed");

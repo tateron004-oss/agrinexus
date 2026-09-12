@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const harness = require("../server/nexus-live-provider-adoption-harness.js");
+const harness = require("../../server/nexus-live-provider-adoption-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -17,10 +17,10 @@ function runRp1ProviderCredentialInventorySafeConfigQa() {
   const docName = "NEXUS_RP1_PROVIDER_CREDENTIAL_INVENTORY_SAFE_CONFIG_CONTRACT.md";
   const qaName = "nexus-rp1-provider-credential-inventory-safe-config-qa.js";
   assert(exists("docs", docName), "RP1 credential inventory doc must exist.");
-  assert(exists("scripts", qaName), "RP1 QA script must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP1 QA script must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -119,10 +119,10 @@ function runRp1ProviderCredentialInventorySafeConfigQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp1-provider-credential-inventory-safe-config"],
-    "node scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js",
+    "node archive/qa-scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js",
     "RP1 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js"), "RP1 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js"), "RP1 QA must be in safe suites.");
 
   console.log("[nexus-rp1-provider-credential-inventory-safe-config-qa] passed");
 }

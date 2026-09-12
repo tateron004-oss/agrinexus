@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -222,7 +222,7 @@ includes(app, "Workflows are offered, not forced", "consent language");
 includes(app, "Here is what I carried into this workflow from our conversation", "context transfer summary");
 excludes(app, "workflowOpened: true,\n    executionAuthorized: true", "no auto execution authority");
 
-assert(pkg.scripts["qa:nexus-conversation-workflow-transition-engine"] === "node scripts/nexus-conversation-workflow-transition-engine-qa.js", "package alias must exist");
-assert(qaSuite.includes("scripts/nexus-conversation-workflow-transition-engine-qa.js"), "qa-suite must include transition QA");
+assert(pkg.scripts["qa:nexus-conversation-workflow-transition-engine"] === "node archive/qa-scripts/nexus-conversation-workflow-transition-engine-qa.js", "package alias must exist");
+assert(qaSuite.includes("archive/qa-scripts/nexus-conversation-workflow-transition-engine-qa.js"), "qa-suite must include transition QA");
 
 console.log("Nexus conversation-to-workflow transition engine QA passed.");

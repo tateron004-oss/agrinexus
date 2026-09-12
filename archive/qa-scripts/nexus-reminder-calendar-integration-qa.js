@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -96,7 +96,7 @@ const runtimeSource = functionNames.map(name => extractFunction(app, name)).join
 ].forEach(term => assert(app.includes(term), `reminder/calendar integration should include ${term}`));
 
 assert(pkg.scripts["qa:nexus-reminder-calendar-integration"], "package alias should run reminder/calendar QA");
-assert(qaSuite.includes("scripts/nexus-reminder-calendar-integration-qa.js"), "qa-suite should include reminder/calendar QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-reminder-calendar-integration-qa.js"), "qa-suite should include reminder/calendar QA");
 
 [
   "Notification.requestPermission",

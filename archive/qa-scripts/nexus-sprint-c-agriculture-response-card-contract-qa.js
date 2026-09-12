@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C_AGRICULTURE_RESPONSE_CARD_CONTRACT.md"),
   packageJson: path.join(root, "package.json"),
@@ -86,8 +86,8 @@ const qaSuite = fs.readFileSync(files.qaSuite, "utf8");
 ].forEach(required => assert(doc.toLowerCase().includes(required.toLowerCase()), `contract must block: ${required}`));
 
 const alias = "qa:nexus-sprint-c-agriculture-response-card-contract";
-const script = "node scripts/nexus-sprint-c-agriculture-response-card-contract-qa.js";
+const script = "node archive/qa-scripts/nexus-sprint-c-agriculture-response-card-contract-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === script, `${alias} package script must run the Sprint C contract QA.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c-agriculture-response-card-contract-qa.js"), "qa-suite must include Sprint C contract QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c-agriculture-response-card-contract-qa.js"), "qa-suite must include Sprint C contract QA.");
 
 console.log("[nexus-sprint-c-agriculture-response-card-contract-qa] passed");

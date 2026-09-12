@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -95,7 +95,7 @@ const badgeBlock = blockBetween(app, "function renderNexusPresenceRuntimeBadge",
 ].forEach(token => includes(app, token, `regional voice API exposure ${token}`));
 
 assert(!/fake accent available|imitates regional accent|voice clone|character imitation/i.test(contractBlock + resolverBlock + badgeBlock), "regional resolver avoids unsafe accent/clone claims");
-assert(pkg.scripts["qa:nexus-regional-voice-resolution"] === "node scripts/nexus-regional-voice-resolution-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-regional-voice-resolution-qa.js"), "safe QA suite includes regional voice resolution QA");
+assert(pkg.scripts["qa:nexus-regional-voice-resolution"] === "node archive/qa-scripts/nexus-regional-voice-resolution-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-regional-voice-resolution-qa.js"), "safe QA suite includes regional voice resolution QA");
 
 console.log("Nexus regional voice resolution QA passed.");

@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -155,7 +155,7 @@ function excludes(source, token, label) {
   "Ask Nexus",
   "Nexus is present",
   "Talk naturally. Structured fields appear only inside opened workflows.",
-  "Hello. I'm Nexus.",
+  "Hello. I'm Kyro.",
   "Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow.",
   "Saved Questions",
   "Provider Support",
@@ -247,7 +247,7 @@ function excludes(source, token, label) {
 });
 
 [
-  "Hello. I'm Nexus. Speak naturally, and I will open structured fields only when a workflow needs exact details.",
+  "Hello. I'm Kyro. Speak naturally, and I will open structured fields only when a workflow needs exact details.",
   "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   "Playback depends on supported providers or accounts",
   "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
@@ -331,9 +331,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-standard-user-home-screen-redesign"],
-  "node scripts/nexus-standard-user-home-screen-redesign-qa.js",
+  "node archive/qa-scripts/nexus-standard-user-home-screen-redesign-qa.js",
   "package alias should run Standard User home screen redesign QA"
 );
-includes(qaSuite, "scripts/nexus-standard-user-home-screen-redesign-qa.js", "safe QA suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-standard-user-home-screen-redesign-qa.js", "safe QA suite wiring");
 
 console.log("Nexus Standard User home screen redesign QA passed.");

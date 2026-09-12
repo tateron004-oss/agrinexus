@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PROVIDER_CLINIC_PUBLIC_DIRECTORY_CONTRACTS_PHASE_21.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -159,11 +159,11 @@ requiredDirectoryIds.forEach(directoryId => {
 });
 
 assert(
-  packageData.scripts["qa:nexus-provider-clinic-public-directory-contracts"] === "node scripts/nexus-provider-clinic-public-directory-contracts-qa.js",
+  packageData.scripts["qa:nexus-provider-clinic-public-directory-contracts"] === "node archive/qa-scripts/nexus-provider-clinic-public-directory-contracts-qa.js",
   "package.json must expose qa:nexus-provider-clinic-public-directory-contracts"
 );
 assert(
-  qaSuite.includes("scripts/nexus-provider-clinic-public-directory-contracts-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-provider-clinic-public-directory-contracts-qa.js"),
   "qa-suite.js must include provider/clinic public directory contracts QA"
 );
 

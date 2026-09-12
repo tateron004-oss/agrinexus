@@ -6,9 +6,9 @@ const {
   DEFAULT_CONFIRMATION_PREVIEW_ENABLED,
   isConfirmationPreviewEnabled,
   describeConfirmationPreviewFlag
-} = require("../public/nexus-confirmation-preview-flag.js");
+} = require("../../public/nexus-confirmation-preview-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,7 +30,7 @@ const qaName = "nexus-sprint-e5-confirmation-flag-off-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint E5 flag-off doc must exist.");
 assert(exists("public", moduleName), "Sprint E5 flag module must exist.");
-assert(exists("scripts", qaName), "Sprint E5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E5 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -96,9 +96,9 @@ assert(!serverSource.includes("NEXUS_USER_CONFIRMATION_PREVIEW_ENABLED"), "serve
 });
 
 const alias = "qa:nexus-sprint-e5-confirmation-flag-off-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E5 flag-off QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e4-confirmation-evidence-risk-mapping-qa.js"), "E5 requires E4 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e4-confirmation-evidence-risk-mapping-qa.js"), "E5 requires E4 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e5-confirmation-flag-off-regression-guard-qa] passed");

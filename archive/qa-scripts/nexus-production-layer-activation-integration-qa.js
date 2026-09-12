@@ -199,7 +199,7 @@ async function run() {
     "node archive/qa-scripts/nexus-production-layer-activation-integration-qa.js",
     "package alias should run layer activation integration QA"
   );
-  assert(qaSuite.includes("scripts/nexus-production-layer-activation-integration-qa.js"), "qa suite should include layer activation integration QA");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-production-layer-activation-integration-qa.js"), "qa suite should include layer activation integration QA");
 
   [
     "Nexus, are you with me today?",

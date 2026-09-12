@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -91,8 +91,8 @@ assert(server.includes("nexusLiveKnowledgeAllModesQuery"), "Live Knowledge lane 
 assert(server.includes("queueNexusProviderCoordinationFallback"), "local queue fallback should exist");
 assert(server.includes("pharmacy_provider_status_answered"), "Ask Nexus should detect pharmacy commands");
 assert(server.includes("mobile_clinic_provider_status_answered"), "Ask Nexus should detect mobile clinic commands");
-assert.strictEqual(packageJson.scripts["qa:nexus-pharmacy-mobile-clinic-activation"], "node scripts/nexus-pharmacy-mobile-clinic-activation-qa.js", "package alias should run pharmacy/mobile clinic activation QA");
-includes(qaSuite, "scripts/nexus-pharmacy-mobile-clinic-activation-qa.js", "qa-suite should include pharmacy/mobile clinic activation QA");
+assert.strictEqual(packageJson.scripts["qa:nexus-pharmacy-mobile-clinic-activation"], "node archive/qa-scripts/nexus-pharmacy-mobile-clinic-activation-qa.js", "package alias should run pharmacy/mobile clinic activation QA");
+includes(qaSuite, "archive/qa-scripts/nexus-pharmacy-mobile-clinic-activation-qa.js", "qa-suite should include pharmacy/mobile clinic activation QA");
 
 async function waitForServer(port, timeoutMs = 15000) {
   const start = Date.now();

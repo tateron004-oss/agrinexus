@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SOURCE_BACKED_ANSWER_ENGINE_CONTRACT_PHASE_24.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -160,11 +160,11 @@ assert(fallback.responseState === "general_guidance", "invalid response state mu
 });
 
 assert(
-  packageData.scripts["qa:nexus-source-backed-answer-engine-contract"] === "node scripts/nexus-source-backed-answer-engine-contract-qa.js",
+  packageData.scripts["qa:nexus-source-backed-answer-engine-contract"] === "node archive/qa-scripts/nexus-source-backed-answer-engine-contract-qa.js",
   "package.json must expose qa:nexus-source-backed-answer-engine-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-source-backed-answer-engine-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-source-backed-answer-engine-contract-qa.js"),
   "qa-suite.js must include source-backed answer engine contract QA"
 );
 

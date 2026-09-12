@@ -7,9 +7,9 @@ const {
   PROTECTED_ADMIN_MODE_FLAG_FIELDS,
   normalizeAdminModeFeatureFlagState,
   isAdminModeVisibleFeatureEnabled
-} = require("../public/nexus-admin-mode-feature-flag.js");
+} = require("../../public/nexus-admin-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-admin-mode-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AI2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AI2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AI2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AI2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -174,10 +174,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ai2-admin-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AI2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ai1-admin-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AI1 QA.");
-assert(qaSuite.includes("scripts/nexus-admin-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 87 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ai1-admin-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AI1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-admin-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 87 QA.");
 
 console.log("[nexus-sprint-ai2-admin-mode-feature-flag-contract-qa] passed");

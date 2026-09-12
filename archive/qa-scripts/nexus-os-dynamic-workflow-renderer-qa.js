@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -141,10 +141,10 @@ assert(
 ].forEach(token => includes(app + styles, token, `background blocking/focused modal ${token}`));
 
 assert(
-  pkg.scripts["qa:nexus-os-dynamic-workflow-renderer"] === "node scripts/nexus-os-dynamic-workflow-renderer-qa.js",
+  pkg.scripts["qa:nexus-os-dynamic-workflow-renderer"] === "node archive/qa-scripts/nexus-os-dynamic-workflow-renderer-qa.js",
   "package alias exists"
 );
-assert(suite.includes("scripts/nexus-os-dynamic-workflow-renderer-qa.js"), "safe QA suite includes Rail 9 QA");
+assert(suite.includes("archive/qa-scripts/nexus-os-dynamic-workflow-renderer-qa.js"), "safe QA suite includes Rail 9 QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

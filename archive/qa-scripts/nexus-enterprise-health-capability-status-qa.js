@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-enterprise-health-evidence-trust.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -90,9 +90,9 @@ includes(docs, "It cannot activate regulated execution", "documentation preserve
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-enterprise-health-capability-status"],
-  "node scripts/nexus-enterprise-health-capability-status-qa.js",
+  "node archive/qa-scripts/nexus-enterprise-health-capability-status-qa.js",
   "package alias exists"
 );
-includes(qaSuite, "scripts/nexus-enterprise-health-capability-status-qa.js", "safe suites include capability status QA");
+includes(qaSuite, "archive/qa-scripts/nexus-enterprise-health-capability-status-qa.js", "safe suites include capability status QA");
 
 console.log("Nexus enterprise health capability status QA passed.");

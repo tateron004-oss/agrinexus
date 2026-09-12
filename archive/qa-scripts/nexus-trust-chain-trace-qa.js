@@ -1,6 +1,6 @@
 "use strict";
 
-const { runTrustChainQa } = require("./lib/nexus-genesis-trust-chain-shared-qa");
+const { runTrustChainQa } = require("../../scripts/lib/nexus-genesis-trust-chain-shared-qa");
 
 try {
   const result = runTrustChainQa({

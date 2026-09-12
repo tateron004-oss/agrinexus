@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -147,9 +147,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-agentic-all-modes-launch"],
-  "node scripts/nexus-agentic-all-modes-launch-qa.js",
+  "node archive/qa-scripts/nexus-agentic-all-modes-launch-qa.js",
   "package alias should run agentic all-modes launch QA"
 );
-includes(qaSuite, "scripts/nexus-agentic-all-modes-launch-qa.js", "qa-suite should include agentic all-modes launch QA");
+includes(qaSuite, "archive/qa-scripts/nexus-agentic-all-modes-launch-qa.js", "qa-suite should include agentic all-modes launch QA");
 
 console.log("nexus-agentic-all-modes-launch QA passed");

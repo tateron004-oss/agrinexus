@@ -162,7 +162,7 @@ A future renderer may consume this model only after a separate reviewed phase. T
 
 ## 16. QA Coverage
 
-`scripts/nexus-staged-action-inert-renderer-qa.js` verifies:
+`archive/qa-scripts/nexus-staged-action-inert-renderer-qa.js` verifies:
 
 - required sections and safety language are present
 - `deriveNexusStagedActionRenderModel(...)` loads in Node

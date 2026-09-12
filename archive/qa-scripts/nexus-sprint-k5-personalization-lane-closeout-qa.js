@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_PERSONALIZATION_FEATURE_FLAG_STATE,
   normalizePersonalizationFeatureFlagState
-} = require("../public/nexus-personalization-feature-flag.js");
+} = require("../../public/nexus-personalization-feature-flag.js");
 const {
   protectedFields,
   loadPersonalizationFlagFixtures,
   validatePersonalizationFlagFixtures
 } = require("./nexus-sprint-k3-personalization-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_K5_PERSONALIZATION_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-k5-personalization-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint K5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint K5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint K5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-personalization-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-personalization-feature-flag.js");
-const k3Harness = read("scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js");
+const k3Harness = read("archive", "qa-scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js");
 const fixtures = loadPersonalizationFlagFixtures();
 
 assertIncludes(doc, [
@@ -159,7 +159,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint K5 requires prior Sprint K QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint K5 requires prior Sprint K QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint K QA: ${requiredScript}`);
 }
 
@@ -287,7 +287,7 @@ for (const source of [featureFlagModule, k3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-k5-personalization-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K5 QA.");
 

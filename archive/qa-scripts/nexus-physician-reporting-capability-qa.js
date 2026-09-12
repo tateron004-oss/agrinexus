@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -109,12 +109,12 @@ assert(intentSource.includes("I prepared a session-only physician/care-team repo
 
 assert.equal(
   pkg.scripts["qa:nexus-physician-reporting-capability"],
-  "node scripts/nexus-physician-reporting-capability-qa.js",
+  "node archive/qa-scripts/nexus-physician-reporting-capability-qa.js",
   "package.json should expose physician reporting QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-physician-reporting-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-physician-reporting-capability-qa.js"),
   "qa-suite should include physician reporting QA in safe suites"
 );
 

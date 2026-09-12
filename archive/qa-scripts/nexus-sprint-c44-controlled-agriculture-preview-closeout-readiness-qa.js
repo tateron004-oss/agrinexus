@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_C44_CONTROLLED_AGRICULTURE_PREVIEW_CLOSEOUT_AND_SP
 const qaName = "nexus-sprint-c44-controlled-agriculture-preview-closeout-readiness-qa.js";
 
 assert(exists("docs", docName), "Sprint C44 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint C44 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C44 QA script must exist.");
 
 const doc = read("docs", docName);
 const packageJson = JSON.parse(read("package.json"));
@@ -76,7 +76,7 @@ assert(moduleSource.includes("data-nexus-source-backed-agriculture-preview-card"
 assert(moduleSource.includes("No action has been taken."), "C44 protected module must preserve no-action disclosure.");
 
 const alias = "qa:nexus-sprint-c44-controlled-agriculture-preview-closeout-readiness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C44 QA.");
 

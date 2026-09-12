@@ -603,7 +603,7 @@ Recommended next phase:
 Likely files:
 
 - `public/nexus-session-memory.js`
-- `scripts/nexus-session-memory-qa.js`
+- `archive/qa-scripts/nexus-session-memory-qa.js`
 - `docs/NEXUS_SESSION_MEMORY_MODEL.md`
 - package alias `qa:nexus-session-memory`
 - possible `scripts/qa-suite.js` update

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -89,10 +89,10 @@ function runFap6SafeLocalToolLayerQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-fap6-safe-local-tool-layer"],
-    "node scripts/nexus-fap6-safe-local-tool-layer-qa.js",
+    "node archive/qa-scripts/nexus-fap6-safe-local-tool-layer-qa.js",
     "FAP6 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-fap6-safe-local-tool-layer-qa.js"), "FAP6 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-fap6-safe-local-tool-layer-qa.js"), "FAP6 QA must be wired into local-safe suites.");
 
   console.log(JSON.stringify({
     safeLocalTools: ["copy-preview", "clear-context", "restart-task"],

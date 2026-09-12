@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -21,29 +21,29 @@ const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts/qa-suite.js");
 
 const requiredQaScripts = [
-  "scripts/nexus-experience-render-root-qa.js",
-  "scripts/nexus-standard-user-diagnostics-removal-qa.js",
-  "scripts/nexus-core-first-viewport-qa.js",
-  "scripts/nexus-first-impression-greeting-qa.js",
-  "scripts/nexus-primary-voice-entry-qa.js",
-  "scripts/nexus-primary-typed-entry-qa.js",
-  "scripts/nexus-home-to-mission-transition-qa.js",
-  "scripts/nexus-first-viewport-responsive-hardening-qa.js",
-  "scripts/nexus-accessible-first-impression-qa.js",
-  "scripts/nexus-os-genesis-experience-layer-completion-qa.js"
+  "archive/qa-scripts/nexus-experience-render-root-qa.js",
+  "archive/qa-scripts/nexus-standard-user-diagnostics-removal-qa.js",
+  "archive/qa-scripts/nexus-core-first-viewport-qa.js",
+  "archive/qa-scripts/nexus-first-impression-greeting-qa.js",
+  "archive/qa-scripts/nexus-primary-voice-entry-qa.js",
+  "archive/qa-scripts/nexus-primary-typed-entry-qa.js",
+  "archive/qa-scripts/nexus-home-to-mission-transition-qa.js",
+  "archive/qa-scripts/nexus-first-viewport-responsive-hardening-qa.js",
+  "archive/qa-scripts/nexus-accessible-first-impression-qa.js",
+  "archive/qa-scripts/nexus-os-genesis-experience-layer-completion-qa.js"
 ];
 
 const requiredAliases = {
-  "qa:nexus-experience-render-root": "node scripts/nexus-experience-render-root-qa.js",
-  "qa:nexus-standard-user-diagnostics-removal": "node scripts/nexus-standard-user-diagnostics-removal-qa.js",
-  "qa:nexus-core-first-viewport": "node scripts/nexus-core-first-viewport-qa.js",
-  "qa:nexus-first-impression-greeting": "node scripts/nexus-first-impression-greeting-qa.js",
-  "qa:nexus-primary-voice-entry": "node scripts/nexus-primary-voice-entry-qa.js",
-  "qa:nexus-primary-typed-entry": "node scripts/nexus-primary-typed-entry-qa.js",
-  "qa:nexus-home-to-mission-transition": "node scripts/nexus-home-to-mission-transition-qa.js",
-  "qa:nexus-first-viewport-responsive-hardening": "node scripts/nexus-first-viewport-responsive-hardening-qa.js",
-  "qa:nexus-accessible-first-impression": "node scripts/nexus-accessible-first-impression-qa.js",
-  "qa:nexus-os-genesis-experience-layer-completion": "node scripts/nexus-os-genesis-experience-layer-completion-qa.js"
+  "qa:nexus-experience-render-root": "node archive/qa-scripts/nexus-experience-render-root-qa.js",
+  "qa:nexus-standard-user-diagnostics-removal": "node archive/qa-scripts/nexus-standard-user-diagnostics-removal-qa.js",
+  "qa:nexus-core-first-viewport": "node archive/qa-scripts/nexus-core-first-viewport-qa.js",
+  "qa:nexus-first-impression-greeting": "node archive/qa-scripts/nexus-first-impression-greeting-qa.js",
+  "qa:nexus-primary-voice-entry": "node archive/qa-scripts/nexus-primary-voice-entry-qa.js",
+  "qa:nexus-primary-typed-entry": "node archive/qa-scripts/nexus-primary-typed-entry-qa.js",
+  "qa:nexus-home-to-mission-transition": "node archive/qa-scripts/nexus-home-to-mission-transition-qa.js",
+  "qa:nexus-first-viewport-responsive-hardening": "node archive/qa-scripts/nexus-first-viewport-responsive-hardening-qa.js",
+  "qa:nexus-accessible-first-impression": "node archive/qa-scripts/nexus-accessible-first-impression-qa.js",
+  "qa:nexus-os-genesis-experience-layer-completion": "node archive/qa-scripts/nexus-os-genesis-experience-layer-completion-qa.js"
 };
 
 requiredQaScripts.forEach(script => {
@@ -74,7 +74,7 @@ Object.entries(requiredAliases).forEach(([alias, command]) => {
 [
   "Nexus visual status indicator. Use voice controls to continue.",
   "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
-  "Hello. I'm Nexus.",
+  "Hello. I'm Kyro.",
   "Focused mission open",
   "No external action is authorized from this transition."
 ].forEach(token => assert(app.includes(token), `${token} user-facing copy exists`));

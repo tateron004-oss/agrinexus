@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js";
 
 assert(exists("docs", docName), "K2 doc must exist.");
 assert(exists("public", moduleName), "K2 contract module must exist.");
-assert(exists("scripts", qaName), "K2 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K2 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -31,7 +31,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-contact-provider-identity-contract.js");
+const contract = require("../../public/nexus-contact-provider-identity-contract.js");
 
 assertIncludes(doc, [
   "Sprint K2",
@@ -216,9 +216,9 @@ assert.equal(complete.candidate.backendWriteAllowed, false, "K2 factory must for
 });
 
 const alias = "qa:nexus-sprint-k2-inert-contact-provider-identity-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js"), "K2 requires K1 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js"), "K2 requires K1 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-k2-inert-contact-provider-identity-contract-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_PROVIDER_EXECUTION_READINESS_GATE.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -9,11 +9,11 @@ const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
-  contactPermissionQa: path.join(root, "scripts", "nexus-contact-call-permission-qa.js"),
-  contactResolutionQa: path.join(root, "scripts", "nexus-contact-resolution-qa.js"),
-  providerBoundaryQa: path.join(root, "scripts", "nexus-provider-handoff-boundary-qa.js"),
-  approvalCenterQa: path.join(root, "scripts", "nexus-approval-center-contract-qa.js"),
-  providerContactQa: path.join(root, "scripts", "nexus-provider-contact-preparation-contract-qa.js"),
+  contactPermissionQa: path.join(root, "archive", "qa-scripts", "nexus-contact-call-permission-qa.js"),
+  contactResolutionQa: path.join(root, "archive", "qa-scripts", "nexus-contact-resolution-qa.js"),
+  providerBoundaryQa: path.join(root, "archive", "qa-scripts", "nexus-provider-handoff-boundary-qa.js"),
+  approvalCenterQa: path.join(root, "archive", "qa-scripts", "nexus-approval-center-contract-qa.js"),
+  providerContactQa: path.join(root, "archive", "qa-scripts", "nexus-provider-contact-preparation-contract-qa.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
 };
@@ -320,7 +320,7 @@ assert(invalid.restrictedDomains.length === 0, "invalid restricted domains must 
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-provider-execution-readiness-gate"] === "node scripts/nexus-communications-provider-execution-readiness-gate-qa.js", "package.json must expose qa:nexus-communications-provider-execution-readiness-gate.");
-assert(qaSuite.includes("scripts/nexus-communications-provider-execution-readiness-gate-qa.js"), "qa-suite.js must include communications provider execution readiness gate QA.");
+assert(packageData.scripts["qa:nexus-communications-provider-execution-readiness-gate"] === "node archive/qa-scripts/nexus-communications-provider-execution-readiness-gate-qa.js", "package.json must expose qa:nexus-communications-provider-execution-readiness-gate.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-provider-execution-readiness-gate-qa.js"), "qa-suite.js must include communications provider execution readiness gate QA.");
 
 console.log("[nexus-communications-provider-execution-readiness-gate-qa] passed");

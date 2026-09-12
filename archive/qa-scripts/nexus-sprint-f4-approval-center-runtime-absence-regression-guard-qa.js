@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   DEFAULT_APPROVAL_CENTER_FEATURE_FLAG_STATE,
   normalizeApprovalCenterFeatureFlagState
-} = require("../public/nexus-approval-center-feature-flag.js");
+} = require("../../public/nexus-approval-center-feature-flag.js");
 const {
   loadApprovalCenterFlagFixtures,
   validateApprovalCenterFlagFixtures
 } = require("./nexus-sprint-f3-approval-center-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,7 +30,7 @@ const docName = "NEXUS_SPRINT_F4_APPROVAL_CENTER_RUNTIME_ABSENCE_REGRESSION_GUAR
 const qaName = "nexus-sprint-f4-approval-center-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint F4 runtime absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint F4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint F4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -39,7 +39,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const featureFlagModule = read("public", "nexus-approval-center-feature-flag.js");
-const harnessSource = read("scripts", "nexus-sprint-f3-approval-center-flag-contract-harness.js");
+const harnessSource = read("archive", "qa-scripts", "nexus-sprint-f3-approval-center-flag-contract-harness.js");
 const fixtures = loadApprovalCenterFlagFixtures();
 
 assertIncludes(doc, [
@@ -57,7 +57,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-approval-center-contract.js",
   "public/nexus-approval-center-feature-flag.js",
-  "scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness.js",
   "fixtures/nexus/approval-center-feature-flags.json"
 ], "F4 protected artifact list");
 
@@ -98,7 +98,7 @@ for (const prior of [
   ["public", "nexus-approval-center-contract.js"],
   ["public", "nexus-approval-center-feature-flag.js"],
   ["fixtures", "nexus", "approval-center-feature-flags.json"],
-  ["scripts", "nexus-sprint-f3-approval-center-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-f3-approval-center-flag-contract-harness.js"]
 ]) {
   assert(exists(...prior), `Sprint F4 requires prior artifact: ${prior.join("/")}`);
 }
@@ -185,7 +185,7 @@ for (const source of [featureFlagModule, harnessSource]) {
 }
 
 const alias = "qa:nexus-sprint-f4-approval-center-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint F4 QA.");
 

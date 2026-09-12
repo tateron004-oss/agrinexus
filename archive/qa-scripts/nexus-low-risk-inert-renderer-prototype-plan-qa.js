@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -12,7 +12,7 @@ const docPath = path.join(root, "docs", "NEXUS_LOW_RISK_INERT_RENDERER_PROTOTYPE
 assert(fs.existsSync(docPath), "docs/NEXUS_LOW_RISK_INERT_RENDERER_PROTOTYPE_PLAN.md must exist");
 
 const doc = read("docs", "NEXUS_LOW_RISK_INERT_RENDERER_PROTOTYPE_PLAN.md");
-const qaSource = read("scripts", "nexus-low-risk-inert-renderer-prototype-plan-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-low-risk-inert-renderer-prototype-plan-qa.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -127,7 +127,7 @@ for (const gate of [
 }
 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-prototype-plan\""), "package.json must expose qa:nexus-low-risk-inert-renderer-prototype-plan");
-assert(suite.includes("scripts/nexus-low-risk-inert-renderer-prototype-plan-qa.js"), "nexus-workforce suite should include prototype plan QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-inert-renderer-prototype-plan-qa.js"), "nexus-workforce suite should include prototype plan QA");
 
 if (fs.existsSync(path.join(root, "public", "nexus-low-risk-inert-renderer.js"))) {
   const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");

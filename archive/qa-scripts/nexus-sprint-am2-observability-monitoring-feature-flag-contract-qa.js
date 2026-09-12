@@ -7,9 +7,9 @@ const {
   PROTECTED_OBSERVABILITY_MONITORING_FLAG_FIELDS,
   normalizeObservabilityMonitoringFeatureFlagState,
   isObservabilityMonitoringVisibleFeatureEnabled
-} = require("../public/nexus-observability-monitoring-feature-flag.js");
+} = require("../../public/nexus-observability-monitoring-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-observability-monitoring-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AM2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AM2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AM2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AM2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -164,10 +164,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-am2-observability-monitoring-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AM2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AM1 QA.");
-assert(qaSuite.includes("scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Phase 91 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AM1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Phase 91 QA.");
 
 console.log("[nexus-sprint-am2-observability-monitoring-feature-flag-contract-qa] passed");

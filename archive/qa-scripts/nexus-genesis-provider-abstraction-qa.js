@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-genesis-provider-abstraction.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
@@ -250,8 +250,8 @@ includes(app, "renderNexusGenesisProviderAbstractionCard", "app");
 includes(app, "Provider Capability Status", "app");
 includes(app, "noExternalExecution", "app");
 assert(Object.prototype.hasOwnProperty.call(packageJson.scripts, "qa:nexus-genesis-provider-abstraction"), "package scripts should include qa:nexus-genesis-provider-abstraction");
-assert.strictEqual(packageJson.scripts["qa:nexus-genesis-provider-abstraction"], "node scripts/nexus-genesis-provider-abstraction-qa.js");
-includes(qaSuite, "scripts/nexus-genesis-provider-abstraction-qa.js", "qa-suite");
+assert.strictEqual(packageJson.scripts["qa:nexus-genesis-provider-abstraction"], "node archive/qa-scripts/nexus-genesis-provider-abstraction-qa.js");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-provider-abstraction-qa.js", "qa-suite");
 
 const unsafeClaims = [
   "AWS required",

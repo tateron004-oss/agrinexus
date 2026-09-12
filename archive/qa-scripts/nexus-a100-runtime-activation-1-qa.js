@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -117,7 +117,7 @@ assert(previewSource.includes("renderUserSimpleActiveSection"), "A100 prompts sh
   "qa:nexus-a100-42-a100-closeout"
 ].forEach(alias => assert(pkg.scripts[alias], `Existing A100 alias should remain: ${alias}`));
 
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-1"], "node scripts/nexus-a100-runtime-activation-1-qa.js", "Package script should expose A100 runtime activation 1 QA.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-1-qa.js"), "A100 runtime activation QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-1"], "node archive/qa-scripts/nexus-a100-runtime-activation-1-qa.js", "Package script should expose A100 runtime activation 1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-1-qa.js"), "A100 runtime activation QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-1-qa] passed");

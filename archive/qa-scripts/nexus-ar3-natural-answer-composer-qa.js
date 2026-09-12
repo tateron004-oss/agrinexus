@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const composer = require("../server/nexus-assistant-answer-composer.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const composer = require("../../server/nexus-assistant-answer-composer.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const UNSAFE_PATTERNS = Object.freeze([
   /\baction completed\b/i,
@@ -91,7 +91,7 @@ function assertNaturalAnswer(response, label) {
 
 function assertStaticContract() {
   assert(exists("server", "nexus-assistant-answer-composer.js"), "AR3 answer composer module must exist.");
-  assert(exists("scripts", "nexus-ar3-natural-answer-composer-qa.js"), "AR3 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-ar3-natural-answer-composer-qa.js"), "AR3 QA must exist.");
 
   const runtimeSource = read("server", "nexus-assistant-runtime-entrypoint.js");
   const composerSource = read("server", "nexus-assistant-answer-composer.js");
@@ -117,10 +117,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar3-natural-answer-composer"],
-    "node scripts/nexus-ar3-natural-answer-composer-qa.js",
+    "node archive/qa-scripts/nexus-ar3-natural-answer-composer-qa.js",
     "AR3 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar3-natural-answer-composer-qa.js"), "AR3 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar3-natural-answer-composer-qa.js"), "AR3 QA must be wired into local-safe suites.");
 }
 
 async function runNaturalAnswerCases() {

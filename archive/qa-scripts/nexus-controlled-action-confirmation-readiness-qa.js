@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const serverPath = path.join(root, "server.js");
 const packagePath = path.join(root, "package.json");
@@ -235,7 +235,7 @@ assert.match(previewDoc, /controlled-action-confirmation-readiness\.v1/, "previe
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-controlled-action-confirmation-readiness"],
-  "node scripts/nexus-controlled-action-confirmation-readiness-qa.js",
+  "node archive/qa-scripts/nexus-controlled-action-confirmation-readiness-qa.js",
   "package should expose confirmation readiness QA alias"
 );
 assert.match(suite, /scripts\/nexus-controlled-action-confirmation-readiness-qa\.js/, "nexus-workforce suite should include confirmation readiness QA");

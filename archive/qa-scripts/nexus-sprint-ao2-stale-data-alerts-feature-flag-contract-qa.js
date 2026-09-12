@@ -7,9 +7,9 @@ const {
   PROTECTED_STALE_DATA_ALERTS_FLAG_FIELDS,
   normalizeStaleDataAlertsFeatureFlagState,
   isStaleDataAlertsVisibleFeatureEnabled
-} = require("../public/nexus-stale-data-alerts-feature-flag.js");
+} = require("../../public/nexus-stale-data-alerts-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-stale-data-alerts-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AO2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AO2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AO2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AO2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -159,10 +159,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ao2-stale-data-alerts-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AO2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AO1 QA.");
-assert(qaSuite.includes("scripts/nexus-stale-data-alerts-readiness-contract-qa.js"), "qa-suite must continue to include Phase 93 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AO1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-stale-data-alerts-readiness-contract-qa.js"), "qa-suite must continue to include Phase 93 QA.");
 
 console.log("[nexus-sprint-ao2-stale-data-alerts-feature-flag-contract-qa] passed");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -19,7 +19,7 @@ assert(fs.existsSync(helperPath), "public/nexus-low-risk-inert-renderer-eligibil
 
 const doc = read("docs", "NEXUS_LOW_RISK_INERT_RENDERER_ELIGIBILITY_GUARD.md");
 const helperSource = read("public", "nexus-low-risk-inert-renderer-eligibility.js");
-const qaSource = read("scripts", "nexus-low-risk-inert-renderer-eligibility-guard-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-low-risk-inert-renderer-eligibility-guard-qa.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const packageJson = read("package.json");
@@ -205,7 +205,7 @@ for (const [label, model, expectedReason] of [
 }
 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-eligibility-guard\""), "package.json must expose qa:nexus-low-risk-inert-renderer-eligibility-guard");
-assert(suite.includes("scripts/nexus-low-risk-inert-renderer-eligibility-guard-qa.js"), "nexus-workforce suite should include eligibility guard QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-inert-renderer-eligibility-guard-qa.js"), "nexus-workforce suite should include eligibility guard QA");
 if (exists("public", "nexus-low-risk-inert-renderer.js")) {
   const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");
   assert(runtimeRenderer.includes("metadataOnly"), "dormant low-risk renderer, if present, must remain metadata-only");

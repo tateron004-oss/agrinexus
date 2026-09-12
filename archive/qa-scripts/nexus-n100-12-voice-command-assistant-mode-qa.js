@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const voice = require("../server/nexus-n100-voice-command-assistant-mode.js");
+const voice = require("../../server/nexus-n100-voice-command-assistant-mode.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-voice-command-assistant-mode.js"), "N100-12 voice command module must exist.");
   assert(exists("docs", "NEXUS_N100_12_VOICE_COMMAND_ASSISTANT_MODE.md"), "N100-12 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-12-voice-command-assistant-mode-qa.js"), "N100-12 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-12-voice-command-assistant-mode-qa.js"), "N100-12 QA must exist.");
 
   [
     "SUPPORTED_COMMAND_INTENTS",
@@ -70,10 +70,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-12-voice-command-assistant-mode"],
-    "node scripts/nexus-n100-12-voice-command-assistant-mode-qa.js",
+    "node archive/qa-scripts/nexus-n100-12-voice-command-assistant-mode-qa.js",
     "N100-12 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-12-voice-command-assistant-mode-qa.js"), "N100-12 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-12-voice-command-assistant-mode-qa.js"), "N100-12 QA must be wired into local-safe suites.");
 }
 
 function assertDecision(command, expectedIntent) {

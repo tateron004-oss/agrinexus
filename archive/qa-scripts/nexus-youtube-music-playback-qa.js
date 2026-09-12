@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { Script } = require("node:vm");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");

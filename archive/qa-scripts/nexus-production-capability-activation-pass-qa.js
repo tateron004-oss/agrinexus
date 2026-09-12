@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const weather = require(path.join(root, "server/nexus-weather-source-provider.js"));
@@ -91,8 +91,8 @@ async function run() {
   assert.equal(mapsResult.body.data.noLocationPermissionRequested, true, "maps route must not request geolocation permission");
   assert.equal(routeFetchCount, 3, "maps route should geocode origin, geocode destination, and compute one route");
 
-  const mapsNeedsConfirmation = await maps.route({ origin: "Stockton, CA", destination: "Sacramento, CA" }, { NEXUS_MAPS_ENABLED: "true" });
-  assert.equal(mapsNeedsConfirmation.body.status, "confirmation_required", "maps route remains confirmation gated");
+  const mapsRepeatLookup = await maps.route({ origin: "Stockton, CA", destination: "Sacramento, CA" }, { NEXUS_MAPS_ENABLED: "true" });
+  assert.equal(mapsRepeatLookup.body.status, "completed", "maps route stays read-only and never needs confirmation, like checking the weather");
 
   const remindersDb = { profile: {} };
   const reminderBlocked = reminders.create({ title: "Check blood pressure" }, remindersDb, {});

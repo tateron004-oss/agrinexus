@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_PERSONALIZATION_FEATURE_FLAG_STATE,
   normalizePersonalizationFeatureFlagState
-} = require("../public/nexus-personalization-feature-flag.js");
+} = require("../../public/nexus-personalization-feature-flag.js");
 const {
   protectedFields,
   loadPersonalizationFlagFixtures,
   validatePersonalizationFlagFixtures
 } = require("./nexus-sprint-k3-personalization-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_K4_PERSONALIZATION_RUNTIME_ABSENCE_REGRESSION_GUAR
 const qaName = "nexus-sprint-k4-personalization-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint K4 runtime absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint K4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint K4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -41,7 +41,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const featureFlagModule = read("public", "nexus-personalization-feature-flag.js");
-const harnessSource = read("scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js");
+const harnessSource = read("archive", "qa-scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js");
 const fixtures = loadPersonalizationFlagFixtures();
 
 assertIncludes(doc, [
@@ -59,7 +59,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-personalization-readiness-contract.js",
   "public/nexus-personalization-feature-flag.js",
-  "scripts/nexus-sprint-k3-personalization-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-k3-personalization-flag-contract-harness.js",
   "fixtures/nexus/personalization-feature-flags.json",
   "It intentionally does not ban generic words such as personal, language, preference, or settings"
 ], "K4 protected artifact list");
@@ -112,7 +112,7 @@ for (const prior of [
   ["public", "nexus-personalization-readiness-contract.js"],
   ["public", "nexus-personalization-feature-flag.js"],
   ["fixtures", "nexus", "personalization-feature-flags.json"],
-  ["scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-k3-personalization-flag-contract-harness.js"]
 ]) {
   assert(exists(...prior), `Sprint K4 requires prior artifact: ${prior.join("/")}`);
 }
@@ -213,7 +213,7 @@ for (const source of [featureFlagModule, harnessSource]) {
 }
 
 const alias = "qa:nexus-sprint-k4-personalization-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K4 QA.");
 

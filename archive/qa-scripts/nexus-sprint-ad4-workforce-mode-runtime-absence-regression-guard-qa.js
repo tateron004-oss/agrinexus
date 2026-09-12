@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_WORKFORCE_MODE_FEATURE_FLAG_STATE,
   normalizeWorkforceModeFeatureFlagState
-} = require("../public/nexus-workforce-mode-feature-flag.js");
+} = require("../../public/nexus-workforce-mode-feature-flag.js");
 const {
   protectedFields,
   loadWorkforceModeFlagFixtures,
   validateWorkforceModeFlagFixtures
 } = require("./nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_AD4_WORKFORCE_MODE_RUNTIME_ABSENCE_REGRESSION_GUAR
 const qaName = "nexus-sprint-ad4-workforce-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AD4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AD4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AD4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-workforce-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-workforce-mode-feature-flag.js");
-const ad3Harness = read("scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
+const ad3Harness = read("archive", "qa-scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js");
 const fixtures = loadWorkforceModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-workforce-mode-readiness-contract.js",
   "public/nexus-workforce-mode-feature-flag.js",
-  "scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness.js",
   "fixtures/nexus/workforce-mode-feature-flags.json",
   "Sprint AD QA scripts"
 ], "AD4 runtime absence artifact list");
@@ -160,7 +160,7 @@ for (const requiredPath of [
   ["public", "nexus-workforce-mode-readiness-contract.js"],
   ["public", "nexus-workforce-mode-feature-flag.js"],
   ["fixtures", "nexus", "workforce-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-ad3-workforce-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AD4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -295,11 +295,11 @@ for (const source of [featureFlagModule, ad3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-ad4-workforce-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AD4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AD1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ad2-workforce-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AD2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AD3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AD1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ad2-workforce-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AD2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AD3 QA.");
 
 console.log("[nexus-sprint-ad4-workforce-mode-runtime-absence-regression-guard-qa] passed");

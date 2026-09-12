@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
+const dialogue = require("../../public/nexus-assistant-dialogue-engine-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -21,7 +21,7 @@ const qaName = "nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js";
 assert(exists("docs", docName), "LIVE4 doc must exist.");
 assert(exists("public", moduleName), "LIVE4 dialogue module must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "LIVE4 dialogue fixtures must exist.");
-assert(exists("scripts", qaName), "LIVE4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE4 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -144,9 +144,9 @@ assert(highRiskPayment.blockedExecutionChannels.includes("provider-dispatch"), "
 });
 
 const alias = "qa:nexus-sprint-live4-assistant-dialogue-engine-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js"), "LIVE4 requires LIVE3 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js"), "LIVE4 requires LIVE3 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live4-assistant-dialogue-engine-contract-qa] passed");

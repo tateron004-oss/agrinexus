@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -61,12 +61,12 @@ function assertWiring() {
 
   assert.equal(
     pkg.scripts["qa:nexus-fap10-full-assistant-power-closeout"],
-    "node scripts/nexus-fap10-full-assistant-power-closeout-qa.js",
+    "node archive/qa-scripts/nexus-fap10-full-assistant-power-closeout-qa.js",
     "FAP10 package alias must exist."
   );
 
   assert(
-    suite.includes("scripts/nexus-fap10-full-assistant-power-closeout-qa.js"),
+    suite.includes("archive/qa-scripts/nexus-fap10-full-assistant-power-closeout-qa.js"),
     "FAP10 QA must be wired into local-safe suites."
   );
 }

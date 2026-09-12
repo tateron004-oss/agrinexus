@@ -1,11 +1,11 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { normalizeSourceResult } = require("../public/nexus-live-source-result-contract.js");
-const policy = require("../public/nexus-live-source-trust-freshness-policy.js");
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
+const { normalizeSourceResult } = require("../../public/nexus-live-source-result-contract.js");
+const policy = require("../../public/nexus-live-source-trust-freshness-policy.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -132,10 +132,10 @@ function runRt7SourceTrustCitationFreshnessPolicyQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt7-source-trust-citation-freshness-policy"],
-    "node scripts/nexus-rt7-source-trust-citation-freshness-policy-qa.js",
+    "node archive/qa-scripts/nexus-rt7-source-trust-citation-freshness-policy-qa.js",
     "RT7 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt7-source-trust-citation-freshness-policy-qa.js"), "RT7 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt7-source-trust-citation-freshness-policy-qa.js"), "RT7 QA must be in safe suites.");
 
   console.log("[nexus-rt7-source-trust-citation-freshness-policy-qa] passed");
 }

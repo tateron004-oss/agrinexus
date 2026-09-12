@@ -7,8 +7,8 @@ Sprint V3 adds fixture, harness, documentation, and QA only for the Marketplace 
 ## Artifacts
 
 - `fixtures/nexus/marketplace-intelligence-feature-flags.json`
-- `scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js`
-- `scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness-qa.js`
 
 ## Fixture Coverage
 

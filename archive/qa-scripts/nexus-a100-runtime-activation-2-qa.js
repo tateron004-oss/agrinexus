@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -67,7 +67,7 @@ assert(previewSource.includes("rememberA100SafeFollowUpContext(intent);"), "A100
 assert(voiceCoreSource.includes("a100SafeAutonomyIntent"), "Voice/typed core should continue routing through A100 safe autonomy.");
 assert(voiceCoreSource.indexOf("a100SafeAutonomyIntent") < voiceCoreSource.indexOf("runStandardUserAssistantRuntimePreview"), "A100 follow-ups should resolve before provider-backed runtime preview.");
 assert(pkg.scripts["qa:nexus-a100-runtime-activation-1"], "Sprint 1 QA alias should remain.");
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-2"], "node scripts/nexus-a100-runtime-activation-2-qa.js", "Sprint 2 QA alias should exist.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-2-qa.js"), "Sprint 2 QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-2"], "node archive/qa-scripts/nexus-a100-runtime-activation-2-qa.js", "Sprint 2 QA alias should exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-2-qa.js"), "Sprint 2 QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-2-qa] passed");

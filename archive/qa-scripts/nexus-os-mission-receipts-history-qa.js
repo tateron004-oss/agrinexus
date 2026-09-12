@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -100,10 +100,10 @@ function includes(source, token, message) {
 ].forEach(token => includes(styles, token, `mission history styles ${token}`));
 
 assert(
-  pkg.scripts["qa:nexus-os-mission-receipts-history"] === "node scripts/nexus-os-mission-receipts-history-qa.js",
+  pkg.scripts["qa:nexus-os-mission-receipts-history"] === "node archive/qa-scripts/nexus-os-mission-receipts-history-qa.js",
   "package alias exists"
 );
-assert(suite.includes("scripts/nexus-os-mission-receipts-history-qa.js"), "safe QA suite includes Rail 13 QA");
+assert(suite.includes("archive/qa-scripts/nexus-os-mission-receipts-history-qa.js"), "safe QA suite includes Rail 13 QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

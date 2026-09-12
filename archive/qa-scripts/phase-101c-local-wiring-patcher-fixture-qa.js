@@ -3,7 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const patcherSource = fs.readFileSync(path.join(root, "scripts", "apply-phase-101c-local-wiring.js"), "utf8");
 
 function assert(condition, message) {
@@ -42,13 +42,13 @@ try {
   write(path.join(tempRoot, "scripts", "qa-suite.js"), [
     "const suites = {",
     "  \"nexus-workforce\": [",
-    "    \"scripts/nexus-workforce-branding-qa.js\",",
-    "    \"scripts/nexus-100-completion-system-audit-readiness-qa.js\"",
+    "    \"archive/qa-scripts/nexus-workforce-branding-qa.js\",",
+    "    \"archive/qa-scripts/nexus-100-completion-system-audit-readiness-qa.js\"",
     "  ]",
     "};",
     "suites[\"all-safe\"] = [",
-    "  \"scripts/nexus-100-full-platform-roadmap-qa.js\",",
-    "  \"scripts/nexus-100-completion-system-audit-readiness-qa.js\"",
+    "  \"archive/qa-scripts/nexus-100-full-platform-roadmap-qa.js\",",
+    "  \"archive/qa-scripts/nexus-100-completion-system-audit-readiness-qa.js\"",
     "];",
     ""
   ].join("\n"));
@@ -75,8 +75,8 @@ try {
   assert(index.indexOf("nexus-agriculture-support-response-card.js") < index.indexOf("/app.js?v=nexus-behavior-305"), "fixture loader must appear before app.js.");
   assert(packageData.scripts["qa:nexus-phase-101-agriculture-support-response-card-runtime"], "fixture package must include runtime QA alias.");
   assert(packageData.scripts["qa:nexus-phase-101b-standard-user-runtime-wiring-readiness"], "fixture package must include readiness QA alias.");
-  assert(qaSuite.includes("scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js"), "fixture qa-suite must include runtime QA.");
-  assert(qaSuite.includes("scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js"), "fixture qa-suite must include readiness QA.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js"), "fixture qa-suite must include runtime QA.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js"), "fixture qa-suite must include readiness QA.");
   assert(readinessQa.includes("assert(loaderPresent"), "fixture readiness QA must expect loader presence after patching.");
 
   console.log("[phase-101c-local-wiring-patcher-fixture-qa] passed");

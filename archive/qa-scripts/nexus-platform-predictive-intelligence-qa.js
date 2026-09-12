@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -18,7 +18,7 @@ const domains = [
     route: "marketplace-predictive",
     selector: "data-nexus-marketplace-predictive-modeler",
     alias: "qa:nexus-marketplace-predictive-intelligence",
-    script: "scripts/nexus-marketplace-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-marketplace-predictive-intelligence-qa.js",
     examples: [
       "Nexus, help me sell maize to a buyer.",
       "Nexus, predict transaction risk.",
@@ -34,7 +34,7 @@ const domains = [
     route: "logistics-predictive",
     selector: "data-nexus-logistics-predictive-modeler",
     alias: "qa:nexus-logistics-predictive-intelligence",
-    script: "scripts/nexus-logistics-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-logistics-predictive-intelligence-qa.js",
     examples: [
       "Nexus, track this shipment.",
       "Nexus, predict delivery risk.",
@@ -50,7 +50,7 @@ const domains = [
     route: "workforce-predictive",
     selector: "data-nexus-workforce-predictive-modeler",
     alias: "qa:nexus-workforce-predictive-intelligence",
-    script: "scripts/nexus-workforce-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-workforce-predictive-intelligence-qa.js",
     examples: [
       "Nexus, help me apply for a job.",
       "Nexus, assess my job readiness.",
@@ -66,7 +66,7 @@ const domains = [
     route: "learning-predictive",
     selector: "data-nexus-learning-predictive-modeler",
     alias: "qa:nexus-learning-predictive-intelligence",
-    script: "scripts/nexus-learning-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-learning-predictive-intelligence-qa.js",
     examples: [
       "Nexus, build a learning plan.",
       "Nexus, assess my learning readiness.",
@@ -82,7 +82,7 @@ const domains = [
     route: "drone-predictive",
     selector: "data-nexus-drone-predictive-modeler",
     alias: "qa:nexus-drone-predictive-intelligence",
-    script: "scripts/nexus-drone-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-drone-predictive-intelligence-qa.js",
     examples: [
       "Nexus, prepare a drone field mission.",
       "Nexus, assess drone mission readiness.",
@@ -98,7 +98,7 @@ const domains = [
     route: "communications-predictive",
     selector: "data-nexus-communications-predictive-modeler",
     alias: "qa:nexus-communications-predictive-intelligence",
-    script: "scripts/nexus-communications-predictive-intelligence-qa.js",
+    script: "archive/qa-scripts/nexus-communications-predictive-intelligence-qa.js",
     examples: [
       "Nexus, prepare a message to a provider.",
       "Nexus, assess this message before sending.",
@@ -206,7 +206,7 @@ domains.forEach(domain => {
 
 includes(serviceWorker, "agrinexus-pwa-__NEXUS_RELEASE_SHA__", "service worker cache bump");
 includes(serviceWorker, "__NEXUS_RELEASE_SHA__", "service worker build version bump");
-assert.strictEqual(packageJson.scripts["qa:nexus-platform-predictive-intelligence"], "node scripts/nexus-platform-predictive-intelligence-qa.js", "platform package alias should run platform QA");
-includes(qaSuite, "scripts/nexus-platform-predictive-intelligence-qa.js", "qa-suite should include platform predictive intelligence QA");
+assert.strictEqual(packageJson.scripts["qa:nexus-platform-predictive-intelligence"], "node archive/qa-scripts/nexus-platform-predictive-intelligence-qa.js", "platform package alias should run platform QA");
+includes(qaSuite, "archive/qa-scripts/nexus-platform-predictive-intelligence-qa.js", "qa-suite should include platform predictive intelligence QA");
 
 console.log("Nexus platform predictive intelligence QA passed.");

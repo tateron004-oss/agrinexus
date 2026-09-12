@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -83,7 +83,7 @@ assert(previewSource.includes("renderA100SafeAutonomyCard(intent);"), "A100 dash
 
 assert(pkg.scripts["qa:nexus-a100-runtime-activation-1"], "Sprint 1 QA alias should remain.");
 assert(pkg.scripts["qa:nexus-a100-runtime-activation-2"], "Sprint 2 QA alias should remain.");
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-3"], "node scripts/nexus-a100-runtime-activation-3-qa.js", "Sprint 3 QA alias should exist.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-3-qa.js"), "Sprint 3 QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-3"], "node archive/qa-scripts/nexus-a100-runtime-activation-3-qa.js", "Sprint 3 QA alias should exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-3-qa.js"), "Sprint 3 QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-3-qa] passed");

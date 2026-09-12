@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-local-language-pack-mode-readiness-contract.js`;
 - `public/nexus-local-language-pack-mode-feature-flag.js`;
-- `scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js`;
 - `fixtures/nexus/local-language-pack-mode-feature-flags.json`;
 - Sprint AL QA scripts.
 

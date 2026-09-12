@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const recordModuleName = "nexus-staged-action-approval-record.js";
 const auditModuleName = "nexus-staged-action-approval-audit-event.js";
 
 assert(exists("docs", docName), "Sprint E5 lifecycle harness doc must exist.");
-assert(exists("scripts", qaName), "Sprint E5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E5 QA script must exist.");
 assert(exists("public", recordModuleName), "Sprint E5 requires E2 approval record module.");
 assert(exists("public", auditModuleName), "Sprint E5 requires E4 audit event module.");
 
@@ -240,12 +240,12 @@ function unsafeEvent(overrides = {}) {
 });
 
 assert(exists("docs", "NEXUS_SPRINT_E4_STAGED_ACTION_APPROVAL_AUDIT_EVENT_CONTRACT.md"), "E5 requires E4 audit event doc.");
-assert(exists("scripts", "nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"), "E5 requires E4 QA.");
+assert(exists("archive", "qa-scripts", "nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"), "E5 requires E4 QA.");
 
 const alias = "qa:nexus-sprint-e5-staged-action-approval-lifecycle-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"), "E5 requires E4 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e4-staged-action-approval-audit-event-contract-qa.js"), "E5 requires E4 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa] passed");

@@ -102,16 +102,16 @@ Record pass/fail evidence for:
 - `node --check server.js`;
 - `node --check public/app.js`;
 - `node --check scripts/qa-suite.js`;
-- `node scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js`;
-- `node scripts/nexus-sprint-c13-source-backed-agriculture-eligibility-handoff-contract-qa.js`;
-- `node scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js`;
-- `node scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js`;
-- `node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js`;
-- `node scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js`;
-- `node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js`;
-- `node scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js`;
-- `node scripts/nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist-qa.js`;
-- `node scripts/nexus-sprint-c24-source-backed-agriculture-runtime-wiring-approval-record-template-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c13-source-backed-agriculture-eligibility-handoff-contract-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist-qa.js`;
+- `node archive/qa-scripts/nexus-sprint-c24-source-backed-agriculture-runtime-wiring-approval-record-template-qa.js`;
 - `node scripts/qa-suite.js nexus-workforce`;
 - `node scripts/qa-suite.js all-safe`.
 

@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -106,10 +106,10 @@ function assertQaWiring() {
   const qaSuite = read("scripts", "qa-suite.js");
   assert.equal(
     pkg.scripts["qa:nexus-nap9-browser-validation"],
-    "node scripts/nexus-nap9-browser-validation-qa.js",
+    "node archive/qa-scripts/nexus-nap9-browser-validation-qa.js",
     "NAP9 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap9-browser-validation-qa.js"), "NAP9 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap9-browser-validation-qa.js"), "NAP9 QA must be wired into local-safe suites.");
 }
 
 function runNap9BrowserValidationQa() {

@@ -7,7 +7,7 @@ Sprint Y3 adds fixture, harness, documentation, and QA only. It does not load Ru
 ## Added Artifacts
 
 - `fixtures/nexus/rural-health-mode-feature-flags.json`
-- `scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

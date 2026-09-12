@@ -7,7 +7,7 @@ Sprint AE3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/education-mode-feature-flags.json`
-- `scripts/nexus-sprint-ae3-education-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ae3-education-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

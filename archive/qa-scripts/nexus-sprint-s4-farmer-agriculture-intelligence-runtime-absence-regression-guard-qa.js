@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_FARMER_AGRICULTURE_INTELLIGENCE_FEATURE_FLAG_STATE,
   normalizeFarmerAgricultureIntelligenceFeatureFlagState
-} = require("../public/nexus-farmer-agriculture-intelligence-feature-flag.js");
+} = require("../../public/nexus-farmer-agriculture-intelligence-feature-flag.js");
 const {
   protectedFields,
   loadFarmerAgricultureIntelligenceFlagFixtures,
   validateFarmerAgricultureIntelligenceFlagFixtures
 } = require("./nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_S4_FARMER_AGRICULTURE_INTELLIGENCE_RUNTIME_ABSENCE
 const qaName = "nexus-sprint-s4-farmer-agriculture-intelligence-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint S4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint S4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint S4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-farmer-agriculture-intelligence-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-farmer-agriculture-intelligence-feature-flag.js");
-const s3Harness = read("scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
+const s3Harness = read("archive", "qa-scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
 const fixtures = loadFarmerAgricultureIntelligenceFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-farmer-agriculture-intelligence-readiness-contract.js",
   "public/nexus-farmer-agriculture-intelligence-feature-flag.js",
-  "scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js",
   "fixtures/nexus/farmer-agriculture-intelligence-feature-flags.json",
   "Sprint S QA scripts"
 ], "S4 runtime absence artifact list");
@@ -142,7 +142,7 @@ for (const requiredPath of [
   ["public", "nexus-farmer-agriculture-intelligence-readiness-contract.js"],
   ["public", "nexus-farmer-agriculture-intelligence-feature-flag.js"],
   ["fixtures", "nexus", "farmer-agriculture-intelligence-feature-flags.json"],
-  ["scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `S4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -265,7 +265,7 @@ for (const source of [featureFlagModule, s3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-s4-farmer-agriculture-intelligence-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint S4 QA.");
 

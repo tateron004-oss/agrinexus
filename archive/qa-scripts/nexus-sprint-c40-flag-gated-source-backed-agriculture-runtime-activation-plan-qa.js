@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_C40_FLAG_GATED_SOURCE_BACKED_AGRICULTURE_RUNTIME_A
 const qaName = "nexus-sprint-c40-flag-gated-source-backed-agriculture-runtime-activation-plan-qa.js";
 
 assert(exists("docs", docName), "Sprint C40 flag-gated activation plan must exist.");
-assert(exists("scripts", qaName), "Sprint C40 flag-gated activation plan QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C40 flag-gated activation plan QA must exist.");
 
 const doc = read("docs", docName);
 const packageJson = JSON.parse(read("package.json"));
@@ -115,7 +115,7 @@ assertIncludes(doc, [
 ], "Sprint C40 no execution requirements");
 
 const alias = "qa:nexus-sprint-c40-flag-gated-source-backed-agriculture-runtime-activation-plan";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C40 QA.");
 

@@ -7,7 +7,7 @@ Sprint AB3 adds fixture, harness, documentation, and QA only. It does not load M
 ## Added Artifacts
 
 - `fixtures/nexus/mobile-clinic-mode-feature-flags.json`
-- `scripts/nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

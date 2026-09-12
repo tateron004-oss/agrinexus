@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ assert(fs.existsSync(docPath), "docs/NEXUS_LOW_RISK_RENDERER_FLAG_OFF_HARNESS_BR
 for (const parts of [
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_OFF_HARNESS.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_WIRING_READINESS_REVIEW.md"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"]
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -117,8 +117,8 @@ assert(app.includes("function evaluateNexusLowRiskRendererRuntimeHarness"), "pub
 assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not invoke the low-risk renderer");
 assert(!app.includes("buildNexusLowRiskInertRendererPrototype"), "public/app.js must not invoke the renderer prototype builder");
 assert(packageJson.includes("\"qa:nexus-low-risk-renderer-flag-off-harness-browser-regression\""), "package.json must expose qa:nexus-low-risk-renderer-flag-off-harness-browser-regression");
-assert(suite.includes("scripts/nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"), "nexus-workforce suite must include Phase 12U browser regression QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must keep Phase 12T flag-off harness QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"), "nexus-workforce suite must include Phase 12U browser regression QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must keep Phase 12T flag-off harness QA");
 
 console.log("Nexus low-risk renderer flag-off harness browser regression QA passed");
 console.log("- Phase 12U browser evidence and prompt cases are documented");

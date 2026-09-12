@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -145,10 +145,10 @@ function assertFailureMatrix() {
 function assertWiring() {
   assert.equal(
     packageJson.scripts["qa:nexus-openai-realtime-microphone-handoff"],
-    "node scripts/nexus-openai-realtime-microphone-handoff-qa.js",
+    "node archive/qa-scripts/nexus-openai-realtime-microphone-handoff-qa.js",
     "package alias should run the handoff QA"
   );
-  assert(qaSuite.includes("scripts/nexus-openai-realtime-microphone-handoff-qa.js"), "qa-suite should include handoff QA");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-openai-realtime-microphone-handoff-qa.js"), "qa-suite should include handoff QA");
 }
 
 assertStaticHandoffContract();

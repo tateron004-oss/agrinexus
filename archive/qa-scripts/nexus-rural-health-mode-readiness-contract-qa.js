@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = { doc: path.join(root, "docs", "NEXUS_RURAL_HEALTH_MODE_READINESS_CONTRACT_PHASE_77.md"), contract: path.join(root, "public", "nexus-rural-health-mode-readiness-contract.js"), index: path.join(root, "public", "index.html"), app: path.join(root, "public", "app.js"), server: path.join(root, "server.js"), packageJson: path.join(root, "package.json"), qaSuite: path.join(root, "scripts", "qa-suite.js") };
 function read(filePath) { return fs.readFileSync(filePath, "utf8"); }
 function assert(condition, message) { if (!condition) { console.error(`[nexus-rural-health-mode-readiness-contract-qa] ${message}`); process.exit(1); } }
@@ -71,6 +71,6 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
 assert(sample.liveActionEnabled === false, "factory must force live action disabled.");
 ["fetch(", "XMLHttpRequest", "axios", "EventSource", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "window.location", "document.location", "addEventListener", "onclick", "execute(", "dispatch(", "openProvider(", "sendMessage(", "makeCall(", "processPayment(", "requestPermission("].forEach(forbidden => assert(!contractSource.includes(forbidden), `contract module must not include runtime behavior: ${forbidden}`));
 ["nexus-rural-health-mode-readiness-contract.js", "NexusRuralHealthModeReadinessContract", "rural-health-mode.readiness.phase_77", "RURAL_HEALTH_MODE_READINESS_CONTRACT"].forEach(runtimeHook => { assert(!index.includes(runtimeHook), `index.html must not load ${runtimeHook}.`); assert(!app.includes(runtimeHook), `app.js must not consume ${runtimeHook}.`); assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`); });
-assert(packageData.scripts["qa:nexus-rural-health-mode-readiness-contract"] === "node scripts/nexus-rural-health-mode-readiness-contract-qa.js", "package.json must expose qa alias.");
-assert(qaSuite.includes("scripts/nexus-rural-health-mode-readiness-contract-qa.js"), "qa-suite.js must include Phase 77 QA.");
+assert(packageData.scripts["qa:nexus-rural-health-mode-readiness-contract"] === "node archive/qa-scripts/nexus-rural-health-mode-readiness-contract-qa.js", "package.json must expose qa alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-rural-health-mode-readiness-contract-qa.js"), "qa-suite.js must include Phase 77 QA.");
 console.log("[nexus-rural-health-mode-readiness-contract-qa] passed");

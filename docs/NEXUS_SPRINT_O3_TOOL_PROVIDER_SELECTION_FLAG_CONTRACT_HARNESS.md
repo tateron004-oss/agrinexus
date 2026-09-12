@@ -7,8 +7,8 @@ Sprint O3 adds fixture, harness, documentation, and QA only for the Sprint O2 To
 ## Artifacts
 
 - `fixtures/nexus/tool-provider-selection-feature-flags.json`
-- `scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js`
-- `scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness-qa.js`
+- `archive/qa-scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-o3-tool-provider-selection-flag-contract-harness-qa.js`
 - `docs/NEXUS_SPRINT_O3_TOOL_PROVIDER_SELECTION_FLAG_CONTRACT_HARNESS.md`
 
 ## Fixture Coverage

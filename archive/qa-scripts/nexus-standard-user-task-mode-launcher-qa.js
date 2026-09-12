@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -94,9 +94,9 @@ function assertNotIncludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-standard-user-task-mode-launcher"],
-  "node scripts/nexus-standard-user-task-mode-launcher-qa.js",
+  "node archive/qa-scripts/nexus-standard-user-task-mode-launcher-qa.js",
   "package alias should run task mode launcher QA"
 );
-assertIncludes(qaSuite, "scripts/nexus-standard-user-task-mode-launcher-qa.js", "safe QA suite wiring");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-standard-user-task-mode-launcher-qa.js", "safe QA suite wiring");
 
 console.log("Nexus Standard User task mode launcher QA passed.");

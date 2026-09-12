@@ -16,8 +16,8 @@ Prove that the default-off Task Planning feature flag contract behaves predictab
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/task-planning-feature-flags.json`
-- Harness: `scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-n3-task-planning-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-n3-task-planning-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -97,7 +97,7 @@ The harness must not:
 Sprint N3 does not load:
 
 - `public/nexus-task-planning-feature-flag.js`;
-- `scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-n3-task-planning-flag-contract-harness.js`;
 - `fixtures/nexus/task-planning-feature-flags.json`.
 
 The Standard User build remains unchanged.

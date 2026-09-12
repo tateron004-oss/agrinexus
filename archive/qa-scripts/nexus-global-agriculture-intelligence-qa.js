@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -20,7 +20,7 @@ function excludes(source, token, label) {
   assert(!source.includes(token), `${label} must not include ${token}`);
 }
 
-const liveKnowledge = spawnSync(process.execPath, ["scripts/nexus-global-live-knowledge-qa.js"], {
+const liveKnowledge = spawnSync(process.execPath, ["archive/qa-scripts/nexus-global-live-knowledge-qa.js"], {
   cwd: root,
   encoding: "utf8"
 });
@@ -182,9 +182,9 @@ assert.strictEqual(liveKnowledge.status, 0, liveKnowledge.stdout || liveKnowledg
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-global-agriculture-intelligence"],
-  "node scripts/nexus-global-agriculture-intelligence-qa.js",
+  "node archive/qa-scripts/nexus-global-agriculture-intelligence-qa.js",
   "package alias should run global agriculture intelligence QA"
 );
-includes(qaSuite, "scripts/nexus-global-agriculture-intelligence-qa.js", "qa suite should include global agriculture intelligence QA");
+includes(qaSuite, "archive/qa-scripts/nexus-global-agriculture-intelligence-qa.js", "qa suite should include global agriculture intelligence QA");
 
 console.log("nexus-global-agriculture-intelligence QA passed");

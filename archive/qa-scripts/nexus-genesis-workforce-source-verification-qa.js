@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-genesis-predictive-workforce.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -61,10 +61,10 @@ runtime.WORKFORCE_VERIFICATION_RECORDS.forEach(record => {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-workforce-source-verification"],
-  "node scripts/nexus-genesis-workforce-source-verification-qa.js",
+  "node archive/qa-scripts/nexus-genesis-workforce-source-verification-qa.js",
   "package alias must run source verification QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-workforce-source-verification-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-workforce-source-verification-qa.js", "qa-suite wiring");
 
 assert.notStrictEqual(packet.selectedVerification.listingAvailability, "verified_current_or_employer_confirmed", "fixture verification must not affirm current listing availability");
 assert.notStrictEqual(packet.selectedVerification.employerVerificationState, "verified_current", "fixture verification must not affirm current employer trust");

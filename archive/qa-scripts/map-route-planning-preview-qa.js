@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -95,6 +95,6 @@ for (const pattern of paidKeyPatterns) {
   assert(!pattern.test(app), "No paid map API key should be hardcoded in public/app.js.");
 }
 
-assert(pkg.scripts["map:route-preview-qa"] === "node scripts/map-route-planning-preview-qa.js", "package script should expose Phase 4 route preview QA.");
+assert(pkg.scripts["map:route-preview-qa"] === "node archive/qa-scripts/map-route-planning-preview-qa.js", "package script should expose Phase 4 route preview QA.");
 
 console.log("Map route planning preview QA passed");

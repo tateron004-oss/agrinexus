@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C23 runtime wiring preflight checklist must exist");
-assert(exists("scripts", qaName), "Sprint C23 runtime wiring preflight QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C23 runtime wiring preflight QA must exist");
 assert(exists("docs", "NEXUS_SPRINT_C22_SOURCE_BACKED_AGRICULTURE_STANDARD_USER_RUNTIME_ABSENCE_CONTRACT.md"), "Sprint C22 absence contract must remain present");
 
 const doc = read("docs", docName);
@@ -124,15 +124,15 @@ assertIncludes(doc, [
 ], "Sprint C23 UX review fields");
 
 assertIncludes(doc, [
-  "node scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js",
-  "node scripts/nexus-sprint-c13-source-backed-agriculture-eligibility-handoff-contract-qa.js",
-  "node scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js",
-  "node scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js",
-  "node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js",
-  "node scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js",
-  "node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
-  "node scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js",
-  "node scripts/nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c13-source-backed-agriculture-eligibility-handoff-contract-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c17-source-backed-agriculture-surface-copy-model-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js",
+  "node archive/qa-scripts/nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist-qa.js",
   "node scripts/qa-suite.js nexus-workforce",
   "node scripts/qa-suite.js all-safe"
 ], "Sprint C23 required QA");
@@ -163,7 +163,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C23 QA.");
 

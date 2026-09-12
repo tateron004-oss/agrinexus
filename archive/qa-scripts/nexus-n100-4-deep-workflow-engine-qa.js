@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const deep = require("../server/nexus-n100-deep-workflow-engine.js");
-const memory = require("../server/nexus-n100-memory-personalization-stack.js");
+const deep = require("../../server/nexus-n100-deep-workflow-engine.js");
+const memory = require("../../server/nexus-n100-memory-personalization-stack.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -26,7 +26,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-deep-workflow-engine.js"), "N100-4 deep workflow module must exist.");
   assert(exists("docs", "NEXUS_N100_4_DEEP_WORKFLOW_ENGINE.md"), "N100-4 doc must exist.");
-  assert(exists("scripts", "nexus-n100-4-deep-workflow-engine-qa.js"), "N100-4 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-4-deep-workflow-engine-qa.js"), "N100-4 QA must exist.");
 
   [
     "DEEP_WORKFLOW_TEMPLATES",
@@ -75,10 +75,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-4-deep-workflow-engine"],
-    "node scripts/nexus-n100-4-deep-workflow-engine-qa.js",
+    "node archive/qa-scripts/nexus-n100-4-deep-workflow-engine-qa.js",
     "N100-4 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-4-deep-workflow-engine-qa.js"), "N100-4 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-4-deep-workflow-engine-qa.js"), "N100-4 QA must be wired into local-safe suites.");
 }
 
 function assertTemplateCoverage() {

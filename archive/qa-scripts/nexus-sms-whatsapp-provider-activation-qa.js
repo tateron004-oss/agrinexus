@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -125,9 +125,9 @@ assert(server.includes("const recipient = contact.to || ownerTestRecipient"), "R
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-sms-whatsapp-provider-activation"],
-  "node scripts/nexus-sms-whatsapp-provider-activation-qa.js",
+  "node archive/qa-scripts/nexus-sms-whatsapp-provider-activation-qa.js",
   "package alias should run SMS/WhatsApp provider activation QA"
 );
-includes(qaSuite, "scripts/nexus-sms-whatsapp-provider-activation-qa.js", "qa suite should include SMS/WhatsApp provider activation QA");
+includes(qaSuite, "archive/qa-scripts/nexus-sms-whatsapp-provider-activation-qa.js", "qa suite should include SMS/WhatsApp provider activation QA");
 
 console.log("nexus-sms-whatsapp-provider-activation QA passed");

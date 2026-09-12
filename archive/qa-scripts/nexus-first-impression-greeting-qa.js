@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -46,13 +46,13 @@ assert(trueHome.includes("renderNexusGenesisHomeVoiceGate()"), "true home mounts
 assert(voiceGate.includes("data-nexus-genesis-voice-runtime"), "voice gate exposes the automatic voice runtime marker");
 assert(!voiceGate.includes("data-nexus-genesis-mic-permission-control"), "voice gate does not render an application microphone control");
 assert(!trueHome.includes("Activate the Nexus orb"), "true home does not instruct orb activation");
-assert(hero.includes("Hello. I'm Nexus."), "hero owns the conversational first impression");
+assert(hero.includes("Hello. I'm Kyro."), "hero owns the conversational first impression");
 assert(hero.includes("Talk to Nexus naturally. When a workflow needs exact details, Nexus will open structured fields for that workflow."), "hero includes natural voice-first greeting");
 assert(!workspace.includes("renderNexusTopWelcomeArea()"), "top welcome is not mounted in Standard User true home startup");
 assert(workspace.includes("renderNexusCommandCenterHero"), "hero remains the Standard User command center");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(topWelcome + trueHome + hero), "first impression does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-first-impression-greeting"] === "node scripts/nexus-first-impression-greeting-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-first-impression-greeting-qa.js"), "safe QA suite includes first impression greeting QA");
+assert(packageJson.scripts["qa:nexus-first-impression-greeting"] === "node archive/qa-scripts/nexus-first-impression-greeting-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-first-impression-greeting-qa.js"), "safe QA suite includes first impression greeting QA");
 
 console.log("Nexus first impression greeting QA passed.");

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const suite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -107,8 +107,8 @@ for (const phrase of unsafePositiveClaims) {
   assert(!missionBlock.includes(phrase), `mission lifecycle avoids unsafe positive success claim: ${phrase}`);
 }
 
-assert(pkg.scripts["qa:nexus-os-mission-lifecycle"] === "node scripts/nexus-os-mission-lifecycle-qa.js", "package alias exists");
-assert(suite.includes("scripts/nexus-os-mission-lifecycle-qa.js"), "safe QA suite includes Rail 7 QA");
+assert(pkg.scripts["qa:nexus-os-mission-lifecycle"] === "node archive/qa-scripts/nexus-os-mission-lifecycle-qa.js", "package alias exists");
+assert(suite.includes("archive/qa-scripts/nexus-os-mission-lifecycle-qa.js"), "safe QA suite includes Rail 7 QA");
 
 if (process.exitCode) {
   process.exit(process.exitCode);

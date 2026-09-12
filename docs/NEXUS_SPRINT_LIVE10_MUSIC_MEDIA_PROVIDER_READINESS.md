@@ -9,7 +9,7 @@ This phase does not wire music/media provider readiness into Standard User runti
 ## Files
 
 - `server/nexus-music-media-source-provider.js`
-- `scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js`
 
 ## Supported Behavior
 

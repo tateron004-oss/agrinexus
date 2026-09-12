@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
+const dialogue = require("../../public/nexus-assistant-dialogue-engine-contract.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -94,10 +94,10 @@ async function runNap2MultiProviderAssistantExpansionQa() {
   assert(dialogueSource.includes("isMarketplaceExecutionRequest"), "NAP2 must preserve marketplace execution blocking.");
   assert.equal(
     pkg.scripts["qa:nexus-nap2-multi-provider-assistant-expansion"],
-    "node scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js",
+    "node archive/qa-scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js",
     "NAP2 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js"), "NAP2 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js"), "NAP2 QA must be wired into local-safe suites.");
 
   await assertProviderPrompt("What is the weather in Stockton?", "weather", env);
   await assertProviderPrompt("What crop disease updates should farmers know?", "agriculture-context", env);

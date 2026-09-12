@@ -183,7 +183,7 @@ If a configured provider fails, Nexus returns a controlled provider-error respon
 
 ## QA Coverage
 
-`scripts/nexus-live-knowledge-all-modes-qa.js` verifies:
+`archive/qa-scripts/nexus-live-knowledge-all-modes-qa.js` verifies:
 
 - status endpoint
 - query endpoint

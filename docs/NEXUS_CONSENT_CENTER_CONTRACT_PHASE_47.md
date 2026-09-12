@@ -194,7 +194,7 @@ Nexus may say an action requires purpose-specific consent, a reviewed consent st
 
 ## QA Expectations
 
-`scripts/nexus-consent-center-contract-qa.js` verifies:
+`archive/qa-scripts/nexus-consent-center-contract-qa.js` verifies:
 
 - the Phase 47 roadmap row remains present;
 - existing memory consent docs still separate consent from execution authority;

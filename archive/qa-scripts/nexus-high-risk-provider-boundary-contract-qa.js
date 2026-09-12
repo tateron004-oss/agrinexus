@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_HIGH_RISK_PROVIDER_BOUNDARY_CONTRACT_PHASE_45.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -10,9 +10,9 @@ const paths = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
-  callProviderRegistryQa: path.join(root, "scripts", "call-provider-registry-qa.js"),
-  providerHandoffBoundaryQa: path.join(root, "scripts", "nexus-provider-handoff-boundary-qa.js"),
-  contactCallPermissionQa: path.join(root, "scripts", "nexus-contact-call-permission-qa.js"),
+  callProviderRegistryQa: path.join(root, "archive", "qa-scripts", "call-provider-registry-qa.js"),
+  providerHandoffBoundaryQa: path.join(root, "archive", "qa-scripts", "nexus-provider-handoff-boundary-qa.js"),
+  contactCallPermissionQa: path.join(root, "archive", "qa-scripts", "nexus-contact-call-permission-qa.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js")
 };
@@ -144,7 +144,7 @@ assert(roadmap.includes("| Phase 45 | Communication/payment/emergency partners |
 assert(providerUniverse.some(item => item.categoryId === "finance.payment_processors" && item.publicPartnerRegulatedStatus === "approved_high_risk" && item.defaultExecutionEnabled === false), "provider universe must keep finance.payment_processors approved-high-risk and disabled by default.");
 assert(providerUniverse.some(item => item.categoryId === "emergency.public_safety_partners" && item.publicPartnerRegulatedStatus === "approved_high_risk" && item.defaultExecutionEnabled === false), "provider universe must keep emergency.public_safety_partners approved-high-risk and disabled by default.");
 assert(callProviderRegistryQa.includes("confirmedOnly: true"), "call provider registry QA must preserve confirmed-only communication providers.");
-assert(callProviderRegistryQa.includes("ACTION_DIAL") || read(path.join(root, "scripts", "android-call-launch-qa.js")).includes("ACTION_DIAL"), "native call QA must preserve ACTION_DIAL handoff behavior.");
+assert(callProviderRegistryQa.includes("ACTION_DIAL") || read(path.join(root, "archive", "qa-scripts", "android-call-launch-qa.js")).includes("ACTION_DIAL"), "native call QA must preserve ACTION_DIAL handoff behavior.");
 assert(providerHandoffBoundaryQa.includes("Raw intent parsing must not dispatch native provider adapters") && providerHandoffBoundaryQa.includes("Provider adapters must never be called directly by raw intent parsing"), "provider handoff boundary QA must forbid raw-intent provider launch.");
 assert(contactCallPermissionQa.includes("okay") && contactCallPermissionQa.includes("confirmed-call-handoff"), "contact call permission QA must block vague confirmations and require confirmed handoff metadata.");
 
@@ -286,7 +286,7 @@ assert(invalid.providerStatus === "not_configured", "invalid provider status mus
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-high-risk-provider-boundary-contract"] === "node scripts/nexus-high-risk-provider-boundary-contract-qa.js", "package.json must expose qa:nexus-high-risk-provider-boundary-contract");
-assert(qaSuite.includes("scripts/nexus-high-risk-provider-boundary-contract-qa.js"), "qa-suite.js must include high-risk provider boundary contract QA");
+assert(packageData.scripts["qa:nexus-high-risk-provider-boundary-contract"] === "node archive/qa-scripts/nexus-high-risk-provider-boundary-contract-qa.js", "package.json must expose qa:nexus-high-risk-provider-boundary-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-high-risk-provider-boundary-contract-qa.js"), "qa-suite.js must include high-risk provider boundary contract QA");
 
 console.log("[nexus-high-risk-provider-boundary-contract-qa] passed");

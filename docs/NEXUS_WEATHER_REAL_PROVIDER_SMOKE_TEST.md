@@ -33,7 +33,7 @@ The test never uses browser geolocation, device location, inferred location, sto
 
 The WEATHER2 smoke harness is:
 
-- `scripts/nexus-weather-live-provider-smoke-qa.js`
+- `archive/qa-scripts/nexus-weather-live-provider-smoke-qa.js`
 
 The harness reuses the WEATHER1 read-only lookup contract:
 

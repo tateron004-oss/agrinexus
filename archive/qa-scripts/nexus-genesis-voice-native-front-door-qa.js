@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -147,10 +147,10 @@ includesAll(server, ["AGRINEXUS_WEB_BUILD_VERSION = NEXUS_EFFECTIVE_RELEASE_SHA"
 includesAll(sw, ["BUILD_VERSION = \"__NEXUS_RELEASE_SHA__\"", "CACHE_NAME = \"agrinexus-pwa-__NEXUS_RELEASE_SHA__\""], "immutable service worker cache");
 
 assert(
-  packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node scripts/nexus-genesis-voice-native-front-door-qa.js",
+  packageJson.scripts["qa:nexus-genesis-voice-native-front-door"] === "node archive/qa-scripts/nexus-genesis-voice-native-front-door-qa.js",
   "package alias must run voice-native front-door QA"
 );
-assert(qaSuite.includes("scripts/nexus-genesis-voice-native-front-door-qa.js"), "qa-suite must include voice-native front-door QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-voice-native-front-door-qa.js"), "qa-suite must include voice-native front-door QA");
 
 console.log(JSON.stringify({
   ok: true,

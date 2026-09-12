@@ -4,7 +4,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -162,10 +162,10 @@ function excludes(haystack, needle, message) {
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-connect-everything-provider-activation"],
-  "node scripts/nexus-connect-everything-provider-activation-qa.js",
+  "node archive/qa-scripts/nexus-connect-everything-provider-activation-qa.js",
   "package alias should run connect-everything QA"
 );
-includes(qaSuite, "scripts/nexus-connect-everything-provider-activation-qa.js", "qa-suite should include connect-everything QA");
+includes(qaSuite, "archive/qa-scripts/nexus-connect-everything-provider-activation-qa.js", "qa-suite should include connect-everything QA");
 
 [
   "What Was Connected",

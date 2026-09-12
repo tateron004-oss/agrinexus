@@ -48,4 +48,4 @@ Marketplace, shipment, weather, agriculture, training, and provider question art
 
 ## QA
 
-`scripts/nexus-aut5-workflow-artifacts-qa.js` verifies all artifact types, source reference preservation, draft/call-script boundaries, plan/session artifact generation, package alias wiring, safe-suite wiring, and absence of runtime hooks or executable metadata.
+`archive/qa-scripts/nexus-aut5-workflow-artifacts-qa.js` verifies all artifact types, source reference preservation, draft/call-script boundaries, plan/session artifact generation, package alias wiring, safe-suite wiring, and absence of runtime hooks or executable metadata.

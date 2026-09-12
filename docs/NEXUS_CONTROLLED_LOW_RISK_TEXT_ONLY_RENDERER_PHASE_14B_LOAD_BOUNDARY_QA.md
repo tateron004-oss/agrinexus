@@ -114,7 +114,7 @@ Excluded and high-risk prompts must also show no Phase 14A renderer UI:
 The static guard for this phase is:
 
 ```text
-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
+archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js
 ```
 
 The package alias is:

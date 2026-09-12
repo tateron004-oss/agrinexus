@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -81,7 +81,7 @@ assertIncludes(doc, [
 ], "M1 doc");
 
 const alias = "qa:nexus-sprint-m1-appointment-service-request-product-boundary";
-const script = "scripts/nexus-sprint-m1-appointment-service-request-product-boundary-qa.js";
+const script = "archive/qa-scripts/nexus-sprint-m1-appointment-service-request-product-boundary-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === `node ${script}`, `${alias} package script must exist.`);
 assert(qaSuite.includes(script), "qa-suite must include M1 QA.");
 

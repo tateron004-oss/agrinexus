@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_OBSERVABILITY_MONITORING_FLAG_FIELDS,
   normalizeObservabilityMonitoringFeatureFlagState
-} = require("../public/nexus-observability-monitoring-feature-flag.js");
+} = require("../../public/nexus-observability-monitoring-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -13,7 +13,7 @@ const {
   validateObservabilityMonitoringFlagFixtures
 } = require("./nexus-sprint-am3-observability-monitoring-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -36,12 +36,12 @@ const harnessName = "nexus-sprint-am3-observability-monitoring-flag-contract-har
 const fixtureName = "observability-monitoring-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AM3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AM3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AM3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AM3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AM3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AM3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const am2Doc = read("docs", "NEXUS_SPRINT_AM2_OBSERVABILITY_MONITORING_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -154,11 +154,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-am3-observability-monitoring-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AM3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-am2-observability-monitoring-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AM2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AM1 QA.");
-assert(qaSuite.includes("scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Observability Monitoring readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-am2-observability-monitoring-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AM2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AM1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Observability Monitoring readiness QA.");
 
 console.log("[nexus-sprint-am3-observability-monitoring-flag-contract-harness-qa] passed");

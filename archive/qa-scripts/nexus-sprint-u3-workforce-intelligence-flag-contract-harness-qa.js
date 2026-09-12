@@ -7,7 +7,7 @@ const {
   validateWorkforceIntelligenceFlagFixtures
 } = require("./nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-u3-workforce-intelligence-flag-contract-harness-qa.
 
 assert(exists("docs", docName), "Sprint U3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint U3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint U3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint U3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint U3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint U3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "ff9fc09e91099d577c09f27e320dea5ff2816a42",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/workforce-intelligence-feature-flags.json",
-  "scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-u3-workforce-intelligence-flag-contract-harness.js",
   "workforcePathwayReviewAllowed: false",
   "sourceBackedWorkforceGuidancePreviewAllowed: false",
   "liveWorkforceAdvisorAllowed: false",
@@ -174,10 +174,10 @@ assert(exists("docs", "NEXUS_SPRINT_U2_WORKFORCE_INTELLIGENCE_FEATURE_FLAG_CONTR
 assert(exists("public", "nexus-workforce-intelligence-feature-flag.js"), "U3 requires U2 feature flag module.");
 
 const alias = "qa:nexus-sprint-u3-workforce-intelligence-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint U3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-u1-workforce-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint U1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-u2-workforce-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint U2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-u1-workforce-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint U1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-u2-workforce-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint U2 QA.");
 
 console.log("[nexus-sprint-u3-workforce-intelligence-flag-contract-harness-qa] passed");

@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -124,11 +124,11 @@ includesAll(speechResume, [
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-browser-voice-acceptance"],
-  "node scripts/nexus-genesis-browser-voice-acceptance-qa.js",
+  "node archive/qa-scripts/nexus-genesis-browser-voice-acceptance-qa.js",
   "package alias must point to browser voice acceptance QA"
 );
 assert(
-  qaSuite.includes('"scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
+  qaSuite.includes('"archive/qa-scripts/nexus-genesis-browser-voice-acceptance-qa.js"'),
   "voice/all-safe suite must include browser voice acceptance QA"
 );
 assert(index.includes("/app.js?v=__NEXUS_RELEASE_SHA__"), "index must bind app.js cache busting to the immutable release SHA");

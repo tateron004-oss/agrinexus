@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const nextSteps = require("../server/nexus-assistant-next-step-planner.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const nextSteps = require("../../server/nexus-assistant-next-step-planner.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const UNSAFE_STEP_PATTERNS = Object.freeze([
   /\bcall\b/i,
@@ -55,7 +55,7 @@ function assertSafeSteps(steps, label) {
 
 function assertStaticContract() {
   assert(exists("server", "nexus-assistant-next-step-planner.js"), "AR5 next-step planner module must exist.");
-  assert(exists("scripts", "nexus-ar5-safe-next-step-planner-qa.js"), "AR5 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-ar5-safe-next-step-planner-qa.js"), "AR5 QA must exist.");
 
   const plannerSource = read("server", "nexus-assistant-next-step-planner.js");
   const runtimeSource = read("server", "nexus-assistant-runtime-entrypoint.js");
@@ -92,10 +92,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar5-safe-next-step-planner"],
-    "node scripts/nexus-ar5-safe-next-step-planner-qa.js",
+    "node archive/qa-scripts/nexus-ar5-safe-next-step-planner-qa.js",
     "AR5 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar5-safe-next-step-planner-qa.js"), "AR5 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar5-safe-next-step-planner-qa.js"), "AR5 QA must be wired into local-safe suites.");
 }
 
 function assertProviderResponseSteps() {

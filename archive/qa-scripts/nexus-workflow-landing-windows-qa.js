@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -177,9 +177,9 @@ function includesInsensitive(source, token, label) {
 
 assert.equal(
   packageJson.scripts["qa:nexus-workflow-landing-windows"],
-  "node scripts/nexus-workflow-landing-windows-qa.js",
+  "node archive/qa-scripts/nexus-workflow-landing-windows-qa.js",
   "package.json must expose qa:nexus-workflow-landing-windows"
 );
-assert(qaSuite.includes("scripts/nexus-workflow-landing-windows-qa.js"), "qa-suite.js must include workflow landing windows QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-workflow-landing-windows-qa.js"), "qa-suite.js must include workflow landing windows QA.");
 
 console.log("Nexus workflow landing windows QA passed.");

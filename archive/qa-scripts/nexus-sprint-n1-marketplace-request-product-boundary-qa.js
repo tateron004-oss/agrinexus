@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -15,7 +15,7 @@ function exists(...parts) {
 const docName = "NEXUS_SPRINT_N1_MARKETPLACE_REQUEST_PRODUCT_BOUNDARY.md";
 const qaName = "nexus-sprint-n1-marketplace-request-product-boundary-qa.js";
 assert(exists("docs", docName), "N1 product boundary doc must exist.");
-assert(exists("scripts", qaName), "N1 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N1 QA must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -79,7 +79,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 ].forEach(term => assert(doc.includes(term), `N1 doc must include: ${term}`));
 
 const alias = "qa:nexus-sprint-n1-marketplace-request-product-boundary";
-const script = "scripts/nexus-sprint-n1-marketplace-request-product-boundary-qa.js";
+const script = "archive/qa-scripts/nexus-sprint-n1-marketplace-request-product-boundary-qa.js";
 assert(pkg.scripts && pkg.scripts[alias] === `node ${script}`, `${alias} package script must exist.`);
 assert(qaSuite.includes(script), "qa-suite must include N1 QA.");
 

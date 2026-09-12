@@ -3,7 +3,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NEXUS_AGENT_ACTION_OBSERVATION_PORT || 4492);
 const base = `http://127.0.0.1:${port}`;
 const sourceDb = path.join(root, "db.json");

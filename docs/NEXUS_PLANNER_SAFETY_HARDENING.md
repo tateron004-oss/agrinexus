@@ -111,7 +111,7 @@ These fields are for QA and developer inspection. They are not normal user UI an
 
 ## What QA Protects
 
-`scripts/nexus-planner-safety-hardening-qa.js` validates:
+`archive/qa-scripts/nexus-planner-safety-hardening-qa.js` validates:
 
 - planner exports only planner APIs, not execution APIs;
 - planner source does not call route, permission, provider, camera, location, confirmation, pending-action, or mutation functions;

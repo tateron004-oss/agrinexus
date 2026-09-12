@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_NATURAL_RESPONSE_GENERATION_FEATURE_FLAG_STATE,
   normalizeNaturalResponseGenerationFeatureFlagState
-} = require("../public/nexus-natural-response-generation-feature-flag.js");
+} = require("../../public/nexus-natural-response-generation-feature-flag.js");
 const {
   protectedFields,
   loadNaturalResponseGenerationFlagFixtures,
   validateNaturalResponseGenerationFlagFixtures
 } = require("./nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_Q4_NATURAL_RESPONSE_GENERATION_RUNTIME_ABSENCE_REG
 const qaName = "nexus-sprint-q4-natural-response-generation-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint Q4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint Q4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Q4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-natural-response-generation-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-natural-response-generation-feature-flag.js");
-const q3Harness = read("scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
+const q3Harness = read("archive", "qa-scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js");
 const fixtures = loadNaturalResponseGenerationFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-natural-response-generation-readiness-contract.js",
   "public/nexus-natural-response-generation-feature-flag.js",
-  "scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-q3-natural-response-generation-flag-contract-harness.js",
   "fixtures/nexus/natural-response-generation-feature-flags.json",
   "Sprint Q QA scripts"
 ], "Q4 runtime absence artifact list");
@@ -147,7 +147,7 @@ for (const requiredPath of [
   ["public", "nexus-natural-response-generation-readiness-contract.js"],
   ["public", "nexus-natural-response-generation-feature-flag.js"],
   ["fixtures", "nexus", "natural-response-generation-feature-flags.json"],
-  ["scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-q3-natural-response-generation-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `Q4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -271,7 +271,7 @@ for (const source of [featureFlagModule, q3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-q4-natural-response-generation-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Q4 QA.");
 

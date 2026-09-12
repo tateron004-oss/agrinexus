@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
   serviceModes: path.join(root, "public", "nexus-service-mode-catalog.js"),
@@ -159,7 +159,7 @@ realDataRegistry.getRealDataSourceRegistry().forEach(source => {
 });
 
 const packageData = JSON.parse(packageJsonSource);
-assert(packageData.scripts["qa:nexus-100-full-platform-roadmap"] === "node scripts/nexus-100-full-platform-roadmap-qa.js", "package.json must include Nexus 100 QA alias.");
-assert(qaSuite.includes("scripts/nexus-100-full-platform-roadmap-qa.js"), "qa-suite must include Nexus 100 QA.");
+assert(packageData.scripts["qa:nexus-100-full-platform-roadmap"] === "node archive/qa-scripts/nexus-100-full-platform-roadmap-qa.js", "package.json must include Nexus 100 QA alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-100-full-platform-roadmap-qa.js"), "qa-suite must include Nexus 100 QA.");
 
 console.log("[nexus-100-full-platform-roadmap-qa] passed");

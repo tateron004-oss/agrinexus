@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
-const safetyModule = require("../public/nexus-os-health-workforce-safety-pack.js");
+const root = path.resolve(__dirname, "..", "..");
+const safetyModule = require("../../public/nexus-os-health-workforce-safety-pack.js");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -114,8 +114,8 @@ assert(server.includes("noExecutionAuthorized: true"), "server status remains no
   "emergency dispatched"
 ].forEach(unsafe => assert(!safetyPackSource.toLowerCase().includes(unsafe), `Rail 17 safety pack avoids unsafe claim: ${unsafe}`));
 
-assert(pkg.scripts["qa:nexus-os-health-workforce-safety"] === "node scripts/nexus-os-health-workforce-safety-qa.js", "package alias exists");
-assert(suite.includes("scripts/nexus-os-health-workforce-safety-qa.js"), "safe QA suite includes health/workforce safety QA");
+assert(pkg.scripts["qa:nexus-os-health-workforce-safety"] === "node archive/qa-scripts/nexus-os-health-workforce-safety-qa.js", "package alias exists");
+assert(suite.includes("archive/qa-scripts/nexus-os-health-workforce-safety-qa.js"), "safe QA suite includes health/workforce safety QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

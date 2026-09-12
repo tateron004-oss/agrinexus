@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const identity = require("../public/nexus-identity-foundation-contract.js");
+const identity = require("../../public/nexus-identity-foundation-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const docName = "NEXUS_SPRINT_I1_IDENTITY_FOUNDATION_RUNTIME_ACTIVATION_READINES
 const qaName = "nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint I1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint I1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint I1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -33,9 +33,9 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const identityModuleSource = read("public", "nexus-identity-foundation-contract.js");
-const intentQa = read("scripts", "nexus-intent-classifier-qa.js");
-const policyQa = read("scripts", "nexus-policy-engine-qa.js");
-const authQa = read("scripts", "auth-login-gate-qa.js");
+const intentQa = read("archive", "qa-scripts", "nexus-intent-classifier-qa.js");
+const policyQa = read("archive", "qa-scripts", "nexus-policy-engine-qa.js");
+const authQa = read("archive", "qa-scripts", "auth-login-gate-qa.js");
 
 assertIncludes(doc, [
   "Sprint I1",
@@ -144,7 +144,7 @@ for (const prior of [
   ["docs", "NEXUS_AUDIT_LOG_RUNTIME_CONTRACT_PHASE_48.md"],
   ["docs", "NEXUS_APPROVAL_CENTER_CONTRACT_PHASE_49.md"],
   ["public", "nexus-identity-foundation-contract.js"],
-  ["scripts", "nexus-identity-foundation-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-identity-foundation-contract-qa.js"]
 ]) {
   assert(exists(...prior), `Sprint I1 requires prior artifact: ${prior.join("/")}`);
 }
@@ -265,7 +265,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint I1 QA.");
 

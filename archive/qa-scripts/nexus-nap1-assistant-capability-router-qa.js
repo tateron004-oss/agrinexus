@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const router = require("../server/nexus-assistant-capability-router.js");
+const router = require("../../server/nexus-assistant-capability-router.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -61,10 +61,10 @@ function assertStaticContracts() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap1-assistant-capability-router"],
-    "node scripts/nexus-nap1-assistant-capability-router-qa.js",
+    "node archive/qa-scripts/nexus-nap1-assistant-capability-router-qa.js",
     "NAP1 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap1-assistant-capability-router-qa.js"), "NAP1 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap1-assistant-capability-router-qa.js"), "NAP1 QA must be wired into local-safe suites.");
 }
 
 function runNap1AssistantCapabilityRouterQa() {

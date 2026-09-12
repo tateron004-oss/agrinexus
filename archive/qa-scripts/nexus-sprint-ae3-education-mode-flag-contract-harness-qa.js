@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_EDUCATION_MODE_FLAG_FIELDS,
   normalizeEducationModeFeatureFlagState
-} = require("../public/nexus-education-mode-feature-flag.js");
+} = require("../../public/nexus-education-mode-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -12,7 +12,7 @@ const {
   validateEducationModeFlagFixtures
 } = require("./nexus-sprint-ae3-education-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -35,12 +35,12 @@ const harnessName = "nexus-sprint-ae3-education-mode-flag-contract-harness.js";
 const fixtureName = "education-mode-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AE3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AE3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AE3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AE3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AE3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AE3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const ae2Doc = read("docs", "NEXUS_SPRINT_AE2_EDUCATION_MODE_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -132,11 +132,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ae3-education-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AE3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ae2-education-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AE2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ae1-education-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AE1 QA.");
-assert(qaSuite.includes("scripts/nexus-education-mode-readiness-contract-qa.js"), "qa-suite must continue to include Education Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ae2-education-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AE2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ae1-education-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AE1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-education-mode-readiness-contract-qa.js"), "qa-suite must continue to include Education Mode readiness QA.");
 
 console.log("[nexus-sprint-ae3-education-mode-flag-contract-harness-qa] passed");

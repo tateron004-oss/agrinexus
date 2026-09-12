@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-marketplace-intelligence-readiness-contract.js`;
 - `public/nexus-marketplace-intelligence-feature-flag.js`;
-- `scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-v3-marketplace-intelligence-flag-contract-harness.js`;
 - `fixtures/nexus/marketplace-intelligence-feature-flags.json`;
 - Sprint V QA scripts.
 

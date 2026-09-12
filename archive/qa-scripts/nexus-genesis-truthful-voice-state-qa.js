@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -191,8 +191,8 @@ includesAll(speechResume, [
 
 assert(app.includes("duplicate-transcript-prevented"), "transcript scheduler must prevent duplicate command submission");
 assert(!app.includes("Nexus is ready for voice."), "runtime must not contain false ready for voice string");
-assert(pkg.scripts["qa:nexus-genesis-truthful-voice-state"] === "node scripts/nexus-genesis-truthful-voice-state-qa.js", "package alias missing");
-assert(qaSuite.includes("scripts/nexus-genesis-truthful-voice-state-qa.js"), "qa-suite missing truthful voice state QA");
+assert(pkg.scripts["qa:nexus-genesis-truthful-voice-state"] === "node archive/qa-scripts/nexus-genesis-truthful-voice-state-qa.js", "package alias missing");
+assert(qaSuite.includes("archive/qa-scripts/nexus-genesis-truthful-voice-state-qa.js"), "qa-suite missing truthful voice state QA");
 
 console.log(JSON.stringify({
   ok: true,

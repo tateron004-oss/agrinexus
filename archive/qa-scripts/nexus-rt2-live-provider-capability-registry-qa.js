@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const registry = require("../public/nexus-live-provider-capability-registry.js");
+const registry = require("../../public/nexus-live-provider-capability-registry.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const REQUIRED_PROVIDER_IDS = Object.freeze([
   "weather",
   "agriculture-context",
@@ -97,10 +97,10 @@ function runRt2LiveProviderCapabilityRegistryQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt2-live-provider-capability-registry"],
-    "node scripts/nexus-rt2-live-provider-capability-registry-qa.js",
+    "node archive/qa-scripts/nexus-rt2-live-provider-capability-registry-qa.js",
     "RT2 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt2-live-provider-capability-registry-qa.js"), "RT2 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt2-live-provider-capability-registry-qa.js"), "RT2 QA must be in safe suites.");
 
   console.log("[nexus-rt2-live-provider-capability-registry-qa] passed");
 }

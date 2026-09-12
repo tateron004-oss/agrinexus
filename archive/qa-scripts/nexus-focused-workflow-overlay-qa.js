@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -69,9 +69,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-focused-workflow-overlay"],
-  "node scripts/nexus-focused-workflow-overlay-qa.js",
+  "node archive/qa-scripts/nexus-focused-workflow-overlay-qa.js",
   "package alias should run focused workflow overlay QA"
 );
-includes(qaSuite, "scripts/nexus-focused-workflow-overlay-qa.js", "qa-suite should include focused workflow overlay QA");
+includes(qaSuite, "archive/qa-scripts/nexus-focused-workflow-overlay-qa.js", "qa-suite should include focused workflow overlay QA");
 
 console.log("Nexus focused workflow overlay QA passed.");

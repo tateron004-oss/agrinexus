@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -144,7 +144,7 @@ const sprintCSurface = [permissionSource, auditSource].join("\n")
   "navigator.sendBeacon"
 ].forEach(forbidden => assert(!sprintCSurface.includes(forbidden), `Sprint C surfaces must not include ${forbidden}.`));
 
-assert(packageData.scripts["qa:nexus-sprint-c-permission-audit-foundation"] === "node scripts/nexus-sprint-c-permission-audit-foundation-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-sprint-c-permission-audit-foundation-qa.js"), "qa-suite must include Sprint C QA.");
+assert(packageData.scripts["qa:nexus-sprint-c-permission-audit-foundation"] === "node archive/qa-scripts/nexus-sprint-c-permission-audit-foundation-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c-permission-audit-foundation-qa.js"), "qa-suite must include Sprint C QA.");
 
 console.log("[nexus-sprint-c-permission-audit-foundation-qa] passed");

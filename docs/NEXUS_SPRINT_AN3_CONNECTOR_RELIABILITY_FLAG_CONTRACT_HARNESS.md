@@ -7,7 +7,7 @@ Sprint AN3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/connector-reliability-feature-flags.json`
-- `scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js`
 
 ## Fixture Coverage
 

@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const planner = require("../server/nexus-autonomy-workflow-planner.js");
-const session = require("../server/nexus-autonomy-workflow-session-state.js");
+const planner = require("../../server/nexus-autonomy-workflow-planner.js");
+const session = require("../../server/nexus-autonomy-workflow-session-state.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -130,10 +130,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-aut4-workflow-session-state"],
-    "node scripts/nexus-aut4-workflow-session-state-qa.js",
+    "node archive/qa-scripts/nexus-aut4-workflow-session-state-qa.js",
     "AUT4 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut4-workflow-session-state-qa.js"), "AUT4 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut4-workflow-session-state-qa.js"), "AUT4 QA must be wired into local-safe suites.");
 }
 
 function runAut4WorkflowSessionStateQa() {

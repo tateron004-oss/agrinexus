@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const runtime = require("../public/nexus-full-communication-runtime.js");
+const runtime = require("../../public/nexus-full-communication-runtime.js");
 
 function assertIncludes(text, expected, label) {
   assert.ok(String(text).includes(expected), `${label} should include ${expected}`);
@@ -153,10 +153,10 @@ const doc = read("docs/NEXUS_FULL_COMMUNICATION_RUNTIME.md");
 ].forEach(text => assertIncludes(doc, text, "full communication doc"));
 
 const pkg = JSON.parse(read("package.json"));
-assert.equal(pkg.scripts["qa:nexus-full-communication-runtime"], "node scripts/nexus-full-communication-runtime-qa.js");
+assert.equal(pkg.scripts["qa:nexus-full-communication-runtime"], "node archive/qa-scripts/nexus-full-communication-runtime-qa.js");
 
 const qaSuite = read("scripts/qa-suite.js");
-assertIncludes(qaSuite, "scripts/nexus-full-communication-runtime-qa.js", "qa-suite wiring");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-full-communication-runtime-qa.js", "qa-suite wiring");
 
 const forbiddenClaims = [
   "SMS sent successfully",

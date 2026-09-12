@@ -58,7 +58,7 @@ Live provider actions remain blocked unless the correct provider is configured a
 Focused QA:
 
 ```bash
-node scripts/nexus-universal-navigation-runtime-qa.js
+node archive/qa-scripts/nexus-universal-navigation-runtime-qa.js
 ```
 
 Package alias:

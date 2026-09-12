@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -141,9 +141,9 @@ includes(
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-agentic-command-runtime"],
-  "node scripts/nexus-agentic-command-runtime-qa.js",
+  "node archive/qa-scripts/nexus-agentic-command-runtime-qa.js",
   "package alias should run agentic command runtime QA"
 );
-includes(qaSuite, "scripts/nexus-agentic-command-runtime-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-agentic-command-runtime-qa.js", "qa-suite wiring");
 
 console.log("Nexus agentic command runtime QA passed.");

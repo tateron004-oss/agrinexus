@@ -7,7 +7,7 @@ Sprint AH3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/provider-mode-feature-flags.json`
-- `scripts/nexus-sprint-ah3-provider-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ah3-provider-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

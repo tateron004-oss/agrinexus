@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -125,9 +125,9 @@ const exposeBlock = sectionBetween(app, "function exposeNexusAppWindowApis()", "
 assert(!/imitates? .*actor|voice cloned|clone .*voice|fake regional voice|guaranteed accent|provider handoff from profile/i.test(contractBlock + registryBlock + resolverBlock), "profile registry must not introduce unsafe voice or provider claims");
 console.log("PASS no unsafe profile claims");
 
-assert(pkg.scripts["qa:nexus-presence-profile-registry"] === "node scripts/nexus-presence-profile-registry-qa.js", "package alias exists");
+assert(pkg.scripts["qa:nexus-presence-profile-registry"] === "node archive/qa-scripts/nexus-presence-profile-registry-qa.js", "package alias exists");
 console.log("PASS package alias exists");
-assert(qaSuite.includes("scripts/nexus-presence-profile-registry-qa.js"), "safe QA suite includes presence profile registry QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-presence-profile-registry-qa.js"), "safe QA suite includes presence profile registry QA");
 console.log("PASS safe QA suite includes presence profile registry QA");
 
 console.log("Nexus Presence profile registry QA passed.");

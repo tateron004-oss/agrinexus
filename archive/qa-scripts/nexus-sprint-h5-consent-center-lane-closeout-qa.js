@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   DEFAULT_CONSENT_CENTER_FEATURE_FLAG_STATE,
   normalizeConsentCenterFeatureFlagState
-} = require("../public/nexus-consent-center-feature-flag.js");
+} = require("../../public/nexus-consent-center-feature-flag.js");
 const {
   loadConsentCenterFlagFixtures,
   validateConsentCenterFlagFixtures
 } = require("./nexus-sprint-h3-consent-center-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_H5_CONSENT_CENTER_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-h5-consent-center-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint H5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint H5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint H5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -41,7 +41,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const consentContract = read("public", "nexus-consent-center-contract.js");
 const featureFlagModule = read("public", "nexus-consent-center-feature-flag.js");
-const h3Harness = read("scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js");
+const h3Harness = read("archive", "qa-scripts", "nexus-sprint-h3-consent-center-flag-contract-harness.js");
 const fixtures = loadConsentCenterFlagFixtures();
 
 assertIncludes(doc, [
@@ -138,7 +138,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint H5 requires prior Sprint H QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint H5 requires prior Sprint H QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint H QA: ${requiredScript}`);
 }
 
@@ -259,7 +259,7 @@ for (const source of [featureFlagModule, h3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-h5-consent-center-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint H5 QA.");
 

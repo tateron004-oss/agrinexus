@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   REQUIRED_SOURCE_RESULT_FIELDS,
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
+} = require("../../public/nexus-live-source-result-contract.js");
 const {
   REQUIRED_JOB_FIELDS,
   loadLiveSourceFixtures,
   validateLiveSourceFixtures
 } = require("./nexus-sprint-live3-mock-source-provider-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,12 +28,12 @@ const qaName = "nexus-sprint-live3-mock-source-provider-harness-qa.js";
 
 assert(exists("docs", docName), "LIVE3 harness doc must exist.");
 assert(exists("fixtures", "nexus", "live-source-results.json"), "LIVE3 fixture file must exist.");
-assert(exists("scripts", harnessName), "LIVE3 harness script must exist.");
-assert(exists("scripts", qaName), "LIVE3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "LIVE3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", "live-source-results.json");
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = loadLiveSourceFixtures();
@@ -42,7 +42,7 @@ const fixtures = loadLiveSourceFixtures();
   "Nexus Sprint LIVE3",
   "Mock/Fixture Source Provider Harness",
   fixtureName.replace(/\\/g, "/"),
-  "scripts/nexus-sprint-live3-mock-source-provider-harness.js",
+  "archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness.js",
   "Nairobi weather result",
   "Kinshasa weather result",
   "eastern DRC conflict/security result",
@@ -167,9 +167,9 @@ assert(!fixtureSource.includes("\"applicationSubmissionAuthority\": true"), "LIV
 });
 
 const alias = "qa:nexus-sprint-live3-mock-source-provider-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js"), "LIVE3 requires LIVE2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js"), "LIVE3 requires LIVE2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live3-mock-source-provider-harness-qa] passed");

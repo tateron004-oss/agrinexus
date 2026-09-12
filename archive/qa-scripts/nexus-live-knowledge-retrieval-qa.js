@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -220,10 +220,10 @@ includes(index, "/app.js?v=__NEXUS_RELEASE_SHA__", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-live-knowledge-retrieval"],
-  "node scripts/nexus-live-knowledge-retrieval-qa.js",
+  "node archive/qa-scripts/nexus-live-knowledge-retrieval-qa.js",
   "package script should run live knowledge retrieval QA"
 );
-includes(qaSuite, "scripts/nexus-live-knowledge-retrieval-qa.js", "qa-suite safe wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-live-knowledge-retrieval-qa.js", "qa-suite safe wiring");
 
 [
   "fabricated source was used",

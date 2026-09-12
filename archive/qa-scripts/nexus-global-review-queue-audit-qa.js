@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -20,7 +20,7 @@ function excludes(haystack, needle, message) {
   assert(!haystack.toLowerCase().includes(needle.toLowerCase()), message || `Did not expect to find ${needle}`);
 }
 
-const activationVerification = spawnSync(process.execPath, ["scripts/nexus-activation-verification-qa.js"], {
+const activationVerification = spawnSync(process.execPath, ["archive/qa-scripts/nexus-activation-verification-qa.js"], {
   cwd: root,
   encoding: "utf8"
 });
@@ -112,9 +112,9 @@ assert.strictEqual(
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-global-review-queue-audit"],
-  "node scripts/nexus-global-review-queue-audit-qa.js",
+  "node archive/qa-scripts/nexus-global-review-queue-audit-qa.js",
   "package script should expose global review/queue/audit QA"
 );
-includes(qaSuite, "scripts/nexus-global-review-queue-audit-qa.js", "qa suite should include global review/queue/audit QA");
+includes(qaSuite, "archive/qa-scripts/nexus-global-review-queue-audit-qa.js", "qa suite should include global review/queue/audit QA");
 
 console.log("nexus-global-review-queue-audit QA passed");

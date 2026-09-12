@@ -3,10 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
-const agriculture = require("../server/nexus-agriculture-context-source-provider.js");
+} = require("../../public/nexus-live-source-result-contract.js");
+const agriculture = require("../../server/nexus-agriculture-context-source-provider.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-live9-agriculture-context-provider-readiness-qa.js"
 
 assert(exists("docs", docName), "LIVE9 doc must exist.");
 assert(exists("server", moduleName), "LIVE9 provider module must exist.");
-assert(exists("scripts", qaName), "LIVE9 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE9 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("server", moduleName);
@@ -143,9 +143,9 @@ assert.equal(liveReady.rawResultAvailable, false, "LIVE9 must not claim raw live
 ].forEach(term => assert(!moduleSource.includes(term), `LIVE9 module must not include agriculture execution path: ${term}`));
 
 const alias = "qa:nexus-sprint-live9-agriculture-context-provider-readiness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE9 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js"), "LIVE9 requires LIVE8 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js"), "LIVE9 requires LIVE8 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live9-agriculture-context-provider-readiness-qa] passed");

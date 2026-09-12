@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_APPOINTMENT_SCHEDULING_READINESS_CONTRACT_PHASE_52.md"),
   contract: path.join(root, "public", "nexus-appointment-scheduling-readiness-contract.js"),
@@ -180,7 +180,7 @@ assert(sample.adminBypassAllowed === false, "factory must force admin bypass dis
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-appointment-scheduling-readiness-contract"] === "node scripts/nexus-appointment-scheduling-readiness-contract-qa.js", "package.json must expose qa:nexus-appointment-scheduling-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-appointment-scheduling-readiness-contract-qa.js"), "qa-suite.js must include appointment scheduling readiness QA.");
+assert(packageData.scripts["qa:nexus-appointment-scheduling-readiness-contract"] === "node archive/qa-scripts/nexus-appointment-scheduling-readiness-contract-qa.js", "package.json must expose qa:nexus-appointment-scheduling-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-appointment-scheduling-readiness-contract-qa.js"), "qa-suite.js must include appointment scheduling readiness QA.");
 
 console.log("[nexus-appointment-scheduling-readiness-contract-qa] passed");

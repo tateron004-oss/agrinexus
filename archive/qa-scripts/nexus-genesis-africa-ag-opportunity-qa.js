@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-genesis-africa-ag-opportunity.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
@@ -316,9 +316,9 @@ assert(homeClickAgenticIndex > homeClickAfricaIndex, "Africa opportunity routing
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-genesis-africa-ag-opportunity"],
-  "node scripts/nexus-genesis-africa-ag-opportunity-qa.js",
+  "node archive/qa-scripts/nexus-genesis-africa-ag-opportunity-qa.js",
   "package alias must run focused QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-africa-ag-opportunity-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-africa-ag-opportunity-qa.js", "qa-suite wiring");
 
 console.log("Nexus Genesis Africa agriculture opportunity QA passed.");

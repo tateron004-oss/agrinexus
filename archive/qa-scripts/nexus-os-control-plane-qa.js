@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const controlPlane = require("../server/nexusOsControlPlane.js");
+const controlPlane = require("../../server/nexusOsControlPlane.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -112,8 +112,8 @@ assert(!app.includes("nexus-os-control-plane"), "Standard User app does not expo
   "process.env.TAVILY_API_KEY"
 ].forEach(secretAccess => assert(!moduleSource.includes(secretAccess), `control plane avoids direct secret value access: ${secretAccess}`));
 
-assert(pkg.scripts["qa:nexus-os-control-plane"] === "node scripts/nexus-os-control-plane-qa.js", "package alias exists");
-assert(suite.includes("scripts/nexus-os-control-plane-qa.js"), "safe QA suite includes control plane QA");
+assert(pkg.scripts["qa:nexus-os-control-plane"] === "node archive/qa-scripts/nexus-os-control-plane-qa.js", "package alias exists");
+assert(suite.includes("archive/qa-scripts/nexus-os-control-plane-qa.js"), "safe QA suite includes control plane QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

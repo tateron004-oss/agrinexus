@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -219,7 +219,7 @@ check("no secrets are exposed", !/\b(TWILIO_AUTH_TOKEN\s*[:=]\s*['\"][^'\"]+|OPE
 check("Standard User first screen remains conversation-first and uncluttered", hasAll(app, [
   'data-nexus-os-standard-startup="true-conversation"',
   'data-nexus-true-conversational-root="true"',
-  "Hello. I'm Nexus.",
+  "Hello. I'm Kyro.",
   "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   'data-standard-user-startup-visible="false" hidden aria-hidden="true"'
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
@@ -228,8 +228,8 @@ check("service worker/cache uses immutable release identity", hasAll(server, ["N
   && hasAll(app, ["__NEXUS_RELEASE_SHA__", "agrinexus-pwa-__NEXUS_RELEASE_SHA__"])
   && hasAll(sw, ["__NEXUS_RELEASE_SHA__", "agrinexus-pwa-__NEXUS_RELEASE_SHA__"]));
 
-check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
-check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));
+check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node archive/qa-scripts/nexus-internet-resource-assistant-platform-qa.js");
+check("qa-suite safe wiring exists", qaSuite.includes("archive/qa-scripts/nexus-internet-resource-assistant-platform-qa.js"));
 
 const failures = checks.filter(item => !item.condition);
 if (failures.length) {

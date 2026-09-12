@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -118,9 +118,9 @@ const exposeBlock = sectionBetween(app, "function exposeNexusAppWindowApis()", "
 assert(!/secret.*browser.*true|silent microphone start|always-on listening enabled|voice provider execution authority/i.test(registryBlock + detectionBlock + adaptersBlock), "voice capability registry must not introduce unsafe voice claims");
 console.log("PASS no unsafe voice provider claims");
 
-assert(pkg.scripts["qa:nexus-voice-capability-registry"] === "node scripts/nexus-voice-capability-registry-qa.js", "package alias exists");
+assert(pkg.scripts["qa:nexus-voice-capability-registry"] === "node archive/qa-scripts/nexus-voice-capability-registry-qa.js", "package alias exists");
 console.log("PASS package alias exists");
-assert(qaSuite.includes("scripts/nexus-voice-capability-registry-qa.js"), "safe QA suite includes voice capability registry QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-voice-capability-registry-qa.js"), "safe QA suite includes voice capability registry QA");
 console.log("PASS safe QA suite includes voice capability registry QA");
 
 console.log("Nexus voice capability registry QA passed.");

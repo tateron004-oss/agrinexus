@@ -84,4 +84,4 @@ Browser validation for this phase must use the normal Standard User build. With 
 
 ## QA Guard
 
-`scripts/nexus-sprint-e6-flag-gated-confirmation-ui-preview-qa.js` verifies the source-level contract, package alias, and safe-suite wiring.
+`archive/qa-scripts/nexus-sprint-e6-flag-gated-confirmation-ui-preview-qa.js` verifies the source-level contract, package alias, and safe-suite wiring.

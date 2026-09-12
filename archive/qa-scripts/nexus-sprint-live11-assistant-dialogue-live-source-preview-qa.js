@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const preview = require("../server/nexus-assistant-live-source-preview.js");
+const preview = require("../../server/nexus-assistant-live-source-preview.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -19,7 +19,7 @@ const qaName = "nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js
 
 assert(exists("docs", docName), "LIVE11 doc must exist.");
 assert(exists("server", moduleName), "LIVE11 preview module must exist.");
-assert(exists("scripts", qaName), "LIVE11 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE11 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("server", moduleName);
@@ -149,9 +149,9 @@ const enabledEnv = {
 ].forEach(term => assert(!moduleSource.includes(term), `LIVE11 module must not include execution path: ${term}`));
 
 const alias = "qa:nexus-sprint-live11-assistant-dialogue-live-source-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE11 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js"), "LIVE11 requires LIVE10 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js"), "LIVE11 requires LIVE10 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live11-assistant-dialogue-live-source-preview-qa] passed");

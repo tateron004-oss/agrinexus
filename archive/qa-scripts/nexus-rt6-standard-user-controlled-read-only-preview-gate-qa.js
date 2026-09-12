@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const gate = require("../public/nexus-standard-user-live-source-preview-gate.js");
+const gate = require("../../public/nexus-standard-user-live-source-preview-gate.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -102,10 +102,10 @@ function runRt6StandardUserControlledReadOnlyPreviewGateQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt6-standard-user-controlled-read-only-preview-gate"],
-    "node scripts/nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js",
+    "node archive/qa-scripts/nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js",
     "RT6 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"), "RT6 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js"), "RT6 QA must be in safe suites.");
 
   console.log("[nexus-rt6-standard-user-controlled-read-only-preview-gate-qa] passed");
 }

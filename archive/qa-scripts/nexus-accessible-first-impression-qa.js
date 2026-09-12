@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -48,7 +48,7 @@ assert(genesisStyles.includes("@media (forced-colors: active)"), "forced-colors 
 assert(genesisStyles.includes("CanvasText"), "forced-colors support uses system colors");
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|dispatch started/i.test(hero), "accessible first impression does not claim external execution");
 
-assert(packageJson.scripts["qa:nexus-accessible-first-impression"] === "node scripts/nexus-accessible-first-impression-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-accessible-first-impression-qa.js"), "safe QA suite includes accessible first impression QA");
+assert(packageJson.scripts["qa:nexus-accessible-first-impression"] === "node archive/qa-scripts/nexus-accessible-first-impression-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-accessible-first-impression-qa.js"), "safe QA suite includes accessible first impression QA");
 
 console.log("Nexus accessible first impression QA passed.");

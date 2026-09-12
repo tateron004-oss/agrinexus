@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C6_SOURCE_BACKED_AGRICULTURE_PACKET_HARNESS.md"),
   c5Doc: path.join(root, "docs", "NEXUS_SPRINT_C5_SOURCE_BACKED_AGRICULTURE_READINESS_DESIGN.md"),
@@ -157,8 +157,8 @@ assert(sourceRegistry.isVerifiedSourceRecord(harness.FIXTURE_SOURCE) === true, "
 });
 
 const alias = "qa:nexus-sprint-c6-source-backed-agriculture-packet-harness";
-const command = "node scripts/nexus-sprint-c6-source-backed-agriculture-packet-harness-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c6-source-backed-agriculture-packet-harness-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c6-source-backed-agriculture-packet-harness-qa.js"), "qa-suite must include Sprint C6 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c6-source-backed-agriculture-packet-harness-qa.js"), "qa-suite must include Sprint C6 QA.");
 
 console.log("[nexus-sprint-c6-source-backed-agriculture-packet-harness-qa] passed");

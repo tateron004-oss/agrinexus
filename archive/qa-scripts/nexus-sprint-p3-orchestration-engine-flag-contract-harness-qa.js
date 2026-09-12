@@ -7,7 +7,7 @@ const {
   validateOrchestrationEngineFlagFixtures
 } = require("./nexus-sprint-p3-orchestration-engine-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-p3-orchestration-engine-flag-contract-harness-qa.js
 
 assert(exists("docs", docName), "Sprint P3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint P3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint P3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint P3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint P3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint P3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "c156fd5630bdc75b39b03db86c9cda569b260d76",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/orchestration-engine-feature-flags.json",
-  "scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness.js",
   "orchestrationReviewAllowed: false",
   "orchestrationTracePreviewAllowed: false",
   "orchestrationRuntimeAllowed: false",
@@ -178,10 +178,10 @@ assert(exists("docs", "NEXUS_SPRINT_P2_ORCHESTRATION_ENGINE_FEATURE_FLAG_CONTRAC
 assert(exists("public", "nexus-orchestration-engine-feature-flag.js"), "P3 requires P2 feature flag module.");
 
 const alias = "qa:nexus-sprint-p3-orchestration-engine-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint P3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-p1-orchestration-engine-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint P1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-p2-orchestration-engine-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint P2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-p1-orchestration-engine-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint P1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-p2-orchestration-engine-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint P2 QA.");
 
 console.log("[nexus-sprint-p3-orchestration-engine-flag-contract-harness-qa] passed");

@@ -13,10 +13,10 @@ Current artifacts reviewed:
 - `public/index.html`
 - `public/app.js`
 - `public/nexus-session-memory.js`
-- `scripts/nexus-session-memory-qa.js`
-- `scripts/nexus-session-memory-observation-qa.js`
-- `scripts/nexus-policy-observation-qa.js`
-- `scripts/nexus-plan-observation-qa.js`
+- `archive/qa-scripts/nexus-session-memory-qa.js`
+- `archive/qa-scripts/nexus-session-memory-observation-qa.js`
+- `archive/qa-scripts/nexus-policy-observation-qa.js`
+- `archive/qa-scripts/nexus-plan-observation-qa.js`
 - low-risk suggestion and controlled-action preview QA
 - call, provider handoff, confirmation, telehealth, map, and app behavior QA
 

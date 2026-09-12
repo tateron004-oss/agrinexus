@@ -86,9 +86,9 @@ includes(app, "speakVoiceResponse(text)", "repeat response uses existing speech 
 assert(!/fake send|fake provider|fake live|silently execute/i.test(runtimeBlock), "conversation surface avoids fake execution language");
 console.log("PASS no fake execution language");
 
-assert(pkg.scripts["qa:nexus-os-conversation-surface"] === "node scripts/nexus-os-conversation-surface-qa.js", "package alias exists");
+assert(pkg.scripts["qa:nexus-os-conversation-surface"] === "node archive/qa-scripts/nexus-os-conversation-surface-qa.js", "package alias exists");
 console.log("PASS package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-conversation-surface-qa.js"), "safe QA suite includes Rail 5 QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-conversation-surface-qa.js"), "safe QA suite includes Rail 5 QA");
 console.log("PASS safe QA suite includes Rail 5 QA");
 
 console.log("Nexus OS conversation surface QA passed.");

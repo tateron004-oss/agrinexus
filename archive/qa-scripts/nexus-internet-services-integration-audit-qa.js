@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const auditModule = require("../public/nexus-internet-services-integration-audit.js");
+const auditModule = require("../../public/nexus-internet-services-integration-audit.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const fail = message => {
   throw new Error(message);
@@ -110,8 +110,8 @@ contains(app, /internet services integration audit|internet integration audit/i,
 contains(styles, /nexus-internet-integration-audit/, "audit styles");
 contains(styles, /nexus-internet-audit-grid article\[hidden\][\s\S]*display:\s*none\s*!important/i, "audit filter hidden-card style");
 
-assert(pkg.scripts["qa:nexus-internet-services-integration-audit"] === "node scripts/nexus-internet-services-integration-audit-qa.js", "package alias missing");
-assert(suite.includes("scripts/nexus-internet-services-integration-audit-qa.js"), "qa-suite wiring missing");
+assert(pkg.scripts["qa:nexus-internet-services-integration-audit"] === "node archive/qa-scripts/nexus-internet-services-integration-audit-qa.js", "package alias missing");
+assert(suite.includes("archive/qa-scripts/nexus-internet-services-integration-audit-qa.js"), "qa-suite wiring missing");
 
 contains(doc, /Mode Inventory/, "doc mode inventory");
 contains(doc, /Status Definitions/, "doc status definitions");

@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
-const media = require("../server/nexus-music-media-source-provider.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const media = require("../../server/nexus-music-media-source-provider.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
 function buildResponse(payload, status = 200) {
   return {

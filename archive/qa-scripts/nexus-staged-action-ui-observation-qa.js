@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -17,7 +17,7 @@ assert(fs.existsSync(mapperPath), "public/nexus-action-decision-mapper.js must e
 assert(fs.existsSync(stagedStatePath), "public/nexus-staged-action-state.js must exist");
 
 const doc = read("docs", "NEXUS_STAGED_ACTION_UI_OBSERVATION_QA.md");
-const qaSource = read("scripts", "nexus-staged-action-ui-observation-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-staged-action-ui-observation-qa.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");

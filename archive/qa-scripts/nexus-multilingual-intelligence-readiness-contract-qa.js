@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = { doc: path.join(root, "docs", "NEXUS_MULTILINGUAL_INTELLIGENCE_READINESS_CONTRACT_PHASE_70.md"), contract: path.join(root, "public", "nexus-multilingual-intelligence-readiness-contract.js"), index: path.join(root, "public", "index.html"), app: path.join(root, "public", "app.js"), server: path.join(root, "server.js"), packageJson: path.join(root, "package.json"), qaSuite: path.join(root, "scripts", "qa-suite.js") };
 function read(filePath) { return fs.readFileSync(filePath, "utf8"); }
 function assert(condition, message) { if (!condition) { console.error(`[nexus-multilingual-intelligence-readiness-contract-qa] ${message}`); process.exit(1); } }
@@ -24,6 +24,6 @@ assert(sample.providerExecutionFromLanguageSwitchEnabled === false, "factory mus
 assert(sample.executionAllowed === false, "factory must force execution disabled.");
 ["fetch(", "XMLHttpRequest", "axios", "EventSource", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "window.location", "document.location", "addEventListener", "onclick", "translateLive(", "callInterpreter(", "executeLanguageAction("].forEach(forbidden => assert(!contractSource.includes(forbidden), `contract module must not include runtime behavior: ${forbidden}`));
 ["nexus-multilingual-intelligence-readiness-contract.js", "NexusMultilingualIntelligenceReadinessContract", "multilingualIntelligenceReadiness", "MULTILINGUAL_INTELLIGENCE_READINESS_CONTRACT"].forEach(runtimeHook => { assert(!index.includes(runtimeHook), `index.html must not load ${runtimeHook}.`); assert(!app.includes(runtimeHook), `app.js must not consume ${runtimeHook}.`); assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`); });
-assert(packageData.scripts["qa:nexus-multilingual-intelligence-readiness-contract"] === "node scripts/nexus-multilingual-intelligence-readiness-contract-qa.js", "package.json must expose qa:nexus-multilingual-intelligence-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-multilingual-intelligence-readiness-contract-qa.js"), "qa-suite.js must include Phase 70 QA.");
+assert(packageData.scripts["qa:nexus-multilingual-intelligence-readiness-contract"] === "node archive/qa-scripts/nexus-multilingual-intelligence-readiness-contract-qa.js", "package.json must expose qa:nexus-multilingual-intelligence-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-multilingual-intelligence-readiness-contract-qa.js"), "qa-suite.js must include Phase 70 QA.");
 console.log("[nexus-multilingual-intelligence-readiness-contract-qa] passed");

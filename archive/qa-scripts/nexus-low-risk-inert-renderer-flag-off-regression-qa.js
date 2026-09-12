@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docPath = path.join(root, "docs", "NEXUS_LOW_RISK_INERT_RENDERER_FLAG_OFF_
 assert(fs.existsSync(docPath), "docs/NEXUS_LOW_RISK_INERT_RENDERER_FLAG_OFF_REGRESSION_QA.md must exist");
 
 const doc = read("docs", "NEXUS_LOW_RISK_INERT_RENDERER_FLAG_OFF_REGRESSION_QA.md");
-const qaSource = read("scripts", "nexus-low-risk-inert-renderer-flag-off-regression-qa.js");
+const qaSource = read("archive", "qa-scripts", "nexus-low-risk-inert-renderer-flag-off-regression-qa.js");
 const flagSource = read("public", "nexus-low-risk-inert-renderer-flag.js");
 const eligibilitySource = read("public", "nexus-low-risk-inert-renderer-eligibility.js");
 const index = read("public", "index.html");
@@ -194,7 +194,7 @@ for (const [label, source] of [
 }
 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-flag-off-regression\""), "package.json must expose qa:nexus-low-risk-inert-renderer-flag-off-regression");
-assert(suite.includes("scripts/nexus-low-risk-inert-renderer-flag-off-regression-qa.js"), "nexus-workforce suite should include flag-off regression QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-inert-renderer-flag-off-regression-qa.js"), "nexus-workforce suite should include flag-off regression QA");
 
 console.log("Nexus low-risk inert renderer flag-off regression QA passed");
 console.log("- flag and eligibility default off/false");

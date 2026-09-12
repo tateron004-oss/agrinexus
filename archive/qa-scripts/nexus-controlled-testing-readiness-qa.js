@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const docs = {
   startPlan: path.join(root, "docs", "NEXUS_CONTROLLED_TESTING_START_PLAN.md"),
@@ -172,11 +172,11 @@ assertAbsent(combinedDocs, [
 
 assert.equal(
   packageData.scripts["qa:nexus-controlled-testing-readiness"],
-  "node scripts/nexus-controlled-testing-readiness-qa.js",
+  "node archive/qa-scripts/nexus-controlled-testing-readiness-qa.js",
   "package.json must expose qa:nexus-controlled-testing-readiness"
 );
 assert(
-  qaSuite.includes("scripts/nexus-controlled-testing-readiness-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-controlled-testing-readiness-qa.js"),
   "qa-suite.js nexus-workforce suite must include controlled testing readiness QA."
 );
 

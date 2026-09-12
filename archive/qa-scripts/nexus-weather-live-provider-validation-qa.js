@@ -4,11 +4,11 @@ const path = require("node:path");
 const {
   normalizeSourceResult,
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
-const weatherProvider = require("../server/nexus-weather-source-provider.js");
-const assistantPreview = require("../server/nexus-assistant-live-source-preview.js");
+} = require("../../public/nexus-live-source-result-contract.js");
+const weatherProvider = require("../../server/nexus-weather-source-provider.js");
+const assistantPreview = require("../../server/nexus-assistant-live-source-preview.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const DEFAULT_WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
 const DEFAULT_TEST_LOCATION = "Stockton, CA";
 
@@ -199,10 +199,10 @@ function runStaticWeatherValidationAssertions() {
   const docName = "NEXUS_WEATHER_LIVE_PROVIDER_VALIDATION.md";
   const qaName = "nexus-weather-live-provider-validation-qa.js";
   assert(exists("docs", docName), "WEATHER1 validation doc must exist.");
-  assert(exists("scripts", qaName), "WEATHER1 QA script must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "WEATHER1 QA script must exist.");
 
   const doc = read("docs", docName);
-  const scriptSource = read("scripts", qaName);
+  const scriptSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -271,10 +271,10 @@ function runStaticWeatherValidationAssertions() {
   ].forEach(term => assert(!scriptSource.includes(term), `WEATHER1 script must not include unsafe behavior: ${term}`));
 
   const alias = "qa:nexus-weather-live-provider-validation";
-  const command = `node scripts/${qaName}`;
+  const command = `node archive/qa-scripts/${qaName}`;
   assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
   assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include WEATHER1 QA.");
-  assert(qaSuite.includes("scripts/nexus-sprint-live5-weather-provider-readiness-qa.js"), "WEATHER1 requires LIVE5 QA to remain in qa-suite.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live5-weather-provider-readiness-qa.js"), "WEATHER1 requires LIVE5 QA to remain in qa-suite.");
 }
 
 async function runWeatherLiveProviderValidationQa(env = process.env) {

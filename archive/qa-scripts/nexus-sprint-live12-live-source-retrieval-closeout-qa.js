@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docName = "NEXUS_SPRINT_LIVE12_LIVE_SOURCE_RETRIEVAL_CLOSEOUT_AND_REAL_PRO
 const qaName = "nexus-sprint-live12-live-source-retrieval-closeout-qa.js";
 
 assert(exists("docs", docName), "LIVE12 closeout doc must exist.");
-assert(exists("scripts", qaName), "LIVE12 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE12 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -79,18 +79,18 @@ const qaSuite = read("scripts", "qa-suite.js");
 });
 
 [
-  "scripts/nexus-sprint-live1-live-source-retrieval-assistant-product-boundary-qa.js",
-  "scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js",
-  "scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js",
-  "scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js",
-  "scripts/nexus-sprint-live5-weather-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js",
-  "scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js",
-  "scripts/nexus-sprint-live12-live-source-retrieval-closeout-qa.js"
+  "archive/qa-scripts/nexus-sprint-live1-live-source-retrieval-assistant-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-live5-weather-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js",
+  "archive/qa-scripts/nexus-sprint-live11-assistant-dialogue-live-source-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-live12-live-source-retrieval-closeout-qa.js"
 ].forEach(scriptPath => {
   const parts = scriptPath.split("/");
   assert(exists(...parts), `LIVE12 QA artifact must exist: ${scriptPath}`);
@@ -112,7 +112,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 ].forEach(term => assert(doc.includes(term), `LIVE12 no-execution guarantee must include: ${term}`));
 
 const alias = "qa:nexus-sprint-live12-live-source-retrieval-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE12 QA.");
 

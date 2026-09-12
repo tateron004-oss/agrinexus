@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const finalGateModule = "nexus-final-execution-gate-contract.js";
 const finalGateHarness = "nexus-sprint-f7-final-execution-gate-harness.js";
 
 assert(exists("docs", docName), "Sprint F8 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint F8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint F8 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -32,7 +32,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
-const finalGate = require("../public/nexus-final-execution-gate-contract.js");
+const finalGate = require("../../public/nexus-final-execution-gate-contract.js");
 const finalGateHarnessModule = require("./nexus-sprint-f7-final-execution-gate-harness.js");
 
 assertIncludes(doc, [
@@ -96,13 +96,13 @@ assertIncludes(doc, [
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `F8 requires prior Sprint F artifact: ${relative}`));
 
 [
-  "scripts/nexus-sprint-f1-approval-center-runtime-activation-readiness-gate-qa.js",
-  "scripts/nexus-sprint-f2-approval-center-feature-flag-contract-qa.js",
-  "scripts/nexus-sprint-f3-approval-center-flag-contract-harness-qa.js",
-  "scripts/nexus-sprint-f4-approval-center-runtime-absence-regression-guard-qa.js",
-  "scripts/nexus-sprint-f5-approval-center-lane-closeout-qa.js",
-  "scripts/nexus-sprint-f6-final-execution-gate-contract-qa.js",
-  "scripts/nexus-sprint-f7-final-execution-gate-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-f1-approval-center-runtime-activation-readiness-gate-qa.js",
+  "archive/qa-scripts/nexus-sprint-f2-approval-center-feature-flag-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-f3-approval-center-flag-contract-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-f4-approval-center-runtime-absence-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-f5-approval-center-lane-closeout-qa.js",
+  "archive/qa-scripts/nexus-sprint-f6-final-execution-gate-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-f7-final-execution-gate-harness-qa.js"
 ].forEach(relative => assert(qaSuite.includes(relative), `F8 requires prior Sprint F QA in qa-suite: ${relative}`));
 
 assert.equal(typeof finalGate.createFinalExecutionGate, "function", "F8 requires F6 final execution gate factory.");
@@ -125,7 +125,7 @@ fixtureResults.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-f8-final-execution-gate-readiness-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint F8 QA.");
 

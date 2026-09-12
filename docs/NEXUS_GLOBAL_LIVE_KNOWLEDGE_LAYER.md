@@ -146,8 +146,8 @@ The Standard User dashboard shows the Live Knowledge rail, selected provider, su
 
 Primary guards:
 
-- `scripts/nexus-live-knowledge-all-modes-qa.js`
-- `scripts/nexus-global-live-knowledge-qa.js`
+- `archive/qa-scripts/nexus-live-knowledge-all-modes-qa.js`
+- `archive/qa-scripts/nexus-global-live-knowledge-qa.js`
 
 The QA verifies provider priority, environment names, selector values, endpoints, no-secret output, credential-blocked state, provider-error state, citation/source fields, packet type, UI presence, Activation Center presence, mode coverage, health education boundaries, marketplace no-purchase behavior, communications no-send behavior, telehealth no-launch behavior, and pharmacy no-refill behavior.
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const pilotModule = "nexus-first-real-world-action-pilot-readiness-contract.js";
 const pilotHarness = "nexus-sprint-i7-first-real-world-action-pilot-readiness-harness.js";
 
 assert(exists("docs", docName), "Sprint I8 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint I8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint I8 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -32,7 +32,7 @@ const qaSuite = read("scripts", "qa-suite.js");
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
-const pilotContract = require("../public/nexus-first-real-world-action-pilot-readiness-contract.js");
+const pilotContract = require("../../public/nexus-first-real-world-action-pilot-readiness-contract.js");
 const pilotHarnessModule = require("./nexus-sprint-i7-first-real-world-action-pilot-readiness-harness.js");
 
 assertIncludes(doc, [
@@ -103,13 +103,13 @@ assertIncludes(doc, [
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `I8 requires prior Sprint I artifact: ${relative}`));
 
 [
-  "scripts/nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate-qa.js",
-  "scripts/nexus-sprint-i2-identity-foundation-feature-flag-contract-qa.js",
-  "scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness-qa.js",
-  "scripts/nexus-sprint-i4-identity-foundation-runtime-absence-regression-guard-qa.js",
-  "scripts/nexus-sprint-i5-identity-foundation-lane-closeout-qa.js",
-  "scripts/nexus-sprint-i6-first-real-world-action-pilot-readiness-contract-qa.js",
-  "scripts/nexus-sprint-i7-first-real-world-action-pilot-readiness-harness-qa.js"
+  "archive/qa-scripts/nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate-qa.js",
+  "archive/qa-scripts/nexus-sprint-i2-identity-foundation-feature-flag-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-i4-identity-foundation-runtime-absence-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-i5-identity-foundation-lane-closeout-qa.js",
+  "archive/qa-scripts/nexus-sprint-i6-first-real-world-action-pilot-readiness-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-i7-first-real-world-action-pilot-readiness-harness-qa.js"
 ].forEach(relative => assert(qaSuite.includes(relative), `I8 requires prior Sprint I QA in qa-suite: ${relative}`));
 
 assert.equal(typeof pilotContract.createFirstRealWorldActionPilotReadiness, "function", "I8 requires I6 pilot readiness contract factory.");
@@ -129,7 +129,7 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-i8-first-real-world-action-pilot-readiness-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint I8 QA.");
 

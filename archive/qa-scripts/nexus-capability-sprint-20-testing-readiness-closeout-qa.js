@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 
 assert(exists("docs", docName), "Sprint 20 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint 20 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint 20 QA must exist.");
 
 [
   "Sprint 20 closes the Nexus capability sprint lane",
@@ -72,13 +72,13 @@ for (let sprint = 1; sprint <= 20; sprint += 1) {
   "nexus-capability-sprint-19-end-to-end-autonomous-workflow-qa.js",
   "nexus-capability-sprint-20-testing-readiness-closeout-qa.js"
 ].forEach(script => {
-  assert(exists("scripts", script), `${script} must exist.`);
+  assert(exists("archive", "qa-scripts", script), `${script} must exist.`);
   assert(qaSuite.includes(`scripts/${script}`), `${script} must be wired into qa-suite.`);
 });
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-20-testing-readiness-closeout"],
-  "node scripts/nexus-capability-sprint-20-testing-readiness-closeout-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-20-testing-readiness-closeout-qa.js",
   "package alias should expose Sprint 20 closeout QA."
 );
 

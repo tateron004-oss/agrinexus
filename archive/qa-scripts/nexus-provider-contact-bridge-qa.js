@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -26,7 +26,7 @@ const remindersProvider = read("server/providers/reminderProvider.js");
 
 [
   "server/providers/providerContactBridgeProvider.js",
-  "scripts/nexus-provider-contact-bridge-qa.js"
+  "archive/qa-scripts/nexus-provider-contact-bridge-qa.js"
 ].forEach(relativePath => assert(fs.existsSync(path.join(root, relativePath)), `${relativePath} must exist`));
 
 [
@@ -163,6 +163,6 @@ assert.equal(result.body.status, "completed", "non-sensitive provider note shoul
 assert.equal(result.body.data.note.sensitiveHealthDataAllowed, false, "provider notes must remain non-sensitive");
 
 includes(packageJson, "qa:nexus-provider-contact-bridge", "package.json");
-includes(qaSuite, "scripts/nexus-provider-contact-bridge-qa.js", "qa-suite.js");
+includes(qaSuite, "archive/qa-scripts/nexus-provider-contact-bridge-qa.js", "qa-suite.js");
 
 console.log("Nexus provider contact bridge QA passed.");

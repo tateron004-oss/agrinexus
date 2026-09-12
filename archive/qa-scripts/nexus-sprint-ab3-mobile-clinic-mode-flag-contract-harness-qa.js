@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_MOBILE_CLINIC_MODE_FLAG_FIELDS,
   normalizeMobileClinicModeFeatureFlagState
-} = require("../public/nexus-mobile-clinic-mode-feature-flag.js");
+} = require("../../public/nexus-mobile-clinic-mode-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -12,7 +12,7 @@ const {
   validateMobileClinicModeFlagFixtures
 } = require("./nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -35,12 +35,12 @@ const harnessName = "nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness.j
 const fixtureName = "mobile-clinic-mode-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AB3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AB3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AB3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AB3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AB3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AB3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const ab2Doc = read("docs", "NEXUS_SPRINT_AB2_MOBILE_CLINIC_MODE_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -127,10 +127,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AB3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ab2-mobile-clinic-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AB2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ab1-mobile-clinic-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AB1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ab2-mobile-clinic-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AB2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ab1-mobile-clinic-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AB1 QA.");
 
 console.log("[nexus-sprint-ab3-mobile-clinic-mode-flag-contract-harness-qa] passed");

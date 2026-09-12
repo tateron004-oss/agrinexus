@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const modulePath = path.join(root, "public", "nexus-agriculture-source-selection-phase-103.js");
 const packagePath = path.join(root, "package.json");
 const qaSuitePath = path.join(root, "scripts", "qa-suite.js");
@@ -61,7 +61,7 @@ assert(selection.buildSourceSelectionObservation("").selection.selected === fals
   "NexusAgricultureSourceSelectionPhase103"
 ].forEach(hook => assert(!activeRuntime.includes(hook), `active runtime must not load ${hook}.`));
 
-assert(packageData.scripts["qa:nexus-phase-103-agriculture-source-selection-contract"] === "node scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js"), "qa-suite must include Phase 103 QA.");
+assert(packageData.scripts["qa:nexus-phase-103-agriculture-source-selection-contract"] === "node archive/qa-scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js"), "qa-suite must include Phase 103 QA.");
 
 console.log("[nexus-phase-103-agriculture-source-selection-contract-qa] passed");

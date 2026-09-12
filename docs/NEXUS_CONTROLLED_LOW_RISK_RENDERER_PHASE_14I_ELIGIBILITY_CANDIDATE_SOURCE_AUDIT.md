@@ -32,21 +32,21 @@ Primary runtime files reviewed:
 
 Primary QA and documentation families reviewed:
 
-- `scripts/nexus-intent-classifier-qa.js`
-- `scripts/nexus-selected-tool-id-alignment-qa.js`
-- `scripts/nexus-low-risk-suggestion-builder-qa.js`
-- `scripts/nexus-low-risk-suggestion-observation-qa.js`
-- `scripts/nexus-level-one-suggestion-label-qa.js`
-- `scripts/nexus-controlled-action-metadata-schema-qa.js`
-- `scripts/nexus-controlled-action-preview-readiness-qa.js`
-- `scripts/nexus-controlled-action-preview-ui-qa.js`
-- `scripts/nexus-controlled-action-preview-clear-qa.js`
-- `scripts/nexus-action-decision-observation-qa.js`
-- `scripts/nexus-planner-qa.js`
-- `scripts/nexus-policy-engine-qa.js`
-- `scripts/nexus-plan-observation-qa.js`
-- `scripts/nexus-controlled-low-risk-renderer-phase-14g-eligibility-adapter-stub-qa.js`
-- `scripts/nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js`
+- `archive/qa-scripts/nexus-intent-classifier-qa.js`
+- `archive/qa-scripts/nexus-selected-tool-id-alignment-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-builder-qa.js`
+- `archive/qa-scripts/nexus-low-risk-suggestion-observation-qa.js`
+- `archive/qa-scripts/nexus-level-one-suggestion-label-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-ui-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-preview-clear-qa.js`
+- `archive/qa-scripts/nexus-action-decision-observation-qa.js`
+- `archive/qa-scripts/nexus-planner-qa.js`
+- `archive/qa-scripts/nexus-policy-engine-qa.js`
+- `archive/qa-scripts/nexus-plan-observation-qa.js`
+- `archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14g-eligibility-adapter-stub-qa.js`
+- `archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js`
 - Phase 8 through Phase 14 controlled-action and renderer docs under `docs/`
 
 ## 3. Existing Low-Risk Metadata Sources Found
@@ -90,15 +90,15 @@ Existing observation/debug-only paths include:
 - `latestObservedAgentActionMetadata` and `observedAgentActionMetadataLog` in `public/app.js`.
 - Level 1 suggestion labels produced by `buildLowRiskAgentActionSuggestion(...)`; these are visible category labels only and not action controls.
 - Low-risk suggestion builder and observation QA under:
-  - `scripts/nexus-low-risk-suggestion-builder-qa.js`
-  - `scripts/nexus-low-risk-suggestion-observation-qa.js`
-  - `scripts/nexus-agent-action-frontend-observation-qa.js`
+  - `archive/qa-scripts/nexus-low-risk-suggestion-builder-qa.js`
+  - `archive/qa-scripts/nexus-low-risk-suggestion-observation-qa.js`
+  - `archive/qa-scripts/nexus-agent-action-frontend-observation-qa.js`
 - Action decision, staged-action, policy, planner, and plan observation QA under:
-  - `scripts/nexus-action-decision-observation-qa.js`
-  - `scripts/nexus-staged-action-ui-observation-qa.js`
-  - `scripts/nexus-staged-action-inert-renderer-observation-qa.js`
-  - `scripts/nexus-policy-observation-qa.js`
-  - `scripts/nexus-plan-observation-qa.js`
+  - `archive/qa-scripts/nexus-action-decision-observation-qa.js`
+  - `archive/qa-scripts/nexus-staged-action-ui-observation-qa.js`
+  - `archive/qa-scripts/nexus-staged-action-inert-renderer-observation-qa.js`
+  - `archive/qa-scripts/nexus-policy-observation-qa.js`
+  - `archive/qa-scripts/nexus-plan-observation-qa.js`
 - Phase 12 through Phase 14 low-risk renderer harnesses, which remain local-safe, fixture-only, or runtime-unwired unless explicitly run by QA.
 
 These paths are useful for future candidate selection because they already preserve `selectedToolId`, risk, domain, user-visible labels, and no-execution safety notes without making metadata authoritative.
@@ -218,7 +218,7 @@ Phase 14I validation includes:
 - `node --check public/nexus-controlled-low-risk-text-only-renderer-loader.js`
 - `node --check public/nexus-controlled-low-risk-renderer-eligibility-adapter.js`
 - `node --check scripts/qa-suite.js`
-- `node --check scripts/nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js`
+- `node --check archive/qa-scripts/nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js`
 - Phase 14A through Phase 14I direct QA scripts
 - Phase 14A through Phase 14I npm QA aliases
 - `node scripts/qa-suite.js all-safe`

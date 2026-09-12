@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   REQUIRED_BLOCKED_EXECUTION_CHANNELS,
   isSafeReviewOnlyStagedAction
-} = require("../public/nexus-staged-action-contract.js");
+} = require("../../public/nexus-staged-action-contract.js");
 const {
   loadStagedActionFixtures,
   validateStagedActionFixtures
 } = require("./nexus-sprint-d3-staged-action-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -33,12 +33,12 @@ const qaName = "nexus-sprint-d3-staged-action-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint D3 harness doc must exist.");
 assert(exists("fixtures", "nexus", "staged-actions.json"), "Sprint D3 staged action fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint D3 staged action harness must exist.");
-assert(exists("scripts", qaName), "Sprint D3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint D3 staged action harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint D3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", "staged-actions.json");
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = loadStagedActionFixtures();
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "audit train ended at AO3",
   "Fixture-Only Staged Action Harness",
   fixtureName.replace(/\\/g, "/"),
-  "scripts/nexus-sprint-d3-staged-action-harness.js",
+  "archive/qa-scripts/nexus-sprint-d3-staged-action-harness.js",
   "reviewOnly: true",
   "requiresUserApproval: true",
   "executionAuthority: false",
@@ -114,7 +114,7 @@ assert(!fixtureSource.includes("\"requiresUserApproval\": false"), "D3 fixtures 
 });
 
 const alias = "qa:nexus-sprint-d3-staged-action-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint D3 QA.");
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const qaName = "nexus-sprint-o4-payee-amount-risk-evidence-mapping-qa.js";
 
 assert(exists("docs", docName), "O4 doc must exist.");
 assert(exists("public", moduleName), "O4 mapping module must exist.");
-assert(exists("scripts", qaName), "O4 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "O4 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -28,8 +28,8 @@ const serverSource = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = JSON.parse(read("fixtures", "nexus", "payment-intents.json"));
-const contract = require("../public/nexus-payment-intent-contract.js");
-const mapper = require("../public/nexus-payment-risk-evidence-mapping.js");
+const contract = require("../../public/nexus-payment-intent-contract.js");
+const mapper = require("../../public/nexus-payment-risk-evidence-mapping.js");
 
 [
   "payee identity requirement",
@@ -108,9 +108,9 @@ assert.equal(ambiguous.mapping.clarificationRequired, true, "O4 ambiguous paymen
 });
 
 const alias = "qa:nexus-sprint-o4-payee-amount-risk-evidence-mapping";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include O4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-o3-payment-harness-qa.js"), "O4 requires O3 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-o3-payment-harness-qa.js"), "O4 requires O3 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-o4-payee-amount-risk-evidence-mapping-qa] passed");

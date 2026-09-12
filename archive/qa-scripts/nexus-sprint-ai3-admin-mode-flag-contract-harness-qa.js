@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_ADMIN_MODE_FLAG_FIELDS,
   normalizeAdminModeFeatureFlagState
-} = require("../public/nexus-admin-mode-feature-flag.js");
+} = require("../../public/nexus-admin-mode-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -13,7 +13,7 @@ const {
   validateAdminModeFlagFixtures
 } = require("./nexus-sprint-ai3-admin-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -36,12 +36,12 @@ const harnessName = "nexus-sprint-ai3-admin-mode-flag-contract-harness.js";
 const fixtureName = "admin-mode-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AI3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AI3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AI3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AI3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AI3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AI3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const ai2Doc = read("docs", "NEXUS_SPRINT_AI2_ADMIN_MODE_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -150,11 +150,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ai3-admin-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AI3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ai2-admin-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AI2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ai1-admin-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AI1 QA.");
-assert(qaSuite.includes("scripts/nexus-admin-mode-readiness-contract-qa.js"), "qa-suite must continue to include Admin Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ai2-admin-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AI2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ai1-admin-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AI1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-admin-mode-readiness-contract-qa.js"), "qa-suite must continue to include Admin Mode readiness QA.");
 
 console.log("[nexus-sprint-ai3-admin-mode-flag-contract-harness-qa] passed");

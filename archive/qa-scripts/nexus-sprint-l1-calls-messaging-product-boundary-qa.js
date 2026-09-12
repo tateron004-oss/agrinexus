@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const docPath = path.join(root, "docs", "NEXUS_SPRINT_L1_CALLS_MESSAGING_PRODUCT_BOUNDARY.md");
 
 function read(relativePath) {
@@ -77,8 +77,8 @@ includesAll(doc, [
 ], "L1 doc");
 
 const alias = "qa:nexus-sprint-l1-calls-messaging-product-boundary";
-const command = "node scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js";
 assert.equal(pkg.scripts && pkg.scripts[alias], command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js"), "qa-suite must include L1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js"), "qa-suite must include L1 QA.");
 
 console.log("[nexus-sprint-l1-calls-messaging-product-boundary-qa] passed");

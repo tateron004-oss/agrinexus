@@ -3,9 +3,9 @@
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
-const { TRUST_CHAIN_RAILS } = require("./lib/nexus-genesis-trust-chain-shared-qa");
+const { TRUST_CHAIN_RAILS } = require("../../scripts/lib/nexus-genesis-trust-chain-shared-qa");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const guide = fs.readFileSync(path.join(root, "docs", "NEXUS_E2E_TESTING_AND_TRAINING_GUIDE.md"), "utf8");
 const railMap = fs.readFileSync(path.join(root, "docs", "NEXUS_GENESIS_FULL_RAIL_COMPLETION_MAP.md"), "utf8");

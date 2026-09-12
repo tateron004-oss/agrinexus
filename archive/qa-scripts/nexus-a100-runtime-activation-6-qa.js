@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -74,7 +74,7 @@ assert(styles.includes(".a100-route-preview"), "Sprint 6 styles should cover rou
 assert(pkg.scripts["map:scaling-qa"], "Map scaling QA alias should remain.");
 assert(pkg.scripts["map:tile-config-qa"], "Map tile config QA alias should remain.");
 assert(pkg.scripts["map:route-preview-qa"], "Map route preview QA alias should remain.");
-assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-6"], "node scripts/nexus-a100-runtime-activation-6-qa.js", "Sprint 6 QA alias should exist.");
-assert(qaSuite.includes("scripts/nexus-a100-runtime-activation-6-qa.js"), "Sprint 6 QA should be wired into qa-suite.");
+assert.equal(pkg.scripts["qa:nexus-a100-runtime-activation-6"], "node archive/qa-scripts/nexus-a100-runtime-activation-6-qa.js", "Sprint 6 QA alias should exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-a100-runtime-activation-6-qa.js"), "Sprint 6 QA should be wired into qa-suite.");
 
 console.log("[nexus-a100-runtime-activation-6-qa] passed");

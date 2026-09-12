@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const index = read("public/index.html");
@@ -98,9 +98,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-pilot-browser-readiness"],
-  "node scripts/nexus-pilot-browser-readiness-qa.js",
+  "node archive/qa-scripts/nexus-pilot-browser-readiness-qa.js",
   "package alias should run pilot browser readiness QA"
 );
-includes(qaSuite, "scripts/nexus-pilot-browser-readiness-qa.js", "safe QA suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-pilot-browser-readiness-qa.js", "safe QA suite wiring");
 
 console.log("Nexus pilot browser readiness QA passed.");

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 let app = fs.readFileSync(appPath, "utf8");
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,17 +28,17 @@ const rendererFiles = [
   "nexus-controlled-low-risk-renderer-runtime-adjacent-adapter-stub"
 ];
 const rendererQaScripts = [
-  "scripts/nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-default-off-wiring-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-static-harness-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-non-runtime-shell-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-runtime-adapter-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-adapter-to-shell-fixture-integration-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-runtime-adjacent-adapter-stub-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-final-standard-user-browser-validation-default-off-qa.js"
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-default-off-wiring-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-static-harness-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-non-runtime-shell-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-runtime-adapter-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-adapter-to-shell-fixture-integration-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-runtime-adjacent-adapter-stub-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-final-standard-user-browser-validation-default-off-qa.js"
 ];
 
 assert(exists("docs", docName), "Phase 13X closeout/readiness document must exist");
@@ -191,7 +191,7 @@ assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js mu
 assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
 assert(!server.includes(mountId), "server.js must not reference the hidden mount point");
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-phase-13-closeout-readiness": "node scripts/${scriptName}"`), "package.json must expose Phase 13X QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-phase-13-closeout-readiness": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13X QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13X QA guard");
 
 console.log("Nexus controlled low-risk renderer Phase 13 closeout readiness QA passed.");

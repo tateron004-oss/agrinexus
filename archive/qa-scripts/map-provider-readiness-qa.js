@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -101,6 +101,6 @@ for (const pattern of paidKeyPatterns) {
   assert(!pattern.test(app), "No paid map API key should be hardcoded in public/app.js.");
 }
 
-assert(pkg.scripts["map:provider-readiness-qa"] === "node scripts/map-provider-readiness-qa.js", "package script should expose Phase 3 map provider readiness QA.");
+assert(pkg.scripts["map:provider-readiness-qa"] === "node archive/qa-scripts/map-provider-readiness-qa.js", "package script should expose Phase 3 map provider readiness QA.");
 
 console.log("Map provider readiness QA passed");

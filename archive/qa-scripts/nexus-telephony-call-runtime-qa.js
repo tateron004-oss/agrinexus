@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const runtime = require("../public/nexus-telephony-call-runtime.js");
+const runtime = require("../../public/nexus-telephony-call-runtime.js");
 
 function assertIncludes(text, expected, label) {
   assert.ok(String(text).includes(expected), `${label} should include ${expected}`);
@@ -156,9 +156,9 @@ const doc = read("docs/NEXUS_TELEPHONY_CALL_RUNTIME.md");
 ].forEach(text => assertIncludes(doc, text, "telephony doc"));
 
 const pkg = JSON.parse(read("package.json"));
-assert.equal(pkg.scripts["qa:nexus-telephony-call-runtime"], "node scripts/nexus-telephony-call-runtime-qa.js");
+assert.equal(pkg.scripts["qa:nexus-telephony-call-runtime"], "node archive/qa-scripts/nexus-telephony-call-runtime-qa.js");
 
 const qaSuite = read("scripts/qa-suite.js");
-assertIncludes(qaSuite, "scripts/nexus-telephony-call-runtime-qa.js", "qa-suite wiring");
+assertIncludes(qaSuite, "archive/qa-scripts/nexus-telephony-call-runtime-qa.js", "qa-suite wiring");
 
 console.log("Nexus telephony call runtime QA passed.");

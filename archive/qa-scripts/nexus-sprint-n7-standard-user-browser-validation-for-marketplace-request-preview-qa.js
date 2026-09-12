@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const previewModuleName = "nexus-marketplace-request-preview.js";
 const flagModuleName = "nexus-marketplace-request-preview-flag-guard.js";
 
 assert(exists("docs", docName), "N7 browser validation doc must exist.");
-assert(exists("scripts", qaName), "N7 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N7 QA must exist.");
 
 const doc = read("docs", docName);
 const indexHtml = read("public", "index.html");
@@ -57,9 +57,9 @@ const qaSuite = read("scripts", "qa-suite.js");
 });
 
 const alias = "qa:nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include N7 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js"), "N7 requires N6 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js"), "N7 requires N6 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview-qa] passed");

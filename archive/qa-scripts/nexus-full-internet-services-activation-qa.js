@@ -4,7 +4,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -190,10 +190,10 @@ function excludes(haystack, needle, message) {
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-full-internet-services-activation"],
-  "node scripts/nexus-full-internet-services-activation-qa.js",
+  "node archive/qa-scripts/nexus-full-internet-services-activation-qa.js",
   "package script should expose full internet services activation QA"
 );
-includes(qaSuite, "scripts/nexus-full-internet-services-activation-qa.js", "qa suite should include full internet services activation QA");
+includes(qaSuite, "archive/qa-scripts/nexus-full-internet-services-activation-qa.js", "qa suite should include full internet services activation QA");
 
 [
   "Nexus Full Internet Services Activation Runtime",

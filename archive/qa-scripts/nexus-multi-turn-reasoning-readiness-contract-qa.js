@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_MULTI_TURN_REASONING_READINESS_CONTRACT_PHASE_65.md"),
   contract: path.join(root, "public", "nexus-multi-turn-reasoning-readiness-contract.js"),
@@ -173,7 +173,7 @@ assert(sample.executionAllowed === false, "factory must force executionAllowed d
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-multi-turn-reasoning-readiness-contract"] === "node scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js", "package.json must expose qa:nexus-multi-turn-reasoning-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js"), "qa-suite.js must include Phase 65 QA.");
+assert(packageData.scripts["qa:nexus-multi-turn-reasoning-readiness-contract"] === "node archive/qa-scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js", "package.json must expose qa:nexus-multi-turn-reasoning-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js"), "qa-suite.js must include Phase 65 QA.");
 
 console.log("[nexus-multi-turn-reasoning-readiness-contract-qa] passed");

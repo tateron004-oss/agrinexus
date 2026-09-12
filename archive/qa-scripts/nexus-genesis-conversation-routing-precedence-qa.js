@@ -3,13 +3,13 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NEXUS_GENESIS_CONVERSATION_ROUTING_QA_PORT || 4597);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-genesis-conversation-routing-qa-db.json");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
-const orchestrator = require("../public/nexus-genesis-conversational-mode-orchestrator.js");
+const orchestrator = require("../../public/nexus-genesis-conversational-mode-orchestrator.js");
 let cookie = "";
 
 function extractFunction(source, name) {
@@ -94,7 +94,7 @@ async function runCommand(command) {
     ["Talk to me.", "conversation.small_talk", "take this slowly"],
     ["What can you do?", "conversation.capability_summary", "agriculture"],
     ["How are you?", "conversation.how_are_you", "ready to help"],
-    ["Tell me about yourself.", "conversation.identity", "Nexus Genesis"]
+    ["Tell me about yourself.", "conversation.identity", "Kyro Genesis"]
   ];
 
   for (const [prompt, expectedIntent] of conversationCases) {

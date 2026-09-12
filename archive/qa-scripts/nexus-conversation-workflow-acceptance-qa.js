@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -115,7 +115,7 @@ assert(index.includes("/nexus-conversation-workflow-transition-engine.js"), "ind
 assert(app.includes("Trust rails"), "Standard User workflow surface must show trust rails");
 assert(app.includes("Workflows are offered, not forced"), "Standard User copy must preserve consent language");
 assert(!app.includes("providerHandoffAuthorized: true"), "app must not authorize provider handoff in transition runtime");
-assert(pkg.scripts["qa:nexus-conversation-workflow-acceptance"] === "node scripts/nexus-conversation-workflow-acceptance-qa.js", "package alias must exist");
-assert(qaSuite.includes("scripts/nexus-conversation-workflow-acceptance-qa.js"), "qa-suite must include acceptance QA");
+assert(pkg.scripts["qa:nexus-conversation-workflow-acceptance"] === "node archive/qa-scripts/nexus-conversation-workflow-acceptance-qa.js", "package alias must exist");
+assert(qaSuite.includes("archive/qa-scripts/nexus-conversation-workflow-acceptance-qa.js"), "qa-suite must include acceptance QA");
 
 console.log("Nexus conversation workflow acceptance QA passed.");

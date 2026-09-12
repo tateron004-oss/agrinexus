@@ -8,9 +8,9 @@ const {
   MULTILINGUAL_INTELLIGENCE_NO_EXECUTION_DEFAULTS,
   MULTILINGUAL_INTELLIGENCE_READINESS_CONTRACT,
   createMultilingualIntelligenceReadinessContract
-} = require("../public/nexus-multilingual-intelligence-readiness-contract.js");
+} = require("../../public/nexus-multilingual-intelligence-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const docName = "NEXUS_SPRINT_R1_MULTILINGUAL_INTELLIGENCE_RUNTIME_ACTIVATION_RE
 const qaName = "nexus-sprint-r1-multilingual-intelligence-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint R1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint R1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint R1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -275,13 +275,13 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_Q5_NATURAL_RESPONSE_GENERATION_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_MULTILINGUAL_INTELLIGENCE_READINESS_CONTRACT_PHASE_70.md"],
   ["public", "nexus-multilingual-intelligence-readiness-contract.js"],
-  ["scripts", "nexus-multilingual-intelligence-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-multilingual-intelligence-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `R1 requires artifact: ${requiredPath.join("/")}`);
 }
 
 const alias = "qa:nexus-sprint-r1-multilingual-intelligence-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint R1 QA.");
 

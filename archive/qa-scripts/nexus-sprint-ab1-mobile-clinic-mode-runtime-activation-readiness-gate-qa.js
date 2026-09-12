@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const docName = "NEXUS_SPRINT_AB1_MOBILE_CLINIC_MODE_RUNTIME_ACTIVATION_READINES
 const qaName = "nexus-sprint-ab1-mobile-clinic-mode-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint AB1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint AB1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AB1 QA script must exist.");
 
 const doc = read("docs", docName);
 const aa5Doc = read("docs", "NEXUS_SPRINT_AA5_PHARMACY_MODE_LANE_CLOSEOUT.md");
@@ -33,7 +33,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const mobileClinicContractSource = read("public", "nexus-mobile-clinic-mode-readiness-contract.js");
-const mobileClinicContract = require("../public/nexus-mobile-clinic-mode-readiness-contract.js");
+const mobileClinicContract = require("../../public/nexus-mobile-clinic-mode-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint AB1",
@@ -167,7 +167,7 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_AA5_PHARMACY_MODE_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_MOBILE_CLINIC_MODE_READINESS_CONTRACT_PHASE_80.md"],
   ["public", "nexus-mobile-clinic-mode-readiness-contract.js"],
-  ["scripts", "nexus-mobile-clinic-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-mobile-clinic-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AB1 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -279,10 +279,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ab1-mobile-clinic-mode-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AB1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aa5-pharmacy-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AA5 QA.");
-assert(qaSuite.includes("scripts/nexus-mobile-clinic-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 80 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aa5-pharmacy-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AA5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-mobile-clinic-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 80 QA.");
 
 console.log("[nexus-sprint-ab1-mobile-clinic-mode-runtime-activation-readiness-gate-qa] passed");

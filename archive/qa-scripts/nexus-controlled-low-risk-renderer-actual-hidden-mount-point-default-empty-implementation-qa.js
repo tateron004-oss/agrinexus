@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -110,7 +110,7 @@ const helperDeclaration = app.indexOf("function createNexusControlledLowRiskIner
 const afterHelperDeclaration = app.slice(helperDeclaration + "function createNexusControlledLowRiskInertCardForTest".length);
 assert(!afterHelperDeclaration.match(/createNexusControlledLowRiskInertCardForTest\s*\(/), "inert test helper must not be invoked from runtime flow");
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation": "node scripts/${scriptName}"`), "package.json must expose Phase 13L QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13L QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13L QA guard");
 
 console.log("Nexus controlled low-risk renderer actual hidden mount point default-empty implementation QA passed.");

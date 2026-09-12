@@ -166,11 +166,11 @@ git diff --check
 node --check server.js
 node --check public/app.js
 node --check public/nexus-message-preparation-runtime.js
-node --check scripts/nexus-message-preparation-runtime-qa.js
-node scripts/nexus-message-preparation-runtime-qa.js
+node --check archive/qa-scripts/nexus-message-preparation-runtime-qa.js
+node archive/qa-scripts/nexus-message-preparation-runtime-qa.js
 npm.cmd run qa:nexus-message-preparation-runtime
-node scripts/nexus-voice-open-dialogue-runtime-qa.js
-node scripts/nexus-universal-navigation-runtime-qa.js
+node archive/qa-scripts/nexus-voice-open-dialogue-runtime-qa.js
+node archive/qa-scripts/nexus-universal-navigation-runtime-qa.js
 node scripts/qa-suite.js nexus-workforce
 node scripts/qa-suite.js all-safe
 ```

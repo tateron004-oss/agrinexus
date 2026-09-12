@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -97,10 +97,10 @@ function assertCardStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-ar7-assistant-preview-card"],
-    "node scripts/nexus-ar7-assistant-preview-card-qa.js",
+    "node archive/qa-scripts/nexus-ar7-assistant-preview-card-qa.js",
     "AR7 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar7-assistant-preview-card-qa.js"), "AR7 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar7-assistant-preview-card-qa.js"), "AR7 QA must be wired into local-safe suites.");
 }
 
 function assertRuntimeResponseHasCardInputs() {

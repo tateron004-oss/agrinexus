@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -75,10 +75,10 @@ includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE
 includes(app, "nexus-genesis-voice-runtime-v456", "voice runtime marker");
 assert.strictEqual(
   pkg.scripts["qa:nexus-genesis-realtime-repeated-turn-lifecycle"],
-  "node scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
+  "node archive/qa-scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js",
   "package alias should run repeated-turn lifecycle QA"
 );
-includes(qaSuite, "scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js", "qa-suite wiring");
 
 function createController() {
   return {

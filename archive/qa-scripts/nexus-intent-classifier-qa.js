@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const classifierPath = path.join(root, "public", "nexus-intent-classifier.js");
 const serverPath = path.join(root, "server.js");
 const appPath = path.join(root, "public", "app.js");

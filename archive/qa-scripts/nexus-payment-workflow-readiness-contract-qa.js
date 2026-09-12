@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PAYMENT_WORKFLOW_READINESS_CONTRACT_PHASE_57.md"),
   contract: path.join(root, "public", "nexus-payment-workflow-readiness-contract.js"),
@@ -170,7 +170,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-payment-workflow-readiness-contract"] === "node scripts/nexus-payment-workflow-readiness-contract-qa.js", "package.json must expose qa:nexus-payment-workflow-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-payment-workflow-readiness-contract-qa.js"), "qa-suite.js must include payment workflow readiness QA.");
+assert(packageData.scripts["qa:nexus-payment-workflow-readiness-contract"] === "node archive/qa-scripts/nexus-payment-workflow-readiness-contract-qa.js", "package.json must expose qa:nexus-payment-workflow-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-payment-workflow-readiness-contract-qa.js"), "qa-suite.js must include payment workflow readiness QA.");
 
 console.log("[nexus-payment-workflow-readiness-contract-qa] passed");

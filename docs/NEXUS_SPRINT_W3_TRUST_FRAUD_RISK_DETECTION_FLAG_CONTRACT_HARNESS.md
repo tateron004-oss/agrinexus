@@ -7,7 +7,7 @@ Sprint W3 adds fixture, harness, documentation, and QA only. It does not load Tr
 ## Added Artifacts
 
 - `fixtures/nexus/trust-fraud-risk-detection-feature-flags.json`
-- `scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js`
 
 ## Fixture Coverage
 

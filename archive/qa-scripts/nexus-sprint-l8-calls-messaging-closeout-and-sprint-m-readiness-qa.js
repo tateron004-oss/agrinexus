@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -20,7 +20,7 @@ const docName = "NEXUS_SPRINT_L8_CALLS_MESSAGING_CLOSEOUT_AND_SPRINT_M_READINESS
 const qaName = "nexus-sprint-l8-calls-messaging-closeout-and-sprint-m-readiness-qa.js";
 
 assert(exists("docs", docName), "L8 closeout doc must exist.");
-assert(exists("scripts", qaName), "L8 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "L8 QA must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -107,12 +107,12 @@ assertIncludes(doc, [
   "nexus-sprint-l6-flag-gated-call-message-preview-qa.js",
   "nexus-sprint-l7-standard-user-browser-validation-for-call-message-preview-qa.js",
   qaName
-].forEach(name => assert(exists("scripts", name), `${name} must exist.`));
+].forEach(name => assert(exists("archive", "qa-scripts", name), `${name} must exist.`));
 
-const contract = require("../public/nexus-call-message-intent-contract.js");
-const mapper = require("../public/nexus-call-message-risk-evidence-mapping.js");
-const guard = require("../public/nexus-call-message-preview-flag-guard.js");
-const preview = require("../public/nexus-call-message-preview.js");
+const contract = require("../../public/nexus-call-message-intent-contract.js");
+const mapper = require("../../public/nexus-call-message-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-call-message-preview-flag-guard.js");
+const preview = require("../../public/nexus-call-message-preview.js");
 const harness = require("./nexus-sprint-l3-call-message-intent-harness.js");
 
 assert.equal(typeof contract.validateCallMessageIntent, "function", "L2 contract must remain callable.");
@@ -217,7 +217,7 @@ const unsafeTerms = [
   "public/nexus-call-message-risk-evidence-mapping.js",
   "public/nexus-call-message-preview-flag-guard.js",
   "public/nexus-call-message-preview.js",
-  "scripts/nexus-sprint-l3-call-message-intent-harness.js"
+  "archive/qa-scripts/nexus-sprint-l3-call-message-intent-harness.js"
 ].forEach(relativePath => {
   const source = read(...relativePath.split("/"));
   unsafeTerms.forEach(term => assert(!source.includes(term), `${relativePath} must not include side-effect API: ${term}`));
@@ -235,13 +235,13 @@ const unsafeTerms = [
 ].forEach(alias => assert(pkg.scripts && pkg.scripts[alias], `${alias} package script must exist.`));
 
 [
-  "scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js",
-  "scripts/nexus-sprint-l2-inert-call-message-intent-contract-qa.js",
-  "scripts/nexus-sprint-l3-call-message-intent-harness-qa.js",
-  "scripts/nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa.js",
-  "scripts/nexus-sprint-l5-flag-off-calls-messaging-regression-guard-qa.js",
-  "scripts/nexus-sprint-l6-flag-gated-call-message-preview-qa.js",
-  "scripts/nexus-sprint-l7-standard-user-browser-validation-for-call-message-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-l2-inert-call-message-intent-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-l3-call-message-intent-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa.js",
+  "archive/qa-scripts/nexus-sprint-l5-flag-off-calls-messaging-regression-guard-qa.js",
+  "archive/qa-scripts/nexus-sprint-l6-flag-gated-call-message-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-l7-standard-user-browser-validation-for-call-message-preview-qa.js",
   `scripts/${qaName}`
 ].forEach(script => assert(qaSuite.includes(script), `qa-suite must include ${script}.`));
 

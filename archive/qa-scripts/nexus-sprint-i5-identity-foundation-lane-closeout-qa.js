@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_IDENTITY_FOUNDATION_FEATURE_FLAG_STATE,
   normalizeIdentityFoundationFeatureFlagState
-} = require("../public/nexus-identity-foundation-feature-flag.js");
+} = require("../../public/nexus-identity-foundation-feature-flag.js");
 const {
   protectedFields,
   loadIdentityFoundationFlagFixtures,
   validateIdentityFoundationFlagFixtures
 } = require("./nexus-sprint-i3-identity-foundation-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_I5_IDENTITY_FOUNDATION_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-i5-identity-foundation-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint I5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint I5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint I5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const identityContract = read("public", "nexus-identity-foundation-contract.js");
 const featureFlagModule = read("public", "nexus-identity-foundation-feature-flag.js");
-const i3Harness = read("scripts", "nexus-sprint-i3-identity-foundation-flag-contract-harness.js");
+const i3Harness = read("archive", "qa-scripts", "nexus-sprint-i3-identity-foundation-flag-contract-harness.js");
 const fixtures = loadIdentityFoundationFlagFixtures();
 
 assertIncludes(doc, [
@@ -163,7 +163,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint I5 requires prior Sprint I QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint I5 requires prior Sprint I QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint I QA: ${requiredScript}`);
 }
 
@@ -291,7 +291,7 @@ for (const source of [featureFlagModule, i3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-i5-identity-foundation-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint I5 QA.");
 

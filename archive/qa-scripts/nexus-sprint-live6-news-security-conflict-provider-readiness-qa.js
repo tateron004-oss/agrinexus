@@ -3,10 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
-const newsSecurity = require("../server/nexus-news-security-source-provider.js");
+} = require("../../public/nexus-live-source-result-contract.js");
+const newsSecurity = require("../../server/nexus-news-security-source-provider.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-live6-news-security-conflict-provider-readiness-qa.
 
 assert(exists("docs", docName), "LIVE6 doc must exist.");
 assert(exists("server", moduleName), "LIVE6 provider module must exist.");
-assert(exists("scripts", qaName), "LIVE6 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE6 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("server", moduleName);
@@ -147,9 +147,9 @@ assert.equal(liveReady.rawResultAvailable, false, "LIVE6 must not claim raw live
 ].forEach(term => assert(!moduleSource.includes(term), `LIVE6 module must not include unsafe safety claim or execution path: ${term}`));
 
 const alias = "qa:nexus-sprint-live6-news-security-conflict-provider-readiness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE6 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live5-weather-provider-readiness-qa.js"), "LIVE6 requires LIVE5 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live5-weather-provider-readiness-qa.js"), "LIVE6 requires LIVE5 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live6-news-security-conflict-provider-readiness-qa] passed");

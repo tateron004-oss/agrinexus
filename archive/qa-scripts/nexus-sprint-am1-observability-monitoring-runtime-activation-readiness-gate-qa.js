@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const docName = "NEXUS_SPRINT_AM1_OBSERVABILITY_MONITORING_RUNTIME_ACTIVATION_RE
 const qaName = "nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint AM1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint AM1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AM1 QA script must exist.");
 
 const doc = read("docs", docName);
 const al5Doc = read("docs", "NEXUS_SPRINT_AL5_LOCAL_LANGUAGE_PACK_MODE_LANE_CLOSEOUT.md");
@@ -31,7 +31,7 @@ const runtime = [read("public", "index.html"), read("public", "app.js"), read("s
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const contractSource = read("public", "nexus-observability-monitoring-readiness-contract.js");
-const contract = require("../public/nexus-observability-monitoring-readiness-contract.js");
+const contract = require("../../public/nexus-observability-monitoring-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint AM1",
@@ -152,7 +152,7 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_AL5_LOCAL_LANGUAGE_PACK_MODE_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_OBSERVABILITY_MONITORING_READINESS_CONTRACT_PHASE_91.md"],
   ["public", "nexus-observability-monitoring-readiness-contract.js"],
-  ["scripts", "nexus-observability-monitoring-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-observability-monitoring-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AM1 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -266,10 +266,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AM1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al5-local-language-pack-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AL5 QA.");
-assert(qaSuite.includes("scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Phase 91 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al5-local-language-pack-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AL5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-observability-monitoring-readiness-contract-qa.js"), "qa-suite must continue to include Phase 91 QA.");
 
 console.log("[nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa] passed");

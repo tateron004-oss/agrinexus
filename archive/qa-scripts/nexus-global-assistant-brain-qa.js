@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
 const app = read("public/app.js");
@@ -104,9 +104,9 @@ function includes(source, token, label = token) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-global-assistant-brain"],
-  "node scripts/nexus-global-assistant-brain-qa.js",
+  "node archive/qa-scripts/nexus-global-assistant-brain-qa.js",
   "package alias missing"
 );
-includes(qaSuite, "scripts/nexus-global-assistant-brain-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-global-assistant-brain-qa.js", "qa-suite wiring");
 
 console.log("nexus-global-assistant-brain QA passed");

@@ -7,7 +7,7 @@ const {
   validateTrustFraudRiskDetectionFlagFixtures
 } = require("./nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness
 
 assert(exists("docs", docName), "Sprint W3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint W3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint W3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint W3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint W3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint W3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "c78fdad49efcc1b2bf77950ebf0e4abbad234884",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/trust-fraud-risk-detection-feature-flags.json",
-  "scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js",
   "riskReviewAllowed: false",
   "riskSignalPreviewAllowed: false",
   "fraudSignalPreviewAllowed: false",
@@ -174,10 +174,10 @@ assert(exists("docs", "NEXUS_SPRINT_W2_TRUST_FRAUD_RISK_DETECTION_FEATURE_FLAG_C
 assert(exists("public", "nexus-trust-fraud-risk-detection-feature-flag.js"), "W3 requires W2 feature flag module.");
 
 const alias = "qa:nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint W3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-w1-trust-fraud-risk-detection-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint W1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-w2-trust-fraud-risk-detection-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint W2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-w1-trust-fraud-risk-detection-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint W1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-w2-trust-fraud-risk-detection-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint W2 QA.");
 
 console.log("[nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness-qa] passed");

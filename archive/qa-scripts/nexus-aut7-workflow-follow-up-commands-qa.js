@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const planner = require("../server/nexus-autonomy-workflow-planner.js");
-const session = require("../server/nexus-autonomy-workflow-session-state.js");
-const followUps = require("../server/nexus-autonomy-workflow-follow-up-commands.js");
+const planner = require("../../server/nexus-autonomy-workflow-planner.js");
+const session = require("../../server/nexus-autonomy-workflow-session-state.js");
+const followUps = require("../../server/nexus-autonomy-workflow-follow-up-commands.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -145,10 +145,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-aut7-workflow-follow-up-commands"],
-    "node scripts/nexus-aut7-workflow-follow-up-commands-qa.js",
+    "node archive/qa-scripts/nexus-aut7-workflow-follow-up-commands-qa.js",
     "AUT7 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut7-workflow-follow-up-commands-qa.js"), "AUT7 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut7-workflow-follow-up-commands-qa.js"), "AUT7 QA must be wired into local-safe suites.");
 }
 
 function runAut7WorkflowFollowUpCommandsQa() {

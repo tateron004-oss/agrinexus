@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_EMERGENCY_HANDOFF_READINESS_CONTRACT_PHASE_59.md"),
   contract: path.join(root, "public", "nexus-emergency-handoff-readiness-contract.js"),
@@ -171,7 +171,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-emergency-handoff-readiness-contract"] === "node scripts/nexus-emergency-handoff-readiness-contract-qa.js", "package.json must expose qa:nexus-emergency-handoff-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-emergency-handoff-readiness-contract-qa.js"), "qa-suite.js must include emergency handoff readiness QA.");
+assert(packageData.scripts["qa:nexus-emergency-handoff-readiness-contract"] === "node archive/qa-scripts/nexus-emergency-handoff-readiness-contract-qa.js", "package.json must expose qa:nexus-emergency-handoff-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-emergency-handoff-readiness-contract-qa.js"), "qa-suite.js must include emergency handoff readiness QA.");
 
 console.log("[nexus-emergency-handoff-readiness-contract-qa] passed");

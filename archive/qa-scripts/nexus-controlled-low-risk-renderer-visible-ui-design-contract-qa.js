@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,8 +25,8 @@ for (const parts of [
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_ON_TEST_HARNESS_IMPLEMENTATION.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_ON_BROWSER_REGRESSION_VALIDATION.md"],
   ["docs", "NEXUS_LOW_RISK_SUGGESTION_DISPLAY_PLAN.md"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"]
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -133,9 +133,9 @@ assert(app.includes("localTestFlagOn"), "Phase 12Y harness must remain local/tes
 assert(app.includes("metadata_only"), "Phase 12Y harness must remain metadata/no-op only");
 
 assert(packageJson.includes("\"qa:nexus-controlled-low-risk-renderer-visible-ui-design-contract\""), "package.json must expose qa:nexus-controlled-low-risk-renderer-visible-ui-design-contract");
-assert(suite.includes("scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must include Phase 13A design contract QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must keep Phase 12Y implementation QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"), "nexus-workforce suite must keep Phase 12Z browser regression QA");
+assert(suite.includes("archive/qa-scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js"), "nexus-workforce suite must include Phase 13A design contract QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must keep Phase 12Y implementation QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js"), "nexus-workforce suite must keep Phase 12Z browser regression QA");
 
 console.log("Nexus controlled low-risk renderer visible UI design contract QA passed");
 console.log("- Phase 13A contract defines allowed fields, prohibited actions, and safety copy");

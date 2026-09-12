@@ -5,9 +5,9 @@ const {
   WORKFORCE_INTELLIGENCE_READINESS_CONTRACT,
   WORKFORCE_INTELLIGENCE_NO_EXECUTION_DEFAULTS,
   createWorkforceIntelligenceReadinessContract
-} = require("../public/nexus-workforce-intelligence-readiness-contract.js");
+} = require("../../public/nexus-workforce-intelligence-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,7 +28,7 @@ const docName = "NEXUS_SPRINT_U1_WORKFORCE_INTELLIGENCE_RUNTIME_ACTIVATION_READI
 const qaName = "nexus-sprint-u1-workforce-intelligence-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint U1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint U1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint U1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -222,7 +222,7 @@ for (const field of [
 for (const requiredPath of [
   ["docs", "NEXUS_WORKFORCE_INTELLIGENCE_READINESS_CONTRACT_PHASE_73.md"],
   ["public", "nexus-workforce-intelligence-readiness-contract.js"],
-  ["scripts", "nexus-workforce-intelligence-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-workforce-intelligence-readiness-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_T5_HEALTHCARE_ACCESS_INTELLIGENCE_LANE_CLOSEOUT.md"]
 ]) {
   assert(exists(...requiredPath), `U1 requires artifact: ${requiredPath.join("/")}`);
@@ -277,7 +277,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-u1-workforce-intelligence-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint U1 QA.");
 

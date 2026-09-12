@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-pharmacy-mode-readiness-contract.js`;
 - `public/nexus-pharmacy-mode-feature-flag.js`;
-- `scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js`;
 - `fixtures/nexus/pharmacy-mode-feature-flags.json`;
 - Sprint AA QA scripts.
 

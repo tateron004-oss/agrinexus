@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_PROVIDER_AVAILABILITY_FALLBACK_CONTRACT_PHASE_51D.md"),
   readinessGate: path.join(root, "public", "nexus-communications-provider-execution-readiness-gate.js"),
@@ -157,7 +157,7 @@ assert(doc.includes("does not open providers or execute communications"), "doc m
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-provider-availability-fallback-contract"] === "node scripts/nexus-communications-provider-availability-fallback-contract-qa.js", "package.json must expose qa:nexus-communications-provider-availability-fallback-contract.");
-assert(qaSuite.includes("scripts/nexus-communications-provider-availability-fallback-contract-qa.js"), "qa-suite.js must include communications provider availability fallback QA.");
+assert(packageData.scripts["qa:nexus-communications-provider-availability-fallback-contract"] === "node archive/qa-scripts/nexus-communications-provider-availability-fallback-contract-qa.js", "package.json must expose qa:nexus-communications-provider-availability-fallback-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-provider-availability-fallback-contract-qa.js"), "qa-suite.js must include communications provider availability fallback QA.");
 
 console.log("[nexus-communications-provider-availability-fallback-contract-qa] passed");

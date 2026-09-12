@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -132,9 +132,9 @@ includes(exposeBlock, "window.getNexusPresenceRuntimeBaseline = getNexusPresence
 assert(!/voice cloned|imitates? .*actor|any regional accent|guaranteed accent|fake hearing|fake completion/i.test(app), "Presence runtime must not introduce fake voice/accent/completion claims");
 console.log("PASS no fake presence claims");
 
-assert(pkg.scripts["qa:nexus-presence-runtime-baseline"] === "node scripts/nexus-presence-runtime-baseline-qa.js", "package alias exists");
+assert(pkg.scripts["qa:nexus-presence-runtime-baseline"] === "node archive/qa-scripts/nexus-presence-runtime-baseline-qa.js", "package alias exists");
 console.log("PASS package alias exists");
-assert(qaSuite.includes("scripts/nexus-presence-runtime-baseline-qa.js"), "safe QA suite includes presence runtime baseline QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-presence-runtime-baseline-qa.js"), "safe QA suite includes presence runtime baseline QA");
 console.log("PASS safe QA suite includes presence runtime baseline QA");
 
 console.log("Nexus Presence runtime baseline QA passed.");

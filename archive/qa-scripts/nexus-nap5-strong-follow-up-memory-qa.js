@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const memory = require("../server/nexus-strong-follow-up-memory.js");
-const prep = require("../server/nexus-safe-action-preparation.js");
-const planner = require("../server/nexus-agent-task-planner.js");
+const memory = require("../../server/nexus-strong-follow-up-memory.js");
+const prep = require("../../server/nexus-safe-action-preparation.js");
+const planner = require("../../server/nexus-agent-task-planner.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -47,10 +47,10 @@ function runNap5StrongFollowUpMemoryQa() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap5-strong-follow-up-memory"],
-    "node scripts/nexus-nap5-strong-follow-up-memory-qa.js",
+    "node archive/qa-scripts/nexus-nap5-strong-follow-up-memory-qa.js",
     "NAP5 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap5-strong-follow-up-memory-qa.js"), "NAP5 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap5-strong-follow-up-memory-qa.js"), "NAP5 QA must be wired into local-safe suites.");
 
   const activePlan = planner.buildAgentTaskPlan("Help me get a farm job.");
   const activePreparation = prep.buildSafeActionPreparation("Draft questions for that program.");

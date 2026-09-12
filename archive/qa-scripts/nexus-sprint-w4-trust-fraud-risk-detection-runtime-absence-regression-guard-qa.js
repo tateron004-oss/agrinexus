@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TRUST_FRAUD_RISK_DETECTION_FEATURE_FLAG_STATE,
   normalizeTrustFraudRiskDetectionFeatureFlagState
-} = require("../public/nexus-trust-fraud-risk-detection-feature-flag.js");
+} = require("../../public/nexus-trust-fraud-risk-detection-feature-flag.js");
 const {
   protectedFields,
   loadTrustFraudRiskDetectionFlagFixtures,
   validateTrustFraudRiskDetectionFlagFixtures
 } = require("./nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_W4_TRUST_FRAUD_RISK_DETECTION_RUNTIME_ABSENCE_REGR
 const qaName = "nexus-sprint-w4-trust-fraud-risk-detection-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint W4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint W4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint W4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-trust-fraud-risk-detection-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-trust-fraud-risk-detection-feature-flag.js");
-const w3Harness = read("scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
+const w3Harness = read("archive", "qa-scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js");
 const fixtures = loadTrustFraudRiskDetectionFlagFixtures();
 
 assertIncludes(doc, [
@@ -69,7 +69,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-trust-fraud-risk-detection-readiness-contract.js",
   "public/nexus-trust-fraud-risk-detection-feature-flag.js",
-  "scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js",
   "fixtures/nexus/trust-fraud-risk-detection-feature-flags.json",
   "Sprint W QA scripts"
 ], "W4 runtime absence artifact list");
@@ -146,7 +146,7 @@ for (const requiredPath of [
   ["public", "nexus-trust-fraud-risk-detection-readiness-contract.js"],
   ["public", "nexus-trust-fraud-risk-detection-feature-flag.js"],
   ["fixtures", "nexus", "trust-fraud-risk-detection-feature-flags.json"],
-  ["scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-w3-trust-fraud-risk-detection-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `W4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -294,7 +294,7 @@ for (const source of [featureFlagModule, w3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-w4-trust-fraud-risk-detection-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint W4 QA.");
 

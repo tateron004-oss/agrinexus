@@ -1,7 +1,7 @@
 const assert = require("node:assert");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const brain = require(path.join(root, "server/nexusAgenticBrainRuntime.js"));
 
 async function run(command, db) {

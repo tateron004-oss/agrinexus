@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -141,7 +141,7 @@ for (const forbidden of [
 }
 
 assert(packageJson.includes("\"qa:nexus-low-risk-renderer-controlled-runtime-wiring-plan\""), "package.json must expose qa:nexus-low-risk-renderer-controlled-runtime-wiring-plan");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js"), "nexus-workforce suite should include controlled runtime wiring plan QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js"), "nexus-workforce suite should include controlled runtime wiring plan QA");
 assert(exists("docs", "NEXUS_LOW_RISK_RENDERER_BROWSER_VALIDATION.md"), "Phase 12P browser validation doc must remain present");
 assert(exists("docs", "NEXUS_LOW_RISK_INERT_RENDERER_PROTOTYPE_IMPLEMENTATION.md"), "Phase 12O implementation doc must remain present");
 

@@ -69,7 +69,7 @@ Phase 101 preserves these guarantees: no provider contacted; no message sent; no
 
 ## QA coverage
 
-The deterministic QA script `scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js` validates safe agriculture prompts, excluded and high-risk prompts, pesticide and fertilizer safety boundaries, source-backed label requirements, general guidance fallback, no forbidden controls or execution flags, and absence of live fetch, geolocation, media, payment, phone, mail, or navigation execution paths.
+The deterministic QA script `archive/qa-scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js` validates safe agriculture prompts, excluded and high-risk prompts, pesticide and fertilizer safety boundaries, source-backed label requirements, general guidance fallback, no forbidden controls or execution flags, and absence of live fetch, geolocation, media, payment, phone, mail, or navigation execution paths.
 
 ## Browser validation plan
 

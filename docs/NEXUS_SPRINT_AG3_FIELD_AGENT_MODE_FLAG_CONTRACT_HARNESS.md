@@ -7,7 +7,7 @@ Sprint AG3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/field-agent-mode-feature-flags.json`
-- `scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ag3-field-agent-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

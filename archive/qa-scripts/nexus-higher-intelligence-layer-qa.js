@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -99,7 +99,7 @@ const runtimeSource = functionNames.map(name => extracted[name]).join("\n");
 ].forEach(term => assert(app.includes(term), `higher intelligence layer should include ${term}`));
 
 assert(pkg.scripts["qa:nexus-higher-intelligence-layer"], "package alias should run higher intelligence QA");
-assert(qaSuite.includes("scripts/nexus-higher-intelligence-layer-qa.js"), "qa-suite should include higher intelligence QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-higher-intelligence-layer-qa.js"), "qa-suite should include higher intelligence QA");
 
 [
   "window.open",

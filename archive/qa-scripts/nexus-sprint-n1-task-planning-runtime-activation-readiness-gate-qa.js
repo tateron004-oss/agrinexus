@@ -7,9 +7,9 @@ const {
   TASK_PLANNING_NO_EXECUTION_DEFAULTS,
   TASK_PLANNING_READINESS_CONTRACT,
   createTaskPlanningReadinessContract
-} = require("../public/nexus-task-planning-readiness-contract.js");
+} = require("../../public/nexus-task-planning-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -30,7 +30,7 @@ const docName = "NEXUS_SPRINT_N1_TASK_PLANNING_RUNTIME_ACTIVATION_READINESS_GATE
 const qaName = "nexus-sprint-n1-task-planning-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint N1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint N1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint N1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -285,11 +285,11 @@ for (const term of [
 
 assert(exists("docs", "NEXUS_SPRINT_M5_MULTI_TURN_REASONING_LANE_CLOSEOUT.md"), "N1 requires Sprint M5 closeout doc.");
 assert(exists("docs", "NEXUS_TASK_PLANNING_READINESS_CONTRACT_PHASE_66.md"), "N1 requires Phase 66 doc.");
-assert(exists("scripts", "nexus-task-planning-readiness-contract-qa.js"), "N1 requires Phase 66 QA.");
-assert(qaSuite.includes("scripts/nexus-task-planning-readiness-contract-qa.js"), "qa-suite must include Phase 66 QA.");
+assert(exists("archive", "qa-scripts", "nexus-task-planning-readiness-contract-qa.js"), "N1 requires Phase 66 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-task-planning-readiness-contract-qa.js"), "qa-suite must include Phase 66 QA.");
 
 const alias = "qa:nexus-sprint-n1-task-planning-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint N1 QA.");
 

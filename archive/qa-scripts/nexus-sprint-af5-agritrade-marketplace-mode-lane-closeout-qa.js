@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_AGRITRADE_MARKETPLACE_MODE_FEATURE_FLAG_STATE,
   normalizeAgritradeMarketplaceModeFeatureFlagState
-} = require("../public/nexus-agritrade-marketplace-mode-feature-flag.js");
+} = require("../../public/nexus-agritrade-marketplace-mode-feature-flag.js");
 const {
   protectedFields,
   loadAgritradeMarketplaceModeFlagFixtures,
   validateAgritradeMarketplaceModeFlagFixtures
 } = require("./nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_AF5_AGRITRADE_MARKETPLACE_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-af5-agritrade-marketplace-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AF5 lane closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AF5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AF5 QA script must exist.");
 
 const doc = read("docs", docName);
 const af4Doc = read("docs", "NEXUS_SPRINT_AF4_AGRITRADE_MARKETPLACE_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
@@ -43,7 +43,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-agritrade-marketplace-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-agritrade-marketplace-mode-feature-flag.js");
-const harness = read("scripts", "nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness.js");
+const harness = read("archive", "qa-scripts", "nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness.js");
 const fixtures = loadAgritradeMarketplaceModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -84,12 +84,12 @@ for (const requiredPath of [
   ["public", "nexus-agritrade-marketplace-mode-feature-flag.js"],
   ["public", "nexus-field-agent-mode-readiness-contract.js"],
   ["fixtures", "nexus", "agritrade-marketplace-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa.js"],
-  ["scripts", "nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract-qa.js"],
-  ["scripts", "nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness-qa.js"],
-  ["scripts", "nexus-sprint-af4-agritrade-marketplace-mode-runtime-absence-regression-guard-qa.js"],
-  ["scripts", "nexus-agritrade-marketplace-mode-readiness-contract-qa.js"],
-  ["scripts", "nexus-field-agent-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-af4-agritrade-marketplace-mode-runtime-absence-regression-guard-qa.js"],
+  ["archive", "qa-scripts", "nexus-agritrade-marketplace-mode-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-field-agent-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AF5 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -212,14 +212,14 @@ for (const source of [featureFlagModule, harness]) {
 }
 
 const alias = "qa:nexus-sprint-af5-agritrade-marketplace-mode-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AF5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AF1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AF2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AF3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-af4-agritrade-marketplace-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AF4 QA.");
-assert(qaSuite.includes("scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 84 QA.");
-assert(qaSuite.includes("scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AF1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AF2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AF3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-af4-agritrade-marketplace-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AF4 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 84 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-field-agent-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 85 QA.");
 
 console.log("[nexus-sprint-af5-agritrade-marketplace-mode-lane-closeout-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const checklistPath = path.join(root, "docs", "NEXUS_PHASE_101C_STANDARD_USER_BROWSER_VALIDATION_CHECKLIST.md");
 
 function assert(condition, message) {
@@ -19,7 +19,7 @@ const checklist = fs.readFileSync(checklistPath, "utf8");
   "node server.js",
   "No special test candidate build",
   "git diff --check",
-  "node scripts/phase-101c-post-wiring-validation-qa.js",
+  "node archive/qa-scripts/phase-101c-post-wiring-validation-qa.js",
   "node scripts/qa-suite.js nexus-workforce",
   "node scripts/qa-suite.js all-safe"
 ].forEach(required => assert(checklist.includes(required), `checklist must include ${required}.`));

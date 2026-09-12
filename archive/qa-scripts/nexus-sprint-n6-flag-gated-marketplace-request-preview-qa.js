@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -18,7 +18,7 @@ const qaName = "nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js";
 
 assert(exists("docs", docName), "N6 doc must exist.");
 assert(exists("public", moduleName), "N6 preview module must exist.");
-assert(exists("scripts", qaName), "N6 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "N6 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -28,7 +28,7 @@ const serverSource = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = JSON.parse(read("fixtures", "nexus", "marketplace-requests.json"));
-const preview = require("../public/nexus-marketplace-request-preview.js");
+const preview = require("../../public/nexus-marketplace-request-preview.js");
 
 [
   "Sprint N4 risk/evidence mapper",
@@ -131,9 +131,9 @@ assert.equal(model.executionAllowed, false, "N6 restricted fixture must not exec
 });
 
 const alias = "qa:nexus-sprint-n6-flag-gated-marketplace-request-preview";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include N6 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js"), "N6 requires N5 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js"), "N6 requires N5 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-n6-flag-gated-marketplace-request-preview-qa] passed");

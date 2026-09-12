@@ -5,7 +5,7 @@ const {
   DEFAULT_LOCAL_LANGUAGE_PACK_MODE_FEATURE_FLAG_STATE,
   PROTECTED_LOCAL_LANGUAGE_PACK_MODE_FLAG_FIELDS,
   normalizeLocalLanguagePackModeFeatureFlagState
-} = require("../public/nexus-local-language-pack-mode-feature-flag.js");
+} = require("../../public/nexus-local-language-pack-mode-feature-flag.js");
 const {
   protectedFields,
   loadLocalLanguagePackModeFlagFixtures,
@@ -13,7 +13,7 @@ const {
   validateLocalLanguagePackModeFlagFixtures
 } = require("./nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -34,7 +34,7 @@ const docName = "NEXUS_SPRINT_AL4_LOCAL_LANGUAGE_PACK_MODE_RUNTIME_ABSENCE_REGRE
 const qaName = "nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AL4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AL4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AL4 QA script must exist.");
 
 const doc = read("docs", docName);
 const runtime = [read("public", "index.html"), read("public", "app.js"), read("server.js")].join("\n");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-local-language-pack-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-local-language-pack-mode-feature-flag.js");
-const al3Harness = read("scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
+const al3Harness = read("archive", "qa-scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
 const fixtures = loadLocalLanguagePackModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -66,7 +66,7 @@ assertIncludes(doc, [
   "Phase 90 Local Language Pack Mode readiness contract",
   "public/nexus-local-language-pack-mode-readiness-contract.js",
   "public/nexus-local-language-pack-mode-feature-flag.js",
-  "scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js",
   "fixtures/nexus/local-language-pack-mode-feature-flags.json",
   "Sprint AL QA scripts"
 ], "AL4 protected artifacts");
@@ -154,7 +154,7 @@ for (const requiredPath of [
   ["public", "nexus-local-language-pack-mode-readiness-contract.js"],
   ["public", "nexus-local-language-pack-mode-feature-flag.js"],
   ["fixtures", "nexus", "local-language-pack-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AL4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -273,12 +273,12 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AL4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AL3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AL2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
-assert(qaSuite.includes("scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Local Language Pack Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AL3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AL2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Local Language Pack Mode readiness QA.");
 
 console.log("[nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa] passed");

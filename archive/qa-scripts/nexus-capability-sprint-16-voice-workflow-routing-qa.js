@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
@@ -97,16 +97,16 @@ assert(
 ].forEach(term => assert(normalizerSource.includes("normalizeImperfectSpeech") && app.includes(term), `Sprint 16 should preserve high-risk ${term} terms for existing gates.`));
 
 assert(app.includes("__NEXUS_RELEASE_SHA__") && index.includes("__NEXUS_RELEASE_SHA__") && server.includes("NEXUS_EFFECTIVE_RELEASE_SHA"), "Sprint 16 should preserve coordinated immutable release identity.");
-require("./lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
+require("../../scripts/lib/assert-release-cache-contract.js").assertReleaseCacheContract({ app, server, sw });
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-16-voice-workflow-routing"],
-  "node scripts/nexus-capability-sprint-16-voice-workflow-routing-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-16-voice-workflow-routing-qa.js",
   "package alias should expose Sprint 16 QA."
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-16-voice-workflow-routing-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-16-voice-workflow-routing-qa.js"),
   "qa-suite should include Sprint 16 QA."
 );
 

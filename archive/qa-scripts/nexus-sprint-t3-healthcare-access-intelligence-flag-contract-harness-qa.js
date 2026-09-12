@@ -7,7 +7,7 @@ const {
   validateHealthcareAccessIntelligenceFlagFixtures
 } = require("./nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-t3-healthcare-access-intelligence-flag-contract-har
 
 assert(exists("docs", docName), "Sprint T3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint T3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint T3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint T3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint T3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint T3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "e3eafaa889c14551b2402d9f86860e1b363751f5",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/healthcare-access-intelligence-feature-flags.json",
-  "scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness.js",
   "healthAccessReviewAllowed: false",
   "sourceBackedHealthGuidancePreviewAllowed: false",
   "liveHealthcareAdvisorAllowed: false",
@@ -174,10 +174,10 @@ assert(exists("docs", "NEXUS_SPRINT_T2_HEALTHCARE_ACCESS_INTELLIGENCE_FEATURE_FL
 assert(exists("public", "nexus-healthcare-access-intelligence-feature-flag.js"), "T3 requires T2 feature flag module.");
 
 const alias = "qa:nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint T3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint T1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-t2-healthcare-access-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint T2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-t1-healthcare-access-intelligence-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint T1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-t2-healthcare-access-intelligence-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint T2 QA.");
 
 console.log("[nexus-sprint-t3-healthcare-access-intelligence-flag-contract-harness-qa] passed");

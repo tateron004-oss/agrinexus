@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -24,7 +24,7 @@ const qaName = "nexus-sprint-j6-multi-lane-assistant-router-readiness-contract-q
 
 assert(exists("docs", docName), "Sprint J6 doc must exist.");
 assert(exists("public", moduleName), "Sprint J6 contract module must exist.");
-assert(exists("scripts", qaName), "Sprint J6 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint J6 QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -33,7 +33,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-multi-lane-assistant-router-readiness-contract.js");
+const contract = require("../../public/nexus-multi-lane-assistant-router-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint J6",
@@ -263,7 +263,7 @@ assert.equal(complete.candidate.backendWriteAllowed, false, "J6 factory must for
 });
 
 const alias = "qa:nexus-sprint-j6-multi-lane-assistant-router-readiness-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint J6 QA.");
 

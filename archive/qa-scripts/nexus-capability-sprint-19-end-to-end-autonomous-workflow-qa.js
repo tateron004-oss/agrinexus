@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -202,11 +202,11 @@ const dashboardHtml = sandbox.renderNexusSafetyReviewDashboard(dashboard);
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-19-end-to-end-autonomous-workflow"],
-  "node scripts/nexus-capability-sprint-19-end-to-end-autonomous-workflow-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-19-end-to-end-autonomous-workflow-qa.js",
   "package alias should expose Sprint 19 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-19-end-to-end-autonomous-workflow-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-19-end-to-end-autonomous-workflow-qa.js"),
   "qa-suite should include Sprint 19 QA."
 );
 

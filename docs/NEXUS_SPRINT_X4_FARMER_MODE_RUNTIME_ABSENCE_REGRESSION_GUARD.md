@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-farmer-mode-readiness-contract.js`;
 - `public/nexus-farmer-mode-feature-flag.js`;
-- `scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-x3-farmer-mode-flag-contract-harness.js`;
 - `fixtures/nexus/farmer-mode-feature-flags.json`;
 - Sprint X QA scripts.
 

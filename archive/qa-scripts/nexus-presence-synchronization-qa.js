@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -100,7 +100,7 @@ assert(exposureBlock.includes("window.nexusPresenceSynchronizationState"), "pres
 assert(exposureBlock.includes("window.syncNexusPresenceSurfaces"), "presence synchronization sync helper is exposed");
 assert(!/completed.*provider contacted|completed.*payment|speaking.*provider contacted/i.test(contractBlock), "presence synchronization does not claim fake execution");
 
-assert(packageJson.scripts["qa:nexus-presence-synchronization"] === "node scripts/nexus-presence-synchronization-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-presence-synchronization-qa.js"), "safe QA suite includes presence synchronization QA");
+assert(packageJson.scripts["qa:nexus-presence-synchronization"] === "node archive/qa-scripts/nexus-presence-synchronization-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-presence-synchronization-qa.js"), "safe QA suite includes presence synchronization QA");
 
 console.log("Nexus Presence synchronization QA passed.");

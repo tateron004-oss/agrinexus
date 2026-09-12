@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TRANSPORTATION_MODE_FEATURE_FLAG_STATE,
   normalizeTransportationModeFeatureFlagState
-} = require("../public/nexus-transportation-mode-feature-flag.js");
+} = require("../../public/nexus-transportation-mode-feature-flag.js");
 const {
   protectedFields,
   loadTransportationModeFlagFixtures,
   validateTransportationModeFlagFixtures
 } = require("./nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_AC5_TRANSPORTATION_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AC5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AC5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AC5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-transportation-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-transportation-mode-feature-flag.js");
-const ac3Harness = read("scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
+const ac3Harness = read("archive", "qa-scripts", "nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
 const ac4Doc = read("docs", "NEXUS_SPRINT_AC4_TRANSPORTATION_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
 const fixtures = loadTransportationModeFlagFixtures();
 
@@ -195,7 +195,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint AC5 requires prior Sprint AC QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint AC5 requires prior Sprint AC QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint AC QA: ${requiredScript}`);
 }
 
@@ -302,9 +302,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-ac5-transportation-mode-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js",
   "package.json must expose Sprint AC5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AC5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js"), "qa-suite must include Sprint AC5 QA.");
 
 console.log("[nexus-sprint-ac5-transportation-mode-lane-closeout-qa] passed");

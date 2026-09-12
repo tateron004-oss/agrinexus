@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const docName = "NEXUS_SPRINT_X1_FARMER_MODE_RUNTIME_ACTIVATION_READINESS_GATE.m
 const qaName = "nexus-sprint-x1-farmer-mode-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint X1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint X1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint X1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -32,7 +32,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const farmerContractSource = read("public", "nexus-farmer-mode-readiness-contract.js");
-const farmerContract = require("../public/nexus-farmer-mode-readiness-contract.js");
+const farmerContract = require("../../public/nexus-farmer-mode-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint X1",
@@ -145,7 +145,7 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_W5_TRUST_FRAUD_RISK_DETECTION_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_FARMER_MODE_READINESS_CONTRACT_PHASE_76.md"],
   ["public", "nexus-farmer-mode-readiness-contract.js"],
-  ["scripts", "nexus-farmer-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-farmer-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `X1 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -237,10 +237,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-x1-farmer-mode-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint X1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js"), "qa-suite must continue to include Sprint W5 QA.");
-assert(qaSuite.includes("scripts/nexus-farmer-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 76 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-w5-trust-fraud-risk-detection-lane-closeout-qa.js"), "qa-suite must continue to include Sprint W5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-farmer-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 76 QA.");
 
 console.log("[nexus-sprint-x1-farmer-mode-runtime-activation-readiness-gate-qa] passed");

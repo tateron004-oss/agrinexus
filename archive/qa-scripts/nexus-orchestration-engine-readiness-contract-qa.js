@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = { doc: path.join(root, "docs", "NEXUS_ORCHESTRATION_ENGINE_READINESS_CONTRACT_PHASE_68.md"), contract: path.join(root, "public", "nexus-orchestration-engine-readiness-contract.js"), index: path.join(root, "public", "index.html"), app: path.join(root, "public", "app.js"), server: path.join(root, "server.js"), packageJson: path.join(root, "package.json"), qaSuite: path.join(root, "scripts", "qa-suite.js") };
 function read(filePath) { return fs.readFileSync(filePath, "utf8"); }
 function assert(condition, message) { if (!condition) { console.error(`[nexus-orchestration-engine-readiness-contract-qa] ${message}`); process.exit(1); } }
@@ -24,6 +24,6 @@ assert(sample.providerAdapterExecutionEnabled === false, "factory must force pro
 assert(sample.executionAllowed === false, "factory must force execution disabled.");
 ["fetch(", "XMLHttpRequest", "axios", "EventSource", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "window.location", "document.location", "addEventListener", "onclick", "runOrchestration(", "executeStep(", "callAdapter(", "dispatchEmergency("].forEach(forbidden => assert(!contractSource.includes(forbidden), `contract module must not include runtime behavior: ${forbidden}`));
 ["nexus-orchestration-engine-readiness-contract.js", "NexusOrchestrationEngineReadinessContract", "orchestrationEngineReadiness", "ORCHESTRATION_ENGINE_READINESS_CONTRACT"].forEach(runtimeHook => { assert(!index.includes(runtimeHook), `index.html must not load ${runtimeHook}.`); assert(!app.includes(runtimeHook), `app.js must not consume ${runtimeHook}.`); assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`); });
-assert(packageData.scripts["qa:nexus-orchestration-engine-readiness-contract"] === "node scripts/nexus-orchestration-engine-readiness-contract-qa.js", "package.json must expose qa:nexus-orchestration-engine-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-orchestration-engine-readiness-contract-qa.js"), "qa-suite.js must include Phase 68 QA.");
+assert(packageData.scripts["qa:nexus-orchestration-engine-readiness-contract"] === "node archive/qa-scripts/nexus-orchestration-engine-readiness-contract-qa.js", "package.json must expose qa:nexus-orchestration-engine-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-orchestration-engine-readiness-contract-qa.js"), "qa-suite.js must include Phase 68 QA.");
 console.log("[nexus-orchestration-engine-readiness-contract-qa] passed");

@@ -73,16 +73,16 @@ All workflow objects, cards, artifacts, follow-up results, and recovery objects 
 
 The local-safe QA set for the lane is:
 
-- `scripts/nexus-aut1-workflow-goal-classifier-qa.js`
-- `scripts/nexus-aut2-workflow-planner-qa.js`
-- `scripts/nexus-aut3-workflow-step-runner-qa.js`
-- `scripts/nexus-aut4-workflow-session-state-qa.js`
-- `scripts/nexus-aut5-workflow-artifacts-qa.js`
-- `scripts/nexus-aut6-standard-user-workflow-card-qa.js`
-- `scripts/nexus-aut7-workflow-follow-up-commands-qa.js`
-- `scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js`
-- `scripts/nexus-aut9-autonomy-reliability-recovery-qa.js`
-- `scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js`
+- `archive/qa-scripts/nexus-aut1-workflow-goal-classifier-qa.js`
+- `archive/qa-scripts/nexus-aut2-workflow-planner-qa.js`
+- `archive/qa-scripts/nexus-aut3-workflow-step-runner-qa.js`
+- `archive/qa-scripts/nexus-aut4-workflow-session-state-qa.js`
+- `archive/qa-scripts/nexus-aut5-workflow-artifacts-qa.js`
+- `archive/qa-scripts/nexus-aut6-standard-user-workflow-card-qa.js`
+- `archive/qa-scripts/nexus-aut7-workflow-follow-up-commands-qa.js`
+- `archive/qa-scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js`
+- `archive/qa-scripts/nexus-aut9-autonomy-reliability-recovery-qa.js`
+- `archive/qa-scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js`
 
 These scripts are wired into `nexus-workforce` and `all-safe` local-safe suites.
 

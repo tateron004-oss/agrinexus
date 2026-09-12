@@ -403,15 +403,15 @@ Standard User UI:
 QA:
 
 - `scripts/qa-suite.js`
-- `scripts/nexus-intelligent-brain-acceptance-qa.js`
-- `scripts/nexus-real-provider-integrations-qa.js`
-- `scripts/nexus-production-capability-runtime-qa.js`
-- `scripts/nexus-chronic-disease-bridge-qa.js`
-- `scripts/nexus-rpm-bridge-qa.js`
-- `scripts/nexus-rtm-bridge-qa.js`
-- `scripts/nexus-telehealth-provider-bridge-qa.js`
-- `scripts/nexus-pharmacy-bridge-qa.js`
-- `scripts/nexus-mobile-clinic-bridge-qa.js`
+- `archive/qa-scripts/nexus-intelligent-brain-acceptance-qa.js`
+- `archive/qa-scripts/nexus-real-provider-integrations-qa.js`
+- `archive/qa-scripts/nexus-production-capability-runtime-qa.js`
+- `archive/qa-scripts/nexus-chronic-disease-bridge-qa.js`
+- `archive/qa-scripts/nexus-rpm-bridge-qa.js`
+- `archive/qa-scripts/nexus-rtm-bridge-qa.js`
+- `archive/qa-scripts/nexus-telehealth-provider-bridge-qa.js`
+- `archive/qa-scripts/nexus-pharmacy-bridge-qa.js`
+- `archive/qa-scripts/nexus-mobile-clinic-bridge-qa.js`
 
 ## Bottom Line
 

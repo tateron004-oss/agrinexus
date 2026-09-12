@@ -157,7 +157,7 @@ The Phase 8T `Review options` and `Not now` controls remain non-executing. Phase
 
 Phase 8V is protected by:
 
-- `scripts/nexus-controlled-action-navigation-readiness-qa.js`
+- `archive/qa-scripts/nexus-controlled-action-navigation-readiness-qa.js`
 - `npm run qa:nexus-controlled-action-navigation-readiness`
 - `node scripts/qa-suite.js nexus-workforce`
 

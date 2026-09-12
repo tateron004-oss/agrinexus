@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PUBLIC_DATA_CONNECTOR_BASELINE_PHASE_19.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -157,11 +157,11 @@ requiredConnectorIds.forEach(id => {
 });
 
 assert(
-  packageData.scripts["qa:nexus-public-data-connector-baseline"] === "node scripts/nexus-public-data-connector-baseline-qa.js",
+  packageData.scripts["qa:nexus-public-data-connector-baseline"] === "node archive/qa-scripts/nexus-public-data-connector-baseline-qa.js",
   "package.json must expose qa:nexus-public-data-connector-baseline"
 );
 assert(
-  qaSuite.includes("scripts/nexus-public-data-connector-baseline-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-public-data-connector-baseline-qa.js"),
   "qa-suite.js must include public data connector baseline QA"
 );
 

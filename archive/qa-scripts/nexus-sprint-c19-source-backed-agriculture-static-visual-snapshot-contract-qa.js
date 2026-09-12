@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -164,8 +164,8 @@ for (const forbiddenTerm of [
 });
 
 const alias = "qa:nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract";
-const command = "node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js";
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js"), "qa-suite must include Sprint C19 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js"), "qa-suite must include Sprint C19 QA.");
 
 console.log("[nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa] passed");

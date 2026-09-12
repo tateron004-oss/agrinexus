@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -146,11 +146,11 @@ const voiceBridgeSource = sourceBetween(app, "function installNexusVoiceDemoShel
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-1-autonomous-task-planner"],
-  "node scripts/nexus-capability-sprint-1-autonomous-task-planner-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-1-autonomous-task-planner-qa.js",
   "package.json must expose Sprint 1 QA alias."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-1-autonomous-task-planner-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-1-autonomous-task-planner-qa.js"),
   "qa-suite.js must include Sprint 1 QA."
 );
 

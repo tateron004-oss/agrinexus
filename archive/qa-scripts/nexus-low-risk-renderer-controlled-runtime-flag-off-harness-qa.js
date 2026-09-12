@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -60,8 +60,8 @@ for (const parts of [
   ["public", "nexus-low-risk-inert-renderer.js"],
   ["public", "nexus-low-risk-inert-renderer-flag.js"],
   ["public", "nexus-low-risk-inert-renderer-eligibility.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"]
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -209,9 +209,9 @@ assert.equal(configuredButInactive.rendererInvoked, false, "Phase 12T must not i
 assert.equal(configuredButInactive.standardUserBehaviorChange, false, "Phase 12T must not change Standard User behavior");
 
 assert(packageJson.includes("\"qa:nexus-low-risk-renderer-controlled-runtime-flag-off-harness\""), "package.json must expose qa:nexus-low-risk-renderer-controlled-runtime-flag-off-harness");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must include Phase 12T flag-off harness QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"), "nexus-workforce suite must keep Phase 12R static guard");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"), "nexus-workforce suite must keep Phase 12S readiness review guard");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must include Phase 12T flag-off harness QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js"), "nexus-workforce suite must keep Phase 12R static guard");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js"), "nexus-workforce suite must keep Phase 12S readiness review guard");
 
 console.log("Nexus low-risk renderer controlled runtime flag-off harness QA passed");
 console.log("- Phase 12T doc and safety language are present");

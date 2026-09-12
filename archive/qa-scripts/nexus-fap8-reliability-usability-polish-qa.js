@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const providerHealth = require("../server/nexus-provider-reliability-health.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const providerHealth = require("../../server/nexus-provider-reliability-health.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -81,10 +81,10 @@ function assertStaticReliabilityPolish() {
 
   assert.equal(
     pkg.scripts["qa:nexus-fap8-reliability-usability-polish"],
-    "node scripts/nexus-fap8-reliability-usability-polish-qa.js",
+    "node archive/qa-scripts/nexus-fap8-reliability-usability-polish-qa.js",
     "FAP8 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-fap8-reliability-usability-polish-qa.js"), "FAP8 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-fap8-reliability-usability-polish-qa.js"), "FAP8 QA must be wired into local-safe suites.");
 }
 
 async function assertReliabilityBehavior() {

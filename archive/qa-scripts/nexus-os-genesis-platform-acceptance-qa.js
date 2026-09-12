@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -94,7 +94,7 @@ assert(app.includes("body.user-mode.nexus-os-visual-boundary .sidebar"), "legacy
 assert(app.includes("data-nexus-os-deferred-legacy-surfaces=\"true\""), "legacy surfaces remain deferred instead of duplicated");
 
 assert(!/sent successfully|payment completed|provider contacted|appointment booked|diagnosed|prescribed/i.test(releasePanel), "Genesis release panel does not claim unsafe live execution");
-assert(packageJson.scripts["qa:nexus-os-genesis-platform-acceptance"] === "node scripts/nexus-os-genesis-platform-acceptance-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-genesis-platform-acceptance-qa.js"), "safe QA suite includes Genesis platform acceptance QA");
+assert(packageJson.scripts["qa:nexus-os-genesis-platform-acceptance"] === "node archive/qa-scripts/nexus-os-genesis-platform-acceptance-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-genesis-platform-acceptance-qa.js"), "safe QA suite includes Genesis platform acceptance QA");
 
 console.log("Nexus OS Genesis platform acceptance QA passed.");

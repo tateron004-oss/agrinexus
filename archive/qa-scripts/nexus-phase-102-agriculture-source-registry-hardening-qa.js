@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const helperPath = path.join(root, "public", "nexus-agriculture-source-registry.js");
 const docPath = path.join(root, "docs", "NEXUS_PHASE_102_AGRICULTURE_SOURCE_REGISTRY_HARDENING.md");
 const modulePath = path.join(root, "public", "nexus-agriculture-source-registry-phase-102.js");
@@ -157,7 +157,7 @@ assert(sourceRegistry.validateSourceCandidate({ sourceId: "unknown" }).valid ===
   "NexusAgricultureSourceRegistryPhase102"
 ].forEach(hook => assert(!activeRuntime.includes(hook), `active runtime must not load ${hook}.`));
 
-assert(packageData.scripts["qa:nexus-phase-102-agriculture-source-registry-hardening"] === "node scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js"), "qa-suite must include Phase 102 QA.");
+assert(packageData.scripts["qa:nexus-phase-102-agriculture-source-registry-hardening"] === "node archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-phase-102-agriculture-source-registry-hardening-qa.js"), "qa-suite must include Phase 102 QA.");
 
 console.log("[nexus-phase-102-agriculture-source-registry-hardening-qa] passed");

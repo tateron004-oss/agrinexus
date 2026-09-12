@@ -4,7 +4,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const server = read("server.js");
@@ -113,10 +113,10 @@ function excludes(haystack, needle, message) {
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-all-modes-activation-runtime"],
-  "node scripts/nexus-all-modes-activation-runtime-qa.js",
+  "node archive/qa-scripts/nexus-all-modes-activation-runtime-qa.js",
   "package script should expose all-modes activation runtime QA"
 );
-includes(qaSuite, "scripts/nexus-all-modes-activation-runtime-qa.js", "qa suite should include all-modes activation runtime QA");
+includes(qaSuite, "archive/qa-scripts/nexus-all-modes-activation-runtime-qa.js", "qa suite should include all-modes activation runtime QA");
 
 [
   "Nexus All-Modes Activation Runtime",

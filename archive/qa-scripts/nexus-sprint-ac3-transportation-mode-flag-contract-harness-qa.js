@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   PROTECTED_TRANSPORTATION_MODE_FLAG_FIELDS,
   normalizeTransportationModeFeatureFlagState
-} = require("../public/nexus-transportation-mode-feature-flag.js");
+} = require("../../public/nexus-transportation-mode-feature-flag.js");
 const {
   fixturePath,
   protectedFields,
@@ -12,7 +12,7 @@ const {
   validateTransportationModeFlagFixtures
 } = require("./nexus-sprint-ac3-transportation-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -35,12 +35,12 @@ const harnessName = "nexus-sprint-ac3-transportation-mode-flag-contract-harness.
 const fixtureName = "transportation-mode-feature-flags.json";
 
 assert(exists("docs", docName), "Sprint AC3 harness doc must exist.");
-assert(exists("scripts", harnessName), "Sprint AC3 harness script must exist.");
-assert(exists("scripts", qaName), "Sprint AC3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AC3 harness script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AC3 QA script must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AC3 fixtures must exist.");
 
 const doc = read("docs", docName);
-const harness = read("scripts", harnessName);
+const harness = read("archive", "qa-scripts", harnessName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
 const ac2Doc = read("docs", "NEXUS_SPRINT_AC2_TRANSPORTATION_MODE_FEATURE_FLAG_CONTRACT.md");
 const index = read("public", "index.html");
@@ -128,11 +128,11 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-ac3-transportation-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AC3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ac2-transportation-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AC2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ac1-transportation-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AC1 QA.");
-assert(qaSuite.includes("scripts/nexus-transportation-mode-readiness-contract-qa.js"), "qa-suite must continue to include Transportation Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac2-transportation-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AC2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ac1-transportation-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AC1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-transportation-mode-readiness-contract-qa.js"), "qa-suite must continue to include Transportation Mode readiness QA.");
 
 console.log("[nexus-sprint-ac3-transportation-mode-flag-contract-harness-qa] passed");

@@ -23,7 +23,7 @@ The contract is deliberately conservative:
 
 - `public/nexus-approval-audit-persistence-contract.js`
 - `fixtures/nexus/approval-audit-persistence-records.json`
-- `scripts/nexus-sprint-g2-approval-audit-persistence-contract-qa.js`
+- `archive/qa-scripts/nexus-sprint-g2-approval-audit-persistence-contract-qa.js`
 
 These artifacts are contract, fixture, and QA only. They are not runtime persistence adapters.
 

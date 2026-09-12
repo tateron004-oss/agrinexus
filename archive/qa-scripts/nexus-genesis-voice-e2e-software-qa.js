@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert/strict");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -164,10 +164,10 @@ includes(sw, "clients.claim", "service worker claims clients");
 includes(sw, "purgeOldCaches", "service worker purges old caches");
 includes(sw, "/api/voice/realtime/", "Realtime requests bypass app-shell caching");
 
-assert.equal(pkg.scripts["qa:nexus-genesis-persistent-voice-lifecycle"], "node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "persistent lifecycle npm alias missing");
-assert.equal(pkg.scripts["qa:nexus-genesis-voice-e2e-software"], "node scripts/nexus-genesis-voice-e2e-software-qa.js", "e2e software npm alias missing");
-includes(qaSuite, "scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "qa-suite persistent lifecycle registration");
-includes(qaSuite, "scripts/nexus-genesis-voice-e2e-software-qa.js", "qa-suite e2e software registration");
+assert.equal(pkg.scripts["qa:nexus-genesis-persistent-voice-lifecycle"], "node archive/qa-scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "persistent lifecycle npm alias missing");
+assert.equal(pkg.scripts["qa:nexus-genesis-voice-e2e-software"], "node archive/qa-scripts/nexus-genesis-voice-e2e-software-qa.js", "e2e software npm alias missing");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-persistent-voice-lifecycle-qa.js", "qa-suite persistent lifecycle registration");
+includes(qaSuite, "archive/qa-scripts/nexus-genesis-voice-e2e-software-qa.js", "qa-suite e2e software registration");
 
 const faultCases = [
   ["unsupported-browser", { micControlVisible: true, realtimeAttempted: false, userRecoverable: true }],

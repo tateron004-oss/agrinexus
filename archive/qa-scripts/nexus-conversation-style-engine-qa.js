@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -86,7 +86,7 @@ const polishBlock = blockBetween(app, "function buildNexusExperienceStarterRespo
 ].forEach(token => includes(app, token, `style engine API exposure ${token}`));
 
 assert(!/(diagnosed|prescribed|payment completed|appointment booked|dispatch started|provider accepted)/i.test(contractBlock + engineBlock + polishBlock), "style engine avoids fake completion and regulated execution claims");
-assert(pkg.scripts["qa:nexus-conversation-style-engine"] === "node scripts/nexus-conversation-style-engine-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-conversation-style-engine-qa.js"), "safe QA suite includes conversation style engine QA");
+assert(pkg.scripts["qa:nexus-conversation-style-engine"] === "node archive/qa-scripts/nexus-conversation-style-engine-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-conversation-style-engine-qa.js"), "safe QA suite includes conversation style engine QA");
 
 console.log("Nexus conversation style engine QA passed.");

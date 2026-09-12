@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const docName = "NEXUS_SPRINT_E1_STAGED_ACTION_APPROVAL_AUDIT_PRODUCT_BOUNDARY.m
 const qaName = "nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js";
 
 assert(exists("docs", docName), "Sprint E1 product boundary doc must exist.");
-assert(exists("scripts", qaName), "Sprint E1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E1 QA script must exist.");
 
 const doc = read("docs", docName);
 const app = read("public", "app.js");
@@ -87,7 +87,7 @@ assertIncludes(doc, [
 
 [
   "docs/NEXUS_SPRINT_D8_CONTROLLED_STAGED_ACTION_PREVIEW_CLOSEOUT.md",
-  "scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"
+  "archive/qa-scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"
 ].forEach(relative => assert(fs.existsSync(path.join(root, relative)), `E1 requires prior D8 artifact: ${relative}`));
 
 [
@@ -104,9 +104,9 @@ assertIncludes(doc, [
 });
 
 const alias = "qa:nexus-sprint-e1-staged-action-approval-audit-product-boundary";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"), "E1 requires D8 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js"), "E1 requires D8 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa] passed");

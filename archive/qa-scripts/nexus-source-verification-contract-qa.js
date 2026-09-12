@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SOURCE_VERIFICATION_CONTRACT_PHASE_29.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -245,11 +245,11 @@ assert(invalid.termsReviewStatus === "not_reviewed", "invalid terms status must 
 });
 
 assert(
-  packageData.scripts["qa:nexus-source-verification-contract"] === "node scripts/nexus-source-verification-contract-qa.js",
+  packageData.scripts["qa:nexus-source-verification-contract"] === "node archive/qa-scripts/nexus-source-verification-contract-qa.js",
   "package.json must expose qa:nexus-source-verification-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-source-verification-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-source-verification-contract-qa.js"),
   "qa-suite.js must include source verification contract QA"
 );
 

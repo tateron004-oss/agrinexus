@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_ADVANCED_INTENT_UNDERSTANDING_READINESS_CONTRACT_PHASE_64.md"),
   contract: path.join(root, "public", "nexus-advanced-intent-understanding-readiness-contract.js"),
@@ -173,7 +173,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-advanced-intent-understanding-readiness-contract"] === "node scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js", "package.json must expose qa:nexus-advanced-intent-understanding-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js"), "qa-suite.js must include advanced intent understanding readiness QA.");
+assert(packageData.scripts["qa:nexus-advanced-intent-understanding-readiness-contract"] === "node archive/qa-scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js", "package.json must expose qa:nexus-advanced-intent-understanding-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js"), "qa-suite.js must include advanced intent understanding readiness QA.");
 
 console.log("[nexus-advanced-intent-understanding-readiness-contract-qa] passed");

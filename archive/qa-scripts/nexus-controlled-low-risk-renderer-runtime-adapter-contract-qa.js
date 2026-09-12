@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -246,7 +246,7 @@ assert(!server.includes(mountId), "server.js must not reference the hidden mount
 assert(shellSource.includes("evaluateControlledLowRiskRendererEligibility"), "Phase 13P shell helper must remain present");
 assert(shellSource.includes("buildControlledLowRiskRendererTextModel"), "Phase 13P shell text model helper must remain present");
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-runtime-adapter-contract": "node scripts/${scriptName}"`), "package.json must expose Phase 13Q QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-runtime-adapter-contract": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13Q QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13Q QA guard");
 
 console.log("Nexus controlled low-risk renderer runtime adapter contract QA passed.");

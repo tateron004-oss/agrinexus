@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -47,11 +47,11 @@ assert(exists("test-fixtures", fixtureName), "Phase 13I hidden mount point fixtu
 
 for (const parts of [
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_HIDDEN_STANDARD_USER_MOUNT_POINT_CONTRACT.md"],
-  ["scripts", "nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js"],
   ["docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_DEFAULT_OFF_VISIBLE_FEATURE_FLAG_DESIGN.md"],
-  ["scripts", "nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js"],
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js"],
   ["test-fixtures", "nexus-controlled-low-risk-renderer-inert-card.snapshot.html"],
-  ["scripts", "nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js"]
+  ["archive", "qa-scripts", "nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist before Phase 13I fixture QA`);
 }
@@ -228,19 +228,19 @@ assert(declarationIndex >= 0, "inert helper declaration must be found");
 const afterDeclaration = app.slice(declarationIndex + "function createNexusControlledLowRiskInertCardForTest".length);
 assert(!afterDeclaration.match(/createNexusControlledLowRiskInertCardForTest\s*\(/), "inert helper must not be invoked during startup/runtime flow");
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture": "node scripts/${scriptName}"`), "package.json must expose Phase 13I QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13I QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13I hidden mount point fixture guard");
 
 for (const qaScript of [
-  "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js",
-  "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-standard-user-readiness-review-before-visible-activation-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js",
-  "scripts/nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js"
+  "archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js",
+  "archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-standard-user-readiness-review-before-visible-activation-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js",
+  "archive/qa-scripts/nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js"
 ]) {
   assert(suite.includes(qaScript), `nexus-workforce suite must keep renderer/pre-activation guard: ${qaScript}`);
 }

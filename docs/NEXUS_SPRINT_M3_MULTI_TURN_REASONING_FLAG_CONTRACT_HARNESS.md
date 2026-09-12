@@ -16,8 +16,8 @@ Prove that the default-off Multi-Turn Reasoning feature flag contract behaves pr
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/multi-turn-reasoning-feature-flags.json`
-- Harness: `scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -97,7 +97,7 @@ The harness must not:
 Sprint M3 does not load:
 
 - `public/nexus-multi-turn-reasoning-feature-flag.js`;
-- `scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-m3-multi-turn-reasoning-flag-contract-harness.js`;
 - `fixtures/nexus/multi-turn-reasoning-feature-flags.json`.
 
 The Standard User build remains unchanged.

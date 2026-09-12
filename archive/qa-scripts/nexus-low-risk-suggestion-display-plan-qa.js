@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const planPath = path.join(root, "docs", "NEXUS_LOW_RISK_SUGGESTION_DISPLAY_PLAN.md");
 const appPath = path.join(root, "public", "app.js");
 const serverPath = path.join(root, "server.js");

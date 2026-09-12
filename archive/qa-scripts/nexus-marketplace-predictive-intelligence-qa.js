@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -53,6 +53,6 @@ function excludes(source, token, label) {
   "trade acceptance confirmed"
 ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe marketplace claim ${token}`));
 
-assert.strictEqual(packageJson.scripts["qa:nexus-marketplace-predictive-intelligence"], "node scripts/nexus-marketplace-predictive-intelligence-qa.js");
-includes(qaSuite, "scripts/nexus-marketplace-predictive-intelligence-qa.js", "qa-suite marketplace wiring");
+assert.strictEqual(packageJson.scripts["qa:nexus-marketplace-predictive-intelligence"], "node archive/qa-scripts/nexus-marketplace-predictive-intelligence-qa.js");
+includes(qaSuite, "archive/qa-scripts/nexus-marketplace-predictive-intelligence-qa.js", "qa-suite marketplace wiring");
 console.log("Nexus marketplace predictive intelligence QA passed.");

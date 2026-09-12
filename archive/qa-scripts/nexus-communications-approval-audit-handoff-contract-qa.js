@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNICATIONS_APPROVAL_AUDIT_HANDOFF_CONTRACT_PHASE_51C.md"),
   readinessGate: path.join(root, "public", "nexus-communications-provider-execution-readiness-gate.js"),
@@ -166,7 +166,7 @@ assert(doc.includes("does not send, call, message, open providers, or change run
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-communications-approval-audit-handoff-contract"] === "node scripts/nexus-communications-approval-audit-handoff-contract-qa.js", "package.json must expose qa:nexus-communications-approval-audit-handoff-contract.");
-assert(qaSuite.includes("scripts/nexus-communications-approval-audit-handoff-contract-qa.js"), "qa-suite.js must include communications approval/audit handoff QA.");
+assert(packageData.scripts["qa:nexus-communications-approval-audit-handoff-contract"] === "node archive/qa-scripts/nexus-communications-approval-audit-handoff-contract-qa.js", "package.json must expose qa:nexus-communications-approval-audit-handoff-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-communications-approval-audit-handoff-contract-qa.js"), "qa-suite.js must include communications approval/audit handoff QA.");
 
 console.log("[nexus-communications-approval-audit-handoff-contract-qa] passed");

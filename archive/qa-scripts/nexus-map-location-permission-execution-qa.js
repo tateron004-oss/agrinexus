@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -97,7 +97,7 @@ const runtimeSource = functionNames.map(name => extractFunction(app, name)).join
 ].forEach(term => assert(app.includes(term), `map/location permission layer should include ${term}`));
 
 assert(pkg.scripts["qa:nexus-map-location-permission-execution"], "package alias should run map/location QA");
-assert(qaSuite.includes("scripts/nexus-map-location-permission-execution-qa.js"), "qa-suite should include map/location QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-map-location-permission-execution-qa.js"), "qa-suite should include map/location QA");
 
 [
   "navigator.geolocation",

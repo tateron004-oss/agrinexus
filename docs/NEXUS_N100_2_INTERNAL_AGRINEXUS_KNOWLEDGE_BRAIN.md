@@ -74,7 +74,7 @@ The knowledge brain is read-only and non-authoritative. It can inform future pla
 
 Focused QA:
 
-- `scripts/nexus-n100-2-internal-knowledge-brain-qa.js`
+- `archive/qa-scripts/nexus-n100-2-internal-knowledge-brain-qa.js`
 
 The QA verifies the corpus, required prompts, source/citation metadata, provider-combine behavior, package alias, safe-suite wiring, and absence from Standard User runtime loading.
 

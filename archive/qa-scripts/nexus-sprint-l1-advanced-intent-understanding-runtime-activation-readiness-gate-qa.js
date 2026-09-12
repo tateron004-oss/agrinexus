@@ -1,12 +1,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_L1_ADVANCED_INTENT_UNDERSTANDING_RUNTIME_ACTIVATION_READINESS_GATE.md"),
   phase64Doc: path.join(root, "docs", "NEXUS_ADVANCED_INTENT_UNDERSTANDING_READINESS_CONTRACT_PHASE_64.md"),
   phase64Contract: path.join(root, "public", "nexus-advanced-intent-understanding-readiness-contract.js"),
-  phase64Qa: path.join(root, "scripts", "nexus-advanced-intent-understanding-readiness-contract-qa.js"),
+  phase64Qa: path.join(root, "archive", "qa-scripts", "nexus-advanced-intent-understanding-readiness-contract-qa.js"),
   k5Doc: path.join(root, "docs", "NEXUS_SPRINT_K5_PERSONALIZATION_LANE_CLOSEOUT.md"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -228,9 +228,9 @@ const attemptedOverride = contract.createAdvancedIntentUnderstandingReadinessCon
 });
 
 const alias = "qa:nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate";
-const scriptPath = "scripts/nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate-qa.js";
+const scriptPath = "archive/qa-scripts/nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate-qa.js";
 assert(packageData.scripts[alias] === `node ${scriptPath}`, `package.json must expose ${alias}.`);
 assert(qaSuite.includes(scriptPath), "qa-suite.js must include Sprint L1 QA.");
-assert(qaSuite.includes("scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 64 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 64 QA.");
 
 console.log("[nexus-sprint-l1-advanced-intent-understanding-runtime-activation-readiness-gate-qa] passed");

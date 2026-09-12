@@ -4,7 +4,7 @@ const path = require("node:path");
 const weatherValidation = require("./nexus-weather-live-provider-validation-qa.js");
 const weatherSmoke = require("./nexus-weather-live-provider-smoke-qa.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -19,8 +19,8 @@ async function runRt1WeatherProviderCredentialCompletionQa(env = process.env) {
   assert(exists("docs", docName), "RT1 closeout doc must exist.");
 
   const doc = read("docs", docName);
-  const smokeScript = read("scripts", "nexus-weather-live-provider-smoke-qa.js");
-  const validationScript = read("scripts", "nexus-weather-live-provider-validation-qa.js");
+  const smokeScript = read("archive", "qa-scripts", "nexus-weather-live-provider-smoke-qa.js");
+  const validationScript = read("archive", "qa-scripts", "nexus-weather-live-provider-validation-qa.js");
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -77,10 +77,10 @@ async function runRt1WeatherProviderCredentialCompletionQa(env = process.env) {
 
   assert.equal(
     pkg.scripts["qa:nexus-rt1-weather-provider-credential-completion"],
-    "node scripts/nexus-rt1-weather-provider-credential-completion-qa.js",
+    "node archive/qa-scripts/nexus-rt1-weather-provider-credential-completion-qa.js",
     "RT1 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rt1-weather-provider-credential-completion-qa.js"), "RT1 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rt1-weather-provider-credential-completion-qa.js"), "RT1 QA must be in safe suites.");
 
   const smoke = await weatherSmoke.runWeatherLiveProviderSmokeQa(env);
   assert.equal(smoke.queryLocationText, "Stockton, CA", "RT1 smoke should default to Stockton, CA.");

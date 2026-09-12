@@ -63,7 +63,7 @@ Intentionally not changed:
 
 Protection:
 
-- `scripts/nexus-workforce-branding-qa.js` verifies visible Nexus Workforce AI branding, Ask Nexus copy, preserved AgriNexus compatibility identifiers, and AgriTrade presence.
+- `archive/qa-scripts/nexus-workforce-branding-qa.js` verifies visible Nexus Workforce AI branding, Ask Nexus copy, preserved AgriNexus compatibility identifiers, and AgriTrade presence.
 
 ### Phase 3: Standard User Workflow Repositioning
 
@@ -78,7 +78,7 @@ Intentionally not changed:
 
 Protection:
 
-- `scripts/nexus-workforce-standard-user-qa.js` verifies worker-first order, domain coverage, retained AgriTrade and crop paths, and protected frontend/backend/native identifiers.
+- `archive/qa-scripts/nexus-workforce-standard-user-qa.js` verifies worker-first order, domain coverage, retained AgriTrade and crop paths, and protected frontend/backend/native identifiers.
 
 ### Phase 4: Assistant Copy And Aliases
 
@@ -94,7 +94,7 @@ Intentionally not changed:
 
 Protection:
 
-- `scripts/nexus-workforce-alias-qa.js` verifies the new aliases, legacy AgriNexus prompts, agriculture/trade compatibility, and safe call behavior.
+- `archive/qa-scripts/nexus-workforce-alias-qa.js` verifies the new aliases, legacy AgriNexus prompts, agriculture/trade compatibility, and safe call behavior.
 
 ### Phase 5: Backend Product Metadata
 
@@ -113,7 +113,7 @@ Intentionally not changed:
 
 Protection:
 
-- `scripts/nexus-workforce-metadata-qa.js` verifies canonical metadata, additive public exposure, preserved protected identifiers, and AgriTrade/agriculture compatibility.
+- `archive/qa-scripts/nexus-workforce-metadata-qa.js` verifies canonical metadata, additive public exposure, preserved protected identifiers, and AgriTrade/agriculture compatibility.
 
 ## Runtime Protection Rules
 
@@ -165,10 +165,10 @@ npm run qa:nexus-workforce
 
 The focused suite runs:
 
-- `scripts/nexus-workforce-branding-qa.js`
-- `scripts/nexus-workforce-standard-user-qa.js`
-- `scripts/nexus-workforce-alias-qa.js`
-- `scripts/nexus-workforce-metadata-qa.js`
+- `archive/qa-scripts/nexus-workforce-branding-qa.js`
+- `archive/qa-scripts/nexus-workforce-standard-user-qa.js`
+- `archive/qa-scripts/nexus-workforce-alias-qa.js`
+- `archive/qa-scripts/nexus-workforce-metadata-qa.js`
 
 Repurpose QA checklist:
 

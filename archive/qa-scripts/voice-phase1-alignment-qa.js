@@ -3,7 +3,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.VOICE_PHASE1_QA_PORT || 4461);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-voice-phase1-qa-db.json");
@@ -55,7 +55,7 @@ async function twilioPost(route, body) {
   assert(!serverSource.includes("runAgentCommand(db, phoneUser, command, { confirm: true"), "phone gather must not directly execute with unconditional confirm:true");
   assert(serverSource.includes('inputMode: "phone"'), "phone gather should preserve inputMode=phone");
   assert(serverSource.includes('operationalMode: "realtime-tools"') && serverSource.includes('toolName: "nexus_capability_router"'), "realtime status should expose the single safe Nexus tool router");
-  assert(serverSource.includes("Use tools only when a real Nexus capability is needed") && serverSource.includes("Never claim an action completed"), "realtime model instructions should allow gated tools without fake execution");
+  assert(serverSource.includes("prefer calling a tool over answering from your own knowledge") && serverSource.includes("Never claim an action completed"), "realtime model instructions should allow gated tools without fake execution");
   assert(appSource.includes('status.runtime !== "realtime"'), "realtime should be selected by the server runtime contract, not local browser opt-in");
   assert.equal(bridge.apiEndpoints.voice, "/api/voice/speak", "native bridge voice endpoint should reference the implemented TTS route");
 

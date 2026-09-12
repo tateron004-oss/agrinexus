@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-k5-flag-off-identity-resolution-regression-guard-qa
 
 assert(exists("docs", docName), "K5 doc must exist.");
 assert(exists("public", moduleName), "K5 flag guard module must exist.");
-assert(exists("scripts", qaName), "K5 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K5 QA must exist.");
 
 const doc = read("docs", docName);
 const guardSource = read("public", moduleName);
@@ -31,7 +31,7 @@ const app = read("public", "app.js");
 const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const guard = require("../public/nexus-contact-provider-identity-flag-guard.js");
+const guard = require("../../public/nexus-contact-provider-identity-flag-guard.js");
 
 assertIncludes(doc, [
   "Sprint K5",
@@ -121,9 +121,9 @@ assert.equal(executionEscalation.allowed, false, "K5 must deny preview when vali
 });
 
 const alias = "qa:nexus-sprint-k5-flag-off-identity-resolution-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-k4-identity-confidence-risk-evidence-mapping-qa.js"), "K5 requires K4 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-k4-identity-confidence-risk-evidence-mapping-qa.js"), "K5 requires K4 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-k5-flag-off-identity-resolution-regression-guard-qa] passed");

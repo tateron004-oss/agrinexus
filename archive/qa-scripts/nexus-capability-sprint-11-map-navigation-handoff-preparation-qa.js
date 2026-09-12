@@ -3,12 +3,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
-const jarvisQa = fs.readFileSync(path.join(root, "scripts", "nexus-jarvis-style-standard-user-experience-qa.js"), "utf8");
+const jarvisQa = fs.readFileSync(path.join(root, "archive", "qa-scripts", "nexus-jarvis-style-standard-user-experience-qa.js"), "utf8");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -201,11 +201,11 @@ assert(status.includes("launch directions"), "confirmed route handoff should sta
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-11-map-navigation-handoff-preparation"],
-  "node scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js",
   "package alias should expose Sprint 11 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js"),
   "qa-suite should include Sprint 11 route handoff QA."
 );
 

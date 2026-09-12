@@ -3,7 +3,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NEXUS_GENESIS_VOICE_RESPONSE_QA_PORT || 4596);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-genesis-voice-response-provider-qa-db.json");

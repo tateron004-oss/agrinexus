@@ -6,9 +6,9 @@ const {
   DEFAULT_USER_PROFILE_FEATURE_FLAG_STATE,
   normalizeUserProfileFeatureFlagState,
   isUserProfileVisibleFeatureEnabled
-} = require("../public/nexus-user-profile-feature-flag.js");
+} = require("../../public/nexus-user-profile-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const qaName = "nexus-sprint-j2-user-profile-feature-flag-contract-qa.js";
 
 assert(exists("docs", docName), "Sprint J2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint J2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint J2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint J2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -190,7 +190,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-j2-user-profile-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint J2 QA.");
 

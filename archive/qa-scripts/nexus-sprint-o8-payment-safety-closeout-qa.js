@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docName = "NEXUS_SPRINT_O8_PAYMENT_SAFETY_CLOSEOUT_AND_SPRINT_P_READINESS.
 const qaName = "nexus-sprint-o8-payment-safety-closeout-qa.js";
 
 assert(exists("docs", docName), "O8 closeout doc must exist.");
-assert(exists("scripts", qaName), "O8 QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "O8 QA must exist.");
 
 [
   "NEXUS_SPRINT_O1_PAYMENT_SAFETY_PRODUCT_BOUNDARY.md",
@@ -38,7 +38,7 @@ assert(exists("scripts", qaName), "O8 QA must exist.");
   "nexus-sprint-o6-flag-gated-payment-preview-qa.js",
   "nexus-sprint-o7-standard-user-browser-validation-for-payment-preview-qa.js",
   qaName
-].forEach(file => assert(exists("scripts", file), `Sprint O QA must exist: ${file}`));
+].forEach(file => assert(exists("archive", "qa-scripts", file), `Sprint O QA must exist: ${file}`));
 
 [
   "nexus-payment-intent-contract.js",
@@ -80,22 +80,22 @@ const aliases = [
 aliases.forEach(alias => assert(pkg.scripts && pkg.scripts[alias], `${alias} package script must exist.`));
 
 [
-  "scripts/nexus-sprint-o1-payment-safety-product-boundary-qa.js",
-  "scripts/nexus-sprint-o2-inert-payment-intent-contract-qa.js",
-  "scripts/nexus-sprint-o3-payment-harness-qa.js",
-  "scripts/nexus-sprint-o4-payee-amount-risk-evidence-mapping-qa.js",
-  "scripts/nexus-sprint-o5-flag-off-payment-regression-qa.js",
-  "scripts/nexus-sprint-o6-flag-gated-payment-preview-qa.js",
-  "scripts/nexus-sprint-o7-standard-user-browser-validation-for-payment-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-o1-payment-safety-product-boundary-qa.js",
+  "archive/qa-scripts/nexus-sprint-o2-inert-payment-intent-contract-qa.js",
+  "archive/qa-scripts/nexus-sprint-o3-payment-harness-qa.js",
+  "archive/qa-scripts/nexus-sprint-o4-payee-amount-risk-evidence-mapping-qa.js",
+  "archive/qa-scripts/nexus-sprint-o5-flag-off-payment-regression-qa.js",
+  "archive/qa-scripts/nexus-sprint-o6-flag-gated-payment-preview-qa.js",
+  "archive/qa-scripts/nexus-sprint-o7-standard-user-browser-validation-for-payment-preview-qa.js",
   `scripts/${qaName}`
 ].forEach(script => assert(qaSuite.includes(script), `qa-suite must include ${script}.`));
 
 const fixtures = JSON.parse(read("fixtures", "nexus", "payment-intents.json"));
-const contract = require("../public/nexus-payment-intent-contract.js");
+const contract = require("../../public/nexus-payment-intent-contract.js");
 const harness = require("./nexus-sprint-o3-payment-harness.js");
-const mapper = require("../public/nexus-payment-risk-evidence-mapping.js");
-const guard = require("../public/nexus-payment-preview-flag-guard.js");
-const preview = require("../public/nexus-payment-preview.js");
+const mapper = require("../../public/nexus-payment-risk-evidence-mapping.js");
+const guard = require("../../public/nexus-payment-preview-flag-guard.js");
+const preview = require("../../public/nexus-payment-preview.js");
 
 fixtures.forEach(fixture => {
   const validation = contract.validatePaymentIntent(fixture);

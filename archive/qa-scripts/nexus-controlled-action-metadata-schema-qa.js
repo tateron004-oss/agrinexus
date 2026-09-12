@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const stylesPath = path.join(root, "public", "styles.css");
 const serverPath = path.join(root, "server.js");
@@ -192,7 +192,7 @@ assert.match(schemaDoc, /telehealth video[\s\S]*camera diagnosis[\s\S]*call the 
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-controlled-action-metadata-schema"],
-  "node scripts/nexus-controlled-action-metadata-schema-qa.js",
+  "node archive/qa-scripts/nexus-controlled-action-metadata-schema-qa.js",
   "package should expose controlled action metadata schema QA alias"
 );
 

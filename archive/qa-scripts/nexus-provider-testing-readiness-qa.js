@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const planPath = path.join(root, "docs", "NEXUS_PROVIDER_TESTING_READINESS_PLAN.md");
 const reviewPackagePath = path.join(root, "docs", "NEXUS_PROVIDER_REVIEW_PACKAGE.md");
@@ -249,11 +249,11 @@ assertAbsent(dashboardBlock, [
 
 assert.equal(
   packageData.scripts["qa:nexus-provider-testing-readiness"],
-  "node scripts/nexus-provider-testing-readiness-qa.js",
+  "node archive/qa-scripts/nexus-provider-testing-readiness-qa.js",
   "package.json must expose qa:nexus-provider-testing-readiness"
 );
 assert(
-  qaSuite.includes("scripts/nexus-provider-testing-readiness-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-provider-testing-readiness-qa.js"),
   "qa-suite.js nexus-workforce suite must include provider testing readiness QA."
 );
 

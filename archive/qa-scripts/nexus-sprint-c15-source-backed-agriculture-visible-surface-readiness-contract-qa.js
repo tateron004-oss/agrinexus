@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C15_SOURCE_BACKED_AGRICULTURE_VISIBLE_SURFACE_READINESS_CONTRACT.md"),
   c14Doc: path.join(root, "docs", "NEXUS_SPRINT_C14_SOURCE_BACKED_AGRICULTURE_ELIGIBILITY_HANDOFF_BROWSER_VALIDATION_PLAN.md"),
@@ -257,8 +257,8 @@ assert(!index.includes(c8MapperFileName), "public/index.html must still not load
 assert(!server.includes(c8MapperFileName), "server.js must still not special-case C8 mapper.");
 
 const alias = "qa:nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract";
-const command = "node scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js"), "qa-suite must include Sprint C15 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa.js"), "qa-suite must include Sprint C15 QA.");
 
 console.log("[nexus-sprint-c15-source-backed-agriculture-visible-surface-readiness-contract-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_AGRITRADE_MARKETPLACE_MODE_READINESS_CONTRACT_PHASE_84.md"),
   contract: path.join(root, "public", "nexus-agritrade-marketplace-mode-readiness-contract.js"),
@@ -154,7 +154,7 @@ assert(sample.liveActionEnabled === false, "factory must force live action disab
   assert(!server.includes(runtimeHook), "server.js must not consume " + runtimeHook + ".");
 });
 
-assert(packageData.scripts["qa:nexus-agritrade-marketplace-mode-readiness-contract"] === "node scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js", "package.json must expose qa alias.");
-assert(qaSuite.includes("scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite.js must include Phase 84 QA.");
+assert(packageData.scripts["qa:nexus-agritrade-marketplace-mode-readiness-contract"] === "node archive/qa-scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js", "package.json must expose qa alias.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite.js must include Phase 84 QA.");
 
 console.log("[nexus-agritrade-marketplace-mode-readiness-contract-qa] passed");

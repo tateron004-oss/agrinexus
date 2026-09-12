@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
@@ -196,8 +196,8 @@ const requirements = [
   ["Blocked fallback truthful", app.includes("OpenAI Realtime did not connect to a live microphone track.") && app.includes('fallback: "blocked"')],
   ["No visible selector added", !app.includes("data-nexus-realtime-runtime-selector") && !index.includes("data-nexus-realtime-runtime-selector")],
   ["Service worker no-cache guards", sw.includes("/api/voice/realtime/") && sw.includes("/api/voice/transcribe") && sw.includes("/api/voice/speak")],
-  ["QA alias wired", pkg.scripts["qa:nexus-genesis-realtime-production-migration"] === "node scripts/nexus-genesis-realtime-production-migration-qa.js"],
-  ["Voice suite wiring", qaSuite.includes("scripts/nexus-genesis-realtime-production-migration-qa.js")]
+  ["QA alias wired", pkg.scripts["qa:nexus-genesis-realtime-production-migration"] === "node archive/qa-scripts/nexus-genesis-realtime-production-migration-qa.js"],
+  ["Voice suite wiring", qaSuite.includes("archive/qa-scripts/nexus-genesis-realtime-production-migration-qa.js")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);

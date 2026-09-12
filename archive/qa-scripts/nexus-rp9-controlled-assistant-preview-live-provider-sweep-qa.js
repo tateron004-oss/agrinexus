@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 const SWEEP_PROMPTS = Object.freeze([
   { providerId: "weather", prompt: "What is the weather in Stockton, CA?" },
@@ -35,10 +35,10 @@ function assertStaticContract() {
   const docName = "NEXUS_RP9_CONTROLLED_ASSISTANT_PREVIEW_LIVE_PROVIDER_SWEEP.md";
   const qaName = "nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js";
   assert(exists("docs", docName), "RP9 controlled assistant preview sweep doc must exist.");
-  assert(exists("scripts", qaName), "RP9 controlled assistant preview sweep QA must exist.");
+  assert(exists("archive", "qa-scripts", qaName), "RP9 controlled assistant preview sweep QA must exist.");
 
   const doc = read("docs", docName);
-  const qaSource = read("scripts", qaName);
+  const qaSource = read("archive", "qa-scripts", qaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -104,10 +104,10 @@ function assertStaticContract() {
 
   assert.equal(
     pkg.scripts["qa:nexus-rp9-controlled-assistant-preview-live-provider-sweep"],
-    "node scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+    "node archive/qa-scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
     "RP9 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js"), "RP9 QA must be in safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js"), "RP9 QA must be in safe suites.");
 }
 
 function assertSafeOrchestrationResult(result, label) {

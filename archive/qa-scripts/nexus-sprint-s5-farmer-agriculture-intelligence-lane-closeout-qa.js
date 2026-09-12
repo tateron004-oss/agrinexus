@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_FARMER_AGRICULTURE_INTELLIGENCE_FEATURE_FLAG_STATE,
   normalizeFarmerAgricultureIntelligenceFeatureFlagState
-} = require("../public/nexus-farmer-agriculture-intelligence-feature-flag.js");
+} = require("../../public/nexus-farmer-agriculture-intelligence-feature-flag.js");
 const {
   protectedFields,
   loadFarmerAgricultureIntelligenceFlagFixtures,
   validateFarmerAgricultureIntelligenceFlagFixtures
 } = require("./nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -38,7 +38,7 @@ const docName = "NEXUS_SPRINT_S5_FARMER_AGRICULTURE_INTELLIGENCE_LANE_CLOSEOUT.m
 const qaName = "nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint S5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint S5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint S5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -48,7 +48,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-farmer-agriculture-intelligence-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-farmer-agriculture-intelligence-feature-flag.js");
-const s3Harness = read("scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
+const s3Harness = read("archive", "qa-scripts", "nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness.js");
 const fixtures = loadFarmerAgricultureIntelligenceFlagFixtures();
 
 assertIncludes(doc, [
@@ -181,7 +181,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint S5 requires prior Sprint S QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint S5 requires prior Sprint S QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint S QA: ${requiredScript}`);
 }
 
@@ -292,9 +292,9 @@ assertRuntimeExcludes(server, runtimeForbiddenTerms, "server.js");
 const alias = "qa:nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout";
 assert.equal(
   pkg.scripts[alias],
-  "node scripts/nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa.js",
+  "node archive/qa-scripts/nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa.js",
   "package.json must expose Sprint S5 QA alias."
 );
-assert(qaSuite.includes("scripts/nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa.js"), "qa-suite must include Sprint S5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa.js"), "qa-suite must include Sprint S5 QA.");
 
 console.log("[nexus-sprint-s5-farmer-agriculture-intelligence-lane-closeout-qa] passed");

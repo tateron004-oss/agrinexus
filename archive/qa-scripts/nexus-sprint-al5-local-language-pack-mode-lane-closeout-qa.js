@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   DEFAULT_LOCAL_LANGUAGE_PACK_MODE_FEATURE_FLAG_STATE,
   normalizeLocalLanguagePackModeFeatureFlagState
-} = require("../public/nexus-local-language-pack-mode-feature-flag.js");
+} = require("../../public/nexus-local-language-pack-mode-feature-flag.js");
 const {
   protectedFields,
   loadLocalLanguagePackModeFlagFixtures,
@@ -12,7 +12,7 @@ const {
   validateLocalLanguagePackModeFlagFixtures
 } = require("./nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -33,7 +33,7 @@ const docName = "NEXUS_SPRINT_AL5_LOCAL_LANGUAGE_PACK_MODE_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-al5-local-language-pack-mode-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint AL5 lane closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint AL5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AL5 QA script must exist.");
 
 const doc = read("docs", docName);
 const al4Doc = read("docs", "NEXUS_SPRINT_AL4_LOCAL_LANGUAGE_PACK_MODE_RUNTIME_ABSENCE_REGRESSION_GUARD.md");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-local-language-pack-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-local-language-pack-mode-feature-flag.js");
-const harness = read("scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
+const harness = read("archive", "qa-scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness.js");
 const fixtures = loadLocalLanguagePackModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -81,11 +81,11 @@ for (const requiredPath of [
   ["public", "nexus-local-language-pack-mode-readiness-contract.js"],
   ["public", "nexus-local-language-pack-mode-feature-flag.js"],
   ["fixtures", "nexus", "local-language-pack-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"],
-  ["scripts", "nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"],
-  ["scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"],
-  ["scripts", "nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js"],
-  ["scripts", "nexus-local-language-pack-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js"],
+  ["archive", "qa-scripts", "nexus-local-language-pack-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AL5 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -207,13 +207,13 @@ for (const source of [featureFlagModule, harness]) {
 }
 
 const alias = "qa:nexus-sprint-al5-local-language-pack-mode-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AL5 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AL2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AL3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AL4 QA.");
-assert(qaSuite.includes("scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 90 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AL2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AL3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js"), "qa-suite must continue to include Sprint AL4 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 90 QA.");
 
 console.log("[nexus-sprint-al5-local-language-pack-mode-lane-closeout-qa] passed");

@@ -6,9 +6,9 @@ const {
   DEFAULT_IDENTITY_FOUNDATION_FEATURE_FLAG_STATE,
   normalizeIdentityFoundationFeatureFlagState,
   isIdentityFoundationVisibleFeatureEnabled
-} = require("../public/nexus-identity-foundation-feature-flag.js");
+} = require("../../public/nexus-identity-foundation-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,7 +31,7 @@ const qaName = "nexus-sprint-i2-identity-foundation-feature-flag-contract-qa.js"
 
 assert(exists("docs", docName), "Sprint I2 feature flag contract doc must exist.");
 assert(exists("public", moduleName), "Sprint I2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint I2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint I2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -190,7 +190,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-i2-identity-foundation-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint I2 QA.");
 

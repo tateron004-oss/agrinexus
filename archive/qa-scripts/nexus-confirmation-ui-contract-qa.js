@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function readText(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -234,7 +234,7 @@ assertIncludes(prototypeDoc, "does not execute", "Low-risk prototype doc must pr
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-confirmation-ui-contract"],
-  "node scripts/nexus-confirmation-ui-contract-qa.js",
+  "node archive/qa-scripts/nexus-confirmation-ui-contract-qa.js",
   "package should expose confirmation UI contract QA alias"
 );
 

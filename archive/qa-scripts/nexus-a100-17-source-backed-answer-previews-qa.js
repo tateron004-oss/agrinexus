@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const sprint = require("../server/nexus-a100-17-source-backed-answer-previews.js");
+const sprint = require("../../server/nexus-a100-17-source-backed-answer-previews.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-a100-17-source-backed-answer-previews.js"), "A100-17 module must exist.");
   assert(exists("docs", "NEXUS_A100_17_SOURCE_BACKED_ANSWER_PREVIEWS.md"), "A100-17 documentation must exist.");
-  assert(exists("scripts", "nexus-a100-17-source-backed-answer-previews-qa.js"), "A100-17 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-a100-17-source-backed-answer-previews-qa.js"), "A100-17 QA must exist.");
   if (17 === 1) {
     assert(exists("docs", "NEXUS_A100_SPRINT_LEDGER.md"), "A100 sprint ledger must exist.");
     const ledger = read("docs", "NEXUS_A100_SPRINT_LEDGER.md");
@@ -72,8 +72,8 @@ function assertStaticSafety() {
     "executionAuthority: \"provider\""
   ].forEach(term => assert(!source.includes(term), `A100-17 module must not introduce unsafe behavior: ${term}.`));
 
-  assert.equal(pkg.scripts["qa:nexus-a100-17-source-backed-answer-previews"], "node scripts/nexus-a100-17-source-backed-answer-previews-qa.js", "A100-17 package QA alias must exist.");
-  assert(qaSuite.includes("scripts/nexus-a100-17-source-backed-answer-previews-qa.js"), "A100-17 QA must be wired into local-safe suites.");
+  assert.equal(pkg.scripts["qa:nexus-a100-17-source-backed-answer-previews"], "node archive/qa-scripts/nexus-a100-17-source-backed-answer-previews-qa.js", "A100-17 package QA alias must exist.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-a100-17-source-backed-answer-previews-qa.js"), "A100-17 QA must be wired into local-safe suites.");
 }
 
 function assertArtifacts() {

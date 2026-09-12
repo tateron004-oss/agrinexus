@@ -13,8 +13,8 @@ D3 remains non-runtime and non-executing. It does not import staged actions into
 ## Files
 
 - Fixture file: `fixtures/nexus/staged-actions.json`
-- Harness: `scripts/nexus-sprint-d3-staged-action-harness.js`
-- QA guard: `scripts/nexus-sprint-d3-staged-action-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-d3-staged-action-harness.js`
+- QA guard: `archive/qa-scripts/nexus-sprint-d3-staged-action-harness-qa.js`
 
 ## Fixture Examples
 

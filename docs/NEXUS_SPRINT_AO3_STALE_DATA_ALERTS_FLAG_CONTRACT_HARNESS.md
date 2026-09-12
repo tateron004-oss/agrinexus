@@ -7,7 +7,7 @@ Sprint AO3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/stale-data-alerts-feature-flags.json`
-- `scripts/nexus-sprint-ao3-stale-data-alerts-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ao3-stale-data-alerts-flag-contract-harness.js`
 
 ## Fixture Coverage
 

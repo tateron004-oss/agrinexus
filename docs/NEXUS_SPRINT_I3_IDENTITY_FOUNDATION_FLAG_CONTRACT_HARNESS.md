@@ -16,8 +16,8 @@ Prove that the default-off Identity Foundation feature flag contract behaves pre
 ## Artifacts
 
 - Fixture file: `fixtures/nexus/identity-foundation-feature-flags.json`
-- Harness: `scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`
-- QA: `scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness-qa.js`
+- Harness: `archive/qa-scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`
+- QA: `archive/qa-scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness-qa.js`
 
 ## Fixture Expectations
 
@@ -88,7 +88,7 @@ The harness must not:
 Sprint I3 does not load:
 
 - `public/nexus-identity-foundation-feature-flag.js`;
-- `scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness.js`;
 - `fixtures/nexus/identity-foundation-feature-flags.json`.
 
 The Standard User build remains unchanged.

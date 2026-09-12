@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = { doc: path.join(root, "docs", "NEXUS_TOOL_PROVIDER_SELECTION_READINESS_CONTRACT_PHASE_67.md"), contract: path.join(root, "public", "nexus-tool-provider-selection-readiness-contract.js"), index: path.join(root, "public", "index.html"), app: path.join(root, "public", "app.js"), server: path.join(root, "server.js"), packageJson: path.join(root, "package.json"), qaSuite: path.join(root, "scripts", "qa-suite.js") };
 function read(filePath) { return fs.readFileSync(filePath, "utf8"); }
 function assert(condition, message) { if (!condition) { console.error(`[nexus-tool-provider-selection-readiness-contract-qa] ${message}`); process.exit(1); } }
@@ -31,6 +31,6 @@ assert(sample.silentProviderHandoffEnabled === false, "factory must force silent
 assert(sample.executionAllowed === false, "factory must force execution disabled.");
 ["fetch(", "XMLHttpRequest", "axios", "EventSource", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "window.location", "document.location", "addEventListener", "onclick", "callAdapter(", "openProvider(", "selectAndExecuteProvider("].forEach(forbidden => assert(!contractSource.includes(forbidden), `contract module must not include runtime behavior: ${forbidden}`));
 ["nexus-tool-provider-selection-readiness-contract.js", "NexusToolProviderSelectionReadinessContract", "toolProviderSelectionReadiness", "TOOL_PROVIDER_SELECTION_READINESS_CONTRACT"].forEach(runtimeHook => { assert(!index.includes(runtimeHook), `index.html must not load ${runtimeHook}.`); assert(!app.includes(runtimeHook), `app.js must not consume ${runtimeHook}.`); assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`); });
-assert(packageData.scripts["qa:nexus-tool-provider-selection-readiness-contract"] === "node scripts/nexus-tool-provider-selection-readiness-contract-qa.js", "package.json must expose qa:nexus-tool-provider-selection-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-tool-provider-selection-readiness-contract-qa.js"), "qa-suite.js must include Phase 67 QA.");
+assert(packageData.scripts["qa:nexus-tool-provider-selection-readiness-contract"] === "node archive/qa-scripts/nexus-tool-provider-selection-readiness-contract-qa.js", "package.json must expose qa:nexus-tool-provider-selection-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-tool-provider-selection-readiness-contract-qa.js"), "qa-suite.js must include Phase 67 QA.");
 console.log("[nexus-tool-provider-selection-readiness-contract-qa] passed");

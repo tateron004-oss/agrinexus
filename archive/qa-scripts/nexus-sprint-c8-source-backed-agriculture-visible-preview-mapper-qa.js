@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C8_SOURCE_BACKED_AGRICULTURE_VISIBLE_PREVIEW_MAPPER.md"),
   c7Doc: path.join(root, "docs", "NEXUS_SPRINT_C7_FIXTURE_TO_VISIBLE_PREVIEW_REVIEW_PLAN.md"),
@@ -129,8 +129,8 @@ mapper.REQUIRED_FALSE_FLAGS.forEach(flag => assert(preview[flag] === false, `pre
 });
 
 const alias = "qa:nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper";
-const command = "node scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js"), "qa-suite must include Sprint C8 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js"), "qa-suite must include Sprint C8 QA.");
 
 console.log("[nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa] passed");

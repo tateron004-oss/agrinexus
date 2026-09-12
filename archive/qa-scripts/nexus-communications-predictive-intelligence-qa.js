@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -50,6 +50,6 @@ function excludes(source, token, label) {
   "provider contacted successfully"
 ].forEach(token => excludes(`${app}\n${server}`, token, `unsafe communications claim ${token}`));
 
-assert.strictEqual(packageJson.scripts["qa:nexus-communications-predictive-intelligence"], "node scripts/nexus-communications-predictive-intelligence-qa.js");
-includes(qaSuite, "scripts/nexus-communications-predictive-intelligence-qa.js", "qa-suite communications wiring");
+assert.strictEqual(packageJson.scripts["qa:nexus-communications-predictive-intelligence"], "node archive/qa-scripts/nexus-communications-predictive-intelligence-qa.js");
+includes(qaSuite, "archive/qa-scripts/nexus-communications-predictive-intelligence-qa.js", "qa-suite communications wiring");
 console.log("Nexus communications predictive intelligence QA passed.");

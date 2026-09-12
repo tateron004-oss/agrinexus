@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C38 closeout report must exist");
-assert(exists("scripts", qaName), "Sprint C38 closeout report QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C38 closeout report QA must exist");
 
 for (const prior of [
   "NEXUS_SPRINT_C37_SOURCE_BACKED_AGRICULTURE_RUNTIME_ACTIVATION_FINAL_ARCHIVE_INDEX.md",
@@ -176,7 +176,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c38-source-backed-agriculture-activation-readiness-closeout-report";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C38 QA.");
 

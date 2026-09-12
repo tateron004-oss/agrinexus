@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const stylesPath = path.join(root, "public", "styles.css");
 const packagePath = path.join(root, "package.json");
@@ -173,7 +173,7 @@ for (const blocked of blockedCases) {
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-controlled-action-confirmation-ui-prototype"],
-  "node scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js",
+  "node archive/qa-scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js",
   "package should expose prototype QA alias"
 );
 assert.match(suite, /scripts\/nexus-controlled-action-confirmation-ui-prototype-qa\.js/, "nexus-workforce suite should include prototype QA");

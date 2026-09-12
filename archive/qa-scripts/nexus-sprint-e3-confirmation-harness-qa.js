@@ -4,13 +4,13 @@ const path = require("node:path");
 const {
   REQUIRED_BLOCKED_EXECUTION_CHANNELS,
   isSafeApprovalIntentConfirmation
-} = require("../public/nexus-confirmation-contract.js");
+} = require("../../public/nexus-confirmation-contract.js");
 const {
   loadConfirmationFixtures,
   validateConfirmationFixtures
 } = require("./nexus-sprint-e3-confirmation-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -33,12 +33,12 @@ const qaName = "nexus-sprint-e3-confirmation-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint E3 harness doc must exist.");
 assert(exists("fixtures", "nexus", "confirmations.json"), "Sprint E3 confirmation fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint E3 confirmation harness must exist.");
-assert(exists("scripts", qaName), "Sprint E3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint E3 confirmation harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint E3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", "confirmations.json");
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const packageJson = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const fixtures = loadConfirmationFixtures();
@@ -48,7 +48,7 @@ assertIncludes(doc, [
   "34df1a38fc31e771e0a588cc7ded95d5d77acfbf",
   "Fixture-Only Confirmation Harness",
   fixtureName.replace(/\\/g, "/"),
-  "scripts/nexus-sprint-e3-confirmation-harness.js",
+  "archive/qa-scripts/nexus-sprint-e3-confirmation-harness.js",
   "approvalIntentOnly: true",
   "requiresFinalExecutionGate: true",
   "executionAuthority: false",
@@ -113,9 +113,9 @@ assert(!fixtureSource.includes("\"requiresFinalExecutionGate\": false"), "E3 fix
 });
 
 const alias = "qa:nexus-sprint-e3-confirmation-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint E3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js"), "E3 requires E2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js"), "E3 requires E2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-e3-confirmation-harness-qa] passed");

@@ -7,9 +7,9 @@ const {
   PROTECTED_OFFLINE_LOW_BANDWIDTH_MODE_FLAG_FIELDS,
   normalizeOfflineLowBandwidthModeFeatureFlagState,
   isOfflineLowBandwidthModeVisibleFeatureEnabled
-} = require("../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
+} = require("../../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-offline-low-bandwidth-mode-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AJ2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AJ2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AJ2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AJ2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -176,10 +176,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AJ2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
-assert(qaSuite.includes("scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 88 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 88 QA.");
 
 console.log("[nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const app = read("public/app.js");
@@ -121,11 +121,11 @@ for (const claim of unsafeClaims) {
 }
 
 assert(
-  pkg.scripts["qa:nexus-predictive-intelligence-maturity"] === "node scripts/nexus-predictive-intelligence-maturity-qa.js",
+  pkg.scripts["qa:nexus-predictive-intelligence-maturity"] === "node archive/qa-scripts/nexus-predictive-intelligence-maturity-qa.js",
   "package.json is missing qa:nexus-predictive-intelligence-maturity alias"
 );
 assert(
-  qaSuite.includes("scripts/nexus-predictive-intelligence-maturity-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-predictive-intelligence-maturity-qa.js"),
   "scripts/qa-suite.js is missing maturity QA wiring"
 );
 

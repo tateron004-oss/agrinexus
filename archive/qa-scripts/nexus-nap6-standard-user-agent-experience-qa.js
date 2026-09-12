@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const standardUserAgentExperience = require("../server/nexus-standard-user-agent-experience.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const standardUserAgentExperience = require("../../server/nexus-standard-user-agent-experience.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -111,10 +111,10 @@ function assertStaticContracts() {
 
   assert.equal(
     pkg.scripts["qa:nexus-nap6-standard-user-agent-experience"],
-    "node scripts/nexus-nap6-standard-user-agent-experience-qa.js",
+    "node archive/qa-scripts/nexus-nap6-standard-user-agent-experience-qa.js",
     "NAP6 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-nap6-standard-user-agent-experience-qa.js"), "NAP6 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-nap6-standard-user-agent-experience-qa.js"), "NAP6 QA must be wired into local-safe suites.");
 }
 
 function assertExperienceModels() {

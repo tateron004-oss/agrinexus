@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const memory = require("../public/nexus-persistent-memory.js");
+const memory = require("../../public/nexus-persistent-memory.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const app = read("public/app.js");
 const server = read("server.js");
@@ -119,7 +119,7 @@ for (const unsafe of [
   assert(!server.toLowerCase().includes(unsafe), `server includes unsafe memory claim: ${unsafe}`);
 }
 
-assert(pkg.scripts["qa:nexus-persistent-memory-layer"] === "node scripts/nexus-persistent-memory-layer-qa.js", "package alias missing");
-assert(suite.includes("scripts/nexus-persistent-memory-layer-qa.js"), "qa-suite wiring missing");
+assert(pkg.scripts["qa:nexus-persistent-memory-layer"] === "node archive/qa-scripts/nexus-persistent-memory-layer-qa.js", "package alias missing");
+assert(suite.includes("archive/qa-scripts/nexus-persistent-memory-layer-qa.js"), "qa-suite wiring missing");
 
 console.log("Nexus persistent memory layer QA passed.");

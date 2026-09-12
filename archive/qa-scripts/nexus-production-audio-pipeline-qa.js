@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -92,8 +92,8 @@ assert(!orbStyleBlock.includes("cursor: pointer"), "Genesis orb block must not r
 assert(server.includes('url.pathname === "/api/voice/transcribe"'), "server voice transcription endpoint must exist");
 assert(server.includes("openAiTranscribeAudio"), "server must support configured OpenAI STT fallback");
 
-assert(pkg.scripts["qa:nexus-production-audio-pipeline"] === "node scripts/nexus-production-audio-pipeline-qa.js", "package alias missing");
-assert(qaSuite.includes("scripts/nexus-production-audio-pipeline-qa.js"), "qa-suite must include production audio pipeline QA");
+assert(pkg.scripts["qa:nexus-production-audio-pipeline"] === "node archive/qa-scripts/nexus-production-audio-pipeline-qa.js", "package alias missing");
+assert(qaSuite.includes("archive/qa-scripts/nexus-production-audio-pipeline-qa.js"), "qa-suite must include production audio pipeline QA");
 
 console.log(JSON.stringify({
   ok: true,

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C26 rollback plan template must exist");
-assert(exists("scripts", qaName), "Sprint C26 rollback plan QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C26 rollback plan QA must exist");
 assert(exists("docs", "NEXUS_SPRINT_C25_SOURCE_BACKED_AGRICULTURE_RUNTIME_ACTIVATION_RISK_REGISTER.md"), "Sprint C25 risk register must remain present");
 assert(exists("docs", "NEXUS_SPRINT_C24_SOURCE_BACKED_AGRICULTURE_RUNTIME_WIRING_APPROVAL_RECORD_TEMPLATE.md"), "Sprint C24 approval template must remain present");
 assert(exists("docs", "NEXUS_SPRINT_C23_SOURCE_BACKED_AGRICULTURE_RUNTIME_WIRING_PREFLIGHT_CHECKLIST.md"), "Sprint C23 preflight checklist must remain present");
@@ -173,7 +173,7 @@ for (const fragment of protectedFragments) {
 }
 
 const alias = "qa:nexus-sprint-c26-source-backed-agriculture-runtime-activation-rollback-plan-template";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C26 QA.");
 

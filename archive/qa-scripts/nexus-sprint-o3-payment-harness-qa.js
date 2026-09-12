@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -19,15 +19,15 @@ const qaName = "nexus-sprint-o3-payment-harness-qa.js";
 
 assert(exists("docs", docName), "O3 doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "O3 fixtures must exist.");
-assert(exists("scripts", harnessName), "O3 harness must exist.");
-assert(exists("scripts", qaName), "O3 QA must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "O3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "O3 QA must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
-const contract = require("../public/nexus-payment-intent-contract.js");
+const contract = require("../../public/nexus-payment-intent-contract.js");
 const harness = require("./nexus-sprint-o3-payment-harness.js");
 
 [
@@ -107,9 +107,9 @@ results.forEach(result => {
 ].forEach(term => assert(!harnessSource.includes(term), `O3 harness must not include side-effect API: ${term}`));
 
 const alias = "qa:nexus-sprint-o3-payment-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include O3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-o2-inert-payment-intent-contract-qa.js"), "O3 requires O2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-o2-inert-payment-intent-contract-qa.js"), "O3 requires O2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-o3-payment-harness-qa] passed");

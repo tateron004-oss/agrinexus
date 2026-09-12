@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_C5_SOURCE_BACKED_AGRICULTURE_READINESS_DESIGN.md"),
   c3Doc: path.join(root, "docs", "NEXUS_SPRINT_C3_SOURCE_BACKED_AGRICULTURE_ACTIVATION_HARDENING.md"),
@@ -282,8 +282,8 @@ assert(registry.normalizeAgricultureSourceRecord({ ...verifiedSource, confidence
 });
 
 const alias = "qa:nexus-sprint-c5-source-backed-agriculture-readiness-design";
-const command = "node scripts/nexus-sprint-c5-source-backed-agriculture-readiness-design-qa.js";
+const command = "node archive/qa-scripts/nexus-sprint-c5-source-backed-agriculture-readiness-design-qa.js";
 assert(packageData.scripts && packageData.scripts[alias] === command, `${alias} package script must exist.`);
-assert(qaSuite.includes("scripts/nexus-sprint-c5-source-backed-agriculture-readiness-design-qa.js"), "qa-suite must include Sprint C5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-c5-source-backed-agriculture-readiness-design-qa.js"), "qa-suite must include Sprint C5 QA.");
 
 console.log("[nexus-sprint-c5-source-backed-agriculture-readiness-design-qa] passed");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -44,7 +44,7 @@ const noExecutionFields = [
 
 assert(exists("docs", docName), "Sprint C41 flag-off regression doc must exist.");
 assert(exists("public", moduleName), "Sprint C41 flag contract module must exist.");
-assert(exists("scripts", qaName), "Sprint C41 flag-off regression QA must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C41 flag-off regression QA must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -139,7 +139,7 @@ assert(!app.includes(flagName), "public/app.js must not reference C41 flag.");
 assert(!server.includes(flagName), "server.js must not reference C41 flag.");
 
 const alias = "qa:nexus-sprint-c41-source-backed-agriculture-preview-flag-off-regression";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C41 QA.");
 

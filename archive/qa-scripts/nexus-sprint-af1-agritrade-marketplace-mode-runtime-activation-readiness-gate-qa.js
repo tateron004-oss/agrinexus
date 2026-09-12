@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,7 +23,7 @@ const docName = "NEXUS_SPRINT_AF1_AGRITRADE_MARKETPLACE_MODE_RUNTIME_ACTIVATION_
 const qaName = "nexus-sprint-af1-agritade-marketplace-mode-runtime-activation-readiness-gate-qa.js".replace("agritade", "agritrade");
 
 assert(exists("docs", docName), "Sprint AF1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint AF1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AF1 QA script must exist.");
 
 const doc = read("docs", docName);
 const ae5Doc = read("docs", "NEXUS_SPRINT_AE5_EDUCATION_MODE_LANE_CLOSEOUT.md");
@@ -33,7 +33,7 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const agritradeContractSource = read("public", "nexus-agritrade-marketplace-mode-readiness-contract.js");
-const agritradeContract = require("../public/nexus-agritrade-marketplace-mode-readiness-contract.js");
+const agritradeContract = require("../../public/nexus-agritrade-marketplace-mode-readiness-contract.js");
 
 assertIncludes(doc, [
   "Sprint AF1",
@@ -167,7 +167,7 @@ for (const requiredPath of [
   ["docs", "NEXUS_SPRINT_AE5_EDUCATION_MODE_LANE_CLOSEOUT.md"],
   ["docs", "NEXUS_AGRITRADE_MARKETPLACE_MODE_READINESS_CONTRACT_PHASE_84.md"],
   ["public", "nexus-agritrade-marketplace-mode-readiness-contract.js"],
-  ["scripts", "nexus-agritrade-marketplace-mode-readiness-contract-qa.js"]
+  ["archive", "qa-scripts", "nexus-agritrade-marketplace-mode-readiness-contract-qa.js"]
 ]) {
   assert(exists(...requiredPath), `AF1 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -283,10 +283,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AF1 QA.");
-assert(qaSuite.includes("scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 84 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-ae5-education-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AE5 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 84 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-ae5-education-mode-lane-closeout-qa.js"), "qa-suite must continue to include Sprint AE5 QA.");
 
 console.log("[nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa] passed");

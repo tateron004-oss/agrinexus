@@ -3,10 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
-const jobs = require("../server/nexus-job-search-source-provider.js");
+} = require("../../public/nexus-live-source-result-contract.js");
+const jobs = require("../../server/nexus-job-search-source-provider.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -22,7 +22,7 @@ const qaName = "nexus-sprint-live8-job-search-application-provider-readiness-qa.
 
 assert(exists("docs", docName), "LIVE8 doc must exist.");
 assert(exists("server", moduleName), "LIVE8 provider module must exist.");
-assert(exists("scripts", qaName), "LIVE8 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "LIVE8 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("server", moduleName);
@@ -151,9 +151,9 @@ assert.equal(liveReady.rawResultAvailable, false, "LIVE8 must not claim raw live
 ].forEach(term => assert(!moduleSource.includes(term), `LIVE8 module must not include job execution path: ${term}`));
 
 const alias = "qa:nexus-sprint-live8-job-search-application-provider-readiness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include LIVE8 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js"), "LIVE8 requires LIVE7 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js"), "LIVE8 requires LIVE7 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-live8-job-search-application-provider-readiness-qa] passed");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_CLINIC_PROVIDER_CONNECTOR_CONTRACT_PHASE_36.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -9,7 +9,7 @@ const paths = {
   clinicDirectory: path.join(root, "public", "nexus-provider-clinic-public-directory-contracts.js"),
   providerUniverse: path.join(root, "public", "nexus-provider-source-universe.js"),
   confirmationQa: path.join(root, "scripts", "companion-confirmation-gate-smoke.js"),
-  handoffQa: path.join(root, "scripts", "confirmed-call-handoff-qa.js"),
+  handoffQa: path.join(root, "archive", "qa-scripts", "confirmed-call-handoff-qa.js"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
@@ -231,7 +231,7 @@ assert(invalid.connectorStatus === "not_configured", "invalid connector status m
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-clinic-provider-connector-contract"] === "node scripts/nexus-clinic-provider-connector-contract-qa.js", "package.json must expose qa:nexus-clinic-provider-connector-contract");
-assert(qaSuite.includes("scripts/nexus-clinic-provider-connector-contract-qa.js"), "qa-suite.js must include clinic provider connector contract QA");
+assert(packageData.scripts["qa:nexus-clinic-provider-connector-contract"] === "node archive/qa-scripts/nexus-clinic-provider-connector-contract-qa.js", "package.json must expose qa:nexus-clinic-provider-connector-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-clinic-provider-connector-contract-qa.js"), "qa-suite.js must include clinic provider connector contract QA");
 
 console.log("[nexus-clinic-provider-connector-contract-qa] passed");

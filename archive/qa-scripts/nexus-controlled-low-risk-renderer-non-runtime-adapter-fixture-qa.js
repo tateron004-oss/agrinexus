@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -360,7 +360,7 @@ assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js mu
 assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
 assert(!server.includes(mountId), "server.js must not reference the hidden mount point");
 
-assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture": "node scripts/${scriptName}"`), "package.json must expose Phase 13R QA alias");
+assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture": "node archive/qa-scripts/${scriptName}"`), "package.json must expose Phase 13R QA alias");
 assert(suite.includes(`scripts/${scriptName}`), "nexus-workforce suite must include Phase 13R QA guard");
 
 console.log("Nexus controlled low-risk renderer non-runtime adapter fixture QA passed.");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -152,12 +152,12 @@ assert(surfaceSource.includes("a100PilotModeRuntimePanelHtml()"), "default Stand
 
 assert.equal(
   pkg.scripts["qa:nexus-pilot-mode-runtime-capability"],
-  "node scripts/nexus-pilot-mode-runtime-capability-qa.js",
+  "node archive/qa-scripts/nexus-pilot-mode-runtime-capability-qa.js",
   "package.json should expose pilot mode runtime capability QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-pilot-mode-runtime-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-pilot-mode-runtime-capability-qa.js"),
   "qa-suite should include pilot mode runtime capability QA in safe suites"
 );
 

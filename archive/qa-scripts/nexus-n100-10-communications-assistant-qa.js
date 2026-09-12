@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const communications = require("../server/nexus-n100-communications-assistant.js");
+const communications = require("../../server/nexus-n100-communications-assistant.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-communications-assistant.js"), "N100-10 communications module must exist.");
   assert(exists("docs", "NEXUS_N100_10_COMMUNICATIONS_ASSISTANT.md"), "N100-10 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-10-communications-assistant-qa.js"), "N100-10 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-10-communications-assistant-qa.js"), "N100-10 QA must exist.");
 
   [
     "SUPPORTED_DRAFT_TYPES",
@@ -77,10 +77,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-10-communications-assistant"],
-    "node scripts/nexus-n100-10-communications-assistant-qa.js",
+    "node archive/qa-scripts/nexus-n100-10-communications-assistant-qa.js",
     "N100-10 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-10-communications-assistant-qa.js"), "N100-10 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-10-communications-assistant-qa.js"), "N100-10 QA must be wired into local-safe suites.");
 }
 
 function assertDraft(prompt, expectedType) {

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -153,7 +153,7 @@ assert(routerBlock.includes("handleNexusVoicePreferenceCommand(command || locali
 ].forEach(token => assert(exposureBlock.includes(token), `voice preference API exposed: ${token}`));
 
 assert(!/voice preferences?.*(send|call|payment|dispatch|prescribe|diagnose|provider handoff)/i.test(preferencesBlock), "voice preferences do not introduce workflow execution claims");
-assert(packageJson.scripts["qa:nexus-voice-preferences-accessibility"] === "node scripts/nexus-voice-preferences-accessibility-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-voice-preferences-accessibility-qa.js"), "safe QA suite includes voice preferences accessibility QA");
+assert(packageJson.scripts["qa:nexus-voice-preferences-accessibility"] === "node archive/qa-scripts/nexus-voice-preferences-accessibility-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-voice-preferences-accessibility-qa.js"), "safe QA suite includes voice preferences accessibility QA");
 
 console.log("Nexus voice preferences accessibility QA passed.");

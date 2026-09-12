@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -29,7 +29,7 @@ const protectedFragments = [
 ];
 
 assert(exists("docs", docName), "Sprint C22 runtime absence contract must exist");
-assert(exists("scripts", qaName), "Sprint C22 runtime absence QA must exist");
+assert(exists("archive", "qa-scripts", qaName), "Sprint C22 runtime absence QA must exist");
 assert(exists("docs", "NEXUS_SPRINT_C21_SOURCE_BACKED_AGRICULTURE_STATIC_SNAPSHOT_BROWSER_VALIDATION_EVIDENCE_TEMPLATE.md"), "Sprint C21 evidence template must remain present");
 assert(exists("docs", "NEXUS_SPRINT_C20_SOURCE_BACKED_AGRICULTURE_STATIC_SNAPSHOT_BROWSER_VALIDATION_PLAN.md"), "Sprint C20 browser validation plan must remain present");
 assert(exists("docs", "NEXUS_SPRINT_C19_SOURCE_BACKED_AGRICULTURE_STATIC_VISUAL_SNAPSHOT_CONTRACT.md"), "Sprint C19 contract must remain present");
@@ -143,7 +143,7 @@ for (const forbiddenRuntimePattern of [
 }
 
 const alias = "qa:nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(packageJson.scripts && packageJson.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint C22 QA.");
 

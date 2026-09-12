@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const recovery = require("../server/nexus-autonomy-workflow-reliability-recovery.js");
-const sessionState = require("../server/nexus-autonomy-workflow-session-state.js");
-const stepRunner = require("../server/nexus-autonomy-workflow-step-runner.js");
+const recovery = require("../../server/nexus-autonomy-workflow-reliability-recovery.js");
+const sessionState = require("../../server/nexus-autonomy-workflow-session-state.js");
+const stepRunner = require("../../server/nexus-autonomy-workflow-step-runner.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -107,10 +107,10 @@ function assertQaWiring() {
   const suite = read("scripts", "qa-suite.js");
   assert.equal(
     pkg.scripts["qa:nexus-aut9-autonomy-reliability-recovery"],
-    "node scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
+    "node archive/qa-scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
     "AUT9 package alias must exist."
   );
-  assert(suite.includes("scripts/nexus-aut9-autonomy-reliability-recovery-qa.js"), "AUT9 QA must be wired into local-safe suites.");
+  assert(suite.includes("archive/qa-scripts/nexus-aut9-autonomy-reliability-recovery-qa.js"), "AUT9 QA must be wired into local-safe suites.");
 }
 
 function runAut9AutonomyReliabilityRecoveryQa() {

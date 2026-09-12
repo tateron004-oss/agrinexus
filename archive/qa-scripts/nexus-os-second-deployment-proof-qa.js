@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const agriNexus = require("../public/nexus-os-agrinexus-deployment-profile.js");
-const healthNexus = require("../public/nexus-os-healthnexus-reference-profile.js");
-const controlPlane = require("../server/nexusOsControlPlane.js");
+const agriNexus = require("../../public/nexus-os-agrinexus-deployment-profile.js");
+const healthNexus = require("../../public/nexus-os-healthnexus-reference-profile.js");
+const controlPlane = require("../../server/nexusOsControlPlane.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -120,8 +120,8 @@ assert(!profileSource.includes("missionLifecycle"), "HealthNexus profile does no
 assert(!profileSource.includes("TWILIO_AUTH_TOKEN="), "HealthNexus profile does not expose Twilio secret values");
 assert(!profileSource.includes("STRIPE_SECRET_KEY="), "HealthNexus profile does not expose payment secret values");
 
-assert(pkg.scripts["qa:nexus-os-second-deployment-proof"] === "node scripts/nexus-os-second-deployment-proof-qa.js", "package alias exists");
-assert(suite.includes("scripts/nexus-os-second-deployment-proof-qa.js"), "safe QA suite includes second deployment proof QA");
+assert(pkg.scripts["qa:nexus-os-second-deployment-proof"] === "node archive/qa-scripts/nexus-os-second-deployment-proof-qa.js", "package alias exists");
+assert(suite.includes("archive/qa-scripts/nexus-os-second-deployment-proof-qa.js"), "safe QA suite includes second deployment proof QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

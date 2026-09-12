@@ -1,12 +1,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_SPRINT_M1_MULTI_TURN_REASONING_RUNTIME_ACTIVATION_READINESS_GATE.md"),
   phase65Doc: path.join(root, "docs", "NEXUS_MULTI_TURN_REASONING_READINESS_CONTRACT_PHASE_65.md"),
   phase65Contract: path.join(root, "public", "nexus-multi-turn-reasoning-readiness-contract.js"),
-  phase65Qa: path.join(root, "scripts", "nexus-multi-turn-reasoning-readiness-contract-qa.js"),
+  phase65Qa: path.join(root, "archive", "qa-scripts", "nexus-multi-turn-reasoning-readiness-contract-qa.js"),
   l5Doc: path.join(root, "docs", "NEXUS_SPRINT_L5_ADVANCED_INTENT_UNDERSTANDING_LANE_CLOSEOUT.md"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -232,9 +232,9 @@ const attemptedOverride = contract.createMultiTurnReasoningReadinessContract({
 });
 
 const alias = "qa:nexus-sprint-m1-multi-turn-reasoning-runtime-activation-readiness-gate";
-const scriptPath = "scripts/nexus-sprint-m1-multi-turn-reasoning-runtime-activation-readiness-gate-qa.js";
+const scriptPath = "archive/qa-scripts/nexus-sprint-m1-multi-turn-reasoning-runtime-activation-readiness-gate-qa.js";
 assert(packageData.scripts[alias] === `node ${scriptPath}`, `package.json must expose ${alias}.`);
 assert(qaSuite.includes(scriptPath), "qa-suite.js must include Sprint M1 QA.");
-assert(qaSuite.includes("scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 65 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js"), "qa-suite.js must continue to include Phase 65 QA.");
 
 console.log("[nexus-sprint-m1-multi-turn-reasoning-runtime-activation-readiness-gate-qa] passed");

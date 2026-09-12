@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const packagePath = path.join(root, "package.json");
 const suitePath = path.join(root, "scripts", "qa-suite.js");
@@ -184,7 +184,7 @@ assert.match(behaviorDoc, /Phase 8Y browser validation/i, "behavior doc should r
 
 assert.strictEqual(
   pkg.scripts["qa:nexus-controlled-action-navigation-behavior"],
-  "node scripts/nexus-controlled-action-navigation-behavior-qa.js",
+  "node archive/qa-scripts/nexus-controlled-action-navigation-behavior-qa.js",
   "package should expose navigation behavior QA alias"
 );
 assert.match(suite, /scripts\/nexus-controlled-action-navigation-behavior-qa\.js/, "nexus-workforce suite should include navigation behavior QA");

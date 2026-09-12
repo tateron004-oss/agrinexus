@@ -2,9 +2,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const routes = require("../server/nexus-n100-map-route-planning-assistant.js");
+const routes = require("../../server/nexus-n100-map-route-planning-assistant.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -25,7 +25,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-map-route-planning-assistant.js"), "N100-15 map/route module must exist.");
   assert(exists("docs", "NEXUS_N100_15_MAP_ROUTE_PLANNING_ASSISTANT.md"), "N100-15 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-15-map-route-planning-assistant-qa.js"), "N100-15 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-15-map-route-planning-assistant-qa.js"), "N100-15 QA must exist.");
 
   [
     "SUPPORTED_ROUTE_ARTIFACTS",
@@ -69,10 +69,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-15-map-route-planning-assistant"],
-    "node scripts/nexus-n100-15-map-route-planning-assistant-qa.js",
+    "node archive/qa-scripts/nexus-n100-15-map-route-planning-assistant-qa.js",
     "N100-15 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-15-map-route-planning-assistant-qa.js"), "N100-15 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-15-map-route-planning-assistant-qa.js"), "N100-15 QA must be wired into local-safe suites.");
 }
 
 function assertArtifact(prompt, expectedType) {

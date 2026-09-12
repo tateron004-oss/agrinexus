@@ -21,7 +21,7 @@ The following artifacts must not be loaded by `public/index.html`, `public/app.j
 
 - `public/nexus-offline-low-bandwidth-mode-readiness-contract.js`;
 - `public/nexus-offline-low-bandwidth-mode-feature-flag.js`;
-- `scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js`;
+- `archive/qa-scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js`;
 - `fixtures/nexus/offline-low-bandwidth-mode-feature-flags.json`;
 - Sprint AJ QA scripts.
 

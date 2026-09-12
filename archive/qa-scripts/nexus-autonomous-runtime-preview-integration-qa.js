@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const files = {
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
@@ -146,7 +146,7 @@ const sprintBAppSurface = [
   "navigator.sendBeacon"
 ].forEach(forbidden => assert(!sprintBAppSurface.includes(forbidden), `Sprint B app integration must not include ${forbidden}.`));
 
-assert(packageData.scripts["qa:nexus-autonomous-runtime-preview-integration"] === "node scripts/nexus-autonomous-runtime-preview-integration-qa.js", "package alias must exist.");
-assert(qaSuite.includes("scripts/nexus-autonomous-runtime-preview-integration-qa.js"), "qa-suite must include autonomous runtime preview integration QA.");
+assert(packageData.scripts["qa:nexus-autonomous-runtime-preview-integration"] === "node archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js", "package alias must exist.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-autonomous-runtime-preview-integration-qa.js"), "qa-suite must include autonomous runtime preview integration QA.");
 
 console.log("[nexus-autonomous-runtime-preview-integration-qa] passed");

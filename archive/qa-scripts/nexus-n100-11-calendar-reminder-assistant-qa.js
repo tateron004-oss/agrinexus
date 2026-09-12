@@ -2,10 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const scheduling = require("../server/nexus-n100-calendar-reminder-assistant.js");
-const permissions = require("../server/nexus-n100-permission-consent-manager.js");
+const scheduling = require("../../server/nexus-n100-calendar-reminder-assistant.js");
+const permissions = require("../../server/nexus-n100-permission-consent-manager.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -26,7 +26,7 @@ function assertStaticSafety() {
 
   assert(exists("server", "nexus-n100-calendar-reminder-assistant.js"), "N100-11 scheduling module must exist.");
   assert(exists("docs", "NEXUS_N100_11_CALENDAR_REMINDER_ASSISTANT.md"), "N100-11 documentation must exist.");
-  assert(exists("scripts", "nexus-n100-11-calendar-reminder-assistant-qa.js"), "N100-11 QA must exist.");
+  assert(exists("archive", "qa-scripts", "nexus-n100-11-calendar-reminder-assistant-qa.js"), "N100-11 QA must exist.");
 
   [
     "SUPPORTED_SCHEDULE_ARTIFACTS",
@@ -72,10 +72,10 @@ function assertStaticSafety() {
 
   assert.equal(
     pkg.scripts["qa:nexus-n100-11-calendar-reminder-assistant"],
-    "node scripts/nexus-n100-11-calendar-reminder-assistant-qa.js",
+    "node archive/qa-scripts/nexus-n100-11-calendar-reminder-assistant-qa.js",
     "N100-11 package QA alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-n100-11-calendar-reminder-assistant-qa.js"), "N100-11 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-n100-11-calendar-reminder-assistant-qa.js"), "N100-11 QA must be wired into local-safe suites.");
 }
 
 function grantedPermission(capability) {

@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -148,11 +148,11 @@ includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-production-platform-rails"],
-  "node scripts/nexus-production-platform-rails-qa.js",
+  "node archive/qa-scripts/nexus-production-platform-rails-qa.js",
   "package script should run production platform rails QA"
 );
 
-includes(qaSuite, "scripts/nexus-production-platform-rails-qa.js", "qa-suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-production-platform-rails-qa.js", "qa-suite wiring");
 
 [
   "provider connection is live",

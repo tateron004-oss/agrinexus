@@ -2,12 +2,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
-const jarvisQa = fs.readFileSync(path.join(root, "scripts", "nexus-jarvis-style-standard-user-experience-qa.js"), "utf8");
+const jarvisQa = fs.readFileSync(path.join(root, "archive", "qa-scripts", "nexus-jarvis-style-standard-user-experience-qa.js"), "utf8");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -171,11 +171,11 @@ assert(styles.includes("[data-nexus-chronic-care-physician-report-result]"), "Sp
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-13-chronic-care-physician-report-builder"],
-  "node scripts/nexus-capability-sprint-13-chronic-care-physician-report-builder-qa.js",
+  "node archive/qa-scripts/nexus-capability-sprint-13-chronic-care-physician-report-builder-qa.js",
   "package alias should expose Sprint 13 QA."
 );
 assert(
-  qaSuite.includes("scripts/nexus-capability-sprint-13-chronic-care-physician-report-builder-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-capability-sprint-13-chronic-care-physician-report-builder-qa.js"),
   "qa-suite should include Sprint 13 QA."
 );
 

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -23,12 +23,12 @@ const qaName = "nexus-sprint-l3-call-message-intent-harness-qa.js";
 
 assert(exists("docs", docName), "L3 doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "L3 fixture file must exist.");
-assert(exists("scripts", harnessName), "L3 harness must exist.");
-assert(exists("scripts", qaName), "L3 QA must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "L3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "L3 QA must exist.");
 
 const doc = read("docs", docName);
 const fixturesSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -123,9 +123,9 @@ results.forEach(result => {
 });
 
 const alias = "qa:nexus-sprint-l3-call-message-intent-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint L3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-l2-inert-call-message-intent-contract-qa.js"), "L3 requires L2 QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-l2-inert-call-message-intent-contract-qa.js"), "L3 requires L2 QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-l3-call-message-intent-harness-qa] passed");

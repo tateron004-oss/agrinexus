@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -347,10 +347,10 @@ assertAll(styles, [
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-final-endgame-agent-platform"],
-  "node scripts/nexus-final-endgame-agent-platform-qa.js",
+  "node archive/qa-scripts/nexus-final-endgame-agent-platform-qa.js",
   "package alias should run final endgame platform QA"
 );
 
-includes(qaSuite, "scripts/nexus-final-endgame-agent-platform-qa.js", "qa-suite local-safe wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-final-endgame-agent-platform-qa.js", "qa-suite local-safe wiring");
 
 console.log("Nexus final endgame agent platform QA passed.");

@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -187,10 +187,10 @@ function staticAssertions() {
   }
   assert.equal(
     packageJson.scripts["qa:nexus-openai-native-tool-parity"],
-    "node scripts/nexus-openai-native-tool-parity-qa.js",
+    "node archive/qa-scripts/nexus-openai-native-tool-parity-qa.js",
     "package alias should be wired"
   );
-  assert(qaSuite.includes("scripts/nexus-openai-native-tool-parity-qa.js"), "qa-suite should include tool parity QA");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-openai-native-tool-parity-qa.js"), "qa-suite should include tool parity QA");
 }
 
 async function runtimeAssertions() {

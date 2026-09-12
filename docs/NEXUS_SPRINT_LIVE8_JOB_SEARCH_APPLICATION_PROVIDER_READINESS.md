@@ -9,7 +9,7 @@ This phase does not wire job retrieval into Standard User runtime and does not m
 ## Files
 
 - `server/nexus-job-search-source-provider.js`
-- `scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js`
 
 ## Supported Behavior
 

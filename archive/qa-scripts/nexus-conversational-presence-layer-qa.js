@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const stylesPath = path.join(root, "public", "styles.css");
 
@@ -72,7 +72,7 @@ check("wake phrase detector supports Nexus greetings", hasAll(app, [
   "hello nexus",
   "hey nexus",
   "function normalizeNexusPresenceRoutableCommand",
-  "nexus\\s*[,;:.-]?\\s+",
+  "(?:nexus|kyro)\\s*[,;:.-]?\\s+",
   "function nexusPresenceGreeting",
   "Hello ${first}, how can I help?",
   "Hello, how can I help?"

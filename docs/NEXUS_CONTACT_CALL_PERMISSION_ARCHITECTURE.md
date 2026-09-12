@@ -35,13 +35,13 @@ For contact and call requests, Nexus must remain confirmation-first and audit-re
 - `native-mobile/android/app/src/main/java/com/agrinexus/mobile/NexusNativeController.kt`
 - `native-mobile/ios/AgriNexus/NexusWebViewController.swift`
 - `scripts/call-intent-smoke.js`
-- `scripts/confirmed-call-handoff-qa.js`
-- `scripts/native-call-bridge-dispatch-qa.js`
-- `scripts/android-call-launch-qa.js`
-- `scripts/ios-call-launch-qa.js`
+- `archive/qa-scripts/confirmed-call-handoff-qa.js`
+- `archive/qa-scripts/native-call-bridge-dispatch-qa.js`
+- `archive/qa-scripts/android-call-launch-qa.js`
+- `archive/qa-scripts/ios-call-launch-qa.js`
 - `scripts/companion-confirmation-gate-smoke.js`
 - `scripts/voice-response-regression.js`
-- `scripts/voice-phase1-alignment-qa.js`
+- `archive/qa-scripts/voice-phase1-alignment-qa.js`
 - Nexus controlled-action QA scripts under `scripts/`
 
 ### Current Call / Contact / Native / Voice Capabilities
@@ -839,8 +839,8 @@ Future behavior:
 
 ### Recommended Future QA Scripts
 
-- `scripts/nexus-contact-call-permission-qa.js`
-- `scripts/nexus-contact-resolution-qa.js`
+- `archive/qa-scripts/nexus-contact-call-permission-qa.js`
+- `archive/qa-scripts/nexus-contact-resolution-qa.js`
 - `scripts/nexus-communication-provider-boundary-qa.js`
 - `scripts/nexus-communication-audit-log-qa.js`
 - `scripts/nexus-message-permission-qa.js`
@@ -959,7 +959,7 @@ Scope:
 
 Deliverable:
 
-- `scripts/nexus-contact-call-permission-qa.js`
+- `archive/qa-scripts/nexus-contact-call-permission-qa.js`
 
 Assertions:
 

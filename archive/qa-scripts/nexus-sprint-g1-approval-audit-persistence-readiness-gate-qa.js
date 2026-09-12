@@ -1,13 +1,13 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const auditContract = require("../public/nexus-audit-log-runtime-contract.js");
+const auditContract = require("../../public/nexus-audit-log-runtime-contract.js");
 const {
   DEFAULT_APPROVAL_CENTER_FEATURE_FLAG_STATE,
   normalizeApprovalCenterFeatureFlagState
-} = require("../public/nexus-approval-center-feature-flag.js");
+} = require("../../public/nexus-approval-center-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -27,7 +27,7 @@ const docName = "NEXUS_SPRINT_G1_APPROVAL_AUDIT_PERSISTENCE_READINESS_GATE.md";
 const qaName = "nexus-sprint-g1-approval-audit-persistence-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint G1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint G1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint G1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -121,8 +121,8 @@ for (const prior of [
   ["public", "nexus-audit-log-runtime-contract.js"],
   ["public", "nexus-approval-center-contract.js"],
   ["public", "nexus-approval-center-feature-flag.js"],
-  ["scripts", "nexus-audit-log-runtime-contract-qa.js"],
-  ["scripts", "nexus-sprint-f5-approval-center-lane-closeout-qa.js"]
+  ["archive", "qa-scripts", "nexus-audit-log-runtime-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-sprint-f5-approval-center-lane-closeout-qa.js"]
 ]) {
   assert(exists(...prior), `Sprint G1 requires prior artifact: ${prior.join("/")}`);
 }
@@ -240,7 +240,7 @@ for (const source of [auditModule, approvalFlagModule, approvalContract]) {
 }
 
 const alias = "qa:nexus-sprint-g1-approval-audit-persistence-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint G1 QA.");
 

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_AGRITRADE_PARTNER_CONNECTOR_CONTRACT_PHASE_35.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -11,8 +11,8 @@ const paths = {
   actionPlanner: path.join(root, "public", "nexus-platform-action-planner.js"),
   phase24Module: path.join(root, "public", "nexus-source-backed-answer-engine-contract.js"),
   phase34Module: path.join(root, "public", "nexus-market-price-source-connector-contract.js"),
-  lowRiskBuilder: path.join(root, "scripts", "nexus-low-risk-suggestion-builder-qa.js"),
-  standardSafety: path.join(root, "scripts", "nexus-standard-user-demo-final-safety-qa.js"),
+  lowRiskBuilder: path.join(root, "archive", "qa-scripts", "nexus-low-risk-suggestion-builder-qa.js"),
+  standardSafety: path.join(root, "archive", "qa-scripts", "nexus-standard-user-demo-final-safety-qa.js"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
@@ -241,7 +241,7 @@ assert(invalid.connectorStatus === "not_configured", "invalid connector status m
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-agritrade-partner-connector-contract"] === "node scripts/nexus-agritrade-partner-connector-contract-qa.js", "package.json must expose qa:nexus-agritrade-partner-connector-contract");
-assert(qaSuite.includes("scripts/nexus-agritrade-partner-connector-contract-qa.js"), "qa-suite.js must include AgriTrade partner connector contract QA");
+assert(packageData.scripts["qa:nexus-agritrade-partner-connector-contract"] === "node archive/qa-scripts/nexus-agritrade-partner-connector-contract-qa.js", "package.json must expose qa:nexus-agritrade-partner-connector-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-agritrade-partner-connector-contract-qa.js"), "qa-suite.js must include AgriTrade partner connector contract QA");
 
 console.log("[nexus-agritrade-partner-connector-contract-qa] passed");

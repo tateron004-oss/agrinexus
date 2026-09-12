@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_COMMUNITY_SERVICE_ORG_CONNECTOR_CONTRACT_PHASE_44.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -310,8 +310,8 @@ assert(invalid.connectorStatus === "not_configured", "invalid connector status m
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}`);
 });
 
-assert(packageData.scripts["qa:nexus-community-service-org-connector-contract"] === "node scripts/nexus-community-service-org-connector-contract-qa.js", "package.json must expose qa:nexus-community-service-org-connector-contract");
-assert(qaSuite.includes("scripts/nexus-community-service-org-connector-contract-qa.js"), "qa-suite.js must include community service org connector contract QA");
+assert(packageData.scripts["qa:nexus-community-service-org-connector-contract"] === "node archive/qa-scripts/nexus-community-service-org-connector-contract-qa.js", "package.json must expose qa:nexus-community-service-org-connector-contract");
+assert(qaSuite.includes("archive/qa-scripts/nexus-community-service-org-connector-contract-qa.js"), "qa-suite.js must include community service org connector contract QA");
 
 console.log("[nexus-community-service-org-connector-contract-qa] passed");
 

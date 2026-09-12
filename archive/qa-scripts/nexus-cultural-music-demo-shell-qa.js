@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   index: path.join(root, "public", "index.html"),
   shell: path.join(root, "public", "nexus-voice-demo-shell.js"),
@@ -9,7 +9,7 @@ const paths = {
   server: path.join(root, "server.js"),
   packageJson: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
-  phase16aQa: path.join(root, "scripts", "nexus-voice-demo-shell-phase-16a-qa.js"),
+  phase16aQa: path.join(root, "archive", "qa-scripts", "nexus-voice-demo-shell-phase-16a-qa.js"),
   doc: path.join(root, "docs", "NEXUS_VOICE_DEMO_SHELL_PHASE_16A.md")
 };
 
@@ -135,9 +135,9 @@ assert(!server.includes("nexus-cultural-music"), "Server must not add backend mu
 assert(!server.includes("AudioContext"), "Server must not add backend audio behavior.");
 
 const packageData = JSON.parse(packageJson);
-assert(packageData.scripts["qa:nexus-cultural-music-demo-shell"] === "node scripts/nexus-cultural-music-demo-shell-qa.js", "package.json must include cultural music QA alias.");
+assert(packageData.scripts["qa:nexus-cultural-music-demo-shell"] === "node archive/qa-scripts/nexus-cultural-music-demo-shell-qa.js", "package.json must include cultural music QA alias.");
 assert(!Object.keys(packageData.dependencies || {}).some(name => /spotify|youtube|music|audio|soundcloud|stream/i.test(name)), "No music/audio/streaming dependency should be added.");
-assert(qaSuite.includes("scripts/nexus-cultural-music-demo-shell-qa.js"), "nexus-workforce QA suite must include cultural music QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-cultural-music-demo-shell-qa.js"), "nexus-workforce QA suite must include cultural music QA.");
 assert(phase16aQa.includes("nexusVoiceDemoStopMusicBtn"), "Existing Phase 16A QA must cover Stop Music control.");
 
 console.log("[nexus-cultural-music-demo-shell-qa] passed");

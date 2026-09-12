@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
@@ -164,12 +164,12 @@ assert(surfaceBody.includes("a100ProductionProviderReadinessPanelHtml(a100Produc
 
 assert.equal(
   pkg.scripts["qa:nexus-production-provider-readiness-capability"],
-  "node scripts/nexus-production-provider-readiness-capability-qa.js",
+  "node archive/qa-scripts/nexus-production-provider-readiness-capability-qa.js",
   "package.json should expose production provider readiness QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-production-provider-readiness-capability-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-production-provider-readiness-capability-qa.js"),
   "qa-suite should include production provider readiness QA in safe suites"
 );
 

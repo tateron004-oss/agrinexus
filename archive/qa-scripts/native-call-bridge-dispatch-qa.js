@@ -3,7 +3,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.NATIVE_CALL_BRIDGE_DISPATCH_QA_PORT || 4474);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-native-call-bridge-dispatch-qa-db.json");

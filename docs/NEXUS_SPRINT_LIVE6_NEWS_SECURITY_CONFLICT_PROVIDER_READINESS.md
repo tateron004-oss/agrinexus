@@ -9,7 +9,7 @@ This phase does not wire news/security retrieval into Standard User runtime and 
 ## Files
 
 - `server/nexus-news-security-source-provider.js`
-- `scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js`
+- `archive/qa-scripts/nexus-sprint-live6-news-security-conflict-provider-readiness-qa.js`
 
 ## Supported Behavior
 

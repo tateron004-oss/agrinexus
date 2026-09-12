@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const exists = file => fs.existsSync(path.join(root, file));
 
@@ -155,10 +155,10 @@ function runRenderCredentialActivationGuideQa() {
 
   assert.strictEqual(
     pkg.scripts["qa:nexus-render-credential-activation-guide"],
-    "node scripts/nexus-render-credential-activation-guide-qa.js",
+    "node archive/qa-scripts/nexus-render-credential-activation-guide-qa.js",
     "package alias must run Render credential activation guide QA"
   );
-  includes(qaSuite, "scripts/nexus-render-credential-activation-guide-qa.js", "qa-suite must include Render credential activation guide QA.");
+  includes(qaSuite, "archive/qa-scripts/nexus-render-credential-activation-guide-qa.js", "qa-suite must include Render credential activation guide QA.");
 
   [
     ["guide", guide],

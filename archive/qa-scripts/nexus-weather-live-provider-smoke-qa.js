@@ -3,10 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   isSafeReadOnlySourceResult
-} = require("../public/nexus-live-source-result-contract.js");
+} = require("../../public/nexus-live-source-result-contract.js");
 const weatherValidation = require("./nexus-weather-live-provider-validation-qa.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const DEFAULT_TEST_LOCATION = weatherValidation.DEFAULT_TEST_LOCATION || "Stockton, CA";
 
 function read(...parts) {
@@ -63,12 +63,12 @@ function runStaticWeatherSmokeAssertions() {
   const validationQaName = "nexus-weather-live-provider-validation-qa.js";
 
   assert(exists("docs", docName), "WEATHER2 smoke test doc must exist.");
-  assert(exists("scripts", qaName), "WEATHER2 smoke QA script must exist.");
-  assert(exists("scripts", validationQaName), "WEATHER1 validation QA must remain available.");
+  assert(exists("archive", "qa-scripts", qaName), "WEATHER2 smoke QA script must exist.");
+  assert(exists("archive", "qa-scripts", validationQaName), "WEATHER1 validation QA must remain available.");
 
   const doc = read("docs", docName);
-  const scriptSource = read("scripts", qaName);
-  const validationScript = read("scripts", validationQaName);
+  const scriptSource = read("archive", "qa-scripts", qaName);
+  const validationScript = read("archive", "qa-scripts", validationQaName);
   const app = read("public", "app.js");
   const index = read("public", "index.html");
   const server = read("server.js");
@@ -139,7 +139,7 @@ function runStaticWeatherSmokeAssertions() {
   ].forEach(term => assert(!scriptSource.includes(term), `WEATHER2 script must not include unsafe behavior: ${term}`));
 
   const alias = "qa:nexus-weather-live-provider-smoke";
-  const command = `node scripts/${qaName}`;
+  const command = `node archive/qa-scripts/${qaName}`;
   assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
   assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include WEATHER2 smoke QA.");
   assert(qaSuite.includes(`scripts/${validationQaName}`), "qa-suite must keep WEATHER1 validation QA.");

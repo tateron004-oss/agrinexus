@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -121,11 +121,11 @@ for (const parts of [
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_ON_TEST_HARNESS_PLAN.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_FLAG_OFF_HARNESS_BROWSER_REGRESSION.md"],
   ["docs", "NEXUS_LOW_RISK_RENDERER_CONTROLLED_RUNTIME_FLAG_OFF_HARNESS.md"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"],
-  ["scripts", "nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"]
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"],
+  ["archive", "qa-scripts", "nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"]
 ]) {
   assert(exists(...parts), `${parts.join("/")} must exist`);
 }
@@ -286,12 +286,12 @@ for (const forbidden of [
 }
 
 assert(packageJson.includes("\"qa:nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation\""), "package.json must expose qa:nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must include Phase 12Y implementation QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js"), "nexus-workforce suite must keep Phase 12X readiness review QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js"), "nexus-workforce suite must keep Phase 12W static QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js"), "nexus-workforce suite must keep Phase 12V plan QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must keep Phase 12T flag-off harness QA");
-assert(suite.includes("scripts/nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"), "nexus-workforce suite must keep Phase 12U browser regression QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js"), "nexus-workforce suite must include Phase 12Y implementation QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js"), "nexus-workforce suite must keep Phase 12X readiness review QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js"), "nexus-workforce suite must keep Phase 12W static QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js"), "nexus-workforce suite must keep Phase 12V plan QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js"), "nexus-workforce suite must keep Phase 12T flag-off harness QA");
+assert(suite.includes("archive/qa-scripts/nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js"), "nexus-workforce suite must keep Phase 12U browser regression QA");
 
 console.log("Nexus low-risk renderer controlled runtime flag-on test harness implementation QA passed");
 console.log("- local/test-only eligible fixtures return metadata/no-op output");

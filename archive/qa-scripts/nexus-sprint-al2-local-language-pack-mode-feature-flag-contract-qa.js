@@ -7,9 +7,9 @@ const {
   PROTECTED_LOCAL_LANGUAGE_PACK_MODE_FLAG_FIELDS,
   normalizeLocalLanguagePackModeFeatureFlagState,
   isLocalLanguagePackModeVisibleFeatureEnabled
-} = require("../public/nexus-local-language-pack-mode-feature-flag.js");
+} = require("../../public/nexus-local-language-pack-mode-feature-flag.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const moduleName = "nexus-local-language-pack-mode-feature-flag.js";
 
 assert(exists("docs", docName), "Sprint AL2 feature flag doc must exist.");
 assert(exists("public", moduleName), "Sprint AL2 feature flag module must exist.");
-assert(exists("scripts", qaName), "Sprint AL2 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AL2 QA script must exist.");
 
 const doc = read("docs", docName);
 const moduleSource = read("public", moduleName);
@@ -157,10 +157,10 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-al2-local-language-pack-mode-feature-flag-contract";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AL2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
-assert(qaSuite.includes("scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 90 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-al1-local-language-pack-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AL1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-local-language-pack-mode-readiness-contract-qa.js"), "qa-suite must continue to include Phase 90 QA.");
 
 console.log("[nexus-sprint-al2-local-language-pack-mode-feature-flag-contract-qa] passed");

@@ -34,4 +34,4 @@ This module is not loaded by `public/app.js`, `public/index.html`, or `server.js
 
 ## QA
 
-`scripts/nexus-n100-15-map-route-planning-assistant-qa.js` verifies route artifacts, blocked route execution requests, absence of geolocation/navigation/provider APIs, package alias wiring, and local-safe suite inclusion.
+`archive/qa-scripts/nexus-n100-15-map-route-planning-assistant-qa.js` verifies route artifacts, blocked route execution requests, absence of geolocation/navigation/provider APIs, package alias wiring, and local-safe suite inclusion.

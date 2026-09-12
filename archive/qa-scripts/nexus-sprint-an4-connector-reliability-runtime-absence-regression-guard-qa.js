@@ -5,7 +5,7 @@ const {
   DEFAULT_CONNECTOR_RELIABILITY_FEATURE_FLAG_STATE,
   PROTECTED_CONNECTOR_RELIABILITY_FLAG_FIELDS,
   normalizeConnectorReliabilityFeatureFlagState
-} = require("../public/nexus-connector-reliability-feature-flag.js");
+} = require("../../public/nexus-connector-reliability-feature-flag.js");
 const {
   protectedFields,
   loadConnectorReliabilityFlagFixtures,
@@ -13,7 +13,7 @@ const {
   validateConnectorReliabilityFlagFixtures
 } = require("./nexus-sprint-an3-connector-reliability-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -34,7 +34,7 @@ const docName = "NEXUS_SPRINT_AN4_CONNECTOR_RELIABILITY_RUNTIME_ABSENCE_REGRESSI
 const qaName = "nexus-sprint-an4-connector-reliability-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AN4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AN4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AN4 QA script must exist.");
 
 const doc = read("docs", docName);
 const runtime = [read("public", "index.html"), read("public", "app.js"), read("server.js")].join("\n");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-connector-reliability-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-connector-reliability-feature-flag.js");
-const an3Harness = read("scripts", "nexus-sprint-an3-connector-reliability-flag-contract-harness.js");
+const an3Harness = read("archive", "qa-scripts", "nexus-sprint-an3-connector-reliability-flag-contract-harness.js");
 const fixtures = loadConnectorReliabilityFlagFixtures();
 
 assertIncludes(doc, [
@@ -66,7 +66,7 @@ assertIncludes(doc, [
   "Phase 92 Connector Reliability readiness contract",
   "public/nexus-connector-reliability-readiness-contract.js",
   "public/nexus-connector-reliability-feature-flag.js",
-  "scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness.js",
   "fixtures/nexus/connector-reliability-feature-flags.json",
   "Sprint AN QA scripts"
 ], "AN4 protected artifacts");
@@ -156,7 +156,7 @@ for (const requiredPath of [
   ["public", "nexus-connector-reliability-readiness-contract.js"],
   ["public", "nexus-connector-reliability-feature-flag.js"],
   ["fixtures", "nexus", "connector-reliability-feature-flags.json"],
-  ["scripts", "nexus-sprint-an3-connector-reliability-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-an3-connector-reliability-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AN4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -285,12 +285,12 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-an4-connector-reliability-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AN4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AN3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-an2-connector-reliability-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AN2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-an1-connector-reliability-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AN1 QA.");
-assert(qaSuite.includes("scripts/nexus-connector-reliability-readiness-contract-qa.js"), "qa-suite must continue to include Connector Reliability readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-an3-connector-reliability-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AN3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-an2-connector-reliability-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AN2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-an1-connector-reliability-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AN1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-connector-reliability-readiness-contract-qa.js"), "qa-suite must continue to include Connector Reliability readiness QA.");
 
 console.log("[nexus-sprint-an4-connector-reliability-runtime-absence-regression-guard-qa] passed");

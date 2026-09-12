@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const voiceShell = fs.readFileSync(path.join(root, "public/nexus-voice-demo-shell.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");

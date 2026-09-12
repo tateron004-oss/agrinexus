@@ -4,14 +4,14 @@ const path = require("node:path");
 const {
   DEFAULT_TASK_PLANNING_FEATURE_FLAG_STATE,
   normalizeTaskPlanningFeatureFlagState
-} = require("../public/nexus-task-planning-feature-flag.js");
+} = require("../../public/nexus-task-planning-feature-flag.js");
 const {
   protectedFields,
   loadTaskPlanningFlagFixtures,
   validateTaskPlanningFlagFixtures
 } = require("./nexus-sprint-n3-task-planning-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -32,7 +32,7 @@ const docName = "NEXUS_SPRINT_N5_TASK_PLANNING_LANE_CLOSEOUT.md";
 const qaName = "nexus-sprint-n5-task-planning-lane-closeout-qa.js";
 
 assert(exists("docs", docName), "Sprint N5 closeout doc must exist.");
-assert(exists("scripts", qaName), "Sprint N5 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint N5 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -42,7 +42,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-task-planning-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-task-planning-feature-flag.js");
-const n3Harness = read("scripts", "nexus-sprint-n3-task-planning-flag-contract-harness.js");
+const n3Harness = read("archive", "qa-scripts", "nexus-sprint-n3-task-planning-flag-contract-harness.js");
 const fixtures = loadTaskPlanningFlagFixtures();
 
 assertIncludes(doc, [
@@ -182,7 +182,7 @@ const requiredScripts = [
 ];
 
 for (const requiredScript of requiredScripts) {
-  assert(exists("scripts", requiredScript), `Sprint N5 requires prior Sprint N QA: ${requiredScript}`);
+  assert(exists("archive", "qa-scripts", requiredScript), `Sprint N5 requires prior Sprint N QA: ${requiredScript}`);
   assert(qaSuite.includes(`scripts/${requiredScript}`), `qa-suite must include prior Sprint N QA: ${requiredScript}`);
 }
 
@@ -321,7 +321,7 @@ for (const source of [featureFlagModule, n3Harness]) {
 }
 
 const alias = "qa:nexus-sprint-n5-task-planning-lane-closeout";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint N5 QA.");
 

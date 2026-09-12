@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -16,7 +16,7 @@ const docName = "NEXUS_SPRINT_O1_PAYMENT_SAFETY_PRODUCT_BOUNDARY.md";
 const qaName = "nexus-sprint-o1-payment-safety-product-boundary-qa.js";
 
 assert(exists("docs", docName), "O1 product boundary doc must exist.");
-assert(exists("scripts", qaName), "O1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "O1 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -72,9 +72,9 @@ const qaSuite = read("scripts", "qa-suite.js");
 ].forEach(term => assert(doc.includes(term), `O1 doc must include: ${term}`));
 
 const alias = "qa:nexus-sprint-o1-payment-safety-product-boundary";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include O1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-n8-marketplace-request-closeout-qa.js"), "O1 requires Sprint N closeout QA to remain in qa-suite.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-n8-marketplace-request-closeout-qa.js"), "O1 requires Sprint N closeout QA to remain in qa-suite.");
 
 console.log("[nexus-sprint-o1-payment-safety-product-boundary-qa] passed");

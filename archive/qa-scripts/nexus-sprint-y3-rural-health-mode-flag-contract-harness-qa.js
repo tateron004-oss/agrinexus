@@ -7,7 +7,7 @@ const {
   validateRuralHealthModeFlagFixtures
 } = require("./nexus-sprint-y3-rural-health-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-y3-rural-health-mode-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint Y3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint Y3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint Y3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint Y3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint Y3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint Y3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "0104bb73c3d8494e2243380ad5f5a5524c1ce6ff",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/rural-health-mode-feature-flags.json",
-  "scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness.js",
   "ruralHealthModeReviewAllowed: false",
   "healthAccessGuidancePreviewAllowed: false",
   "providerDirectoryPreviewAllowed: false",
@@ -202,14 +202,14 @@ assert(exists("docs", "NEXUS_SPRINT_Y2_RURAL_HEALTH_MODE_FEATURE_FLAG_CONTRACT.m
 assert(exists("public", "nexus-rural-health-mode-feature-flag.js"), "Y3 requires Y2 feature flag module.");
 
 const alias = "qa:nexus-sprint-y3-rural-health-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint Y3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Y1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Y2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint Y1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint Y2 QA.");
 
 for (const field of protectedFields) {
-  const visibleOnly = require("../public/nexus-rural-health-mode-feature-flag.js").normalizeRuralHealthModeFeatureFlagState({
+  const visibleOnly = require("../../public/nexus-rural-health-mode-feature-flag.js").normalizeRuralHealthModeFeatureFlagState({
     enabled: true,
     visibleUiAllowed: true,
     [field]: true

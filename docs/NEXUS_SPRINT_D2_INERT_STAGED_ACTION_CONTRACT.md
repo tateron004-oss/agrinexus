@@ -127,7 +127,7 @@ D2 does not load the contract into active Standard User runtime. The Standard Us
 
 ## QA Guard
 
-QA script: `scripts/nexus-sprint-d2-inert-staged-action-contract-qa.js`
+QA script: `archive/qa-scripts/nexus-sprint-d2-inert-staged-action-contract-qa.js`
 
 The QA guard validates:
 

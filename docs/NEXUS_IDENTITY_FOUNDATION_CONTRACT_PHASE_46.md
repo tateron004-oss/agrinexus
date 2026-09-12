@@ -203,7 +203,7 @@ Nexus may say identity or account-sensitive actions require identity policy revi
 
 ## QA Expectations
 
-`scripts/nexus-identity-foundation-contract-qa.js` verifies:
+`archive/qa-scripts/nexus-identity-foundation-contract-qa.js` verifies:
 
 - the Phase 46 roadmap row remains present;
 - existing intent, policy, auth, and tool-registry guards continue to treat account and identity prompts as gated;

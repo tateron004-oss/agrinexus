@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
@@ -126,12 +126,12 @@ assert(intentBody.includes("no device is connected") && intentBody.includes("pro
 
 assert.equal(
   pkg.scripts["qa:nexus-health-privacy-runtime-guardrails"],
-  "node scripts/nexus-health-privacy-runtime-guardrails-qa.js",
+  "node archive/qa-scripts/nexus-health-privacy-runtime-guardrails-qa.js",
   "package.json should expose health privacy guardrails QA alias"
 );
 
 assert(
-  qaSuite.includes("scripts/nexus-health-privacy-runtime-guardrails-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-health-privacy-runtime-guardrails-qa.js"),
   "qa-suite should include health privacy guardrails QA in safe suites"
 );
 

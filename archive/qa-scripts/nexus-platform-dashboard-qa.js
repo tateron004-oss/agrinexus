@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const appPath = path.join(root, "public", "app.js");
 const cssPath = path.join(root, "public", "styles.css");
 const packagePath = path.join(root, "package.json");
@@ -111,10 +111,10 @@ assert(/openAskNexus\(\)/.test(app), "Dashboard should preserve Ask Nexus access
 
 assert.equal(
   packageData.scripts["qa:nexus-platform-dashboard"],
-  "node scripts/nexus-platform-dashboard-qa.js",
+  "node archive/qa-scripts/nexus-platform-dashboard-qa.js",
   "package.json must expose qa:nexus-platform-dashboard"
 );
-assert(qaSuite.includes("scripts/nexus-platform-dashboard-qa.js"), "qa-suite.js nexus-workforce suite must include platform dashboard QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-platform-dashboard-qa.js"), "qa-suite.js nexus-workforce suite must include platform dashboard QA.");
 
 console.log("Nexus platform dashboard QA passed");
 console.log("- dashboard mode coverage, desktop grid, responsive fallback, safe labels, and no-execution boundaries verified");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PHASE_101B_STANDARD_USER_RUNTIME_WIRING_READINESS.md"),
   module: path.join(root, "public", "nexus-agriculture-support-response-card.js"),

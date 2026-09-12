@@ -62,7 +62,7 @@ includes(voiceTransportBlock, "startRealtimeVoiceSession", "canonical runtime st
 includes(voiceTransportBlock, "legacy-runtime-disabled", "legacy browser recognition is explicitly blocked");
 assert(!voiceTransportBlock.includes("new Recognition()"), "canonical runtime must not create a browser recognition instance");
 console.log("PASS canonical runtime avoids browser recognition instance");
-includes(app, 'model: sessionPayload.model || status.model || "gpt-realtime-2"', "Realtime model diagnostics remain centralized");
+includes(app, 'model: sessionPayload.model || status.model || "gpt-realtime-2.1"', "Realtime model diagnostics remain centralized");
 includes(app, "utterance.lang = voiceLocale()", "speech synthesis locale follows app language");
 includes(app, "utterance.rate = speechRateForLanguage()", "speech synthesis rate follows app language");
 includes(app, "utterance.pitch = speechPitchForLanguage()", "speech synthesis pitch follows app language");
@@ -94,9 +94,9 @@ includes(bindBlock, 'handleNexusOsVoiceControlAction("repeat-response"', "legacy
 assert(!/always-on listening is enabled|silent microphone|background microphone/i.test(runtimeBlock + startBlock), "voice runtime must not claim hidden always-on listening");
 console.log("PASS no hidden always-on listening claim");
 
-assert(pkg.scripts["qa:nexus-os-voice-runtime-consolidation"] === "node scripts/nexus-os-voice-runtime-consolidation-qa.js", "package alias exists");
+assert(pkg.scripts["qa:nexus-os-voice-runtime-consolidation"] === "node archive/qa-scripts/nexus-os-voice-runtime-consolidation-qa.js", "package alias exists");
 console.log("PASS package alias exists");
-assert(qaSuite.includes("scripts/nexus-os-voice-runtime-consolidation-qa.js"), "safe QA suite includes Rail 6 QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-voice-runtime-consolidation-qa.js"), "safe QA suite includes Rail 6 QA");
 console.log("PASS safe QA suite includes Rail 6 QA");
 
 console.log("Nexus OS voice runtime consolidation QA passed.");

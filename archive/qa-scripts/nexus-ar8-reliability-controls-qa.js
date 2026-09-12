@@ -2,11 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const orchestrator = require("../server/nexus-live-source-orchestrator.js");
-const runtime = require("../server/nexus-assistant-runtime-entrypoint.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const orchestrator = require("../../server/nexus-live-source-orchestrator.js");
+const runtime = require("../../server/nexus-assistant-runtime-entrypoint.js");
+const { isSafeReadOnlySourceResult } = require("../../public/nexus-live-source-result-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -60,10 +60,10 @@ function assertStaticReliabilityContract() {
   ].forEach(term => assert(!orchestratorSource.includes(term), `AR8 orchestrator must not introduce secret or payload cache mechanics: ${term}`));
   assert.equal(
     pkg.scripts["qa:nexus-ar8-reliability-controls"],
-    "node scripts/nexus-ar8-reliability-controls-qa.js",
+    "node archive/qa-scripts/nexus-ar8-reliability-controls-qa.js",
     "AR8 package alias must exist."
   );
-  assert(qaSuite.includes("scripts/nexus-ar8-reliability-controls-qa.js"), "AR8 QA must be wired into local-safe suites.");
+  assert(qaSuite.includes("archive/qa-scripts/nexus-ar8-reliability-controls-qa.js"), "AR8 QA must be wired into local-safe suites.");
 }
 
 async function assertReliabilityBehavior() {

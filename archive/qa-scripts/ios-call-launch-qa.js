@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const iosController = fs.readFileSync(path.join(root, "native-mobile", "ios", "AgriNexus", "NexusWebViewController.swift"), "utf8");
 const androidController = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "java", "com", "agrinexus", "mobile", "NexusNativeController.kt"), "utf8");
 const androidManifest = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const rendererFileName = "nexus-controlled-low-risk-text-only-renderer.js";
 const mountId = "nexus-controlled-low-risk-renderer-root";
 const flagName = "enableControlledLowRiskRendererVisibleUi";
@@ -14,7 +14,7 @@ const paths = {
   package: path.join(root, "package.json"),
   qaSuite: path.join(root, "scripts", "qa-suite.js"),
   doc: path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_TEXT_ONLY_RENDERER_PHASE_14B_LOAD_BOUNDARY_QA.md"),
-  phase14aQa: path.join(root, "scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js")
+  phase14aQa: path.join(root, "archive", "qa-scripts", "nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js")
 };
 
 function read(filePath) {
@@ -124,10 +124,10 @@ forbiddenStandardUserRuntimeStrings.forEach(term => {
   assert(!server.includes(term), `server.js must not reference ${term}.`);
 });
 
-assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary"] === "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js", "package.json must expose Phase 14B QA alias.");
-assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"] === "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js", "Phase 14A QA alias must remain present.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"), "nexus-workforce suite must include Phase 14B load-boundary QA.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must retain Phase 14A QA.");
+assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary"] === "node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js", "package.json must expose Phase 14B QA alias.");
+assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"] === "node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js", "Phase 14A QA alias must remain present.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"), "nexus-workforce suite must include Phase 14B load-boundary QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must retain Phase 14A QA.");
 
 [
   "not loaded by `public/index.html`",

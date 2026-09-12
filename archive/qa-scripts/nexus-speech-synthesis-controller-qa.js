@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const qaSuite = fs.readFileSync(path.join(root, "scripts", "qa-suite.js"), "utf8");
@@ -74,7 +74,7 @@ const speakBlock = blockBetween(app, "function speakVoiceResponse", "function se
 ].forEach(token => includes(app, token, `speech controller API exposure ${token}`));
 
 assert(!/(imitates? .*actor|voice cloned|guaranteed accent|always-on speech|executes workflow through speech)/i.test(contractBlock + speakBlock), "speech controller avoids unsafe voice and execution claims");
-assert(pkg.scripts["qa:nexus-speech-synthesis-controller"] === "node scripts/nexus-speech-synthesis-controller-qa.js", "package alias exists");
-assert(qaSuite.includes("scripts/nexus-speech-synthesis-controller-qa.js"), "safe QA suite includes speech synthesis controller QA");
+assert(pkg.scripts["qa:nexus-speech-synthesis-controller"] === "node archive/qa-scripts/nexus-speech-synthesis-controller-qa.js", "package alias exists");
+assert(qaSuite.includes("archive/qa-scripts/nexus-speech-synthesis-controller-qa.js"), "safe QA suite includes speech synthesis controller QA");
 
 console.log("Nexus speech synthesis controller QA passed.");

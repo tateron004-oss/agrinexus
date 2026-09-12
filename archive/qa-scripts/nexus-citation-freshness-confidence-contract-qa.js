@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_CITATION_FRESHNESS_CONFIDENCE_CONTRACT_PHASE_25.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -192,11 +192,11 @@ assert(invalidLabel.confidenceLevel === "unverified", "invalid confidence must f
 });
 
 assert(
-  packageData.scripts["qa:nexus-citation-freshness-confidence-contract"] === "node scripts/nexus-citation-freshness-confidence-contract-qa.js",
+  packageData.scripts["qa:nexus-citation-freshness-confidence-contract"] === "node archive/qa-scripts/nexus-citation-freshness-confidence-contract-qa.js",
   "package.json must expose qa:nexus-citation-freshness-confidence-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-citation-freshness-confidence-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-citation-freshness-confidence-contract-qa.js"),
   "qa-suite.js must include citation freshness confidence contract QA"
 );
 

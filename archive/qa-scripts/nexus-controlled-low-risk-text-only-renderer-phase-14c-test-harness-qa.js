@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const rendererPath = path.join(root, "public", "nexus-controlled-low-risk-text-only-renderer.js");
 const docPath = path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_TEXT_ONLY_RENDERER_PHASE_14C_TEST_HARNESS.md");
 const indexPath = path.join(root, "public", "index.html");
@@ -298,11 +298,11 @@ allowedModels.forEach(model => {
   assertMountDefaultOff(mount, `excluded/invalid model ${indexNumber}`);
 });
 
-assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness"] === "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js", "package.json must expose Phase 14C QA alias.");
+assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness"] === "node archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js", "package.json must expose Phase 14C QA alias.");
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14a"], "Phase 14A QA alias must remain present.");
 assert(packageJson.scripts["qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary"], "Phase 14B QA alias must remain present.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"), "nexus-workforce suite must include Phase 14C harness QA.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must retain Phase 14A QA.");
-assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"), "nexus-workforce suite must retain Phase 14B QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js"), "nexus-workforce suite must include Phase 14C harness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js"), "nexus-workforce suite must retain Phase 14A QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js"), "nexus-workforce suite must retain Phase 14B QA.");
 
 console.log("[nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa] passed");

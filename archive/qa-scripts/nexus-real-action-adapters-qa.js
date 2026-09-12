@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -104,7 +104,7 @@ const runtimeSource = functionNames.map(name => extractFunction(app, name)).join
 ].forEach(term => assert(app.includes(term), `real action adapters should include ${term}`));
 
 assert(pkg.scripts["qa:nexus-real-action-adapters"], "package alias should run real action adapters QA");
-assert(qaSuite.includes("scripts/nexus-real-action-adapters-qa.js"), "qa-suite should include real action adapters QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-real-action-adapters-qa.js"), "qa-suite should include real action adapters QA");
 
 [
   "window.open",

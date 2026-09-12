@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   DEFAULT_OFFLINE_LOW_BANDWIDTH_MODE_FEATURE_FLAG_STATE,
   normalizeOfflineLowBandwidthModeFeatureFlagState
-} = require("../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
+} = require("../../public/nexus-offline-low-bandwidth-mode-feature-flag.js");
 const {
   protectedFields,
   loadOfflineLowBandwidthModeFlagFixtures,
@@ -12,7 +12,7 @@ const {
   validateOfflineLowBandwidthModeFlagFixtures
 } = require("./nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -33,7 +33,7 @@ const docName = "NEXUS_SPRINT_AJ4_OFFLINE_LOW_BANDWIDTH_MODE_RUNTIME_ABSENCE_REG
 const qaName = "nexus-sprint-aj4-offline-low-bandwidth-mode-runtime-absence-regression-guard-qa.js";
 
 assert(exists("docs", docName), "Sprint AJ4 absence guard doc must exist.");
-assert(exists("scripts", qaName), "Sprint AJ4 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AJ4 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -43,7 +43,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 const readinessContract = read("public", "nexus-offline-low-bandwidth-mode-readiness-contract.js");
 const featureFlagModule = read("public", "nexus-offline-low-bandwidth-mode-feature-flag.js");
-const aj3Harness = read("scripts", "nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js");
+const aj3Harness = read("archive", "qa-scripts", "nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js");
 const fixtures = loadOfflineLowBandwidthModeFlagFixtures();
 
 assertIncludes(doc, [
@@ -70,7 +70,7 @@ assertIncludes(doc, [
 assertIncludes(doc, [
   "public/nexus-offline-low-bandwidth-mode-readiness-contract.js",
   "public/nexus-offline-low-bandwidth-mode-feature-flag.js",
-  "scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js",
   "fixtures/nexus/offline-low-bandwidth-mode-feature-flags.json",
   "Sprint AJ QA scripts"
 ], "AJ4 runtime absence artifact list");
@@ -174,7 +174,7 @@ for (const requiredPath of [
   ["public", "nexus-offline-low-bandwidth-mode-readiness-contract.js"],
   ["public", "nexus-offline-low-bandwidth-mode-feature-flag.js"],
   ["fixtures", "nexus", "offline-low-bandwidth-mode-feature-flags.json"],
-  ["scripts", "nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js"]
+  ["archive", "qa-scripts", "nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness.js"]
 ]) {
   assert(exists(...requiredPath), `AJ4 requires artifact: ${requiredPath.join("/")}`);
 }
@@ -299,12 +299,12 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-aj4-offline-low-bandwidth-mode-runtime-absence-regression-guard";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AJ4 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AJ3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AJ2 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
-assert(qaSuite.includes("scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Offline Low-Bandwidth Mode readiness QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj3-offline-low-bandwidth-mode-flag-contract-harness-qa.js"), "qa-suite must continue to include Sprint AJ3 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj2-offline-low-bandwidth-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AJ2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aj1-offline-low-bandwidth-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AJ1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"), "qa-suite must continue to include Offline Low-Bandwidth Mode readiness QA.");
 
 console.log("[nexus-sprint-aj4-offline-low-bandwidth-mode-runtime-absence-regression-guard-qa] passed");

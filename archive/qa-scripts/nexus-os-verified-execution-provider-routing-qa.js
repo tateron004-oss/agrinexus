@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -108,10 +108,10 @@ function includes(source, token, message) {
 ].forEach(token => includes(`${app}\n${styles}`, token, `visible verified execution status ${token}`));
 
 assert(
-  pkg.scripts["qa:nexus-os-verified-execution-provider-routing"] === "node scripts/nexus-os-verified-execution-provider-routing-qa.js",
+  pkg.scripts["qa:nexus-os-verified-execution-provider-routing"] === "node archive/qa-scripts/nexus-os-verified-execution-provider-routing-qa.js",
   "package alias exists"
 );
-assert(suite.includes("scripts/nexus-os-verified-execution-provider-routing-qa.js"), "safe QA suite includes Rail 12 QA");
+assert(suite.includes("archive/qa-scripts/nexus-os-verified-execution-provider-routing-qa.js"), "safe QA suite includes Rail 12 QA");
 
 if (process.exitCode) process.exit(process.exitCode);
 

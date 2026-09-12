@@ -2,10 +2,10 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 
-const dataset = require("../server/nexus-demo-provider-dataset.js");
+const dataset = require("../../server/nexus-demo-provider-dataset.js");
 const providers = dataset.getNexusDemoProviders();
 const summary = dataset.summarizeDemoProviders(providers);
 const server = read("server.js");
@@ -168,9 +168,9 @@ includes(server, "/api/nexus/demo-providers/catalog", "demo provider catalog end
 
 assert.equal(
   packageJson.scripts["qa:nexus-demo-provider-dataset"],
-  "node scripts/nexus-demo-provider-dataset-qa.js",
+  "node archive/qa-scripts/nexus-demo-provider-dataset-qa.js",
   "package.json must expose qa:nexus-demo-provider-dataset"
 );
-assert(qaSuite.includes("scripts/nexus-demo-provider-dataset-qa.js"), "qa-suite.js must include demo provider dataset QA");
+assert(qaSuite.includes("archive/qa-scripts/nexus-demo-provider-dataset-qa.js"), "qa-suite.js must include demo provider dataset QA");
 
 console.log("[nexus-demo-provider-dataset-qa] passed");

@@ -31,7 +31,7 @@ The QA harness starts with representative Standard User prompts and performs thr
 2. Call `deriveNexusStagedActionState(actionDecision)`.
 3. Create an observation object that contains the prompt, `actionDecision`, `stagedActionState`, and safety flags.
 
-The observation object exists only inside `scripts/nexus-staged-action-ui-observation-qa.js`. It is not loaded by `public/index.html`, `public/app.js`, or `server.js`.
+The observation object exists only inside `archive/qa-scripts/nexus-staged-action-ui-observation-qa.js`. It is not loaded by `public/index.html`, `public/app.js`, or `server.js`.
 
 ## 4. QA-Only Observation Object Shape
 

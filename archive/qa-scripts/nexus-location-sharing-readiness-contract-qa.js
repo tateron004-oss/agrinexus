@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_LOCATION_SHARING_READINESS_CONTRACT_PHASE_56.md"),
   contract: path.join(root, "public", "nexus-location-sharing-readiness-contract.js"),
@@ -171,7 +171,7 @@ assert(sample.executionAllowed === false, "factory must force execution disabled
   assert(!server.includes(runtimeHook), `server.js must not consume ${runtimeHook}.`);
 });
 
-assert(packageData.scripts["qa:nexus-location-sharing-readiness-contract"] === "node scripts/nexus-location-sharing-readiness-contract-qa.js", "package.json must expose qa:nexus-location-sharing-readiness-contract.");
-assert(qaSuite.includes("scripts/nexus-location-sharing-readiness-contract-qa.js"), "qa-suite.js must include location sharing readiness QA.");
+assert(packageData.scripts["qa:nexus-location-sharing-readiness-contract"] === "node archive/qa-scripts/nexus-location-sharing-readiness-contract-qa.js", "package.json must expose qa:nexus-location-sharing-readiness-contract.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-location-sharing-readiness-contract-qa.js"), "qa-suite.js must include location sharing readiness QA.");
 
 console.log("[nexus-location-sharing-readiness-contract-qa] passed");

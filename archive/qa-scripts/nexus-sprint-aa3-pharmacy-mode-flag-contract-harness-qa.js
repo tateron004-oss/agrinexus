@@ -7,7 +7,7 @@ const {
   validatePharmacyModeFlagFixtures
 } = require("./nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -31,12 +31,12 @@ const qaName = "nexus-sprint-aa3-pharmacy-mode-flag-contract-harness-qa.js";
 
 assert(exists("docs", docName), "Sprint AA3 harness doc must exist.");
 assert(exists("fixtures", "nexus", fixtureName), "Sprint AA3 fixture file must exist.");
-assert(exists("scripts", harnessName), "Sprint AA3 harness must exist.");
-assert(exists("scripts", qaName), "Sprint AA3 QA script must exist.");
+assert(exists("archive", "qa-scripts", harnessName), "Sprint AA3 harness must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint AA3 QA script must exist.");
 
 const doc = read("docs", docName);
 const fixtureSource = read("fixtures", "nexus", fixtureName);
-const harnessSource = read("scripts", harnessName);
+const harnessSource = read("archive", "qa-scripts", harnessName);
 const index = read("public", "index.html");
 const app = read("public", "app.js");
 const server = read("server.js");
@@ -49,7 +49,7 @@ assertIncludes(doc, [
   "a60e2a5aa4df5862b7b3b71c63a4a385400d1841",
   "fixture, harness, documentation, and QA only",
   "fixtures/nexus/pharmacy-mode-feature-flags.json",
-  "scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js",
+  "archive/qa-scripts/nexus-sprint-aa3-pharmacy-mode-flag-contract-harness.js",
   "pharmacyModeReviewAllowed: false",
   "pharmacySupportPreviewAllowed: false",
   "prescriptionReadinessPreviewAllowed: false",
@@ -213,14 +213,14 @@ assert(exists("docs", "NEXUS_SPRINT_AA2_PHARMACY_MODE_FEATURE_FLAG_CONTRACT.md")
 assert(exists("public", "nexus-pharmacy-mode-feature-flag.js"), "AA3 requires AA2 feature flag module.");
 
 const alias = "qa:nexus-sprint-aa3-pharmacy-mode-flag-contract-harness";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint AA3 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aa1-pharmacy-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AA1 QA.");
-assert(qaSuite.includes("scripts/nexus-sprint-aa2-pharmacy-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AA2 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aa1-pharmacy-mode-runtime-activation-readiness-gate-qa.js"), "qa-suite must continue to include Sprint AA1 QA.");
+assert(qaSuite.includes("archive/qa-scripts/nexus-sprint-aa2-pharmacy-mode-feature-flag-contract-qa.js"), "qa-suite must continue to include Sprint AA2 QA.");
 
 for (const field of protectedFields) {
-  const visibleOnly = require("../public/nexus-pharmacy-mode-feature-flag.js").normalizePharmacyModeFeatureFlagState({
+  const visibleOnly = require("../../public/nexus-pharmacy-mode-feature-flag.js").normalizePharmacyModeFeatureFlagState({
     enabled: true,
     visibleUiAllowed: true,
     [field]: true

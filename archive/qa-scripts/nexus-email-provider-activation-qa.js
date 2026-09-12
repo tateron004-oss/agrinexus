@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const server = read("server.js");
@@ -97,9 +97,9 @@ function excludes(source, token, label) {
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-email-provider-activation"],
-  "node scripts/nexus-email-provider-activation-qa.js",
+  "node archive/qa-scripts/nexus-email-provider-activation-qa.js",
   "package alias should run email provider activation QA"
 );
-includes(qaSuite, "scripts/nexus-email-provider-activation-qa.js", "qa suite should include email provider activation QA");
+includes(qaSuite, "archive/qa-scripts/nexus-email-provider-activation-qa.js", "qa suite should include email provider activation QA");
 
 console.log("nexus-email-provider-activation QA passed");

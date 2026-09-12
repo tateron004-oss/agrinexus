@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const runtime = require(path.join(root, "public", "nexus-enterprise-health-evidence-trust.js"));
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -55,9 +55,9 @@ includes(app, "Can approve provider submission", "Standard User card shows provi
 includes(app, "Can bypass consent", "Standard User card shows consent boundary");
 assert.strictEqual(
   packageJson.scripts["qa:nexus-enterprise-health-human-review-controls"],
-  "node scripts/nexus-enterprise-health-human-review-controls-qa.js",
+  "node archive/qa-scripts/nexus-enterprise-health-human-review-controls-qa.js",
   "package alias exists"
 );
-includes(qaSuite, "scripts/nexus-enterprise-health-human-review-controls-qa.js", "safe suites include human-review QA");
+includes(qaSuite, "archive/qa-scripts/nexus-enterprise-health-human-review-controls-qa.js", "safe suites include human-review QA");
 
 console.log("Nexus enterprise health human review controls QA passed.");

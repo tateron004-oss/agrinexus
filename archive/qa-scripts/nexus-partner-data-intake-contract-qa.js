@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PARTNER_DATA_INTAKE_CONTRACT_PHASE_27.md"),
   roadmap: path.join(root, "docs", "NEXUS_100_FULL_MULTILINGUAL_ACCESS_PLATFORM_ROADMAP.md"),
@@ -216,11 +216,11 @@ assert(invalid.intakeStatus === "draft", "invalid intake status must fall back t
 });
 
 assert(
-  packageData.scripts["qa:nexus-partner-data-intake-contract"] === "node scripts/nexus-partner-data-intake-contract-qa.js",
+  packageData.scripts["qa:nexus-partner-data-intake-contract"] === "node archive/qa-scripts/nexus-partner-data-intake-contract-qa.js",
   "package.json must expose qa:nexus-partner-data-intake-contract"
 );
 assert(
-  qaSuite.includes("scripts/nexus-partner-data-intake-contract-qa.js"),
+  qaSuite.includes("archive/qa-scripts/nexus-partner-data-intake-contract-qa.js"),
   "qa-suite.js must include partner data intake contract QA"
 );
 

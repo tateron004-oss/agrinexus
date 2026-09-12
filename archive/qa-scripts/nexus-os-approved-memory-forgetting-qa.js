@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -110,12 +110,12 @@ function includes(source, token, label) {
 });
 
 assert(
-  pkg.scripts["qa:nexus-os-approved-memory-forgetting"] === "node scripts/nexus-os-approved-memory-forgetting-qa.js",
+  pkg.scripts["qa:nexus-os-approved-memory-forgetting"] === "node archive/qa-scripts/nexus-os-approved-memory-forgetting-qa.js",
   "package alias missing"
 );
 console.log("PASS package alias exists");
 
-assert(qaSuite.includes("scripts/nexus-os-approved-memory-forgetting-qa.js"), "qa-suite wiring missing");
+assert(qaSuite.includes("archive/qa-scripts/nexus-os-approved-memory-forgetting-qa.js"), "qa-suite wiring missing");
 console.log("PASS safe QA suite includes Rail 14 QA");
 
 console.log("Nexus OS approved memory and forgetting QA passed.");

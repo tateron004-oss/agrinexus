@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const app = read("public/app.js");
@@ -176,9 +176,9 @@ includes(deferredLegacyBlock, "renderNexusAgenticBrainPanel()", "agentic brain p
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-full-workflow-workspace"],
-  "node scripts/nexus-full-workflow-workspace-qa.js",
+  "node archive/qa-scripts/nexus-full-workflow-workspace-qa.js",
   "package alias should run full workflow workspace QA"
 );
-includes(qaSuite, "scripts/nexus-full-workflow-workspace-qa.js", "safe QA suite wiring");
+includes(qaSuite, "archive/qa-scripts/nexus-full-workflow-workspace-qa.js", "safe QA suite wiring");
 
 console.log("Nexus full workflow workspace QA passed.");

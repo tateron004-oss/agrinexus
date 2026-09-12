@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -20,7 +20,7 @@ const docName = "NEXUS_SPRINT_K1_CONTACT_PROVIDER_IDENTITY_PRODUCT_BOUNDARY.md";
 const qaName = "nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js";
 
 assert(exists("docs", docName), "K1 product boundary doc must exist.");
-assert(exists("scripts", qaName), "K1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "K1 QA script must exist.");
 
 const doc = read("docs", docName);
 const pkg = JSON.parse(read("package.json"));
@@ -82,7 +82,7 @@ assertIncludes(doc, [
 });
 
 const alias = "qa:nexus-sprint-k1-contact-provider-identity-product-boundary";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint K1 QA.");
 

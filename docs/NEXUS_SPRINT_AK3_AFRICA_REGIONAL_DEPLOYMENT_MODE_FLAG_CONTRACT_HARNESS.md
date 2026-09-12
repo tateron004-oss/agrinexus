@@ -7,7 +7,7 @@ Sprint AK3 adds documentation, fixture, and deterministic QA only. It does not l
 ## Added Artifacts
 
 - `fixtures/nexus/africa-regional-deployment-mode-feature-flags.json`
-- `scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js`
+- `archive/qa-scripts/nexus-sprint-ak3-africa-regional-deployment-mode-flag-contract-harness.js`
 
 ## Fixture Coverage
 

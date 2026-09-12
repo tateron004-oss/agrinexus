@@ -5,9 +5,9 @@ const {
   TRUST_FRAUD_RISK_DETECTION_READINESS_CONTRACT,
   TRUST_FRAUD_RISK_DETECTION_NO_EXECUTION_DEFAULTS,
   createTrustFraudRiskDetectionReadinessContract
-} = require("../public/nexus-trust-fraud-risk-detection-readiness-contract.js");
+} = require("../../public/nexus-trust-fraud-risk-detection-readiness-contract.js");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 
 function read(...parts) {
   return fs.readFileSync(path.join(root, ...parts), "utf8");
@@ -28,7 +28,7 @@ const docName = "NEXUS_SPRINT_W1_TRUST_FRAUD_RISK_DETECTION_RUNTIME_ACTIVATION_R
 const qaName = "nexus-sprint-w1-trust-fraud-risk-detection-runtime-activation-readiness-gate-qa.js";
 
 assert(exists("docs", docName), "Sprint W1 readiness gate doc must exist.");
-assert(exists("scripts", qaName), "Sprint W1 QA script must exist.");
+assert(exists("archive", "qa-scripts", qaName), "Sprint W1 QA script must exist.");
 
 const doc = read("docs", docName);
 const index = read("public", "index.html");
@@ -239,7 +239,7 @@ for (const field of [
 for (const requiredPath of [
   ["docs", "NEXUS_TRUST_FRAUD_RISK_DETECTION_READINESS_CONTRACT_PHASE_75.md"],
   ["public", "nexus-trust-fraud-risk-detection-readiness-contract.js"],
-  ["scripts", "nexus-trust-fraud-risk-detection-readiness-contract-qa.js"],
+  ["archive", "qa-scripts", "nexus-trust-fraud-risk-detection-readiness-contract-qa.js"],
   ["docs", "NEXUS_SPRINT_V5_MARKETPLACE_INTELLIGENCE_LANE_CLOSEOUT.md"]
 ]) {
   assert(exists(...requiredPath), `W1 requires artifact: ${requiredPath.join("/")}`);
@@ -299,7 +299,7 @@ for (const term of [
 }
 
 const alias = "qa:nexus-sprint-w1-trust-fraud-risk-detection-runtime-activation-readiness-gate";
-const command = `node scripts/${qaName}`;
+const command = `node archive/qa-scripts/${qaName}`;
 assert(pkg.scripts && pkg.scripts[alias] === command, `${alias} package script must exist.`);
 assert(qaSuite.includes(`scripts/${qaName}`), "qa-suite must include Sprint W1 QA.");
 

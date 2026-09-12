@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const serverSource = read("server.js");
@@ -159,10 +159,10 @@ function staticAssertions() {
 
   assert.strictEqual(
     packageJson.scripts["qa:nexus-open-domain-institutional-evidence"],
-    "node scripts/nexus-open-domain-institutional-evidence-qa.js",
+    "node archive/qa-scripts/nexus-open-domain-institutional-evidence-qa.js",
     "package alias should run institutional evidence QA"
   );
-  includes(qaSuite, "scripts/nexus-open-domain-institutional-evidence-qa.js", "qa suite institutional evidence wiring");
+  includes(qaSuite, "archive/qa-scripts/nexus-open-domain-institutional-evidence-qa.js", "qa suite institutional evidence wiring");
 }
 
 async function routeAssertions() {
