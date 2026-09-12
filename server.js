@@ -1860,7 +1860,14 @@ async function ensurePostgresState() {
   `);
   const existing = await pool.query("select 1 from agrinexus_app_state where id = $1", ["default"]);
   if (!existing.rowCount) {
-    const seed = JSON.parse(fs.readFileSync(path.join(ROOT, "db.json"), "utf8"));
+    // Prefer the real, accumulated local data at DB_PATH (e.g. the persistent
+    // disk in production) over the repo's static demo db.json. This seed runs
+    // exactly once, the first time Postgres-state mode ever activates, so
+    // seeding from the wrong file here would silently discard real data --
+    // matches the same DB_PATH-first, repo-db.json-fallback pattern already
+    // used by ensureRuntimeData() for the local-file storage mode.
+    const seedPath = fs.existsSync(DB_PATH) ? DB_PATH : path.join(ROOT, "db.json");
+    const seed = JSON.parse(fs.readFileSync(seedPath, "utf8"));
     await pool.query(
       "insert into agrinexus_app_state (id, state) values ($1, $2::jsonb)",
       ["default", JSON.stringify(seed)]
