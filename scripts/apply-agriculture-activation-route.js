@@ -28,14 +28,14 @@ replaceExactlyOnce(workspaceOld, workspaceNew, "Live Knowledge/Agriculture works
 fs.writeFileSync(appPath, app);
 const commands = [
   ["node", ["--check", "public/app.js"]],
-  ["node", ["scripts/nexus-agriculture-activation-route-qa.js"]],
-  ["node", ["scripts/nexus-genesis-voice-workspace-bridge-qa.js"]],
-  ["node", ["scripts/nexus-browser-action-controller-qa.js"]],
-  ["node", ["scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js"]],
-  ["node", ["scripts/nexus-openai-realtime-microphone-handoff-qa.js"]],
-  ["node", ["scripts/nexus-realtime-microphone-visibility-qa.js"]],
-  ["node", ["scripts/nexus-genesis-mission-renderer-workspace-qa.js"]],
-  ["node", ["scripts/nexus-full-workflow-workspace-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-agriculture-activation-route-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-genesis-voice-workspace-bridge-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-browser-action-controller-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-genesis-realtime-repeated-turn-lifecycle-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-openai-realtime-microphone-handoff-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-realtime-microphone-visibility-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-genesis-mission-renderer-workspace-qa.js"]],
+  ["node", ["archive/qa-scripts/nexus-full-workflow-workspace-qa.js"]],
   ["git", ["diff", "--check"]]
 ];
 for (const [command, args] of commands) execFileSync(command, args, { cwd: root, stdio: "inherit" });

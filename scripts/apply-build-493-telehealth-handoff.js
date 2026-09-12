@@ -21,7 +21,7 @@ for (const file of files) {
   fs.writeFileSync(file, source, "utf8");
 }
 
-const qaPath = "scripts/nexus-genesis-voice-workspace-bridge-qa.js";
+const qaPath = "archive/qa-scripts/nexus-genesis-voice-workspace-bridge-qa.js";
 let qa = fs.readFileSync(qaPath, "utf8");
 const stale = "app.includes('source: \"realtime-workspace-transition\"')";
 if (!qa.includes(stale)) throw new Error("Stale map-transition assertion was not found");

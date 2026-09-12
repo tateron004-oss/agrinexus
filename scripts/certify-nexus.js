@@ -12,8 +12,8 @@ const genesisSuccessStatement = 'The complete Nexus Genesis experience passed at
 const stages = [
   { id: 'syntax', command: 'node --check server.js; if($LASTEXITCODE -ne 0){exit 1}; node --check public/app.js; if($LASTEXITCODE -ne 0){exit 1}; node --check scripts/nexus-genesis-live-provider-browser-smoke.js' },
   { id: 'voice-focused', command: 'npm.cmd run qa:nexus-genesis-persistent-voice-lifecycle; if($LASTEXITCODE -ne 0){exit 1}; npm.cmd run qa:nexus-genesis-realtime-repeated-turn-lifecycle; if($LASTEXITCODE -ne 0){exit 1}; npm.cmd run qa:nexus-openai-realtime-genesis; if($LASTEXITCODE -ne 0){exit 1}; npm.cmd run qa:nexus-realtime-microphone-visibility' },
-  { id: 'language-and-provider', command: 'node scripts/voice-phase2-language-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node scripts/voice-phase3-tts-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node scripts/nexus-openai-native-genesis-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node scripts/nexus-openai-native-tool-parity-qa.js' },
-  { id: 'deterministic-lifecycle-50', command: 'node scripts/nexus-genesis-persistent-voice-lifecycle-qa.js' },
+  { id: 'language-and-provider', command: 'node archive/qa-scripts/voice-phase2-language-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node archive/qa-scripts/voice-phase3-tts-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node archive/qa-scripts/nexus-openai-native-genesis-qa.js; if($LASTEXITCODE -ne 0){exit 1}; node archive/qa-scripts/nexus-openai-native-tool-parity-qa.js' },
+  { id: 'deterministic-lifecycle-50', command: 'node archive/qa-scripts/nexus-genesis-persistent-voice-lifecycle-qa.js' },
   { id: 'genesis-experience-confidence', command: 'npm.cmd run qa:nexus-genesis-experience-confidence-layer' },
   { id: 'genesis-production-exact-build', command: 'npm.cmd run qa:nexus-genesis-production-exact-build-smoke' },
   { id: 'genesis-production-browser-lifecycle', command: "$env:NEXUS_LIVE_BASE_URL='https://nexus-genesis-certified.onrender.com'; $env:NEXUS_LIVE_EXPECTED_TURNS='4'; $env:NEXUS_LIVE_REQUIRE_WORKSPACES='1'; $env:NEXUS_LIVE_REQUIRED_INTERRUPTION_COUNT='0'; npm.cmd run qa:nexus-genesis-live-provider-browser-smoke" },
@@ -23,7 +23,7 @@ const stages = [
 ];
 function hashSource() {
   const hash = crypto.createHash('sha256');
-  const files = ['server.js', 'public/app.js', 'public/sw.js', 'package.json', 'scripts/qa-suite.js', 'scripts/nexus-production-layer-activation-integration-qa.js', 'scripts/nexus-openai-native-genesis-qa.js', 'scripts/nexus-openai-native-tool-parity-qa.js', 'scripts/voice-phase2-language-qa.js', 'scripts/voice-phase3-tts-qa.js', 'scripts/phone-greeting-qa.js', 'scripts/nexus-genesis-experience-confidence-layer-qa.js', 'public/nexus-conversation-workflow-transition-engine.js', 'scripts/nexus-genesis-production-exact-build-smoke.js', 'scripts/nexus-genesis-live-provider-browser-smoke.js', 'scripts/nexus-genesis-final-runtime-audit.js', 'scripts/nexus-genesis-voice-workspace-bridge-qa.js'];
+  const files = ['server.js', 'public/app.js', 'public/sw.js', 'package.json', 'scripts/qa-suite.js', 'archive/qa-scripts/nexus-production-layer-activation-integration-qa.js', 'archive/qa-scripts/nexus-openai-native-genesis-qa.js', 'archive/qa-scripts/nexus-openai-native-tool-parity-qa.js', 'archive/qa-scripts/voice-phase2-language-qa.js', 'archive/qa-scripts/voice-phase3-tts-qa.js', 'archive/qa-scripts/phone-greeting-qa.js', 'archive/qa-scripts/nexus-genesis-experience-confidence-layer-qa.js', 'public/nexus-conversation-workflow-transition-engine.js', 'scripts/nexus-genesis-production-exact-build-smoke.js', 'scripts/nexus-genesis-live-provider-browser-smoke.js', 'scripts/nexus-genesis-final-runtime-audit.js', 'archive/qa-scripts/nexus-genesis-voice-workspace-bridge-qa.js'];
   for (const file of files) hash.update(fs.readFileSync(path.join(root, file)));
   return hash.digest('hex');
 }

@@ -3,7 +3,8 @@
     "commit": "0e3ce5b6",
     "runtime": "immutable NEXUS_RELEASE_SHA",
     "cache": "agrinexus-pwa-${NEXUS_RELEASE_SHA}",
-    "certification": "pending exact-release protected certification"
+    "certification": "pending exact-release protected certification",
+    "status": "retired 2026-09-10 by explicit repository owner decision; kept for historical reference only"
   },
   "genesisProductionCertification": {
     "service": "https://nexus-genesis-certified.onrender.com",
@@ -21,22 +22,5 @@
     ],
     "purpose": "Eliminate the duplicate Standard User map render after goSection has rendered the map section while preserving the orb, microphone, Realtime voice, map controls, route rendering, visible-outcome verification, and acknowledgement ordering"
   },
-  "protectedFiles": {
-    "server.js": "02f2fd7ef98501f7c61ace611f0297efdb4b42b7",
-    "public/app.js": "74e5336acc1474525ec69ef42db0c9fc16cf45e0",
-    "nexus/runtime/health.js": "3bf0817d3d8e1c14354da04c68e53752129c4387",
-    "nexus/compat/server-runtime-adapter.js": "a68dd9af4ea92d4922de6c2cb0c5d536e29e0519",
-    "public/index.html": "885a48c60decafd307653e40abd362b9fa0cb940",
-    "public/styles.css": "bd3a4ef51baceff46215112363f3f3b7ba9d2b62",
-    "public/sw.js": "b964f53994c43f36a24c0b8e071fa769df3ce869",
-    "public/nexus-genesis-voice-runtime-manager.js": "fd8f20d57cf4526307a487c5e810d41ce62aae0b",
-    "public/nexus-openai-realtime-agent.js": "f027038f6b34dd0a8364cc31425c24cf2a83af7b",
-    "public/vendor/nexus-openai-realtime-agent.bundle.mjs": "b188e5a68e8b0aeea6fcff7c900d2dfc5158d2c8",
-    "scripts/certify-nexus.js": "d2cff238bf2ba907ff4f7eef451482d4d0e4366a",
-    "scripts/qa-suite.js": "74dee79dd1a0845526390cf6ebee5e6c697a3fe5",
-    "scripts/nexus-protected-foundation-guard.js": "0d7c7220d3584cbec61dfb2b975cd2a2cdbb32b2",
-    ".github/workflows/nexus-clean-windows-certification.yml": "b3eca0b4ddfa6be8fe15b08dc688c534e73965f6",
-    "rebuild/tests/nexus-windows-physical-certification.spec.js": "c669d66f5d614d9a48bc1de6fad6b50559672735",
-    "scripts/nexus-run-browser-capability-probes.js": "cf69571d236dd0a8e21b09e4368c02e42cc51153"
-  }
+  "protectedFiles": {}
 }

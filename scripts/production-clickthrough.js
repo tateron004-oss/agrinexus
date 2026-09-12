@@ -239,7 +239,7 @@ assert(server.includes("function operationalDecisionReview"), "Backend must rank
 assert(server.includes("operational_intelligence.issue_recorded"), "Operational intelligence must create voice issue-recovery intent");
 assert(app.includes('workflow === "operational-intelligence"'), "Frontend must wire operational intelligence buttons to real workflows");
 assert(app.includes("/api/operational-intelligence/goal") && app.includes("/api/operational-intelligence/playbook"), "Frontend must call operational intelligence goal and playbook endpoints");
-assert(pkg.scripts["operational:intelligence-qa"] === "node scripts/operational-intelligence-qa.js", "Package scripts must expose operational intelligence QA");
+assert(pkg.scripts["operational:intelligence-qa"] === "node archive/qa-scripts/operational-intelligence-qa.js", "Package scripts must expose operational intelligence QA");
 assert(html.includes("Adaptive Autonomous Intelligence"), "Integrations must include an adaptive autonomous intelligence desk");
 assert(server.includes("function ensureAdaptiveAutonomyProfile"), "Backend must create adaptive autonomy storage");
 assert(server.includes("function buildAdaptiveSignals"), "Backend must inspect adaptive autonomy signals");
@@ -249,7 +249,7 @@ assert(server.includes("function recordAdaptiveLearning"), "Backend must record 
 assert(server.includes("adaptive_autonomy.cycle_completed"), "Adaptive autonomy must create voice cycle intent");
 assert(app.includes('workflow === "adaptive-autonomy"'), "Frontend must wire adaptive autonomy buttons to real workflows");
 assert(app.includes("/api/adaptive-autonomy/run") && app.includes("/api/adaptive-autonomy/learn"), "Frontend must call adaptive autonomy run and learn endpoints");
-assert(pkg.scripts["adaptive:autonomy-qa"] === "node scripts/adaptive-autonomy-qa.js", "Package scripts must expose adaptive autonomy QA");
+assert(pkg.scripts["adaptive:autonomy-qa"] === "node archive/qa-scripts/adaptive-autonomy-qa.js", "Package scripts must expose adaptive autonomy QA");
 assert(html.includes("Network Intelligence Desk"), "Integrations must include a network intelligence desk");
 assert(server.includes("function ensureNetworkedIntelligenceProfile"), "Backend must create network intelligence storage");
 assert(server.includes("function networkServiceRegistry"), "Backend must define a provider service registry");
@@ -259,7 +259,7 @@ assert(server.includes("function networkCountryCoverageModel"), "Backend must ex
 assert(server.includes("network_intelligence.query_routed"), "Network intelligence must create voice query-routed intent");
 assert(app.includes('workflow === "network-intelligence"'), "Frontend must wire network intelligence buttons to real workflows");
 assert(app.includes("/api/network-intelligence/query") && app.includes("/api/network-intelligence/action-readiness"), "Frontend must call network intelligence query and readiness endpoints");
-assert(pkg.scripts["network:intelligence-qa"] === "node scripts/network-intelligence-qa.js", "Package scripts must expose network intelligence QA");
+assert(pkg.scripts["network:intelligence-qa"] === "node archive/qa-scripts/network-intelligence-qa.js", "Package scripts must expose network intelligence QA");
 assert(html.includes("Ecosystem Intelligence Command"), "Integrations must include an ecosystem intelligence command center");
 assert(server.includes("function ensureEcosystemIntelligenceProfile"), "Backend must create ecosystem intelligence storage");
 assert(server.includes("function ecosystemActorGraph"), "Backend must model ecosystem actors and relationships");
@@ -268,7 +268,7 @@ assert(server.includes("function ecosystemReadinessModel"), "Backend must score 
 assert(server.includes("ecosystem_intelligence.mission_coordinated"), "Ecosystem intelligence must create voice mission intent");
 assert(app.includes('workflow === "ecosystem-intelligence"'), "Frontend must wire ecosystem intelligence buttons to real workflows");
 assert(app.includes("/api/ecosystem-intelligence/mission"), "Frontend must call ecosystem mission endpoint");
-assert(pkg.scripts["ecosystem:intelligence-qa"] === "node scripts/ecosystem-intelligence-qa.js", "Package scripts must expose ecosystem intelligence QA");
+assert(pkg.scripts["ecosystem:intelligence-qa"] === "node archive/qa-scripts/ecosystem-intelligence-qa.js", "Package scripts must expose ecosystem intelligence QA");
 assert(html.includes("Executive Intelligence Suite"), "Integrations must include an executive intelligence suite");
 assert(server.includes("function ensureExecutiveIntelligenceProfile"), "Backend must create executive intelligence storage");
 assert(server.includes("function executiveIntelligencePillars"), "Backend must expose strategic, market, governance, revenue, and self-improving pillars");
@@ -279,7 +279,7 @@ assert(server.includes("function executiveImprovementSignals"), "Backend must mo
 assert(server.includes("executive_intelligence.analysis_completed"), "Executive intelligence must create voice analysis intent");
 assert(app.includes('workflow === "executive-intelligence"'), "Frontend must wire executive intelligence buttons to real workflows");
 assert(app.includes("/api/executive-intelligence/analyze"), "Frontend must call executive analysis endpoint");
-assert(pkg.scripts["executive:intelligence-qa"] === "node scripts/executive-intelligence-qa.js", "Package scripts must expose executive intelligence QA");
+assert(pkg.scripts["executive:intelligence-qa"] === "node archive/qa-scripts/executive-intelligence-qa.js", "Package scripts must expose executive intelligence QA");
 assert(html.includes("Autonomous Mission Operator"), "Integrations must include an autonomous mission operator");
 assert(server.includes("function ensureAutonomousOrchestrationProfile"), "Backend must create autonomous orchestration storage");
 assert(server.includes("function runAutonomousOrchestrationMission"), "Backend must start autonomous orchestration missions");
@@ -288,7 +288,7 @@ assert(server.includes("function buildAutonomousOrchestrationReport"), "Backend 
 assert(server.includes("autonomous_orchestration.mission_started"), "Autonomous orchestration must create voice mission intent");
 assert(app.includes('workflow === "autonomous-orchestration"'), "Frontend must wire autonomous orchestration buttons to real workflows");
 assert(app.includes("/api/autonomous-orchestration/mission") && app.includes("/api/autonomous-orchestration/cycle"), "Frontend must call autonomous orchestration mission and cycle endpoints");
-assert(pkg.scripts["orchestration:intelligence-qa"] === "node scripts/autonomous-orchestration-qa.js", "Package scripts must expose autonomous orchestration QA");
+assert(pkg.scripts["orchestration:intelligence-qa"] === "node archive/qa-scripts/autonomous-orchestration-qa.js", "Package scripts must expose autonomous orchestration QA");
 assert(server.includes("function ensurePhoneVoiceSessions"), "Phone assistant must persist caller session state");
 assert(server.includes("function extractCallerName"), "Phone assistant must extract caller name before command mode");
 assert(server.includes("function phoneLanguageChoice"), "Phone assistant must map spoken language choices");
@@ -296,7 +296,7 @@ assert(server.includes("function phoneAutoLanguageChoice"), "Phone assistant mus
 assert(server.includes("phoneAutoLanguagePrompt"), "Phone assistant must skip language question when language is detected");
 assert(server.includes("Hi, I am AgriNexus. Who am I speaking with?"), "Incoming phone greeting must be short and name-first");
 assert(server.includes("step=language") && server.includes("step=command"), "Phone assistant must move through name, language, and command steps");
-assert(pkg.scripts["phone:greeting-qa"] === "node scripts/phone-greeting-qa.js", "Package scripts must expose phone greeting QA");
+assert(pkg.scripts["phone:greeting-qa"] === "node archive/qa-scripts/phone-greeting-qa.js", "Package scripts must expose phone greeting QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

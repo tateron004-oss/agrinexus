@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 const appPath = "public/app.js";
-const qaPath = "scripts/nexus-genesis-voice-workspace-bridge-qa.js";
+const qaPath = "archive/qa-scripts/nexus-genesis-voice-workspace-bridge-qa.js";
 const app = fs.readFileSync(appPath, "utf8");
 const marker = [
   "  const action = genesisWorkspaceActionFromFinalTranscript(command);",
