@@ -50,6 +50,24 @@ test("verifyPassword accepts the correct password and records last_login_at, rej
   assert.equal(pool2.calls.length, 1, "a failed login must not update last_login_at");
 });
 
+test("verifyPassword still returns the user when the last_login_at bookkeeping update fails (e.g. migration 017 not applied yet)", async () => {
+  const storedHash = pgUsers.hashPassword("Correct-Horse-1");
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    const pool = stubPool([
+      [/^select id, tenant_id, email, display_name, password_hash, status from users/, () => ({
+        rows: [{ id: "user-1", tenant_id: "tenant-1", email: "demo@agrinexus.org", display_name: "Demo", password_hash: storedHash, status: "active" }]
+      })],
+      [/^update users set last_login_at = now\(\)/, () => { throw new Error('column "last_login_at" does not exist'); }]
+    ]);
+    const user = await pgUsers.verifyPassword(pool, "demo@agrinexus.org", "Correct-Horse-1");
+    assert.equal(user.id, "user-1", "a correct password must still succeed even if the last_login_at write fails");
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
 test("verifyPassword rejects a non-active account even with the correct password", async () => {
   const storedHash = pgUsers.hashPassword("Correct-Horse-1");
   const pool = stubPool([
@@ -104,6 +122,21 @@ test("consumeResetToken accepts a matching, unexpired token and clears it after 
     [/^select password_reset_token_hash, password_reset_expires_at from users/, () => ({ rows: [{ password_reset_token_hash: validHash, password_reset_expires_at: new Date(Date.now() - 1000).toISOString() }] })]
   ]);
   assert.equal(await pgUsers.consumeResetToken(expiredPool, "demo@agrinexus.org", "correct-raw-token", "Brand-New-Pass1"), false);
+});
+
+test("buildBlobShadowFromPostgresUser backfills a usable blob row for a Postgres-only account", () => {
+  const pgUser = { id: "user-1", email: "demo@agrinexus.org", display_name: "Demo Person", status: "active" };
+  const shadow = pgUsers.buildBlobShadowFromPostgresUser(pgUser, { defaultCountry: "Nigeria", defaultLanguage: "en" });
+  assert.equal(shadow.email, "demo@agrinexus.org");
+  assert.equal(shadow.name, "Demo Person");
+  assert.equal(shadow.role, "Standard User");
+  assert.equal(shadow.country, "Nigeria");
+  assert.equal(shadow.language, "en");
+  assert.match(shadow.id, /^[0-9a-f-]{36}$/, "must assign a fresh blob id, not the Postgres uuid");
+  assert.notEqual(shadow.id, pgUser.id);
+
+  const noDisplayName = pgUsers.buildBlobShadowFromPostgresUser({ id: "user-2", email: "nodisplay@agrinexus.org" });
+  assert.equal(noDisplayName.name, "nodisplay@agrinexus.org", "must fall back to email when display_name is missing");
 });
 
 test("setPasswordResetToken reports whether a matching account exists", async () => {

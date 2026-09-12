@@ -149,18 +149,23 @@ async function route(body = {}, env = process.env) {
       headers: {
         "content-type": "application/json",
         "x-goog-api-key": env.GOOGLE_MAPS_API_KEY,
-        "x-goog-fieldmask": "routes.duration,routes.distanceMeters,routes.description"
+        "x-goog-fieldmask": "routes.duration,routes.distanceMeters,routes.description,routes.polyline.geoJsonLinestring"
       },
       body: JSON.stringify({
         origin: { address: origin },
         destination: { address: destination },
         travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_AWARE"
+        routingPreference: "TRAFFIC_AWARE",
+        polylineEncoding: "GEO_JSON_LINESTRING"
       })
     });
     const payload = await safeJson(result);
     if (!result.ok) throw new Error(payload.error?.message || result.statusText);
     const firstRoute = Array.isArray(payload.routes) ? payload.routes[0] : null;
+    // Google renders duration as a Duration-proto string like "1234s", not a number.
+    const rawDurationSeconds = typeof firstRoute?.duration === "string" ? Number(firstRoute.duration.replace(/s$/, "")) : null;
+    const durationSeconds = Number.isFinite(rawDurationSeconds) ? Math.round(rawDurationSeconds) : null;
+    const routeGeometry = simplifyGeometry(firstRoute?.polyline?.geoJsonLinestring?.coordinates);
     let originCoords = null;
     let destinationCoords = null;
     try {
@@ -189,6 +194,8 @@ async function route(body = {}, env = process.env) {
         destinationResolved: destinationCoords?.label || "",
         distanceMeters: firstRoute?.distanceMeters || null,
         duration: firstRoute?.duration || null,
+        durationSeconds,
+        routeGeometry: routeGeometry.length > 1 ? routeGeometry : null,
         description: firstRoute?.description || "",
         routeUrl: fallbackUrl,
         noLocationPermissionRequested: true
