@@ -383,7 +383,24 @@
 
   function isAgricultureCollaborationCommand(command = "") {
     const lower = String(command || "").toLowerCase();
-    return /\b(crop|farm|farmer|agriculture|plants|pest|disease|soil|irrigation|weather|heat risk|livestock|marketplace listing|buyer|seller|trade match|shipment|cold chain|drone|field observation|extension service|farm profile|farm intake|agriculture sources|provider evidence|satellite source|weather source|delete this buyer|deactivate this seller|grant|crop insurance)\b/.test(lower);
+    // Narrowed 2026-09-12: this runtime is a pure business-readiness
+    // simulator (real weather/satellite/marketplace/drone providers are
+    // never actually contacted here — everything returns "prepared
+    // locally"). It used to also match crop/farm/farmer/agriculture/
+    // pest/disease/soil/irrigation/weather/heat risk/drone/field
+    // observation/shipment/marketplace listing/buyer/seller/trade match,
+    // which meant it silently intercepted and blocked those requests
+    // before they could reach the real, working tools built this
+    // session: nexus_weather (real Open-Meteo), nexus_maps_route (real
+    // OSRM traffic/distance), nexus_agriculture (real crop guidance and
+    // real drone mission intake), and nexus_marketplace_logistics (real
+    // shipment tracking with a genuine road ETA, real listing
+    // create/browse, real payment readiness). Only keep terms that are
+    // NOT handled by those real systems: livestock/veterinary,
+    // cold-chain logistics, extension-service handoffs, farm-profile
+    // CRM, provider/source-evidence readiness display, and
+    // finance/grant/insurance.
+    return /\b(livestock|cattle|goat|sheep|poultry|veterinary|vet clinic|cold chain|extension service|extension handoff|plant clinic handoff|farm profile|farm intake|remember this farm|delete this buyer|deactivate this seller|agriculture sources|provider evidence|satellite source|weather source|agriculture actions blocked|finance packet|grant packet|crop insurance|farm loan|farm subsidy)\b/.test(lower);
   }
 
   function shouldHandleBeforeLegacy(command = "") {

@@ -5,7 +5,6 @@ const {
   providerResponse,
   disabledResponse,
   missingConfigResponse,
-  requireConfirmation,
   blockedResponse,
   failedResponse,
   safeJson
@@ -66,6 +65,19 @@ async function geocodeLocation(locationText, fetchImpl) {
   };
 }
 
+function simplifyGeometry(coordinates, maxPoints = 120) {
+  if (!Array.isArray(coordinates) || coordinates.length === 0) return [];
+  const points = coordinates
+    .filter(pair => Array.isArray(pair) && Number.isFinite(Number(pair[0])) && Number.isFinite(Number(pair[1])))
+    .map(([lon, lat]) => [Number(lat), Number(lon)]);
+  if (points.length <= maxPoints) return points;
+  const step = Math.ceil(points.length / maxPoints);
+  const sampled = points.filter((_, index) => index % step === 0);
+  const last = points[points.length - 1];
+  if (sampled[sampled.length - 1] !== last) sampled.push(last);
+  return sampled;
+}
+
 async function publicOsmRoute(origin, destination, fallbackUrl, env = process.env) {
   if (!envEnabled("NEXUS_MAPS_PUBLIC_OSM_ENABLED", env, true)) return null;
   const fetchImpl = mapsFetch(env);
@@ -75,10 +87,11 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
   if (!Number.isFinite(start.lat) || !Number.isFinite(start.lon) || !Number.isFinite(end.lat) || !Number.isFinite(end.lon)) {
     throw new Error("route-geocode-invalid");
   }
-  const routeUrl = `${OSRM_ROUTE_URL}/${start.lon},${start.lat};${end.lon},${end.lat}?overview=false&alternatives=false&steps=false`;
+  const routeUrl = `${OSRM_ROUTE_URL}/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson&alternatives=false&steps=false`;
   const payload = await fetchJson(fetchImpl, routeUrl, { accept: "application/json" });
   const route = Array.isArray(payload.routes) ? payload.routes[0] : null;
   if (!route) throw new Error("route-not-found");
+  const geometry = simplifyGeometry(route.geometry?.coordinates);
   return providerResponse({
     provider: "openstreetmap-osrm",
     action: "maps.route",
@@ -89,6 +102,11 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
       destination,
       originResolved: start.label,
       destinationResolved: end.label,
+      originLat: start.lat,
+      originLng: start.lon,
+      destinationLat: end.lat,
+      destinationLng: end.lon,
+      routeGeometry: geometry.length > 1 ? geometry : null,
       distanceMeters: typeof route.distance === "number" ? Math.round(route.distance) : null,
       duration: typeof route.duration === "number" ? `${Math.round(route.duration)}s` : null,
       durationSeconds: typeof route.duration === "number" ? Math.round(route.duration) : null,
@@ -108,8 +126,9 @@ async function route(body = {}, env = process.env) {
   const origin = clean(body.origin);
   const destination = clean(body.destination);
   if (!origin || !destination) return blockedResponse(provider, action, "Origin and destination text are required. Nexus will not use browser geolocation.");
-  const confirmation = requireConfirmation(body, provider, action);
-  if (confirmation) return confirmation;
+  // Read-only lookup (distance/duration/traffic) — no money moves, nothing is
+  // booked or dispatched, so this doesn't need a confirmation gate any more
+  // than checking the weather does.
   const fallbackUrl = mapsUrl(origin, destination);
   const missing = missingEnv(["GOOGLE_MAPS_API_KEY"], env);
   if (missing.length) {
@@ -142,6 +161,18 @@ async function route(body = {}, env = process.env) {
     const payload = await safeJson(result);
     if (!result.ok) throw new Error(payload.error?.message || result.statusText);
     const firstRoute = Array.isArray(payload.routes) ? payload.routes[0] : null;
+    let originCoords = null;
+    let destinationCoords = null;
+    try {
+      const fetchImpl = mapsFetch(env);
+      if (typeof fetchImpl === "function") {
+        const [start, end] = await Promise.all([geocodeLocation(origin, fetchImpl), geocodeLocation(destination, fetchImpl)]);
+        originCoords = { lat: start.lat, lng: start.lon, label: start.label };
+        destinationCoords = { lat: end.lat, lng: end.lon, label: end.label };
+      }
+    } catch (error) {
+      // Real-time distance still returned even if best-effort coordinate lookup fails.
+    }
     return providerResponse({
       provider,
       action,
@@ -150,6 +181,12 @@ async function route(body = {}, env = process.env) {
       data: {
         origin,
         destination,
+        originLat: originCoords?.lat ?? null,
+        originLng: originCoords?.lng ?? null,
+        originResolved: originCoords?.label || "",
+        destinationLat: destinationCoords?.lat ?? null,
+        destinationLng: destinationCoords?.lng ?? null,
+        destinationResolved: destinationCoords?.label || "",
         distanceMeters: firstRoute?.distanceMeters || null,
         duration: firstRoute?.duration || null,
         description: firstRoute?.description || "",

@@ -391,7 +391,24 @@
 
   function isHealthcareCollaborationCommand(command = "") {
     const lower = String(command || "").toLowerCase();
-    return /\b(healthcare collaboration|provider message|care team|referral packet|fhir|ehr|epic|cerner|hie|outside records|telehealth|virtual care|pharmacy handoff|medication reconciliation|rpm|rtm|blood pressure|diabetes|hypertension|obesity|chronic care|mobile clinic|patient reminder|secure message|visit summary|clinical record|consent form|intake form|lab result|imaging report|community health worker|chw|chest pain|trouble breathing|can't breathe|cannot breathe|stroke|severe bleeding|emergency help)\b/.test(lower);
+    // Narrowed 2026-09-12: this runtime is a pure enterprise-EHR readiness
+    // simulator (Epic/Cerner FHIR, HIE, HIPAA BAA) that never executes
+    // anything until real enterprise credentials exist. It used to also
+    // match blood pressure/diabetes/hypertension/obesity/RPM/RTM/mobile
+    // clinic/telehealth/pharmacy/chw/patient-reminder phrasing, which
+    // meant it silently intercepted and blocked those requests before
+    // they could reach the real, working nexus_health_preparation tool
+    // (chronic-care readings, mobile clinic search, pharmacy questions,
+    // telehealth intake, provider search — all genuinely wired and
+    // persisting real data). Only keep the terms that are NOT handled by
+    // that real system: FHIR/EHR/HIE record access, referral packets,
+    // secure provider/care-team messaging, visit summary sharing,
+    // clinical records, consent/intake forms, lab/imaging reports,
+    // scheduled video-visit booking, and medication reconciliation.
+    // Emergency-boundary terms stay — this correctly routes to a
+    // "contact emergency services" message rather than a blocked
+    // business-readiness message.
+    return /\b(healthcare collaboration|provider message|care team|referral packet|refer a patient|fhir|ehr|epic|cerner|hie|outside records|exchange record|tefca|schedule (?:a |an )?(?:telehealth|video) visit|book (?:a |an )?(?:telehealth|video) visit|medication reconciliation|secure message|visit summary|clinical record|consent form|intake form request|lab result|diagnostic report|imaging report|x-ray|mri scan|ct scan|ultrasound report|healthcare source readiness|provider evidence|connected healthcare provider|what healthcare provider|chest pain|trouble breathing|can't breathe|cannot breathe|stroke|severe bleeding|emergency help)\b/.test(lower);
   }
 
   function providerRowsForSource(sourceType, env = {}) {

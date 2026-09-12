@@ -199,7 +199,7 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
   });
   const session = new RealtimeSession(agent, {
     transport,
-    model: options.model || "gpt-realtime-2",
+    model: options.model || "gpt-realtime-2.1",
     config: options.clientConfig || {},
     context: {
       nexusRuntime: "openai-agents-realtime",
@@ -261,7 +261,7 @@ export async function startNexusOpenAiRealtimeGenesisSession(options = {}) {
 
   const microphone = await connectSessionWithMicrophoneProof(session, {
     apiKey: options.clientSecret,
-    model: options.model || "gpt-realtime-2",
+    model: options.model || "gpt-realtime-2.1",
     preverifiedMicrophoneStream
   }, emit);
 

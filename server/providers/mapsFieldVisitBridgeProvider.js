@@ -181,6 +181,7 @@ async function routeVisitPlan(body = {}, db, env = process.env) {
         routeUrl: routeData.routeUrl || plan.routeFallbackUrl,
         distanceMeters: routeData.distanceMeters || null,
         duration: routeData.duration || null,
+        durationSeconds: routeData.durationSeconds || null,
         description: routeData.description || "",
         noLocationPermissionRequested: true
       }

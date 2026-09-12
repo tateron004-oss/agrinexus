@@ -7,6 +7,8 @@ const tls = require("tls");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
+const pgUsers = require("./server/pg-users.js");
+const pgHealthIntakes = require("./server/pg-health-intakes.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
 const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
@@ -74,11 +76,11 @@ const NEXUS_RELEASE_PLACEHOLDER = "__NEXUS_RELEASE_SHA__";
 const NEXUS_GENESIS_REALTIME_RUNTIME_VERSION = "nexus-genesis-openai-agents-realtime-v3";
 const NEXUS_GENESIS_VOICE_RUNTIME_VALUES = new Set(["realtime", "disabled"]);
 const NEXUS_GENESIS_REALTIME_FALLBACK_VALUES = new Set(["blocked"]);
-const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-mini", "gpt-realtime-2", "gpt-realtime-2.1"]);
+const NEXUS_REALTIME_ALLOWED_MODELS = new Set(["gpt-realtime", "gpt-realtime-mini", "gpt-realtime-2.1", "gpt-realtime-2.1-mini"]);
 const NEXUS_REALTIME_ALLOWED_VOICES = new Set(["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]);
 const PRODUCT_IDENTITY = Object.freeze({
-  productName: "Nexus Genesis | AgriNexus",
-  assistantName: "Nexus",
+  productName: "Kyro Genesis | AgriNexus",
+  assistantName: "Kyro",
   edition: "genesis",
   legacyProductName: "AgriNexus"
 });
@@ -1787,7 +1789,11 @@ const mime = {
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
-  ".webmanifest": "application/manifest+json; charset=utf-8"
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".pdf": "application/pdf",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 };
 
 let pgPool = null;
@@ -1795,6 +1801,35 @@ let pgStateReady = false;
 
 function usingPostgresState() {
   return STATE_STORE === "postgres";
+}
+
+// Independent of AGRINEXUS_STATE_STORE: lets auth move to real Postgres
+// (foundation/migrations' `users` table) while other domains stay on the
+// JSON blob. Shares the same lazily-created pool via getPgPool().
+function usingPostgresAuth() {
+  return String(process.env.AUTH_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+// Additive shadow-write only: the JSON blob (db.profile.healthIntakes) stays
+// the authoritative read path for the app's many existing intake call sites.
+// This proves a real Postgres record can be created alongside it, the same
+// "start narrow" pattern Phase 1 used for auth, before a full cutover.
+function usingPostgresHealthIntakes() {
+  return String(process.env.HEALTH_INTAKE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+function shadowWriteHealthIntakeToPostgres(intake) {
+  if (!usingPostgresHealthIntakes() || !intake) return;
+  Promise.resolve()
+    .then(() => pgHealthIntakes.createIntake(getPgPool(), {
+      countryId: intake.countryId,
+      patientRef: intake.patientRef,
+      needSummary: intake.needSummary,
+      riskLevel: intake.riskLevel
+    }))
+    .catch(error => {
+      console.error("[health-intake] Postgres shadow-write failed:", error.message);
+    });
 }
 
 function postgresConfig() {
@@ -9270,23 +9305,51 @@ function logisticsPointForOrder(route, order) {
   return points[Math.max(0, Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, Math.max(0, points.length - 1)))] || points[0] || null;
 }
 
-function normalizeLogisticsTrackingResponse(payload = {}, { order, route, deliveryStatus = "local", provider = "AgriNexus logistics" } = {}) {
+function formatDurationHuman(totalSeconds) {
+  const seconds = Number(totalSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  if (hours && minutes) return `${hours}h ${minutes}m`;
+  if (hours) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+function normalizeLogisticsTrackingResponse(payload = {}, { order, route, deliveryStatus = "local", provider = "AgriNexus logistics", realRoute = null } = {}) {
   const data = payload.tracking || payload.shipment || payload.data || payload;
-  const point = logisticsPointForOrder(route, order);
-  const latitude = Number(data.latitude ?? data.lat ?? data.location?.lat ?? data.currentLocation?.lat ?? point?.[0]);
-  const longitude = Number(data.longitude ?? data.lng ?? data.lon ?? data.location?.lng ?? data.location?.lon ?? data.currentLocation?.lng ?? point?.[1]);
+  const point = realRoute ? null : logisticsPointForOrder(route, order);
+  const latitude = Number(data.latitude ?? data.lat ?? data.location?.lat ?? data.currentLocation?.lat ?? realRoute?.originLat ?? point?.[0]);
+  const longitude = Number(data.longitude ?? data.lng ?? data.lon ?? data.location?.lng ?? data.location?.lon ?? data.currentLocation?.lng ?? realRoute?.originLng ?? point?.[1]);
+  const routeGeometry = Array.isArray(realRoute?.routeGeometry) && realRoute.routeGeometry.length > 1 ? realRoute.routeGeometry : null;
   const events = Array.isArray(data.events) ? data.events : Array.isArray(data.timeline) ? data.timeline : [];
   const status = data.status || data.stage || data.shipmentStatus || order?.stage || "Tracking";
+  const parsedDurationSeconds = Number.isFinite(realRoute?.durationSeconds)
+    ? realRoute.durationSeconds
+    : Number(String(realRoute?.duration || "").replace(/s$/i, ""));
+  const realDuration = formatDurationHuman(parsedDurationSeconds);
+  const realDistanceKm = Number.isFinite(realRoute?.distanceMeters) ? `${(realRoute.distanceMeters / 1000).toFixed(1)} km` : "";
+  const realEtaText = realDuration
+    ? `About ${realDuration}${realDistanceKm ? ` (${realDistanceKm})` : ""} by road based on current route conditions`
+    : "";
   return {
     provider: data.provider || payload.provider || provider,
     source: deliveryStatus,
     trackingNumber: data.trackingNumber || data.tracking_number || data.waybill || data.waybillNumber || order?.trackingNumber || order?.orderNumber,
     carrier: data.carrier || data.carrierName || data.courier || data.provider || payload.provider || provider,
     status,
-    eta: data.eta || data.estimatedDelivery || data.estimated_delivery || data.deliveryWindow || "",
+    eta: data.eta || data.estimatedDelivery || data.estimated_delivery || data.deliveryWindow || realEtaText || "",
+    distanceMeters: Number.isFinite(realRoute?.distanceMeters) ? realRoute.distanceMeters : null,
+    routeUrl: realRoute?.routeUrl || null,
     currentLocation: data.currentLocation?.label || data.current_location || data.locationName || data.city || order?.checkpoint || "",
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
+    routeGeometry,
+    originLat: Number.isFinite(Number(realRoute?.originLat)) ? Number(realRoute.originLat) : null,
+    originLng: Number.isFinite(Number(realRoute?.originLng)) ? Number(realRoute.originLng) : null,
+    originLabel: realRoute?.originResolved || order?.checkpoint || "",
+    destinationLat: Number.isFinite(Number(realRoute?.destinationLat)) ? Number(realRoute.destinationLat) : null,
+    destinationLng: Number.isFinite(Number(realRoute?.destinationLng)) ? Number(realRoute.destinationLng) : null,
+    destinationLabel: realRoute?.destinationResolved || "",
     speedKph: data.speedKph || data.speed_kph || null,
     lastEvent: data.lastEvent || data.event || events[0]?.detail || events[0]?.label || "",
     events: events.slice(0, 8),
@@ -9295,7 +9358,7 @@ function normalizeLogisticsTrackingResponse(payload = {}, { order, route, delive
   };
 }
 
-async function refreshOrderLogisticsTracking(db, order, user, action = "logistics.tracking_status") {
+async function refreshOrderLogisticsTracking(db, order, user, action = "logistics.tracking_status", locations = {}) {
   ensureTradeProfile(db.profile);
   if (!order) return { ok: false, status: "missing-order", tracking: null };
   const route = db.routes.find(item => item.id === order.routeId) || activeContext(db).route;
@@ -9347,8 +9410,22 @@ async function refreshOrderLogisticsTracking(db, order, user, action = "logistic
       delivery = { attempted: true, ok: false, status: "provider-error", error: error.message, url: runtime.url };
     }
   }
-  const source = delivery.ok ? "live-provider" : delivery.attempted ? "provider-error-local-fallback" : "local-route-estimate";
-  const tracking = normalizeLogisticsTrackingResponse(responsePayload, { order, route, deliveryStatus: source, provider });
+  let realRoute = null;
+  if (!delivery.ok) {
+    const latestRecord = (db.profile.tradeLogisticsRecords || []).find(item => item.orderId === order.id);
+    const origin = locations.pickupLocation || latestRecord?.pickupLocation || order.checkpoint;
+    const destination = locations.deliveryLocation || latestRecord?.deliveryLocation;
+    if (origin && destination && origin !== destination) {
+      try {
+        const routeResult = await nexusRealProviders.googleMaps.route({ confirmed: true, origin, destination }, process.env);
+        if (routeResult.body?.status === "completed" && routeResult.body.data) realRoute = routeResult.body.data;
+      } catch (error) {
+        realRoute = null;
+      }
+    }
+  }
+  const source = delivery.ok ? "live-provider" : realRoute ? "real-route-estimate" : delivery.attempted ? "provider-error-local-fallback" : "local-route-estimate";
+  const tracking = normalizeLogisticsTrackingResponse(responsePayload, { order, route, deliveryStatus: source, provider, realRoute });
   order.trackingNumber = tracking.trackingNumber || order.trackingNumber || order.orderNumber;
   order.liveTracking = tracking;
   order.updatedAt = tracking.updatedAt;
@@ -9415,7 +9492,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     "delivery-confirm": "delivery confirmed",
     settlement: "settlement prepared"
   };
-  const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`);
+  const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`, { pickupLocation, deliveryLocation });
   const record = {
     id: crypto.randomUUID(),
     logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
@@ -11689,17 +11766,17 @@ function runWorkforceActionByAgent(db, user, type) {
   return submitBestWorkforceApplication(db, user, "apply for job").response;
 }
 
-function runHealthActionByAgent(db, user, type) {
+function ensureVoiceHealthIntake(db, user, { needSummary, force = false } = {}) {
   ensureHealthProfile(db.profile);
   const { country, route } = activeContext(db);
-  let intake = db.profile.healthIntakes[0];
+  let intake = force ? null : db.profile.healthIntakes[0];
   if (!intake) {
     intake = {
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-VOICE`,
       patientName: "Voice-supported patient",
       countryId: country.id,
-      needSummary: `${country.name} voice intake for telehealth access`,
+      needSummary: needSummary || `${country.name} voice intake for telehealth access`,
       riskLevel: country.risk === "High" || country.heat >= 38 ? "High" : "Routine",
       queueStatus: "Voice intake opened",
       representativeStatus: "Accessibility aide pending",
@@ -11712,7 +11789,13 @@ function runHealthActionByAgent(db, user, type) {
       createdAt: new Date().toISOString()
     };
     db.profile.healthIntakes.unshift(intake);
+    shadowWriteHealthIntakeToPostgres(intake);
   }
+  return intake;
+}
+
+function runHealthActionByAgent(db, user, type) {
+  const intake = ensureVoiceHealthIntake(db, user);
   const actionMap = {
     representative: ["representative.connected", "Representative connected", "health-notifications"],
     caption: ["telehealth.caption_relay_started", "Caption relay started", "health-telehealth"],
@@ -16850,8 +16933,8 @@ function openAiRealtimeVoice(env = process.env) {
 }
 
 function openAiRealtimeModel(env = process.env) {
-  const requested = String(env.OPENAI_REALTIME_MODEL || "gpt-realtime-2").trim();
-  return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime-2";
+  const requested = String(env.OPENAI_REALTIME_MODEL || "gpt-realtime-2.1").trim();
+  return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime-2.1";
 }
 
 function nexusRealtimeFailureCategory(error = {}) {
@@ -16936,6 +17019,18 @@ function nexusElevenLabsToolSchemas() {
       confirmation: {
         type: "boolean",
         description: "Whether the user has explicitly confirmed a gated action in the current Nexus workflow."
+      },
+      title: {
+        type: "string",
+        description: "A short title, when the user named one, for a document, export, event, listing, or reminder."
+      },
+      content: {
+        type: "string",
+        description: "The full body text the user wants exported, drafted, or sent, when it is longer or more specific than the plain command."
+      },
+      format: {
+        type: "string",
+        description: "The file format the user asked for (e.g. pdf, docx, txt, md, json), when exporting a document."
       }
     },
     required: ["command"]
@@ -17014,12 +17109,23 @@ function openAiRealtimeInstructions(user, language = "en") {
     "You are Nexus Genesis, the live voice companion inside AgriNexus.",
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
-    "Ordinary conversation remains conversation. Never open, create, continue, or display a workflow merely because the user speaks.",
-    "Answer greetings, presence checks, emotional support, casual questions, capability questions, and contextual follow-ups directly without a function tool.",
-    "Use tools only when a real Nexus capability is needed, such as weather, maps, agriculture, health preparation, workforce, learning, marketplace, logistics, communications, provider readiness, receipts, or workflow preparation.",
-    "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code. Use the provider-backed translation returned by Nexus.",
-    "When the user explicitly asks to open, show, display, or use Maps or requests a route or directions, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app. Nexus opens its own browser Maps workspace; an unavailable external route provider does not prevent that workspace from opening.",
-    "Never claim an action completed without verified evidence from the Nexus tool result.",
+    "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, and pure follow-up questions about something you already said do not need a function tool.",
+    "For everything else, prefer calling a tool over answering from your own knowledge. If the user reports a real fact Nexus can act on (a vital sign, a symptom, an intent to buy or sell, a place to find), or asks Nexus to do, check, find, save, track, plan, export, or remind something, call the matching tool below even if they phrased it as a statement rather than a command. Do not silently answer in conversation when a tool exists for the request — that leaves no real record and is a failure mode, not a shortcut.",
+    "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
+    "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
+    "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
+    "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
+    "When the user describes a crop or field problem, or asks to send, fly, or request a drone for field scanning/monitoring, you must call nexus_agriculture.",
+    "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
+    "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
+    "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
+    "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
+    "When the user asks about current weather, temperature, or conditions in a place, you must call nexus_weather.",
+    "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
+    "If your last turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user now confirms (yes, confirm, confirmed, go ahead, do it), call the SAME tool again with the SAME details plus confirmed: true. Never just repeat the confirmation request — a user who already said yes has confirmed.",
+    "If an earlier turn in this conversation was a mental-health crisis or safety concern, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, or any other everyday task), answer the current request plainly using the real tool result. Do not re-open or extend crisis-support language into an answer to an unrelated request. Only keep that tone if the current message itself still relates to safety or the same crisis topic.",
+    "Never claim an action completed without verified evidence from the Nexus tool result. After a tool call returns, briefly confirm out loud in plain language what was actually saved, found, or checked — the user cannot see a screen changing on its own and needs to hear that it happened.",
     "High-risk actions require Nexus confirmation gates. Do not send messages, call, schedule, pay, dispatch, refill, diagnose, prescribe, contact providers, share location, or execute marketplace actions by inference.",
     "For health, do not diagnose, prescribe, or replace clinical judgment. Help with literacy, intake, tracking, preparation, and provider-ready summaries.",
     "For live information, ask for missing location or parameters naturally. Never invent current data or fake citations.",
@@ -17395,7 +17501,10 @@ function nexusOpenAiNativeToolSchemas() {
       },
       language: { type: "string", description: "The user's active language or BCP-47 language code." },
       location: { type: "string", description: "Optional user-provided location text. Never infer precise location." },
-      confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." }
+      confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." },
+      title: { type: "string", description: "A short title, when the user named one, for a document, export, event, listing, or reminder." },
+      content: { type: "string", description: "The full body text the user wants exported, drafted, or sent, when it is longer or more specific than the plain command." },
+      format: { type: "string", description: "The file format the user asked for (e.g. pdf, docx, txt, md, json), when exporting a document." }
     },
     required: ["command"]
   };
@@ -17633,9 +17742,25 @@ async function callOpenAiNativeResponses(payload, env = process.env) {
 function nexusOpenAiNativeSystemPrompt() {
   return [
     "You are Nexus, the OpenAI-native intelligence layer for AgriNexus.",
-    "Understand the user's goal, keep natural conversation fluid, select tools only when they are genuinely useful, and never replace the final answer with internal statuses.",
-    "Use the server-provided Nexus tools for weather, current information, maps, agriculture, health preparation, workforce, marketplace, communications, workflows, and provider readiness.",
+    "Understand the user's goal and keep natural conversation fluid. Ordinary greetings, small talk, and pure follow-up questions about something you already said do not need a tool.",
+    "For everything else, prefer calling a tool over answering from your own knowledge or explaining that something is unavailable without checking. Do not silently answer in conversation or say a capability is disabled when a tool exists for the request — call it and let its real result decide the answer.",
+    "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
+    "When the user asks to see, find, or show images, photos, or pictures of anything (including crop damage, pests, disease, or any other visual subject), you must call nexus_visual_analysis with that request. This is a real keyless image search — never say visual analysis is disabled without calling it first.",
+    "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
+    "When the user describes a crop or field problem, or asks to send, fly, or request a drone for field scanning or monitoring, you must call nexus_agriculture.",
+    "When the user asks to learn something, or requests a lesson, course, or training topic, you must call nexus_workforce_learning.",
+    "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
+    "When the user asks about current weather, temperature, or conditions in a place, you must call nexus_weather.",
+    "When the user asks for a route, directions, or traffic between two places, you must call nexus_maps_route.",
+    "When the user asks to export something or save it as a PDF or document, you must call nexus_document_export.",
+    "When the user asks to set, create, or list a reminder, or queue/sync something for offline use, you must call nexus_automation_reminder.",
+    "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
+    "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
+    "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
+    "Use the server-provided Nexus tools for current information, workforce, provider readiness, and anything else a tool covers.",
     "Do not diagnose, prescribe, change medication, dispatch emergency help, contact providers, send messages, place calls, book appointments, process payments, share location, or claim completed real-world actions unless a Nexus tool result proves an authorized action.",
+    "Never claim an action completed, or that a capability is unavailable, without verified evidence from a Nexus tool result.",
     "When provider credentials are missing, state the exact missing environment variable names returned by Nexus and continue with safe general guidance.",
     "When sources are returned, cite them naturally and do not invent citations.",
     "Return the complete user-facing Nexus answer as natural speech-ready text."
@@ -17650,6 +17775,100 @@ function nexusOpenAiNativeToolReceipt(db, toolName = "", command = "", status = 
     "Nexus did not expose secrets, create hidden external actions, or bypass confirmation gates.",
     "Nexus did not claim provider execution without provider-confirmed evidence."
   ], status);
+}
+
+async function nexusRealYouTubeVideoSearch(query, env = process.env) {
+  const apiKey = String(env.YOUTUBE_API_KEY || env.NEXUS_MEDIA_PROVIDER_API_KEY || "").trim();
+  if (!apiKey) return null;
+  const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
+  searchUrl.searchParams.set("part", "snippet");
+  searchUrl.searchParams.set("type", "video");
+  searchUrl.searchParams.set("videoEmbeddable", "true");
+  searchUrl.searchParams.set("videoSyndicated", "true");
+  searchUrl.searchParams.set("maxResults", "8");
+  searchUrl.searchParams.set("safeSearch", "moderate");
+  searchUrl.searchParams.set("q", query);
+  searchUrl.searchParams.set("key", apiKey);
+  const searchResponse = await fetchWithTimeout(searchUrl, { headers: { accept: "application/json" } }, 9000);
+  const searchPayload = await searchResponse.json().catch(() => ({}));
+  if (!searchResponse.ok) throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
+  const candidates = (searchPayload.items || [])
+    .map(item => ({
+      videoId: item.id?.videoId || "",
+      title: item.snippet?.title || "",
+      channelTitle: item.snippet?.channelTitle || "",
+      thumbnailUrl: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || "",
+      publishedAt: item.snippet?.publishedAt || ""
+    }))
+    .filter(item => item.videoId);
+  if (!candidates.length) return [];
+  const statusUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+  statusUrl.searchParams.set("part", "status");
+  statusUrl.searchParams.set("id", candidates.map(item => item.videoId).join(","));
+  statusUrl.searchParams.set("key", apiKey);
+  const statusResponse = await fetchWithTimeout(statusUrl, { headers: { accept: "application/json" } }, 9000);
+  const statusPayload = await statusResponse.json().catch(() => ({}));
+  const embeddableIds = new Set(
+    (statusPayload.items || [])
+      .filter(item => item.status?.embeddable === true && item.status?.privacyStatus === "public")
+      .map(item => item.id)
+  );
+  const eligible = candidates.filter(item => embeddableIds.has(item.videoId)).slice(0, 6);
+  const oembedChecked = await Promise.all(eligible.map(async item => {
+    try {
+      const oembedUrl = new URL("https://www.youtube.com/oembed");
+      oembedUrl.searchParams.set("url", `https://www.youtube.com/watch?v=${item.videoId}`);
+      oembedUrl.searchParams.set("format", "json");
+      const response = await fetchWithTimeout(oembedUrl, { headers: { accept: "application/json" } }, 6000);
+      if (!response.ok) return null;
+      const metadata = await response.json().catch(() => ({}));
+      return metadata?.type === "video" && metadata?.html ? item : null;
+    } catch (error) {
+      return null;
+    }
+  }));
+  return oembedChecked.filter(Boolean).map(item => ({
+    title: sanitizePilotText(item.title || "YouTube video", 180),
+    videoId: item.videoId,
+    embedUrl: `https://www.youtube.com/embed/${item.videoId}`,
+    thumbnailUrl: item.thumbnailUrl,
+    channelTitle: sanitizePilotText(item.channelTitle || "", 120),
+    sourceUrl: `https://www.youtube.com/watch?v=${item.videoId}`,
+    provider: "youtube"
+  }));
+}
+
+async function nexusRealCommonsVideoSearch(query) {
+  const commonsUrl = new URL("https://commons.wikimedia.org/w/api.php");
+  commonsUrl.searchParams.set("action", "query");
+  commonsUrl.searchParams.set("generator", "search");
+  commonsUrl.searchParams.set("gsrsearch", `filetype:video ${query}`);
+  commonsUrl.searchParams.set("gsrnamespace", "6");
+  commonsUrl.searchParams.set("gsrlimit", "6");
+  commonsUrl.searchParams.set("prop", "imageinfo");
+  commonsUrl.searchParams.set("iiprop", "url|extmetadata|mime");
+  commonsUrl.searchParams.set("format", "json");
+  commonsUrl.searchParams.set("origin", "*");
+  const response = await fetchWithTimeout(commonsUrl, { headers: { accept: "application/json" } }, 10000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
+  return Object.values(payload.query?.pages || {})
+    .map(page => {
+      const info = page.imageinfo?.[0] || {};
+      const metadata = info.extmetadata || {};
+      return {
+        title: sanitizePilotText(page.title || "Wikimedia Commons video", 180),
+        videoUrl: info.url || "",
+        mimeType: info.mime || "",
+        sourceUrl: info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title || "").replace(/ /g, "_"))}`,
+        creator: sanitizePilotText(metadata.Artist?.value || "", 180),
+        license: sanitizePilotText(metadata.LicenseShortName?.value || metadata.UsageTerms?.value || "See source", 120),
+        description: sanitizePilotText(metadata.ImageDescription?.value || metadata.ObjectName?.value || "", 260),
+        provider: "wikimedia-commons"
+      };
+    })
+    .filter(item => item.videoUrl && /^video\//.test(item.mimeType || ""))
+    .slice(0, 4);
 }
 
 function nexusOpenAiNativeBlockedToolResult(db, common = {}, {
@@ -17764,6 +17983,20 @@ function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   return {
     origin: sanitizePilotText(args.origin || args.from || args.start || args.location || (between ? between[1] : ""), 160),
     destination: sanitizePilotText(args.destination || args.to || args.end || (between ? between[2] : ""), 160)
+  };
+}
+
+function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
+  const text = String(command || "");
+  const titleMatch = text.match(/\btitled?\s*[:\-]?\s*["']?([^"'.,\n]{2,80})["']?/i);
+  const formatMatch = text.match(/\b(pdf|docx|doc|word|txt|text|md|markdown|json)\b/i);
+  const contentMatch = text.match(/\b(?:with content|content is|content|containing|that says|saying)\s*[:\-]?\s*(.+)$/i);
+  const formatRaw = String(args.format || args.fileType || (formatMatch ? formatMatch[1] : "")).toLowerCase();
+  const format = ["doc", "word"].includes(formatRaw) ? "docx" : formatRaw === "text" ? "txt" : formatRaw === "markdown" ? "md" : (["json", "txt", "md", "pdf", "docx"].includes(formatRaw) ? formatRaw : "txt");
+  return {
+    title: sanitizePilotText(args.title || (titleMatch ? titleMatch[1].trim() : "") || "Nexus export", 160),
+    content: sanitizePilotText(args.content || args.text || (contentMatch ? contentMatch[1].trim() : "") || command, 4000),
+    format
   };
 }
 
@@ -18090,9 +18323,47 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     };
   }
   if (toolName === "nexus_visual_analysis") {
-    const imageSearchRequest = !args.imageUrl && !args.url && /\b(show|find|search|display|open)\b.*\b(images?|photos?|pictures?)\b/i.test(command);
+    const wantsVideos = !args.imageUrl && !args.url && /\b(show|find|search|display|open|play)\b.*\bvideos?\b/i.test(command);
+    const wantsImages = !args.imageUrl && !args.url && /\b(show|find|search|display|open)\b.*\b(images?|photos?|pictures?)\b/i.test(command);
+    if (wantsVideos) {
+      const videoQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|play|me|real|and|also|while|explaining|please|videos?|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
+      let videos = [];
+      let videoProviderSucceeded = false;
+      try {
+        const youtubeVideos = await nexusRealYouTubeVideoSearch(videoQuery, process.env);
+        if (Array.isArray(youtubeVideos) && youtubeVideos.length) {
+          videos = youtubeVideos;
+          videoProviderSucceeded = true;
+        }
+      } catch (error) {
+        // Fall through to the keyless Wikimedia Commons video fallback below.
+      }
+      if (!videos.length) {
+        try {
+          const commonsVideos = await nexusRealCommonsVideoSearch(videoQuery);
+          if (commonsVideos.length) {
+            videos = commonsVideos;
+            videoProviderSucceeded = true;
+          }
+        } catch (error) {
+          // Both real video sources failed or returned nothing usable — say so truthfully below.
+        }
+      }
+      if (videos.length && !wantsImages) {
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-videos", [`Retrieved ${videos.length} real video result(s) with confirmed source pages.`], ["Nexus did not analyze an unseen video, open the camera, or claim ownership of source media."]);
+        return { ...common, capability: "video-search", status: "source-backed-videos", response: `I found ${videos.length} real video result(s) for ${videoQuery}.`, videos, sources: videos.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
+      }
+      if (!wantsImages) {
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "no-video-results", ["Searched YouTube and Wikimedia Commons for real, embeddable video results."], ["Nexus did not fabricate a video result or claim a video exists when none was found."]);
+        return { ...common, capability: "video-search", status: "no-video-results", response: `I searched for real videos of ${videoQuery} but found no usable, embeddable result right now.`, providerAttempted: true, providerSucceeded: false, executionAttempted: true, executionVerified: false, receipt, evidenceReceipt: receipt };
+      }
+      common.__nexusPendingVideos = videos;
+      common.__nexusVideoProviderSucceeded = videoProviderSucceeded;
+      common.__nexusVideoQuery = videoQuery;
+    }
+    const imageSearchRequest = wantsImages;
     if (imageSearchRequest) {
-      const imageQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|me|real|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
+      const imageQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|me|real|and|also|while|explaining|please|videos?|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
       try {
         const commonsUrl = new URL("https://commons.wikimedia.org/w/api.php");
         commonsUrl.searchParams.set("action", "query");
@@ -18121,8 +18392,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           };
         }).filter(item => item.imageUrl && item.sourceUrl).slice(0, 6);
         if (images.length) {
+          const pendingVideos = Array.isArray(common.__nexusPendingVideos) ? common.__nexusPendingVideos : [];
           const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-images", [`Retrieved ${images.length} visible image result(s) from Wikimedia Commons with source pages.`], ["Nexus did not analyze an unseen image, open the camera, or claim ownership of source media."]);
-          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-backed image results for ${imageQuery} from Wikimedia Commons.`, images, sources: images.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
+          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-backed image results for ${imageQuery} from Wikimedia Commons.${pendingVideos.length ? ` I also found ${pendingVideos.length} real video result(s).` : ""}`, images, videos: pendingVideos.length ? pendingVideos : undefined, sources: [...images.map(item => ({ title: item.title, url: item.sourceUrl })), ...pendingVideos.map(item => ({ title: item.title, url: item.sourceUrl }))], providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
         }
       } catch (error) {
         // Try the recovered source-attributed image fallback before truthful vision refusal.
@@ -18130,11 +18402,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       try {
         const images = await require("./server/nexus-open-image-fallback").searchOpenImages(imageQuery);
         if (images.length) {
+          const pendingVideos = Array.isArray(common.__nexusPendingVideos) ? common.__nexusPendingVideos : [];
           const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-images", [`Retrieved ${images.length} image result(s) through Openverse with source pages and license metadata.`], ["Nexus did not analyze an unseen image, open the camera, or diagnose a crop or health condition."]);
-          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-linked image results for ${imageQuery} through Openverse after the primary search returned no usable result.`, images, sources: images.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
+          return { ...common, capability: "visual-search", status: "source-backed-images", response: `I found ${images.length} source-linked image results for ${imageQuery} through Openverse after the primary search returned no usable result.${pendingVideos.length ? ` I also found ${pendingVideos.length} real video result(s).` : ""}`, images, videos: pendingVideos.length ? pendingVideos : undefined, sources: [...images.map(item => ({ title: item.title, url: item.sourceUrl })), ...pendingVideos.map(item => ({ title: item.title, url: item.sourceUrl }))], providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
         }
       } catch {
         // Preserve the configured vision provider's truthful unavailable result.
+      }
+      if (Array.isArray(common.__nexusPendingVideos) && common.__nexusPendingVideos.length) {
+        const pendingVideos = common.__nexusPendingVideos;
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-videos", [`Retrieved ${pendingVideos.length} real video result(s); no matching image results were found.`], ["Nexus did not analyze an unseen image or video, open the camera, or claim ownership of source media."]);
+        return { ...common, capability: "video-search", status: "source-backed-videos", response: `I could not find image results for ${imageQuery}, but I found ${pendingVideos.length} real video result(s).`, videos: pendingVideos, sources: pendingVideos.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
       }
     }
     const visionResult = await nexusRealProviders.vision.analyze({
@@ -18150,6 +18428,25 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeMemoryTool(db, user, common, args);
   }
   if (toolName === "nexus_automation_reminder") {
+    const wantsOfflineQueue = /\b(offline queue|queue (?:this|that)|save (?:this|that) for offline|show my offline)\b/i.test(command);
+    const wantsOfflineSync = /\bsync\b.*\boffline\b|\boffline\b.*\bsync\b/i.test(command);
+    const wantsListReminders = /\b(show|list|what are)\b.*\breminders?\b/i.test(command);
+    if (wantsOfflineSync) {
+      const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: true }, db, process.env);
+      const ok = Boolean(syncResult?.body?.ok && syncResult.body.status === "completed");
+      return { ...common, capability: "automation-reminder", status: ok ? "offline-sync-completed" : "offline-sync-blocked", response: ok ? syncResult.body.message : "I could not sync the offline queue right now.", localOnly: true };
+    }
+    if (wantsOfflineQueue) {
+      const summary = args.summary || args.content || command;
+      const queueResult = nexusRealProviders.offlineExpansionBridge.queue({ type: args.type || "workflow_plan", title: args.title || summary.slice(0, 80), summary, confirmed: true }, db, process.env);
+      const ok = Boolean(queueResult?.body?.ok && queueResult.body.status === "completed");
+      return { ...common, capability: "automation-reminder", status: ok ? "offline-item-queued" : "offline-queue-blocked", response: ok ? "I queued that locally for offline review. No health, payment, contact, or dispatch content was included." : (queueResult?.body?.message || "I could not queue that item — it may include sensitive or restricted content."), localOnly: true };
+    }
+    if (wantsListReminders) {
+      const listResult = nexusRealProviders.reminders.list(db, process.env);
+      const cards = listResult?.body?.data?.cards || [];
+      return { ...common, capability: "automation-reminder", status: "reminders-listed", response: cards.length ? `You have ${cards.length} reminder(s): ${cards.slice(0, 5).map(r => `${r.title}${r.dueAt ? ` (${r.dueAt})` : ""}`).join("; ")}.` : "You have no reminders saved yet.", localOnly: true, reminders: cards };
+    }
     return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
   }
   if (toolName === "nexus_email") {
@@ -18163,6 +18460,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "email" }, emailResult);
   }
   if (toolName === "nexus_communications") {
+    const wantsDraftOnly = /\b(draft|prepare)\b/i.test(command) && !/\bsend\b/i.test(command);
+    if (wantsDraftOnly) {
+      const draftContact = nexusOpenAiNativeExtractContactArgs(command, args);
+      const draftChannel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : "sms"), 40).toLowerCase();
+      const draftResult = draftChannel === "call"
+        ? nexusRealProviders.communicationsBridge.prepareCall({ to: draftContact.to }, process.env)
+        : nexusRealProviders.communicationsBridge.draft({ channel: draftChannel, message: draftContact.message, to: draftContact.to }, process.env);
+      const ok = Boolean(draftResult?.body?.ok);
+      return { ...common, capability: "communications", status: ok ? "draft-prepared" : "draft-blocked", response: ok ? draftResult.body.message + (draftResult.body.data?.draft ? ` Draft: "${draftResult.body.data.draft}"` : "") : (draftResult?.body?.message || "I could not prepare that draft."), localOnly: true };
+    }
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
     const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
     const recipient = contact.to || ownerTestRecipient;
@@ -18189,21 +18496,63 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (toolName === "nexus_workforce_learning") {
     const learningRequest = /\b(explain|teach|lesson|learn|learning|literacy|course|courses|training|lms|class|quiz|understanding)\b/i.test(command);
     const jobsRequest = /\b(job|jobs|employment|career|employer|resume|résumé|vacancy|vacancies|position|workforce)\b/i.test(command);
+    const wantsSave = /\b(save|bookmark|keep)\b/i.test(command);
+    const wantsReminder = /\bremind me\b/i.test(command);
     if (learningRequest && !jobsRequest) {
+      const learningTopic = command
+        .replace(/\b(please|can you|could you|i want to|i'd like to|explain|teach me|about|a lesson|lesson on|learn about|learn|learning|literacy|course|courses|training|lms|class|save|bookmark|keep|remind me|that|this)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const searchResult = await nexusRealProviders.learningBridge.search({ query: learningTopic }, process.env);
+      const cards = searchResult?.body?.data?.cards || [];
+      const bestMatch = cards[0];
+      if (bestMatch && (wantsSave || wantsReminder)) {
+        const actionResult = wantsSave
+          ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: true }, db, process.env)
+          : nexusRealProviders.learningBridge.createLearningReminder({ ...bestMatch, dueAt: args.dueAt || args.when, confirmed: true }, db, process.env);
+        const ok = Boolean(actionResult?.body?.ok && actionResult.body.status === "completed");
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? (wantsSave ? "learning-resource-saved" : "learning-reminder-created") : "learning-preparation-ready",
+          [ok ? `${wantsSave ? "Saved" : "Created a reminder for"} ${bestMatch.title} to the learner's local record.` : "Prepared learning guidance."],
+          ["Nexus did not enroll the learner, issue a certificate, or claim completion of an external course."]);
+        return { ...common, capability: "learning-training", status: ok ? (wantsSave ? "learning-resource-saved" : "learning-reminder-created") : "learning-preparation-ready", response: ok ? `${wantsSave ? "Saved" : "Set a reminder for"} "${bestMatch.title}" (${bestMatch.duration}, ${bestMatch.level}). ${bestMatch.summary}` : `I could not ${wantsSave ? "save" : "set a reminder for"} that resource right now.`, receipt, evidenceReceipt: receipt, localOnly: true };
+      }
       const cropRotation = /\bcrop rotation\b/i.test(command);
       const lesson = cropRotation
         ? "Crop rotation means planting a different crop in the same field in the next season. Changing crops can protect soil nutrients and interrupt some pest and disease cycles. For example, maize may be followed by beans or another legume. Check your local growing conditions before choosing the next crop. Understanding question: why can changing crops help the soil?"
-        : "I opened Learning and prepared a plain-language lesson from your request. I will explain one idea at a time, check understanding with one question, and rephrase anything that is unclear.";
+        : bestMatch
+          ? `I found a matching lesson: "${bestMatch.title}" (${bestMatch.duration}, ${bestMatch.level}). ${bestMatch.summary} ${bestMatch.details} Say "save that" or "remind me" if you want to keep it.`
+          : "I opened Learning and prepared a plain-language lesson from your request. I will explain one idea at a time, check understanding with one question, and rephrase anything that is unclear.";
       const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "lesson-ready", ["Prepared a relevant plain-language learning response and one understanding check."], ["Nexus did not enroll the user, issue a certificate, or claim completion of an external course."]);
-      return { ...common, capability: "learning-training", status: "lesson-ready", response: lesson, receipt, evidenceReceipt: receipt, localOnly: true };
+      return { ...common, capability: "learning-training", status: "lesson-ready", response: lesson, receipt, evidenceReceipt: receipt, localOnly: true, matchedResources: cards.slice(0, 5) };
     }
     const lmsRequest = /\b(course|courses|training|lms|class|learning)\b/i.test(command);
     if (lmsRequest) {
-      const courses = await nexusRealProviders.moodle.courses(process.env);
+      const courses = await nexusRealProviders.lmsLiveBridge.courses({ q: command }, process.env);
       return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "learning-training" }, courses);
     }
   }
   if (toolName === "nexus_agriculture") {
+    const wantsDrone = /\bdrone\b/i.test(command) && /\b(send|fly|scan|survey|mission|inspect|request)\b/i.test(command);
+    if (wantsDrone) {
+      const areaMatch = command.match(/\b(?:in|on|over|of)\s+(?:the\s+|my\s+)?([a-z0-9\s]+?)(?:\s+(?:field|farm|plot|area))?$/i)
+        || command.match(/\b(?:the\s+|my\s+)([a-z0-9]+(?:\s+[a-z0-9]+)?\s+(?:field|farm|plot|area))\b/i);
+      const missionResult = nexusRealProviders.droneMissionBridge.missionRequest({
+        title: args.title || `Drone field review: ${command}`.slice(0, 180),
+        missionType: /\bpest|disease\b/i.test(command) ? "pest/disease scan" : /\birrigat|water\b/i.test(command) ? "irrigation review" : "crop monitoring",
+        area: args.area || areaMatch?.[1]?.trim() || "field area to confirm",
+        purpose: command,
+        confirmed: true
+      }, db, process.env);
+      const ok = Boolean(missionResult?.body?.ok && missionResult.body.status === "completed");
+      const request = missionResult?.body?.data?.request;
+      const response = ok
+        ? `I saved a drone mission request: ${request.missionType} for ${request.area}. This is intake only — no drone flight was launched, controlled, or dispatched. A qualified operator will need to review and schedule the real flight.`
+        : `I could not save that drone mission request. ${missionResult?.body?.message || ""}`;
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "drone-mission-requested" : "drone-mission-blocked",
+        [ok ? `Saved drone mission intake request ${request.id}.` : "Attempted to save a drone mission intake request."],
+        ["Nexus did not launch, control, or dispatch a drone flight."]);
+      return { ...common, capability: "nexus_agriculture", status: ok ? "drone-mission-requested" : "drone-mission-blocked", response, receipt, evidenceReceipt: receipt, localOnly: true };
+    }
     const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
     const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
     const response = yellowLowerLeaves
@@ -18212,17 +18561,179 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "guidance-ready", ["Returned crop-relevant, non-transactional agriculture guidance."], ["Nexus did not diagnose the crop from incomplete evidence, prescribe a chemical, place an order, or claim a field inspection occurred."]);
     return { ...common, capability: "nexus_agriculture", status: "guidance-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
   }
+  function chronicConditionEducationResponse(commandText) {
+    const lower = String(commandText || "").toLowerCase();
+    const wantsManagement = /\b(manage|control|lower|reduce|treat|deal with|help with|handle|cope with|live with|what steps|what should i do|what do i do|steps (?:should|to) take|next steps|how do i)\b/.test(lower);
+    if (!wantsManagement) return null;
+    if (/\b(high blood pressure|hypertension|bp)\b/.test(lower)) {
+      return "General, non-diagnostic education for managing high blood pressure: reduce sodium, stay physically active most days, keep a healthy weight, limit alcohol, avoid tobacco, manage stress, and take any prescribed medication exactly as directed. High blood pressure often causes no symptoms, so regular monitoring matters even when you feel fine. I can log your readings over time so you and a provider can review the trend. Seek emergency care right away for severe symptoms such as chest pain, severe headache, shortness of breath, vision changes, or confusion. This is general education, not a diagnosis or treatment plan; confirm any specific changes with your healthcare provider.";
+    }
+    if (/\b(diabetes|blood sugar|glucose)\b/.test(lower)) {
+      return "General, non-diagnostic education for managing diabetes: monitor blood glucose as your care team recommends, eat regular balanced meals, stay active, and take medications exactly as prescribed. Know the signs of low blood sugar (shakiness, sweating, sudden confusion) and high blood sugar (excess thirst, frequent urination, fatigue). I can log your readings over time for provider review. Seek emergency care for severe confusion, loss of consciousness, or signs of severe low blood sugar. This is general education, not a diagnosis or treatment plan; confirm any specific changes with your healthcare provider.";
+    }
+    if (/\b(weight|obesity|overweight)\b/.test(lower)) {
+      return "General, non-diagnostic education for weight and wellness: sustainable change usually combines balanced nutrition, regular activity, sleep, and stress management. BMI is a screening number with real limits; it doesn't account for muscle mass or individual health context, so treat it as one data point, not a verdict. I can log your weight over time for provider review. This is general education, not a diagnosis or treatment plan; confirm any specific changes with your healthcare provider.";
+    }
+    return null;
+  }
   if (toolName === "nexus_health_preparation") {
     const bp = command.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i);
-    const response = bp
-      ? `I prepared the test blood-pressure reading ${bp[1]} over ${bp[2]} for review. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
-      : /\btelehealth|intake\b/i.test(command)
-        ? "I opened Telehealth Intake and prepared the information you provided as a draft. Nothing was sent. I can collect the reason for the visit, when it began, relevant symptoms, and user-approved history, then show the draft for review."
-        : "I opened Health and Chronic Care. I can help with health literacy, test readings, intake preparation, RPM/RTM records, medication-list preparation, and provider-ready summaries without diagnosing or prescribing.";
-    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "health-preparation-ready", ["Prepared relevant health information under non-diagnostic safety rules."], ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
-    return { ...common, capability: "nexus_health_preparation", status: "health-preparation-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
+    const glucose = !bp && command.match(/\b(?:blood\s*sugar|glucose)\D{0,15}?(\d{2,3})\b/i);
+    const oxygenMatch = !bp && !glucose && command.match(/\b(?:oxygen|o2|spo2|pulse\s*ox)\D{0,10}?(\d{2,3})\b/i);
+    const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(/\btemp(?:erature)?\D{0,10}?(\d{2,3}(?:\.\d)?)\b/i);
+    const weightMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && command.match(/\b(?:i\s+weigh|my\s+weight\s+is)\D{0,10}?(\d{2,3}(?:\.\d)?)\s*(lbs?|pounds|kg|kilograms)?\b/i);
+    const pulseMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && !weightMatch && command.match(/\b(?:pulse|heart\s*rate)\D{0,10}?(\d{2,3})\b/i);
+    const rpmVital = oxygenMatch ? { metric: "oxygen_saturation", value: oxygenMatch[1], unit: "%", label: "oxygen saturation" }
+      : temperatureMatch ? { metric: "temperature", value: temperatureMatch[1], unit: "", label: "temperature" }
+      : weightMatch ? { metric: "weight", value: weightMatch[1], unit: weightMatch[2] || "", label: "weight" }
+      : pulseMatch ? { metric: "pulse", value: pulseMatch[1], unit: "bpm", label: "pulse" }
+      : null;
+    if (rpmVital) rpmVital.display = `${rpmVital.value}${rpmVital.unit === "%" ? "%" : rpmVital.unit ? ` ${rpmVital.unit}` : ""}`;
+    const rtmExercise = /\b(?:completed|did|finished)\s+(?:my\s+)?(?:therapy|exercise|rehab|physical therapy|workout)\b/i.test(command);
+    const rtmAdherence = /\b(?:took my medication|medication adherence|missed (?:a|my) (?:dose|medication))\b/i.test(command);
+    const wantsMobileClinic = /\bmobile\s*clinic\b/i.test(command);
+    const wantsPharmacy = /\bpharmac(?:y|ist)\b/i.test(command);
+    const patientSupportMatch = command.match(/\b(community health worker|chw|transport(?:ation)?|support resource|patient support)\b/i);
+    const patientSupportQuery = patientSupportMatch && /^(support resource|patient support)$/i.test(patientSupportMatch[1]) ? "" : patientSupportMatch?.[1];
+    const wantsNavigationHelp = /\b(?:not sure what to do|help me navigate|where do i start|health navigation)\b/i.test(command);
+    const providerSearchMatch = command.match(/\b(?:find|search for|look up|locate)\s+(?:a\s+|an\s+)?(?:doctor|physician|specialist|provider|clinic|nurse)\b(?:\s+(?:named|called)\s+([a-z\s.'-]+?))?(?:\s+in\s+([a-z\s]+))?$/i);
+    const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
+    let response;
+    let intakeRecord = null;
+    let readingSaved = false;
+    let readingKind = "";
+    let extraData = {};
+    if (bp || glucose) {
+      const readingResult = nexusRealProviders.chronicDiseaseBridge.reading({
+        conditionFocus: bp ? "hypertension" : "diabetes",
+        systolic: bp ? Number(bp[1]) : null,
+        diastolic: bp ? Number(bp[2]) : null,
+        glucose: glucose ? Number(glucose[1]) : null,
+        readingContext: args.readingContext || "voice-reported",
+        confirmed: true
+      }, db, process.env);
+      readingSaved = Boolean(readingResult?.body?.ok && readingResult.body.status === "completed");
+      readingKind = bp ? "blood-pressure" : "blood-glucose";
+      if (bp) {
+        response = readingSaved
+          ? `I saved the blood-pressure reading ${bp[1]} over ${bp[2]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
+          : `I noted the blood-pressure reading ${bp[1]} over ${bp[2]}, but saving it to your chronic-care record is unavailable right now. A single reading does not establish a diagnosis. Discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
+      } else {
+        response = readingSaved
+          ? `I saved the blood-glucose reading ${glucose[1]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`
+          : `I noted the blood-glucose reading ${glucose[1]}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
+      }
+    } else if (rpmVital) {
+      const rpmResult = nexusRealProviders.rpmBridge.deviceReading({
+        metric: rpmVital.metric,
+        value: rpmVital.value,
+        unit: rpmVital.unit,
+        dataSource: "voice-reported",
+        confirmed: true
+      }, db, process.env);
+      readingSaved = Boolean(rpmResult?.body?.ok && rpmResult.body.status === "completed");
+      readingKind = rpmVital.label;
+      response = readingSaved
+        ? `I saved the ${rpmVital.label} reading ${rpmVital.display} to your remote monitoring record for provider review. This is not a diagnosis, alert, or device connection. Seek urgent medical help now for severe symptoms.`
+        : `I noted the ${rpmVital.label} reading ${rpmVital.display}, but saving it to your monitoring record is unavailable right now.`;
+    } else if (rtmExercise || rtmAdherence) {
+      const rtmResult = nexusRealProviders.rtmBridge.activityEntry({
+        activityType: rtmExercise ? "exercise_rehab" : "medication_adherence_discussion",
+        activityDescription: rtmExercise ? "Exercise/therapy activity completed (voice-reported)" : "Medication adherence note (voice-reported)",
+        completed: true,
+        confirmed: true
+      }, db, process.env);
+      readingSaved = Boolean(rtmResult?.body?.ok && rtmResult.body.status === "completed");
+      readingKind = rtmExercise ? "activity participation" : "medication adherence note";
+      response = readingSaved
+        ? `I logged that ${rtmExercise ? "activity in your therapy/exercise participation record" : "medication adherence note in your participation record"} for provider review. This is not a treatment plan or medication change. Discuss any medication concerns with your care team.`
+        : `I noted that, but saving it to your participation record is unavailable right now.`;
+    } else if (wantsNavigationHelp) {
+      const navResult = nexusRealProviders.medicalSupportBridge.summary({ concern: command, confirmed: true });
+      const steps = navResult?.body?.data?.summary?.suggestedNextSteps || [];
+      extraData = { suggestedNextSteps: steps };
+      response = steps.length
+        ? `Here is how I can help you navigate this: ${steps.join("; ")}. Tell me which one you want to do and I will take that step.`
+        : "I can help with provider search, telehealth preparation, mobile clinic search, pharmacy questions, chronic-care monitoring, and reminders. Tell me which one you want.";
+    } else if (providerSearchMatch) {
+      const name = args.providerName || providerSearchMatch[1]?.trim();
+      const city = args.city || providerSearchMatch[2]?.trim();
+      const specialty = args.specialty || /\b(cardiologist|dermatologist|pediatrician|dentist|obgyn|psychiatrist|physical therapist|family medicine|internal medicine)\b/i.exec(command)?.[1];
+      const searchResult = await nexusRealProviders.npi.search({ name, city, taxonomy: specialty }, process.env);
+      const cards = searchResult?.body?.data?.cards || [];
+      extraData = { providerSearchResults: cards };
+      response = cards.length
+        ? `I found ${cards.length} public provider record(s): ${cards.slice(0, 3).map(c => `${c.providerName}${c.providerType ? `, ${c.providerType}` : ""} at ${c.address || "address not listed"}`).join("; ")}. This is a public directory lookup only; I did not contact anyone. Say "save that provider" if you want to keep one.`
+        : `I did not find a matching public provider record. Try a full name, specialty, or city.`;
+    } else if (wantsSaveProvider) {
+      const saveResult = nexusRealProviders.providerContactBridge.saveProvider({
+        providerName: args.providerName || args.name,
+        organizationName: args.organizationName,
+        providerType: args.providerType || args.specialty,
+        address: args.address,
+        phone: args.phone,
+        npi: args.npi,
+        confirmed: true
+      }, db, process.env);
+      const ok = Boolean(saveResult?.body?.ok && saveResult.body.status === "completed");
+      response = ok
+        ? `I saved ${saveResult.body.data.provider.name || "that provider"} to your local provider list. No health details or secrets were stored.`
+        : "I need a provider's name to save. Tell me which provider from the search results to keep.";
+    } else if (wantsMobileClinic) {
+      const locationMatch = command.match(/\bin\s+([a-z\s]+)$/i);
+      const searchResult = nexusRealProviders.mobileClinicBridge.search({ q: locationMatch?.[1]?.trim() || "" });
+      const cards = searchResult?.body?.data?.cards || [];
+      extraData = { mobileClinics: cards };
+      response = cards.length
+        ? `I found ${cards.length} mobile clinic option(s): ${cards.map(c => `${c.name} in ${c.city}, ${c.region} (${c.services.join(", ")})`).join("; ")}. These are local starter listings, not a live booking; nothing has been scheduled or contacted.`
+        : "I did not find a matching mobile clinic in the local catalog. Tell me a city or region and I will check again.";
+    } else if (wantsPharmacy) {
+      const draftResult = nexusRealProviders.pharmacyBridge.questionDraft({ questionTopic: args.summary || command });
+      const questions = draftResult?.body?.data?.draft?.questions || [];
+      extraData = { pharmacyQuestions: questions };
+      response = `Here are safe questions to bring to a pharmacist: ${questions.join(" ")} I did not request a refill, transfer, dosage change, or contact a pharmacy.`;
+    } else if (patientSupportMatch) {
+      const supportResult = nexusRealProviders.patientSupportBridge.resources({ q: patientSupportQuery });
+      const cards = supportResult?.body?.data?.cards || [];
+      extraData = { patientSupportResources: cards };
+      response = cards.length
+        ? `I found ${cards.length} patient support resource(s): ${cards.map(c => `${c.title} — ${c.summary.replace(/\.$/, "")}`).join("; ")}. No referral was submitted and no one was contacted automatically.`
+        : "I did not find a matching patient support resource. Tell me more about what kind of support you need.";
+    } else if (/\btelehealth|intake\b/i.test(command)) {
+      intakeRecord = ensureVoiceHealthIntake(db, user, { needSummary: args.summary || args.reason || command, force: true });
+      response = `I started your telehealth intake, case ${intakeRecord.patientRef}. Status: ${intakeRecord.queueStatus}. Tell me the reason for the visit, when it began, and any symptoms, and I will add them to the case for provider review.`;
+    } else {
+      response = chronicConditionEducationResponse(command)
+        || "I opened Health and Chronic Care. I can help with health literacy, test readings, intake preparation, mobile clinic search, pharmacist questions, community health worker and transportation resources, RPM/RTM records, and provider-ready summaries without diagnosing or prescribing.";
+    }
+    const status = intakeRecord ? "health-intake-created" : readingSaved ? "health-reading-saved" : "health-preparation-ready";
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, status,
+      intakeRecord ? [`Created and saved intake ${intakeRecord.patientRef} to the patient's record.`]
+        : readingSaved ? [`Saved the ${readingKind} reading/entry to the patient's record.`]
+        : ["Prepared relevant health information under non-diagnostic safety rules."],
+      ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
+    return { ...common, capability: "nexus_health_preparation", status, response, receipt, evidenceReceipt: receipt, localOnly: true, ...extraData, ...(intakeRecord ? { intakeId: intakeRecord.id, patientRef: intakeRecord.patientRef } : {}) };
   }
   if (toolName === "nexus_marketplace_logistics") {
+    if (/\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
+      const order = (db.profile.orders || [])[db.profile.orders.length - 1];
+      if (!order) {
+        return { ...common, capability: "marketplace-trade", status: "no-order", response: "I do not see an active crop order yet. Say create a crop order to start one, and then I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
+      }
+      const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.voice_tracking_check");
+      const tracking = trackingResult.tracking;
+      const response = tracking?.eta
+        ? `${order.orderNumber} for ${order.product} is at ${order.checkpoint}, stage ${order.stage}. ${tracking.eta}`
+        : `${order.orderNumber} for ${order.product} is at ${order.checkpoint}, stage ${order.stage}. I do not have a real pickup and delivery address on this order yet, so I cannot compute road distance or a live ETA. Give me both addresses and I will check real road traffic.`;
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "logistics-tracking-checked",
+        [`Checked logistics tracking for ${order.orderNumber} using ${tracking?.source || "local"} data.`],
+        ["Nexus did not contact a carrier, book a shipment, or move payment."]);
+      return { ...common, capability: "marketplace-trade", status: "logistics-tracking-checked", response, receipt, evidenceReceipt: receipt, localOnly: true, tracking };
+    }
+    if (/\b(payment|payments|checkout|accept money|get paid)\b/i.test(command) && /\bready\b/i.test(command)) {
+      const readiness = nexusRealProviders.paymentReadinessBridge.readinessCheck({ amount: args.amount, currency: args.currency }, process.env);
+      return { ...common, capability: "marketplace-trade", status: readiness?.body?.status || "payment-readiness-checked", response: readiness?.body?.message || "Payment readiness checked.", localOnly: true, paymentReadiness: readiness?.body?.data };
+    }
     if (/\b(create|post|publish|list|sell)\b/i.test(command)) {
       const listingResult = nexusRealProviders.marketplace.createListing({
         title: args.title || command,
@@ -18234,10 +18745,36 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       }, db, process.env);
       return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, listingResult);
     }
-    const listings = nexusRealProviders.marketplace.listListings(db, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, listings);
+    const categoryMatch = /\b(seeds?|fertilizer|tools?|equipment|produce|transport|logistics|training|drone)\b/i.exec(command)?.[1] || "";
+    const catalogResult = nexusRealProviders.marketplaceBridge.search({ query: categoryMatch }, db, process.env);
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, catalogResult);
   }
   if (toolName === "nexus_workflow") {
+    const wantsFieldVisit = /\bfield visit\b/i.test(command);
+    const wantsSession = /\b(?:prepare|plan|schedule)\b.*\bsession\b/i.test(command);
+    if (wantsFieldVisit) {
+      const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
+      const visitBody = {
+        title: args.title || `Field visit: ${command}`.slice(0, 180),
+        origin: routeArgs.origin || args.origin,
+        destinations: [{ label: args.destinationLabel || routeArgs.destination || "Destination", addressText: routeArgs.destination || args.destination }],
+        confirmed: true
+      };
+      const visitResult = routeArgs.origin && routeArgs.destination
+        ? await nexusRealProviders.mapsFieldVisitBridge.routeVisitPlan(visitBody, db, process.env)
+        : nexusRealProviders.mapsFieldVisitBridge.createVisitPlan(visitBody, db, process.env);
+      const ok = Boolean(visitResult?.body?.ok);
+      const routeData = visitResult?.body?.data?.route;
+      const response = ok
+        ? `I prepared a field visit plan${routeData?.distanceMeters ? ` — real road distance ${(routeData.distanceMeters / 1000).toFixed(1)} km, about ${formatDurationHuman(routeData.durationSeconds) || "duration pending"}` : ""}. ${visitResult.body.message}`
+        : (visitResult?.body?.message || "I need a starting point and a destination to plan the field visit.");
+      return { ...common, capability: "workflow", status: ok ? "field-visit-planned" : "field-visit-blocked", response, localOnly: true };
+    }
+    if (wantsSession) {
+      const sessionResult = nexusRealProviders.sessionBridge.prepare({ title: args.title || command, topic: args.topic || command, sessionType: args.sessionType, startTime: args.startTime || args.when, duration: args.duration }, db, process.env);
+      const ok = Boolean(sessionResult?.body?.ok);
+      return { ...common, capability: "workflow", status: ok ? "session-prepared" : "session-blocked", response: ok ? `${sessionResult.body.message} Topic: ${sessionResult.body.data.plan.topic}.` : (sessionResult?.body?.message || "I could not prepare that session."), localOnly: true };
+    }
     const workflowFn = args.confirmed ? nexusRealProviders.workflowOrchestratorBridge.save : nexusRealProviders.workflowOrchestratorBridge.plan;
     const workflow = workflowFn({
       workflowType: args.workflowType || args.type || "",
@@ -18257,13 +18794,27 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "browser-computer-actions" }, browserResult);
   }
   if (toolName === "nexus_document_export") {
-    const exportResult = nexusRealProviders.exports.exportDocument({
-      title: args.title || "Nexus report",
-      content: args.content || args.text || command,
-      format: args.format || args.fileType || "txt",
-      confirmed: args.confirmed
+    const extractedExport = nexusOpenAiNativeExtractExportArgs(command, args);
+    const exportTitle = extractedExport.title;
+    const exportFormat = extractedExport.format;
+    const exportResult = await nexusRealProviders.exports.exportDocument({
+      title: exportTitle,
+      content: extractedExport.content,
+      format: exportFormat,
+      confirmed: Boolean(args.confirmed || args.confirmation)
     }, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "document-export" }, exportResult);
+    const wrapped = nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "document-export" }, exportResult);
+    const exportData = exportResult?.body?.data;
+    if (exportResult?.body?.status === "completed" && exportData?.downloadPath) {
+      wrapped.documents = [{
+        title: exportTitle,
+        filename: exportData.filename,
+        format: exportData.format || exportFormat,
+        downloadPath: exportData.downloadPath,
+        bytes: exportData.bytes
+      }];
+    }
+    return wrapped;
   }
   if (toolName === "nexus_receipts") {
     const store = ensureNexusPersistentOperations(db);
@@ -18322,7 +18873,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
 function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const toolNames = toolResults.map(item => String(item?.call?.name || ""));
-  const route = toolNames.includes("nexus_maps_route") || /\b(route|directions?|navigation|map)\b/.test(lower); const jobs = /\b(job|jobs|workforce|employment|career|resume|résumé|application|employer)\b/.test(lower); const learning = /\b(explain|teach|lesson|learn|learning|course|training|literacy|quiz|understanding)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") && jobs || jobs; const agriculture = toolNames.includes("nexus_agriculture") || /\b(farm|farmer|agriculture|soil|irrigation|pest|disease|leaf|leaves|crop rotation|crop health)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|listing|seller|vendor|price|shipment)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const media = toolNames.includes("nexus_general_conversation") && Boolean(musicAssistantIntent(text));
+  const fieldVisit = toolNames.includes("nexus_workflow") && /\bfield visit\b/i.test(lower);
+  const route = toolNames.includes("nexus_maps_route") || fieldVisit || /\b(route|directions?|navigation|map)\b/.test(lower); const jobs = /\b(job|jobs|workforce|employment|career|resume|résumé|application|employer)\b/.test(lower); const learning = toolNames.includes("nexus_workflow") && /\bsession\b/i.test(lower) || /\b(explain|teach|lesson|learn|learning|course|training|literacy|quiz|understanding)\b/.test(lower); const workforce = toolNames.includes("nexus_workforce_learning") && jobs || jobs; const agriculture = toolNames.includes("nexus_agriculture") || /\b(farm|farmer|agriculture|soil|irrigation|pest|disease|leaf|leaves|crop rotation|crop health)\b/.test(lower); const marketplace = toolNames.includes("nexus_marketplace_logistics") || /\b(sell|selling|buy|buyer|marketplace|listing|seller|vendor|price|shipment)\b/.test(lower); const health = toolNames.includes("nexus_health_preparation") || /\b(diabetes|hypertension|blood pressure|obesity|telehealth|healthcare|clinic|pharmacy|medicine)\b/.test(lower); const media = toolNames.includes("nexus_general_conversation") && Boolean(musicAssistantIntent(text));
   if (!(route || workforce || learning || agriculture || marketplace || health || media)) return null;
   const originMatch = text.match(/\bfrom\s+(.+?)\s+to\s+([^.!?]+)/i);
   const locationMatch = text.match(/\b(?:in|near|around)\s+([A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*)*)/u);
@@ -18352,7 +18904,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
   if (!command) return null;
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const language = body.targetLanguage || body.language || user.language || "en";
-  const recentTurns = (db.profile?.agentConversation || []).slice(0, 8).map(turn => ({
+  const recentTurns = (db.profile?.agentConversation || []).slice(-8).map(turn => ({
     role: turn.role || "user",
     text: sanitizePilotText(turn.response || turn.command || turn.text || "", 500)
   }));
@@ -18400,6 +18952,17 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
     const genesisAction = nexusGenesisWorkspaceAction(command, toolResults);
+    // Real tool results carry rich display data (real image results, real
+    // catalog/list results, real tracking info) beyond the spoken text —
+    // this used to be silently dropped here, so the client had real data
+    // to speak but nothing to actually render on screen. Collect the
+    // fields real providers attach so the UI can display them.
+    const richDataKeys = ["images", "videos", "documents", "mobileClinics", "pharmacyQuestions", "patientSupportResources", "providerSearchResults", "matchedResources", "tracking", "suggestedNextSteps", "reminders", "paymentReadiness"];
+    const richData = {};
+    for (const key of richDataKeys) {
+      const collected = toolResults.flatMap(item => Array.isArray(item.result?.[key]) ? item.result[key] : (item.result?.[key] ? [item.result[key]] : []));
+      if (collected.length) richData[key] = collected;
+    }
     return ensureSpeakableAgentResult({
       intent: calls.length ? `openai_native.${calls[0].name}` : "openai_native.conversation",
       response: finalText,
@@ -18419,6 +18982,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         },
         citations,
         sourceContext: citations.length ? { citations } : null,
+        richData: Object.keys(richData).length ? richData : null,
         noExecutionAuthorized: true,
         providerHandoffAuthorized: false,
         fakeCitationsAllowed: false
@@ -27362,7 +27926,7 @@ function genesisCapabilityResponse() {
 }
 
 function genesisIdentityResponse() {
-  return "I am Nexus Genesis, the voice companion inside AgriNexus. My job is to listen, understand what you need, choose the safest next step, and guide agriculture, health access, learning, workforce, maps, marketplace, and communication workflows truthfully. I can prepare and explain a lot now, and I only execute real-world actions when the required provider, consent, and confirmation are in place.";
+  return "I am Kyro Genesis, the voice companion inside AgriNexus. My job is to listen, understand what you need, choose the safest next step, and guide agriculture, health access, learning, workforce, maps, marketplace, and communication workflows truthfully. I can prepare and explain a lot now, and I only execute real-world actions when the required provider, consent, and confirmation are in place.";
 }
 
 function genesisDayPlanningResponse() {
@@ -35329,6 +35893,43 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
       localQueueItem: queueItem,
       noExternalDelivery: true
     };
+  }
+}
+
+function buildNexusPasswordResetEmailBody({ resetToken, expiresAt }) {
+  return [
+    `A password reset was requested for your Nexus / AgriNexus account.`,
+    ``,
+    `Reset code: ${resetToken}`,
+    `This code expires at ${expiresAt}.`,
+    ``,
+    `If you did not request this, you can ignore this email — your password will not change.`
+  ].join("\n");
+}
+
+async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt }, env = process.env) {
+  const status = nexusEmailProviderStatus(env);
+  const subject = "Your Nexus password reset code";
+  const text = buildNexusPasswordResetEmailBody({ resetToken, expiresAt });
+  if (!status.configured) {
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-provider-unconfigured", status.missingEnv);
+    return { ok: true, provider: status.provider, configured: false, executed: false, missingEnv: status.missingEnv, localQueueItem: queueItem, noExternalDelivery: true };
+  }
+  try {
+    const providerResult = status.provider === "sendgrid"
+      ? await sendNexusSendGridEmail({ to, subject, text }, env)
+      : await sendNexusSmtpEmail({ to, subject, text }, env);
+    addNexusPilotAuditEvent(db, "password_reset_email_sent_by_provider", {
+      relatedRecordId: to,
+      mode: "auth-password-reset",
+      actor: "Nexus",
+      description: `Password reset email accepted by ${status.provider}. Message metadata only was stored.`
+    });
+    return { ok: true, provider: status.provider, configured: true, executed: true, messageId: providerResult.messageId };
+  } catch (error) {
+    const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-blocked", []);
+    return { ok: true, provider: status.provider, configured: true, executed: false, error: safeError, localQueueItem: queueItem, noExternalDelivery: true };
   }
 }
 
@@ -43820,8 +44421,18 @@ async function api(req, res, url) {
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
-    const found = db.users.find(item => String(item.email || "").toLowerCase() === email && String(item.password || "") === password);
-    if (!found) return send(res, 401, { error: "Invalid demo credentials" });
+    let found;
+    if (usingPostgresAuth()) {
+      const pgUser = await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null);
+      if (!pgUser) return send(res, 401, { error: "Invalid demo credentials" });
+      // Postgres is authoritative for the credential check; profile fields
+      // (name, role, restrictions, etc.) still come from the blob shadow copy.
+      found = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      if (!found) return send(res, 401, { error: "Invalid demo credentials" });
+    } else {
+      found = db.users.find(item => String(item.email || "").toLowerCase() === email && String(item.password || "") === password);
+      if (!found) return send(res, 401, { error: "Invalid demo credentials" });
+    }
     if (usersChanged) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     sessions.set(sid, found.id);
@@ -43854,23 +44465,55 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return send(res, 400, { error: "Email is required" });
-    const resetEvent = {
-      providerId: "auth-password-reset",
-      module: "Platform",
-      action: "auth.password_reset_requested",
-      detail: `Password reset requested for ${email}.`,
-      metadata: { email }
-    };
-    const delivery = await dispatchProviderWebhook(db, resetEvent).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
-    logIntegration(db, {
-      ...resetEvent,
-      status: delivery.ok ? "success" : "needs-credentials",
-      metadata: { email, delivery },
-      dispatch: false
-    });
+    const rawToken = crypto.randomBytes(24).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    let accountExists;
+    if (usingPostgresAuth()) {
+      accountExists = await pgUsers.setPasswordResetToken(getPgPool(), email, { tokenHash, expiresAt }).catch(() => false);
+    } else {
+      const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      accountExists = Boolean(user);
+      if (user) {
+        user.resetTokenHash = tokenHash;
+        user.resetTokenExpiresAt = expiresAt;
+      }
+    }
+    const emailResult = accountExists
+      ? await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt })
+      : { configured: false, executed: false };
     addActivity(db.profile, `Password reset requested for ${email}.`);
     await writeDb(db);
-    return send(res, 200, { ok: true, status: delivery.ok ? "sent" : "queued-needs-provider" });
+    // Always respond identically whether or not the email is registered, so this endpoint
+    // cannot be used to enumerate accounts.
+    return send(res, 200, { ok: true, status: emailResult.configured ? (emailResult.executed ? "sent" : "queued-needs-provider") : "queued-needs-provider" });
+  }
+
+  if (url.pathname === "/api/auth/password-reset/confirm" && req.method === "POST") {
+    const body = await readBody(req);
+    const email = String(body.email || "").trim().toLowerCase();
+    const token = String(body.token || "").trim();
+    const newPassword = String(body.newPassword || "");
+    if (!email || !token || !newPassword.trim()) return send(res, 400, { error: "Email, token, and newPassword are required" });
+    if (usingPostgresAuth()) {
+      const consumed = await pgUsers.consumeResetToken(getPgPool(), email, token, newPassword).catch(() => false);
+      if (!consumed) return send(res, 400, { error: "Invalid or expired reset code" });
+    } else {
+      const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const valid = user
+        && user.resetTokenHash
+        && user.resetTokenHash === tokenHash
+        && user.resetTokenExpiresAt
+        && new Date(user.resetTokenExpiresAt).getTime() > Date.now();
+      if (!valid) return send(res, 400, { error: "Invalid or expired reset code" });
+      user.password = newPassword;
+      delete user.resetTokenHash;
+      delete user.resetTokenExpiresAt;
+    }
+    addActivity(db.profile, `Password reset completed for ${email}.`);
+    await writeDb(db);
+    return send(res, 200, { ok: true });
   }
 
   if (url.pathname.startsWith("/api/voice/phone/audio/") && req.method === "GET") {
@@ -44469,6 +45112,9 @@ async function api(req, res, url) {
     account.language = String(body.language || account.language || COUNTRY_LANGUAGE[account.country.toLowerCase()] || "en").trim() || "en";
     account.lastUpdatedAt = new Date().toISOString();
     if (!db.users.some(item => item.id === account.id)) db.users.push(account);
+    if (usingPostgresAuth()) {
+      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password: account.password }).catch(() => null);
+    }
     addUsageEvent(db.profile, { module: "Admin", action: "test_user.created", detail: `${account.email} User-only test login created.` });
     logIntegration(db, {
       providerId: "auth-users",
@@ -44507,6 +45153,9 @@ async function api(req, res, url) {
     adminAccount.language = String(body.language || adminAccount.language || COUNTRY_LANGUAGE[adminAccount.country.toLowerCase()] || "en").trim() || "en";
     adminAccount.lastUpdatedAt = new Date().toISOString();
     if (!account) db.users.push(adminAccount);
+    if (usingPostgresAuth()) {
+      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password: adminAccount.password }).catch(() => null);
+    }
     addUsageEvent(db.profile, { module: "Admin", action: "admin_user.created", detail: `${adminAccount.email} Admin test login created.` });
     logIntegration(db, {
       providerId: "auth-users",
@@ -45325,6 +45974,16 @@ async function api(req, res, url) {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow evidence exports" });
     const body = await readBody(req);
     const packet = evidenceExportPacket(db, user, body.audience || "investor");
+    const requestedFileFormat = String(body.fileFormat || "").toLowerCase();
+    if (requestedFileFormat === "pdf" || requestedFileFormat === "docx") {
+      const fileResult = await nexusRealProviders.exports.exportDocument({
+        title: packet.title,
+        content: packet.content,
+        format: requestedFileFormat,
+        confirmed: true
+      }, process.env);
+      if (fileResult.body?.ok) packet.fileExport = fileResult.body.data;
+    }
     await writeDb(db);
     const state = publicState(db, user);
     state.evidenceExportResult = packet;
@@ -46324,6 +46983,7 @@ async function api(req, res, url) {
         caregiverName: "Community accessibility aide"
       });
       db.profile.healthIntakes.unshift(intake);
+      shadowWriteHealthIntakeToPostgres(intake);
       ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -49361,9 +50021,9 @@ async function api(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  if (url.pathname === "/nexus-clean.bundle.js") {
-    const certifiedBundlePath = path.join(ROOT, "rebuild", "browser", "nexus-clean.bundle.js");
-    return fs.readFile(certifiedBundlePath, (err, data) => {
+  if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
+    const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
+    return fs.readFile(livekitPath, (err, data) => {
       if (err) return send(res, 404, "Not found");
       res.writeHead(200, {
         "content-type": "application/javascript; charset=utf-8",
@@ -49373,14 +50033,19 @@ function serveStatic(req, res, url) {
       res.end(data);
     });
   }
-  if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
-    const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
-    return fs.readFile(livekitPath, (err, data) => {
+  if (url.pathname.startsWith("/exports/")) {
+    const requestedName = decodeURIComponent(url.pathname.slice("/exports/".length));
+    if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(requestedName)) return send(res, 404, "Not found");
+    const exportRoot = path.resolve(String(process.env.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports"));
+    const exportPath = path.join(exportRoot, requestedName);
+    if (!exportPath.startsWith(exportRoot)) return send(res, 403, "Forbidden");
+    return fs.readFile(exportPath, (err, data) => {
       if (err) return send(res, 404, "Not found");
+      const ext = path.extname(exportPath);
       res.writeHead(200, {
-        "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff"
+        "content-type": mime[ext] || "application/octet-stream",
+        "content-disposition": `attachment; filename="${requestedName}"`,
+        "cache-control": "no-store"
       });
       res.end(data);
     });

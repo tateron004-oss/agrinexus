@@ -368,8 +368,17 @@
 
   function isMessageRequest(text = "") {
     const value = lower(text);
+    // Narrowed 2026-09-12: this runtime only prepares message drafts (it
+    // never actually sends anything without real credentials). It used to
+    // also treat bare mentions of "mobile clinic", "pharmacy", "logistics",
+    // or "drone provider" as a message request, which intercepted real
+    // search/action requests (mobile clinic search, pharmacist questions,
+    // shipment tracking, drone missions) that nexus_health_preparation,
+    // nexus_marketplace_logistics, and nexus_agriculture now genuinely
+    // handle. Only keep terms that are clearly about drafting or sending
+    // a message to someone.
     return /\b(prepare|draft|compose|write|send|message|email|sms|text|whatsapp|notify|notification|can nexus message)\b/.test(value)
-      || /\b(provider follow-up|employer referral|buyer|seller|logistics|mobile clinic|pharmacy|drone provider)\b/.test(value);
+      || /\b(provider follow-up|employer referral|message (?:the |my )?buyer|message (?:the |my )?seller)\b/.test(value);
   }
 
   function isSensitiveRequest(channel, sourceMode, text = "") {

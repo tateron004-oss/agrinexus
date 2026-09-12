@@ -260,6 +260,28 @@ async function runMetNorwayFallbackLookup(request = {}, env = process.env) {
   return normalizeMetNorwayWeatherPayload({ locationText: query.locationText, geocodingPayload, forecastPayload });
 }
 
+// Open-Meteo's geocoder is strict: "Austin Texas" or "Addis Ababa Ethiopia"
+// return zero results even though "Austin" and "Addis Ababa" alone match
+// correctly. Retry with trailing words stripped one at a time (state/country
+// qualifiers are usually the tail) until a real match is found.
+async function geocodeOpenMeteoWithFallback(fetchImpl, locationText, env) {
+  const words = normalizeLocationText(locationText).split(" ").filter(Boolean);
+  for (let end = words.length; end >= 1; end--) {
+    const candidate = words.slice(0, end).join(" ");
+    const geocodingUrl = new URL(OPEN_METEO_GEOCODING_URL);
+    geocodingUrl.searchParams.set("name", candidate);
+    geocodingUrl.searchParams.set("count", "1");
+    geocodingUrl.searchParams.set("language", "en");
+    geocodingUrl.searchParams.set("format", "json");
+    const geocodingPayload = await fetchJsonWithRetry(fetchImpl, geocodingUrl, env);
+    const location = Array.isArray(geocodingPayload.results) && geocodingPayload.results[0] ? geocodingPayload.results[0] : null;
+    if (location && typeof location.latitude === "number" && typeof location.longitude === "number") {
+      return { location, geocodingPayload, matchedText: candidate };
+    }
+  }
+  return null;
+}
+
 async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
   const query = buildWeatherSourceQuery(request);
   if (!hasText(query.locationText)) {
@@ -275,16 +297,11 @@ async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
   }
 
   try {
-    const geocodingUrl = new URL(OPEN_METEO_GEOCODING_URL);
-    geocodingUrl.searchParams.set("name", query.locationText);
-    geocodingUrl.searchParams.set("count", "1");
-    geocodingUrl.searchParams.set("language", "en");
-    geocodingUrl.searchParams.set("format", "json");
-    const geocodingPayload = await fetchJsonWithRetry(fetchImpl, geocodingUrl, env);
-    const location = Array.isArray(geocodingPayload.results) && geocodingPayload.results[0] ? geocodingPayload.results[0] : null;
-    if (!location || typeof location.latitude !== "number" || typeof location.longitude !== "number") {
+    const geocoded = await geocodeOpenMeteoWithFallback(fetchImpl, query.locationText, env);
+    if (!geocoded) {
       return buildOpenMeteoProviderErrorResult(query.locationText, "location-not-found");
     }
+    const { location, geocodingPayload } = geocoded;
 
     const forecastUrl = new URL(OPEN_METEO_FORECAST_URL);
     forecastUrl.searchParams.set("latitude", String(location.latitude));

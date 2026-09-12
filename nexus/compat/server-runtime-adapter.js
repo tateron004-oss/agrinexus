@@ -622,6 +622,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       send(res, result.status, result.body);
     } catch (error) {
+      if (process.env.NODE_ENV !== "production") console.error("[debug] authoritative runtime error:", url.pathname, error.message, error.stack);
       logger.error?.("authoritative.runtime.request_failed", {
           code: error.code || error.name,
           requestId: req.headers["x-request-id"] || "",
