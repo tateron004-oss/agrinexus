@@ -19,9 +19,22 @@ class PostgresAdapter {
       max: poolMax,
       idleTimeoutMillis: idleTimeoutMs,
       connectionTimeoutMillis: connectionTimeoutMs,
-      statement_timeout: statementTimeoutMs,
       application_name: "agrinexus-foundation"
     });
+    if (!pool) {
+      // statement_timeout must not go in the Pool config: node-postgres sends
+      // it as a connection *startup* parameter, and a pooled (e.g. PgBouncer)
+      // connection string rejects unrecognized startup parameters with
+      // "unsupported startup parameter: statement_timeout". Apply it as a
+      // normal SET on every new connection instead, which works through a
+      // pooler as well as a direct connection.
+      const timeoutMs = Number.isFinite(Number(statementTimeoutMs)) ? Math.max(0, Math.trunc(Number(statementTimeoutMs))) : 60000;
+      this.pool.on("connect", client => {
+        client.query(`set statement_timeout = ${timeoutMs}`).catch(error => {
+          console.error("[postgres-adapter] failed to set statement_timeout on new connection:", error.message);
+        });
+      });
+    }
   }
 
   async query(sql, params = []) {
