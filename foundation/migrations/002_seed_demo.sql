@@ -1,5 +1,10 @@
 -- Demo seed data for the initial AgriNexus tenant.
--- Password hash is a placeholder. Replace with a real Argon2/bcrypt hash in production.
+-- password_hash below is scrypt:<salt>:<hash> for the password "Demo2026!"
+-- (generated via server/pg-users.js's hashPassword with an empty pepper --
+-- matches that function's default when PASSWORD_PEPPER is unset). If a real
+-- PASSWORD_PEPPER is ever configured, this specific seed row's password will
+-- stop verifying; it exists mainly as an FK anchor for the rest of this
+-- file's seeded audit/AI-insight rows, not as a production login path.
 
 insert into tenants (id, name, slug)
 values ('00000000-0000-0000-0000-000000000001', 'AgriNexus Demo', 'agrinexus-demo');
@@ -24,7 +29,7 @@ values (
   '00000000-0000-0000-0000-000000000001',
   'demo@agrinexus.org',
   'Demo Coordinator',
-  'replace-with-real-password-hash',
+  'scrypt:ac3d50c4f9bde2187c7caecf3cd3ebe8:518557f1d14bbd7dfdb769c46921b525e000378cd0db0714226e7f1fe62a483f6513a8594851df97362f19e0bbdc8b1e43041b87e4e439c02614b2cf418ec0cd',
   '10000000-0000-0000-0000-000000000001'
 );
 

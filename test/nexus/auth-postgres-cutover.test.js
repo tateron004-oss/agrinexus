@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const pgUsers = require("../../server/pg-users.js");
 
 function stubPool(handlers) {
@@ -122,6 +124,17 @@ test("consumeResetToken accepts a matching, unexpired token and clears it after 
     [/^select password_reset_token_hash, password_reset_expires_at from users/, () => ({ rows: [{ password_reset_token_hash: validHash, password_reset_expires_at: new Date(Date.now() - 1000).toISOString() }] })]
   ]);
   assert.equal(await pgUsers.consumeResetToken(expiredPool, "demo@agrinexus.org", "correct-raw-token", "Brand-New-Pass1"), false);
+});
+
+test("the demo seed user's real password hash (migrations 002 and 018) actually verifies against \"Demo2026!\"", () => {
+  const migrationsDir = path.join(__dirname, "../../foundation/migrations");
+  const migration002 = fs.readFileSync(path.join(migrationsDir, "002_seed_demo.sql"), "utf8");
+  const migration018 = fs.readFileSync(path.join(migrationsDir, "018_demo_user_real_password_hash.sql"), "utf8");
+  const hashIn002 = migration002.match(/'(scrypt:[0-9a-f]+:[0-9a-f]+)'/)[1];
+  const hashIn018 = migration018.match(/'(scrypt:[0-9a-f]+:[0-9a-f]+)'/)[1];
+  assert.equal(hashIn002, hashIn018, "the fresh-database seed (002) and the already-migrated-database patch (018) must set the identical hash");
+  assert.equal(pgUsers.verifyPasswordHash("Demo2026!", hashIn002, ""), true, "the seeded hash must actually verify against its documented password with an empty pepper");
+  assert.equal(pgUsers.verifyPasswordHash("wrong-password", hashIn002, ""), false);
 });
 
 test("buildBlobShadowFromPostgresUser backfills a usable blob row for a Postgres-only account", () => {
