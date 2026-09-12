@@ -102,7 +102,6 @@ jobs:
               printf '%s: PASS\n' "$name"
             else
               printf '%s: FAIL (raw output retained only on ephemeral runner)\n' "$name"
-              echo "TEMP-DEBUG tail of $name.log:"; tail -n 40 "$CI_LOG_DIR/$name.log" || true
               failed=1
             fi
           }

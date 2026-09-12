@@ -91,7 +91,20 @@ async function run() {
   assert.equal(mapsResult.body.data.noLocationPermissionRequested, true, "maps route must not request geolocation permission");
   assert.equal(routeFetchCount, 3, "maps route should geocode origin, geocode destination, and compute one route");
 
-  const mapsRepeatLookup = await maps.route({ origin: "Stockton, CA", destination: "Sacramento, CA" }, { NEXUS_MAPS_ENABLED: "true" });
+  const mapsRepeatLookup = await maps.route({ origin: "Stockton, CA", destination: "Sacramento, CA" }, {
+    NEXUS_MAPS_ENABLED: "true",
+    NEXUS_MAPS_PUBLIC_OSM_ENABLED: "true",
+    NEXUS_MAPS_FETCH_IMPL: async url => {
+      const value = String(url);
+      if (value.includes("nominatim.openstreetmap.org") && value.includes("Stockton")) {
+        return { ok: true, text: async () => JSON.stringify([{ display_name: "Stockton, California, United States", lat: "37.9577", lon: "-121.2908" }]) };
+      }
+      if (value.includes("nominatim.openstreetmap.org") && value.includes("Sacramento")) {
+        return { ok: true, text: async () => JSON.stringify([{ display_name: "Sacramento, California, United States", lat: "38.5816", lon: "-121.4944" }]) };
+      }
+      return { ok: true, text: async () => JSON.stringify({ routes: [{ distance: 78234.4, duration: 4210.2 }] }) };
+    }
+  });
   assert.equal(mapsRepeatLookup.body.status, "completed", "maps route stays read-only and never needs confirmation, like checking the weather");
 
   const remindersDb = { profile: {} };
