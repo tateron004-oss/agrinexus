@@ -5369,7 +5369,7 @@ function paintNexusRichDataCard(richData) {
     host.style.cssText = "position:fixed;left:12px;right:12px;bottom:90px;max-height:52vh;overflow-y:auto;z-index:9000;box-shadow:0 8px 28px rgba(0,0,0,.28);";
     document.body.appendChild(host);
   }
-  host.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:-2px;"><button type="button" onclick="this.closest('#nexusRichDataOverlay').remove()" style="background:var(--ink,#222);color:#fff;border:none;border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;">Close</button></div>` + html;
+  host.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:-2px;"><button type="button" data-nexus-rich-data-close="true" style="background:var(--ink,#222);color:#fff;border:none;border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;">Close</button></div>` + html;
 }
 
 function handleNexusOpenDialogueAgentCommand(command = "", options = {}) {
@@ -62037,6 +62037,12 @@ function bindStatic() {
       return;
     }
     if (handleNexusOpenDialogueAgentClick(event)) return;
+    if (event.target.closest("[data-nexus-rich-data-close]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      document.getElementById("nexusRichDataOverlay")?.remove();
+      return;
+    }
     if (event.target.closest("[data-toggle-user-language]")) {
       event.preventDefault();
       event.stopPropagation();
