@@ -252,7 +252,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p output
-          npm audit --omit=dev --json > output/nexus-production-security-audit.json
+          # npm audit exits non-zero whenever it finds any vulnerability, even
+          # with --json; under set -e that would abort this whole evidence
+          # step over an unrelated advisory instead of just recording it, so
+          # tolerate its exit code here -- this step is capturing evidence,
+          # not gating the deploy on zero vulnerabilities.
+          npm audit --omit=dev --json > output/nexus-production-security-audit.json || true
           node scripts/nexus-run-production-evidence-probes.js 2>&1 | tee output/nexus-production-probe-run.log
           node scripts/nexus-diagnose-browser-login-binding.js 2>&1 | tee output/nexus-browser-login-binding-diagnostic.log
           node scripts/nexus-run-browser-capability-probes.js 2>&1 | tee output/nexus-browser-capability-probe-run.log

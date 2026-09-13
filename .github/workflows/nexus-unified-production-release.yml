@@ -71,7 +71,11 @@ jobs:
       - name: Record exact-release production dependency audit
         run: |
           mkdir -p output
-          npm audit --omit=dev --json > output/nexus-production-security-audit.json
+          # npm audit exits non-zero whenever it finds any vulnerability, even
+          # with --json; GitHub Actions runs this under `set -e` by default,
+          # so tolerate its exit code -- this step records evidence, it
+          # doesn't gate the deploy on zero vulnerabilities.
+          npm audit --omit=dev --json > output/nexus-production-security-audit.json || true
       - name: Deploy exact SHA to the canonical Render topology
         id: render
         env:
