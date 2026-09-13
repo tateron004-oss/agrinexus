@@ -17127,6 +17127,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
     "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
+    "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning/monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
@@ -17670,7 +17671,7 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(export|report|document|presentation|table|receipt|pdf)\b/.test(lower)) return "nexus_document_export";
   if (/\b(map|route|directions|travel time|field visit|logistics|delivery|nearby|near me)\b/.test(lower)) return "nexus_maps_route";
   if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|yield|post-harvest|harvest)\b/.test(lower)) return "nexus_agriculture";
-  if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw)\b/.test(lower)) return "nexus_health_preparation";
+  if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw|fitness|workout|training plan|exercise routine)\b/.test(lower)) return "nexus_health_preparation";
   if (/\b(job|workforce|training|learning|literacy|course|career|employer|apprentice|internship)\b/.test(lower)) return "nexus_workforce_learning";
   if (/\b(marketplace|agritrade|buyer|seller|vendor|price|shipment|cold chain|product|listing)\b/.test(lower)) return "nexus_marketplace_logistics";
   if (/\b(sms|text|whatsapp|email|message|phone|call|telegram)\b/.test(lower)) return "nexus_communications";
@@ -17765,6 +17766,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "Understand the user's goal and keep natural conversation fluid. Ordinary greetings, small talk, and pure follow-up questions about something you already said do not need a tool.",
     "For everything else, prefer calling a tool over answering from your own knowledge or explaining that something is unavailable without checking. Do not silently answer in conversation or say a capability is disabled when a tool exists for the request — call it and let its real result decide the answer.",
     "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
+    "When the user asks to create a fitness or training plan, reports a completed workout/run/training session (with or without a duration), or asks about their fitness or training progress, you must call nexus_health_preparation. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to see, find, or show images, photos, or pictures of anything (including crop damage, pests, disease, or any other visual subject), you must call nexus_visual_analysis with that request. This is a real keyless image search — never say visual analysis is disabled without calling it first.",
     "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning or monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
@@ -18687,6 +18689,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const wantsNavigationHelp = /\b(?:not sure what to do|help me navigate|where do i start|health navigation)\b/i.test(command);
     const providerSearchMatch = command.match(/\b(?:find|search for|look up|locate)\s+(?:a\s+|an\s+)?(?:doctor|physician|specialist|provider|clinic|nurse)\b(?:\s+(?:named|called)\s+([a-z\s.'-]+?))?(?:\s+in\s+([a-z\s]+))?$/i);
     const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
+    const fitnessPlanMatch = /\b(?:create|start|build|make)\s+(?:a\s+|my\s+)?(?:training|workout|fitness)\s+plan\b/i.test(command);
+    const workoutLogMatch = command.match(/\b(?:log|logged|record|recorded|track|tracked|did|completed|finished)\s+(?:a\s+|my\s+)?(\d{1,3})\s*(?:minute|min)s?\s+(run|walk|jog|workout|training session|training|exercise session|exercise|swim|cycling|cycle|ride|strength training|strength|cardio|hiit)\b/i);
+    const fitnessProgressMatch = /\b(fitness progress|training progress|workout summary|workout history|show my workouts)\b/i.test(command);
     let response;
     let intakeRecord = null;
     let readingSaved = false;
@@ -18725,6 +18730,41 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       response = readingSaved
         ? `I saved the ${rpmVital.label} reading ${rpmVital.display} to your remote monitoring record for provider review. This is not a diagnosis, alert, or device connection. Seek urgent medical help now for severe symptoms.`
         : `I noted the ${rpmVital.label} reading ${rpmVital.display}, but saving it to your monitoring record is unavailable right now.`;
+    } else if (fitnessPlanMatch) {
+      const goalMatch = command.match(/\bfor\s+([a-z0-9\s]+?)(?:\.|$)/i);
+      const planResult = nexusRealProviders.rtmBridge.trainingPlan({
+        goal: args.goal || goalMatch?.[1]?.trim() || command,
+        weeklySessionTarget: args.weeklySessionTarget,
+        durationWeeks: args.durationWeeks,
+        confirmed: true
+      }, db, process.env);
+      readingSaved = Boolean(planResult?.body?.ok && planResult.body.status === "completed");
+      readingKind = "training plan";
+      response = readingSaved
+        ? `I saved a training plan${planResult.body.data.plan.goal ? ` for ${planResult.body.data.plan.goal}` : ""} to your fitness record. This is general activity guidance, not a training program from a coach or clinician.`
+        : "I noted your training plan, but saving it is unavailable right now.";
+    } else if (workoutLogMatch) {
+      const workoutMinutes = Number(workoutLogMatch[1]);
+      const workoutKind = workoutLogMatch[2];
+      const workoutResult = nexusRealProviders.rtmBridge.activityEntry({
+        activityType: "fitness_training",
+        activityDescription: `${workoutKind} workout (voice-reported)`,
+        participationMinutes: workoutMinutes,
+        completed: true,
+        confirmed: true
+      }, db, process.env);
+      readingSaved = Boolean(workoutResult?.body?.ok && workoutResult.body.status === "completed");
+      readingKind = "workout";
+      response = readingSaved
+        ? `I logged your ${workoutMinutes}-minute ${workoutKind} to your fitness record.`
+        : `I noted that workout, but saving it to your fitness record is unavailable right now.`;
+    } else if (fitnessProgressMatch) {
+      const progressResult = nexusRealProviders.rtmBridge.fitnessProgress({}, db);
+      const summary = progressResult?.body?.data?.summary;
+      extraData = { fitnessProgress: summary };
+      response = summary && summary.sessionCount
+        ? `You have logged ${summary.sessionCount} workout${summary.sessionCount === 1 ? "" : "s"} totaling ${summary.totalMinutes} minutes${summary.mostRecentActivity ? `, most recently ${summary.mostRecentActivity}` : ""}.`
+        : "I don't have any logged workouts yet. Tell me about a workout to start tracking your fitness progress.";
     } else if (rtmExercise || rtmAdherence) {
       const rtmResult = nexusRealProviders.rtmBridge.activityEntry({
         activityType: rtmExercise ? "exercise_rehab" : "medication_adherence_discussion",

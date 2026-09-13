@@ -52,6 +52,7 @@
     "companion:response-quality-smoke": "node scripts/companion-response-quality-smoke.js",
     "call:intent-smoke": "node scripts/call-intent-smoke.js",
     "field-agents:dispatch-smoke": "node scripts/field-agent-dispatch-smoke.js",
+    "fitness:voice-smoke": "node scripts/fitness-voice-smoke.js",
     "auth:login-api-smoke": "node scripts/auth-login-api-smoke.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",

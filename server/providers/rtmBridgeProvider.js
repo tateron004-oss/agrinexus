@@ -17,7 +17,8 @@ const PROVIDER = "nexus-rtm-bridge";
 const FLAG = "NEXUS_RTM_BRIDGE_ENABLED";
 const INTAKES = "nexusRtmIntakes";
 const ENTRIES = "nexusRtmActivityEntries";
-const ACTIVITY_TYPES = new Set(["therapy_activity", "exercise_rehab", "nutrition_behavior", "medication_adherence_discussion", "education_module", "symptom_function_note", "device_app_usage"]);
+const PLANS = "nexusFitnessTrainingPlans";
+const ACTIVITY_TYPES = new Set(["therapy_activity", "exercise_rehab", "nutrition_behavior", "medication_adherence_discussion", "education_module", "symptom_function_note", "device_app_usage", "fitness_training"]);
 
 function status(env = process.env) {
   return defaultStatus(PROVIDER, FLAG, env, {
@@ -95,6 +96,41 @@ function providerReport(body = {}, db) {
   });
 }
 
+function trainingPlan(body = {}, db, env = process.env) {
+  const action = "rtm.training_plan";
+  const disabled = guardEnabled(PROVIDER, action, FLAG, env);
+  if (disabled) return disabled;
+  const confirmation = requireConfirmation(body, PROVIDER, action);
+  if (confirmation) return confirmation;
+  const blocked = guardMedicalText(PROVIDER, action, [body.goal, body.notes], false);
+  if (blocked) return blocked;
+  const record = saveRecord(db, PLANS, localRecord("fitness-plan", body, {
+    goal: safeText(body.goal || "general fitness", 200),
+    activityFocus: safeList(body.activityFocus || body.focus || "general activity"),
+    weeklySessionTarget: Number(body.weeklySessionTarget) || null,
+    durationWeeks: Number(body.durationWeeks) || null,
+    notes: safeText(body.notes, 240)
+  }), 20);
+  return response(PROVIDER, action, "completed", "Training plan saved locally. This is general activity guidance, not a training program from a coach, trainer, or clinician.", { plan: record });
+}
+
+function trainingPlans(db) {
+  return response(PROVIDER, "rtm.training_plans", "completed", "Training plans loaded.", { plans: ensureProfileStore(db, PLANS) });
+}
+
+function fitnessProgress(body = {}, db) {
+  const entries = ensureProfileStore(db, ENTRIES).filter(item => item.activityType === "fitness_training");
+  const totalMinutes = entries.reduce((sum, item) => sum + (Number(item.participationMinutes) || 0), 0);
+  return response(PROVIDER, "rtm.fitness_progress", "prepared", "Fitness progress summary prepared from logged workouts.", {
+    summary: {
+      sessionCount: entries.length,
+      totalMinutes,
+      mostRecentActivity: entries[0]?.activityDescription || null,
+      missingData: entries.length ? [] : ["No workouts logged yet"]
+    }
+  });
+}
+
 function reminder(body = {}, db, env = process.env) {
   const disabled = guardEnabled(PROVIDER, "rtm.reminder", FLAG, env);
   if (disabled) return disabled;
@@ -107,4 +143,4 @@ function offline(body = {}, db, env = process.env) {
   return queueOffline(PROVIDER, "rtm.offline", body, db, "rtm_participation_entry", body.summary || body.activityType || "manual RTM participation metadata");
 }
 
-module.exports = { status, intake, activityEntry, activityEntries, adherenceSummary, providerReport, reminder, offline };
+module.exports = { status, intake, activityEntry, activityEntries, adherenceSummary, providerReport, reminder, offline, trainingPlan, trainingPlans, fitnessProgress };
