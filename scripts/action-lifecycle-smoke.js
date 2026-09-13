@@ -69,6 +69,16 @@ async function call(route, { method, body, cookie } = {}) {
     assert.equal(unconfirmed.json.ok, false);
     assert.equal(unconfirmed.json.status, "confirmation_required");
 
+    // Same bug class, parallel function: an unconfirmed SMS/WhatsApp send must
+    // also return a real ok:false/400, not the ok:true/200 it returned before.
+    const unconfirmedSms = await call("/api/nexus/communications/send-message", {
+      body: { channel: "sms", to: "+15550001111", domain: "admin" },
+      cookie: userCookie
+    });
+    assert.equal(unconfirmedSms.status, 400, "an unconfirmed communications send must surface as a real 400, not a misleading 200");
+    assert.equal(unconfirmedSms.json.ok, false);
+    assert.equal(unconfirmedSms.json.status, "confirmation_required");
+
     // With no real Twilio/SendGrid/Calendar credentials configured in this environment,
     // these real-provider tool calls correctly come back disabled -- and a disabled/failed
     // attempt must never be cached as if it were a completed send, so a second identical

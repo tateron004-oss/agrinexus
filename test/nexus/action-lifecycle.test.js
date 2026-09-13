@@ -1,7 +1,9 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { computeIdempotencyKey, withActionLifecycle, ensureNexusActionLedger } = require("../../server/action-lifecycle.js");
+const { computeIdempotencyKey, withActionLifecycle, ensureNexusActionLedger, resetActionLedgerForTests } = require("../../server/action-lifecycle.js");
+
+test.beforeEach(() => resetActionLedgerForTests());
 
 function fixtureDb() {
   return {};
@@ -58,7 +60,7 @@ test("withActionLifecycle short-circuits an immediate duplicate completed reques
   assert.equal(second.body.data.sid, first.body.data.sid);
 });
 
-test("withActionLifecycle suppresses a duplicate that arrives while the original is still in flight", async () => {
+test("withActionLifecycle awaits the SAME real execution for a duplicate that arrives while the original is still in flight, instead of guessing with a timeout", async () => {
   const db = fixtureDb();
   let calls = 0;
   let releaseFirst;
@@ -69,14 +71,34 @@ test("withActionLifecycle suppresses a duplicate that arrives while the original
   const firstPromise = withActionLifecycle(db, { provider: "twilio", action: "sms.send", body, execute });
   // Let the first call reach and pass its synchronous reserve step before firing the duplicate.
   await Promise.resolve();
-  const second = await withActionLifecycle(db, { provider: "twilio", action: "sms.send", body, execute });
-
-  assert.equal(second.body.status, "duplicate_suppressed");
-  assert.equal(calls, 1, "the in-flight duplicate must not call execute a second time");
+  const secondPromise = withActionLifecycle(db, { provider: "twilio", action: "sms.send", body, execute });
 
   releaseFirst();
-  const first = await firstPromise;
+  const [first, second] = await Promise.all([firstPromise, secondPromise]);
+
+  assert.equal(calls, 1, "the in-flight duplicate must not call execute a second time");
   assert.equal(first.body.data.sid, "SM-inflight");
+  assert.equal(second.body.data.sid, "SM-inflight", "the duplicate must receive the SAME real result once it resolves, not a synthetic placeholder");
+  assert.equal(first, second, "both callers should be awaiting the exact same result object");
+});
+
+test("withActionLifecycle shares its ledger across different db object instances -- the ledger is not scoped to any single request's db", async () => {
+  // Regression test: server.js's readDb()/writeDb() re-read the whole app
+  // state fresh on every HTTP request, so two different `db` objects here
+  // stand in for two different (possibly concurrent) requests. Duplicate
+  // suppression must still work even though neither db object is the same
+  // reference and neither has been "written back" anywhere.
+  const dbForRequestA = { requestId: "A" };
+  const dbForRequestB = { requestId: "B" };
+  let calls = 0;
+  const body = { to: "+1", message: "hi" };
+  const execute = async () => { calls += 1; return ok({ sid: "SM-shared" }); };
+
+  const first = await withActionLifecycle(dbForRequestA, { provider: "twilio", action: "sms.send", body, execute });
+  const second = await withActionLifecycle(dbForRequestB, { provider: "twilio", action: "sms.send", body, execute });
+
+  assert.equal(calls, 1, "a duplicate arriving under a different db object (a different request) must still be deduped");
+  assert.equal(second.body.data.sid, first.body.data.sid);
 });
 
 test("withActionLifecycle does not dedupe a blocked/failed attempt -- a retry after fixing input must run", async () => {
@@ -104,6 +126,7 @@ test("withActionLifecycle calls verify() on success and records a real verified 
     verify: async executeResult => ({ verified: Boolean(executeResult.body.data.sid), note: "Twilio response contained a real message SID." })
   });
   assert.equal(result.body.data.sid, "SM999");
+  assert.equal(result.body.nexusLifecycleVerified, true, "the real verified flag must be attached to the returned result, not left only on the internal ledger entry");
   const ledger = ensureNexusActionLedger(db);
   assert.equal(ledger[0].verified, true);
   assert.match(ledger[0].verificationNote, /real message SID/);
@@ -111,10 +134,11 @@ test("withActionLifecycle calls verify() on success and records a real verified 
 
 test("withActionLifecycle defaults verified to false honestly when no verify function is given", async () => {
   const db = fixtureDb();
-  await withActionLifecycle(db, {
+  const result = await withActionLifecycle(db, {
     provider: "twilio", action: "sms.send", body: { to: "+1", message: "hi" },
     execute: async () => ok({ sid: "SM1" })
   });
+  assert.equal(result.body.nexusLifecycleVerified, false);
   const ledger = ensureNexusActionLedger(db);
   assert.equal(ledger[0].verified, false);
   assert.match(ledger[0].verificationNote, /No independent verification/);

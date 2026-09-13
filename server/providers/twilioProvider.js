@@ -1,4 +1,3 @@
-const crypto = require("crypto");
 const {
   clean,
   envEnabled,
@@ -10,7 +9,9 @@ const {
   blockedResponse,
   failedResponse,
   validateText,
-  safeJson
+  safeJson,
+  domainProviderSimulationEnabled,
+  simulatedProviderResponse
 } = require("./providerUtils");
 
 const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
@@ -60,21 +61,16 @@ function smsEnabled(env = process.env) {
 
 // When the feature is wanted (NEXUS_SMS_ENABLED etc.) but no real Twilio
 // credentials exist yet, fall back to a clearly-labeled simulated response
-// instead of just reporting missing config -- so the app stays fully
-// demoable without a Twilio account. Real credentials always take priority
-// over simulation when both happen to be present.
-function domainProviderSimulationEnabled(env = process.env) {
-  return envEnabled("NEXUS_SIMULATE_DOMAIN_PROVIDERS", env, true);
-}
-
-function simulatedTwilioResponse(provider, action, channel, to, extra = {}) {
-  const fakeSid = `SIMULATED${channel.toUpperCase()}${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
-  return providerResponse({
-    provider,
-    action,
-    status: "completed",
-    message: `Simulated ${channel} completed by the local demo double after explicit confirmation. Twilio is not configured, so no real message reached a phone -- this is a labeled simulated response for demoing the full build-out before a real account is connected.`,
-    data: { sid: fakeSid, to, channel, simulated: true, ...extra }
+// (via providerUtils.simulatedProviderResponse) instead of just reporting
+// missing config -- so the app stays fully demoable without a Twilio
+// account. Real credentials always take priority over simulation when both
+// happen to be present.
+function simulatedTwilioResponse(provider, action, channel, to) {
+  return simulatedProviderResponse(provider, action, {
+    idField: "sid",
+    idPrefix: `SIMULATED${channel.toUpperCase()}`,
+    extra: { to, channel },
+    note: `Simulated ${channel} completed by the local demo double after explicit confirmation. Twilio is not configured, so no real message reached a phone -- this is a labeled simulated response for demoing the full build-out before a real account is connected.`
   });
 }
 

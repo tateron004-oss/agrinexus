@@ -120,6 +120,17 @@ async function callTool(name, args, cookie) {
     assert.equal(doubleSettle.json.ok, false, "settling an already-settled transaction again must fail cleanly, not double-count");
     assert.equal(doubleSettle.json.error, "transaction_already_settled");
 
+    // A settled transaction must be locked -- neither adding an item nor
+    // cancelling it should be able to mutate a record that already carries a
+    // (simulated) completed payment.
+    const addItemAfterSettle = await call("/api/nexus/operations/command", { body: { action: "add_transaction_item", transactionId, name: "extra bag", quantity: "1", amount: "10" }, cookie: userCookie });
+    assert.equal(addItemAfterSettle.json.ok, false, "adding an item to an already-settled transaction must be rejected, not silently reopen it");
+    assert.equal(addItemAfterSettle.json.error, "transaction_already_settled");
+
+    const cancelAfterSettle = await call("/api/nexus/operations/command", { body: { action: "cancel_transaction", transactionId }, cookie: userCookie });
+    assert.equal(cancelAfterSettle.json.ok, false, "cancelling an already-settled transaction must be rejected, not overwrite the settlement");
+    assert.equal(cancelAfterSettle.json.error, "transaction_already_settled");
+
     console.log("Domain provider simulation smoke test passed");
   } finally {
     server.kill();

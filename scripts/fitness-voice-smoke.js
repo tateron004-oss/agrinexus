@@ -64,6 +64,13 @@ async function callTool(command, cookie) {
     assert.match(plan.json.response, /training plan/i);
     assert.equal(plan.json.status, "health-reading-saved");
 
+    // Regression: with no period in the command, the goal extractor's lazy
+    // match used to run to end-of-string. "and"/"then" must still stop it.
+    const planWithClause = await callTool("create a training plan for a marathon and also track my sleep", userCookie);
+    assert.equal(planWithClause.status, 200);
+    assert.match(planWithClause.json.response, /marathon/i, "the stored goal must be scoped to the clause before 'and', not run to the end of the sentence");
+    assert.doesNotMatch(planWithClause.json.response, /track my sleep/i, "the goal must not swallow the unrelated trailing clause");
+
     const workout = await callTool("I logged a 30 minute run", userCookie);
     assert.equal(workout.status, 200);
     assert.match(workout.json.response, /30-minute run/i);

@@ -122,6 +122,28 @@ function requireConfirmation(body = {}, provider, action) {
   return body.confirmed === true ? null : confirmationRequiredResponse(provider, action);
 }
 
+// Shared by every provider that offers a simulated fallback when the feature
+// is wanted (its own enable flag is on) but no real credentials exist yet --
+// e.g. twilioProvider.js, calendarProvider.js. Centralized here (rather than
+// copy-pasted per provider) because `data.simulated` is a load-bearing
+// contract: server/action-lifecycle.js's verify() callbacks key off it to
+// decide whether an action was genuinely verified, so every simulated
+// response must set it the same way.
+function domainProviderSimulationEnabled(env = process.env) {
+  return envEnabled("NEXUS_SIMULATE_DOMAIN_PROVIDERS", env, true);
+}
+
+function simulatedProviderResponse(provider, action, { idField, idPrefix, extra = {}, note = "" } = {}) {
+  const fakeId = `${idPrefix}-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
+  return providerResponse({
+    provider,
+    action,
+    status: "completed",
+    message: note || `Simulated ${provider} ${action} completed by the local demo double after explicit confirmation. No real account is configured, so nothing real happened -- this is a labeled simulated response for demoing the full build-out before a real account is connected.`,
+    data: { [idField]: fakeId, simulated: true, ...extra }
+  });
+}
+
 function validateText(value, label, { min = 1, max = 2000, pattern = null } = {}) {
   const text = clean(value);
   if (text.length < min) return `${label} is required.`;
@@ -160,6 +182,8 @@ module.exports = {
   blockedResponse,
   failedResponse,
   requireConfirmation,
+  domainProviderSimulationEnabled,
+  simulatedProviderResponse,
   validateText,
   redactSecrets,
   safeJson
