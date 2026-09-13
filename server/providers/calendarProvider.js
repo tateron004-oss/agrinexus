@@ -1,4 +1,3 @@
-const crypto = require("crypto");
 const {
   clean,
   envEnabled,
@@ -9,15 +8,10 @@ const {
   requireConfirmation,
   blockedResponse,
   failedResponse,
-  safeJson
+  safeJson,
+  domainProviderSimulationEnabled,
+  simulatedProviderResponse
 } = require("./providerUtils");
-
-// See twilioProvider.js's domainProviderSimulationEnabled -- same fallback
-// pattern: when a real calendar provider is wanted but not configured, fall
-// back to a clearly-labeled simulated event instead of just "not configured."
-function domainProviderSimulationEnabled(env = process.env) {
-  return envEnabled("NEXUS_SIMULATE_DOMAIN_PROVIDERS", env, true);
-}
 
 function provider(env = process.env) {
   return clean(env.NEXUS_CALENDAR_PROVIDER || (env.GOOGLE_CALENDAR_ACCESS_TOKEN ? "google" : "generic"));
@@ -53,13 +47,11 @@ async function createEvent(body = {}, env = process.env) {
   const start = clean(body.start || body.startTime || body.when);
   if (!title || !start) return blockedResponse(selected, action, "Calendar title and start time are required.");
   if (readiness.missingConfig.length) {
-    const fakeEventId = `SIMULATED-EVT-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
-    return providerResponse({
-      provider: selected,
-      action,
-      status: "completed",
-      message: "Simulated calendar event created by the local demo double after explicit confirmation. No real calendar provider is configured, so no real event was created -- this is a labeled simulated response for demoing the full build-out before a real account is connected.",
-      data: { eventId: fakeEventId, htmlLink: "", title, start, simulated: true, providerVerified: false }
+    return simulatedProviderResponse(selected, action, {
+      idField: "eventId",
+      idPrefix: "SIMULATED-EVT",
+      extra: { htmlLink: "", title, start, providerVerified: false },
+      note: "Simulated calendar event created by the local demo double after explicit confirmation. No real calendar provider is configured, so no real event was created -- this is a labeled simulated response for demoing the full build-out before a real account is connected."
     });
   }
   try {

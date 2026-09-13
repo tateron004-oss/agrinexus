@@ -48,6 +48,14 @@ test("activityEntry accepts fitness_training as a real activity type and records
   assert.equal(result.body.data.entry.participationMinutes, 30);
 });
 
+test("activityEntry records an explicit 0-minute entry instead of silently discarding it as falsy", () => {
+  const db = fixtureDb();
+  const result = rtmBridge.activityEntry({
+    activityType: "fitness_training", activityDescription: "stretching", participationMinutes: 0, confirmed: true
+  }, db, {});
+  assert.equal(result.body.data.entry.participationMinutes, 0, "an explicitly reported 0-minute duration must be stored as 0, not discarded to null");
+});
+
 test("activityEntry falls back to therapy_activity for an unrecognized activity type, not fitness_training", () => {
   const db = fixtureDb();
   const result = rtmBridge.activityEntry({ activityType: "made_up_type", confirmed: true }, db, {});

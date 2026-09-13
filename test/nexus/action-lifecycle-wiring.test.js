@@ -4,7 +4,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { withActionLifecycle, ensureNexusActionLedger } = require("../../server/action-lifecycle.js");
+const { withActionLifecycle, ensureNexusActionLedger, resetActionLedgerForTests } = require("../../server/action-lifecycle.js");
+
+test.beforeEach(() => resetActionLedgerForTests());
 
 function loadExecuteTool({ twilio, email, calendar }) {
   const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
@@ -43,6 +45,17 @@ function loadExecuteTool({ twilio, email, calendar }) {
 
 function ok(data = {}) {
   return { httpStatus: 200, body: { ok: true, status: "completed", message: "sent", data } };
+}
+
+function loadProviderToolResult() {
+  const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  const start = source.indexOf("function nexusOpenAiNativeProviderToolResult(");
+  const end = source.indexOf("\nfunction nexusOpenAiNativeExtractContactArgs(", start);
+  assert.ok(start > 0 && end > start, "could not locate nexusOpenAiNativeProviderToolResult in server.js");
+  const sandbox = { nexusOpenAiNativeToolReceipt: () => ({ testReceipt: true }) };
+  vm.createContext(sandbox);
+  vm.runInContext(source.slice(start, end) + "\nthis.run = nexusOpenAiNativeProviderToolResult;", sandbox);
+  return sandbox.run;
 }
 
 test("nexus_email routes real email sends through withActionLifecycle and dedupes an immediate duplicate", async () => {
@@ -138,4 +151,22 @@ test("nexus_email and nexus_communications also record verified: false for a sim
   const dbSms = {};
   await runSms(dbSms, {}, "nexus_communications", { command: "text this number", to: "+15550001111", message: "hi", confirmed: true });
   assert.equal(ensureNexusActionLedger(dbSms)[0].verified, false);
+});
+
+test("nexusOpenAiNativeProviderToolResult reports the REAL lifecycle-verified flag as executionVerified, not the old ok+status heuristic", () => {
+  const run = loadProviderToolResult();
+  // A simulated response: ok:true, status:"completed" (so the old heuristic
+  // would say providerSucceeded/executionVerified: true), but the lifecycle
+  // wrapper honestly computed verified:false and attached it to body.
+  const simulatedResult = { httpStatus: 200, body: { ok: true, status: "completed", message: "simulated", data: { simulated: true }, nexusLifecycleVerified: false } };
+  const output = run({}, { toolName: "nexus_calendar", command: "schedule a meeting" }, simulatedResult);
+  assert.equal(output.providerSucceeded, true, "providerSucceeded is a separate, unchanged signal (the provider layer did report completed)");
+  assert.equal(output.executionVerified, false, "executionVerified must reflect the real lifecycle verification, not be fabricated from ok+status alone");
+});
+
+test("nexusOpenAiNativeProviderToolResult falls back to the old ok+status heuristic when no lifecycle metadata is present", () => {
+  const run = loadProviderToolResult();
+  const plainResult = { httpStatus: 200, body: { ok: true, status: "completed", message: "sent", data: { sid: "SMreal" } } };
+  const output = run({}, { toolName: "nexus_communications", command: "text someone" }, plainResult);
+  assert.equal(output.executionVerified, true, "call sites not wrapped by withActionLifecycle must keep their prior behavior unchanged");
 });

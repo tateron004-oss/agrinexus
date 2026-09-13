@@ -17946,7 +17946,7 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
     providerSucceeded,
     executionAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
-    executionVerified: providerSucceeded,
+    executionVerified: typeof body.nexusLifecycleVerified === "boolean" ? body.nexusLifecycleVerified : providerSucceeded,
     missingEnvVars: body.missingConfig || [],
     requiresConfirmation: Boolean(body.requiresConfirmation),
     disabled: Boolean(body.disabled),
@@ -18773,7 +18773,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ? `I saved the ${rpmVital.label} reading ${rpmVital.display} to your remote monitoring record for provider review. This is not a diagnosis, alert, or device connection. Seek urgent medical help now for severe symptoms.`
         : `I noted the ${rpmVital.label} reading ${rpmVital.display}, but saving it to your monitoring record is unavailable right now.`;
     } else if (fitnessPlanMatch) {
-      const goalMatch = command.match(/\bfor\s+([a-z0-9\s]+?)(?:\.|$)/i);
+      const goalMatch = command.match(/\bfor\s+([a-z0-9\s]+?)(?:[.,]|\s+and\s+|\s+then\s+|$)/i);
       const planResult = nexusRealProviders.rtmBridge.trainingPlan({
         goal: args.goal || goalMatch?.[1]?.trim() || command,
         weeklySessionTarget: args.weeklySessionTarget,
@@ -36347,10 +36347,10 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
   const sensitive = nexusCommunicationsDomainRequiresConsent(domain);
   if (!to) return { ok: false, provider: status.provider, channel, configured: channelStatus.configured, executed: false, status: "recipient_required", error: "Recipient is required.", missingEnv: channelStatus.missingEnv };
   if (body.confirmed !== true) {
-    return { ok: true, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "confirmation_required", error: `${channel.toUpperCase()} send requires explicit confirmation.`, noExternalDelivery: true };
+    return { ok: false, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "confirmation_required", error: `${channel.toUpperCase()} send requires explicit confirmation.`, noExternalDelivery: true };
   }
   if (sensitive && body.consent !== true) {
-    return { ok: true, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "consent_required", error: `Sensitive ${channel.toUpperCase()} packet requires explicit consent.`, noExternalDelivery: true };
+    return { ok: false, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "consent_required", error: `Sensitive ${channel.toUpperCase()} packet requires explicit consent.`, noExternalDelivery: true };
   }
   const message = nexusCommunicationsSafeMessage({ ...body, domain, packetId }, channel);
   if (!channelStatus.configured) {
@@ -40720,6 +40720,8 @@ function runNexusOperationsAction(db, body = {}, user = null) {
 
   if (action === "add_transaction_item") {
     const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store) || runNexusOperationsAction(db, { action: "create_transaction" }, user).record;
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
+    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db) };
     const before = { ...transaction, items: [...(transaction.items || [])] };
     const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(body.amount || "0", 80), createdAt: now };
     transaction.items = [item, ...(transaction.items || [])];
@@ -40733,6 +40735,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
   if (action === "cancel_transaction") {
     const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
     if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db) };
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
     const before = { ...transaction };
     transaction.status = "cancelled";
     transaction.updatedAt = now;

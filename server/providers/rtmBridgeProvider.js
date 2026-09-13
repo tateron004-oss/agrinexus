@@ -58,7 +58,7 @@ function activityEntry(body = {}, db, env = process.env) {
     activityDescription: safeText(body.activityDescription || body.description || "participation entry", 240),
     completed: body.completed === true || String(body.completed).toLowerCase() === "true",
     dateTimeText: safeText(body.dateTimeText || body.dueAt || "not provided", 120),
-    participationMinutes: Number(body.participationMinutes) || null,
+    participationMinutes: Number.isFinite(Number(body.participationMinutes)) && body.participationMinutes !== "" && body.participationMinutes != null ? Number(body.participationMinutes) : null,
     notes: safeText(body.notes, 240),
     detailedMedicationListStored: false,
     automatedProviderAlertSent: false
