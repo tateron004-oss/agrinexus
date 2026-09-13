@@ -18602,13 +18602,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         title: args.title || `Drone field review: ${command}`.slice(0, 180),
         missionType: /\bpest|disease\b/i.test(command) ? "pest/disease scan" : /\birrigat|water\b/i.test(command) ? "irrigation review" : "crop monitoring",
         area: args.area || areaMatch?.[1]?.trim() || "field area to confirm",
+        areaHectares: nexusRealProviders.droneMissionBridge.parseAreaHectares(command),
         purpose: command,
         confirmed: true
       }, db, process.env);
       const ok = Boolean(missionResult?.body?.ok && missionResult.body.status === "completed");
       const request = missionResult?.body?.data?.request;
+      const coveragePlanNote = request?.coveragePlan
+        ? ` Simulated coverage estimate for a ${request.coveragePlan.areaHectares} hectare field: about ${request.coveragePlan.passes} pass(es), ${request.coveragePlan.estimatedFlightMinutes} minute(s) of flight, and ${request.coveragePlan.estimatedImages} image(s) -- a planning estimate only, not a real flight plan.`
+        : "";
       const response = ok
-        ? `I saved a drone mission request: ${request.missionType} for ${request.area}. This is intake only — no drone flight was launched, controlled, or dispatched. A qualified operator will need to review and schedule the real flight.`
+        ? `I saved a drone mission request: ${request.missionType} for ${request.area}. This is intake only — no drone flight was launched, controlled, or dispatched. A qualified operator will need to review and schedule the real flight.${coveragePlanNote}`
         : `I could not save that drone mission request. ${missionResult?.body?.message || ""}`;
       const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "drone-mission-requested" : "drone-mission-blocked",
         [ok ? `Saved drone mission intake request ${request.id}.` : "Attempted to save a drone mission intake request."],
