@@ -1240,7 +1240,8 @@ const suites = {
     "archive/qa-scripts/nexus-agriculture-provider-evidence-qa.js",
     "archive/qa-scripts/nexus-agriculture-receipts-qa.js",
     "archive/qa-scripts/nexus-agriculture-safety-gates-qa.js",
-    "archive/qa-scripts/nexus-agriculture-communication-integration-qa.js"
+    "archive/qa-scripts/nexus-agriculture-communication-integration-qa.js",
+    "scripts/field-agent-dispatch-smoke.js"
   ]
 };
 

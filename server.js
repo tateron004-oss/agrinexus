@@ -17128,7 +17128,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
     "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
-    "When the user describes a crop or field problem, or asks to send, fly, or request a drone for field scanning/monitoring, you must call nexus_agriculture.",
+    "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning/monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
@@ -17764,7 +17764,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
     "When the user asks to see, find, or show images, photos, or pictures of anything (including crop damage, pests, disease, or any other visual subject), you must call nexus_visual_analysis with that request. This is a real keyless image search — never say visual analysis is disabled without calling it first.",
     "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
-    "When the user describes a crop or field problem, or asks to send, fly, or request a drone for field scanning or monitoring, you must call nexus_agriculture.",
+    "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning or monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to learn something, or requests a lesson, course, or training topic, you must call nexus_workforce_learning.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
@@ -18600,6 +18600,29 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         [ok ? `Saved drone mission intake request ${request.id}.` : "Attempted to save a drone mission intake request."],
         ["Nexus did not launch, control, or dispatch a drone flight."]);
       return { ...common, capability: "nexus_agriculture", status: ok ? "drone-mission-requested" : "drone-mission-blocked", response, receipt, evidenceReceipt: receipt, localOnly: true };
+    }
+    const wantsFieldAgent = /\bfield\s*agent\b/i.test(command) && /\b(send|dispatch|request|need|schedule)\b/i.test(command);
+    if (wantsFieldAgent) {
+      const regionMatch = command.match(/\b(Kenya|Nigeria|Egypt|DRC|Democratic Republic of the Congo)\b/i);
+      const taskType = /\bverif(?:y|ication)\b/i.test(command) ? "marketplace-verification"
+        : /\birrigat/i.test(command) ? "irrigation-support"
+        : /\blogistic/i.test(command) ? "logistics-support"
+        : "field-visit";
+      const dispatchResult = dispatchFieldAgent(db, {
+        taskType,
+        taskDescription: command,
+        location: args.location || regionMatch?.[0] || "",
+        region: regionMatch?.[0] || ""
+      }, user);
+      const response = dispatchResult.ok
+        ? `I recorded an assignment for ${dispatchResult.agent.name}, a field agent covering ${dispatchResult.agent.region}, for this ${taskType.replace(/-/g, " ")} request. This is an internal AgriNexus assignment record only, not an emergency service, and it does not guarantee real-world arrival timing.`
+        : dispatchResult.error === "no_available_field_agent"
+          ? "I could not find an available field agent right now. All agents are currently assigned or off duty."
+          : "I could not complete that field-agent assignment request.";
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, dispatchResult.ok ? "field-agent-dispatched" : "field-agent-dispatch-blocked",
+        [dispatchResult.ok ? `Recorded a field-agent assignment ${dispatchResult.agent?.id} (record ${dispatchResult.dispatch?.id}).` : "Attempted a field-agent assignment."],
+        ["Nexus did not contact, pay, or promise arrival timing for a real-world field agent beyond this internal assignment record."]);
+      return { ...common, capability: "nexus_agriculture", status: dispatchResult.ok ? "field-agent-dispatched" : "field-agent-dispatch-blocked", response, receipt, evidenceReceipt: receipt, localOnly: true };
     }
     const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
     const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
@@ -32552,7 +32575,10 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusMarketplaceExecutionAttempts)) db.nexusMarketplaceExecutionAttempts = [];
   if (!Array.isArray(db.nexusHighRiskBlockedAttempts)) db.nexusHighRiskBlockedAttempts = [];
   if (!Array.isArray(db.nexusAiAnswerReports)) db.nexusAiAnswerReports = [];
+  if (!Array.isArray(db.nexusFieldAgents)) db.nexusFieldAgents = [];
+  if (!Array.isArray(db.nexusFieldDispatches)) db.nexusFieldDispatches = [];
   ensureNexusEndgameSeeds(db);
+  ensureNexusFieldAgentSeeds(db);
   const profile = db.nexusPilotProfiles[0];
   if (profile) {
     profile.accountId = profile.accountId || "standard-user-local";
@@ -37238,6 +37264,10 @@ const NEXUS_PROVIDER_REVIEWER_ROLES = Object.freeze([
   "platform_admin"
 ]);
 
+const NEXUS_FIELD_AGENT_STATUSES = Object.freeze(["available", "assigned", "off_duty"]);
+
+const NEXUS_FIELD_DISPATCH_STATUSES = Object.freeze(["assigned", "en_route", "completed", "cancelled"]);
+
 const NEXUS_CASE_STATUSES = Object.freeze([
   "open",
   "draft",
@@ -37414,6 +37444,90 @@ function ensureNexusEndgameSeeds(db) {
     })));
   }
   ensureNexusLaunchBlockers(db);
+}
+
+function ensureNexusFieldAgentSeeds(db) {
+  if (db.nexusFieldAgents.length) return;
+  const now = new Date().toISOString();
+  const seedAgents = [
+    { id: "field-agent-ke-1", name: "Wanjiru Kamau", region: "Kenya", skills: ["crop-assessment", "drone-support"] },
+    { id: "field-agent-ng-1", name: "Chidi Okafor", region: "Nigeria", skills: ["marketplace-verification", "crop-assessment"] },
+    { id: "field-agent-eg-1", name: "Amina Hassan", region: "Egypt", skills: ["irrigation-support", "crop-assessment"] },
+    { id: "field-agent-drc-1", name: "Jean-Pierre Mbala", region: "DRC", skills: ["logistics-support", "marketplace-verification"] }
+  ];
+  db.nexusFieldAgents.push(...seedAgents.map(agent => ({
+    ...agent,
+    status: "available",
+    activeDispatchId: null,
+    createdAt: now,
+    updatedAt: now
+  })));
+}
+
+function normalizeFieldDispatch(db, body = {}, existing = null, user = null) {
+  const now = new Date().toISOString();
+  const status = NEXUS_FIELD_DISPATCH_STATUSES.includes(body.status) ? body.status : existing?.status || "assigned";
+  return {
+    id: existing?.id || `field-dispatch-${crypto.randomUUID()}`,
+    agentId: sanitizePilotText(body.agentId || existing?.agentId || "", 120),
+    taskType: sanitizePilotText(body.taskType || existing?.taskType || "field-visit", 80),
+    taskDescription: sanitizePilotText(body.taskDescription || existing?.taskDescription || "Field visit requested.", 400),
+    location: sanitizePilotText(body.location || existing?.location || "", 160),
+    status,
+    requestedBy: sanitizePilotText(user?.name || existing?.requestedBy || "Standard User", 120),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function dispatchFieldAgent(db, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
+  const region = sanitizePilotText(body.region || "", 80);
+  const candidate = requestedAgentId
+    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && agent.status === "available")
+    : db.nexusFieldAgents.find(agent => agent.status === "available" && (!region || agent.region.toLowerCase() === region.toLowerCase()))
+      || db.nexusFieldAgents.find(agent => agent.status === "available");
+  if (!candidate) {
+    return { ok: false, error: requestedAgentId ? "requested_agent_unavailable" : "no_available_field_agent" };
+  }
+  const dispatch = normalizeFieldDispatch(db, { ...body, agentId: candidate.id, status: "assigned" }, null, user);
+  db.nexusFieldDispatches.unshift(dispatch);
+  candidate.status = "assigned";
+  candidate.activeDispatchId = dispatch.id;
+  candidate.updatedAt = dispatch.updatedAt;
+  const audit = addNexusPilotAuditEvent(db, "field_agent_dispatched", {
+    relatedRecordId: dispatch.id,
+    actor: dispatch.requestedBy,
+    role: user?.role || "Standard User",
+    description: `${candidate.name} dispatched for ${dispatch.taskType} at ${dispatch.location || "an unspecified location"}. No live field action was taken by Nexus.`
+  });
+  return { ok: true, dispatch, agent: candidate, audit };
+}
+
+function updateFieldDispatchStatus(db, dispatchId, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const dispatch = db.nexusFieldDispatches.find(item => item.id === dispatchId);
+  if (!dispatch) return { ok: false, error: "dispatch_not_found" };
+  const nextStatus = NEXUS_FIELD_DISPATCH_STATUSES.includes(body.status) ? body.status : null;
+  if (!nextStatus) return { ok: false, error: "invalid_status" };
+  dispatch.status = nextStatus;
+  dispatch.updatedAt = new Date().toISOString();
+  if (["completed", "cancelled"].includes(nextStatus)) {
+    const agent = db.nexusFieldAgents.find(item => item.id === dispatch.agentId);
+    if (agent && agent.activeDispatchId === dispatch.id) {
+      agent.status = "available";
+      agent.activeDispatchId = null;
+      agent.updatedAt = dispatch.updatedAt;
+    }
+  }
+  const audit = addNexusPilotAuditEvent(db, "field_dispatch_status_changed", {
+    relatedRecordId: dispatch.id,
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    description: `Field dispatch ${dispatch.id} status changed to ${nextStatus}. No live field action was taken by Nexus.`
+  });
+  return { ok: true, dispatch, audit };
 }
 
 function ensureNexusLaunchBlockers(db, env = process.env) {
@@ -41977,6 +42091,46 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/my-responses" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, { ok: true, responses: db.nexusProviderResponses.filter(item => item.visibleToUser), label: "My Nexus Activity responses" });
+  }
+
+  if (url.pathname === "/api/field-agents" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, agents: db.nexusFieldAgents, statuses: NEXUS_FIELD_AGENT_STATUSES });
+  }
+
+  if (url.pathname === "/api/field-agents/dispatches" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    const dispatches = canUse(user, "provider-queue")
+      ? db.nexusFieldDispatches
+      : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+    return send(res, 200, { ok: true, dispatches, statuses: NEXUS_FIELD_DISPATCH_STATUSES });
+  }
+
+  if (url.pathname === "/api/field-agents/dispatch" && req.method === "POST") {
+    const body = await readBody(req);
+    const result = dispatchFieldAgent(db, body, user);
+    if (!result.ok) return send(res, 409, { ok: false, error: result.error, agents: db.nexusFieldAgents });
+    await writeDb(db);
+    return send(res, 200, { ok: true, dispatch: result.dispatch, agent: result.agent, audit: result.audit });
+  }
+
+  const fieldDispatchStatusMatch = url.pathname.match(/^\/api\/field-agents\/dispatch\/([^/]+)\/status$/);
+  if (fieldDispatchStatusMatch && req.method === "PATCH") {
+    const body = await readBody(req);
+    const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
+    if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
+    const isOwner = dispatch.requestedBy === (user?.name || "Standard User");
+    const isAgentSideStatus = ["en_route", "completed"].includes(body.status);
+    if (isAgentSideStatus && !canUse(user, "provider-queue")) {
+      return send(res, 403, { ok: false, error: "Only a provider/admin can mark a dispatch en route or completed." });
+    }
+    if (!isAgentSideStatus && !isOwner && !canUse(user, "provider-queue")) {
+      return send(res, 403, { ok: false, error: "Only the requester (or a provider/admin) can update this dispatch." });
+    }
+    const result = updateFieldDispatchStatus(db, fieldDispatchStatusMatch[1], body, user);
+    if (!result.ok) return send(res, 400, { ok: false, error: result.error });
+    await writeDb(db);
+    return send(res, 200, { ok: true, dispatch: result.dispatch, audit: result.audit });
   }
 
   if (url.pathname === "/api/nexus/integrations" && req.method === "GET") {
