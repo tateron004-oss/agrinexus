@@ -52213,7 +52213,7 @@ function normalizedWakeText(command) {
 function isWakePhraseOnly(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
-  if (/^(?:\u0645\u0631\u062d\u0628\u0627|\u064a\u0627)?\s*(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633)$/.test(normalized)) return true;
+  if (/^(?:\u0645\u0631\u062d\u0628\u0627|\u064a\u0627)?\s*(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|\u0643\u064a\u0631\u0648)$/.test(normalized)) return true;
   const wakePhrases = [
     "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus", "hey agri", "agri",
     "hey kyro", "kyro",
@@ -52225,7 +52225,8 @@ function isWakePhraseOnly(command) {
     "bonjour kyro", "salut kyro",
     "habari agrinexus", "hujambo agrinexus", "habari nexus",
     "habari kyro", "hujambo kyro",
-    "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
+    "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس",
+    "مرحبا كيرو", "يا كيرو", "كيرو"
   ];
   return wakePhrases.includes(normalized);
 }
@@ -52249,7 +52250,7 @@ function isNexusGreetingOnly(command) {
     "bonjour nexus", "salut nexus", "bonjour agrinexus", "habari nexus", "hujambo nexus",
     "bonjour kyro", "salut kyro", "habari kyro", "hujambo kyro"
   ].includes(normalized)
-    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)(?:\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus))?$/.test(normalized);
+    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)(?:\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|\u0643\u064a\u0631\u0648|nexus|agrinexus|kyro))?$/.test(normalized);
 }
 
 function isNexusGreetingPrefix(command) {
@@ -52257,7 +52258,7 @@ function isNexusGreetingPrefix(command) {
   if (!normalized) return false;
   return /^(hello|hi|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri nexus|agri|kyro)\b/.test(normalized)
     || /^(hola|buenos dias|buenas tardes|buenas noches|ola|oi|bom dia|boa tarde|boa noite|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri|kyro)\b/.test(normalized)
-    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)\b/.test(normalized);
+    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|\u0643\u064a\u0631\u0648|nexus|agrinexus|kyro)\b/.test(normalized);
 }
 
 function nexusLocalizedBehaviorCopy(key, values = {}) {
