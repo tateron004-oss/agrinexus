@@ -43,6 +43,7 @@ test("canonical services are reconciled to root production entry points", async 
   assert.equal(calls[0].path, "/services/srv-web");
   assert.equal(calls[0].options.method, "PATCH");
   assert.equal(body.rootDir, "");
+  assert.equal(body.serviceDetails.envSpecificDetails.buildCommand, "npm install", "must not reference the archived rebuild/ bundle");
   assert.equal(body.serviceDetails.envSpecificDetails.startCommand, "npm start");
   assert.equal(body.serviceDetails.preDeployCommand, "node foundation/scripts/migrate.js");
   assert.equal(body.serviceDetails.healthCheckPath, "/api/healthz");
@@ -53,7 +54,9 @@ test("worker and provider configuration use their canonical processes", async ()
   const client = { request: async (path, options) => { bodies.push(options.body); return {}; } };
   await reconcileServiceConfiguration(client, { id: "srv-worker", name: "nexus-background-worker" });
   await reconcileServiceConfiguration(client, { id: "srv-provider", name: "agrinexus-provider-engines" });
+  assert.equal(bodies[0].serviceDetails.envSpecificDetails.buildCommand, "npm install");
   assert.equal(bodies[0].serviceDetails.envSpecificDetails.startCommand, "node nexus/workers/process.js");
+  assert.equal(bodies[1].serviceDetails.envSpecificDetails.buildCommand, "npm install");
   assert.equal(bodies[1].serviceDetails.envSpecificDetails.startCommand, "npm run provider-engines");
 });
 
