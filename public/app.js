@@ -12352,8 +12352,14 @@ function applyPlatformLanguage() {
   const copy = platformText();
   document.documentElement.lang = languageCode();
   document.body.setAttribute("dir", languageCode() === "ar" ? "rtl" : "ltr");
-  $$(".nav").forEach((button, index) => {
-    button.textContent = copy.nav[index] || button.textContent;
+  let navIndex = 0;
+  $$(".nav").forEach(button => {
+    // "cases" (Case Review) isn't in copy.nav's per-language translations yet;
+    // skip it so it keeps its own static label instead of stealing the next
+    // positional translation meant for a different button.
+    if (button.dataset.section === "cases") return;
+    button.textContent = copy.nav[navIndex] || button.textContent;
+    navIndex++;
   });
   setText("#logoutBtn", copy.logout);
   setText("#dashboard .hero h2", copy.dashboardTitle);
@@ -12633,6 +12639,7 @@ function goSection(sectionId, options = {}) {
   if (sectionId === "map") setTimeout(() => safeInvalidateLeafletMap(map), 100);
   renderUserSimpleActiveSection(sectionId);
   if (experienceMode === "user" && sectionId === "dashboard") renderUserWorkspace();
+  if (sectionId === "cases") refreshProviderCaseQueue();
   if (experienceMode === "user" && options.openDefaultAction === true) {
     queueMicrotask(() => openDefaultUserSectionAction(sectionId));
   }
@@ -12787,6 +12794,7 @@ function sectionPermissionArea(sectionId) {
     agent: "ai",
     integrations: "integrations",
     admin: "admin",
+    cases: "provider-queue",
     profile: "profile"
   }[sectionId] || sectionId;
 }
@@ -12797,11 +12805,13 @@ function canOpenSection(sectionId) {
 }
 
 function firstAllowedSection() {
-  return ["dashboard", "learning", "workforce", "health", "trade", "map", "agent", "integrations", "admin", "profile"].find(canOpenSection) || "dashboard";
+  if (String(data?.user?.role || "").toLowerCase().includes("provider")) return "cases";
+  return ["dashboard", "learning", "workforce", "health", "trade", "map", "agent", "integrations", "admin", "cases", "profile"].find(canOpenSection) || "dashboard";
 }
 
 function defaultExperienceMode() {
   const role = String(data?.user?.role || "").toLowerCase();
+  if (role.includes("provider")) return "provider";
   if (role.includes("admin")) return "admin";
   if (role.includes("investor")) return "investor";
   return "user";
@@ -12809,6 +12819,7 @@ function defaultExperienceMode() {
 
 function allowedExperienceModes() {
   const role = String(data?.user?.role || "").toLowerCase();
+  if (role.includes("provider")) return ["provider"];
   if (role.includes("standard") || role.includes("user")) return ["user"];
   const modes = ["user", "advanced"];
   if (can("integrations") || can("admin")) modes.push("investor");
@@ -12827,7 +12838,8 @@ function experienceModeLabel(mode = experienceMode) {
     user: "User",
     advanced: "Workspace",
     investor: "Investor",
-    admin: "Admin"
+    admin: "Admin",
+    provider: "Provider"
   }[mode] || "User";
 }
 
@@ -12844,6 +12856,7 @@ function applyExperienceMode({ announceChange = false } = {}) {
   document.body.classList.toggle("advanced-mode", experienceMode === "advanced");
   document.body.classList.toggle("investor-mode", experienceMode === "investor");
   document.body.classList.toggle("admin-mode", experienceMode === "admin");
+  document.body.classList.toggle("provider-mode", experienceMode === "provider");
   $$("[data-experience-mode]").forEach(button => {
     const mode = button.dataset.experienceMode;
     const allowed = allowedExperienceModes().includes(mode);
@@ -16140,7 +16153,7 @@ function openNativeAppPlan() {
 
 function sectionFromHash() {
   const id = String(window.location.hash || "").replace(/^#/, "").trim();
-  if (!id) return "dashboard";
+  if (!id) return experienceMode === "provider" ? "cases" : "dashboard";
   return document.getElementById(id)?.classList.contains("section") ? id : "dashboard";
 }
 
@@ -22297,6 +22310,47 @@ async function refreshNexusPilotPlatformStatus(options = {}) {
     return nexusPilotPlatformStatus;
   } catch {
     return null;
+  }
+}
+
+async function refreshProviderCaseQueue() {
+  const summaryTarget = $("#providerCaseSummary");
+  const queueTarget = $("#providerCaseQueue");
+  if (!summaryTarget && !queueTarget) return;
+  await refreshNexusPilotReviewQueue({ rerender: false });
+  let cases = [];
+  try {
+    const result = await request("/api/nexus/cases", { method: "GET" });
+    cases = Array.isArray(result.cases) ? result.cases : [];
+  } catch {
+    cases = [];
+  }
+  if (summaryTarget) {
+    const openCount = cases.filter(item => !["closed", "archived"].includes(item.status)).length;
+    summaryTarget.innerHTML = `
+      <article><strong>${escapeHtml(translateText("Open cases"))}</strong><span>${openCount}</span></article>
+      <article><strong>${escapeHtml(translateText("Total cases"))}</strong><span>${cases.length}</span></article>
+      <article><strong>${escapeHtml(translateText("Review queue items"))}</strong><span>${Array.isArray(nexusPilotReviewQueue) ? nexusPilotReviewQueue.length : 0}</span></article>
+    `;
+  }
+  if (queueTarget) {
+    queueTarget.innerHTML = `
+      ${renderNexusPilotReviewQueuePanel()}
+      <section class="nexus-provider-case-list" aria-label="${escapeHtml(translateText("Cases"))}">
+        <strong>${escapeHtml(translateText("Cases"))}</strong>
+        ${cases.length ? `
+          <div class="nexus-provider-case-items">
+            ${cases.slice(0, 20).map(item => `
+              <article class="nexus-provider-case-item">
+                <strong>${escapeHtml(item.title || "Case")}</strong>
+                <span>${escapeHtml(translateText("Status"))}: ${escapeHtml(item.status || "open")}</span>
+                <small>${escapeHtml(item.summary || "")}</small>
+              </article>
+            `).join("")}
+          </div>
+        ` : `<p>${escapeHtml(translateText("No cases yet."))}</p>`}
+      </section>
+    `;
   }
 }
 

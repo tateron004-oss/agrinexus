@@ -577,7 +577,7 @@ assert(app.includes("function stageNexusSpokenCommand") && app.includes("I'm on 
 assert(app.includes("Nexus opened the requested workflow and is waiting for the next command."), "Voice workflows must open actions and wait for the next command instead of forcing another confirmation");
 assert(app.includes("function executePendingNexusSpokenCommand") && app.includes("source: \"nexus-confirmation\""), "Confirmed Nexus commands must execute through the main voice handler");
 assert(app.includes("agrinexusAutonomousLearningLog") && app.includes("command-confirmed"), "Nexus must record autonomous learning evidence for confirmed commands");
-assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
+assert(app.includes('if (!id) return experienceMode === "provider" ? "cases" : "dashboard";'), "Language changes must survive an empty hash without querying '#', and a Provider Reviewer's empty hash must still resolve locally to their case queue");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");

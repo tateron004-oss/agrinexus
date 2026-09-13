@@ -101,6 +101,7 @@
         <button data-section="agent" class="nav">Agent AI</button>
         <button data-section="integrations" class="nav">Integrations</button>
         <button data-section="admin" class="nav">Admin</button>
+        <button data-section="cases" class="nav">Case Review</button>
         <button data-section="profile" class="nav">Profile</button>
       </nav>
 
@@ -533,6 +534,7 @@
                   <button id="experienceAdvancedBtn" type="button" data-experience-mode="advanced">Workspace</button>
                   <button id="experienceInvestorBtn" type="button" data-experience-mode="investor">Investor</button>
                   <button id="experienceAdminBtn" type="button" data-experience-mode="admin">Admin</button>
+                  <button id="experienceProviderBtn" type="button" data-experience-mode="provider">Provider</button>
                 </div>
                 <button id="simpleContinueBtn" type="button" data-simple-action="continue">Continue last task</button>
               </div>
@@ -2019,6 +2021,12 @@
               <div class="action-row"><button id="billingCheckoutBtn">Test billing checkout</button></div>
             </article>
           </div>
+        </section>
+
+        <section id="cases" class="section" aria-labelledby="casesTitle">
+          <div class="section-head"><h2 id="casesTitle">Case Review</h2><p>Provider/admin review of prepared local records. Local review only -- no live clinical, pharmacy, payment, or emergency action occurs here.</p></div>
+          <div id="providerCaseSummary" class="cards three"></div>
+          <div id="providerCaseQueue"></div>
         </section>
 
         <section id="profile" class="section" aria-labelledby="profileTitle">
