@@ -17133,6 +17133,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, or small-business/nonprofit planning task, you must call nexus_business_assistant.",
     "When the user asks about current weather, temperature, or conditions in a place, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
     "If your last turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user now confirms (yes, confirm, confirmed, go ahead, do it), call the SAME tool again with the SAME details plus confirmed: true. Never just repeat the confirmation request — a user who already said yes has confirmed.",
@@ -17507,14 +17508,15 @@ function nexusOpenAiNativeToolSchemas() {
           "email",
           "calendar",
           "browser-computer-actions",
-          "document-export"
+          "document-export",
+          "business-assistant"
         ],
         description: "The safest Nexus capability lane for this tool call."
       },
       language: { type: "string", description: "The user's active language or BCP-47 language code." },
       location: { type: "string", description: "Optional user-provided location text. Never infer precise location." },
       confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." },
-      title: { type: "string", description: "A short title, when the user named one, for a document, export, event, listing, or reminder." },
+      title: { type: "string", description: "A short title, when the user named one, for a document, export, event, listing, reminder, or business/nonprofit workspace." },
       content: { type: "string", description: "The full body text the user wants exported, drafted, or sent, when it is longer or more specific than the plain command." },
       format: { type: "string", description: "The file format the user asked for (e.g. pdf, docx, txt, md, json), when exporting a document." }
     },
@@ -17543,6 +17545,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
+    tool("nexus_business_assistant", "List, start, or check the user's business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting) through the existing Nexus business-services backend.", "business-assistant-preparation"),
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
@@ -17668,6 +17671,7 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(marketplace|agritrade|buyer|seller|vendor|price|shipment|cold chain|product|listing)\b/.test(lower)) return "nexus_marketplace_logistics";
   if (/\b(sms|text|whatsapp|email|message|phone|call|telegram)\b/.test(lower)) return "nexus_communications";
   if (/\b(open|start|continue|show)\b.*\b(workflow|workspace|mode|panel|dashboard|intake|queue)\b/.test(lower)) return "nexus_workflow";
+  if (/\b(business plan|nonprofit|non-profit|ngo|grant writing|donor|volunteer coordination|launch kit|business assistant|admin assistant|small business)\b/.test(lower)) return "nexus_business_assistant";
   if (/\b(provider|credential|configured|missing env|status|ready|readiness|connector)\b/.test(lower)) return "nexus_provider_readiness";
   return "nexus_general_conversation";
 }
@@ -17768,6 +17772,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to set, create, or list a reminder, or queue/sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, or small-business/nonprofit planning task, you must call nexus_business_assistant.",
     "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
     "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
     "Use the server-provided Nexus tools for current information, workforce, provider readiness, and anything else a tool covers.",
@@ -18010,6 +18015,12 @@ function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
     content: sanitizePilotText(args.content || args.text || (contentMatch ? contentMatch[1].trim() : "") || command, 4000),
     format
   };
+}
+
+function nexusOpenAiNativeExtractBusinessName(command = "", args = {}) {
+  const text = String(command || "");
+  const nameMatch = text.match(/\b(?:called|named|titled|for)\s+["']?([^"'.,\n]{2,80})["']?/i);
+  return sanitizePilotText(args.businessName || args.title || (nameMatch ? nameMatch[1].trim() : ""), 180);
 }
 
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
@@ -18796,6 +18807,53 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       confirmed: args.confirmed
     }, db, process.env);
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "workflow" }, workflow);
+  }
+  if (toolName === "nexus_business_assistant") {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) {
+      return { ...common, capability: "business-assistant", status: "needs-auth", response: "Sign in first, then I can open the business assistant." };
+    }
+    const wantsList = /\b(list|show|which|what|my)\b/i.test(command)
+      && /\b(business|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)\b/i.test(command)
+      && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
+    try {
+      if (wantsList) {
+        const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
+        const clients = listing?.body?.clients || [];
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response: clients.length
+            ? `You have ${clients.length} business or nonprofit workspace${clients.length === 1 ? "" : "s"}: ${clients.map(item => item.data?.info?.businessName || "Untitled").join(", ")}.`
+            : "You do not have a business or nonprofit workspace yet. Tell me its name and what it does, and I can start one.",
+          businessClients: clients
+        };
+      }
+      const businessName = nexusOpenAiNativeExtractBusinessName(command, args);
+      if (!businessName) {
+        return { ...common, capability: "business-assistant", status: "needs-input", response: "What should I call this business or nonprofit workspace?", missingInformation: ["businessName"] };
+      }
+      if (!(args.confirmed === true || args.confirmation === true)) {
+        return {
+          ...common, capability: "business-assistant", status: "needs-confirmation", requiresConfirmation: true,
+          response: `I can start a new business or nonprofit workspace called "${businessName}" and save it to your account. Should I go ahead?`
+        };
+      }
+      const created = await authoritativeNexusRuntime.businessRequest({
+        method: "POST", pathname: "/api/nexus/runtime/business/clients",
+        body: { businessName, consent: true },
+        user: authoritativeUser
+      });
+      return {
+        ...common, capability: "business-assistant", status: "completed", localOnly: true,
+        response: `Started a business/nonprofit workspace called "${businessName}". Open Business services anytime to keep building it out.`,
+        businessRecord: created?.body || null
+      };
+    } catch (error) {
+      return {
+        ...common, capability: "business-assistant", status: "blocked",
+        response: error.code === "business_identity_required" ? "Sign in first, then I can open the business assistant." : (error.message || "I could not reach the business assistant right now.")
+      };
+    }
   }
   if (toolName === "nexus_browser_computer_action") {
     const browserResult = await nexusRealProviders.browserActions.run({

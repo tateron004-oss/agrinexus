@@ -637,7 +637,12 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     }
       return true;
     }
-  return Object.freeze({ handle, status });
+  async function businessRequest({ method, pathname, body = {}, user }) {
+    const active = await runtime(); await active.ready;
+    const context = requestContext({ headers: {} }, user);
+    return createBusinessApi(active, { env }).handle({ method, pathname, context, body });
+  }
+  return Object.freeze({ handle, status, businessRequest });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {
