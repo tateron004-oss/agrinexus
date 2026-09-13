@@ -18520,10 +18520,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const emailResult = await withActionLifecycle(db, {
       provider: "email", action: "email.send", body: emailBody,
       execute: () => nexusRealProviders.email.send(emailBody, process.env),
-      verify: async result => ({
-        verified: Boolean(result?.body?.data?.providerMessageId),
-        note: result?.body?.data?.providerMessageId ? "Provider returned a real message id." : "Provider response had no message id to verify against."
-      })
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return {
+          verified: Boolean(data.providerMessageId) && !data.simulated,
+          note: data.simulated ? "Simulated response -- no real email provider was contacted." : data.providerMessageId ? "Provider returned a real message id." : "Provider response had no message id to verify against."
+        };
+      }
     });
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "email" }, emailResult);
   }
@@ -18546,8 +18549,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const data = result?.body?.data || {};
       const realId = data.sid || data.providerMessageId;
       return {
-        verified: Boolean(realId),
-        note: realId ? `${channelLabel} provider response contained a real id.` : `${channelLabel} provider response had no id to verify against.`
+        verified: Boolean(realId) && !data.simulated,
+        note: data.simulated ? `Simulated response -- no real ${channelLabel} provider was contacted.` : realId ? `${channelLabel} provider response contained a real id.` : `${channelLabel} provider response had no id to verify against.`
       };
     };
     const providerResult = channel === "whatsapp"
@@ -18586,10 +18589,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const calendarResult = await withActionLifecycle(db, {
       provider: "calendar", action: "calendar.event.create", body: calendarBody,
       execute: () => nexusRealProviders.calendar.createEvent(calendarBody, process.env),
-      verify: async result => ({
-        verified: Boolean(result?.body?.data?.eventId),
-        note: result?.body?.data?.eventId ? "Provider returned a real calendar event id." : "Provider response had no event id to verify against."
-      })
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return {
+          verified: Boolean(data.eventId) && !data.simulated,
+          note: data.simulated ? "Simulated response -- no real calendar provider was contacted." : data.eventId ? "Provider returned a real calendar event id." : "Provider response had no event id to verify against."
+        };
+      }
     });
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "calendar" }, calendarResult);
   }
@@ -40369,6 +40375,7 @@ function parseNexusOperationsCommand(command = "") {
   if (/\b(create transaction|transaction ledger)\b/.test(text)) return "create_transaction";
   if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
   if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
+  if (/\b(settle transaction|settle this transaction|complete payment|finalize transaction)\b/.test(text)) return "settle_transaction";
   if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
   if (/\b(create|open|start).*(learning profile|learning development|learning and development|training profile|student profile)\b/.test(text)) return "create_learning_profile";
   if (/\b(training referral|training provider referral|prepare training)\b/.test(text)) return "prepare_training_referral";
@@ -40731,6 +40738,31 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     transaction.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_cancelled", actor, "Transaction cancelled before external payment execution.", before, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Cancelled transaction before execution."], ["Nexus did not contact Stripe, charge a card, refund, or fake payment settlement."], "cancelled");
+    return nexusOperationResponse(db, action, transaction, audit, receipt);
+  }
+
+  if (action === "settle_transaction") {
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
+    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db) };
+    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db) };
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
+    if (!transaction.items || !transaction.items.length) return { ok: false, error: "transaction_has_no_items", operations: nexusOperationsSummary(db) };
+    const before = { ...transaction, items: [...(transaction.items || [])] };
+    const stripeStatus = nexusRealProviders.stripe.status(process.env);
+    const settledAmount = transaction.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    transaction.status = "settled";
+    transaction.paymentProvider = "simulated";
+    transaction.providerTransactionId = nexusOperationId("NX-SIM-TXN");
+    transaction.settledAmount = settledAmount;
+    transaction.updatedAt = now;
+    const stripeNote = stripeStatus.missingConfig.length
+      ? "No real Stripe/Paystack account is configured."
+      : "A real Stripe key is present, but real checkout is not wired to this local ledger yet -- settlement here is still simulated.";
+    const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_settled_simulated", actor, `Transaction settled via simulated payment. ${stripeNote}`, before, transaction);
+    const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action,
+      [`Settled the transaction with a simulated payment of ${settledAmount} ${transaction.currency || "USD"}.`],
+      ["Nexus did not charge a real card, contact Stripe or Paystack, or move real funds -- this is a labeled simulated settlement for demoing AgriTrade end to end before a real payment account is connected."],
+      "settled");
     return nexusOperationResponse(db, action, transaction, audit, receipt);
   }
 
