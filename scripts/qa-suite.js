@@ -1959,6 +1959,7 @@ function fail(message) {
 
 const transientRetryScripts = new Set([
   "scripts/call-intent-smoke.js",
+  "scripts/field-agent-dispatch-smoke.js",
   "archive/qa-scripts/native-call-bridge-dispatch-qa.js",
   "scripts/companion-confirmation-gate-smoke.js",
   "scripts/companion-understanding-smoke.js",

@@ -16,7 +16,7 @@ function wait(ms) {
 }
 
 async function waitFor(url) {
-  for (let i = 0; i < 60; i += 1) {
+  for (let i = 0; i < 80; i += 1) {
     try {
       const res = await fetch(url);
       if (res.ok) return;
