@@ -17135,7 +17135,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, or small-business/nonprofit planning task, you must call nexus_business_assistant.",
-    "When the user asks about current weather, temperature, or conditions in a place, you must call nexus_weather.",
+    "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
     "If your last turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user now confirms (yes, confirm, confirmed, go ahead, do it), call the SAME tool again with the SAME details plus confirmed: true. Never just repeat the confirmation request — a user who already said yes has confirmed.",
     "If an earlier turn in this conversation was a mental-health crisis or safety concern, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, or any other everyday task), answer the current request plainly using the real tool result. Do not re-open or extend crisis-support language into an answer to an unrelated request. Only keep that tone if the current message itself still relates to safety or the same crisis topic.",
@@ -17767,7 +17767,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user describes a crop or field problem, or asks to send, fly, or request a drone for field scanning or monitoring, you must call nexus_agriculture.",
     "When the user asks to learn something, or requests a lesson, course, or training topic, you must call nexus_workforce_learning.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
-    "When the user asks about current weather, temperature, or conditions in a place, you must call nexus_weather.",
+    "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks for a route, directions, or traffic between two places, you must call nexus_maps_route.",
     "When the user asks to export something or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or queue/sync something for offline use, you must call nexus_automation_reminder.",
@@ -18018,6 +18018,13 @@ function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
   };
 }
 
+function nexusOpenAiNativeExtractWeatherTimeframe(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(week|7[\s-]?day|five[\s-]?day|5[\s-]?day|next few days|this week|coming days|daily forecast)\b/.test(text)) return "daily";
+  if (/\b(hourly|next few hours|this afternoon|tonight|later today|throughout the day|by hour)\b/.test(text)) return "hourly";
+  return "current";
+}
+
 function nexusOpenAiNativeExtractBusinessName(command = "", args = {}) {
   const text = String(command || "");
   const nameMatch = text.match(/\b(?:called|named|titled|for)\s+["']?([^"'.,\n]{2,80})["']?/i);
@@ -18222,9 +18229,26 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
     const location = sanitizePilotText(args.location || args.city || locationMatch?.[1] || args.query || command, 180);
+    const otherLocationsMatch = command.match(/\b(?:compare|versus|vs\.?)\b.*?\b(?:with|to|and)\s+(.+)$/i);
+    const compareLocations = otherLocationsMatch ? otherLocationsMatch[1].split(/\band\b|,/i).map(item => item.trim()).filter(Boolean) : [];
+    if (compareLocations.length && location) {
+      const comparison = await nexusWeatherSourceProvider.getMultiLocationWeatherComparison([location, ...compareLocations], process.env);
+      return {
+        ...common,
+        status: comparison.sourceStatus === "source-result-available" ? "source-backed" : comparison.sourceStatus || "blocked",
+        response: comparison.resultSummary,
+        providerAttempted: true,
+        providerSucceeded: comparison.sourceStatus === "source-result-available",
+        executionAttempted: false,
+        executionVerified: false,
+        weather: comparison
+      };
+    }
+    const timeframe = nexusOpenAiNativeExtractWeatherTimeframe(command);
     const result = await nexusWeatherSourceProvider.getWeatherSourceResultAsync({
       locationText: location,
       query: args.query || command,
+      timeframe,
       mode: "openai-native-weather"
     }, process.env);
     return {
