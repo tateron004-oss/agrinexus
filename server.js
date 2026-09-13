@@ -1820,7 +1820,19 @@ function usingPostgresHealthIntakes() {
 }
 
 function shadowWriteHealthIntakeToPostgres(intake) {
-  if (!usingPostgresHealthIntakes() || !intake) return;
+  // Never shadow-write a simulation intake (withHealthProvenance's
+  // options.simulation path -- genuinely fake pitch-demo data like the
+  // "executive demo" and "wow demo" scenarios). Deliberately NOT excluding
+  // demoRecord:true here -- withHealthProvenance sets that much more broadly,
+  // on any record where even one field fell back to a default value, which
+  // is normal for a real fallback intake created as a side effect of a
+  // vitals/consent/referral action where the caller didn't also supply
+  // patient-profile fields. Several call sites reuse
+  // db.profile.healthIntakes[0] when it already exists (which, in a
+  // demo-seeded environment, is very often a simulation:true record), so
+  // this guard matters at this single write point rather than trusting
+  // every caller to check first.
+  if (!usingPostgresHealthIntakes() || !intake || intake.simulation === true) return;
   Promise.resolve()
     .then(() => pgHealthIntakes.createIntake(getPgPool(), {
       countryId: intake.countryId,
@@ -3727,6 +3739,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
       caregiverName: "Community health aide"
     });
     db.profile.healthIntakes.unshift(intake);
+    shadowWriteHealthIntakeToPostgres(intake);
     db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
     created.push(`${intake.patientRef} telehealth navigation intake`);
   } else if (selected.id === "learning-workforce") {
@@ -11285,6 +11298,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
       contactMethod: "Video plus fallback callback"
     }, { defaultFields: ["fallbackIntake"] });
     db.profile.healthIntakes.unshift(intake);
+    shadowWriteHealthIntakeToPostgres(intake);
   }
   const encounter = isHealth && intake
     ? ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -15474,6 +15488,7 @@ async function executeAgentTool(db, user, step) {
         caregiverName: "Community accessibility aide"
       });
       db.profile.healthIntakes.unshift(intake);
+      shadowWriteHealthIntakeToPostgres(intake);
     }
     const record = {
       id: crypto.randomUUID(),
@@ -25752,6 +25767,7 @@ async function applyConversationalIntake(db, user, pending) {
       contactMethod: "Voice callback"
     });
     db.profile.healthIntakes.unshift(intake);
+    shadowWriteHealthIntakeToPostgres(intake);
     logIntegration(db, { providerId: "health-telehealth", module: "Healthcare", action: "agent.conversational_intake_created", detail: `${intake.patientRef} created from conversational intake.`, metadata: { intakeId: intake.id, answers } });
     addActivity(db.profile, `${intake.patientRef} created from conversational intake.`);
     return { intent: "health.conversational_intake", response: `Done. I created telehealth intake ${intake.patientRef} for ${intake.patientName}. Next step: say "create care plan" or "connect provider."`, status: "completed", metadata: { redirectSection: "health", intakeId: intake.id } };
@@ -47472,7 +47488,10 @@ async function api(req, res, url) {
         needSummary: `${country.name} care plan review`,
         createdAt: new Date().toISOString()
       }, body, { needSummary: `${country.name} care plan review` }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const carePlan = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
@@ -47516,7 +47535,10 @@ async function api(req, res, url) {
         patientName: "Community patient",
         needSummary: `${country.name} consent and privacy review`
       }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -47572,7 +47594,10 @@ async function api(req, res, url) {
         patientName: "Community patient",
         needSummary: `${country.name} vitals and triage review`
       }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -47631,7 +47656,10 @@ async function api(req, res, url) {
         patientName: "Community patient",
         needSummary: `${country.name} referral review`
       }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -47688,7 +47716,10 @@ async function api(req, res, url) {
         patientName: "Community patient",
         needSummary: `${country.name} follow-up review`
       }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -47741,7 +47772,10 @@ async function api(req, res, url) {
       }, body, {
         needSummary: `${country.name} accessible telehealth review`
       }, { defaultFields: ["fallbackIntake"] });
-      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
+        db.profile.healthIntakes.unshift(intake);
+        shadowWriteHealthIntakeToPostgres(intake);
+      }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
         demoRecord: intake.demoRecord,
@@ -47844,7 +47878,10 @@ async function api(req, res, url) {
       patientLocation: country.name,
       caregiverName: "Community health aide"
     }, { defaultFields: ["fallbackIntake"] });
-    if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) db.profile.healthIntakes.unshift(activeIntake);
+    if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) {
+      db.profile.healthIntakes.unshift(activeIntake);
+      shadowWriteHealthIntakeToPostgres(activeIntake);
+    }
     activeIntake.patientName = patientName || activeIntake.patientName;
     activeIntake.preferredLanguage = preferredLanguage;
     activeIntake.contactMethod = contactMethod;
@@ -48190,6 +48227,7 @@ async function api(req, res, url) {
       contactMethod: "voice callback, SMS, or WhatsApp"
     }, { defaultFields: ["fallbackIntake"] });
     if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+    shadowWriteHealthIntakeToPostgres(intake);
     const mobileClinic = (db.profile.mobileClinicRequests || [])[0]?.mobileClinic || nearestRuralHealthSites(db, { label: country.name, lat: country.lat, lng: country.lng, country: country.name }, "mobile-clinic", 1)[0];
     const providerName = String(body.providerName || mobileClinic?.name || `${country.name} Mobile Clinic Team`).trim();
     const patientName = String(body.patientName || intake.patientName || "Community patient").trim();
@@ -48468,6 +48506,7 @@ async function api(req, res, url) {
         contactMethod: "Low-bandwidth callback"
       }, { defaultFields: ["fallbackIntake"] });
       db.profile.healthIntakes.unshift(intake);
+      shadowWriteHealthIntakeToPostgres(intake);
     }
     const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
       lifecycleState: "intake-started",
