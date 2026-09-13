@@ -107,10 +107,20 @@ async function waitForServer(port, timeoutMs = 15000) {
   throw new Error("server did not start for pharmacy/mobile clinic QA");
 }
 
-async function request(port, pathname, body) {
+async function login(port) {
+  const response = await fetch(`http://127.0.0.1:${port}/api/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "user@agrinexus.org", password: "User2026!" })
+  });
+  assert(response.ok, `login should succeed: ${response.status}`);
+  return response.headers.get("set-cookie").split(";")[0];
+}
+
+async function request(port, pathname, body, cookie) {
   const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
     method: body ? "POST" : "GET",
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: { ...(body ? { "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}) },
     body: body ? JSON.stringify(body) : undefined
   });
   const json = await response.json();
@@ -135,6 +145,7 @@ async function runRouteChecks() {
   });
   try {
     await waitForServer(port);
+    const cookie = await login(port);
     const pharmacyStatus = await request(port, "/api/nexus/pharmacy/status");
     assert(pharmacyStatus.missingEnv.includes("NEXUS_PHARMACY_REFERRAL_EMAIL"), "pharmacy status should report missing destination env by name only");
     assert(!JSON.stringify(pharmacyStatus).includes("SMTP_PASS="), "pharmacy status must not expose secrets");
@@ -143,14 +154,14 @@ async function runRouteChecks() {
       consentToPreparePacket: true,
       confirmed: false,
       concern: "Medication review question"
-    });
+    }, cookie);
     assert.strictEqual(pharmacyNoConfirm.status, "blocked-confirmation-required", "pharmacy preparation should require confirmation");
 
     const pharmacyNoConsent = await request(port, "/api/nexus/pharmacy/create-referral", {
       consentToPreparePacket: false,
       confirmed: true,
       concern: "Medication review question"
-    });
+    }, cookie);
     assert.strictEqual(pharmacyNoConsent.status, "blocked-consent-required", "pharmacy preparation should require consent");
 
     const pharmacyPrepared = await request(port, "/api/nexus/pharmacy/create-referral", {
@@ -162,7 +173,7 @@ async function runRouteChecks() {
       medications: ["metformin"],
       allergies: ["penicillin"],
       readings: [{ type: "blood_glucose", value: "142 mg/dL" }]
-    });
+    }, cookie);
     assert.strictEqual(pharmacyPrepared.status, "packet-prepared", "pharmacy packet should prepare locally");
     assert(pharmacyPrepared.referralId.startsWith("NX-RX-"), "pharmacy referral id should use NX-RX");
     assert.strictEqual(pharmacyPrepared.queue.created, true, "pharmacy packet should create local review queue item");
@@ -173,7 +184,7 @@ async function runRouteChecks() {
       consentToShare: false,
       confirmed: true,
       concern: "Send pharmacy review"
-    });
+    }, cookie);
     assert.strictEqual(pharmacySendNoConsent.status, "blocked-consent-required", "pharmacy external send should require share consent");
 
     const mobileStatus = await request(port, "/api/nexus/mobile-clinic/status");
@@ -183,14 +194,14 @@ async function runRouteChecks() {
       consentToPreparePacket: true,
       confirmed: false,
       concern: "Vitals check"
-    });
+    }, cookie);
     assert.strictEqual(mobileNoConfirm.status, "blocked-confirmation-required", "mobile clinic preparation should require confirmation");
 
     const mobileNoConsent = await request(port, "/api/nexus/mobile-clinic/create-request", {
       consentToPreparePacket: false,
       confirmed: true,
       concern: "Vitals check"
-    });
+    }, cookie);
     assert.strictEqual(mobileNoConsent.status, "blocked-consent-required", "mobile clinic preparation should require consent");
 
     const mobileEmergency = await request(port, "/api/nexus/mobile-clinic/create-request", {
@@ -200,7 +211,7 @@ async function runRouteChecks() {
       concern: "Very high BP and chest pain",
       redFlags: ["chest_pain"],
       urgency: "emergency_possible"
-    });
+    }, cookie);
     assert.strictEqual(mobileEmergency.status, "emergency-guidance", "red flags should trigger emergency guidance");
     assert(/does not dispatch/i.test(mobileEmergency.emergencyGuidance), "emergency guidance must not claim dispatch");
 
@@ -209,7 +220,7 @@ async function runRouteChecks() {
       consentToShare: false,
       confirmed: true,
       concern: "Send mobile clinic request"
-    });
+    }, cookie);
     assert.strictEqual(mobileSendNoConsent.status, "blocked-consent-required", "mobile clinic external send should require share consent");
 
     const askPharmacy = await request(port, "/api/nexus/intelligence/ask", { question: "What is blocking pharmacy referrals?" });
