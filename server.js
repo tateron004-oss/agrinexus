@@ -4682,18 +4682,19 @@ function evidenceExportPacket(db, user, audience = "investor") {
 }
 
 function permissionsForRole(role) {
-  const all = ["learning", "workforce", "health", "trade", "map", "ai", "integrations", "admin", "profile", "notifications", "governance"];
+  const all = ["learning", "workforce", "health", "trade", "map", "ai", "integrations", "admin", "profile", "notifications", "governance", "provider-queue"];
   const matrix = {
     Admin: all,
     "Standard User": ["learning", "workforce", "health", "trade", "map", "ai", "notifications", "profile"],
-    Investor: ["learning", "workforce", "health", "trade", "map", "ai", "profile"]
+    Investor: ["learning", "workforce", "health", "trade", "map", "ai", "profile"],
+    "Provider Reviewer": ["health", "provider-queue", "notifications", "profile"]
   };
   const allowed = new Set(matrix[role] || matrix["Standard User"]);
   return Object.fromEntries(all.map(item => [item, allowed.has(item)]));
 }
 
 function canUse(user, area) {
-  return Boolean(permissionsForRole(user.role)[area]);
+  return Boolean(user && permissionsForRole(user.role)[area]);
 }
 
 function canWriteHealth(user) {
@@ -41651,6 +41652,16 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, integrations: nexusProductionIntegrationStatus(db, process.env) });
   }
 
+  if ((url.pathname.startsWith("/api/nexus/providers")
+      || url.pathname === "/api/nexus/provider-pathways" || url.pathname === "/api/nexus/provider-pathways/status" || url.pathname === "/api/nexus/provider-pathways/logs"
+      || url.pathname === "/api/nexus/cases" || url.pathname.startsWith("/api/nexus/cases/")
+      || (url.pathname.startsWith("/api/nexus/records/") && url.pathname.endsWith("/responses"))
+      || url.pathname.startsWith("/api/nexus/responses/")
+      || url.pathname.startsWith("/api/nexus/routing/"))
+    && !canUse(user, "provider-queue")) {
+    return send(res, 403, { ok: false, error: "Provider or admin access is required for case and provider review data.", code: "provider_access_required" });
+  }
+
   if (url.pathname === "/api/nexus/providers" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, { ok: true, providers: db.nexusProviderOrganizations, organizationTypes: NEXUS_PROVIDER_ORGANIZATION_TYPES, statuses: NEXUS_PROVIDER_STATUSES });
@@ -42679,6 +42690,10 @@ async function api(req, res, url) {
     record.updatedAt = new Date().toISOString();
     await writeDb(db);
     return send(res, 200, { ok: true, record, request: requestItem, localReviewOnly: true, noSilentDeletion: true });
+  }
+
+  if ((url.pathname === "/api/nexus/review-queue" || url.pathname.startsWith("/api/nexus/review-queue/")) && !canUse(user, "provider-queue")) {
+    return send(res, 403, { ok: false, error: "Provider or admin access is required for the review queue.", code: "provider_access_required" });
   }
 
   if (url.pathname === "/api/nexus/review-queue" && req.method === "GET") {
