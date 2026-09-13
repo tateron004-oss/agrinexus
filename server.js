@@ -9,6 +9,7 @@ const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./pub
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const pgUsers = require("./server/pg-users.js");
 const pgHealthIntakes = require("./server/pg-health-intakes.js");
+const pgAuditEvents = require("./server/pg-audit-events.js");
 const { withActionLifecycle } = require("./server/action-lifecycle.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
@@ -1817,6 +1818,35 @@ function usingPostgresAuth() {
 // "start narrow" pattern Phase 1 used for auth, before a full cutover.
 function usingPostgresHealthIntakes() {
   return String(process.env.HEALTH_INTAKE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+// Same additive shadow-write pattern as health intakes above, for
+// foundation/migrations' audit_events and ai_runs tables. Unlike patient
+// intakes (13 separate blob call sites), the blob's audit/integration
+// logging already funnels through two central functions
+// (addNexusPilotAuditEvent, logIntegration) plus one real-AI-call site
+// (runNexusOpenAiNativeAgentCommand), so wiring those three call sites
+// covers every one of their real callers for free.
+function usingPostgresAuditEvents() {
+  return String(process.env.AUDIT_EVENT_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+function shadowWriteAuditEventToPostgres({ action, entityType, entityId, actorEmail, metadata }) {
+  if (!usingPostgresAuditEvents()) return;
+  Promise.resolve()
+    .then(() => pgAuditEvents.recordAuditEvent(getPgPool(), { action, entityType, entityId, actorEmail, metadata }))
+    .catch(error => {
+      console.error("[audit-event] Postgres shadow-write failed:", error.message);
+    });
+}
+
+function shadowWriteAiRunToPostgres({ runType, provider, model, prompt, responseText, responseMetadata }) {
+  if (!usingPostgresAuditEvents() || !responseText) return;
+  Promise.resolve()
+    .then(() => pgAuditEvents.recordAiRun(getPgPool(), { runType, provider, model, prompt, responseText, responseMetadata }))
+    .catch(error => {
+      console.error("[ai-run] Postgres shadow-write failed:", error.message);
+    });
 }
 
 function shadowWriteHealthIntakeToPostgres(intake) {
@@ -9727,6 +9757,12 @@ function logIntegration(db, { providerId, module, action, status = "success", de
       console.warn(`Provider dispatch failed for ${providerId}: ${error.message}`);
     });
   }
+  shadowWriteAuditEventToPostgres({
+    action: `${module || providerId}.${action}`,
+    entityType: "integration",
+    actorEmail: null,
+    metadata: { providerId, module, status, detail: detail || null, ...metadata }
+  });
 }
 
 function recalcReadiness(profile) {
@@ -19257,8 +19293,17 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       const collected = toolResults.flatMap(item => Array.isArray(item.result?.[key]) ? item.result[key] : (item.result?.[key] ? [item.result[key]] : []));
       if (collected.length) richData[key] = collected;
     }
+    const runType = calls.length ? `openai_native.${calls[0].name}` : "openai_native.conversation";
+    shadowWriteAiRunToPostgres({
+      runType,
+      provider: "openai",
+      model: status.model,
+      prompt: { command, toolsCalled: calls.map(call => call.name) },
+      responseText: finalText,
+      responseMetadata: { toolResultStatuses: toolResults.map(item => item.result?.status || "unknown"), citationsCount: citations.length }
+    });
     return ensureSpeakableAgentResult({
-      intent: calls.length ? `openai_native.${calls[0].name}` : "openai_native.conversation",
+      intent: runType,
       response: finalText,
       status: "completed",
       metadata: {
@@ -32417,6 +32462,13 @@ function addNexusPilotAuditEvent(db, eventType, options = {}) {
     noEmergencyDispatch: true
   };
   db.nexusPilotAuditEvents.unshift(event);
+  shadowWriteAuditEventToPostgres({
+    action: event.eventType,
+    entityType: event.mode || "pilot",
+    entityId: event.relatedRecordId,
+    actorEmail: null,
+    metadata: { actor: event.actor, role: event.role, description: event.description }
+  });
   return event;
 }
 
