@@ -1222,7 +1222,8 @@ const suites = {
     "archive/qa-scripts/nexus-healthcare-ui-readiness-qa.js",
     "archive/qa-scripts/nexus-healthcare-provider-evidence-qa.js",
     "archive/qa-scripts/nexus-healthcare-rpm-chronic-care-qa.js",
-    "archive/qa-scripts/nexus-healthcare-receipts-qa.js"
+    "archive/qa-scripts/nexus-healthcare-receipts-qa.js",
+    "scripts/fitness-voice-smoke.js"
   ],
   agriculture: [
     "archive/qa-scripts/nexus-agriculture-provider-registry-qa.js",
@@ -1960,6 +1961,7 @@ function fail(message) {
 const transientRetryScripts = new Set([
   "scripts/call-intent-smoke.js",
   "scripts/field-agent-dispatch-smoke.js",
+  "scripts/fitness-voice-smoke.js",
   "archive/qa-scripts/native-call-bridge-dispatch-qa.js",
   "scripts/companion-confirmation-gate-smoke.js",
   "scripts/companion-understanding-smoke.js",
