@@ -181,7 +181,9 @@ test("AI business planning requires consent, confirmation and current record ver
 
 test('business strategy templates use supplied workspace notes and export stored planning state',async()=>{
  const {agentProfiles}=require('../../nexus/business/strategy');const info=templates.inferBusiness({businessName:'Test'}),editable=templates.defaultClientWorkspace(info);editable.assistantStudio.knowledge=['Owner-provided synthetic note'];
- assert.equal(Object.keys(agentProfiles).length,10);
+ const genericProfiles=['coach','strategy','investor','product','operations','research','content','partnerships','technical','business'];
+ const nonprofitProfiles=['grants','donors','volunteers'];
+ assert.deepEqual(Object.keys(agentProfiles).sort(),[...genericProfiles,...nonprofitProfiles].sort());
  for(const profile of Object.keys(agentProfiles)){const files=filesFor(info,editable,'strategy',profile);assert.match(files[`strategy/${profile}.md`].content,/Owner-provided synthetic note/);assert.match(files[`strategy/${profile}.md`].content,/Template Outline/);}
  assert.throws(()=>filesFor(info,editable,'strategy','__proto__'),error=>error.code==='business_profile_unknown');
  const f=fixture(),row=await f.service.create(f.context,{businessName:'Test',consent:true});f.rows.get(row.record_id).data.planning={executed:false,plan:[{agent:'qa',action:'Review'}]};
