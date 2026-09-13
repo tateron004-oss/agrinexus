@@ -50,6 +50,21 @@ const agentProfiles = {
     name: "Business Builder Agent",
     promise: "business launch kits, websites, social media, and customer AI assistants",
     sections: ["Business Snapshot", "Ideal Customer", "Offer Menu", "Website Plan", "Social Media Plan", "AI Assistant Plan", "30-Day Launch Plan"]
+  },
+  grants: {
+    name: "Grant Writing Agent",
+    promise: "grant proposals, funder alignment, and application readiness",
+    sections: ["Funder Fit", "Case For Support", "Outcomes & Measurement", "Budget Narrative", "Submission Checklist"]
+  },
+  donors: {
+    name: "Donor Relations Agent",
+    promise: "donor communications, stewardship, and fundraising campaigns",
+    sections: ["Donor Segment", "Ask Strategy", "Stewardship Plan", "Campaign Copy", "Follow-Up Plan"]
+  },
+  volunteers: {
+    name: "Volunteer Coordination Agent",
+    promise: "volunteer recruitment, scheduling, and program support",
+    sections: ["Program Need", "Role Design", "Recruitment Plan", "Onboarding & Scheduling", "Recognition Plan"]
   }
 };
 
