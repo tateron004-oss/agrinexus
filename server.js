@@ -18608,7 +18608,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         : /\birrigat/i.test(command) ? "irrigation-support"
         : /\blogistic/i.test(command) ? "logistics-support"
         : "field-visit";
-      const dispatchResult = dispatchFieldAgent(db, {
+      const dispatchResult = assignFieldAgentDispatch(db, {
         taskType,
         taskDescription: command,
         location: args.location || regionMatch?.[0] || "",
@@ -37480,7 +37480,7 @@ function normalizeFieldDispatch(db, body = {}, existing = null, user = null) {
   };
 }
 
-function dispatchFieldAgent(db, body = {}, user = null) {
+function assignFieldAgentDispatch(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
   const region = sanitizePilotText(body.region || "", 80);
@@ -42108,7 +42108,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/field-agents/dispatch" && req.method === "POST") {
     const body = await readBody(req);
-    const result = dispatchFieldAgent(db, body, user);
+    const result = assignFieldAgentDispatch(db, body, user);
     if (!result.ok) return send(res, 409, { ok: false, error: result.error, agents: db.nexusFieldAgents });
     await writeDb(db);
     return send(res, 200, { ok: true, dispatch: result.dispatch, agent: result.agent, audit: result.audit });
