@@ -10,6 +10,9 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { loadEnvFile } = require("../foundation/src/runtime/env-file");
+
+loadEnvFile();
 
 const port = 4485;
 const base = `http://localhost:${port}`;
@@ -55,7 +58,8 @@ async function call(route, { body, cookie } = {}) {
 }
 
 (async () => {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL || "postgres://agrinexus:agrinexus_dev_password@localhost:5432/agrinexus" });
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required to run this verification -- set it the same way server.js's HEALTH_INTAKE_STORE=postgres path expects (see .env).");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   // Start with an empty healthIntakes array so healthIntakes[0] is genuinely
   // absent -- this is what makes the `healthIntakes[0] || withHealthProvenance(...)`
