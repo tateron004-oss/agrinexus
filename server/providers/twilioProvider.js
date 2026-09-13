@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   clean,
   envEnabled,
@@ -57,6 +58,26 @@ function smsEnabled(env = process.env) {
   return envEnabled("NEXUS_SMS_ENABLED", env) || envEnabled("NEXUS_MESSAGES_ENABLED", env);
 }
 
+// When the feature is wanted (NEXUS_SMS_ENABLED etc.) but no real Twilio
+// credentials exist yet, fall back to a clearly-labeled simulated response
+// instead of just reporting missing config -- so the app stays fully
+// demoable without a Twilio account. Real credentials always take priority
+// over simulation when both happen to be present.
+function domainProviderSimulationEnabled(env = process.env) {
+  return envEnabled("NEXUS_SIMULATE_DOMAIN_PROVIDERS", env, true);
+}
+
+function simulatedTwilioResponse(provider, action, channel, to, extra = {}) {
+  const fakeSid = `SIMULATED${channel.toUpperCase()}${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
+  return providerResponse({
+    provider,
+    action,
+    status: "completed",
+    message: `Simulated ${channel} completed by the local demo double after explicit confirmation. Twilio is not configured, so no real message reached a phone -- this is a labeled simulated response for demoing the full build-out before a real account is connected.`,
+    data: { sid: fakeSid, to, channel, simulated: true, ...extra }
+  });
+}
+
 function status(env = process.env) {
   const baseMissing = twilioConfigured(env);
   const fromMissing = missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env);
@@ -99,12 +120,13 @@ async function sendSms(body = {}, env = process.env) {
   const action = "sms.send";
   if (!smsEnabled(env)) return disabledResponse(provider, action, "NEXUS_SMS_ENABLED");
   const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
-  if (missing.length) return missingConfigResponse(provider, action, missing);
+  if (missing.length && !domainProviderSimulationEnabled(env)) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   const toError = validateText(body.to, "SMS recipient", { max: 80, pattern: /^\+?[0-9][0-9\s().-]{6,}$/ });
   const messageError = validateText(body.message, "SMS message", { max: 1200 });
   if (toError || messageError) return blockedResponse(provider, action, toError || messageError);
+  if (missing.length) return simulatedTwilioResponse(provider, action, "sms", clean(body.to));
   try {
     const result = await twilioPost("/Messages.json", { To: clean(body.to), From: twilioFromNumber(env), Body: clean(body.message) }, env);
     return providerResponse({
@@ -124,12 +146,13 @@ async function sendWhatsapp(body = {}, env = process.env) {
   const action = "whatsapp.send";
   if (!envEnabled("NEXUS_WHATSAPP_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_WHATSAPP_ENABLED");
   const missing = [...twilioConfigured(env), ...missingEnv(["TWILIO_WHATSAPP_FROM"], env)];
-  if (missing.length) return missingConfigResponse(provider, action, missing);
+  if (missing.length && !domainProviderSimulationEnabled(env)) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   const toError = validateText(body.to, "WhatsApp recipient", { max: 90 });
   const messageError = validateText(body.message, "WhatsApp message", { max: 1200 });
   if (toError || messageError) return blockedResponse(provider, action, toError || messageError);
+  if (missing.length) return simulatedTwilioResponse(provider, action, "whatsapp", clean(body.to));
   const to = clean(body.to).startsWith("whatsapp:") ? clean(body.to) : `whatsapp:${clean(body.to)}`;
   const from = clean(env.TWILIO_WHATSAPP_FROM).startsWith("whatsapp:") ? clean(env.TWILIO_WHATSAPP_FROM) : `whatsapp:${clean(env.TWILIO_WHATSAPP_FROM)}`;
   try {
@@ -151,11 +174,12 @@ async function startCall(body = {}, env = process.env) {
   const action = "call.start";
   if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
   const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
-  if (missing.length) return missingConfigResponse(provider, action, missing);
+  if (missing.length && !domainProviderSimulationEnabled(env)) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   const toError = validateText(body.to, "Call target", { max: 80, pattern: /^\+?[0-9][0-9\s().-]{6,}$/ });
   if (toError) return blockedResponse(provider, action, toError);
+  if (missing.length) return simulatedTwilioResponse(provider, action, "voice", clean(body.to));
   const twiml = `<Response><Say voice="alice">${clean(body.message || "This is a confirmed Nexus provider testing call.")}</Say></Response>`;
   try {
     const result = await twilioPost("/Calls.json", { To: clean(body.to), From: twilioFromNumber(env), Twiml: twiml }, env);

@@ -54,6 +54,7 @@
     "field-agents:dispatch-smoke": "node scripts/field-agent-dispatch-smoke.js",
     "fitness:voice-smoke": "node scripts/fitness-voice-smoke.js",
     "action-lifecycle:smoke": "node scripts/action-lifecycle-smoke.js",
+    "domain-providers:simulation-smoke": "node scripts/domain-provider-simulation-smoke.js",
     "auth:login-api-smoke": "node scripts/auth-login-api-smoke.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",

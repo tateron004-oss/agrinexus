@@ -30815,6 +30815,7 @@ function nexusOperationsActionForCommand(command = "") {
   if (/\b(create transaction|transaction ledger)\b/.test(text)) return "create_transaction";
   if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
   if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
+  if (/\b(settle transaction|settle this transaction|complete payment|finalize transaction)\b/.test(text)) return "settle_transaction";
   if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
   if (/\b(create|open|start).*(learning profile|learning development|learning and development|training profile|student profile)\b/.test(text)) return "create_learning_profile";
   if (/\b(training referral|training provider referral|prepare training)\b/.test(text)) return "prepare_training_referral";
@@ -30913,6 +30914,7 @@ function renderNexusOperationsMemoryWindow() {
     ["create_transaction", "Create transaction"],
     ["add_transaction_item", "Add transaction item"],
     ["cancel_transaction", "Cancel transaction"],
+    ["settle_transaction", "Settle transaction"],
     ["log_heat_risk_report", "Open heat risk window"],
     ["create_learning_profile", "Create learning profile"],
     ["prepare_training_referral", "Prepare training referral"],

@@ -112,3 +112,30 @@ test("nexus_calendar records verified: false when the provider response has no r
   const ledger = ensureNexusActionLedger(db);
   assert.equal(ledger[0].verified, false);
 });
+
+test("nexus_calendar records verified: false for a simulated event, even though it carries a fake event id", async () => {
+  const run = loadExecuteTool({
+    calendar: { createEvent: async () => ok({ eventId: "SIMULATED-EVT-ABC123", simulated: true }) }
+  });
+  const db = {};
+  await run(db, {}, "nexus_calendar", { command: "schedule a meeting", title: "Farm visit", start: "2026-10-01T10:00:00Z", confirmed: true });
+  const ledger = ensureNexusActionLedger(db);
+  assert.equal(ledger[0].verified, false, "a simulated response must never be reported as independently verified, even with a well-formed fake id");
+  assert.match(ledger[0].verificationNote, /Simulated/);
+});
+
+test("nexus_email and nexus_communications also record verified: false for a simulated response", async () => {
+  const runEmail = loadExecuteTool({
+    email: { send: async () => ok({ providerMessageId: "SIMULATED-MSG-1", simulated: true }) }
+  });
+  const dbEmail = {};
+  await runEmail(dbEmail, {}, "nexus_email", { command: "email jane@example.com", confirmed: true });
+  assert.equal(ensureNexusActionLedger(dbEmail)[0].verified, false);
+
+  const runSms = loadExecuteTool({
+    twilio: { sendSms: async () => ok({ sid: "SIMULATEDSMSABC", simulated: true }) }
+  });
+  const dbSms = {};
+  await runSms(dbSms, {}, "nexus_communications", { command: "text this number", to: "+15550001111", message: "hi", confirmed: true });
+  assert.equal(ensureNexusActionLedger(dbSms)[0].verified, false);
+});

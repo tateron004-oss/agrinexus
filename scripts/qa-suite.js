@@ -66,7 +66,8 @@ const suites = {
   provider: [
     "archive/qa-scripts/call-provider-registry-qa.js",
     "archive/qa-scripts/call-provider-drift-qa.js",
-    "scripts/action-lifecycle-smoke.js"
+    "scripts/action-lifecycle-smoke.js",
+    "scripts/domain-provider-simulation-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
@@ -1964,6 +1965,7 @@ const transientRetryScripts = new Set([
   "scripts/field-agent-dispatch-smoke.js",
   "scripts/fitness-voice-smoke.js",
   "scripts/action-lifecycle-smoke.js",
+  "scripts/domain-provider-simulation-smoke.js",
   "archive/qa-scripts/native-call-bridge-dispatch-qa.js",
   "scripts/companion-confirmation-gate-smoke.js",
   "scripts/companion-understanding-smoke.js",
