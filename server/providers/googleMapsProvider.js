@@ -31,9 +31,14 @@ function status(env = process.env) {
   };
 }
 
-function mapsUrl(origin, destination) {
+function mapsUrl(origin, destination, waypoints = []) {
   const params = new URLSearchParams({ api: "1", origin, destination, travelmode: "driving" });
+  if (waypoints.length) params.set("waypoints", waypoints.join("|"));
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function cleanWaypoints(value) {
+  return (Array.isArray(value) ? value : []).map(clean).filter(Boolean).slice(0, 8);
 }
 
 function mapsFetch(env = process.env) {
@@ -78,16 +83,19 @@ function simplifyGeometry(coordinates, maxPoints = 120) {
   return sampled;
 }
 
-async function publicOsmRoute(origin, destination, fallbackUrl, env = process.env) {
+async function publicOsmRoute(origin, destination, fallbackUrl, env = process.env, waypoints = []) {
   if (!envEnabled("NEXUS_MAPS_PUBLIC_OSM_ENABLED", env, true)) return null;
   const fetchImpl = mapsFetch(env);
   if (typeof fetchImpl !== "function") return null;
-  const start = await geocodeLocation(origin, fetchImpl);
-  const end = await geocodeLocation(destination, fetchImpl);
-  if (!Number.isFinite(start.lat) || !Number.isFinite(start.lon) || !Number.isFinite(end.lat) || !Number.isFinite(end.lon)) {
+  const cleanedWaypoints = cleanWaypoints(waypoints);
+  const stops = await Promise.all([origin, ...cleanedWaypoints, destination].map(location => geocodeLocation(location, fetchImpl)));
+  if (stops.some(stop => !Number.isFinite(stop.lat) || !Number.isFinite(stop.lon))) {
     throw new Error("route-geocode-invalid");
   }
-  const routeUrl = `${OSRM_ROUTE_URL}/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson&alternatives=false&steps=false`;
+  const start = stops[0];
+  const end = stops[stops.length - 1];
+  const coordinatePath = stops.map(stop => `${stop.lon},${stop.lat}`).join(";");
+  const routeUrl = `${OSRM_ROUTE_URL}/${coordinatePath}?overview=full&geometries=geojson&alternatives=false&steps=false`;
   const payload = await fetchJson(fetchImpl, routeUrl, { accept: "application/json" });
   const route = Array.isArray(payload.routes) ? payload.routes[0] : null;
   if (!route) throw new Error("route-not-found");
@@ -96,12 +104,16 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
     provider: "openstreetmap-osrm",
     action: "maps.route",
     status: "completed",
-    message: "Route distance and duration computed from user-provided origin and destination using public OpenStreetMap/Nominatim plus OSRM. No browser geolocation was requested.",
+    message: cleanedWaypoints.length
+      ? `Multi-stop route distance and duration computed for ${stops.length} stops using public OpenStreetMap/Nominatim plus OSRM. No browser geolocation was requested.`
+      : "Route distance and duration computed from user-provided origin and destination using public OpenStreetMap/Nominatim plus OSRM. No browser geolocation was requested.",
     data: {
       origin,
       destination,
+      waypoints: cleanedWaypoints,
       originResolved: start.label,
       destinationResolved: end.label,
+      waypointsResolved: stops.slice(1, -1).map(stop => stop.label),
       originLat: start.lat,
       originLng: start.lon,
       destinationLat: end.lat,
@@ -125,15 +137,16 @@ async function route(body = {}, env = process.env) {
   if (!envEnabled("NEXUS_MAPS_ENABLED", env, true)) return disabledResponse(provider, action, "NEXUS_MAPS_ENABLED");
   const origin = clean(body.origin);
   const destination = clean(body.destination);
+  const waypoints = cleanWaypoints(body.waypoints);
   if (!origin || !destination) return blockedResponse(provider, action, "Origin and destination text are required. Nexus will not use browser geolocation.");
   // Read-only lookup (distance/duration/traffic) — no money moves, nothing is
   // booked or dispatched, so this doesn't need a confirmation gate any more
   // than checking the weather does.
-  const fallbackUrl = mapsUrl(origin, destination);
+  const fallbackUrl = mapsUrl(origin, destination, waypoints);
   const missing = missingEnv(["GOOGLE_MAPS_API_KEY"], env);
   if (missing.length) {
     try {
-      const publicRoute = await publicOsmRoute(origin, destination, fallbackUrl, env);
+      const publicRoute = await publicOsmRoute(origin, destination, fallbackUrl, env, waypoints);
       if (publicRoute) return publicRoute;
     } catch (error) {
       // Fall through to the safe credential-blocked Google result with route URL fallback.
@@ -154,6 +167,7 @@ async function route(body = {}, env = process.env) {
       body: JSON.stringify({
         origin: { address: origin },
         destination: { address: destination },
+        ...(waypoints.length ? { intermediates: waypoints.map(address => ({ address })) } : {}),
         travelMode: "DRIVE",
         routingPreference: "TRAFFIC_AWARE",
         polylineEncoding: "GEO_JSON_LINESTRING"
@@ -168,12 +182,14 @@ async function route(body = {}, env = process.env) {
     const routeGeometry = simplifyGeometry(firstRoute?.polyline?.geoJsonLinestring?.coordinates);
     let originCoords = null;
     let destinationCoords = null;
+    let waypointsResolved = [];
     try {
       const fetchImpl = mapsFetch(env);
       if (typeof fetchImpl === "function") {
-        const [start, end] = await Promise.all([geocodeLocation(origin, fetchImpl), geocodeLocation(destination, fetchImpl)]);
+        const [start, end, ...waypointStops] = await Promise.all([geocodeLocation(origin, fetchImpl), geocodeLocation(destination, fetchImpl), ...waypoints.map(location => geocodeLocation(location, fetchImpl))]);
         originCoords = { lat: start.lat, lng: start.lon, label: start.label };
         destinationCoords = { lat: end.lat, lng: end.lon, label: end.label };
+        waypointsResolved = waypointStops.map(stop => stop.label);
       }
     } catch (error) {
       // Real-time distance still returned even if best-effort coordinate lookup fails.
@@ -182,10 +198,12 @@ async function route(body = {}, env = process.env) {
       provider,
       action,
       status: "completed",
-      message: "Route computed from user-provided origin and destination after confirmation.",
+      message: waypoints.length ? "Multi-stop route computed from user-provided origin, destination, and waypoints after confirmation." : "Route computed from user-provided origin and destination after confirmation.",
       data: {
         origin,
         destination,
+        waypoints,
+        waypointsResolved,
         originLat: originCoords?.lat ?? null,
         originLng: originCoords?.lng ?? null,
         originResolved: originCoords?.label || "",
@@ -208,4 +226,4 @@ async function route(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, route, mapsUrl, publicOsmRoute, NOMINATIM_SEARCH_URL, OSRM_ROUTE_URL };
+module.exports = { status, route, mapsUrl, publicOsmRoute, cleanWaypoints, NOMINATIM_SEARCH_URL, OSRM_ROUTE_URL };

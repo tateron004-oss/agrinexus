@@ -17515,7 +17515,10 @@ function nexusOpenAiNativeToolSchemas() {
         description: "The safest Nexus capability lane for this tool call."
       },
       language: { type: "string", description: "The user's active language or BCP-47 language code." },
-      location: { type: "string", description: "Optional user-provided location text. Never infer precise location." },
+      location: { type: "string", description: "Optional user-provided location text for a single-place request (e.g. weather). Never infer precise location. For a route with two or more places, use origin/destination/waypoints instead of packing them all in here." },
+      origin: { type: "string", description: "The starting place for a route, when the user asked for directions, a route, or travel time between two or more places." },
+      destination: { type: "string", description: "The ending place for a route, when the user asked for directions, a route, or travel time between two or more places." },
+      waypoints: { type: "array", items: { type: "string" }, description: "Intermediate stops between origin and destination, in visiting order, when the user named one or more places to route through (e.g. \"via X\", \"through Y\")." },
       confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." },
       title: { type: "string", description: "A short title, when the user named one, for a document, export, event, listing, reminder, or business/nonprofit workspace." },
       content: { type: "string", description: "The full body text the user wants exported, drafted, or sent, when it is longer or more specific than the plain command." },
@@ -17997,10 +18000,20 @@ function nexusOpenAiNativeAnalyzeStructuredText(command = "") {
 
 function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   const text = String(command || "");
-  const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[.!?]|$)/i);
+  const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:via|through|stopping at|stopping by|by way of)\s+.+?)?(?:[.!?]|$)/i);
+  const viaMatch = text.match(/\b(?:via|through|stopping at|stopping by|by way of)\s+(.+?)(?:\s+to\s+|[.!?]|$)/i);
+  const waypoints = Array.isArray(args.waypoints) && args.waypoints.length
+    ? args.waypoints
+    : (viaMatch ? viaMatch[1].split(/\s*,\s*|\s+and\s+/i) : []);
   return {
-    origin: sanitizePilotText(args.origin || args.from || args.start || args.location || (between ? between[1] : ""), 160),
-    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? between[2] : ""), 160)
+    // args.location is a generic single-place field shared with other tools
+    // (e.g. weather) and can't reliably represent a multi-place route -- the
+    // model sometimes packs "A; B; C" into it when it has no origin/
+    // destination/waypoints fields to use instead, so it's tried last here,
+    // after the command-text regex.
+    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? between[1] : "") || args.location, 160),
+    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? between[2] : ""), 160),
+    waypoints: waypoints.map(item => sanitizePilotText(item, 160)).filter(Boolean).slice(0, 8)
   };
 }
 
@@ -18278,6 +18291,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const routeResult = await nexusRealProviders.googleMaps.route({
       origin: routeArgs.origin,
       destination: routeArgs.destination,
+      waypoints: routeArgs.waypoints,
       confirmed: args.confirmed
     }, process.env);
     return nexusOpenAiNativeProviderToolResult(db, common, routeResult);
