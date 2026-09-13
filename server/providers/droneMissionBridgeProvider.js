@@ -5,6 +5,44 @@ const offlineSyncProvider = require("./offlineSyncProvider");
 
 const SENSITIVE_DRONE_PATTERN = /\b(emergency|disaster dispatch|flight launch|takeoff|control aircraft|payment|secret|token|password|restricted airspace)\b/i;
 
+// Typical survey-drone assumptions used only for a simulated planning
+// estimate -- never a real flight plan, boundary survey, or telemetry.
+const DEFAULT_SWATH_METERS = 20;
+const DEFAULT_SURVEY_SPEED_MPS = 8;
+const DEFAULT_IMAGE_INTERVAL_METERS = 15;
+const HECTARES_PER_ACRE = 0.404686;
+
+function parseAreaHectares(text) {
+  const value = String(text || "");
+  const hectareMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:hectares?|ha)\b/i);
+  if (hectareMatch) return Number(hectareMatch[1]);
+  const acreMatch = value.match(/(\d+(?:\.\d+)?)\s*acres?\b/i);
+  if (acreMatch) return Number(acreMatch[1]) * HECTARES_PER_ACRE;
+  return null;
+}
+
+function planCoverage({ areaHectares, swathMeters = DEFAULT_SWATH_METERS, speedMps = DEFAULT_SURVEY_SPEED_MPS } = {}) {
+  const hectares = Number(areaHectares);
+  if (!Number.isFinite(hectares) || hectares <= 0) return null;
+  const areaSquareMeters = hectares * 10000;
+  const sideMeters = Math.sqrt(areaSquareMeters);
+  const passes = Math.max(1, Math.ceil(sideMeters / swathMeters));
+  const totalDistanceMeters = Math.round(passes * sideMeters);
+  const flightSeconds = totalDistanceMeters / speedMps;
+  const estimatedImages = Math.max(1, Math.round(totalDistanceMeters / DEFAULT_IMAGE_INTERVAL_METERS));
+  return {
+    areaHectares: Math.round(hectares * 100) / 100,
+    assumedFieldShape: "square-equivalent rectangle",
+    swathMeters,
+    surveySpeedMps: speedMps,
+    passes,
+    totalDistanceMeters,
+    estimatedFlightMinutes: Math.round((flightSeconds / 60) * 10) / 10,
+    estimatedImages,
+    limitation: "Simulated planning estimate only, based on an assumed square field shape and typical survey-drone parameters -- not a real flight plan, boundary survey, telemetry, or dispatch."
+  };
+}
+
 function status(env = process.env) {
   return {
     provider: "nexus-drone-mission-bridge",
@@ -24,15 +62,20 @@ function ensureRequests(db) {
 }
 
 function requestRecord(body = {}) {
+  const area = clean(body.area || body.fieldArea).slice(0, 180);
+  const areaHectares = Number.isFinite(Number(body.areaHectares)) && Number(body.areaHectares) > 0
+    ? Number(body.areaHectares)
+    : parseAreaHectares(area);
   return {
     id: clean(body.id || `drone-mission-${Date.now()}`),
     title: clean(body.title || "Drone mission request").slice(0, 180),
     missionType: clean(body.missionType || "crop monitoring").slice(0, 80),
-    area: clean(body.area || body.fieldArea).slice(0, 180),
+    area,
     purpose: clean(body.purpose || "Field review preparation").slice(0, 280),
     status: "intake_only",
     flightControlEnabled: false,
     dispatchAuthorized: false,
+    coveragePlan: areaHectares ? planCoverage({ areaHectares }) : null,
     createdAt: clean(body.createdAt) || new Date().toISOString()
   };
 }
@@ -54,7 +97,10 @@ function missionRequest(body = {}, db, env = process.env) {
   if (error) return blockedResponse(provider, action, error);
   ensureRequests(db).unshift(request);
   db.profile.nexusDroneMissionRequests = db.profile.nexusDroneMissionRequests.slice(0, 50);
-  return providerResponse({ provider, action, status: "completed", message: "Drone mission request saved as intake only. No drone flight was launched, controlled, or dispatched.", data: { request } });
+  const planNote = request.coveragePlan
+    ? ` Simulated coverage estimate: about ${request.coveragePlan.passes} pass(es), ${request.coveragePlan.estimatedFlightMinutes} minute(s), ${request.coveragePlan.estimatedImages} image(s) for a ${request.coveragePlan.areaHectares} hectare field.`
+    : "";
+  return providerResponse({ provider, action, status: "completed", message: `Drone mission request saved as intake only. No drone flight was launched, controlled, or dispatched.${planNote}`, data: { request } });
 }
 
 function missionRequests(db, env = process.env) {
@@ -92,4 +138,4 @@ function offline(body = {}, db, env = process.env) {
   return providerResponse({ provider, action, status: "completed", message: "Drone mission intake queued locally for offline review. No flight control or dispatch was queued.", data: { item: queued.body.data.item } });
 }
 
-module.exports = { status, missionRequest, missionRequests, reminder, offline, requestRecord };
+module.exports = { status, missionRequest, missionRequests, reminder, offline, requestRecord, planCoverage, parseAreaHectares };
