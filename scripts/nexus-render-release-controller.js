@@ -304,7 +304,7 @@ async function reconcileServiceConfiguration(client, service) {
         healthCheckPath: "/api/healthz",
         preDeployCommand: "node foundation/scripts/migrate.js",
         envSpecificDetails: {
-          buildCommand: "npm install && node rebuild/scripts/build-browser.js",
+          buildCommand: "npm install",
           startCommand: "npm start"
         }
       }
