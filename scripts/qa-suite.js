@@ -1240,7 +1240,8 @@ const suites = {
     "archive/qa-scripts/nexus-agriculture-provider-evidence-qa.js",
     "archive/qa-scripts/nexus-agriculture-receipts-qa.js",
     "archive/qa-scripts/nexus-agriculture-safety-gates-qa.js",
-    "archive/qa-scripts/nexus-agriculture-communication-integration-qa.js"
+    "archive/qa-scripts/nexus-agriculture-communication-integration-qa.js",
+    "scripts/field-agent-dispatch-smoke.js"
   ]
 };
 
@@ -1958,6 +1959,7 @@ function fail(message) {
 
 const transientRetryScripts = new Set([
   "scripts/call-intent-smoke.js",
+  "scripts/field-agent-dispatch-smoke.js",
   "archive/qa-scripts/native-call-bridge-dispatch-qa.js",
   "scripts/companion-confirmation-gate-smoke.js",
   "scripts/companion-understanding-smoke.js",
