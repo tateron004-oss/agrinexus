@@ -9,6 +9,7 @@ const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./pub
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const pgUsers = require("./server/pg-users.js");
 const pgHealthIntakes = require("./server/pg-health-intakes.js");
+const { withActionLifecycle } = require("./server/action-lifecycle.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
 const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
@@ -18515,12 +18516,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_email") {
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
-    const emailResult = await nexusRealProviders.email.send({
-      to: contact.to,
-      subject: contact.subject,
-      text: contact.message,
-      confirmed: args.confirmed
-    }, process.env);
+    const emailBody = { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed };
+    const emailResult = await withActionLifecycle(db, {
+      provider: "email", action: "email.send", body: emailBody,
+      execute: () => nexusRealProviders.email.send(emailBody, process.env),
+      verify: async result => ({
+        verified: Boolean(result?.body?.data?.providerMessageId),
+        note: result?.body?.data?.providerMessageId ? "Provider returned a real message id." : "Provider response had no message id to verify against."
+      })
+    });
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "email" }, emailResult);
   }
   if (toolName === "nexus_communications") {
@@ -18538,23 +18542,55 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
     const recipient = contact.to || ownerTestRecipient;
     const channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
+    const verifyRealProviderId = channelLabel => async result => {
+      const data = result?.body?.data || {};
+      const realId = data.sid || data.providerMessageId;
+      return {
+        verified: Boolean(realId),
+        note: realId ? `${channelLabel} provider response contained a real id.` : `${channelLabel} provider response had no id to verify against.`
+      };
+    };
     const providerResult = channel === "whatsapp"
-      ? await nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env)
+      ? await withActionLifecycle(db, {
+          provider: "twilio", action: "whatsapp.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+          execute: () => nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+          verify: verifyRealProviderId("WhatsApp")
+        })
       : channel === "call"
-        ? await nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env)
+        ? await withActionLifecycle(db, {
+            provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+            execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+            verify: verifyRealProviderId("Call")
+          })
         : channel === "email"
-          ? await nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env)
-          : await nexusRealProviders.twilio.sendSms({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env);
+          ? await withActionLifecycle(db, {
+              provider: "email", action: "email.send", body: { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed },
+              execute: () => nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env),
+              verify: verifyRealProviderId("Email")
+            })
+          : await withActionLifecycle(db, {
+              provider: "twilio", action: "sms.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+              execute: () => nexusRealProviders.twilio.sendSms({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+              verify: verifyRealProviderId("SMS")
+            });
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
   }
   if (toolName === "nexus_calendar") {
-    const calendarResult = await nexusRealProviders.calendar.createEvent({
+    const calendarBody = {
       title: args.title || args.summary || command,
       start: args.start || args.startTime || args.when,
       end: args.end || args.endTime,
       description: args.description,
       confirmed: args.confirmed
-    }, process.env);
+    };
+    const calendarResult = await withActionLifecycle(db, {
+      provider: "calendar", action: "calendar.event.create", body: calendarBody,
+      execute: () => nexusRealProviders.calendar.createEvent(calendarBody, process.env),
+      verify: async result => ({
+        verified: Boolean(result?.body?.data?.eventId),
+        note: result?.body?.data?.eventId ? "Provider returned a real calendar event id." : "Provider response had no event id to verify against."
+      })
+    });
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "calendar" }, calendarResult);
   }
   if (toolName === "nexus_workforce_learning") {
@@ -36002,10 +36038,10 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
   const timestamp = new Date().toISOString();
   if (!to) return { ok: false, error: "recipient_email_required", executed: false, status };
   if (body.confirmed !== true) {
-    return { ok: true, provider: status.provider, configured: status.configured, executed: false, status: "confirmation_required", error: "Email send requires explicit confirmation.", missingEnv: status.missingEnv, noExternalDelivery: true };
+    return { ok: false, provider: status.provider, configured: status.configured, executed: false, status: "confirmation_required", error: "Email send requires explicit confirmation.", missingEnv: status.missingEnv, noExternalDelivery: true };
   }
   if (sensitive && body.consent !== true) {
-    return { ok: true, provider: status.provider, configured: status.configured, executed: false, status: "consent_required", error: "Sensitive packet email requires explicit consent.", missingEnv: status.missingEnv, noExternalDelivery: true };
+    return { ok: false, provider: status.provider, configured: status.configured, executed: false, status: "consent_required", error: "Sensitive packet email requires explicit consent.", missingEnv: status.missingEnv, noExternalDelivery: true };
   }
   const text = buildNexusEmailPacketBody({ ...body, domain, packetId });
   if (!status.configured) {
