@@ -1889,15 +1889,27 @@ async function ensurePostgresState() {
   pgStateReady = true;
 }
 
+// Async file I/O deliberately, not fs.readFileSync/writeFileSync: this app
+// is a single Node process, and every request calls readDb() (most also
+// call writeDb()) against a state file that only grows over the life of a
+// real deployment. A synchronous read/write blocks the entire event loop --
+// every other in-flight request stalls for its duration -- whereas the
+// async equivalent lets Node interleave other requests during the I/O wait.
+// Real load test (scripts/load-test.js) confirmed the size-dependent cost:
+// throughput roughly halved and p50 latency roughly doubled going from a
+// 300KB to a 1.2MB state file under the same concurrent load.
 async function readDb() {
   if (usingPostgresState()) {
     await ensurePostgresState();
     const result = await getPgPool().query("select state from agrinexus_app_state where id = $1", ["default"]);
     return result.rows[0].state;
   }
-  ensureRuntimeData();
-  return JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
+  await ensureRuntimeData();
+  const raw = await fs.promises.readFile(DB_PATH, "utf8");
+  return JSON.parse(raw);
 }
+
+let writeDbQueue = Promise.resolve();
 
 async function writeDb(db) {
   if (usingPostgresState()) {
@@ -1908,15 +1920,64 @@ async function writeDb(db) {
     );
     return;
   }
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2) + "\n");
+  // Two real races confirmed live under concurrent load once writeFile
+  // stopped blocking the event loop: (1) a concurrent readDb() landing
+  // mid-write of the same file ("Unexpected end of JSON input" on a
+  // truncated read), and (2) two concurrent writers' renames racing each
+  // other (Windows: EPERM on the second rename). Fixed by (a) writing to a
+  // temp file and renaming over the real path -- a reader only ever sees
+  // the complete old file or the complete new one, never a partial one --
+  // and (b) serializing writes through this in-process queue so only one
+  // write's temp-file-then-rename is ever in flight at a time. readDb()
+  // stays fully concurrent; only writes queue, and they queue without
+  // blocking the event loop (other requests' non-write work keeps running
+  // while a write waits its turn).
+  const previousWrite = writeDbQueue;
+  let releaseNext;
+  writeDbQueue = new Promise(resolve => { releaseNext = resolve; });
+  await previousWrite;
+  try {
+    await fs.promises.mkdir(path.dirname(DB_PATH), { recursive: true });
+    const tempPath = `${DB_PATH}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await fs.promises.writeFile(tempPath, JSON.stringify(db, null, 2) + "\n");
+    // Windows can still throw EPERM renaming over a file that has a
+    // concurrent reader's handle open at that exact instant (POSIX rename
+    // has no such restriction) -- confirmed live even with writes fully
+    // serialized above. A short retry is the standard workaround for this
+    // known Windows/Node quirk (the same approach the write-file-atomic
+    // package uses).
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        await fs.promises.rename(tempPath, DB_PATH);
+        break;
+      } catch (error) {
+        if (error.code !== "EPERM" || attempt >= 10) throw error;
+        await new Promise(resolve => setTimeout(resolve, 25 * attempt));
+      }
+    }
+  } finally {
+    releaseNext();
+  }
 }
 
-function ensureRuntimeData() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  if (!fs.existsSync(DB_PATH)) {
-    fs.copyFileSync(path.join(ROOT, "db.json"), DB_PATH);
+// Memoized: with sync fs calls this check-then-copy was implicitly
+// serialized (blocking the whole event loop), but async calls let concurrent
+// first-boot requests interleave and race to copy the seed file at once.
+// Sharing one in-flight promise across all callers makes the bootstrap copy
+// happen exactly once regardless of how many requests arrive before it
+// finishes.
+let ensureRuntimeDataPromise = null;
+
+async function ensureRuntimeData() {
+  if (!ensureRuntimeDataPromise) {
+    ensureRuntimeDataPromise = (async () => {
+      await fs.promises.mkdir(path.dirname(DB_PATH), { recursive: true });
+      if (!fs.existsSync(DB_PATH)) {
+        await fs.promises.copyFile(path.join(ROOT, "db.json"), DB_PATH);
+      }
+    })();
   }
+  return ensureRuntimeDataPromise;
 }
 
 function send(res, status, body, headers = {}) {
