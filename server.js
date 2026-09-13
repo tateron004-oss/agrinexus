@@ -2055,11 +2055,19 @@ async function verifyNexusHealthSourceLive(sourceIdOrUrl = "") {
   }
 }
 
-function rateLimit(req, limit = 180, windowMs = 60_000) {
-  const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
-  const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
-  const key = `${req.socket.remoteAddress || "local"}:${req.url.split("?")[0]}`;
+// A key that is only ever visited once (an attacker requesting many distinct
+// paths, or many distinct IPs) never gets cleaned by the in-place reset below
+// -- it just sits in the map forever. Sweep expired entries once the map
+// grows past a threshold so this can't grow unbounded.
+const RATE_BUCKET_SWEEP_THRESHOLD = 5000;
+
+function rateBucketCheck(key, limit, windowMs) {
   const now = Date.now();
+  if (rateBuckets.size > RATE_BUCKET_SWEEP_THRESHOLD) {
+    for (const [bucketKey, bucket] of rateBuckets) {
+      if (now > bucket.resetAt) rateBuckets.delete(bucketKey);
+    }
+  }
   const bucket = rateBuckets.get(key) || { count: 0, resetAt: now + windowMs };
   if (now > bucket.resetAt) {
     bucket.count = 0;
@@ -2067,7 +2075,25 @@ function rateLimit(req, limit = 180, windowMs = 60_000) {
   }
   bucket.count += 1;
   rateBuckets.set(key, bucket);
-  return bucket.count <= effectiveLimit;
+  return bucket.count <= limit;
+}
+
+function rateLimit(req, limit = 180, windowMs = 60_000) {
+  const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
+  const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
+  const key = `${req.socket.remoteAddress || "local"}:${req.url.split("?")[0]}`;
+  return rateBucketCheck(key, effectiveLimit, windowMs);
+}
+
+// Stricter, separately-keyed limiting for authentication endpoints. The
+// blanket rateLimit() above (180/min per IP+path, generic request hygiene)
+// is far too permissive to be real brute-force protection on its own --
+// this gives login/password-reset their own much tighter budget, namespaced
+// under "auth:" so it never shares a bucket (and therefore never
+// double-counts) with the blanket per-path check.
+function authRateLimit(req, bucketName, limit = 10, windowMs = 300_000) {
+  const key = `auth:${bucketName}:${req.socket.remoteAddress || "local"}`;
+  return rateBucketCheck(key, limit, windowMs);
 }
 
 function parseCookies(req) {
@@ -2114,10 +2140,25 @@ function verifyDurableAuthToken(token, now = Date.now(), env = process.env) {
   }
 }
 
+// Session TTL in ms, shared with the durable "remember me" token's default so
+// a raw sid captured through some other leak (log line, proxy access log,
+// XSS) doesn't stay valid forever server-side just because the sessions Map
+// itself never expired an entry -- only explicit /api/logout did.
+function sessionTtlMs(env = process.env) {
+  return Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
+}
+
+function issueSession(sid, userId) {
+  sessions.set(sid, { userId, expiresAt: Date.now() + sessionTtlMs() });
+}
+
 function currentUser(req, db) {
   const cookies = parseCookies(req);
   const sid = cookies.agrinexus_sid;
-  const userId = sid && sessions.get(sid);
+  const sessionEntry = sid && sessions.get(sid);
+  const sessionExpired = Boolean(sessionEntry) && sessionEntry.expiresAt <= Date.now();
+  if (sessionExpired) sessions.delete(sid);
+  const userId = sessionEntry && !sessionExpired ? sessionEntry.userId : null;
   const durableSession = userId ? null : verifyDurableAuthToken(cookies.agrinexus_auth);
   const resolvedUserId = userId || durableSession?.userId;
   return db.users.find(user => user.id === resolvedUserId) || null;
@@ -42764,6 +42805,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/pharmacy/create-referral" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow pharmacy referrals" });
     const result = createNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42771,6 +42813,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/pharmacy/send-referral" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow pharmacy referrals" });
     const result = await sendNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42778,6 +42821,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/mobile-clinic/create-request" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic requests" });
     const result = createNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42785,6 +42829,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/mobile-clinic/send-request" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic requests" });
     const result = await sendNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42792,6 +42837,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/telehealth/create-encounter" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth encounters" });
     const result = await nexusTelehealthProvider.createEncounter(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42799,6 +42845,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/telehealth/create-video-room" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth video rooms" });
     const result = await nexusTelehealthProvider.createVideoRoom(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -42806,6 +42853,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/telehealth/notify" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth notifications" });
     const body = await readBody(req);
     const prepared = nexusTelehealthProvider.prepareNotification(db, body, user, process.env);
     let providerResult = null;
@@ -42840,6 +42888,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/telehealth/follow-up" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth follow-ups" });
     const result = nexusTelehealthProvider.createFollowUp(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -44918,7 +44967,7 @@ async function api(req, res, url) {
     await authoritativeRuntimeUser(guest);
     await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    sessions.set(sid, guest.id);
+    issueSession(sid, guest.id);
     const durableToken = issueDurableAuthToken(guest.id);
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
@@ -44938,6 +44987,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/login" && req.method === "POST") {
+    if (!authRateLimit(req, "login", 10, 300_000)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
@@ -44967,7 +45017,7 @@ async function api(req, res, url) {
     }
     if (usersChanged || blobBackfilled) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    sessions.set(sid, found.id);
+    issueSession(sid, found.id);
     const durableToken = issueDurableAuthToken(found.id);
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
@@ -44994,6 +45044,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/auth/password-reset" && req.method === "POST") {
+    if (!authRateLimit(req, "password-reset", 5, 300_000)) return send(res, 429, { error: "Too many reset requests. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return send(res, 400, { error: "Email is required" });
@@ -45025,6 +45076,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/auth/password-reset/confirm" && req.method === "POST") {
+    if (!authRateLimit(req, "password-reset", 5, 300_000)) return send(res, 429, { error: "Too many reset attempts. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     const token = String(body.token || "").trim();
@@ -45041,9 +45093,13 @@ async function api(req, res, url) {
     } else {
       const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const storedHashBuffer = user?.resetTokenHash ? Buffer.from(user.resetTokenHash) : null;
+      const suppliedHashBuffer = Buffer.from(tokenHash);
+      const hashMatches = Boolean(storedHashBuffer)
+        && storedHashBuffer.length === suppliedHashBuffer.length
+        && crypto.timingSafeEqual(storedHashBuffer, suppliedHashBuffer);
       const valid = user
-        && user.resetTokenHash
-        && user.resetTokenHash === tokenHash
+        && hashMatches
         && user.resetTokenExpiresAt
         && new Date(user.resetTokenExpiresAt).getTime() > Date.now();
       if (!valid) return send(res, 400, { error: "Invalid or expired reset code" });
@@ -45902,6 +45958,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/workflow/record" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     const moduleName = String(body.module || "Platform").trim();
     const action = String(body.action || "workflow.reviewed").trim();
@@ -50637,7 +50694,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
     return serveStatic(req, res, url);
   } catch (error) {
-    return send(res, 500, { error: error.message || "Server error" });
+    // Log the real error server-side but never return its raw message to the
+    // client -- an unhandled exception here can originate from a DB driver,
+    // a null-deref, or another internal detail that shouldn't be exposed to
+    // any caller, authenticated or not.
+    console.error("[unhandled]", error.stack || error.message);
+    return send(res, 500, { error: "Server error" });
   }
 });
 
