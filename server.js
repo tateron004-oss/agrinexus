@@ -18404,6 +18404,19 @@ function nexusOpenAiNativeAnalyzeStructuredText(command = "") {
   return summary;
 }
 
+// Confirmed live: "Show a route from Stockton to Sacramento by 5pm." gave a
+// destination of "Sacramento by 5pm" -- the real Google Maps URL fallback
+// became `destination=Sacramento+by+5pm`, a place name Maps can't resolve.
+// Neither "by"/"at"/"before" nor a clock time is part of the optional
+// via-clause the destination match already excludes, so a trailing arrival
+// time has nothing to stop it bleeding in. Strip it the same way the
+// export tool's trailing format/title clauses are stripped.
+function stripTrailingArrivalTimeClause(value = "") {
+  return String(value || "")
+    .replace(/\s+(?:by|at|before|no later than)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b[.!?]*$/i, "")
+    .trim();
+}
+
 function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   const text = String(command || "");
   const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:via|through|stopping at|stopping by|by way of)\s+.+?)?(?:[.!?]|$)/i);
@@ -18417,8 +18430,8 @@ function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
     // model sometimes packs "A; B; C" into it when it has no origin/
     // destination/waypoints fields to use instead, so it's tried last here,
     // after the command-text regex.
-    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? between[1] : "") || args.location, 160),
-    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? between[2] : ""), 160),
+    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? stripTrailingArrivalTimeClause(between[1]) : "") || args.location, 160),
+    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? stripTrailingArrivalTimeClause(between[2]) : ""), 160),
     waypoints: waypoints.map(item => sanitizePilotText(item, 160)).filter(Boolean).slice(0, 8)
   };
 }
