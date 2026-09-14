@@ -19367,7 +19367,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // recognized these same words, but could never be reached. Sharing one
     // pattern for both keeps them from drifting apart again.
     const NEXUS_PROVIDER_SPECIALTY_PATTERN = "cardiologist|dermatologist|pediatrician|dentist|obgyn|psychiatrist|physical therapist|family medicine|internal medicine";
-    const providerSearchMatch = command.match(new RegExp(`\\b(?:find|search for|look up|locate)\\s+(?:a\\s+|an\\s+)?(?:doctor|physician|specialist|provider|clinic|nurse|${NEXUS_PROVIDER_SPECIALTY_PATTERN})\\b(?:\\s+(?:named|called)\\s+([a-z\\s.'-]+?))?(?:\\s+in\\s+([a-z\\s]+))?[.,!?]*$`, "i"));
+    // Confirmed live: "List a cardiologist in Nairobi." fell through to the
+    // generic fallback below -- the verb list only recognized
+    // find/search for/look up/locate, not the same list/show phrasing that
+    // has repeatedly swallowed other real capabilities this session.
+    const providerSearchMatch = command.match(new RegExp(`\\b(?:find|search for|look up|locate|list|show(?:\\s+me)?)\\s+(?:a\\s+|an\\s+)?(?:doctor|physician|specialist|provider|clinic|nurse|${NEXUS_PROVIDER_SPECIALTY_PATTERN})\\b(?:\\s+(?:named|called)\\s+([a-z\\s.'-]+?))?(?:\\s+in\\s+([a-z\\s]+))?[.,!?]*$`, "i"));
     const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
     const fitnessPlanMatch = /\b(?:create|start|build|make)\s+(?:a\s+|my\s+)?(?:training|workout|fitness)\s+plan\b/i.test(command);
     const workoutLogMatch = command.match(/\b(?:log|logged|record|recorded|track|tracked|did|completed|finished)\s+(?:a\s+|my\s+)?(\d{1,3})\s*(?:minute|min)s?\s+(run|walk|jog|workout|training session|training|exercise session|exercise|swim|cycling|cycle|ride|strength training|strength|cardio|hiit)\b/i);
