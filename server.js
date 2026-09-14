@@ -18491,8 +18491,17 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
 function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   const store = nexusPersistentMemoryStore(db, process.env);
   const query = sanitizePilotText(args.query || common.command || "", 240);
-  const wantsCreate = /\b(remember|save|store)\b/i.test(common.command || "");
-  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(common.command || "");
+  const commandText = common.command || "";
+  // "What do you remember about my farm?" is a genuine recall question, not
+  // a save request -- confirmed live, the bare presence of "remember"
+  // routed it into the create/confirm branch instead of the search branch
+  // below, which already exists and handles exactly this. Narrowly targets
+  // the question-form ("do/did/does you remember", "what ... remember")
+  // rather than gating on any question word, so a polite imperative like
+  // "can you save this" is unaffected.
+  const isMemoryRecallQuestion = /\b(do|did|does)\s+you\s+remember\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
+  const wantsCreate = !isMemoryRecallQuestion && /\b(remember|save|store)\b/i.test(commandText);
+  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
   const confirmed = Boolean(args.confirmed || args.confirmation);
   if (wantsCreate || wantsDelete) {
     if (!confirmed) {
@@ -18616,7 +18625,33 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
-    const location = sanitizePilotText(args.location || args.city || locationMatch?.[1] || args.query || command, 180);
+    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query;
+    // A vague question like "Will it rain tomorrow?" or "What is the weather
+    // like?" has no real location in it, but previously fell through to
+    // using the ENTIRE command sentence as the geocoder query -- confirmed
+    // live, this doesn't fail cleanly, it returns weather for a real but
+    // wrong place a fuzzy full-text place-name search happened to match
+    // (e.g. "Will it rain tomorrow?" -> a real commune literally named
+    // "Will" in Haiti), presented with the same confidence as a correct
+    // answer. Only treat the bare command as a location fallback when it
+    // plausibly IS just a typed place name (short, no question phrasing) --
+    // e.g. a one-word follow-up like "Nairobi" after being asked to clarify.
+    const looksLikeBareLocation = !explicitLocation
+      && command.trim().split(/\s+/).length <= 4
+      && !/[?]/.test(command)
+      && !/\b(what|whats|what's|will|is|are|how|does|do|weather|rain|forecast|like|today|tomorrow|tonight)\b/i.test(command);
+    if (!explicitLocation && !looksLikeBareLocation) {
+      return {
+        ...common,
+        status: "missing-location",
+        response: "Which location's weather would you like? Tell me a city, town, or region and I will check.",
+        providerAttempted: false,
+        providerSucceeded: false,
+        executionAttempted: false,
+        executionVerified: false
+      };
+    }
+    const location = sanitizePilotText(explicitLocation || command, 180);
     const otherLocationsMatch = command.match(/\b(?:compare|versus|vs\.?)\b.*?\b(?:with|to|and)\s+(.+)$/i);
     const compareLocations = otherLocationsMatch ? otherLocationsMatch[1].split(/\band\b|,/i).map(item => item.trim()).filter(Boolean) : [];
     if (compareLocations.length && location) {
@@ -19093,9 +19128,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
     const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
+    // Confirmed live: a textbook pest description ("small holes in my
+    // tomato leaves and some caterpillars") fell through to the generic
+    // fallback below -- yellowLowerLeaves was the ONLY symptom pattern with
+    // real guidance behind it, so any other real symptom got a non-answer
+    // instead of the specific, useful response this branch is meant to give.
+    const leafFeedingPest = /\b(hole|holes|chewed|eaten|nibbled)\b/i.test(command) && /\b(leaf|leaves)\b/i.test(command)
+      || /\b(caterpillar|caterpillars|larvae|worm|worms|armyworm|cutworm)\b/i.test(command);
     const response = yellowLowerLeaves
       ? `For ${crop} with yellowing on the lower or older leaves, first inspect soil moisture and drainage, then check whether the yellowing follows a consistent pattern that may indicate nitrogen stress. Also inspect the leaves and stems for pests, lesions, or rot. Do not add fertilizer until the cause is checked; local soil testing or an agricultural specialist can help distinguish nutrient deficiency from disease.`
-      : `I opened Agriculture Help for this ${crop} question. I can help inspect symptoms, soil moisture, drainage, pests, disease signs, crop timing, and source-backed next steps. Tell me the affected plant part, when the problem began, and whether it is spreading.`;
+      : leafFeedingPest
+        ? `Holes, chewed patches, or nibbled edges on ${crop} leaves along with visible caterpillars usually point to a leaf-feeding pest -- common examples include armyworms, cutworms, and loopers, though the exact species varies by region and crop. Check the underside of leaves and near the growing point for eggs or young larvae, note how much leaf area is affected and whether damage is spreading day to day, and try to get a clear look at (or photo of) the pest itself to help identify it correctly. Handpicking can help with light, early infestations. Confirm the specific pest and its safe treatment options and re-entry/harvest interval with your local agricultural extension service or a qualified specialist before applying anything.`
+        : `I opened Agriculture Help for this ${crop} question. I can help inspect symptoms, soil moisture, drainage, pests, disease signs, crop timing, and source-backed next steps. Tell me the affected plant part, when the problem began, and whether it is spreading.`;
     const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "guidance-ready", ["Returned crop-relevant, non-transactional agriculture guidance."], ["Nexus did not diagnose the crop from incomplete evidence, prescribe a chemical, place an order, or claim a field inspection occurred."]);
     return { ...common, capability: "nexus_agriculture", status: "guidance-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
   }
