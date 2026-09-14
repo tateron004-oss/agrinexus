@@ -33,7 +33,7 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -117,7 +117,7 @@ test("a real citation from an African government health domain (.gov.ng) is clas
       ...process.env,
       PORT: String(altPort),
       AGRINEXUS_DB_PATH: altDbPath,
-      OPENAI_API_KEY: "",
+      OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
       NEXUS_LIVE_KNOWLEDGE_ENABLED: "true",
       NEXUS_LIVE_KNOWLEDGE_PROVIDER: "generic",
       NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT: `http://127.0.0.1:${providerPort}/search`,
