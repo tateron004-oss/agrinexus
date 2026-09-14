@@ -19849,7 +19849,14 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
       provider = "local-after-translation-error";
     }
   }
-  if ((provider === "local-dictionary" || provider === "local-after-translation-error" || provider === "local-after-google-translation-error") && process.env.OPENAI_API_KEY && targetLanguage && targetLanguage !== sourceLanguage) {
+  // "local-translation" is the configured provider-engines stand-in
+  // service's own honest label for the exact same "[LANG] original text"
+  // passthrough localTranslateText() already does (scripts/provider-engines.js
+  // /translate handler) -- it never performs a real translation for any
+  // input. Confirmed live: it was excluded from this retry set, so a
+  // genuinely configured OPENAI_API_KEY translation was never attempted for
+  // free-text requests, even though it was available and would have worked.
+  if ((provider === "local-dictionary" || provider === "local-after-translation-error" || provider === "local-after-google-translation-error" || provider === "local-translation") && process.env.OPENAI_API_KEY && targetLanguage && targetLanguage !== sourceLanguage) {
     try {
       const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
         method: "POST",
@@ -19878,12 +19885,15 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
         })
       }, PROVIDER_WEBHOOK_TIMEOUT_MS);
       const json = await response.json().catch(() => ({}));
-      if (response.ok) {
-        const openAiText = extractResponseText(json);
-        if (openAiText) {
-          translatedText = openAiText;
-          provider = "openai-translation";
-        }
+      const openAiText = response.ok ? extractResponseText(json) : "";
+      if (openAiText) {
+        translatedText = openAiText;
+        provider = "openai-translation";
+      } else {
+        // A non-2xx response (e.g. an invalid/expired key) resolves rather
+        // than throws, so without this the attempt was previously
+        // indistinguishable from never having been tried at all.
+        provider = "local-after-openai-translation-error";
       }
     } catch (error) {
       provider = "local-after-openai-translation-error";
