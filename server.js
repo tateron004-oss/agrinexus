@@ -19558,7 +19558,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const removeResult = nexusRealProviders.marketplaceBridge.removeListing({ title: titleQuery, confirmed: args.confirmed }, db, process.env);
       return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, removeResult);
     }
-    if (/\b(create|post|publish|list|sell)\b/i.test(command)) {
+    // "list" is ambiguous between "list an item for sale" (create) and
+    // "list what's available" (browse) -- confirmed live, "List what is
+    // available for maize seeds." matched the bare \blist\b below and was
+    // wrongly submitted as a new listing titled after the whole question
+    // instead of showing the real catalog. wantsBrowseListings only matches
+    // a question-shaped phrase ("what's"/"what is" + "available"/"listed"/
+    // "for sale"), so a genuine "List my maize for sale." is unaffected.
+    const wantsBrowseListings = /\bwhat('?s| is)\b.*\b(available|listed|for sale|on agritrade)\b/i.test(command)
+      || /\b(browse|see what|show me what)\b/i.test(command);
+    if (!wantsBrowseListings && /\b(create|post|publish|list|sell)\b/i.test(command)) {
       const listingResult = nexusRealProviders.marketplace.createListing({
         title: args.title || command,
         crop: args.crop || args.product || "",
