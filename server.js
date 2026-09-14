@@ -18664,9 +18664,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const location = sanitizePilotText(explicitLocation || command, 180);
     const otherLocationsMatch = command.match(/\b(?:compare|versus|vs\.?)\b.*?\b(?:with|to|and)\s+(.+)$/i);
-    const compareLocations = otherLocationsMatch ? otherLocationsMatch[1].split(/\band\b|,/i).map(item => item.trim()).filter(Boolean) : [];
+    const compareLocations = otherLocationsMatch ? otherLocationsMatch[1].split(/\band\b|,/i).map(item => item.trim().replace(/[.!?]+$/, "")).filter(Boolean) : [];
     if (compareLocations.length && location) {
-      const comparison = await nexusWeatherSourceProvider.getMultiLocationWeatherComparison([location, ...compareLocations], process.env);
+      // The generic "in X" location regex above has no notion of comparison
+      // syntax, so for "Compare weather in Lagos with Cairo" it captured
+      // "Lagos with Cairo" as the FIRST location verbatim -- confirmed
+      // live, this made both compared entries silently return the same
+      // (wrong) reading. Strip a trailing comparison clause before using it.
+      const primaryLocation = location.replace(/\s*\b(?:with|versus|vs\.?|and|to)\b.*$/i, "").trim() || location;
+      const comparison = await nexusWeatherSourceProvider.getMultiLocationWeatherComparison([primaryLocation, ...compareLocations], process.env);
       return {
         ...common,
         status: comparison.sourceStatus === "source-result-available" ? "source-backed" : comparison.sourceStatus || "blocked",
@@ -19340,7 +19346,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ? `I saved ${saveResult.body.data.provider.name || "that provider"} to your local provider list. No health details or secrets were stored.`
         : "I need a provider's name to save. Tell me which provider from the search results to keep.";
     } else if (wantsMobileClinic) {
-      const locationMatch = command.match(/\bin\s+([a-z\s]+)$/i);
+      // A trailing period ("Find a mobile clinic in Nairobi.") made this
+      // fail to match at all -- confirmed live, that silently turned into
+      // an EMPTY search query, which returns every catalog entry regardless
+      // of the requested location (dumping US and Kenya listings together)
+      // instead of respecting what was actually asked, or honestly finding
+      // nothing for a city not in the local catalog.
+      const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
       const searchResult = nexusRealProviders.mobileClinicBridge.search({ q: locationMatch?.[1]?.trim() || "" });
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { mobileClinics: cards };
