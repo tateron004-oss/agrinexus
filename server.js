@@ -19468,6 +19468,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const readiness = nexusRealProviders.paymentReadinessBridge.readinessCheck({ amount: args.amount, currency: args.currency }, process.env);
       return { ...common, capability: "marketplace-trade", status: readiness?.body?.status || "payment-readiness-checked", response: readiness?.body?.message || "Payment readiness checked.", localOnly: true, paymentReadiness: readiness?.body?.data };
     }
+    // Confirmed live: "Cancel my listing for maize seeds" had no real path
+    // at all and fell through to the generic browse fallback below --
+    // createListing() already exists and is real, but nothing could ever
+    // remove what it created.
+    if (/\b(cancel|delete|remove)\b.*\blisting\b/i.test(command)) {
+      const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|my|listing|listings|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160);
+      const removeResult = nexusRealProviders.marketplaceBridge.removeListing({ title: titleQuery, confirmed: args.confirmed }, db, process.env);
+      return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, removeResult);
+    }
     if (/\b(create|post|publish|list|sell)\b/i.test(command)) {
       const listingResult = nexusRealProviders.marketplace.createListing({
         title: args.title || command,

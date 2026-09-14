@@ -275,6 +275,30 @@ function createListing(body = {}, db, env = process.env) {
   });
 }
 
+// There was previously no way to remove a listing a user created via
+// createListing() above -- confirmed live, "Cancel my listing for maize
+// seeds" had nowhere real to go and fell through to the generic browse
+// fallback instead.
+function removeListing(body = {}, db, env = process.env) {
+  const provider = "nexus-marketplace-bridge";
+  const action = "marketplace.listing.remove";
+  if (!envEnabled("NEXUS_MARKETPLACE_BRIDGE_ENABLED", env, true)) return disabledResponse(provider, action, "NEXUS_MARKETPLACE_BRIDGE_ENABLED");
+  const confirmation = requireConfirmation(body, provider, action);
+  if (confirmation) return confirmation;
+  const listings = ensureMarketplaceListings(db);
+  const query = clean(body.id || body.title || body.query || "").toLowerCase();
+  const match = query ? listings.find(item => item.id === body.id || item.title.toLowerCase().includes(query)) : null;
+  if (!match) return blockedResponse(provider, action, "No matching saved AgriTrade listing was found to remove.");
+  db.profile.marketplaceListings = listings.filter(item => item.id !== match.id);
+  return providerResponse({
+    provider,
+    action,
+    status: "completed",
+    message: `Removed the saved AgriTrade listing "${match.title}" after explicit confirmation. No buyer was notified.`,
+    data: { removedListing: match }
+  });
+}
+
 function prepareInquiry(body = {}, db, env = process.env) {
   const provider = "nexus-marketplace-bridge";
   const action = "marketplace.inquiry.prepare";
@@ -398,6 +422,7 @@ module.exports = {
   search,
   listing,
   createListing,
+  removeListing,
   prepareInquiry,
   saveNote,
   createReminder,
