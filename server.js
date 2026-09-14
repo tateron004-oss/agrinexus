@@ -19208,7 +19208,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
   }
   if (toolName === "nexus_agriculture") {
-    const wantsDrone = /\bdrone\b/i.test(command) && /\b(send|fly|scan|survey|mission|inspect|request)\b/i.test(command);
+    // droneMissionBridge.missionRequests() (a real listing of saved intake
+    // requests) was only ever reachable via a REST route -- confirmed live,
+    // "Show my drone mission requests." matched the create gate below
+    // ("drone" + "mission") and was wrongly saved as a brand new, garbled
+    // mission request instead of listing the real ones already there.
+    const wantsShowDrone = /\b(show|list|what are|view)\b.*\bdrone\b.*\b(mission|request)/i.test(command);
+    const wantsDrone = !wantsShowDrone && /\bdrone\b/i.test(command) && /\b(send|fly|scan|survey|mission|inspect|request)\b/i.test(command);
+    if (wantsShowDrone) {
+      const listResult = nexusRealProviders.droneMissionBridge.missionRequests(db, process.env);
+      const requests = listResult?.body?.data?.requests || [];
+      return { ...common, capability: "nexus_agriculture", status: "drone-missions-listed", response: requests.length ? `You have ${requests.length} drone mission request(s): ${requests.slice(0, 5).map(r => `${r.missionType} for ${r.area}`).join("; ")}.` : "You have no saved drone mission requests yet.", localOnly: true, droneMissionRequests: requests };
+    }
     if (wantsDrone) {
       const areaMatch = command.match(/\b(?:in|on|over|of)\s+(?:the\s+|my\s+)?([a-z0-9\s]+?)(?:\s+(?:field|farm|plot|area))?$/i)
         || command.match(/\b(?:the\s+|my\s+)([a-z0-9]+(?:\s+[a-z0-9]+)?\s+(?:field|farm|plot|area))\b/i);
@@ -19233,7 +19244,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ["Nexus did not launch, control, or dispatch a drone flight."]);
       return { ...common, capability: "nexus_agriculture", status: ok ? "drone-mission-requested" : "drone-mission-blocked", response, receipt, evidenceReceipt: receipt, localOnly: true };
     }
-    const wantsFieldAgent = /\bfield\s*agent\b/i.test(command) && /\b(send|dispatch|request|need|schedule)\b/i.test(command);
+    // canUse(user, "provider-queue") mirrors the real REST route at
+    // GET /api/field-agents/dispatches -- confirmed live, "Show my field
+    // agent dispatches" matched the create gate below (it contains both
+    // "field agent" and "dispatch"/"request") and was wrongly recorded as a
+    // brand new dispatch assignment instead of listing the real ones.
+    const wantsShowFieldAgent = /\b(show|list|what are|view|status of)\b.*\bfield\s*agent\b.*\bdispatch/i.test(command)
+      || /\bfield\s*agent\b.*\bdispatch(?:es)?\b.*\b(show|list|status)\b/i.test(command);
+    if (wantsShowFieldAgent) {
+      ensureNexusProductionRailsState(db);
+      const dispatches = canUse(user, "provider-queue")
+        ? db.nexusFieldDispatches
+        : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+      return { ...common, capability: "nexus_agriculture", status: "field-agent-dispatches-listed", response: dispatches.length ? `You have ${dispatches.length} field agent dispatch record(s): ${dispatches.slice(0, 5).map(d => `${d.taskType.replace(/-/g, " ")} at ${d.location || "an unspecified location"} (${d.status})`).join("; ")}.` : "You have no field agent dispatch records yet.", localOnly: true, fieldAgentDispatches: dispatches };
+    }
+    const wantsFieldAgent = !wantsShowFieldAgent && /\bfield\s*agent\b/i.test(command) && /\b(send|dispatch|request|need|schedule)\b/i.test(command);
     if (wantsFieldAgent) {
       const regionMatch = command.match(/\b(Kenya|Nigeria|Egypt|DRC|Democratic Republic of the Congo)\b/i);
       const taskType = /\bverif(?:y|ication)\b/i.test(command) ? "marketplace-verification"
