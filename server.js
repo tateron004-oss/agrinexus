@@ -18326,7 +18326,18 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
 }
 
 function nexusOpenAiNativeCalculate(command = "") {
-  const text = String(command || "");
+  // Natural spoken/typed arithmetic almost never uses symbols ("What is 10
+  // divided by 0?"), but this only ever matched literal +-*/x characters --
+  // confirmed live, that made the calculator (including its own
+  // division-by-zero handling just below) unreachable for completely
+  // ordinary phrasing, silently falling back to a generic sum/average
+  // instead. Normalize the common operator words to their symbol first,
+  // then reuse the same parser unchanged.
+  const text = String(command || "")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:divided by|over)\s*(-?\d+(?:\.\d+)?)/i, "$1 / $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:times|multiplied by)\s*(-?\d+(?:\.\d+)?)/i, "$1 * $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:plus|added to)\s*(-?\d+(?:\.\d+)?)/i, "$1 + $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:minus|subtracted by)\s*(-?\d+(?:\.\d+)?)/i, "$1 - $2");
   const arithmetic = text.match(/(-?\d+(?:\.\d+)?)\s*([+\-*/xX])\s*(-?\d+(?:\.\d+)?)/);
   if (!arithmetic) return null;
   const left = Number(arithmetic[1]);
@@ -18783,9 +18794,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       status: "completed",
       response: analysis.calculation?.ok
         ? `I calculated ${analysis.calculation.expression} = ${analysis.calculation.value}. I used deterministic local arithmetic and did not run arbitrary code.`
-        : analysis.numericCount
-          ? `I found ${analysis.numericCount} number(s). Sum: ${analysis.sum}; average: ${analysis.average}. I did not run arbitrary code.`
-          : "I can help reason through the calculation or data, but I need numbers, a table, or a configured dataset reference.",
+        : analysis.calculation?.error === "division-by-zero"
+          ? "Division by zero is undefined -- there is no numeric answer to that calculation."
+          : analysis.numericCount
+            ? `I found ${analysis.numericCount} number(s). Sum: ${analysis.sum}; average: ${analysis.average}. I did not run arbitrary code.`
+            : "I can help reason through the calculation or data, but I need numbers, a table, or a configured dataset reference.",
       analysis,
       receipt,
       evidenceReceipt: receipt,
@@ -19196,7 +19209,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       || /\bhealth literacy\b/i.test(command)
     );
     const wantsNavigationHelp = /\b(?:not sure what to do|help me navigate|where do i start|health navigation)\b/i.test(command);
-    const providerSearchMatch = command.match(/\b(?:find|search for|look up|locate)\s+(?:a\s+|an\s+)?(?:doctor|physician|specialist|provider|clinic|nurse)\b(?:\s+(?:named|called)\s+([a-z\s.'-]+?))?(?:\s+in\s+([a-z\s]+))?$/i);
+    // Two real gaps confirmed live: (1) the bare `$` anchor meant any
+    // trailing punctuation ("find a doctor.") made the whole gate fail
+    // silently, falling through to the generic menu instead of the real NPI
+    // search; (2) a specific specialty name right after "find a/an"
+    // ("find a cardiologist") never matched at all, since only generic
+    // nouns were listed here -- the specialty EXTRACTION below already
+    // recognized these same words, but could never be reached. Sharing one
+    // pattern for both keeps them from drifting apart again.
+    const NEXUS_PROVIDER_SPECIALTY_PATTERN = "cardiologist|dermatologist|pediatrician|dentist|obgyn|psychiatrist|physical therapist|family medicine|internal medicine";
+    const providerSearchMatch = command.match(new RegExp(`\\b(?:find|search for|look up|locate)\\s+(?:a\\s+|an\\s+)?(?:doctor|physician|specialist|provider|clinic|nurse|${NEXUS_PROVIDER_SPECIALTY_PATTERN})\\b(?:\\s+(?:named|called)\\s+([a-z\\s.'-]+?))?(?:\\s+in\\s+([a-z\\s]+))?[.,!?]*$`, "i"));
     const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
     const fitnessPlanMatch = /\b(?:create|start|build|make)\s+(?:a\s+|my\s+)?(?:training|workout|fitness)\s+plan\b/i.test(command);
     const workoutLogMatch = command.match(/\b(?:log|logged|record|recorded|track|tracked|did|completed|finished)\s+(?:a\s+|my\s+)?(\d{1,3})\s*(?:minute|min)s?\s+(run|walk|jog|workout|training session|training|exercise session|exercise|swim|cycling|cycle|ride|strength training|strength|cardio|hiit)\b/i);
@@ -19296,7 +19318,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     } else if (providerSearchMatch) {
       const name = args.providerName || providerSearchMatch[1]?.trim();
       const city = args.city || providerSearchMatch[2]?.trim();
-      const specialty = args.specialty || /\b(cardiologist|dermatologist|pediatrician|dentist|obgyn|psychiatrist|physical therapist|family medicine|internal medicine)\b/i.exec(command)?.[1];
+      const specialty = args.specialty || new RegExp(`\\b(${NEXUS_PROVIDER_SPECIALTY_PATTERN})\\b`, "i").exec(command)?.[1];
       const searchResult = await nexusRealProviders.npi.search({ name, city, taxonomy: specialty }, process.env);
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { providerSearchResults: cards };
