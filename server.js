@@ -19128,9 +19128,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
     const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
+    // Confirmed live: a textbook pest description ("small holes in my
+    // tomato leaves and some caterpillars") fell through to the generic
+    // fallback below -- yellowLowerLeaves was the ONLY symptom pattern with
+    // real guidance behind it, so any other real symptom got a non-answer
+    // instead of the specific, useful response this branch is meant to give.
+    const leafFeedingPest = /\b(hole|holes|chewed|eaten|nibbled)\b/i.test(command) && /\b(leaf|leaves)\b/i.test(command)
+      || /\b(caterpillar|caterpillars|larvae|worm|worms|armyworm|cutworm)\b/i.test(command);
     const response = yellowLowerLeaves
       ? `For ${crop} with yellowing on the lower or older leaves, first inspect soil moisture and drainage, then check whether the yellowing follows a consistent pattern that may indicate nitrogen stress. Also inspect the leaves and stems for pests, lesions, or rot. Do not add fertilizer until the cause is checked; local soil testing or an agricultural specialist can help distinguish nutrient deficiency from disease.`
-      : `I opened Agriculture Help for this ${crop} question. I can help inspect symptoms, soil moisture, drainage, pests, disease signs, crop timing, and source-backed next steps. Tell me the affected plant part, when the problem began, and whether it is spreading.`;
+      : leafFeedingPest
+        ? `Holes, chewed patches, or nibbled edges on ${crop} leaves along with visible caterpillars usually point to a leaf-feeding pest -- common examples include armyworms, cutworms, and loopers, though the exact species varies by region and crop. Check the underside of leaves and near the growing point for eggs or young larvae, note how much leaf area is affected and whether damage is spreading day to day, and try to get a clear look at (or photo of) the pest itself to help identify it correctly. Handpicking can help with light, early infestations. Confirm the specific pest and its safe treatment options and re-entry/harvest interval with your local agricultural extension service or a qualified specialist before applying anything.`
+        : `I opened Agriculture Help for this ${crop} question. I can help inspect symptoms, soil moisture, drainage, pests, disease signs, crop timing, and source-backed next steps. Tell me the affected plant part, when the problem began, and whether it is spreading.`;
     const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "guidance-ready", ["Returned crop-relevant, non-transactional agriculture guidance."], ["Nexus did not diagnose the crop from incomplete evidence, prescribe a chemical, place an order, or claim a field inspection occurred."]);
     return { ...common, capability: "nexus_agriculture", status: "guidance-ready", response, receipt, evidenceReceipt: receipt, localOnly: true };
   }
