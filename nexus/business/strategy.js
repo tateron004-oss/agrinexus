@@ -65,6 +65,21 @@ const agentProfiles = {
     name: "Volunteer Coordination Agent",
     promise: "volunteer recruitment, scheduling, and program support",
     sections: ["Program Need", "Role Design", "Recruitment Plan", "Onboarding & Scheduling", "Recognition Plan"]
+  },
+  marketing: {
+    name: "Marketing Strategy Agent",
+    promise: "audience targeting, positioning, and a realistic channel plan",
+    sections: ["Target Audience", "Positioning & Message", "Channel Plan", "Budget & Timeline", "Measurement Plan"]
+  },
+  finance: {
+    name: "Financial Literacy Agent",
+    promise: "cash flow clarity, budgeting, and funding-option readiness for a small business",
+    sections: ["Cash Flow Snapshot", "Budgeting Plan", "Credit & Funding Options", "Bookkeeping Setup", "Financial Risk Check"]
+  },
+  government: {
+    name: "Government & Public-Sector Partnership Agent",
+    promise: "institutional partnership framing, curriculum design, and technology modernization planning for government and public programs",
+    sections: ["Institutional Landscape", "Program & Curriculum Design", "Technology Modernization Roadmap", "Partnership Proposal", "Pilot-Then-Scale Plan"]
   }
 };
 
