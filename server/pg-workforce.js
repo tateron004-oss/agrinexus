@@ -14,13 +14,7 @@
 // Creating a workforce_roles row (the job posting itself) needs no user at
 // all and works regardless of the auth store in use.
 
-const { DEMO_TENANT_ID, pgCountryId } = require("./pg-health-intakes.js");
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isRealUserId(userId) {
-  return typeof userId === "string" && UUID_RE.test(userId);
-}
+const { DEMO_TENANT_ID, pgCountryId, isRealUserId } = require("./pg-health-intakes.js");
 
 async function createWorkforceRole(pool, { title, level, countryId, minReadiness, tenantId = DEMO_TENANT_ID }) {
   if (!title || !level) throw new Error("pg-workforce: title and level are required");
@@ -46,8 +40,24 @@ async function findOrCreateCandidateProfile(pool, { userId }) {
   return result.rows[0] || null;
 }
 
-async function recordJobApplication(pool, { candidateProfileId, workforceRoleId, status = "submitted" }) {
+// job_applications has no natural unique key to ON CONFLICT against (unlike
+// its siblings trade_orders/course_enrollments), because one real
+// application is expected to have its status updated over time by separate
+// calls, not re-derived from a stable natural key. The caller tracks the
+// real row's id itself (on its own persistent record) and passes it back in
+// as `id` on every subsequent call so this updates the same row instead of
+// inserting a new one each time.
+async function upsertJobApplication(pool, { id, candidateProfileId, workforceRoleId, status = "submitted" }) {
   if (!candidateProfileId || !workforceRoleId) throw new Error("pg-workforce: candidateProfileId and workforceRoleId are required");
+  if (id) {
+    const updated = await pool.query(
+      `update job_applications set status = $2, updated_at = now() where id = $1 returning *`,
+      [id, status]
+    );
+    if (updated.rows[0]) return updated.rows[0];
+    // The tracked id no longer exists (e.g. the row was deleted out-of-band)
+    // -- fall through and create a fresh one rather than silently no-op.
+  }
   const result = await pool.query(
     `insert into job_applications (candidate_profile_id, workforce_role_id, status)
      values ($1, $2, $3)
@@ -57,4 +67,4 @@ async function recordJobApplication(pool, { candidateProfileId, workforceRoleId,
   return result.rows[0] || null;
 }
 
-module.exports = { isRealUserId, createWorkforceRole, findOrCreateCandidateProfile, recordJobApplication };
+module.exports = { isRealUserId, createWorkforceRole, findOrCreateCandidateProfile, upsertJobApplication };

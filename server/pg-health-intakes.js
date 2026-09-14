@@ -19,6 +19,15 @@ function pgCountryId(blobCountryId) {
   return BLOB_COUNTRY_TO_PG_ID[String(blobCountryId || "").toLowerCase()] || null;
 }
 
+// Shared by every pg-*.js module that needs to confirm a value is a real
+// Postgres-assigned id (not one of the blob's own, deliberately distinct,
+// synthetic ids -- see buildBlobShadowFromPostgresUser in pg-users.js).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isRealUserId(userId) {
+  return typeof userId === "string" && UUID_RE.test(userId);
+}
+
 async function createIntake(pool, { countryId, patientRef, needSummary, riskLevel, tenantId = DEMO_TENANT_ID }) {
   const pgCountry = pgCountryId(countryId);
   // Throw rather than resolve null: the caller's shadow-write wrapper only
@@ -51,4 +60,4 @@ async function listIntakes(pool, { tenantId = DEMO_TENANT_ID } = {}) {
   return result.rows || [];
 }
 
-module.exports = { DEMO_TENANT_ID, BLOB_COUNTRY_TO_PG_ID, pgCountryId, createIntake, listIntakes };
+module.exports = { DEMO_TENANT_ID, BLOB_COUNTRY_TO_PG_ID, pgCountryId, isRealUserId, createIntake, listIntakes };

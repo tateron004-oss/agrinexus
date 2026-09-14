@@ -7,12 +7,12 @@
 // UI reads -- this is an additive, verifiable real record, not yet a full
 // cutover (same rollout pattern as server/pg-health-intakes.js).
 
+const { isRealUserId } = require("./pg-health-intakes.js");
+
 const DEMO_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function asEntityId(value) {
-  return typeof value === "string" && UUID_RE.test(value) ? value : null;
+  return isRealUserId(value) ? value : null;
 }
 
 async function recordAuditEvent(pool, { action, entityType, entityId, actorEmail = null, userId = null, metadata = {}, tenantId = DEMO_TENANT_ID }) {

@@ -10,13 +10,7 @@
 // this is Nexus's own real record of what the learner told it, not a claim
 // about a real external course).
 
-const { DEMO_TENANT_ID } = require("./pg-health-intakes.js");
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isRealUserId(userId) {
-  return typeof userId === "string" && UUID_RE.test(userId);
-}
+const { DEMO_TENANT_ID, isRealUserId } = require("./pg-health-intakes.js");
 
 async function upsertCourse(pool, { code, title, track, tenantId = DEMO_TENANT_ID }) {
   if (!code || !title || !track) throw new Error("pg-courses: code, title, and track are required");

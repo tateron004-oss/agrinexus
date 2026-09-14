@@ -1,10 +1,19 @@
 // Manual local verification for the Phase 9 course-progress shadow-write
-// (learningBridgeProvider.markProgress() -> server/pg-courses.js), exercised
-// through the real typed /api/agent/command dispatcher end to end, including
-// a real OpenAI call (needs a real OPENAI_API_KEY). Not part of
-// scripts/qa-suite.js: needs a real local Postgres with COURSE_STORE=postgres
-// + DATABASE_URL, same reason the other Phase 9 expansion scripts are
-// standalone.
+// (learningBridgeProvider.markProgress() -> server/pg-courses.js). Not part
+// of scripts/qa-suite.js: needs a real local Postgres with
+// COURSE_STORE=postgres + DATABASE_URL configured (see .env), same reason
+// the other Phase 9 expansion scripts are standalone.
+//
+// Calls the real tool dispatcher directly (POST /api/nexus/openai-native/tool
+// with an explicit toolName) rather than going through a real OpenAI model
+// call to choose the tool -- this project has repeatedly documented that
+// tool *selection* is inherently non-deterministic (the model sometimes
+// picks a different tool, or rephrases the command text, for identical
+// input), which is a live-model characteristic unrelated to the dispatch
+// logic this script is actually verifying. Calling the dispatcher directly
+// still exercises the real command-text parsing (wantsProgress/regex
+// stripping), the real learningBridge.markProgress() call, and the real
+// Postgres shadow-write -- everything downstream of tool selection.
 // Run manually: node scripts/courses-expansion-verify.js
 const assert = require("assert");
 const { spawn } = require("child_process");
@@ -49,11 +58,11 @@ async function login(email, password) {
   return setCookie.split(";")[0];
 }
 
-async function agentCommand(command, cookie) {
-  const res = await fetch(`${base}/api/agent/command`, {
+async function callLearningTool(command, cookie) {
+  const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ command, inputMode: "api" })
+    body: JSON.stringify({ name: "nexus_workforce_learning", arguments: { command } })
   });
   return res.json();
 }
@@ -69,7 +78,7 @@ async function agentCommand(command, cookie) {
 
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, COURSE_STORE: "postgres", AUTH_STORE: "postgres" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, COURSE_STORE: "postgres", AUTH_STORE: "postgres", OPENAI_API_KEY: "" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -78,9 +87,9 @@ async function agentCommand(command, cookie) {
     await waitFor(`${base}/api/healthz`);
     const cookie = await login(testEmail, testPassword);
 
-    const started = await agentCommand("I started the irrigation basics course.", cookie);
-    assert.ok(started.nexusResponse?.response, "expected a real spoken response");
-    console.log("Agent response (started):", started.nexusResponse.response);
+    const started = await callLearningTool("I started the irrigation basics course.", cookie);
+    assert.equal(started.status, "learning-progress-recorded", `expected the dispatcher to actually record progress, got status=${started.status}`);
+    console.log("Tool response (started):", started.response);
 
     let enrollmentRow = { rows: [] };
     for (let i = 0; i < 20 && enrollmentRow.rows.length === 0; i += 1) {
@@ -98,9 +107,9 @@ async function agentCommand(command, cookie) {
     assert.equal(enrollmentRow.rows[0].status, "started");
     console.log(`Verified real course_enrollments row: course=${enrollmentRow.rows[0].code}, status=${enrollmentRow.rows[0].status}`);
 
-    const finished = await agentCommand("I finished the irrigation basics course.", cookie);
-    assert.ok(finished.nexusResponse?.response);
-    console.log("Agent response (completed):", finished.nexusResponse.response);
+    const finished = await callLearningTool("I've finished the irrigation basics course.", cookie);
+    assert.equal(finished.status, "learning-progress-recorded", `expected the dispatcher to actually record progress, got status=${finished.status}`);
+    console.log("Tool response (completed, contraction phrasing):", finished.response);
 
     let completedRow = { rows: [{ status: "started" }] };
     for (let i = 0; i < 20 && completedRow.rows[0].status !== "completed"; i += 1) {
@@ -120,7 +129,14 @@ async function agentCommand(command, cookie) {
       [createdUser.id]
     );
     assert.equal(countCheck.rows[0].count, 1, "start+complete on the same course must upsert one row, not two");
-    console.log("Verified completion updates the same real course_enrollments row (status=completed, completed_at set)");
+    console.log("Verified completion updates the same real course_enrollments row (status=completed, completed_at set), including via a contraction phrasing that previously broke the search");
+
+    // Regression check: a save/reminder request that also mentions progress
+    // language must still save/remind, not get intercepted by progress
+    // tracking (the branch-order bug found in review).
+    const saveResult = await callLearningTool("Save the soil health basics course I started", cookie);
+    assert.equal(saveResult.status, "learning-resource-saved", `a save request must still save even when it also mentions progress language, got status=${saveResult.status}`);
+    console.log("Verified: a 'save' command that also mentions progress language still saves (branch-order fix holds).");
 
     await pool.query("delete from course_enrollments where learner_profile_id = (select id from learner_profiles where user_id = $1)", [createdUser.id]);
     await pool.query("delete from learner_profiles where user_id = $1", [createdUser.id]);
