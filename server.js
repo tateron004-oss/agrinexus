@@ -18423,9 +18423,26 @@ function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   };
 }
 
+// Confirmed live: "Export this saying hello there as a PDF." put the
+// literal text "hello there as a PDF." into the exported document's real
+// body (checked via pdftotext on the actual generated file), and once
+// content-stripping was added, the same bleed just moved to the title
+// instead -- "...saying X titled Farm Notes as a PDF." produced a title
+// of "Farm Notes as a PDF". Neither the title nor content regex below has
+// any way to know a trailing "as a <format>" or "titled <title>" clause
+// names the export's format/title rather than being part of the captured
+// text, so both must have the same trailing clauses stripped.
+function stripTrailingExportMetaClauses(value = "") {
+  return String(value || "")
+    .replace(/\s+as\s+(?:a|an)\s+(?:pdf|docx|doc|word|txt|text|md|markdown|json|csv|xlsx|excel|pptx|ppt|html)\b[.!?]*$/i, "")
+    .replace(/\s+titled?\s*[:\-]?\s*["']?[^"'.,\n]{2,80}["']?[.!?]*$/i, "")
+    .trim();
+}
+
 function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
   const text = String(command || "");
   const titleMatch = text.match(/\btitled?\s*[:\-]?\s*["']?([^"'.,\n]{2,80})["']?/i);
+  const strippedTitle = titleMatch ? stripTrailingExportMetaClauses(titleMatch[1].trim()) : "";
   // csv/xlsx/pptx/html are recognized so a request for one of them is
   // honestly rejected by exportProvider's own "only json, txt, md, pdf, and
   // docx" message -- confirmed live, "Export this as a CSV" previously
@@ -18434,6 +18451,7 @@ function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
   // telling the user CSV isn't supported.
   const formatMatch = text.match(/\b(pdf|docx|doc|word|txt|text|md|markdown|json|csv|xlsx|excel|pptx|ppt|html)\b/i);
   const contentMatch = text.match(/\b(?:with content|content is|content|containing|that says|saying)\s*[:\-]?\s*(.+)$/i);
+  const strippedContent = contentMatch ? stripTrailingExportMetaClauses(contentMatch[1].trim()) : "";
   const formatRaw = String(args.format || args.fileType || (formatMatch ? formatMatch[1] : "")).toLowerCase();
   const format = ["doc", "word"].includes(formatRaw) ? "docx"
     : formatRaw === "text" ? "txt"
@@ -18442,8 +18460,8 @@ function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
     : ["ppt", "pptx"].includes(formatRaw) ? "pptx"
     : formatRaw || "txt";
   return {
-    title: sanitizePilotText(args.title || (titleMatch ? titleMatch[1].trim() : "") || "Nexus export", 160),
-    content: sanitizePilotText(args.content || args.text || (contentMatch ? contentMatch[1].trim() : "") || command, 4000),
+    title: sanitizePilotText(args.title || strippedTitle || "Nexus export", 160),
+    content: sanitizePilotText(args.content || args.text || strippedContent || command, 4000),
     format
   };
 }
