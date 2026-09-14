@@ -84,3 +84,28 @@ test("not naming any format at all still defaults to TXT, unaffected by the new 
   assert.equal(result.status, "completed");
   assert.match(result.response, /real TXT file/i);
 });
+
+async function callExportNoArgs(command) {
+  const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ name: "nexus_document_export", arguments: { command, confirmed: true } })
+  });
+  return res.json();
+}
+
+test("a trailing 'as a <format>' clause does not bleed into the extracted document content", async () => {
+  // TXT (not PDF) so the real file's text is readable directly -- PDFKit
+  // compresses the content stream, so byte-matching a PDF for this string
+  // isn't meaningful without a PDF-text-extraction tool.
+  const result = await callExportNoArgs("Export this saying hello there as a TXT.");
+  const outputPath = path.join(root, "output", "nexus-exports", result.documents[0].filename);
+  const text = fs.readFileSync(outputPath, "utf8");
+  assert.match(text, /hello there/);
+  assert.doesNotMatch(text, /hello there as a TXT/i, "the format clause must be stripped from the real document content");
+});
+
+test("a trailing 'as a <format>' clause does not bleed into the extracted document title either", async () => {
+  const result = await callExportNoArgs("Export this saying the harvest was good this year titled Farm Notes as a PDF.");
+  assert.equal(result.documents[0].title, "Farm Notes");
+});
