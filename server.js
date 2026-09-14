@@ -18334,12 +18334,38 @@ function nexusOpenAiNativeCalculate(command = "") {
   // instead. Normalize the common operator words to their symbol first,
   // then reuse the same parser unchanged.
   const text = String(command || "")
-    .replace(/(-?\d+(?:\.\d+)?)\s*(?:divided by|over)\s*(-?\d+(?:\.\d+)?)/i, "$1 / $2")
-    .replace(/(-?\d+(?:\.\d+)?)\s*(?:times|multiplied by)\s*(-?\d+(?:\.\d+)?)/i, "$1 * $2")
-    .replace(/(-?\d+(?:\.\d+)?)\s*(?:plus|added to)\s*(-?\d+(?:\.\d+)?)/i, "$1 + $2")
-    .replace(/(-?\d+(?:\.\d+)?)\s*(?:minus|subtracted by)\s*(-?\d+(?:\.\d+)?)/i, "$1 - $2");
+    // A thousands-separator comma ("1,000 plus 500") otherwise splits the
+    // number at the comma -- confirmed live, "What is 1,000 plus 500?"
+    // silently computed "0 + 500 = 500" (the "1," was orphaned, leaving
+    // "000" as the real left operand) and presented it as a correct,
+    // deterministic answer. Only strips a comma between digits followed by
+    // exactly 3 more digits then a non-digit/end, so a list-style "5, 3"
+    // is untouched.
+    .replace(/(\d),(?=\d{3}(?:\D|$))/g, "$1")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:divided by|over)\s*(-?\d+(?:\.\d+)?)/gi, "$1 / $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:times|multiplied by)\s*(-?\d+(?:\.\d+)?)/gi, "$1 * $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:plus|added to)\s*(-?\d+(?:\.\d+)?)/gi, "$1 + $2")
+    .replace(/(-?\d+(?:\.\d+)?)\s*(?:minus|subtracted by)\s*(-?\d+(?:\.\d+)?)/gi, "$1 - $2");
   const arithmetic = text.match(/(-?\d+(?:\.\d+)?)\s*([+\-*/xX])\s*(-?\d+(?:\.\d+)?)/);
   if (!arithmetic) return null;
+  // Confirmed live: "What is 10 minus 3 minus 2?" silently answered "10 - 3
+  // = 7", discarding "minus 2" without any indication part of the question
+  // was ignored. A word-based chain can't be caught by matching for two
+  // adjacent symbol operators, because each operator-word replace() above
+  // consumes the shared middle number as its right operand, leaving the
+  // second operator as a bare, unconverted word next to a number with no
+  // partner -- e.g. "10 - 3 minus 2", not "10 - 3 - 2". Checking only the
+  // text immediately touching this specific match (not the whole command)
+  // is deliberate: "Calculate 12 * 7 and summarize the numbers 3, 9, 12."
+  // is a real, already-tested case with 5 numbers total that must still
+  // resolve "12 * 7" -- an unrelated number elsewhere in the sentence must
+  // not block it, only a number+operator directly adjacent to this match.
+  const ANY_OPERATOR = "(?:[+\\-*/xX]|plus|added to|minus|subtracted by|times|multiplied by|divided by|over)";
+  const before = text.slice(0, arithmetic.index);
+  const after = text.slice(arithmetic.index + arithmetic[0].length);
+  const continuesBefore = new RegExp(`-?\\d+(?:\\.\\d+)?\\s*${ANY_OPERATOR}\\s*$`, "i").test(before);
+  const continuesAfter = new RegExp(`^\\s*${ANY_OPERATOR}\\s*-?\\d+(?:\\.\\d+)?`, "i").test(after);
+  if (continuesBefore || continuesAfter) return null;
   const left = Number(arithmetic[1]);
   const right = Number(arithmetic[3]);
   const operator = arithmetic[2].toLowerCase() === "x" ? "*" : arithmetic[2];

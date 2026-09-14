@@ -86,3 +86,30 @@ test("a list of numbers with no binary operator still correctly falls back to su
   const result = await callCalc("What is the average of 12, 18, and 24?");
   assert.match(result.response, /Sum: 54; average: 18/);
 });
+
+test("a comma-formatted thousands number is parsed as one number, not split at the comma", async () => {
+  const result = await callCalc("What is 1,000 plus 500?");
+  assert.match(result.response, /1000 \+ 500 = 1500\b/);
+});
+
+test("a multi-comma large number is fully de-commafied", async () => {
+  const result = await callCalc("What is 1,000,000 minus 250,000?");
+  assert.match(result.response, /1000000 - 250000 = 750000\b/);
+});
+
+test("an unrelated number elsewhere in the same sentence does not block a real single operation, unaffected by the chain-detection fix", async () => {
+  const result = await callCalc("Calculate 12 * 7 and summarize the numbers 3, 9, 12.");
+  assert.equal(result.analysis?.calculation?.value, 84, "the chain guard must only look at text directly touching the matched expression, not the whole sentence");
+});
+
+test("a chained expression (word form) declines a confident partial answer instead of silently dropping the extra term", async () => {
+  const result = await callCalc("What is 10 minus 3 minus 2?");
+  assert.doesNotMatch(result.response, /10 - 3 = 7/);
+  assert.match(result.response, /Sum: 15; average: 5/);
+});
+
+test("a chained expression (symbol form) also declines, unaffected by word-vs-symbol phrasing", async () => {
+  const result = await callCalc("What is 10 - 3 - 2?");
+  assert.doesNotMatch(result.response, /10 - 3 = 7/);
+  assert.match(result.response, /Sum: 15; average: 5/);
+});
