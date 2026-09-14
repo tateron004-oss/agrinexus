@@ -19484,8 +19484,56 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, catalogResult);
   }
   if (toolName === "nexus_workflow") {
-    const wantsFieldVisit = /\bfield visit\b/i.test(command);
+    // mapsFieldVisitBridgeProvider already has real, fully-implemented
+    // saveVisitPlan/savedVisitPlans functions writing to and reading from
+    // db.profile.nexusFieldVisitPlans, but nothing in this dispatcher ever
+    // called them -- only the ephemeral route-computation path
+    // (createVisitPlan/routeVisitPlan, which saves nothing) was reachable.
+    // Confirmed live: "Cancel my field visit plan." fell into that same
+    // ephemeral path and was asked for an origin/destination as if starting
+    // a brand new visit, since there was nothing saved to find or cancel in
+    // the first place, and no code path ever tried.
+    const wantsShowFieldVisits = /\b(show|list|what are|view)\b.*\bfield visit/i.test(command);
+    const wantsSaveFieldVisit = !wantsShowFieldVisits && /\bsave\b.*\bfield visit/i.test(command);
+    const wantsCancelFieldVisit = !wantsShowFieldVisits && !wantsSaveFieldVisit && /\b(cancel|delete|remove)\b.*\bfield visit/i.test(command);
+    const wantsFieldVisit = !wantsShowFieldVisits && !wantsSaveFieldVisit && !wantsCancelFieldVisit && /\bfield visit\b/i.test(command);
     const wantsSession = /\b(?:prepare|plan|schedule)\b.*\bsession\b/i.test(command);
+    if (wantsShowFieldVisits) {
+      const savedResult = nexusRealProviders.mapsFieldVisitBridge.savedVisitPlans(db, process.env);
+      const plans = savedResult?.body?.data?.plans || [];
+      return { ...common, capability: "workflow", status: "field-visits-listed", response: plans.length ? `You have ${plans.length} saved field visit plan(s): ${plans.slice(0, 5).map(p => p.title).join("; ")}.` : "You have no saved field visit plans yet.", localOnly: true, fieldVisitPlans: plans };
+    }
+    if (wantsSaveFieldVisit) {
+      const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
+      const visitBody = {
+        title: args.title || `Field visit: ${command}`.slice(0, 180),
+        origin: routeArgs.origin || args.origin,
+        destinations: [{ label: args.destinationLabel || routeArgs.destination || "Destination", addressText: routeArgs.destination || args.destination }],
+        confirmed: Boolean(args.confirmed || args.confirmation)
+      };
+      const saveResult = nexusRealProviders.mapsFieldVisitBridge.saveVisitPlan(visitBody, db, process.env);
+      const ok = Boolean(saveResult?.body?.ok && saveResult.body.status === "completed");
+      return { ...common, capability: "workflow", status: ok ? "field-visit-saved" : (saveResult?.body?.status || "field-visit-blocked"), response: ok ? saveResult.body.message : (saveResult?.body?.message || "I need a starting point and a destination to save the field visit."), localOnly: true };
+    }
+    if (wantsCancelFieldVisit) {
+      const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|my|field visit|plan|plans|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160).toLowerCase();
+      const plans = db.profile?.nexusFieldVisitPlans || [];
+      const match = titleQuery ? plans.find(plan => plan.title.toLowerCase().includes(titleQuery)) : null;
+      if (!Boolean(args.confirmed || args.confirmation)) {
+        return nexusOpenAiNativeBlockedToolResult(db, common, {
+          status: "confirmation-required",
+          response: match ? `I found a saved field visit plan called "${match.title}". Confirm and I will cancel it.` : "Tell me which saved field visit plan to cancel, and confirm, and I will remove it.",
+          requiredAuthorization: ["explicit-user-confirmation"],
+          did: ["Checked for a matching saved field visit plan to cancel."],
+          didNot: ["Nexus did not delete any field visit plan."]
+        });
+      }
+      if (!match) {
+        return { ...common, capability: "workflow", status: "field-visit-not-found", response: "I could not find a matching saved field visit plan to cancel. Tell me its exact title, or ask to list your field visit plans first.", localOnly: true };
+      }
+      db.profile.nexusFieldVisitPlans = plans.filter(plan => plan.id !== match.id);
+      return { ...common, capability: "workflow", status: "field-visit-canceled", response: `I canceled the saved field visit plan "${match.title}".`, localOnly: true };
+    }
     if (wantsFieldVisit) {
       const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
       const visitBody = {
