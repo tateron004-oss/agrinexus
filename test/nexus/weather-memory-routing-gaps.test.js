@@ -106,3 +106,14 @@ test("forget/delete phrasing is unaffected by the memory recall-question fix", a
   assert.equal(result.status, "confirmation-required");
   assert.match(result.response, /remove or archive/i);
 });
+
+test("'Did you delete X?' is a status question, searched not gated as a new delete request", async () => {
+  const result = await callTool("nexus_memory", "Did you delete what I told you about my phone number?");
+  assert.equal(result.status, "completed");
+  assert.notEqual(result.status, "confirmation-required");
+});
+
+test("'Have you forgotten X?' is also treated as a status question, not a new delete request", async () => {
+  const result = await callTool("nexus_memory", "Have you forgotten my location yet?");
+  assert.equal(result.status, "completed");
+});

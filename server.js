@@ -18517,13 +18517,17 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   // "What do you remember about my farm?" is a genuine recall question, not
   // a save request -- confirmed live, the bare presence of "remember"
   // routed it into the create/confirm branch instead of the search branch
-  // below, which already exists and handles exactly this. Narrowly targets
-  // the question-form ("do/did/does you remember", "what ... remember")
-  // rather than gating on any question word, so a polite imperative like
-  // "can you save this" is unaffected.
-  const isMemoryRecallQuestion = /\b(do|did|does)\s+you\s+remember\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
-  const wantsCreate = !isMemoryRecallQuestion && /\b(remember|save|store)\b/i.test(commandText);
-  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
+  // below, which already exists and handles exactly this. The same
+  // confusion applies symmetrically to delete: "Did you delete what I told
+  // you about my phone number?" is a status question, not a new delete
+  // request, but the bare presence of "delete" asked to confirm deleting it
+  // again. Narrowly targets the question-form ("do/did/does/have/has you
+  // remember/delete/forget/...", "what ... remember") rather than gating on
+  // any question word, so a polite imperative like "can you save this" is
+  // unaffected.
+  const isMemoryStatusQuestion = /\b(do|did|does|have|has)\s+you\s+(remember|delet(?:e|ed)|forgot(?:ten)?|forget|remov(?:e|ed)|eras(?:e|ed))\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
+  const wantsCreate = !isMemoryStatusQuestion && /\b(remember|save|store)\b/i.test(commandText);
+  const wantsDelete = !isMemoryStatusQuestion && /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
   const confirmed = Boolean(args.confirmed || args.confirmation);
   if (wantsCreate || wantsDelete) {
     if (!confirmed) {
