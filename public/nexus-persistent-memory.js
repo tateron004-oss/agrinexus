@@ -227,13 +227,23 @@
       },
       searchRecords({ type = "", status = "", sourceMode = "", query = "", includeArchived = true } = {}) {
         const q = String(query || "").toLowerCase();
+        // A whole-phrase substring match is the fast path, but a caller's
+        // query is rarely the exact contiguous text stored in a record --
+        // confirmed live, this made recall nearly non-functional (even a
+        // single real keyword the record actually contains, like a saved
+        // location name, failed to match once wrapped in any other words).
+        // Token-AND for multi-word queries only ever adds matches an exact
+        // phrase already found, so it cannot break an existing caller.
+        const qTokens = q.split(/\s+/).filter(Boolean);
         const records = state.records.filter(record => {
           if (type && record.type !== normalizeType(type)) return false;
           if (status && record.status !== status) return false;
           if (sourceMode && record.sourceMode !== sourceMode) return false;
           if (!includeArchived && /archived|inactive|deceased|closed|cancelled/i.test(record.status)) return false;
-          if (q && !`${record.title} ${record.name} ${record.type} ${JSON.stringify(record.payload || {})}`.toLowerCase().includes(q)) return false;
-          return true;
+          if (!q) return true;
+          const haystack = `${record.title} ${record.name} ${record.type} ${JSON.stringify(record.payload || {})}`.toLowerCase();
+          if (haystack.includes(q)) return true;
+          return qTokens.length > 1 && qTokens.every(token => haystack.includes(token));
         });
         return { ok: true, records, count: records.length };
       },
