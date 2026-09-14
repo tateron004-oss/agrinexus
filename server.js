@@ -19130,9 +19130,27 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const rtmExercise = /\b(?:completed|did|finished)\s+(?:my\s+)?(?:therapy|exercise|rehab|physical therapy|workout)\b/i.test(command);
     const rtmAdherence = /\b(?:took my medication|medication adherence|missed (?:a|my) (?:dose|medication))\b/i.test(command);
     const wantsMobileClinic = /\bmobile\s*clinic\b/i.test(command);
-    const wantsPharmacy = /\bpharmac(?:y|ist)\b/i.test(command);
+    // A real user asking about medication safety rarely says the word
+    // "pharmacy"/"pharmacist" itself (confirmed live: "What should I know
+    // about storing insulin safely?" fell through to the generic capability
+    // menu instead of the pharmacist question-draft, even though that draft
+    // is exactly the safe, generic response this question should get).
+    const wantsPharmacy = /\bpharmac(?:y|ist)\b/i.test(command) || /\b(medication|medicine|prescription|insulin|dosage|drug interaction)s?\b/i.test(command);
     const patientSupportMatch = command.match(/\b(community health worker|chw|transport(?:ation)?|support resource|patient support)\b/i);
     const patientSupportQuery = patientSupportMatch && /^(support resource|patient support)$/i.test(patientSupportMatch[1]) ? "" : patientSupportMatch?.[1];
+    // patientSupportBridge's real catalog already includes plain-language
+    // health-literacy / visit-question preparation, but the gate above only
+    // matched CHW/transportation phrasing -- "help me prepare questions for
+    // my next clinic visit" (confirmed live) fell through to the generic
+    // menu even though a matching resource exists. This widens the gate to
+    // the catalog's actual scope without changing the narrow match's
+    // existing query-narrowing behavior.
+    const wantsVisitPrepSupport = !patientSupportMatch && (
+      /\b(prepare|preparing|write|writing|need)\b.*\bquestions?\b.*\b(doctor|clinic|provider|appointment|visit)\b/i.test(command)
+      || /\bquestions?\b.*\bfor\b.*\b(?:my|a|an)?\s*(doctor|clinic|provider|appointment|visit)\b/i.test(command)
+      || /\b(visit|appointment)\s+preparation\b/i.test(command)
+      || /\bhealth literacy\b/i.test(command)
+    );
     const wantsNavigationHelp = /\b(?:not sure what to do|help me navigate|where do i start|health navigation)\b/i.test(command);
     const providerSearchMatch = command.match(/\b(?:find|search for|look up|locate)\s+(?:a\s+|an\s+)?(?:doctor|physician|specialist|provider|clinic|nurse)\b(?:\s+(?:named|called)\s+([a-z\s.'-]+?))?(?:\s+in\s+([a-z\s]+))?$/i);
     const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
@@ -19268,8 +19286,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const questions = draftResult?.body?.data?.draft?.questions || [];
       extraData = { pharmacyQuestions: questions };
       response = `Here are safe questions to bring to a pharmacist: ${questions.join(" ")} I did not request a refill, transfer, dosage change, or contact a pharmacy.`;
-    } else if (patientSupportMatch) {
-      const supportResult = nexusRealProviders.patientSupportBridge.resources({ q: patientSupportQuery });
+    } else if (patientSupportMatch || wantsVisitPrepSupport) {
+      const supportResult = nexusRealProviders.patientSupportBridge.resources({ q: patientSupportMatch ? patientSupportQuery : "" });
       const cards = supportResult?.body?.data?.cards || [];
       extraData = { patientSupportResources: cards };
       response = cards.length
