@@ -277,6 +277,61 @@ function saveResource(body = {}, db, env = process.env) {
   });
 }
 
+const PROGRESS_STATUSES = ["started", "completed"];
+
+function ensureLearningProgress(db) {
+  db.profile = db.profile || {};
+  db.profile.nexusLearningProgress = db.profile.nexusLearningProgress || [];
+  return db.profile.nexusLearningProgress;
+}
+
+// Deliberately distinct from saveResource()'s bookmark list: this is Nexus's
+// own internal record of what the learner told it they started/completed,
+// not a claim about an external LMS. Every response this returns says so
+// explicitly, matching the same honesty rule the rest of this provider
+// already follows (e.g. "did not enroll... or claim completion of an
+// external course").
+function markProgress(body = {}, db, env = process.env) {
+  const provider = "nexus-learning-provider-bridge";
+  const action = "learning.progress";
+  if (!envEnabled("NEXUS_LEARNING_BRIDGE_ENABLED", env, true)) return disabledResponse(provider, action, "NEXUS_LEARNING_BRIDGE_ENABLED");
+  const confirmation = requireConfirmation(body, provider, action);
+  if (confirmation) return confirmation;
+  const record = normalizeSavedLearningResource(body);
+  const error = validateLearningResourceRecord(record);
+  if (error) return blockedResponse(provider, action, error);
+  const status = PROGRESS_STATUSES.includes(body.progressStatus) ? body.progressStatus : "started";
+  const progress = ensureLearningProgress(db);
+  const now = new Date().toISOString();
+  let entry = record.resourceId && progress.find(item => item.resourceId === record.resourceId);
+  if (entry) {
+    entry.status = status;
+    entry.updatedAt = now;
+    if (status === "completed" && !entry.startedAt) entry.startedAt = now;
+    if (status === "completed") entry.completedAt = now;
+  } else {
+    entry = {
+      id: `learning-progress-${Date.now()}`,
+      ...record,
+      status,
+      startedAt: now,
+      completedAt: status === "completed" ? now : null,
+      updatedAt: now,
+      noExternalEnrollmentClaimed: true,
+      noCertificateIssued: true
+    };
+    progress.unshift(entry);
+    db.profile.nexusLearningProgress = progress.slice(0, 100);
+  }
+  return providerResponse({
+    provider,
+    action,
+    status: "completed",
+    message: `Nexus marked "${entry.title}" as ${status} in your own local learning progress list. This is Nexus's own internal record -- it does not enroll you in, or claim completion of, any external course or LMS, and no certificate was issued.`,
+    data: { progress: entry }
+  });
+}
+
 function createLearningReminder(body = {}, db, env = process.env) {
   const provider = "nexus-learning-provider-bridge";
   const action = "learning.reminder";
@@ -339,6 +394,7 @@ module.exports = {
   search,
   resource,
   saveResource,
+  markProgress,
   createLearningReminder,
   queueOffline
 };

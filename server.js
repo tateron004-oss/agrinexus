@@ -10,6 +10,9 @@ const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.j
 const pgUsers = require("./server/pg-users.js");
 const pgHealthIntakes = require("./server/pg-health-intakes.js");
 const pgAuditEvents = require("./server/pg-audit-events.js");
+const pgWorkforce = require("./server/pg-workforce.js");
+const pgTrade = require("./server/pg-trade.js");
+const pgCourses = require("./server/pg-courses.js");
 const { withActionLifecycle } = require("./server/action-lifecycle.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
@@ -1846,6 +1849,119 @@ function shadowWriteAiRunToPostgres({ runType, provider, model, prompt, response
     .then(() => pgAuditEvents.recordAiRun(getPgPool(), { runType, provider, model, prompt, responseText, responseMetadata }))
     .catch(error => {
       console.error("[ai-run] Postgres shadow-write failed:", error.message);
+    });
+}
+
+// Phase 9: real relational workforce storage. runNexusOperationsAction() is
+// synchronous (many call sites chain its return value directly, including
+// recursive self-calls), so this can't be awaited inline. The real
+// workforce_roles id also needs to survive until a LATER, separate request
+// tracks an application against the same job -- and since readDb()/writeDb()
+// hand every request a fresh snapshot (nothing in this file persists across
+// requests by mutating an in-memory object -- see the Phase 8 action-lifecycle
+// incident), a fire-and-forget mutation of the `job` object here would be
+// silently lost the moment this request's writeDb() already ran. Instead this
+// does its own independent read-patch-write cycle after the real Postgres
+// insert resolves, using the shared writeDb() queue so it can't corrupt a
+// concurrent write. A job_applications shadow-write that races ahead of this
+// finishing simply skips (job.pgWorkforceRoleId not yet persisted) rather
+// than fabricating a linkage -- same "best effort, never invent data" rule as
+// every other shadow-write in this file.
+function usingPostgresWorkforce() {
+  return String(process.env.WORKFORCE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+function shadowWriteWorkforceRoleToPostgres(job) {
+  if (!usingPostgresWorkforce() || !job) return;
+  Promise.resolve()
+    .then(() => pgWorkforce.createWorkforceRole(getPgPool(), {
+      title: job.title,
+      level: job.level,
+      countryId: job.country,
+      minReadiness: job.minReadiness
+    }))
+    .then(async role => {
+      if (!role) return;
+      const freshDb = await readDb();
+      const freshJob = ensureNexusPersistentOperations(freshDb).jobOpportunities.find(item => item.jobOpportunityId === job.jobOpportunityId);
+      if (!freshJob) return;
+      freshJob.pgWorkforceRoleId = role.id;
+      job.pgWorkforceRoleId = role.id;
+      await writeDb(freshDb);
+    })
+    .catch(error => {
+      console.error("[workforce-role] Postgres shadow-write failed:", error.message);
+    });
+}
+
+// Phase 9: real relational trade-order storage. Unlike workforce, this
+// needs no second linked table (product_id/route_id/created_by are all
+// nullable) -- a fire-and-forget upsert here is sufficient, keyed by the
+// transaction's own id so create/settle both land on the same real row.
+function usingPostgresTrade() {
+  return String(process.env.TRADE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+function shadowWriteTradeOrderToPostgres(transaction) {
+  if (!usingPostgresTrade() || !transaction) return;
+  Promise.resolve()
+    .then(() => pgTrade.upsertTradeOrder(getPgPool(), {
+      orderNumber: transaction.transactionId,
+      countryId: transaction.country,
+      stage: transaction.status,
+      buyerInterest: transaction.buyerInterest,
+      totalAmount: Number(transaction.settledAmount ?? transaction.amount) || 0
+    }))
+    .catch(error => {
+      console.error("[trade-order] Postgres shadow-write failed:", error.message);
+    });
+}
+
+// Phase 9: real relational course-progress storage. Same real-Postgres-id-
+// by-email resolution as shadowWriteJobApplicationToPostgres above, since a
+// learner_profiles row also requires a real users.id, not the blob shadow's
+// own deliberately-distinct id.
+function usingPostgresCourses() {
+  return String(process.env.COURSE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
+}
+
+function shadowWriteCourseProgressToPostgres(progressEntry, userEmail) {
+  if (!usingPostgresCourses() || !progressEntry?.resourceId || !userEmail) return;
+  Promise.resolve()
+    .then(() => pgCourses.upsertCourse(getPgPool(), {
+      code: progressEntry.resourceId,
+      title: progressEntry.title,
+      track: progressEntry.category
+    }))
+    .then(async course => {
+      if (!course) return;
+      const pgUser = await pgUsers.findUserByEmail(getPgPool(), userEmail);
+      if (!pgUser) return;
+      const learner = await pgCourses.findOrCreateLearnerProfile(getPgPool(), { userId: pgUser.id });
+      if (!learner) return;
+      await pgCourses.upsertCourseEnrollment(getPgPool(), { learnerProfileId: learner.id, courseId: course.id, status: progressEntry.status });
+    })
+    .catch(error => {
+      console.error("[course-progress] Postgres shadow-write failed:", error.message);
+    });
+}
+
+function shadowWriteJobApplicationToPostgres(job, userEmail) {
+  if (!usingPostgresWorkforce() || !job?.pgWorkforceRoleId || !userEmail) return;
+  Promise.resolve()
+    // The signed-in user's blob id is deliberately NOT the same id as their
+    // real Postgres users row (buildBlobShadowFromPostgresUser mints a fresh
+    // blob-only id on purpose -- see auth-postgres-cutover.test.js), so the
+    // real Postgres user id has to be resolved fresh by email here rather
+    // than trusted from `user.id`.
+    .then(() => pgUsers.findUserByEmail(getPgPool(), userEmail))
+    .then(pgUser => pgUser && pgWorkforce.findOrCreateCandidateProfile(getPgPool(), { userId: pgUser.id }))
+    .then(candidate => candidate && pgWorkforce.recordJobApplication(getPgPool(), {
+      candidateProfileId: candidate.id,
+      workforceRoleId: job.pgWorkforceRoleId
+    }))
+    .catch(error => {
+      console.error("[job-application] Postgres shadow-write failed:", error.message);
     });
 }
 
@@ -18757,14 +18873,32 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const jobsRequest = /\b(job|jobs|employment|career|employer|resume|résumé|vacancy|vacancies|position|workforce)\b/i.test(command);
     const wantsSave = /\b(save|bookmark|keep)\b/i.test(command);
     const wantsReminder = /\bremind me\b/i.test(command);
+    const wantsProgress = /\b(started|starting|finished|completed|complete|done with)\b/i.test(command) && /\b(course|lesson|training|module)\b/i.test(command);
+    const progressStatus = /\b(finished|completed|complete|done with)\b/i.test(command) ? "completed" : "started";
     if (learningRequest && !jobsRequest) {
       const learningTopic = command
-        .replace(/\b(please|can you|could you|i want to|i'd like to|explain|teach me|about|a lesson|lesson on|learn about|learn|learning|literacy|course|courses|training|lms|class|save|bookmark|keep|remind me|that|this)\b/gi, " ")
+        // matchesResource() does a whole-phrase substring match, not
+        // keyword overlap -- a leftover connector word here (confirmed live:
+        // "I started the irrigation basics course" left "i the irrigation
+        // basics" after the earlier strip list, which matched nothing) silently
+        // breaks the search, so this needs to strip stopwords too, not just
+        // domain phrases.
+        .replace(/\b(please|can you|could you|i want to|i'd like to|explain|teach me|about|a lesson|lesson on|learn about|learn|learning|literacy|course|courses|training|lms|class|save|bookmark|keep|remind me|that|this|started|starting|finished|completed|complete|done with|i|i've|i'm|my|the|a|an|on|for|to|of)\b/gi, " ")
+        .replace(/[^\w\s-]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
       const searchResult = await nexusRealProviders.learningBridge.search({ query: learningTopic }, process.env);
       const cards = searchResult?.body?.data?.cards || [];
       const bestMatch = cards[0];
+      if (bestMatch && wantsProgress) {
+        const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: true }, db, process.env);
+        const ok = Boolean(progressResult?.body?.ok && progressResult.body.status === "completed");
+        if (ok) shadowWriteCourseProgressToPostgres(progressResult.body.data.progress, user?.email);
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "learning-progress-recorded" : "learning-preparation-ready",
+          [ok ? `Marked ${bestMatch.title} as ${progressStatus} in Nexus's own local learning progress list.` : "Prepared learning guidance."],
+          ["Nexus did not enroll the learner in, issue a certificate for, or claim completion of an external course or LMS -- this is Nexus's own internal record only."]);
+        return { ...common, capability: "learning-training", status: ok ? "learning-progress-recorded" : "learning-preparation-ready", response: ok ? `I marked "${bestMatch.title}" as ${progressStatus} in your own Nexus learning progress list. This is Nexus's own record, not an external course enrollment or certificate.` : `I could not record progress for that resource right now.`, receipt, evidenceReceipt: receipt, localOnly: true };
+      }
       if (bestMatch && (wantsSave || wantsReminder)) {
         const actionResult = wantsSave
           ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: true }, db, process.env)
@@ -40875,6 +41009,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
       shipmentId: cleanOpsText(body.shipmentId || latestShipment(store)?.shipmentId || "", 120),
       amount: cleanOpsText(body.amount || "0", 80),
       currency: cleanOpsText(body.currency || "USD", 12),
+      country: cleanOpsText(body.country || db.profile.activeCountryId || "", 40).toLowerCase(),
       items: Array.isArray(body.items) ? body.items : [],
       status: "draft",
       paymentProvider: cleanOpsText(body.paymentProvider || "none", 40),
@@ -40883,6 +41018,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
       updatedAt: now
     };
     store.transactions.unshift(transaction);
+    shadowWriteTradeOrderToPostgres(transaction);
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_created", actor, "Transaction draft created with payment execution disabled.", null, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Created transaction draft and payment gate."], ["Nexus did not charge, pay, refund, escrow, checkout, or create a provider transaction ID."], "draft");
     return nexusOperationResponse(db, action, transaction, audit, receipt);
@@ -40928,6 +41064,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     transaction.providerTransactionId = nexusOperationId("NX-SIM-TXN");
     transaction.settledAmount = settledAmount;
     transaction.updatedAt = now;
+    shadowWriteTradeOrderToPostgres(transaction);
     const stripeNote = stripeStatus.missingConfig.length
       ? "No real Stripe/Paystack account is configured."
       : "A real Stripe key is present, but real checkout is not wired to this local ledger yet -- settlement here is still simulated.";
@@ -41072,6 +41209,8 @@ function runNexusOperationsAction(db, body = {}, user = null) {
       employerId: employer.employerId,
       title: cleanOpsText(body.title || "Job opportunity", 160),
       status: "draft",
+      level: cleanOpsText(body.level || "Level 1", 40),
+      country: cleanOpsText(body.country || db.profile.activeCountryId || "", 40).toLowerCase(),
       location: cleanOpsText(body.location || employer.region || "", 160),
       skillsRequired: cleanOpsArray(body.skillsRequired || ""),
       description: cleanOpsText(body.description || command || "Job opportunity prepared for review.", 500),
@@ -41081,6 +41220,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     };
     store.jobOpportunities.unshift(job);
     employer.updatedAt = now;
+    shadowWriteWorkforceRoleToPostgres(job);
     const audit = addNexusOperationsAudit(db, "job", job.jobOpportunityId, "job_opportunity_added", actor, "Job opportunity added as draft only.", null, job);
     const receipt = addNexusOperationsReceipt(db, "job", job.jobOpportunityId, action, ["Added job opportunity draft."], ["Nexus did not publish the job externally or promise applicant placement."], "draft");
     return nexusOperationResponse(db, action, job, audit, receipt, { pipeline: nexusHiringPipeline(store, employer.employerId) });
@@ -41104,7 +41244,10 @@ function runNexusOperationsAction(db, body = {}, user = null) {
       updatedAt: now
     };
     if (action === "add_interview_follow_up") store.interviewFollowUps.unshift(application);
-    else store.jobApplications.unshift(application);
+    else {
+      store.jobApplications.unshift(application);
+      shadowWriteJobApplicationToPostgres(job, user?.email);
+    }
     store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
     applicant.updatedAt = now;
     employer.updatedAt = now;
