@@ -123,6 +123,72 @@ const LOCAL_CATALOG = Object.freeze([
     summary: "Learn basic agritech terms, safe drone-use questions, and when to ask a trained operator.",
     details: "This is education only. It does not control drones, request flights, or capture images.",
     keywords: ["drone", "agritech", "technology", "field", "remote"]
+  },
+  {
+    id: "local-small-business-financial-literacy",
+    title: "Small business financial literacy basics",
+    category: "small-business-finance",
+    level: "Beginner",
+    duration: "25 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Learn cash flow tracking, separating personal and business money, basic bookkeeping, and reading a simple profit-and-loss picture.",
+    details: "Covers budgeting for a small business, understanding credit and common financing options (loans, lines of credit, grants, and revenue-based options), and questions to ask before signing any funding agreement. Education only; it does not extend credit, move money, or replace a licensed accountant or financial advisor.",
+    keywords: ["financial literacy", "finance", "budget", "cash flow", "bookkeeping", "credit", "funding", "small business"]
+  },
+  {
+    id: "local-marketing-strategy-fundamentals",
+    title: "Marketing strategy fundamentals for small business",
+    category: "marketing-strategy",
+    level: "Beginner",
+    duration: "22 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Learn how to define a target customer, position an offer, choose realistic marketing channels, and set a simple budget and timeline.",
+    details: "Walks through audience definition, message and positioning, a channel plan (social, local outreach, referrals, in-person), and a basic way to measure what is working. Education only; it does not post content, run ads, or contact customers on your behalf.",
+    keywords: ["marketing", "strategy", "branding", "advertising", "customers", "small business", "social media"]
+  },
+  {
+    id: "local-nonprofit-grant-writing-fundamentals",
+    title: "Grant writing fundamentals for nonprofits",
+    category: "nonprofit-grants",
+    level: "Beginner",
+    duration: "28 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Learn how to find funders whose priorities match your mission, and how to structure a clear, fundable grant proposal.",
+    details: "Covers a needs statement, a case for support, outcomes and measurement, a simple budget narrative, and a submission checklist. Also explains how to evaluate whether a funder is a genuine match before applying. This is education and proposal-structure guidance only -- it does not search live funder databases, submit applications, or guarantee funding. Always verify a funder's current guidelines, deadlines, and eligibility directly on that funder's own official page before applying.",
+    keywords: ["grant", "grants", "grant writing", "grant proposal", "locate grants", "find grants", "nonprofit", "funder", "donor", "fundraising", "proposal"]
+  },
+  {
+    id: "local-minority-owned-business-development",
+    title: "Minority-owned business development resources",
+    category: "minority-business-development",
+    level: "Beginner",
+    duration: "20 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Learn about certification and support programs commonly used by Black-owned and Brown-owned small businesses to access capital, contracts, and mentorship.",
+    details: "Introduces well-established programs worth researching directly, including the U.S. Small Business Administration's 8(a) Business Development Program, the Minority Business Development Agency (MBDA) and its regional Business Centers, and state or local Minority Business Enterprise (MBE) / Disadvantaged Business Enterprise (DBE) certification, alongside general readiness steps (business registration, financial records, a clear pitch) that most programs expect. Education only -- program rules, deadlines, and eligibility change, so verify current details on each program's own official site before applying.",
+    keywords: ["minority owned", "minority-owned", "minority-owned business", "black owned", "black-owned", "black-owned business", "brown owned", "brown-owned", "brown-owned business", "mbe", "dbe", "8(a)", "mbda", "certification", "small business", "development"]
+  },
+  {
+    id: "local-government-partnership-readiness",
+    title: "Government & public-sector partnership readiness",
+    category: "government-partnership",
+    level: "Intermediate",
+    duration: "26 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Prepare to work with a government ministry, agency, or public program on small-business education, workforce training, or digital-skills initiatives.",
+    details: "Covers mapping the relevant stakeholders and decision-makers, framing a program proposal in language that matches public-sector priorities (outcomes, cost, reach, sustainability), planning a curriculum and training delivery approach, and a simple pilot-then-scale rollout plan. Education and preparation only -- it does not contact any government office, submit a proposal, or represent an existing partnership.",
+    keywords: ["government", "government partnership", "government partnership readiness", "public sector", "public-sector partnership", "public sector partnership readiness", "ministry", "agency", "partnership", "policy", "training program", "small business education", "africa"]
+  },
+  {
+    id: "local-technology-modernization-planning",
+    title: "Technology modernization planning for small organizations",
+    category: "tech-modernization",
+    level: "Intermediate",
+    duration: "24 minutes",
+    source: "Kyro local starter catalog",
+    summary: "Learn a practical approach to modernizing technology for a small business, nonprofit, or government program with limited budget and connectivity.",
+    details: "Covers a simple needs assessment, planning for low-connectivity and low-cost-device realities, basic data-handling and security practices, choosing and evaluating vendors or tools, and a staged staff-training rollout plan. Education only -- it does not purchase, install, or configure any technology on your behalf.",
+    keywords: ["technology", "modernization", "digital transformation", "it", "training", "infrastructure", "connectivity"]
   }
 ]);
 
@@ -161,7 +227,16 @@ function matchesResource(resource, query, category) {
     ...(resource.keywords || [])
   ].join(" "));
   const categoryMatches = !categoryText || resource.category === categoryText || haystack.includes(categoryText);
-  const queryMatches = !queryText || haystack.includes(queryText);
+  // A whole-phrase substring match is the fast path, but real spoken/typed
+  // requests get reordered by upstream stopword-stripping (e.g. "financial
+  // literacy for my small business" strips to "financial small business",
+  // which is never a contiguous substring of a title like "Small business
+  // financial literacy basics" even though every word is genuinely present).
+  // Falling back to a token-AND match for multi-word queries only ever adds
+  // matches an exact-phrase query already found -- it cannot cause a query
+  // that used to match to stop matching.
+  const queryTokens = queryText.split(/\s+/).filter(Boolean);
+  const queryMatches = !queryText || haystack.includes(queryText) || (queryTokens.length > 1 && queryTokens.every(token => haystack.includes(token)));
   return categoryMatches && queryMatches;
 }
 

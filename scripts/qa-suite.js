@@ -162,7 +162,8 @@ const suites = {
     "scripts/companion-confirmation-gate-smoke.js",
     "scripts/companion-response-quality-smoke.js",
     "scripts/security-hardening-verify.js",
-    "scripts/error-monitoring-verify.js"
+    "scripts/error-monitoring-verify.js",
+    "scripts/small-business-nonprofit-gov-verify.js"
   ],
   "genesis-rails-core": [
     "archive/qa-scripts/nexus-genesis-rail-09-understanding-qa.js",

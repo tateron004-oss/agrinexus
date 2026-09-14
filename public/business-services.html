@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Business services · AgriNexus</title>
+  <title>Kyro Business &amp; Grants · Kyro Genesis | AgriNexus</title>
   <link rel="stylesheet" href="/business-services.css">
   <script src="/business-services.js" defer></script>
 </head>
 <body>
-  <header><a href="/">← Nexus</a><div><p class="eyebrow">AgriNexus</p><h1>Business services</h1></div><p>Client workspaces, launch drafts and assistant packages.</p></header>
+  <header><a href="/">← Kyro Genesis</a><div><p class="eyebrow">Kyro Genesis | AgriNexus</p><h1>Kyro Business &amp; Grants</h1></div><p>Client workspaces, launch drafts, grant and funding proposals, and assistant packages for small businesses, nonprofits, and government partners.</p></header>
   <p id="notice" role="status" aria-live="polite">Checking your signed-in workspace…</p>
   <main>
     <aside>
@@ -41,7 +41,18 @@
         <label class="check"><input id="ai-consent" type="checkbox">Allow these business details, assistant draft and test message to be shared with the configured AI provider.</label>
         <p id="assistant-result" class="result" aria-live="polite"></p>
       </section>
-      <section><h3>Planning templates</h3><label>Perspective<select id="strategy-profile"><option value="coach">Coach</option><option value="strategy">Strategy</option><option value="investor">Investor preparation</option><option value="product">Product</option><option value="operations">Operations</option><option value="research">Research framing</option><option value="content">Content</option><option value="partnerships">Partnerships</option><option value="technical">Technical</option><option value="business">Business builder</option><option value="grants">Grant writing</option><option value="donors">Donor relations</option><option value="volunteers">Volunteer coordination</option></select></label><button type="button" data-generate="strategy">Create planning outline</button><p>Uses this workspace's notes to make a template outline; no live research is performed.</p></section>
+      <section><h3>Planning templates</h3><label>Perspective<select id="strategy-profile"><option value="coach">Coach</option><option value="strategy">Strategy</option><option value="investor">Investor preparation</option><option value="product">Product</option><option value="operations">Operations</option><option value="research">Research framing</option><option value="content">Content</option><option value="partnerships">Partnerships</option><option value="technical">Technical</option><option value="business">Business builder</option><option value="grants">Grant writing</option><option value="donors">Donor relations</option><option value="volunteers">Volunteer coordination</option><option value="marketing">Marketing strategy</option><option value="finance">Financial literacy</option><option value="government">Government &amp; public-sector partnership</option></select></label><button type="button" data-generate="strategy">Create planning outline</button><p>Uses this workspace's notes to make a template outline; no live research is performed.</p></section>
+      <section><h3>Small business, nonprofit &amp; government resources</h3><p>Kyro also has self-paced learning resources you can start from Nexus (ask to "learn about grant writing", "financial literacy", "marketing strategy", "minority-owned business development", "government partnership readiness", or "technology modernization"). These cover:</p>
+        <ul>
+          <li>Small business financial literacy: cash flow, budgeting, bookkeeping, and funding options.</li>
+          <li>Marketing strategy: audience, positioning, channel plan, and measurement.</li>
+          <li>Grant writing for nonprofits: funder fit, case for support, budget narrative, and a submission checklist.</li>
+          <li>Minority-owned business development: readiness for programs such as the SBA 8(a) Business Development Program, the Minority Business Development Agency (MBDA), and state/local MBE or DBE certification.</li>
+          <li>Government &amp; public-sector partnership readiness: stakeholder mapping, curriculum and training design, and a pilot-then-scale rollout plan.</li>
+          <li>Technology modernization planning for organizations with limited budget or connectivity.</li>
+        </ul>
+        <p>These are education and planning-template resources only. Always verify current program rules, deadlines, and eligibility directly on each program's own official site before applying.</p>
+      </section>
       <section><h3>Generate drafts</h3><p>These actions create files in your workspace. They do not publish pages, send messages or contact clients.</p><div class="actions">
         <button type="button" data-generate="launch-kit">Launch kit</button><button type="button" data-generate="landing-page">Landing page</button><button type="button" data-generate="assistant-package">Assistant package</button><button type="button" data-generate="workflow">Full draft workflow</button>
       </div><button id="download-package" type="button">Download all drafts as ZIP</button><ul id="files"></ul></section>
