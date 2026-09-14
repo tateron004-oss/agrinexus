@@ -67,7 +67,14 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
 
 async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
   const listenerBoundary = await waitForCurrentLoginSubmitListener(page);
-  const beforeClick = await page.evaluate(() => window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("before-click") || null);
+  // Diagnostic-only (never gates pass/fail -- see captureLoginLifecycleDiagnostics)
+  // so a stray navigation destroying this evaluate's execution context must not
+  // fail the whole probe run. Confirmed live: this exact call failed with
+  // "Execution context was destroyed, most likely because of a navigation" and
+  // killed an otherwise-successful deploy's evidence step, even though the
+  // sibling after-timeout evaluate a few lines below already tolerates the same
+  // error with .catch(() => null).
+  const beforeClick = await page.evaluate(() => window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("before-click") || null).catch(() => null);
   if (lifecycle) lifecycle.beforeClick = { ...listenerBoundary, ...beforeClick };
   const loginResponsePromise = page.waitForResponse(response => {
     try {
@@ -81,7 +88,7 @@ async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
   const selectedButton = page.getByRole("button", { name: "Enter platform", exact: true });
   await selectedButton.click();
   if (lifecycle) lifecycle.afterClick = await page.evaluate(() =>
-    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-click") || null);
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-click") || null).catch(() => null);
   let response;
   try {
     response = await loginResponsePromise;
@@ -709,10 +716,10 @@ async function run(env = process.env) {
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
   await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
   loginLifecycle.afterEmailFill = await page.evaluate(() =>
-    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-email-fill") || null);
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-email-fill") || null).catch(() => null);
   await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
   loginLifecycle.afterPasswordFill = await page.evaluate(() =>
-    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-password-fill") || null);
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-password-fill") || null).catch(() => null);
   let loginBoundary;
   try {
     loginBoundary = await submitRegisteredStandardUserLogin(page, base, loginLifecycle);
