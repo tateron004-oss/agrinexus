@@ -94,3 +94,13 @@ test("an unrelated health command is unaffected by the widened provider-search g
   const result = await callHealthTool("My blood pressure is 150 over 95.");
   assert.equal(result.status, "health-reading-saved");
 });
+
+test("'list a cardiologist in X' reaches the real search, not just 'find'", async () => {
+  const result = await callHealthTool("List a cardiologist in Nairobi.");
+  assert.ok(reachedRealSearch(result), "the 'list' verb must reach the same real provider search as 'find'");
+});
+
+test("'show me a dentist in X' also reaches the real search", async () => {
+  const result = await callHealthTool("Show me a dentist in Lagos.");
+  assert.ok(reachedRealSearch(result), "the 'show me' verb must reach the same real provider search as 'find'");
+});
