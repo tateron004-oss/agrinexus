@@ -100,6 +100,25 @@ const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 30
 const sessions = new Map();
 const genesisVoiceGuestSessions = new Map();
 const rateBuckets = new Map();
+// Phase 11 error monitoring: a real, always-available in-process record of
+// what's actually been failing, viewable by an admin with no third-party
+// account/credentials needed (Sentry/Datadog-class monitoring is Phase 12
+// territory once the owner picks and pays for one). Bounded ring buffer --
+// process-local and lost on restart, which is an honest limitation stated
+// in the admin endpoint's own response, not hidden.
+const RECENT_SERVER_ERRORS_CAP = 200;
+const recentServerErrors = [];
+
+function recordServerError({ source, message, context = {} }) {
+  recentServerErrors.unshift({
+    id: crypto.randomUUID(),
+    source,
+    message: String(message || "Unknown error").slice(0, 2000),
+    context,
+    occurredAt: new Date().toISOString()
+  });
+  if (recentServerErrors.length > RECENT_SERVER_ERRORS_CAP) recentServerErrors.length = RECENT_SERVER_ERRORS_CAP;
+}
 const phoneAudioCache = new Map();
 const spotifyOAuthStates = new Map();
 const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
@@ -1840,6 +1859,7 @@ function shadowWriteAuditEventToPostgres({ action, entityType, entityId, actorEm
     .then(() => pgAuditEvents.recordAuditEvent(getPgPool(), { action, entityType, entityId, actorEmail, metadata }))
     .catch(error => {
       console.error("[audit-event] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "audit-event-shadow-write", message: error.message });
     });
 }
 
@@ -1849,6 +1869,7 @@ function shadowWriteAiRunToPostgres({ runType, provider, model, prompt, response
     .then(() => pgAuditEvents.recordAiRun(getPgPool(), { runType, provider, model, prompt, responseText, responseMetadata }))
     .catch(error => {
       console.error("[ai-run] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "ai-run-shadow-write", message: error.message });
     });
 }
 
@@ -1891,6 +1912,7 @@ function shadowWriteWorkforceRoleToPostgres(job) {
     })
     .catch(error => {
       console.error("[workforce-role] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "workforce-role-shadow-write", message: error.message });
     });
 }
 
@@ -1914,6 +1936,7 @@ function shadowWriteTradeOrderToPostgres(transaction) {
     }))
     .catch(error => {
       console.error("[trade-order] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "trade-order-shadow-write", message: error.message });
     });
 }
 
@@ -1943,6 +1966,7 @@ function shadowWriteCourseProgressToPostgres(progressEntry, userEmail) {
     })
     .catch(error => {
       console.error("[course-progress] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "course-progress-shadow-write", message: error.message });
     });
 }
 
@@ -1962,6 +1986,7 @@ function shadowWriteJobApplicationToPostgres(job, userEmail) {
     }))
     .catch(error => {
       console.error("[job-application] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "job-application-shadow-write", message: error.message });
     });
 }
 
@@ -1988,6 +2013,7 @@ function shadowWriteHealthIntakeToPostgres(intake) {
     }))
     .catch(error => {
       console.error("[health-intake] Postgres shadow-write failed:", error.message);
+      recordServerError({ source: "health-intake-shadow-write", message: error.message });
     });
 }
 
@@ -46084,6 +46110,17 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, user));
   }
 
+  if (url.pathname === "/api/admin/system/errors" && req.method === "GET") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing system error logs" });
+    return send(res, 200, {
+      ok: true,
+      errors: recentServerErrors,
+      count: recentServerErrors.length,
+      cap: RECENT_SERVER_ERRORS_CAP,
+      note: "This is a real, process-local record of what's actually failed (unhandled request exceptions and provider/database shadow-write failures) -- not a third-party monitoring service. It resets on every server restart/redeploy, so it complements rather than replaces real external error monitoring (Sentry/Datadog-class) once one is configured."
+    });
+  }
+
   if (url.pathname === "/api/admin/health-check" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow admin health checks" });
     for (const provider of runtimeProviders(db)) {
@@ -50842,6 +50879,7 @@ const server = http.createServer(async (req, res) => {
     // a null-deref, or another internal detail that shouldn't be exposed to
     // any caller, authenticated or not.
     console.error("[unhandled]", error.stack || error.message);
+    recordServerError({ source: "unhandled-request", message: error.stack || error.message, context: { path: url.pathname, method: req.method } });
     return send(res, 500, { error: "Server error" });
   }
 });
