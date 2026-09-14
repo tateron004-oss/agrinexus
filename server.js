@@ -18512,8 +18512,21 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
 
 function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   const store = nexusPersistentMemoryStore(db, process.env);
-  const query = sanitizePilotText(args.query || common.command || "", 240);
   const commandText = common.command || "";
+  // Confirmed live: saving "Remember that my farm is in Kisumu." then
+  // asking "What do you remember about my farm?" -- or even "Do you know
+  // anything about Kisumu?", a literal keyword the record actually
+  // contains -- both returned zero results, because the ENTIRE unstripped
+  // question was used as the search query (searchRecords requires the
+  // whole query as one contiguous substring). Strip connector/question
+  // words the same way the reminder/field-visit/marketplace title-matching
+  // fixes already do, so a real keyword search actually reaches the
+  // record; an all-stopword query (e.g. a topic-less "what do you
+  // remember?") falls back to an empty query, matching every record,
+  // rather than the original raw sentence, which would never match.
+  const MEMORY_QUERY_STOPWORDS = /\b(what|do|does|did|have|has|you|remember|remembered|know|knew|anything|something|about|tell|me|can|could|would|should|is|are|was|were|the|a|an|my|to|for|of|that|this|i|told|said|mentioned|please|forget|forgot|forgotten|forgetting|delete|deleted|remove|removed|erase|erased|revoke|revoked|save|saved|store|stored)\b/gi;
+  const searchQuery = sanitizePilotText(commandText.replace(MEMORY_QUERY_STOPWORDS, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 240);
+  const query = sanitizePilotText(args.query || searchQuery, 240);
   // "What do you remember about my farm?" is a genuine recall question, not
   // a save request -- confirmed live, the bare presence of "remember"
   // routed it into the create/confirm branch instead of the search branch
@@ -18541,28 +18554,64 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
         didNot: ["Nexus did not create, delete, export, or share memory."]
       });
     }
-    const result = wantsDelete
-      ? store.searchRecords({ query, includeArchived: false })
-      : store.createRecord({
-          type: "preference",
-          title: sanitizePilotText(args.title || "User preference", 120),
-          value: query || sanitizePilotText(common.command, 240),
-          source: "openai-native-tool",
-          consent: true
-        });
+    if (wantsDelete) {
+      // Previously always stopped here regardless of how many records
+      // matched -- "Choose the exact record before I archive or delete
+      // anything," with no voice-reachable way to ever supply that choice.
+      // A single unambiguous match after explicit confirmation is exactly
+      // as safe to act on as the reminders/field-visit/marketplace-listing
+      // cancel flows already shipped this session; multiple or zero
+      // matches still stop short rather than guessing.
+      const searchResult = store.searchRecords({ query, includeArchived: false });
+      const matches = searchResult.records || [];
+      if (matches.length === 1) {
+        const deleteResult = store.deleteLocalRecord(matches[0].id, true);
+        db.profile.nexusPersistentMemory = deleteResult.state || store.snapshot();
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "memory-deleted",
+          [`Deleted the local Nexus memory record "${matches[0].title}".`],
+          ["Nexus did not share memory externally or expose private values in diagnostics."]);
+        return { ...common, status: "memory-deleted", response: `I deleted the Nexus memory record "${matches[0].title}".`, memory: deleteResult, receipt, evidenceReceipt: receipt, executionAttempted: true, executionVerified: true, localOnly: true };
+      }
+      db.profile.nexusPersistentMemory = searchResult.state || store.snapshot();
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "memory-review-prepared",
+        ["Prepared matching memory records for review."],
+        ["Nexus did not share memory externally or expose private values in diagnostics."]);
+      return {
+        ...common,
+        status: "memory-review-prepared",
+        response: matches.length
+          ? `I found ${matches.length} matching memory records. Tell me more specifically which one (e.g. its exact title) and confirm again, so I don't delete the wrong one.`
+          : "I did not find a matching Nexus memory record to delete.",
+        memory: searchResult,
+        receipt,
+        evidenceReceipt: receipt,
+        executionAttempted: true,
+        executionVerified: true,
+        localOnly: true
+      };
+    }
+    // normalizeRecord() (public/nexus-persistent-memory.js) only ever reads
+    // a *payload* object, not a top-level "value" field -- confirmed live,
+    // passing value here meant it was silently discarded on every save
+    // (payload defaulted to {}), so the record's actual content -- the one
+    // thing search needs to find -- was never stored at all. This was the
+    // real root cause behind recall never finding anything, independent of
+    // the query-matching fixes above.
+    const result = store.createRecord({
+      type: "preference",
+      title: sanitizePilotText(args.title || "User preference", 120),
+      payload: { value: sanitizePilotText(args.value || commandText, 240) },
+      source: "openai-native-tool",
+      consent: true
+    });
     db.profile.nexusPersistentMemory = result.state || store.snapshot();
-    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, wantsDelete ? "memory-review-prepared" : "memory-created", [
-      wantsDelete ? "Prepared matching memory records for review." : "Created an authorized local Nexus memory record.",
-      "Kept memory operation inside Nexus persistent-memory controls."
-    ], [
-      "Nexus did not share memory externally or expose private values in diagnostics."
-    ]);
+    const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "memory-created",
+      ["Created an authorized local Nexus memory record."],
+      ["Nexus did not share memory externally or expose private values in diagnostics."]);
     return {
       ...common,
-      status: wantsDelete ? "memory-review-prepared" : "memory-created",
-      response: wantsDelete
-        ? "I found the relevant Nexus memory records for review. Choose the exact record before I archive or delete anything."
-        : "I saved that as authorized local Nexus memory. You can ask me to inspect, correct, export, or delete it later.",
+      status: "memory-created",
+      response: "I saved that as authorized local Nexus memory. You can ask me to inspect, correct, export, or delete it later.",
       memory: result,
       receipt,
       evidenceReceipt: receipt,
