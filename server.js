@@ -18491,8 +18491,17 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
 function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   const store = nexusPersistentMemoryStore(db, process.env);
   const query = sanitizePilotText(args.query || common.command || "", 240);
-  const wantsCreate = /\b(remember|save|store)\b/i.test(common.command || "");
-  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(common.command || "");
+  const commandText = common.command || "";
+  // "What do you remember about my farm?" is a genuine recall question, not
+  // a save request -- confirmed live, the bare presence of "remember"
+  // routed it into the create/confirm branch instead of the search branch
+  // below, which already exists and handles exactly this. Narrowly targets
+  // the question-form ("do/did/does you remember", "what ... remember")
+  // rather than gating on any question word, so a polite imperative like
+  // "can you save this" is unaffected.
+  const isMemoryRecallQuestion = /\b(do|did|does)\s+you\s+remember\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
+  const wantsCreate = !isMemoryRecallQuestion && /\b(remember|save|store)\b/i.test(commandText);
+  const wantsDelete = /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
   const confirmed = Boolean(args.confirmed || args.confirmation);
   if (wantsCreate || wantsDelete) {
     if (!confirmed) {
@@ -18616,7 +18625,33 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
-    const location = sanitizePilotText(args.location || args.city || locationMatch?.[1] || args.query || command, 180);
+    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query;
+    // A vague question like "Will it rain tomorrow?" or "What is the weather
+    // like?" has no real location in it, but previously fell through to
+    // using the ENTIRE command sentence as the geocoder query -- confirmed
+    // live, this doesn't fail cleanly, it returns weather for a real but
+    // wrong place a fuzzy full-text place-name search happened to match
+    // (e.g. "Will it rain tomorrow?" -> a real commune literally named
+    // "Will" in Haiti), presented with the same confidence as a correct
+    // answer. Only treat the bare command as a location fallback when it
+    // plausibly IS just a typed place name (short, no question phrasing) --
+    // e.g. a one-word follow-up like "Nairobi" after being asked to clarify.
+    const looksLikeBareLocation = !explicitLocation
+      && command.trim().split(/\s+/).length <= 4
+      && !/[?]/.test(command)
+      && !/\b(what|whats|what's|will|is|are|how|does|do|weather|rain|forecast|like|today|tomorrow|tonight)\b/i.test(command);
+    if (!explicitLocation && !looksLikeBareLocation) {
+      return {
+        ...common,
+        status: "missing-location",
+        response: "Which location's weather would you like? Tell me a city, town, or region and I will check.",
+        providerAttempted: false,
+        providerSucceeded: false,
+        executionAttempted: false,
+        executionVerified: false
+      };
+    }
+    const location = sanitizePilotText(explicitLocation || command, 180);
     const otherLocationsMatch = command.match(/\b(?:compare|versus|vs\.?)\b.*?\b(?:with|to|and)\s+(.+)$/i);
     const compareLocations = otherLocationsMatch ? otherLocationsMatch[1].split(/\band\b|,/i).map(item => item.trim()).filter(Boolean) : [];
     if (compareLocations.length && location) {
