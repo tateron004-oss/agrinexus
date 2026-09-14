@@ -300,10 +300,16 @@ function markProgress(body = {}, db, env = process.env) {
   const record = normalizeSavedLearningResource(body);
   const error = validateLearningResourceRecord(record);
   if (error) return blockedResponse(provider, action, error);
+  // A missing resourceId would make the dedup lookup below always miss,
+  // silently creating a fresh entry (and a fresh shadow-written Postgres
+  // course) on every call instead of updating one -- the one real caller
+  // always supplies a real catalog id, but require it explicitly rather
+  // than silently degrading, matching pg-courses.js's own guard.
+  if (!record.resourceId) return blockedResponse(provider, action, "Learning progress requires a resourceId to track against.");
   const status = PROGRESS_STATUSES.includes(body.progressStatus) ? body.progressStatus : "started";
   const progress = ensureLearningProgress(db);
   const now = new Date().toISOString();
-  let entry = record.resourceId && progress.find(item => item.resourceId === record.resourceId);
+  let entry = progress.find(item => item.resourceId === record.resourceId);
   if (entry) {
     entry.status = status;
     entry.updatedAt = now;

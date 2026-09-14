@@ -141,8 +141,51 @@ async function call(route, { body, cookie } = {}) {
       );
     }
     assert.equal(applicationRow.rows.length, 1, "a real signed-in user tracking an application must shadow-write a real, linked job_applications row");
+    const applicationRowId = applicationRow.rows[0].id;
     console.log(`Verified real job_applications row linked to a real candidate_profiles row for user ${applicationRow.rows[0].user_id}`);
 
+    // Regression check: tracking the SAME application again (a real status
+    // update, the whole point of track_application_status) must update the
+    // existing row, not insert a second one.
+    const trackedAgain = await call("/api/nexus/operations/action", {
+      body: { action: "track_application_status", jobOpportunityId, status: "interviewing" },
+      cookie: userCookie
+    });
+    assert.equal(trackedAgain.status, 200);
+    let updatedApplication = { rows: [{ status: "under-review" }] };
+    for (let i = 0; i < 20 && updatedApplication.rows[0].status !== "interviewing"; i += 1) {
+      await wait(200);
+      updatedApplication = await pool.query("select id, status from job_applications where id = $1", [applicationRowId]);
+    }
+    assert.equal(updatedApplication.rows[0].status, "interviewing", "a repeated status update must land on the same real row");
+    const dupeCheck = await pool.query(
+      `select count(*)::int as count from job_applications ja join candidate_profiles cp on cp.id = ja.candidate_profile_id where cp.user_id = $1`,
+      [createdUser.id]
+    );
+    assert.equal(dupeCheck.rows[0].count, 1, "repeated status tracking must upsert one row, not create a duplicate");
+    console.log("Verified repeated track_application_status updates the same real row instead of duplicating.");
+
+    // Security regression check: an anonymous request (no session cookie)
+    // creating a job then tracking an application against it must NOT
+    // attribute a real Postgres write to any real account -- confirmed
+    // review finding: an unauthenticated caller used to resolve to the
+    // Platform Admin account via a broken role-string fallback.
+    const anonJobTitle = `QA anon-check role ${Date.now()}`;
+    const anonPosted = await call("/api/nexus/operations/action", { body: { action: "add_job_opportunity", title: anonJobTitle, level: "Level 1", country: "kenya" } });
+    assert.equal(anonPosted.status, 200, "the anonymous ops console itself should still work for local bookkeeping");
+    const anonJobId = anonPosted.json.nexusOperationsResult.record.jobOpportunityId;
+    await wait(500);
+    const anonTracked = await call("/api/nexus/operations/action", { body: { action: "track_application_status", jobOpportunityId: anonJobId, status: "under-review" } });
+    assert.equal(anonTracked.status, 200);
+    await wait(1500);
+    const misattributed = await pool.query(
+      `select ja.id from job_applications ja join workforce_roles wr on wr.id = ja.workforce_role_id where wr.title = $1`,
+      [anonJobTitle]
+    );
+    assert.equal(misattributed.rows.length, 0, "an anonymous request must never create a real job_applications row attributed to any real account");
+    console.log("Verified an anonymous ops-console request does not misattribute a real Postgres write to any real account.");
+
+    await pool.query("delete from workforce_roles where title = $1", [anonJobTitle]);
     await pool.query("delete from job_applications where workforce_role_id = (select id from workforce_roles where title = $1)", [jobTitle]);
     await pool.query("delete from workforce_roles where title = $1", [jobTitle]);
     await pool.query("delete from candidate_profiles where user_id = $1", [createdUser.id]);

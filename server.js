@@ -1892,6 +1892,53 @@ function usingPostgresWorkforce() {
   return String(process.env.WORKFORCE_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
 }
 
+// Shared by every shadow-write that needs a Postgres-assigned id to survive
+// until a LATER, separate request needs it. readDb()/writeDb() hand every
+// request a fresh snapshot, so a fire-and-forget mutation of an in-memory
+// object from a past request is silently lost the moment that request's own
+// writeDb() already ran (the Phase 8 action-lifecycle incident). This does
+// its own independent read-find-patch-write cycle instead. Note this is
+// still a best-effort mitigation, not a full fix: the shared writeDb() queue
+// only serializes the disk write itself, not the read-then-write gap, so a
+// genuinely concurrent unrelated write landing inside that gap can still
+// lose an update. Acceptable for this low-frequency admin-console feature;
+// a real fix would need compare-and-swap semantics in writeDb() itself.
+async function patchPersistedRecord(collectionKey, matchFn, patchFn) {
+  const freshDb = await readDb();
+  const collection = ensureNexusPersistentOperations(freshDb)[collectionKey];
+  const record = Array.isArray(collection) && collection.find(matchFn);
+  if (!record) return null;
+  patchFn(record);
+  await writeDb(freshDb);
+  return record;
+}
+
+// Polls for a field a background patch (like the one above) is expected to
+// set shortly. Used when a same-request or fast-follow-up flow needs a
+// Postgres id that a still-in-flight sibling shadow-write is about to
+// persist -- e.g. creating a job posting and immediately tracking an
+// application against it, which used to deterministically race
+// patchPersistedRecord above and silently drop the application write.
+async function waitForPersistedField(collectionKey, matchFn, fieldName, { attempts = 6, delayMs = 250 } = {}) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const freshDb = await readDb();
+    const record = ensureNexusPersistentOperations(freshDb)[collectionKey]?.find(matchFn);
+    if (record?.[fieldName]) return record[fieldName];
+    if (attempt < attempts - 1) await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  return null;
+}
+
+// The signed-in user's blob id is deliberately NOT the same id as their real
+// Postgres users row (buildBlobShadowFromPostgresUser mints a fresh
+// blob-only id on purpose -- see auth-postgres-cutover.test.js), so the real
+// Postgres user id has to be resolved fresh by email rather than trusted
+// from `user.id`.
+function resolveRealPgUserByEmail(userEmail) {
+  if (!userEmail) return Promise.resolve(null);
+  return pgUsers.findUserByEmail(getPgPool(), userEmail);
+}
+
 function shadowWriteWorkforceRoleToPostgres(job) {
   if (!usingPostgresWorkforce() || !job) return;
   Promise.resolve()
@@ -1901,15 +1948,11 @@ function shadowWriteWorkforceRoleToPostgres(job) {
       countryId: job.country,
       minReadiness: job.minReadiness
     }))
-    .then(async role => {
-      if (!role) return;
-      const freshDb = await readDb();
-      const freshJob = ensureNexusPersistentOperations(freshDb).jobOpportunities.find(item => item.jobOpportunityId === job.jobOpportunityId);
-      if (!freshJob) return;
-      freshJob.pgWorkforceRoleId = role.id;
-      job.pgWorkforceRoleId = role.id;
-      await writeDb(freshDb);
-    })
+    .then(role => role && patchPersistedRecord(
+      "jobOpportunities",
+      item => item.jobOpportunityId === job.jobOpportunityId,
+      record => { record.pgWorkforceRoleId = role.id; }
+    ))
     .catch(error => {
       console.error("[workforce-role] Postgres shadow-write failed:", error.message);
       recordServerError({ source: "workforce-role-shadow-write", message: error.message });
@@ -1925,13 +1968,16 @@ function usingPostgresTrade() {
 }
 
 function shadowWriteTradeOrderToPostgres(transaction) {
-  if (!usingPostgresTrade() || !transaction) return;
+  // A transaction created before the `country` field existed on this object
+  // (any blob snapshot predating this feature) has no country at all -- that
+  // is expected legacy data, not a config error, so skip it quietly rather
+  // than attempting a write pg-trade.js would throw on for an unmapped value.
+  if (!usingPostgresTrade() || !transaction?.country) return;
   Promise.resolve()
     .then(() => pgTrade.upsertTradeOrder(getPgPool(), {
       orderNumber: transaction.transactionId,
       countryId: transaction.country,
       stage: transaction.status,
-      buyerInterest: transaction.buyerInterest,
       totalAmount: Number(transaction.settledAmount ?? transaction.amount) || 0
     }))
     .catch(error => {
@@ -1941,7 +1987,7 @@ function shadowWriteTradeOrderToPostgres(transaction) {
 }
 
 // Phase 9: real relational course-progress storage. Same real-Postgres-id-
-// by-email resolution as shadowWriteJobApplicationToPostgres above, since a
+// by-email resolution as shadowWriteJobApplicationToPostgres below, since a
 // learner_profiles row also requires a real users.id, not the blob shadow's
 // own deliberately-distinct id.
 function usingPostgresCourses() {
@@ -1958,7 +2004,7 @@ function shadowWriteCourseProgressToPostgres(progressEntry, userEmail) {
     }))
     .then(async course => {
       if (!course) return;
-      const pgUser = await pgUsers.findUserByEmail(getPgPool(), userEmail);
+      const pgUser = await resolveRealPgUserByEmail(userEmail);
       if (!pgUser) return;
       const learner = await pgCourses.findOrCreateLearnerProfile(getPgPool(), { userId: pgUser.id });
       if (!learner) return;
@@ -1970,20 +2016,43 @@ function shadowWriteCourseProgressToPostgres(progressEntry, userEmail) {
     });
 }
 
-function shadowWriteJobApplicationToPostgres(job, userEmail) {
-  if (!usingPostgresWorkforce() || !job?.pgWorkforceRoleId || !userEmail) return;
+function shadowWriteJobApplicationToPostgres(job, applicant, userEmail, status) {
+  if (!usingPostgresWorkforce() || !job?.jobOpportunityId || !applicant?.applicantId || !userEmail) return;
   Promise.resolve()
-    // The signed-in user's blob id is deliberately NOT the same id as their
-    // real Postgres users row (buildBlobShadowFromPostgresUser mints a fresh
-    // blob-only id on purpose -- see auth-postgres-cutover.test.js), so the
-    // real Postgres user id has to be resolved fresh by email here rather
-    // than trusted from `user.id`.
-    .then(() => pgUsers.findUserByEmail(getPgPool(), userEmail))
-    .then(pgUser => pgUser && pgWorkforce.findOrCreateCandidateProfile(getPgPool(), { userId: pgUser.id }))
-    .then(candidate => candidate && pgWorkforce.recordJobApplication(getPgPool(), {
-      candidateProfileId: candidate.id,
-      workforceRoleId: job.pgWorkforceRoleId
-    }))
+    .then(async () => {
+      // The workforce_roles insert from job creation may still be in flight
+      // (it's this same fire-and-forget class of write) -- wait briefly for
+      // its id to land rather than silently dropping this application the
+      // moment a job is created and immediately applied to in one flow.
+      const workforceRoleId = job.pgWorkforceRoleId || await waitForPersistedField(
+        "jobOpportunities",
+        item => item.jobOpportunityId === job.jobOpportunityId,
+        "pgWorkforceRoleId"
+      );
+      if (!workforceRoleId) return;
+      const pgUser = await resolveRealPgUserByEmail(userEmail);
+      if (!pgUser) return;
+      const candidate = await pgWorkforce.findOrCreateCandidateProfile(getPgPool(), { userId: pgUser.id });
+      if (!candidate) return;
+      // track_application_status is meant to be called repeatedly as one
+      // application's status changes -- reuse the same real row across calls
+      // (tracked on the persistent applicant record, since the blob's own
+      // `application` object is a fresh one every call) instead of inserting
+      // a new job_applications row each time.
+      const application = await pgWorkforce.upsertJobApplication(getPgPool(), {
+        id: applicant.pgJobApplicationId || null,
+        candidateProfileId: candidate.id,
+        workforceRoleId,
+        status
+      });
+      if (application?.id && application.id !== applicant.pgJobApplicationId) {
+        await patchPersistedRecord(
+          "applicantProfiles",
+          item => item.applicantId === applicant.applicantId,
+          record => { record.pgJobApplicationId = application.id; }
+        );
+      }
+    })
     .catch(error => {
       console.error("[job-application] Postgres shadow-write failed:", error.message);
       recordServerError({ source: "job-application-shadow-write", message: error.message });
@@ -18481,7 +18550,13 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   };
 }
 
-async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}) {
+// realUserEmail defaults to user's own email for every normal caller. The
+// one route that resolves an anonymous caller to a real Standard User
+// account as a local-tool-console fallback (POST /api/nexus/openai-native/tool)
+// explicitly overrides this with the ORIGINAL, possibly-null, pre-fallback
+// user's email instead, so a real Postgres shadow-write (course progress)
+// can never be attributed to a real account nobody actually authenticated as.
+async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
   const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
   const language = args.language || context.language || user?.language || "en";
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
@@ -18899,7 +18974,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const jobsRequest = /\b(job|jobs|employment|career|employer|resume|résumé|vacancy|vacancies|position|workforce)\b/i.test(command);
     const wantsSave = /\b(save|bookmark|keep)\b/i.test(command);
     const wantsReminder = /\bremind me\b/i.test(command);
-    const wantsProgress = /\b(started|starting|finished|completed|complete|done with)\b/i.test(command) && /\b(course|lesson|training|module)\b/i.test(command);
+    // Checked only when neither wantsSave nor wantsReminder matched: their
+    // trigger words aren't disjoint from progress language ("save the course
+    // I just completed", "remind me about the training I finished"), and an
+    // explicit save/reminder request should always win over incidentally
+    // mentioning progress -- confirmed live this was silently dropping saves
+    // and reminders before this ordering was enforced.
+    const wantsProgress = !wantsSave && !wantsReminder
+      && /\b(started|starting|finished|completed|complete|done with)\b/i.test(command)
+      && /\b(course|lesson|training|module)\b/i.test(command);
     const progressStatus = /\b(finished|completed|complete|done with)\b/i.test(command) ? "completed" : "started";
     if (learningRequest && !jobsRequest) {
       const learningTopic = command
@@ -18909,7 +18992,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         // basics" after the earlier strip list, which matched nothing) silently
         // breaks the search, so this needs to strip stopwords too, not just
         // domain phrases.
-        .replace(/\b(please|can you|could you|i want to|i'd like to|explain|teach me|about|a lesson|lesson on|learn about|learn|learning|literacy|course|courses|training|lms|class|save|bookmark|keep|remind me|that|this|started|starting|finished|completed|complete|done with|i|i've|i'm|my|the|a|an|on|for|to|of)\b/gi, " ")
+        // Longer alternatives must precede their own prefixes: regex
+        // alternation matches left-to-right and stops at the first hit, so
+        // with a bare "i" listed before "i've"/"i'm", \bi\b would match just
+        // the "i" in "I've" (there's a word boundary before the apostrophe)
+        // and never reach the longer branch, leaving a stray "ve"/"m" token
+        // that silently breaks the substring-match search below -- confirmed
+        // live with "I've finished the irrigation basics course."
+        .replace(/\b(please|can you|could you|i want to|i'd like to|i've|i'm|explain|teach me|about|a lesson|lesson on|learn about|learn|learning|literacy|course|courses|training|lms|class|save|bookmark|keep|remind me|that|this|started|starting|finished|completed|complete|done with|i|my|the|a|an|on|for|to|of)\b/gi, " ")
         .replace(/[^\w\s-]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
@@ -18919,7 +19009,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       if (bestMatch && wantsProgress) {
         const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: true }, db, process.env);
         const ok = Boolean(progressResult?.body?.ok && progressResult.body.status === "completed");
-        if (ok) shadowWriteCourseProgressToPostgres(progressResult.body.data.progress, user?.email);
+        if (ok) shadowWriteCourseProgressToPostgres(progressResult.body.data.progress, realUserEmail);
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "learning-progress-recorded" : "learning-preparation-ready",
           [ok ? `Marked ${bestMatch.title} as ${progressStatus} in Nexus's own local learning progress list.` : "Prepared learning guidance."],
           ["Nexus did not enroll the learner in, issue a certificate for, or claim completion of an external course or LMS -- this is Nexus's own internal record only."]);
@@ -40768,7 +40858,16 @@ function nexusOperationResponse(db, action, record, audit, receipt, extra = {}) 
   };
 }
 
-function runNexusOperationsAction(db, body = {}, user = null) {
+// realUserEmail defaults to user's own email so every internal recursive
+// self-call (this function calls itself for auto-created employer/applicant/
+// shipment/transaction records, all passing the same `user`) keeps working
+// unchanged. The two HTTP routes that call this with an anonymous-fallback
+// `user` (operationsUser, resolved from a broken role-string match to a real
+// admin/demo account when nobody is signed in) explicitly override this with
+// the ORIGINAL, possibly-null, pre-fallback user's email instead -- so a real
+// Postgres shadow-write is never attributed to a real account nobody
+// actually authenticated as.
+function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = user?.email) {
   const store = ensureNexusPersistentOperations(db);
   const actor = user?.role || body.actor || "standard-user";
   const command = body.command || "";
@@ -41272,7 +41371,7 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     if (action === "add_interview_follow_up") store.interviewFollowUps.unshift(application);
     else {
       store.jobApplications.unshift(application);
-      shadowWriteJobApplicationToPostgres(job, user?.email);
+      shadowWriteJobApplicationToPostgres(job, applicant, realUserEmail, application.status);
     }
     store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
     applicant.updatedAt = now;
@@ -42018,7 +42117,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/operations/action" && req.method === "POST") {
     const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
-    const result = runNexusOperationsAction(db, await readBody(req), operationsUser);
+    const result = runNexusOperationsAction(db, await readBody(req), operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, operationsUser);
@@ -42029,7 +42128,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/operations/command" && req.method === "POST") {
     const body = await readBody(req);
     const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
-    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser);
+    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, operationsUser);
@@ -42840,7 +42939,7 @@ async function api(req, res, url) {
       command: body.command || body.arguments?.command || "",
       language: body.language || body.arguments?.language || toolUser.language || "en",
       outputMode: body.outputMode || ""
-    });
+    }, user?.email || null);
     await writeDb(db);
     return send(res, 200, result, {
       "cache-control": "no-store, no-cache, must-revalidate, private"

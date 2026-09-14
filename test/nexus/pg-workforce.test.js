@@ -75,13 +75,13 @@ test("findOrCreateCandidateProfile upserts on the real user id", async () => {
   assert.match(pool.calls[0].sql, /on conflict \(user_id\) do update/);
 });
 
-test("recordJobApplication requires both real ids", async () => {
+test("upsertJobApplication requires both real ids", async () => {
   const pool = stubPool([]);
-  await assert.rejects(() => pgWorkforce.recordJobApplication(pool, { workforceRoleId: "role-1" }), /candidateProfileId and workforceRoleId are required/);
-  await assert.rejects(() => pgWorkforce.recordJobApplication(pool, { candidateProfileId: "candidate-1" }), /candidateProfileId and workforceRoleId are required/);
+  await assert.rejects(() => pgWorkforce.upsertJobApplication(pool, { workforceRoleId: "role-1" }), /candidateProfileId and workforceRoleId are required/);
+  await assert.rejects(() => pgWorkforce.upsertJobApplication(pool, { candidateProfileId: "candidate-1" }), /candidateProfileId and workforceRoleId are required/);
 });
 
-test("recordJobApplication inserts a real linked row", async () => {
+test("upsertJobApplication inserts a real linked row when no existing id is given", async () => {
   const pool = stubPool([
     [/^insert into job_applications/, params => {
       assert.equal(params[0], "candidate-1");
@@ -90,6 +90,32 @@ test("recordJobApplication inserts a real linked row", async () => {
       return { rows: [{ id: "application-1" }] };
     }]
   ]);
-  const created = await pgWorkforce.recordJobApplication(pool, { candidateProfileId: "candidate-1", workforceRoleId: "role-1" });
+  const created = await pgWorkforce.upsertJobApplication(pool, { candidateProfileId: "candidate-1", workforceRoleId: "role-1" });
   assert.equal(created.id, "application-1");
+});
+
+test("upsertJobApplication updates the same row by id instead of inserting a new one, so repeated status tracking doesn't duplicate", async () => {
+  const pool = stubPool([
+    [/^update job_applications/, params => {
+      assert.equal(params[0], "application-1");
+      assert.equal(params[1], "interviewing");
+      return { rows: [{ id: "application-1", status: "interviewing" }] };
+    }]
+  ]);
+  const updated = await pgWorkforce.upsertJobApplication(pool, { id: "application-1", candidateProfileId: "candidate-1", workforceRoleId: "role-1", status: "interviewing" });
+  assert.equal(updated.id, "application-1");
+  assert.equal(updated.status, "interviewing");
+  assert.equal(pool.calls.length, 1, "must not also attempt an insert when the update succeeds");
+});
+
+test("upsertJobApplication falls back to inserting when the tracked id no longer exists", async () => {
+  const pool = stubPool([
+    [/^update job_applications/, () => ({ rows: [] })],
+    [/^insert into job_applications/, params => {
+      assert.equal(params[0], "candidate-1");
+      return { rows: [{ id: "application-2" }] };
+    }]
+  ]);
+  const created = await pgWorkforce.upsertJobApplication(pool, { id: "stale-id", candidateProfileId: "candidate-1", workforceRoleId: "role-1" });
+  assert.equal(created.id, "application-2");
 });
