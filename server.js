@@ -18424,7 +18424,14 @@ function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
 
 function nexusOpenAiNativeExtractWeatherTimeframe(command = "") {
   const text = String(command || "").toLowerCase();
-  if (/\b(week|7[\s-]?day|five[\s-]?day|5[\s-]?day|next few days|this week|coming days|daily forecast)\b/.test(text)) return "daily";
+  // \bweek\b required a word boundary immediately after "week", which
+  // "weekend" and "weekly" never have (they continue straight into "end"/
+  // "ly") -- confirmed live, both "this weekend" and "the weekly forecast"
+  // silently fell through to CURRENT conditions instead of a forecast.
+  // week(?:end|ly)? matches "week" as a whole word or as the real prefix of
+  // either of those, without accidentally matching an unrelated word that
+  // merely starts with "week".
+  if (/\bweek(?:end|ly)?\b|7[\s-]?day|five[\s-]?day|5[\s-]?day|next few days|coming days|daily forecast|\btomorrow\b/.test(text)) return "daily";
   if (/\b(hourly|next few hours|this afternoon|tonight|later today|throughout the day|by hour)\b/.test(text)) return "hourly";
   return "current";
 }
