@@ -18934,9 +18934,44 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "automation-reminder", status: ok ? "offline-item-queued" : "offline-queue-blocked", response: ok ? "I queued that locally for offline review. No health, payment, contact, or dispatch content was included." : (queueResult?.body?.message || "I could not queue that item — it may include sensitive or restricted content."), localOnly: true };
     }
     if (wantsListReminders) {
+      // Confirmed live: this tool's own default creation path
+      // (nexusOpenAiNativeCreateLocalReminder, just below) writes to
+      // db.nexusPilotReminders, but this branch only ever read from
+      // reminderProvider's separate db.profile.nexusReminders store --
+      // saying "remind me to X" then "what are my reminders?" in the same
+      // conversation showed "you have no reminders saved yet." Both stores
+      // are real and independently consumed elsewhere (nexusPilotReminders
+      // has its own dashboard/REST API and case-record linkage;
+      // reminderProvider is shared by the pharmacy/learning/marketplace
+      // reminder features), so list now merges both rather than one
+      // replacing the other.
       const listResult = nexusRealProviders.reminders.list(db, process.env);
-      const cards = listResult?.body?.data?.cards || [];
+      const providerCards = listResult?.body?.data?.cards || [];
+      const pilotCards = (db.nexusPilotReminders || []).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
+      const cards = [...pilotCards, ...providerCards];
       return { ...common, capability: "automation-reminder", status: "reminders-listed", response: cards.length ? `You have ${cards.length} reminder(s): ${cards.slice(0, 5).map(r => `${r.title}${r.dueAt ? ` (${r.dueAt})` : ""}`).join("; ")}.` : "You have no reminders saved yet.", localOnly: true, reminders: cards };
+    }
+    // Confirmed live: there was no cancel/delete path at all -- "Cancel my
+    // reminder about X" fell straight to the create fallback below and
+    // asked to confirm CREATING it instead.
+    const wantsCancelReminder = /\b(cancel|delete|remove|clear)\b.*\breminder\b/i.test(command);
+    if (wantsCancelReminder) {
+      const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|clear|my|reminder|reminders|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160).toLowerCase();
+      const match = titleQuery ? (db.nexusPilotReminders || []).find(reminder => reminder.title.toLowerCase().includes(titleQuery)) : null;
+      if (!Boolean(args.confirmed || args.confirmation)) {
+        return nexusOpenAiNativeBlockedToolResult(db, common, {
+          status: "confirmation-required",
+          response: match ? `I found a reminder called "${match.title}". Confirm and I will cancel it.` : "Tell me which reminder to cancel, and confirm, and I will remove it.",
+          requiredAuthorization: ["explicit-user-confirmation"],
+          did: ["Checked for a matching reminder to cancel."],
+          didNot: ["Nexus did not delete any reminder."]
+        });
+      }
+      if (!match) {
+        return { ...common, capability: "automation-reminder", status: "reminder-not-found", response: "I could not find a matching reminder to cancel. Tell me its exact title, or ask to list your reminders first.", localOnly: true };
+      }
+      db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
+      return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
     }
     return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
   }
