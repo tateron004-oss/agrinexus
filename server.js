@@ -18930,9 +18930,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeMemoryTool(db, user, common, args);
   }
   if (toolName === "nexus_automation_reminder") {
-    const wantsOfflineQueue = /\b(offline queue|queue (?:this|that)|save (?:this|that) for offline|show my offline)\b/i.test(command);
+    // "show my offline" was previously one of the phrases that triggered
+    // QUEUING a new item -- confirmed live, "Show my offline queue." added a
+    // real, meaningless entry (using that literal sentence as its content)
+    // instead of listing the real items already there. offlineExpansionBridge
+    // already has a real items() listing function; this branch just never
+    // reached it.
+    const wantsShowOfflineQueue = /\b(show|list|view|what(?:'s| is| are))\b.*\boffline\b.*\bqueue\b|\bshow my offline\b/i.test(command);
+    const wantsOfflineQueue = !wantsShowOfflineQueue && /\b(offline queue|queue (?:this|that)|save (?:this|that) for offline)\b/i.test(command);
     const wantsOfflineSync = /\bsync\b.*\boffline\b|\boffline\b.*\bsync\b/i.test(command);
     const wantsListReminders = /\b(show|list|what are)\b.*\breminders?\b/i.test(command);
+    if (wantsShowOfflineQueue) {
+      const itemsResult = nexusRealProviders.offlineExpansionBridge.items(db, process.env);
+      const queueItems = itemsResult?.body?.data?.items || [];
+      return { ...common, capability: "automation-reminder", status: "offline-queue-listed", response: queueItems.length ? `You have ${queueItems.length} item(s) in your offline queue.` : "Your offline queue is empty.", localOnly: true, offlineQueueItems: queueItems };
+    }
     if (wantsOfflineSync) {
       const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: true }, db, process.env);
       const ok = Boolean(syncResult?.body?.ok && syncResult.body.status === "completed");
