@@ -33,7 +33,14 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" },
+    // NEXUS_MAPS_PUBLIC_OSM_ENABLED=false makes publicOsmRoute() return null
+    // immediately (server/providers/googleMapsProvider.js:87) instead of
+    // attempting a real network call to Nominatim/OSRM -- this test only
+    // cares about the extracted origin/destination strings, not whether a
+    // live geocode succeeds, so it must not depend on real network access
+    // (which always fails in CI's isolated sandbox, and is flaky even
+    // locally depending on live third-party service availability).
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_MAPS_PUBLIC_OSM_ENABLED: "false" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -60,10 +67,17 @@ async function callRoute(command) {
   return res.json();
 }
 
-test("a trailing 'by <time>' clause is stripped from the destination, so it resolves to a real place", async () => {
+// Asserting only on providerData.destination/origin (not on real geocoding
+// succeeding) is deliberate: server/providers/googleMapsProvider.js's
+// route() populates these same two fields identically whether the real
+// public OSRM/Nominatim call succeeds or -- as it always will in CI's
+// network-isolated sandbox -- fails and falls back to the safe
+// credential-blocked "route URL" response. Asserting on destinationResolved
+// or real coordinates would make this test network-dependent and flaky
+// exactly the way this project's established CI lesson warns against.
+test("a trailing 'by <time>' clause is stripped from the destination", async () => {
   const result = await callRoute("Show a route from Stockton to Sacramento by 5pm.");
   assert.equal(result.providerData.destination, "Sacramento");
-  assert.match(result.providerData.destinationResolved, /Sacramento/i);
 });
 
 test("a trailing 'at <time>' clause is also stripped", async () => {
