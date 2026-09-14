@@ -188,13 +188,29 @@ function search({ query = "", category = "" } = {}, db, env = process.env) {
   const action = "marketplace.search";
   if (!envEnabled("NEXUS_MARKETPLACE_BRIDGE_ENABLED", env, true)) return disabledResponse(provider, action, "NEXUS_MARKETPLACE_BRIDGE_ENABLED");
   const cards = allListings(db).filter(listing => matchesListing(listing, query, category)).slice(0, 30);
+  const realCount = cards.filter(item => item.sourceType !== "starter_catalog").length;
+  const demoCount = cards.length - realCount;
+  // Every card already carries an honest per-item sourceType/source, but the
+  // aggregate summary previously said only "Loaded N local AgriTrade
+  // listing(s)" with no indication that up to 8 of those are always-injected
+  // sample catalog entries, not real listings anyone posted -- a user asking
+  // "what's on AgriTrade" would be told a count that silently mixes their own
+  // real, saved listings with permanent demo filler. State both counts
+  // explicitly so the spoken/rendered summary is never ambiguous about that.
+  const message = realCount && demoCount
+    ? `Loaded ${realCount} of your saved AgriTrade listing(s) and ${demoCount} AgriTrade sample listing(s) from the local starter catalog (not real postings). No buyer contact, checkout, order, or payment occurred.`
+    : demoCount
+      ? `You have no saved AgriTrade listings yet. Showing ${demoCount} AgriTrade sample listing(s) from the local starter catalog (not real postings) so you can see how browsing works. No buyer contact, checkout, order, or payment occurred.`
+      : `Loaded ${realCount} of your saved AgriTrade listing(s). No buyer contact, checkout, order, or payment occurred.`;
   return providerResponse({
     provider,
     action,
     status: "completed",
-    message: `Loaded ${cards.length} local AgriTrade listing(s). No buyer contact, checkout, order, or payment occurred.`,
+    message,
     data: {
       cards,
+      realListingCount: realCount,
+      demoListingCount: demoCount,
       starterCategories: Array.from(new Set(STARTER_LISTINGS.map(item => item.category))),
       paymentStatus: paymentStatus(env),
       localOnly: true
