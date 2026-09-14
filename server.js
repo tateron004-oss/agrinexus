@@ -18489,9 +18489,27 @@ function nexusOpenAiNativeExtractBusinessName(command = "", args = {}) {
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
   const text = String(command || "");
   const toMatch = text.match(/\b(?:to|for)\s+([+()\d\s.-]{7,}|[^\n,.]+?@[^\s,.]+|[A-Z][A-Za-z .'-]{1,60})(?:[\s,.]|$)/);
+  // Confirmed live: with no structured args.message (the model is expected
+  // to supply one, but a real command can still reach here without it --
+  // e.g. via the draft path, which needs no provider credentials to test),
+  // "Draft a WhatsApp message to Maria Fernandez saying the shipment left
+  // the warehouse." defaulted the WHOLE command as the message body,
+  // including the "Draft a WhatsApp message to Maria Fernandez saying"
+  // prefix -- a real outbound send would deliver that garbled prefix to
+  // the actual recipient. Extract just the intended message when a
+  // recognizable lead-in phrase is present, mirroring the export tool's
+  // "saying X"/"that says X" content extraction.
+  // A bare "message" trigger is too eager: "Draft a WhatsApp message to
+  // Maria..." already contains the word "message" describing the DRAFT
+  // ACTION itself, well before the real "saying" lead-in -- confirmed live,
+  // this matched there first and produced "to Maria Fernandez saying the
+  // shipment left the warehouse." instead of just the intended text.
+  // Requiring "message is" (not bare "message") makes this phrase rare
+  // enough in the instruction-describing part of the sentence to be safe.
+  const messageMatch = text.match(/\b(?:saying|that says|tell(?:ing)? them|let them know|message is)\s*[:\-]?\s*(.+)$/i);
   return {
     to: sanitizePilotText(args.to || args.recipient || (toMatch ? toMatch[1] : ""), 120),
-    message: sanitizePilotText(args.message || args.text || args.body || command, 1200),
+    message: sanitizePilotText(args.message || args.text || args.body || (messageMatch ? messageMatch[1].trim() : "") || command, 1200),
     subject: sanitizePilotText(args.subject || "Nexus message", 180)
   };
 }
