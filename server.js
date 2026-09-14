@@ -19040,7 +19040,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const wantsCancelReminder = /\b(cancel|delete|remove|clear)\b.*\breminder\b/i.test(command);
     if (wantsCancelReminder) {
       const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|clear|my|reminder|reminders|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160).toLowerCase();
-      const match = titleQuery ? (db.nexusPilotReminders || []).find(reminder => reminder.title.toLowerCase().includes(titleQuery)) : null;
+      // .find() silently picked the FIRST substring match -- confirmed live,
+      // two reminders sharing a word (e.g. "check the pump" and "check the
+      // pump filter") let a query for one silently cancel the other instead.
+      // Mirrors nexus_memory's already-correct matches.length === 1 gate.
+      const matches = titleQuery ? (db.nexusPilotReminders || []).filter(reminder => reminder.title.toLowerCase().includes(titleQuery)) : [];
+      const match = matches.length === 1 ? matches[0] : null;
       if (!Boolean(args.confirmed || args.confirmation)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
@@ -19049,6 +19054,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           did: ["Checked for a matching reminder to cancel."],
           didNot: ["Nexus did not delete any reminder."]
         });
+      }
+      if (matches.length > 1) {
+        return { ...common, capability: "automation-reminder", status: "reminder-ambiguous", response: `I found ${matches.length} reminders matching that: ${matches.slice(0, 5).map(r => `"${r.title}"`).join(", ")}. Tell me the exact title of the one to cancel.`, localOnly: true };
       }
       if (!match) {
         return { ...common, capability: "automation-reminder", status: "reminder-not-found", response: "I could not find a matching reminder to cancel. Tell me its exact title, or ask to list your reminders first.", localOnly: true };
@@ -19621,7 +19629,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (wantsCancelFieldVisit) {
       const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|my|field visit|plan|plans|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160).toLowerCase();
       const plans = db.profile?.nexusFieldVisitPlans || [];
-      const match = titleQuery ? plans.find(plan => plan.title.toLowerCase().includes(titleQuery)) : null;
+      // .find() silently picked the FIRST substring match -- confirmed live,
+      // "Cancel my field visit plan to Lodi." matched BOTH a "...to Lodi."
+      // plan and an unrelated "...to Lodi Junction." plan, and silently
+      // deleted the wrong one while reporting success. Mirrors
+      // nexus_memory's already-correct matches.length === 1 gate.
+      const matches = titleQuery ? plans.filter(plan => plan.title.toLowerCase().includes(titleQuery)) : [];
+      const match = matches.length === 1 ? matches[0] : null;
       if (!Boolean(args.confirmed || args.confirmation)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
@@ -19630,6 +19644,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           did: ["Checked for a matching saved field visit plan to cancel."],
           didNot: ["Nexus did not delete any field visit plan."]
         });
+      }
+      if (matches.length > 1) {
+        return { ...common, capability: "workflow", status: "field-visit-ambiguous", response: `I found ${matches.length} saved field visit plans matching that: ${matches.slice(0, 5).map(p => `"${p.title}"`).join(", ")}. Tell me the exact title of the one to cancel.`, localOnly: true };
       }
       if (!match) {
         return { ...common, capability: "workflow", status: "field-visit-not-found", response: "I could not find a matching saved field visit plan to cancel. Tell me its exact title, or ask to list your field visit plans first.", localOnly: true };
