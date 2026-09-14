@@ -18400,10 +18400,21 @@ function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
 function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
   const text = String(command || "");
   const titleMatch = text.match(/\btitled?\s*[:\-]?\s*["']?([^"'.,\n]{2,80})["']?/i);
-  const formatMatch = text.match(/\b(pdf|docx|doc|word|txt|text|md|markdown|json)\b/i);
+  // csv/xlsx/pptx/html are recognized so a request for one of them is
+  // honestly rejected by exportProvider's own "only json, txt, md, pdf, and
+  // docx" message -- confirmed live, "Export this as a CSV" previously
+  // wasn't recognized as naming ANY format, silently fell back to the "no
+  // format named" default of txt, and created a real TXT file without ever
+  // telling the user CSV isn't supported.
+  const formatMatch = text.match(/\b(pdf|docx|doc|word|txt|text|md|markdown|json|csv|xlsx|excel|pptx|ppt|html)\b/i);
   const contentMatch = text.match(/\b(?:with content|content is|content|containing|that says|saying)\s*[:\-]?\s*(.+)$/i);
   const formatRaw = String(args.format || args.fileType || (formatMatch ? formatMatch[1] : "")).toLowerCase();
-  const format = ["doc", "word"].includes(formatRaw) ? "docx" : formatRaw === "text" ? "txt" : formatRaw === "markdown" ? "md" : (["json", "txt", "md", "pdf", "docx"].includes(formatRaw) ? formatRaw : "txt");
+  const format = ["doc", "word"].includes(formatRaw) ? "docx"
+    : formatRaw === "text" ? "txt"
+    : formatRaw === "markdown" ? "md"
+    : ["excel", "xlsx"].includes(formatRaw) ? "xlsx"
+    : ["ppt", "pptx"].includes(formatRaw) ? "pptx"
+    : formatRaw || "txt";
   return {
     title: sanitizePilotText(args.title || (titleMatch ? titleMatch[1].trim() : "") || "Nexus export", 160),
     content: sanitizePilotText(args.content || args.text || (contentMatch ? contentMatch[1].trim() : "") || command, 4000),
