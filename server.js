@@ -32894,31 +32894,36 @@ const NEXUS_KNOWLEDGE_TRUSTED_SOURCES = Object.freeze({
   },
   health: {
     label: "Health/chronic care education",
-    preferredSources: ["WHO", "CDC", "NIH", "Mayo Clinic", "MedlinePlus", "national health ministries", "peer-reviewed sources"],
+    // Kyro serves Nigeria, Kenya, Egypt, and DRC (see server/pg-health-intakes.js
+    // BLOB_COUNTRY_TO_PG_ID) -- the prior list was entirely US/international
+    // (WHO, CDC, NIH, Mayo Clinic, MedlinePlus), with no regional or
+    // national African public-health authority named. WHO AFRO and Africa
+    // CDC are added alongside, not instead of, the existing sources.
+    preferredSources: ["WHO", "WHO Regional Office for Africa (WHO AFRO)", "Africa CDC", "CDC", "NIH", "Mayo Clinic", "MedlinePlus", "Nigeria, Kenya, Egypt, and DRC ministries of health", "peer-reviewed sources"],
     safetyNote: "Education only. Nexus does not diagnose, prescribe, change medication, replace clinician advice, or handle emergencies.",
     recordType: "chronic_care_reading"
   },
   chronicCare: {
     label: "Chronic care education",
-    preferredSources: ["WHO", "CDC", "NIH", "Mayo Clinic", "MedlinePlus", "national health ministries", "peer-reviewed/public health sources"],
+    preferredSources: ["WHO", "WHO Regional Office for Africa (WHO AFRO)", "Africa CDC", "CDC", "NIH", "Mayo Clinic", "MedlinePlus", "Nigeria, Kenya, Egypt, and DRC ministries of health", "peer-reviewed/public health sources"],
     safetyNote: "Education and tracking support only. Nexus does not diagnose, prescribe, change medication, or replace clinician review.",
     recordType: "chronic_care_reading"
   },
   telehealth: {
     label: "Telehealth preparation",
-    preferredSources: ["WHO", "CDC", "NIH", "MedlinePlus", "national health ministries", "verified telehealth program guidance"],
+    preferredSources: ["WHO", "WHO Regional Office for Africa (WHO AFRO)", "Africa CDC", "CDC", "NIH", "MedlinePlus", "Nigeria, Kenya, Egypt, and DRC ministries of health", "verified telehealth program guidance"],
     safetyNote: "Preparation only. Nexus does not book visits or connect a clinician unless a verified provider integration is configured and approved.",
     recordType: "telehealth_intake"
   },
   pharmacy: {
     label: "Pharmacy education",
-    preferredSources: ["MedlinePlus", "NIH", "FDA", "WHO", "national pharmacy or medicine regulators", "verified pharmacy education sources"],
+    preferredSources: ["MedlinePlus", "NIH", "FDA", "WHO", "African Medicines Agency (AMA)", "national medicine regulators (e.g. NAFDAC in Nigeria, the Pharmacy and Poisons Board in Kenya, the Egyptian Drug Authority)", "verified pharmacy education sources"],
     safetyNote: "Education only. Nexus does not refill prescriptions, prescribe, change dosage, or contact a pharmacy.",
     recordType: "pharmacy_note"
   },
   mobileClinic: {
     label: "Mobile clinic/community health information",
-    preferredSources: ["national health ministries", "local public health agencies", "verified mobile clinic operators", "WHO", "NGOs"],
+    preferredSources: ["Nigeria, Kenya, Egypt, and DRC ministries of health", "local public health agencies", "verified mobile clinic operators", "WHO", "WHO Regional Office for Africa (WHO AFRO)", "Africa CDC", "NGOs"],
     safetyNote: "Information and preparation only. Nexus does not dispatch mobile clinics or request transportation.",
     recordType: "mobile_clinic_request"
   },
@@ -33728,6 +33733,8 @@ const NEXUS_AUTHORITATIVE_SOURCE_CATALOG = Object.freeze({
   ],
   health: [
     { organization: "World Health Organization", url: "https://www.who.int/", category: "public health authority", tier: "primary_institutional" },
+    { organization: "WHO Regional Office for Africa", url: "https://www.afro.who.int/", category: "regional public health authority", tier: "primary_institutional" },
+    { organization: "Africa CDC", url: "https://africacdc.org/", category: "continental public health authority", tier: "primary_institutional" },
     { organization: "MedlinePlus", url: "https://medlineplus.gov/", category: "patient health education", tier: "primary_institutional" },
     { organization: "Centers for Disease Control and Prevention", url: "https://www.cdc.gov/", category: "public health authority", tier: "primary_government" },
     { organization: "National Institutes of Health", url: "https://www.nih.gov/", category: "biomedical research authority", tier: "primary_government" }
@@ -33772,7 +33779,16 @@ function nexusEvidenceSourceQuality(citation = {}, category = "general") {
   const url = String(citation.url || "").toLowerCase();
   const domain = String(citation.domain || "").toLowerCase();
   const haystack = `${url} ${domain}`;
-  if (/\.(gov|mil)(\/|$)|who\.int|cdc\.gov|nih\.gov|osha\.gov|bls\.gov|weather\.gov|federalregister\.gov|usda\.gov/.test(haystack)) return { classification: "primary", qualityTier: "primary_government_or_institutional" };
+  // .gov/.mil alone assumes a US-style bare government TLD. Most African
+  // governments instead qualify their own ccTLD (Nigeria: .gov.ng, Egypt:
+  // .gov.eg, DRC and other Francophone states: .gouv.<cc>) or use a
+  // different convention entirely (Kenya: .go.ke) -- without this, a real
+  // national ministry-of-health source would be scored as a generic
+  // "general_web_source" instead of "primary_government", while the
+  // equivalent US agency scores primary. Matching any two-letter ccTLD
+  // after gov/gouv, plus Kenya's .go.ke, closes that gap without guessing
+  // at any specific country's exact domain.
+  if (/\.(gov|mil)(\/|$)|\.gov\.[a-z]{2}(\/|$)|\.gouv\.[a-z]{2}(\/|$)|\.go\.ke(\/|$)|who\.int|africacdc\.org|cdc\.gov|nih\.gov|osha\.gov|bls\.gov|weather\.gov|federalregister\.gov|usda\.gov/.test(haystack)) return { classification: "primary", qualityTier: "primary_government_or_institutional" };
   if (/\.edu(\/|$)|extension\.org|cgiar\.org|fao\.org|worldbank\.org|unesco\.org/.test(haystack)) return { classification: "primary_or_institutional", qualityTier: "university_extension_or_multilateral" };
   if (/reuters\.com|apnews\.com|british?medicaljournal|nejm\.org|thelancet\.com|nature\.com|science\.org/.test(haystack)) return { classification: "secondary", qualityTier: "recognized_reporting_or_peer_reviewed" };
   if (/openstreetmap\.org|open-meteo\.com|project-osrm\.org/.test(haystack)) return { classification: "public_utility", qualityTier: "public_provider" };
