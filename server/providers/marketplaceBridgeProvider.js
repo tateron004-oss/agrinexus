@@ -287,7 +287,16 @@ function removeListing(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const listings = ensureMarketplaceListings(db);
   const query = clean(body.id || body.title || body.query || "").toLowerCase();
-  const match = query ? listings.find(item => item.id === body.id || item.title.toLowerCase().includes(query)) : null;
+  // An id lookup is always unambiguous by definition. A title-substring
+  // lookup is not -- .find() previously picked the FIRST substring match
+  // silently, so two listings sharing a word could remove the wrong one
+  // while reporting success. Mirror nexus_memory's matches.length === 1 gate.
+  const idMatch = body.id ? listings.find(item => item.id === body.id) : null;
+  const titleMatches = !idMatch && query ? listings.filter(item => item.title.toLowerCase().includes(query)) : [];
+  const match = idMatch || (titleMatches.length === 1 ? titleMatches[0] : null);
+  if (!match && titleMatches.length > 1) {
+    return blockedResponse(provider, action, `Found ${titleMatches.length} matching saved AgriTrade listings: ${titleMatches.slice(0, 5).map(item => `"${item.title}"`).join(", ")}. State the exact title of the one to remove.`);
+  }
   if (!match) return blockedResponse(provider, action, "No matching saved AgriTrade listing was found to remove.");
   db.profile.marketplaceListings = listings.filter(item => item.id !== match.id);
   return providerResponse({
