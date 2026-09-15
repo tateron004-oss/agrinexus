@@ -19446,6 +19446,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return null;
   }
   if (toolName === "nexus_health_preparation") {
+    // Confirmed: every real-record write below (vitals, training plans,
+    // workout logs, RTM activity/adherence notes, navigation summaries,
+    // saved providers) hardcoded confirmed: true regardless of what the
+    // caller actually sent -- chronicDiseaseBridgeProvider, rpmBridgeProvider,
+    // rtmBridgeProvider, medicalSupportBridgeProvider, and
+    // providerContactBridgeProvider all already have a real
+    // requireConfirmation() gate, so this completely defeated it for every
+    // single health report, unlike every other write path in this file
+    // (nexus_workflow, nexus_marketplace_logistics, nexus_communications,
+    // nexus_calendar, nexus_email, nexus_agriculture), which all forward the
+    // caller's actual confirmation.
+    const wantsHealthActionConfirmed = Boolean(args.confirmed || args.confirmation);
     // Confirmed live: "Please use temp file 42 for this." and "Check pulse
     // item 85 in the catalog." -- both completely unrelated, non-health
     // commands -- each saved a FABRICATED vital-sign reading (temperature
@@ -19472,7 +19484,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
-    const weightMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && command.match(/\b(?:i\s+weigh|my\s+weight\s+is)\D{0,10}?(\d{2,3}(?:\.\d)?)\s*(lbs?|pounds|kg|kilograms)?\b/i);
+    // Confirmed: unlike every other vital above, weight kept the old
+    // \D{0,10}? "any 0-10 characters" window instead of VITAL_VALUE_CONNECTOR
+    // -- "I weigh, say, 200 kg of feed for my cattle every morning." and "My
+    // weight is roughly 60 kilos of fertilizer per bag" both fabricated a
+    // real body-weight reading from ordinary farming sentences.
+    const weightMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && command.match(new RegExp(`\\b(?:i\\s+weigh|my\\s+weight\\s+is)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*(lbs?|pounds|kg|kilograms)?\\b`, "i"));
     const pulseMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && !weightMatch && command.match(new RegExp(`\\b(?:pulse|heart\\s*rate)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const rpmVital = oxygenMatch ? { metric: "oxygen_saturation", value: oxygenMatch[1], unit: "%", label: "oxygen saturation" }
       : temperatureMatch ? { metric: "temperature", value: temperatureMatch[1], unit: "", label: "temperature" }
@@ -19480,8 +19497,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       : pulseMatch ? { metric: "pulse", value: pulseMatch[1], unit: "bpm", label: "pulse" }
       : null;
     if (rpmVital) rpmVital.display = `${rpmVital.value}${rpmVital.unit === "%" ? "%" : rpmVital.unit ? ` ${rpmVital.unit}` : ""}`;
-    const rtmExercise = /\b(?:completed|did|finished)\s+(?:my\s+)?(?:therapy|exercise|rehab|physical therapy|workout)\b/i.test(command);
-    const rtmAdherence = /\b(?:took my medication|medication adherence|missed (?:a|my) (?:dose|medication))\b/i.test(command);
+    // Confirmed: "Have you completed my therapy session?" / "Did you log my
+    // medication adherence yet?" / "Did you create my training plan yet?" /
+    // "Did you log my 30 minute run yesterday?" are all status questions,
+    // but none of these four patterns had the guard already applied to
+    // drone-mission/field-agent/listing status questions elsewhere this
+    // session -- each fabricated a real fitness/RTM record entry in answer
+    // to what was only a status question.
+    const isHealthActionStatusQuestion = /\b(do|did|does|have|has)\s+you\b/i.test(command);
+    const rtmExercise = !isHealthActionStatusQuestion && /\b(?:completed|did|finished)\s+(?:my\s+)?(?:therapy|exercise|rehab|physical therapy|workout)\b/i.test(command);
+    const rtmAdherence = !isHealthActionStatusQuestion && /\b(?:took my medication|medication adherence|missed (?:a|my) (?:dose|medication))\b/i.test(command);
     const wantsMobileClinic = /\bmobile\s*clinic\b/i.test(command);
     // A real user asking about medication safety rarely says the word
     // "pharmacy"/"pharmacist" itself (confirmed live: "What should I know
@@ -19530,8 +19555,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // has repeatedly swallowed other real capabilities this session.
     const providerSearchMatch = command.match(new RegExp(`\\b(?:find|search for|look up|locate|list|show(?:\\s+me)?)\\s+(?:a\\s+|an\\s+)?(?:doctor|physician|specialist|provider|clinic|nurse|${NEXUS_PROVIDER_SPECIALTY_PATTERN})\\b(?:\\s+(?:named|called)\\s+([a-z\\s.'-]+?))?(?:\\s+in\\s+([a-z\\s]+))?[.,!?]*$`, "i"));
     const wantsSaveProvider = /\b(save|keep)\b.*\b(that|this)?\s*(doctor|provider|physician|specialist)\b/i.test(command);
-    const fitnessPlanMatch = /\b(?:create|start|build|make)\s+(?:a\s+|my\s+)?(?:training|workout|fitness)\s+plan\b/i.test(command);
-    const workoutLogMatch = command.match(/\b(?:log|logged|record|recorded|track|tracked|did|completed|finished)\s+(?:a\s+|my\s+)?(\d{1,3})\s*(?:minute|min)s?\s+(run|walk|jog|workout|training session|training|exercise session|exercise|swim|cycling|cycle|ride|strength training|strength|cardio|hiit)\b/i);
+    const fitnessPlanMatch = !isHealthActionStatusQuestion && /\b(?:create|start|build|make)\s+(?:a\s+|my\s+)?(?:training|workout|fitness)\s+plan\b/i.test(command);
+    const workoutLogMatch = !isHealthActionStatusQuestion && command.match(/\b(?:log|logged|record|recorded|track|tracked|did|completed|finished)\s+(?:a\s+|my\s+)?(\d{1,3})\s*(?:minute|min)s?\s+(run|walk|jog|workout|training session|training|exercise session|exercise|swim|cycling|cycle|ride|strength training|strength|cardio|hiit)\b/i);
     const fitnessProgressMatch = /\b(fitness progress|training progress|workout summary|workout history|show my workouts)\b/i.test(command);
     let response;
     let intakeRecord = null;
@@ -19545,7 +19570,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         diastolic: bp ? Number(bp[2]) : null,
         glucose: glucose ? Number(glucose[1]) : null,
         readingContext: args.readingContext || "voice-reported",
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(readingResult?.body?.ok && readingResult.body.status === "completed");
       readingKind = bp ? "blood-pressure" : "blood-glucose";
@@ -19564,7 +19589,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         value: rpmVital.value,
         unit: rpmVital.unit,
         dataSource: "voice-reported",
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(rpmResult?.body?.ok && rpmResult.body.status === "completed");
       readingKind = rpmVital.label;
@@ -19577,7 +19602,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         goal: args.goal || goalMatch?.[1]?.trim() || command,
         weeklySessionTarget: args.weeklySessionTarget,
         durationWeeks: args.durationWeeks,
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(planResult?.body?.ok && planResult.body.status === "completed");
       readingKind = "training plan";
@@ -19592,7 +19617,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         activityDescription: `${workoutKind} workout (voice-reported)`,
         participationMinutes: workoutMinutes,
         completed: true,
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(workoutResult?.body?.ok && workoutResult.body.status === "completed");
       readingKind = "workout";
@@ -19611,7 +19636,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         activityType: rtmExercise ? "exercise_rehab" : "medication_adherence_discussion",
         activityDescription: rtmExercise ? "Exercise/therapy activity completed (voice-reported)" : "Medication adherence note (voice-reported)",
         completed: true,
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(rtmResult?.body?.ok && rtmResult.body.status === "completed");
       readingKind = rtmExercise ? "activity participation" : "medication adherence note";
@@ -19619,7 +19644,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ? `I logged that ${rtmExercise ? "activity in your therapy/exercise participation record" : "medication adherence note in your participation record"} for provider review. This is not a treatment plan or medication change. Discuss any medication concerns with your care team.`
         : `I noted that, but saving it to your participation record is unavailable right now.`;
     } else if (wantsNavigationHelp) {
-      const navResult = nexusRealProviders.medicalSupportBridge.summary({ concern: command, confirmed: true });
+      const navResult = nexusRealProviders.medicalSupportBridge.summary({ concern: command, confirmed: wantsHealthActionConfirmed });
       const steps = navResult?.body?.data?.summary?.suggestedNextSteps || [];
       extraData = { suggestedNextSteps: steps };
       response = steps.length
@@ -19643,7 +19668,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         address: args.address,
         phone: args.phone,
         npi: args.npi,
-        confirmed: true
+        confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       const ok = Boolean(saveResult?.body?.ok && saveResult.body.status === "completed");
       response = ok
@@ -19733,7 +19758,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // "for sale"), so a genuine "List my maize for sale." is unaffected.
     const wantsBrowseListings = /\bwhat('?s| is)\b.*\b(available|listed|for sale|on agritrade)\b/i.test(command)
       || /\b(browse|see what|show me what)\b/i.test(command);
-    if (!wantsBrowseListings && /\b(create|post|publish|list|sell)\b/i.test(command)) {
+    // The cancel gate above already excludes "did/have you cancel/delete/
+    // remove" status questions -- this create gate needs the same guard:
+    // "Did you sell my tomatoes yet?" / "Did you list my maize for sale?"
+    // matched the bare create-verb list below and prompted the user to
+    // confirm creating a brand new listing titled after their own status
+    // question, instead of answering it.
+    const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
+    if (!wantsBrowseListings && !wantsListingStatus && /\b(create|post|publish|list|sell)\b/i.test(command)) {
       const listingResult = nexusRealProviders.marketplace.createListing({
         title: args.title || command,
         crop: args.crop || args.product || "",

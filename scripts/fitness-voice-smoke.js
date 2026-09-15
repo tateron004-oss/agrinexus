@@ -41,7 +41,10 @@ async function callTool(command, cookie) {
   const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command } })
+    // confirmed: true -- these vital/fitness saves now forward the caller's
+    // real confirmation instead of the provider's requireConfirmation()
+    // gate being silently bypassed.
+    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command, confirmed: true } })
   });
   const json = await res.json();
   return { status: res.status, json };
