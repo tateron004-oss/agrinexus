@@ -211,7 +211,7 @@ async function createEncounter(db, body = {}, user = null, env = process.env, op
   const currentStatus = status(env);
   if (!intake.confirmed) {
     return {
-      ok: true,
+      ok: false,
       status: "blocked-confirmation-required",
       providerStatus: currentStatus,
       encounterCreated: false,
@@ -221,7 +221,7 @@ async function createEncounter(db, body = {}, user = null, env = process.env, op
   }
   if (!intake.consentToPreparePacket) {
     return {
-      ok: true,
+      ok: false,
       status: "blocked-consent-required",
       providerStatus: currentStatus,
       encounterCreated: false,
@@ -305,12 +305,12 @@ async function createVideoRoom(db, body = {}, user = null, env = process.env, op
   ensureState(db);
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
-  if (!encounter) return { ok: true, status: "encounter_required", roomCreated: false, message: "Prepare an encounter packet before creating a video room." };
+  if (!encounter) return { ok: false, status: "encounter_required", roomCreated: false, message: "Prepare an encounter packet before creating a video room." };
   if (body.confirmed !== true || body.consentToShare !== true) {
-    return { ok: true, status: "blocked-consent-and-confirmation-required", roomCreated: false, encounterId, message: "Video room creation requires explicit confirmation and sharing consent." };
+    return { ok: false, status: "blocked-consent-and-confirmation-required", roomCreated: false, encounterId, message: "Video room creation requires explicit confirmation and sharing consent." };
   }
   if (Array.isArray(encounter.redFlags) && encounter.redFlags.length) {
-    return { ok: true, status: "blocked-emergency-red-flags", roomCreated: false, encounterId, message: "Red flag symptoms should use local emergency or urgent care guidance, not routine video visit creation." };
+    return { ok: false, status: "blocked-emergency-red-flags", roomCreated: false, encounterId, message: "Red flag symptoms should use local emergency or urgent care guidance, not routine video visit creation." };
   }
   const result = await createVideoForEncounter(encounter, env, options);
   encounter.video = result;
@@ -321,16 +321,18 @@ async function createVideoRoom(db, body = {}, user = null, env = process.env, op
     role: user?.role || "Standard User",
     description: `Video room path attempted through ${result.provider || selectedProvider(env)}.`
   });
-  return { ok: true, encounterId, video: result, providerStatus: status(env) };
+  // result.ok can genuinely be false (e.g. a real Daily.co API call failed)
+  // -- the outer response must reflect that, not hardcode success.
+  return { ok: result.ok !== false, encounterId, video: result, providerStatus: status(env) };
 }
 
 function prepareNotification(db, body = {}, user = null, env = process.env) {
   ensureState(db);
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
-  if (!encounter) return { ok: true, status: "encounter_required", message: "Prepare an encounter packet before notification." };
+  if (!encounter) return { ok: false, status: "encounter_required", message: "Prepare an encounter packet before notification." };
   if (body.confirmed !== true || body.consentToShare !== true) {
-    return { ok: true, status: "blocked-consent-and-confirmation-required", encounterId, message: "Notification requires explicit confirmation and sharing consent." };
+    return { ok: false, status: "blocked-consent-and-confirmation-required", encounterId, message: "Notification requires explicit confirmation and sharing consent." };
   }
   const channel = cleanText(body.channel || "email", 30).toLowerCase();
   const message = cleanText(body.message || `Nexus prepared a virtual care packet for review: ${encounter.conditionArea}.`, 320);
@@ -356,8 +358,8 @@ function createFollowUp(db, body = {}, user = null) {
   ensureState(db);
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
-  if (!encounter) return { ok: true, status: "encounter_required", message: "Prepare an encounter packet before creating follow-up." };
-  if (body.confirmed !== true) return { ok: true, status: "blocked-confirmation-required", message: "Follow-up creation requires explicit confirmation." };
+  if (!encounter) return { ok: false, status: "encounter_required", message: "Prepare an encounter packet before creating follow-up." };
+  if (body.confirmed !== true) return { ok: false, status: "blocked-confirmation-required", message: "Follow-up creation requires explicit confirmation." };
   const followUp = {
     id: `telehealth-follow-up-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
     encounterId,

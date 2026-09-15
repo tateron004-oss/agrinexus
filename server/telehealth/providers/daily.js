@@ -47,7 +47,7 @@ async function createRoom(encounter = {}, env = process.env, options = {}) {
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   if (typeof fetchImpl !== "function") {
     return {
-      ok: true,
+      ok: false,
       status: "provider_unavailable",
       provider: "daily",
       roomCreated: false,
@@ -85,7 +85,7 @@ async function createRoom(encounter = {}, env = process.env, options = {}) {
 
   if (!response.ok) {
     return {
-      ok: true,
+      ok: false,
       status: "provider_error",
       provider: "daily",
       httpStatus: response.status,

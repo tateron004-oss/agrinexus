@@ -43670,7 +43670,10 @@ async function api(req, res, url) {
         }, user, process.env);
       }
     }
-    const result = { ...prepared, providerResult };
+    // prepared.ok only reflects local preparation; a genuine send failure
+    // inside providerResult (bad recipient, missing config, provider throw)
+    // must also make this request report a blocked/failed status.
+    const result = { ...prepared, providerResult, ok: prepared.ok && (!providerResult || providerResult.ok === true) };
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
