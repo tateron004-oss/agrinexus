@@ -170,6 +170,29 @@ test("withActionLifecycle marks the ledger entry failed and re-throws when execu
   assert.equal(ledger[0].status, "failed");
 });
 
+// Confirmed: computeIdempotencyKey never folded in who the caller was, so
+// two different users sending byte-identical bodies (e.g. templated/default
+// reminder text) within the same dedupe window collided on the same ledger
+// key -- the second user was silently handed the first user's cached
+// "completed"/verified result (including a real provider SID) for an action
+// that never ran on their behalf.
+test("computeIdempotencyKey differs for the same body from two different actors", () => {
+  const a = computeIdempotencyKey("twilio", "sms.send", { to: "+1", message: "hi" }, "user-a");
+  const b = computeIdempotencyKey("twilio", "sms.send", { to: "+1", message: "hi" }, "user-b");
+  assert.notEqual(a, b);
+});
+
+test("withActionLifecycle does not let one user's cached result satisfy a different user's identical request", async () => {
+  const db = fixtureDb();
+  let calls = 0;
+  const body = { to: "+1", message: "hi" };
+  const execute = async () => { calls += 1; return ok({ sid: `SM-real-${calls}` }); };
+  const first = await withActionLifecycle(db, { provider: "twilio", action: "sms.send", body, actorId: "user-a", execute });
+  const second = await withActionLifecycle(db, { provider: "twilio", action: "sms.send", body, actorId: "user-b", execute });
+  assert.equal(calls, 2, "a second, different user's identical request must execute for real, not be served from user-a's cache");
+  assert.notEqual(second.body.data.sid, first.body.data.sid);
+});
+
 test("withActionLifecycle keys are scoped per provider+action, not just body", async () => {
   const db = fixtureDb();
   let calls = 0;

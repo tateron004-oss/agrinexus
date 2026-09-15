@@ -169,6 +169,15 @@ async function safeJson(response) {
   }
 }
 
+function xmlEscape(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 module.exports = {
   clean,
   envEnabled,
@@ -186,5 +195,6 @@ module.exports = {
   simulatedProviderResponse,
   validateText,
   redactSecrets,
-  safeJson
+  safeJson,
+  xmlEscape
 };

@@ -11,7 +11,8 @@ const {
   validateText,
   safeJson,
   domainProviderSimulationEnabled,
-  simulatedProviderResponse
+  simulatedProviderResponse,
+  xmlEscape
 } = require("./providerUtils");
 
 const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
@@ -176,7 +177,7 @@ async function startCall(body = {}, env = process.env) {
   const toError = validateText(body.to, "Call target", { max: 80, pattern: /^\+?[0-9][0-9\s().-]{6,}$/ });
   if (toError) return blockedResponse(provider, action, toError);
   if (missing.length) return simulatedTwilioResponse(provider, action, "voice", clean(body.to));
-  const twiml = `<Response><Say voice="alice">${clean(body.message || "This is a confirmed Nexus provider testing call.")}</Say></Response>`;
+  const twiml = `<Response><Say voice="alice">${xmlEscape(clean(body.message || "This is a confirmed Nexus provider testing call."))}</Say></Response>`;
   try {
     const result = await twilioPost("/Calls.json", { To: clean(body.to), From: twilioFromNumber(env), Twiml: twiml }, env);
     return providerResponse({

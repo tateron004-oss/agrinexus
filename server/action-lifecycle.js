@@ -33,9 +33,14 @@ function stableStringify(value) {
   return `{${keys.map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
 }
 
-function computeIdempotencyKey(provider, action, body = {}) {
+// actorId folds the calling user into the key -- without it, two unrelated
+// users sending byte-identical bodies (e.g. templated/default reminder text)
+// within the same window would collide, and the second caller would be
+// silently handed the first caller's cached result (including a real
+// provider SID) for an action that never ran on their behalf.
+function computeIdempotencyKey(provider, action, body = {}, actorId = "") {
   const { confirmed, confirmation, confirm, ...meaningful } = body || {};
-  return crypto.createHash("sha256").update(`${provider}:${action}:${stableStringify(meaningful)}`).digest("hex");
+  return crypto.createHash("sha256").update(`${provider}:${action}:${String(actorId || "")}:${stableStringify(meaningful)}`).digest("hex");
 }
 
 // Kept accepting a `db` argument for call-site compatibility, but the ledger
@@ -84,9 +89,9 @@ function attachLifecycleMetadata(result, entry) {
 // based on independently-checkable evidence (a real ID in the response, not
 // a value the caller merely asserted) -- omitting it defaults honestly to
 // verified: false rather than a fabricated true.
-async function withActionLifecycle(_db, { provider, action, body = {}, execute, verify } = {}) {
+async function withActionLifecycle(_db, { provider, action, body = {}, execute, verify, actorId = "" } = {}) {
   if (typeof execute !== "function") throw new Error("withActionLifecycle requires an execute() function.");
-  const idempotencyKey = computeIdempotencyKey(provider, action, body);
+  const idempotencyKey = computeIdempotencyKey(provider, action, body, actorId);
   const now = Date.now();
 
   const existing = ledger.get(idempotencyKey);
