@@ -17,6 +17,13 @@ class ConversationRepository {
     return (result.rows || result)[0];
   }
 
+  async owner({ tenantId, conversationId }) {
+    assertId("conversation", conversationId);
+    const result = await this.db.query(`select owner_id from nexus_conversations where tenant_id=$1 and conversation_id=$2`, [tenantId, conversationId]);
+    const row = (result.rows || result)[0];
+    return row ? row.owner_id : null;
+  }
+
   async recent({ tenantId, conversationId, limit = 24 }) {
     assertId("conversation", conversationId);
     const boundedLimit = Math.min(Math.max(Number(limit) || 24, 1), 100);

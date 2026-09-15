@@ -8,7 +8,19 @@ class AgentService {
   }
 
   async command({ input, context }) {
-    const command = createCommand({ ...input, tenantId: context.tenantId, actorId: context.userId });
+    // A caller-supplied conversationId is otherwise only tenant-scoped in storage,
+    // not owner-scoped -- without this, any tenant member could point at another
+    // user's conversationId (returned in plaintext elsewhere, e.g. task-creation
+    // and behavior-turn responses) and both read their private message history
+    // into this turn's planning context and write into their conversation under
+    // a different actorId. Treat a foreign conversationId exactly like an absent
+    // one: createCommand() below generates a fresh id when none is supplied.
+    const requestedConversationId = input.conversationId || null;
+    const conversationOwnerId = requestedConversationId
+      ? await this.conversations?.owner?.({ tenantId: context.tenantId, conversationId: requestedConversationId })
+      : null;
+    const ownConversationId = conversationOwnerId && conversationOwnerId !== context.userId ? null : requestedConversationId;
+    const command = createCommand({ ...input, conversationId: ownConversationId, tenantId: context.tenantId, actorId: context.userId });
     const fetchedTask = command.taskId ? await this.tasks.get({ tenantId: context.tenantId, taskId: command.taskId }) : null;
     // A caller-supplied taskId is otherwise only tenant-scoped, not owner-scoped -- without this
     // check any tenant member could pull another user's task goal/state/outcome into their own

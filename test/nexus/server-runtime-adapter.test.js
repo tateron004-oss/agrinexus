@@ -208,7 +208,7 @@ test("behavior-turn database failures log only safe diagnostic identifiers", asy
 
 test("authenticated refresh recovery returns only authoritative tenant conversation turns", async () => {
   let recentInput; const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
-    conversations: { recent: async input => { recentInput = input; return [{ role: "assistant", content: "Your route is still open.", created_at: "2026-08-12T00:00:00Z", provenance: { taskId: "tsk_1" } }]; } } };
+    conversations: { owner: async () => "user-1", recent: async input => { recentInput = input; return [{ role: "assistant", content: "Your route is still open.", created_at: "2026-08-12T00:00:00Z", provenance: { taskId: "tsk_1" } }]; } } };
   const adapter = createServerRuntimeAdapter({ env: { RENDER_GIT_COMMIT: "a".repeat(40) },
     resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
   const response = responseCapture(); await adapter.handle({ method: "GET", headers: {} }, {},

@@ -88,6 +88,35 @@ test("agent service never treats another user's task as continuation context", a
   assert.equal(JSON.stringify(result).includes("Secret job search"), false, "another user's task content must never appear in the response");
 });
 
+// Confirmed: a caller-supplied conversationId was passed straight into
+// conversations.ensure()/recent()/append() with no ownership check --
+// storage only scopes it by tenant, so any tenant member could point at
+// another user's conversationId (returned in plaintext elsewhere, e.g.
+// task-creation responses) and both read their private message history
+// into this turn's planning context and write into their conversation. A
+// conversationId owned by someone else must be treated exactly like an
+// unknown one: dropped so a fresh conversation is started instead.
+test("agent service never reuses another user's conversationId for history or writes", async () => {
+  const calls = [];
+  const service = new AgentService({
+    planner: { plan: async ({ conversationHistory }) => { assert.deepEqual(conversationHistory, []); return { goal: "New goal", application: "general", riskTier: "low", planningAttempts: 1, steps: [{ title: "Step", toolId: "knowledge.search" }] }; } },
+    tasks: { get: async () => null },
+    conversations: {
+      owner: async ({ conversationId }) => (conversationId === "cnv_victim" ? "someone-else" : null),
+      ensure: async input => { calls.push(["ensure", input]); },
+      recent: async input => { calls.push(["recent", input]); return input.conversationId === "cnv_victim" ? [{ role: "user", content: "Victim's private prior message" }] : []; },
+      append: async entry => calls.push(["append", entry])
+    },
+    engine: { create: async input => { calls.push(["create", input]); return { taskId: "tsk_new", ...input }; }, conversations: {} },
+    audit: { record: async () => {} }
+  });
+  const result = await service.command({ input: { correlationId: "trace", conversationId: "cnv_victim", channel: "typed", text: "Start something new" }, context });
+  const conversationIdsUsed = new Set(calls.filter(([op]) => op !== "create").map(([, payload]) => payload.conversationId));
+  assert.equal(conversationIdsUsed.size, 1);
+  assert.notEqual([...conversationIdsUsed][0], "cnv_victim", "another user's conversationId must never be reused for reads or writes");
+  assert.equal(result.command.conversationId !== "cnv_victim", true);
+});
+
 test("clarification plans are valid without fake execution steps", () => {
   const catalog = { tools: [], applications: [{ applicationId: "general", capabilities: [], riskTiers: ["low"] }] };
   const result = require("../../nexus/brain/planner.js").validatePlan({ goal: "Help me apply", application: "general",
