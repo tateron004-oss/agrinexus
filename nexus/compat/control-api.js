@@ -1,5 +1,6 @@
 "use strict";
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
+const USER_SCHEDULABLE_JOB_TYPES = Object.freeze(["notifications.deliver"]);
 function createControlApi(runtime) {
   return Object.freeze({
     async registerDevice(r) { permit(r.context,"devices:write"); const deviceId=req(r.body.deviceId,"Device ID"); let pushKeyCiphertext=null; if(r.body.pushSubscription){if(!runtime.deviceTokens)throw new NexusRuntimeError("device_token_key_missing","Push registration is unavailable because encrypted token storage is not configured.",503);pushKeyCiphertext=runtime.deviceTokens.encrypt(r.body.pushSubscription,`${r.context.tenantId}:${r.context.userId}:${deviceId}`);} return respond(async()=>deviceResult(await runtime.devices.register({deviceId,tenantId:r.context.tenantId,userId:r.context.userId,appVersion:r.body.appVersion,permissions:r.body.permissions,lifecycleState:r.body.lifecycleState,platform:req(r.body.platform,"Platform"),capabilities:r.body.capabilities||[],pushEndpoint:r.body.pushEndpoint,pushKeyCiphertext})),201); },
@@ -11,7 +12,14 @@ function createControlApi(runtime) {
     // silently clobber what registerDevice already stored.
     async registerPush(r) { permit(r.context,"devices:write"); if(!runtime.deviceTokens)throw new NexusRuntimeError("device_token_key_missing","Encrypted push storage is unavailable.",503); const secretPayload=r.body.pushSubscription&&typeof r.body.pushSubscription==="object"?r.body.pushSubscription:{token:req(r.body.token,"Push token")}; const pushKeyCiphertext=runtime.deviceTokens.encrypt(secretPayload,`${r.context.tenantId}:${r.context.userId}:${r.params.deviceId}`); return respond(async()=>deviceResult(await runtime.devices.registerPush({tenantId:r.context.tenantId,userId:r.context.userId,deviceId:r.params.deviceId,provider:r.body.provider,pushKeyCiphertext}))); },
     async revokeDevice(r) { permit(r.context,"devices:write"); return respond(async()=>({revoked:await runtime.devices.revoke({tenantId:r.context.tenantId,userId:r.context.userId,deviceId:r.params.deviceId})})); },
-    async createSchedule(r) { permit(r.context,"reminders:write"); return respond(()=>runtime.schedules.create({tenantId:r.context.tenantId,ownerId:r.context.userId,taskId:r.body.taskId,jobType:r.body.jobType||"notifications.deliver",payload:r.body.payload,cadence:r.body.cadence,timezone:req(r.body.timezone,"Timezone"),nextRunAt:req(r.body.nextRunAt,"Next run")}),201); },
+    // jobType is restricted to the one type a "reminders:write"-only caller
+    // may legitimately schedule. The worker (nexus/workers/worker.js)
+    // dispatches purely by this string with no re-check of who created the
+    // schedule, so accepting an arbitrary caller-supplied jobType here would
+    // let an ordinary user trigger privileged system jobs -- e.g.
+    // "deletion.execute" or "retention.sweep", both meant only for internal/
+    // cron triggering -- by scheduling one for themselves.
+    async createSchedule(r) { permit(r.context,"reminders:write"); const jobType=r.body.jobType||"notifications.deliver"; if(!USER_SCHEDULABLE_JOB_TYPES.includes(jobType))throw new NexusRuntimeError("invalid_input",`jobType must be one of: ${USER_SCHEDULABLE_JOB_TYPES.join(", ")}.`); return respond(()=>runtime.schedules.create({tenantId:r.context.tenantId,ownerId:r.context.userId,taskId:r.body.taskId,jobType,payload:r.body.payload,cadence:r.body.cadence,timezone:req(r.body.timezone,"Timezone"),nextRunAt:req(r.body.nextRunAt,"Next run")}),201); },
     async createNotification(r) { permit(r.context,"notifications:write"); return respond(()=>runtime.notifications.enqueue({tenantId:r.context.tenantId,userId:r.context.userId,taskId:r.body.taskId,deviceId:r.body.deviceId,channel:req(r.body.channel,"Channel"),content:r.body.content,scheduledAt:r.body.scheduledAt,idempotencyKey:req(r.body.idempotencyKey,"Idempotency key")}),201); },
     async requestDeletion(r) { permit(r.context,"privacy:delete"); const subjectId=r.body.subjectId||r.context.userId; if(subjectId!==r.context.userId&&!r.context.can("privacy:delete:any"))throw new NexusRuntimeError("permission_denied","Deleting another subject requires privacy:delete:any.",403); return respond(()=>runtime.dataLifecycle.requestDeletion({tenantId:r.context.tenantId,subjectId,requestedBy:r.context.userId}),202); }
   });
