@@ -189,7 +189,7 @@ function waitForServer(child) {
   const child = spawn(process.execPath, ["server.js"], {
     cwd: root,
     env: {
-      ...process.env,
+      ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1",
       PORT: String(port),
       AGRINEXUS_DB_PATH: tmpDb,
       NEXUS_MESSAGES_ENABLED: "",

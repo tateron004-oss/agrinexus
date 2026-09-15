@@ -81,7 +81,7 @@ async function withNexusServer(env, callback) {
   const child = spawn(process.execPath, ["server.js"], {
     cwd: root,
     env: {
-      ...process.env,
+      ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1",
       ...env,
       PORT: String(port),
       AGRINEXUS_DB_PATH: dbPath,

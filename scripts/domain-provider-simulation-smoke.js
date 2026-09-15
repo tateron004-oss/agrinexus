@@ -68,7 +68,13 @@ async function callTool(name, args, cookie) {
       TWILIO_AUTH_TOKEN: "",
       GOOGLE_CALENDAR_ACCESS_TOKEN: "",
       NEXUS_CALENDAR_PROVIDER_ENDPOINT: "",
-      STRIPE_SECRET_KEY: ""
+      STRIPE_SECRET_KEY: "",
+      // Without this, server/local-env-loader.js repopulates any of the
+      // above from a real local .env file at startup (an empty string is
+      // treated as "not usable" and refilled) -- which would silently swap
+      // in real provider credentials and break this test's simulated:true
+      // assertions, or worse, place a real call/send a real SMS.
+      NEXUS_PRESERVE_EMPTY_ENV: "1"
     },
     stdio: "ignore",
     windowsHide: true
