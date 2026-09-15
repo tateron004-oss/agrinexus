@@ -94,7 +94,12 @@ test("canceling a plan that doesn't exist gets an honest not-found response", as
 });
 
 test("a plain field-visit planning request still works exactly as before, unaffected by the new show/save/cancel branches", async () => {
-  const result = await callWorkflow("Plan a field visit from Stockton to Sacramento.");
+  const result = await callWorkflow("Plan a field visit from Stockton to Sacramento.", { confirmed: true });
   assert.equal(result.status, "field-visit-planned");
   assert.match(result.response, /prepared a field visit plan/i);
+});
+
+test("an unconfirmed field-visit route request does not silently make the real routing call -- the provider's confirmation gate is no longer bypassed", async () => {
+  const result = await callWorkflow("Plan a field visit from Stockton to Modesto.");
+  assert.notEqual(result.status, "field-visit-planned");
 });

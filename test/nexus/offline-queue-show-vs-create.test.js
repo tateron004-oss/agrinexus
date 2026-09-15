@@ -82,3 +82,15 @@ test("an actual queue request ('queue this for offline review') still works exac
   const result = await callReminder("Queue this for offline review: soil test results.", { confirmed: true });
   assert.equal(result.status, "offline-item-queued");
 });
+
+test("an unconfirmed offline-queue or offline-sync request is not silently executed -- the provider's confirmation gate is no longer bypassed", async () => {
+  const unconfirmedQueue = await callReminder("Queue this for offline review: unconfirmed notes.");
+  assert.notEqual(unconfirmedQueue.status, "offline-item-queued");
+  const unconfirmedSync = await callReminder("Sync my offline queue.");
+  assert.notEqual(unconfirmedSync.status, "offline-sync-completed");
+});
+
+test("a confirmed offline-sync request still works", async () => {
+  const result = await callReminder("Sync my offline queue.", { confirmed: true });
+  assert.equal(result.status, "offline-sync-completed");
+});

@@ -19098,13 +19098,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "automation-reminder", status: "offline-queue-listed", response: queueItems.length ? `You have ${queueItems.length} item(s) in your offline queue.` : "Your offline queue is empty.", localOnly: true, offlineQueueItems: queueItems };
     }
     if (wantsOfflineSync) {
-      const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: true }, db, process.env);
+      // Confirmed: offlineExpansionBridgeProvider's sync/queue functions both
+      // already have a real requireConfirmation() gate, bypassed here by
+      // hardcoding true regardless of what the caller actually sent.
+      const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
       const ok = Boolean(syncResult?.body?.ok && syncResult.body.status === "completed");
       return { ...common, capability: "automation-reminder", status: ok ? "offline-sync-completed" : "offline-sync-blocked", response: ok ? syncResult.body.message : "I could not sync the offline queue right now.", localOnly: true };
     }
     if (wantsOfflineQueue) {
       const summary = args.summary || args.content || command;
-      const queueResult = nexusRealProviders.offlineExpansionBridge.queue({ type: args.type || "workflow_plan", title: args.title || summary.slice(0, 80), summary, confirmed: true }, db, process.env);
+      const queueResult = nexusRealProviders.offlineExpansionBridge.queue({ type: args.type || "workflow_plan", title: args.title || summary.slice(0, 80), summary, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
       const ok = Boolean(queueResult?.body?.ok && queueResult.body.status === "completed");
       return { ...common, capability: "automation-reminder", status: ok ? "offline-item-queued" : "offline-queue-blocked", response: ok ? "I queued that locally for offline review. No health, payment, contact, or dispatch content was included." : (queueResult?.body?.message || "I could not queue that item — it may include sensitive or restricted content."), localOnly: true };
     }
@@ -19292,7 +19295,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const cards = searchResult?.body?.data?.cards || [];
       const bestMatch = cards[0];
       if (bestMatch && wantsProgress) {
-        const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: true }, db, process.env);
+        // Confirmed: learningBridgeProvider's markProgress/saveResource/
+        // createLearningReminder all already have a real requireConfirmation()
+        // gate, bypassed here by hardcoding true regardless of what the
+        // caller actually sent.
+        const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
         const ok = Boolean(progressResult?.body?.ok && progressResult.body.status === "completed");
         if (ok) shadowWriteCourseProgressToPostgres(progressResult.body.data.progress, realUserEmail);
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "learning-progress-recorded" : "learning-preparation-ready",
@@ -19302,8 +19309,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       }
       if (bestMatch && (wantsSave || wantsReminder)) {
         const actionResult = wantsSave
-          ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: true }, db, process.env)
-          : nexusRealProviders.learningBridge.createLearningReminder({ ...bestMatch, dueAt: args.dueAt || args.when, confirmed: true }, db, process.env);
+          ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env)
+          : nexusRealProviders.learningBridge.createLearningReminder({ ...bestMatch, dueAt: args.dueAt || args.when, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
         const ok = Boolean(actionResult?.body?.ok && actionResult.body.status === "completed");
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? (wantsSave ? "learning-resource-saved" : "learning-reminder-created") : "learning-preparation-ready",
           [ok ? `${wantsSave ? "Saved" : "Created a reminder for"} ${bestMatch.title} to the learner's local record.` : "Prepared learning guidance."],
@@ -19857,7 +19864,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         title: args.title || `Field visit: ${command}`.slice(0, 180),
         origin: routeArgs.origin || args.origin,
         destinations: [{ label: args.destinationLabel || routeArgs.destination || "Destination", addressText: routeArgs.destination || args.destination }],
-        confirmed: true
+        // Confirmed: routeVisitPlan (called below when both origin and
+        // destination are known) already has a real requireConfirmation()
+        // gate before it makes a real Google Maps routing call -- hardcoding
+        // true here bypassed it. createVisitPlan (the other branch) has no
+        // such gate since it never contacts a real provider, so this is safe
+        // for both call paths.
+        confirmed: Boolean(args.confirmed || args.confirmation)
       };
       const visitResult = routeArgs.origin && routeArgs.destination
         ? await nexusRealProviders.mapsFieldVisitBridge.routeVisitPlan(visitBody, db, process.env)
