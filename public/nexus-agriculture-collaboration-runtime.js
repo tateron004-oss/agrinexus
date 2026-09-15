@@ -712,6 +712,22 @@
 
   function attemptExecution(inputValue, options = {}) {
     const result = prepareAction(inputValue, options);
+    // Confirmed: prepareAction() already computes droneExecutionBlocked
+    // (statusForAction() returns "blocked_drone_execution" whenever the
+    // drone flag isn't enabled or options.humanPilotApproved isn't set),
+    // but this function never re-checked it -- confirmationRequired and
+    // expertReviewRequired alone don't cover it (a drone action can satisfy
+    // both of those and still have no licensed/human pilot approval), so a
+    // caller passing confirmed:true + expertReviewed:true without
+    // humanPilotApproved fell straight through to the unscoped
+    // executionAuthority check below. Checked first, matching
+    // statusForAction()'s own precedence (drone is the strictest gate).
+    if (result.droneExecutionBlocked) {
+      result.status = "blocked_drone_execution";
+      result.userVisibleStatus = "Drone mission/flight execution requires configured provider, licensed/human pilot approval, confirmation, and compliance review. No flight executed.";
+      result.noExecutionAuthorized = true;
+      return result;
+    }
     if (!options.confirmed && result.confirmationRequired) {
       result.status = "blocked_confirmation_required";
       result.userVisibleStatus = "Explicit confirmation is required before any external agriculture action. Nothing was executed.";
@@ -724,7 +740,13 @@
       result.noExecutionAuthorized = true;
       return result;
     }
-    if (!result.registry.executionAuthority) {
+    // Confirmed: this used to check result.registry.executionAuthority,
+    // which is true if ANY provider category anywhere is execution-enabled
+    // (e.g. marketplace) regardless of whether THIS action's own lane
+    // (e.g. drone_field_operations) has execution enabled at all -- scoped
+    // to the action's own sourceCategory, matching the equivalent, already-
+    // correct check in nexus-healthcare-collaboration-runtime.js.
+    if (!result.registry.providers.some(item => item.sourceCategory === result.sourceCategory && item.executionCurrentlyEnabled)) {
       result.status = "blocked_execution_disabled";
       result.userVisibleStatus = "Provider execution is not enabled for this agriculture lane. Nexus prepared the packet and receipt only.";
       result.noExecutionAuthorized = true;
