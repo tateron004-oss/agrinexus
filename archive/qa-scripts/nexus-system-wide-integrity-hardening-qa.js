@@ -310,7 +310,11 @@ function assertEnvelope(envelope, label, correlationId) {
       PUBLIC_BASE_URL: base,
       NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "",
       NEXUS_WEATHER_PROVIDER_ENABLED: "",
-      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: ""
+      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "",
+      // This QA script drives /api/agent/command through every matrix case
+      // in one tight loop from a single IP, comfortably exceeding the
+      // real-world-sized default AI-agent rate limit.
+      AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: String(matrix.length + 50)
     },
     stdio: "ignore",
     windowsHide: true

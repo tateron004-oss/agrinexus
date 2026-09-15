@@ -68,7 +68,8 @@ const suites = {
     "archive/qa-scripts/call-provider-drift-qa.js",
     "scripts/action-lifecycle-smoke.js",
     "scripts/domain-provider-simulation-smoke.js",
-    "scripts/operations-status-fabrication-smoke.js"
+    "scripts/operations-status-fabrication-smoke.js",
+    "scripts/agent-command-rate-limit-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
