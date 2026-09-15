@@ -74,6 +74,7 @@ const suites = {
     "archive/qa-scripts/call-provider-registry-qa.js",
     "archive/qa-scripts/call-provider-drift-qa.js",
     "scripts/call-intent-smoke.js",
+    "scripts/openai-native-confirmation-status-smoke.js",
     "archive/qa-scripts/pending-call-ui-qa.js",
     "archive/qa-scripts/confirmed-call-handoff-qa.js",
     "archive/qa-scripts/native-call-bridge-dispatch-qa.js",

@@ -20143,10 +20143,18 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       responseText: finalText,
       responseMetadata: { toolResultStatuses: toolResults.map(item => item.result?.status || "unknown"), citationsCount: citations.length }
     });
+    // A tool result of confirmation_required means Nexus is waiting on the
+    // user's explicit yes before it may proceed -- the model still returns a
+    // normal spoken reply asking for that confirmation, so without this the
+    // turn's own status previously always reported "completed" regardless,
+    // and any caller branching on status (the confirmation-required checks
+    // used throughout this file, e.g. around line 16094 and 30285) would
+    // never see that this turn is actually still pending.
+    const requiresConfirmation = toolResults.some(item => item.result?.status === "confirmation_required");
     return ensureSpeakableAgentResult({
       intent: runType,
       response: finalText,
-      status: "completed",
+      status: requiresConfirmation ? "needs-confirmation" : "completed",
       metadata: {
         redirectSection: genesisAction?.workspace || "agent", genesisAction, openAiNativeAgent: {
           active: true,
@@ -20165,7 +20173,9 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         richData: Object.keys(richData).length ? richData : null,
         noExecutionAuthorized: true,
         providerHandoffAuthorized: false,
-        fakeCitationsAllowed: false
+        fakeCitationsAllowed: false,
+        confirmationRequired: requiresConfirmation,
+        executionDeferred: requiresConfirmation
       }
     }, "openai_native.conversation");
   } catch (error) {
