@@ -18495,7 +18495,12 @@ function nexusOpenAiNativeExtractWeatherTimeframe(command = "") {
 
 function nexusOpenAiNativeExtractBusinessName(command = "", args = {}) {
   const text = String(command || "");
-  const nameMatch = text.match(/\b(?:called|named|titled|for)\s+["']?([^"'.,\n]{2,80})["']?/i);
+  // Confirmed live: "for" marks purpose/audience, not a name -- "Create a
+  // nonprofit for helping smallholder farmers" captured "helping smallholder
+  // farmers" as the business name, which a user could easily confirm
+  // without noticing in "...called 'helping smallholder farmers'...".
+  // called/named/titled are unambiguous naming verbs; "for" is not.
+  const nameMatch = text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,80})["']?/i);
   return sanitizePilotText(args.businessName || args.title || (nameMatch ? nameMatch[1].trim() : ""), 180);
 }
 
@@ -18766,7 +18771,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
     const targetValue = args.targetLanguage || targetMatch?.[1] || args.language || "en";
     const targetLanguage = languageMap[String(targetValue).toLowerCase()] || String(targetValue).toLowerCase();
-    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to)\s+(?:English|Spanish|French|Swahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
+    // targetMatch above accepts "in" as a lead-in ("Translate this in
+    // French") alongside "into"/"to" -- this cleanup must strip the same
+    // trailing lead-in set, or the "in French" fragment leaks into the text
+    // that actually gets sent to the translator.
+    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to|in)\s+(?:English|Spanish|French|Swahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
     const translation = await translateDynamicContent(db, user, { text: sourceText, targetLanguage, sourceLanguage: args.sourceLanguage || "en", context: "openai-native-translation" });
     return {
       ...common,
@@ -19419,7 +19428,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // chainable so "temp today is 101" still works) -- never an arbitrary
     // noun like "file"/"item"/"tank"/"sensor model".
     const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
-    const bp = command.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i);
+    // Confirmed live: unlike every other vital below, this pattern had no
+    // trigger-word gate at all -- ANY two 2-3 digit numbers joined by "/" or
+    // "over" matched, so "Split the harvest 60/40 with my partner" or "a
+    // 50/50 split on this deal" (completely unrelated, non-health commands)
+    // fabricated a blood-pressure reading. Require an explicit BP trigger
+    // word first, mirroring the connector-gated pattern used for glucose/
+    // oxygen/temperature/pulse just below.
+    const bp = command.match(new RegExp(`\\b(?:blood\\s*pressure|bp|systolic)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\s*(?:over|\\/)\\s*(\\d{2,3})\\b`, "i"));
     const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
@@ -19439,7 +19455,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // about storing insulin safely?" fell through to the generic capability
     // menu instead of the pharmacist question-draft, even though that draft
     // is exactly the safe, generic response this question should get).
-    const wantsPharmacy = /\bpharmac(?:y|ist)\b/i.test(command) || /\b(medication|medicine|prescription|insulin|dosage|drug interaction)s?\b/i.test(command);
+    // "dosage"/"medicine" alone are too broad for a farming app -- confirmed
+    // live, "What's the right dosage of fertilizer for my maize field?" and
+    // "How much medicine should I add to the irrigation tank?" both matched
+    // and were misrouted into the pharmacist question-draft branch. Require
+    // them to co-occur with an explicit medication/clinical-context word
+    // instead of standing alone, while leaving the other, already-reliable
+    // trigger words unchanged.
+    const wantsPharmacy = /\bpharmac(?:y|ist)\b/i.test(command)
+      || /\b(medication|prescription|insulin|drug interaction)s?\b/i.test(command)
+      || (/\b(?:medicine|dosage)\b/i.test(command)
+        && /\b(?:medication|prescription|insulin|pill|tablet|dose|refill|side effect|interaction|doctor|pharmacist|pharmacy)\b/i.test(command));
     const patientSupportMatch = command.match(/\b(community health worker|chw|transport(?:ation)?|support resource|patient support)\b/i);
     const patientSupportQuery = patientSupportMatch && /^(support resource|patient support)$/i.test(patientSupportMatch[1]) ? "" : patientSupportMatch?.[1];
     // patientSupportBridge's real catalog already includes plain-language
@@ -19655,7 +19681,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // at all and fell through to the generic browse fallback below --
     // createListing() already exists and is real, but nothing could ever
     // remove what it created.
-    if (/\b(cancel|delete|remove)\b.*\blisting\b/i.test(command)) {
+    // Same question-framing bug already fixed for memory/agriculture in
+    // this session: "Did you delete my listing?" is a status question, not
+    // a new delete request, but the bare presence of "delete" routed it
+    // into the removal confirmation prompt instead of answering it.
+    const isListingStatusQuestion = /\b(do|did|does|have|has)\s+you\s+(cancel(?:led)?|delet(?:e|ed)|remov(?:e|ed))\b/i.test(command);
+    if (!isListingStatusQuestion && /\b(cancel|delete|remove)\b.*\blisting\b/i.test(command)) {
       const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|my|listing|listings|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160);
       const removeResult = nexusRealProviders.marketplaceBridge.removeListing({ title: titleQuery, confirmed: args.confirmed }, db, process.env);
       return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, removeResult);
@@ -19782,9 +19813,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (!authoritativeUser) {
       return { ...common, capability: "business-assistant", status: "needs-auth", response: "Sign in first, then I can open the business assistant." };
     }
-    const wantsList = /\b(list|show|which|what|my)\b/i.test(command)
-      && /\b(business|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)\b/i.test(command)
-      && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
+    // Confirmed live: the bare word "my" in the trigger set meant any
+    // ordinary sentence mentioning "my business"/"my nonprofit" -- e.g. "My
+    // business needs help with cash flow" or "My nonprofit is struggling
+    // with fundraising, what can I do?" -- got shunted into the workspace
+    // list response instead of the real business-assistant flow. "list"/
+    // "show" are unambiguous verbs safe to match anywhere, but "which"/
+    // "what" need to sit directly next to the noun they're asking about
+    // (or in a "do I have" query) to actually mean a listing request.
+    const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)s?";
+    const wantsList = (
+      (/\b(list|show)\b/i.test(command) && new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command))
+      || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
+      || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
+    ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
     try {
       if (wantsList) {
         const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
@@ -40605,7 +40647,13 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
   const readings = [];
   let index = 0;
   const now = nexusNow();
-  const bpPattern = /\b(?:blood pressure|bp)?\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
+  // Confirmed: the trigger word was optional here, so ANY two 2-3 digit
+  // numbers joined by "/" or "over" anywhere in free text (e.g. "The recipe
+  // needs 60/40 flour to sugar ratio", "My yield ratio was 45/55 this
+  // season") fabricated a blood-pressure reading into this predictive
+  // model's state. Require the trigger word, matching the same fix applied
+  // to the nexus_health_preparation vitals gate.
+  const bpPattern = /\b(?:blood\s*pressure|bp)\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
   let bpMatch;
   while ((bpMatch = bpPattern.exec(text)) !== null) {
     const systolic = Number(bpMatch[1]);
@@ -40621,7 +40669,14 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
     const direction = /\b(decreased|lost)\b/i.test(text) ? "decreased" : "increased";
     readings.push({ id: `api-weight-${Date.now()}`, type: "weight", parsedValue: `${direction} ${weightMatch[1]} ${weightMatch[2] || "pounds"}`, weight: Number(weightMatch[1]) * (direction === "decreased" ? -1 : 1), unit: weightMatch[2] || "pounds", context: "weight trend/change", timestamp: now, source: "natural_command", localOnly: true });
   }
-  const adherenceMatch = text.match(/\bmissed\s+(?:my\s+)?(?:medication|medicine|dose|doses)?\s*(once|twice|three times|four times|\d+)?/i);
+  // Confirmed: the medication/dose group was optional, so bare "missed"
+  // anywhere in free text (e.g. "I missed the bus this morning", "I missed
+  // my flight twice last month") fabricated a "missed medication" adherence
+  // reading. Require the medication/dose word immediately after "missed
+  // (my)"; the broader "missed .*medication|missed .*dose" OR-check below
+  // still catches phrasing with words in between (e.g. "missed my morning
+  // medication"), so real adherence reports are unaffected.
+  const adherenceMatch = text.match(/\bmissed\s+(?:my\s+)?(?:medication|medicine|dose|doses)\s*(once|twice|three times|four times|\d+)?/i);
   if (adherenceMatch || /\bmissed .*medication|missed .*dose/i.test(text)) {
     const frequencyText = adherenceMatch?.[1] || "unspecified";
     const frequency = frequencyText === "once" ? 1 : frequencyText === "twice" ? 2 : frequencyText === "three times" ? 3 : frequencyText === "four times" ? 4 : Number(frequencyText) || 1;
