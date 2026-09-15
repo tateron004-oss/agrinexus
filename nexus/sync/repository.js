@@ -11,7 +11,13 @@ class SyncRepository {
       if((prior.rows||prior)[0]) return (prior.rows||prior)[0];
       const syncId=createId("sync");
       const current=await handler({trx,operation,phase:"inspect"});
-      const conflict=current?.version != null && operation.baseVersion != null && current.version!==operation.baseVersion;
+      // A prior record exists and this operation isn't a create -- the
+      // client MUST have seen some version to base its change on. Treating
+      // a missing baseVersion as "no conflict" (the old behavior) let any
+      // update/delete silently skip optimistic-concurrency checking
+      // entirely and overwrite whatever the current server record is.
+      const modifiesExisting=current!=null && (operation.action||"update")!=="create";
+      const conflict=modifiesExisting && (operation.baseVersion==null || current.version!==operation.baseVersion);
       const applied=conflict?null:await handler({trx,operation,phase:"apply",current});
       const result=await trx.query(`insert into nexus_sync_operations
         (sync_id,tenant_id,user_id,device_id,operation_id,entity_type,entity_id,base_version,payload,state,conflict,applied_at)
