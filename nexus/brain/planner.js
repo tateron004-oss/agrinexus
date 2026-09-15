@@ -136,19 +136,63 @@ function canonicalizeExplicitApplication(candidate, text, catalog) {
   return toolsCompatible ? { ...candidate, application: explicit.applicationId } : candidate;
 }
 
+// Confirmed live: "My temperature is 101." and even "My blood pressure is
+// 120 over 80." (a normal, healthy reading) fell all the way through this
+// deterministic planner to the real AI-based planning model, which then
+// treated ANY reported vital sign as a medical emergency requiring 911 --
+// because this function previously only recognized command-style phrasing
+// ("record/log my BP") for blood pressure alone. Nobody actually reports a
+// vital that way; the natural, first-person "my X is Y" statement is how
+// real voice/typed RPM logging is used, and it never matched anything
+// deterministic here, so it fell through to the AI's own (wrong) judgment
+// every time. Widened to accept a plain first-person statement ("my
+// <vital> is/was ...") in addition to the original command-verb phrasing,
+// and added temperature/pulse/oxygen/glucose alongside the existing
+// blood-pressure handling. The number-extraction for the four new types
+// mirrors server.js's nexus_health_preparation dispatcher's own
+// VITAL_VALUE_CONNECTOR fix: the number must follow the trigger word
+// through only a short, specific set of real connector words, never an
+// arbitrary noun -- so a completely unrelated "temp file 42" style
+// sentence (which also lacks the required "my" prefix or record/log verb)
+// still cannot fabricate a reading here either.
+const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
+
 function completeHealthRecordPlan(text, catalog) {
   const goal = String(text || "").trim();
-  if (!/\b(record|log|save|add|capture)\b/i.test(goal) || !/\b(blood\s*pressure|bp)\b/i.test(goal)) return null;
-  const match = goal.match(/\b(?:blood\s*pressure|bp)\b[^\d]{0,40}(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i) ||
-    goal.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i);
-  if (!match || !catalog.tools.some(tool => tool.toolId === "health.record") ||
+  if (!catalog.tools.some(tool => tool.toolId === "health.record") ||
       !catalog.applications.some(app => app.applicationId === "health")) return null;
-  const systolic = Number(match[1]); const diastolic = Number(match[2]);
-  if (systolic < 40 || systolic > 300 || diastolic < 20 || diastolic > 200) return null;
-  return { goal, application: "health", riskTier: "regulated", clarification: null, steps: [{ clientStepId: "record-reading",
-    title: "Record blood pressure reading", toolId: "health.record",
-    input: { intakeType: "blood-pressure", readingType: "blood-pressure", systolic, diastolic },
-    dependsOn: [], fallbackToolIds: [] }] };
+  const wantsRecord = /\b(record|log|save|add|capture)\b/i.test(goal);
+  const isReported = vitalPhrase => wantsRecord || new RegExp(`\\bmy\\s+${vitalPhrase}\\b`, "i").test(goal);
+  const makePlan = (readingType, input) => ({ goal, application: "health", riskTier: "regulated", clarification: null,
+    steps: [{ clientStepId: "record-reading", title: `Record ${readingType.replace(/-/g, " ")} reading`,
+      toolId: "health.record", input: { intakeType: readingType, readingType, ...input },
+      dependsOn: [], fallbackToolIds: [] }] });
+
+  if (isReported("(?:blood\\s*pressure|bp)") && /\b(?:blood\s*pressure|bp)\b/i.test(goal)) {
+    const bpMatch = goal.match(/\b(?:blood\s*pressure|bp)\b[^\d]{0,40}(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i) ||
+      goal.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i);
+    if (bpMatch) {
+      const systolic = Number(bpMatch[1]); const diastolic = Number(bpMatch[2]);
+      if (systolic >= 40 && systolic <= 300 && diastolic >= 20 && diastolic <= 200) return makePlan("blood-pressure", { systolic, diastolic });
+    }
+  }
+  if (isReported("(?:blood\\s*sugar|glucose)")) {
+    const match = goal.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    if (match) { const value = Number(match[1]); if (value >= 20 && value <= 600) return makePlan("blood-glucose", { glucose: value }); }
+  }
+  if (isReported("(?:oxygen|o2|spo2|pulse\\s*ox)")) {
+    const match = goal.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    if (match) { const value = Number(match[1]); if (value >= 50 && value <= 100) return makePlan("oxygen-saturation", { oxygenSaturation: value }); }
+  }
+  if (isReported("temp(?:erature)?")) {
+    const match = goal.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
+    if (match) { const value = Number(match[1]); if (value >= 70 && value <= 115) return makePlan("temperature", { temperature: value }); }
+  }
+  if (isReported("(?:pulse|heart\\s*rate)")) {
+    const match = goal.match(new RegExp(`\\b(?:pulse|heart\\s*rate)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    if (match) { const value = Number(match[1]); if (value >= 20 && value <= 250) return makePlan("pulse", { pulse: value }); }
+  }
+  return null;
 }
 
 function completeTelehealthIntakePlan(text, catalog) {

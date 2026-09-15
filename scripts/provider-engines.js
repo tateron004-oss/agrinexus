@@ -160,8 +160,21 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
       routeGeometry: input.routeGeometry || [[-1.286389, 36.817223], [-0.303099, 36.080026]] },
     "media.play": { requestedMedia: input.requestedMedia || input.query || "Requested media",
       resolvedMedia: input.resolvedMedia || "Provider-resolved media", playbackState: "playing" },
-    "health.record": { reading: { type: "blood-pressure", systolic: input.systolic, diastolic: input.diastolic },
-      persistedRecordId: id, safetyResponse: "Reading recorded with provider-review safety guidance" },
+    // Confirmed live: this always reported { type: "blood-pressure" } no
+    // matter what was actually recorded -- once nexus/brain/planner.js's
+    // completeHealthRecordPlan started sending temperature/pulse/oxygen/
+    // glucose readings too, this mock would have echoed back a mislabeled
+    // "blood-pressure" reading with undefined systolic/diastolic for every
+    // one of them. Reflects the real intakeType/readingType the caller
+    // sent, and only the fields that type actually has.
+    "health.record": { reading: {
+      type: input.intakeType || input.readingType || "blood-pressure",
+      ...(input.systolic !== undefined || input.diastolic !== undefined ? { systolic: input.systolic, diastolic: input.diastolic } : {}),
+      ...(input.glucose !== undefined ? { glucose: input.glucose } : {}),
+      ...(input.oxygenSaturation !== undefined ? { oxygenSaturation: input.oxygenSaturation } : {}),
+      ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
+      ...(input.pulse !== undefined ? { pulse: input.pulse } : {})
+    }, persistedRecordId: id, safetyResponse: "Reading recorded with provider-review safety guidance" },
     "health.emergency-guidance": {
       riskLevel: "emergency",
       safetyResponse: "This may be a medical emergency. Call 911 or your local emergency number now. Do not wait for Nexus or drive yourself. If someone is with you, ask them to stay with you and help emergency responders reach you.",
