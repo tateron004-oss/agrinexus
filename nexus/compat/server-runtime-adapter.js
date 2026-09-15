@@ -539,6 +539,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/behavior/conversation" && req.method === "GET") {
         const conversationId = String(request.query.conversationId || "").trim();
         if (!conversationId) { send(res, 400, { error: "Conversation ID is required.", code: "conversation_id_required" }); return true; }
+        // A conversationId is only tenant-scoped in storage, not owner-scoped --
+        // without this, any authenticated tenant member could read another
+        // user's full message history by supplying a conversationId they saw
+        // returned elsewhere (task creation, behavior-turn responses).
+        const conversationOwnerId = await active.conversations.owner({ tenantId: context.tenantId, conversationId });
+        if (conversationOwnerId && conversationOwnerId !== context.userId && !context.hasRole("admin")) {
+          send(res, 403, { error: "Only the conversation owner may view its history.", code: "conversation_owner_required" }); return true;
+        }
         const turns = await active.conversations.recent({ tenantId: context.tenantId, conversationId,
           limit: Math.min(Math.max(Number(request.query.limit) || 24, 1), 100) });
         send(res, 200, { schema: "nexus.behavior-conversation.v1", authoritative: true,

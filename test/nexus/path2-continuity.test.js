@@ -19,6 +19,16 @@ test("recent conversation context is tenant scoped, bounded, and chronological",
   assert.deepEqual(turns.map(turn => turn.content), ["first", "second"]);
 });
 
+test("owner() looks up the conversation's owner scoped by tenant, and returns null when not found", async () => {
+  let observed;
+  const found = new ConversationRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [{ owner_id: "user-a" }] }; } });
+  assert.equal(await found.owner({ tenantId: "tenant-a", conversationId: "cnv_test" }), "user-a");
+  assert.match(observed.sql, /tenant_id=\$1 and conversation_id=\$2/);
+  assert.deepEqual(observed.params, ["tenant-a", "cnv_test"]);
+  const missing = new ConversationRepository({ query: async () => ({ rows: [] }) });
+  assert.equal(await missing.owner({ tenantId: "tenant-a", conversationId: "cnv_missing" }), null);
+});
+
 test("conversation content and provenance cross the PostgreSQL boundary explicitly", async () => { let observed;
   const repository = new ConversationRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [{}] }; } });
   await repository.append({ tenantId: "tenant-a", conversationId: "cnv_test", actorId: "user-a", role: "user", content: "hello", provenance: { channel: "voice" } });

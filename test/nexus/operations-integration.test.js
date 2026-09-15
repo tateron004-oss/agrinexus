@@ -38,6 +38,24 @@ test('recovered observability and task progress routes retain authorization boun
  const allowed=await request('/api/nexus/runtime/tasks/task/progress',user,runtime);
  assert.equal(allowed.status,200);assert.deepEqual(Object.keys(allowed.data).sort(),['authoritative','progress']);
 });
+// Confirmed: GET /api/nexus/runtime/behavior/conversation resolved a
+// caller-supplied conversationId scoped only by tenant, with no ownership
+// check at all -- any authenticated tenant member could read another
+// user's full message history by supplying a conversationId seen elsewhere.
+test('behavior/conversation route rejects a caller who does not own the conversation',async()=>{
+ let recentCalls=0;
+ const runtime={ready:Promise.resolve(),engine:{tasks:{}},
+   conversations:{owner:async()=>'someone-else',recent:async()=>{recentCalls++;return[];}}};
+ const user={id:'owner',tenantId:'tenant',permissions:[],role:'Standard User'};
+ const denied=await request('/api/nexus/runtime/behavior/conversation?conversationId=cnv_victim',user,runtime);
+ assert.equal(denied.status,403);assert.equal(recentCalls,0,'message history must never be fetched for a non-owner');
+ runtime.conversations.owner=async()=>'owner';
+ const allowed=await request('/api/nexus/runtime/behavior/conversation?conversationId=cnv_mine',user,runtime);
+ assert.equal(allowed.status,200);assert.equal(recentCalls,1);
+ runtime.conversations.owner=async()=>null;
+ const notYetCreated=await request('/api/nexus/runtime/behavior/conversation?conversationId=cnv_new',user,runtime);
+ assert.equal(notYetCreated.status,200,'a not-yet-existing conversationId should not be treated as a permission error');
+});
 test('operations retain canonical event methods and tenant-isolate provider snapshots',async()=>{
  const calls=[];const repo=new ObservabilityRepository({query:async(sql,params)=>{calls.push({sql,params});return{rows:[]};}});
  assert.equal(typeof repo.record,'function');assert.equal(typeof repo.summary,'function');assert.equal(typeof repo.operationalView,'function');
