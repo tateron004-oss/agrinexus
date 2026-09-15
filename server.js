@@ -18024,18 +18024,26 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
   if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
-  if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
   if (/\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";
   if (/\b(calculate|calculation|compute|analyze data|table|dataset|code|script|formula|statistics)\b/.test(lower)) return "nexus_data_code_analysis";
   if (/\b(image|photo|picture|camera|visual|scan|document photo|crop photo|equipment photo)\b/.test(lower)) return "nexus_visual_analysis";
   if (/\b(remember|memory|forget|delete memory|correct memory|export memory|what do you remember|preferences)\b/.test(lower)) return "nexus_memory";
   if (/\b(remind|reminder|scheduled task|recurring|monitor|notification|notify me|follow up)\b/.test(lower)) return "nexus_automation_reminder";
+  if (/\b(receipt|receipts|audit history|audit trail|audit log)\b/.test(lower)) return "nexus_receipts";
   if (/\b(email|inbox|mail)\b/.test(lower)) return "nexus_email";
   if (/\b(calendar|schedule|reschedule|cancel appointment|meeting|event)\b/.test(lower)) return "nexus_calendar";
   if (/\b(browser|website|computer|click|fill out|download|web page)\b/.test(lower)) return "nexus_browser_computer_action";
-  if (/\b(export|report|document|presentation|table|receipt|pdf)\b/.test(lower)) return "nexus_document_export";
+  if (/\b(export|report|document|presentation|table|pdf)\b/.test(lower)) return "nexus_document_export";
   if (/\b(map|route|directions|travel time|field visit|logistics|delivery|nearby|near me)\b/.test(lower)) return "nexus_maps_route";
+  // Confirmed: this bucket used to sit right after translation, ahead of
+  // calendar/email/reminder/export -- "Can you check my calendar for
+  // today?", "Remind me now to email the buyer", and "Send me the latest
+  // invoice by email" all matched "today"/"now"/"latest" here first and were
+  // mislabeled nexus_live_knowledge instead of the tool that actually
+  // handles them. This is a first-match-wins chain, so order matters; this
+  // catch-all bucket now runs only after every more specific one.
+  if (/\b(current|latest|today|now|recent|source|sources|cite|citation|research|look up|search)\b/.test(lower)) return "nexus_live_knowledge";
   if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|yield|post-harvest|harvest)\b/.test(lower)) return "nexus_agriculture";
   if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw|fitness|workout|training plan|exercise routine)\b/.test(lower)) return "nexus_health_preparation";
   if (/\b(job|workforce|training|learning|literacy|course|career|employer|apprentice|internship|marketing strategy|grant writing|minority[- ]owned|black[- ]owned|brown[- ]owned|tech(?:nology)? modernization)\b/.test(lower)) return "nexus_workforce_learning";
@@ -19303,7 +19311,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // "Show my drone mission requests." matched the create gate below
     // ("drone" + "mission") and was wrongly saved as a brand new, garbled
     // mission request instead of listing the real ones already there.
-    const wantsShowDrone = /\b(show|list|what are|view)\b.*\bdrone\b.*\b(mission|request)/i.test(command);
+    // Confirmed: "Did you request the drone mission yet?" / "Have you sent
+    // the drone for the survey?" are status questions -- the base pattern
+    // below requires a show/list/view word, which these don't have, but they
+    // DO still contain "drone" + a create-verb like "request"/"survey", so
+    // they fell into the create branch and silently saved a brand new,
+    // garbled mission intake in answer to what was only a status question.
+    // Routing a status question to the real listing (like field-agent below)
+    // is a more helpful answer than a generic fallback.
+    const wantsShowDrone = /\b(show|list|what are|view)\b.*\bdrone\b.*\b(mission|request)/i.test(command)
+      || (/\bdrone\b/i.test(command) && /\b(do|did|does|have|has)\s+you\b/i.test(command));
     const wantsDrone = !wantsShowDrone && /\bdrone\b/i.test(command) && /\b(send|fly|scan|survey|mission|inspect|request)\b/i.test(command);
     if (wantsShowDrone) {
       const listResult = nexusRealProviders.droneMissionBridge.missionRequests(db, process.env);
@@ -19315,11 +19332,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         || command.match(/\b(?:the\s+|my\s+)([a-z0-9]+(?:\s+[a-z0-9]+)?\s+(?:field|farm|plot|area))\b/i);
       const missionResult = nexusRealProviders.droneMissionBridge.missionRequest({
         title: args.title || `Drone field review: ${command}`.slice(0, 180),
-        missionType: /\bpest|disease\b/i.test(command) ? "pest/disease scan" : /\birrigat|water\b/i.test(command) ? "irrigation review" : "crop monitoring",
+        // Confirmed: droneMissionBridgeProvider.missionRequest() already has
+        // a real requireConfirmation() gate -- hardcoding confirmed: true
+        // here defeated it completely, so EVERY drone mission request
+        // (not just a misrouted status question) was saved immediately with
+        // no confirmation step ever offered, unlike every sibling write path
+        // (nexus_workflow, nexus_marketplace_logistics, nexus_communications,
+        // nexus_calendar, nexus_email), which all forward args.confirmed.
+        missionType: /\b(pest|disease)\b/i.test(command) ? "pest/disease scan" : /\birrigat|water\b/i.test(command) ? "irrigation review" : "crop monitoring",
         area: args.area || areaMatch?.[1]?.trim() || "field area to confirm",
         areaHectares: nexusRealProviders.droneMissionBridge.parseAreaHectares(command),
         purpose: command,
-        confirmed: true
+        confirmed: Boolean(args.confirmed || args.confirmation)
       }, db, process.env);
       const ok = Boolean(missionResult?.body?.ok && missionResult.body.status === "completed");
       const request = missionResult?.body?.data?.request;
@@ -19340,7 +19364,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // "field agent" and "dispatch"/"request") and was wrongly recorded as a
     // brand new dispatch assignment instead of listing the real ones.
     const wantsShowFieldAgent = /\b(show|list|what are|view|status of)\b.*\bfield\s*agent\b.*\bdispatch/i.test(command)
-      || /\bfield\s*agent\b.*\bdispatch(?:es)?\b.*\b(show|list|status)\b/i.test(command);
+      || /\bfield\s*agent\b.*\bdispatch(?:es)?\b.*\b(show|list|status)\b/i.test(command)
+      // "Did you dispatch a field agent yet?" is a status question -- neither
+      // of the two patterns above catch it (the show/list/status word never
+      // sits next to "field agent"/"dispatch"), so it fell into the create
+      // branch below, which unconditionally assigns and consumes a real
+      // available field agent with no confirmation step at all.
+      || /\b(do|did|does|have|has)\s+you\b/i.test(command);
     if (wantsShowFieldAgent) {
       ensureNexusProductionRailsState(db);
       const dispatches = canUse(user, "provider-queue")
@@ -19371,7 +19401,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ["Nexus did not contact, pay, or promise arrival timing for a real-world field agent beyond this internal assignment record."]);
       return { ...common, capability: "nexus_agriculture", status: dispatchResult.ok ? "field-agent-dispatched" : "field-agent-dispatch-blocked", response, receipt, evidenceReceipt: receipt, localOnly: true };
     }
-    const crop = /\bmaize|corn\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
+    // Confirmed: "|" binds looser than "\b", so this parsed as \bmaize OR
+    // corn\b (no leading boundary on "corn") -- "popcorn"/"unicorn" both
+    // matched "corn\b" and were mislabeled "maize" in the guidance response.
+    const crop = /\b(maize|corn)\b/i.test(command) ? "maize" : /\b(cassava|coffee|beans?|rice|wheat|sorghum|millet|tomato(?:es)?)\b/i.exec(command)?.[1] || "crop";
     const yellowLowerLeaves = /\b(yellow|yellowing)\b/i.test(command) && /\b(lower|bottom|older)\b/i.test(command);
     // Confirmed live: a textbook pest description ("small holes in my
     // tomato leaves and some caterpillars") fell through to the generic
