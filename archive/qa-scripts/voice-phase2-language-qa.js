@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -6,6 +7,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..", "..");
 const port = Number(process.env.VOICE_PHASE2_QA_PORT || 4462);
 const base = `http://127.0.0.1:${port}`;
+const authToken = "voice-phase2-qa-test-token";
 const tempDb = path.join(root, "tmp-voice-phase2-qa-db.json");
 
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -46,10 +48,18 @@ async function jsonCall(route, body, options = {}) {
   return { status: response.status, json };
 }
 
+function twilioSignature(route, body) {
+  const parameters = Object.keys(body)
+    .sort()
+    .map(key => `${key}${body[key]}`)
+    .join("");
+  return crypto.createHmac("sha1", authToken).update(`${base}${route}${parameters}`).digest("base64");
+}
+
 async function twilioPost(route, body) {
   const response = await fetch(`${base}${route}`, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature(route, body) },
     body: new URLSearchParams(body)
   });
   const text = await response.text();
@@ -88,7 +98,8 @@ async function twilioPost(route, body) {
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1",
-      PUBLIC_BASE_URL: base
+      PUBLIC_BASE_URL: base,
+      TWILIO_AUTH_TOKEN: authToken
     },
     stdio: "ignore",
     windowsHide: true

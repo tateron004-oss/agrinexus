@@ -1,10 +1,20 @@
 const assert = require("assert");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const testPort = process.env.AGRINEXUS_TEST_PORT || String(4373 + Math.floor(Math.random() * 400));
 const base = process.env.AGRINEXUS_URL || `http://localhost:${testPort}`;
+const twilioAuthToken = "smoke-test-twilio-token";
+
+function twilioSignature(route, body) {
+  const parameters = Object.keys(body)
+    .sort()
+    .map(key => `${key}${body[key]}`)
+    .join("");
+  return crypto.createHmac("sha1", twilioAuthToken).update(`${base}${route}${parameters}`).digest("base64");
+}
 const dbPath = path.join(__dirname, "..", "db.json");
 const dbSnapshot = fs.readFileSync(dbPath, "utf8");
 const tempDbPath = path.join(__dirname, "..", `tmp-smoke-db-${process.pid}-${testPort}.json`);
@@ -67,7 +77,7 @@ async function call(path, body) {
   fs.writeFileSync(tempDbPath, JSON.stringify(isolatedDb, null, 2));
   const server = spawn(process.execPath, ["server.js"], {
     cwd: `${__dirname}/..`,
-    env: { ...process.env, PORT: testPort, AGRINEXUS_DB_PATH: tempDbPath },
+    env: { ...process.env, PORT: testPort, AGRINEXUS_DB_PATH: tempDbPath, PUBLIC_BASE_URL: base, TWILIO_AUTH_TOKEN: twilioAuthToken },
     stdio: "ignore",
     windowsHide: true
   });
@@ -728,18 +738,20 @@ async function call(path, body) {
   const voiceSpeak = await call("/api/voice/speak", { text: "Telehealth command ready", language: "en" });
   assert(voiceSpeak.voiceResult.text === "Telehealth command ready");
   assert(voiceSpeak.profile.voiceSessions.some(item => item.type === "text-to-speech"));
+  const phoneIncomingBody = { From: "+15555550123", CallSid: "CA-smoke" };
   const phoneIncoming = await fetch(`${base}/api/voice/phone/incoming`, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ From: "+15555550123", CallSid: "CA-smoke" })
+    headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature("/api/voice/phone/incoming", phoneIncomingBody) },
+    body: new URLSearchParams(phoneIncomingBody)
   });
   const phoneIncomingXml = await phoneIncoming.text();
   assert(phoneIncoming.ok);
   assert(phoneIncomingXml.includes("<Gather"));
+  const phoneGatherBody = { SpeechResult: "start telehealth intake", CallSid: "CA-smoke" };
   const phoneGather = await fetch(`${base}/api/voice/phone/gather`, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ SpeechResult: "start telehealth intake", CallSid: "CA-smoke" })
+    headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature("/api/voice/phone/gather", phoneGatherBody) },
+    body: new URLSearchParams(phoneGatherBody)
   });
   const phoneGatherXml = await phoneGather.text();
   assert(phoneGather.ok);

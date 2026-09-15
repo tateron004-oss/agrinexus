@@ -45927,6 +45927,10 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/phone/outbound-twiml" && (req.method === "GET" || req.method === "POST")) {
+    const outboundBody = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, outboundBody)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
     const phoneUser = phoneVoiceUser(db);
     const language = twilioLanguage(phoneUser?.language || "en");
     const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
@@ -45945,6 +45949,9 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/phone/incoming" && req.method === "POST") {
     const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     updatePhoneVoiceSession(db, session, { step: "name", callerName: "", language: "", locale: "en-US" });
     const language = "en-US";
@@ -45969,8 +45976,11 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
-    const phoneUser = phoneVoiceUser(db);
     const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const phoneUser = phoneVoiceUser(db);
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     const step = String(url.searchParams.get("step") || session.step || "command");
     const sessionLanguage = canonicalVoiceLanguage(session.language || phoneUser?.language || "en");

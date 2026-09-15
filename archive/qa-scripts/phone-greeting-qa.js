@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -8,6 +9,7 @@ const port = Number(process.env.PHONE_GREETING_QA_PORT || 4413);
 const base = `http://127.0.0.1:${port}`;
 const sourceDb = path.join(root, "db.json");
 const tempDb = path.join(root, "tmp-phone-greeting-qa-db.json");
+const authToken = "phone-greeting-qa-test-token";
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -23,10 +25,22 @@ async function waitForServer() {
   throw new Error("Phone greeting QA server did not become reachable");
 }
 
+// Every real Twilio webhook request must carry a valid X-Twilio-Signature
+// (server.js's validTwilioWebhookSignature) -- this reproduces Twilio's own
+// signing algorithm so these QA requests are accepted the same way a real
+// Twilio callback would be.
+function twilioSignature(route, body) {
+  const parameters = Object.keys(body)
+    .sort()
+    .map(key => `${key}${body[key]}`)
+    .join("");
+  return crypto.createHmac("sha1", authToken).update(`${base}${route}${parameters}`).digest("base64");
+}
+
 async function twilioPost(route, body) {
   const response = await fetch(`${base}${route}`, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature(route, body) },
     body: new URLSearchParams(body)
   });
   const text = await response.text();
@@ -44,7 +58,8 @@ async function twilioPost(route, body) {
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1",
-      PUBLIC_BASE_URL: base
+      PUBLIC_BASE_URL: base,
+      TWILIO_AUTH_TOKEN: authToken
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true
@@ -52,6 +67,25 @@ async function twilioPost(route, body) {
 
   try {
     await waitForServer();
+
+    // Real bug fix: /incoming, /gather, and /outbound-twiml previously had no
+    // Twilio signature check at all -- unlike the sibling /call-status route
+    // in the same file -- so anyone could POST a fake webhook and run the
+    // phone voice assistant's agent commands as the tenant admin with no
+    // proof a real call ever happened.
+    const unsignedIncoming = await fetch(`${base}/api/voice/phone/incoming`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ From: "+15555550999", CallSid: "CA-unsigned-forgery" })
+    });
+    assert.equal(unsignedIncoming.status, 403, "an unsigned /incoming request must be rejected");
+    const unsignedGather = await fetch(`${base}/api/voice/phone/gather?step=command`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ SpeechResult: "start telehealth intake", From: "+15555550999", CallSid: "CA-unsigned-forgery" })
+    });
+    assert.equal(unsignedGather.status, 403, "an unsigned /gather request must be rejected -- this is the actual command-execution entry point");
+
     const incoming = await twilioPost("/api/voice/phone/incoming", { From: "+15555550123", CallSid: "CA-phone-greeting" });
     assert(incoming.includes("Hi, I am AgriNexus"), "incoming call should use short AgriNexus greeting");
     assert(incoming.includes("Who am I speaking with"), "incoming call should ask for caller name first");
