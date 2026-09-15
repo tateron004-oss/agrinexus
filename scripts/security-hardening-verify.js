@@ -79,7 +79,13 @@ async function post(route, { body, cookie } = {}) {
     const anonTelehealth = await post("/api/nexus/telehealth/create-encounter", { body: {} });
     assert.equal(anonTelehealth.status, 403, "an anonymous caller must not be able to create a telehealth encounter");
 
-    const authedPharmacy = await post("/api/nexus/pharmacy/create-referral", { body: { note: "test" }, cookie: userCookie });
+    // confirmed/consentToPreparePacket are required for this to actually
+    // complete (see the createNexusProviderCoordinationPacket confirmation
+    // gate in server.js) -- without them the request is correctly blocked
+    // with a 400, which would make this assertion pass for the wrong reason
+    // (it would no longer distinguish "authenticated and completed" from
+    // "authenticated but blocked pending confirmation").
+    const authedPharmacy = await post("/api/nexus/pharmacy/create-referral", { body: { note: "test", confirmed: true, consentToPreparePacket: true }, cookie: userCookie });
     assert.equal(authedPharmacy.status, 200, "a real signed-in Standard User must still be able to create a pharmacy referral");
     console.log("Verified: previously-unauthenticated pharmacy/telehealth/mobile-clinic routes now require a health-capable role, and still work for a real user.");
 

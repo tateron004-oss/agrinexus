@@ -117,14 +117,19 @@ async function login(port) {
   return response.headers.get("set-cookie").split(";")[0];
 }
 
-async function request(port, pathname, body, cookie) {
+async function request(port, pathname, body, cookie, { allowBlocked = false } = {}) {
   const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
     method: body ? "POST" : "GET",
     headers: { ...(body ? { "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}) },
     body: body ? JSON.stringify(body) : undefined
   });
   const json = await response.json();
-  assert(response.ok, `${pathname} should return ok HTTP status: ${JSON.stringify(json)}`);
+  // A genuinely blocked-confirmation/blocked-consent response now correctly
+  // returns HTTP 400 with ok:false (previously a bug returned 200/ok:true
+  // for these) -- callers that are deliberately exercising that blocked
+  // path pass allowBlocked so this check doesn't reject the very response
+  // it's about to assert the status of.
+  assert(response.ok || allowBlocked, `${pathname} should return ok HTTP status: ${JSON.stringify(json)}`);
   return json;
 }
 
@@ -154,14 +159,14 @@ async function runRouteChecks() {
       consentToPreparePacket: true,
       confirmed: false,
       concern: "Medication review question"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(pharmacyNoConfirm.status, "blocked-confirmation-required", "pharmacy preparation should require confirmation");
 
     const pharmacyNoConsent = await request(port, "/api/nexus/pharmacy/create-referral", {
       consentToPreparePacket: false,
       confirmed: true,
       concern: "Medication review question"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(pharmacyNoConsent.status, "blocked-consent-required", "pharmacy preparation should require consent");
 
     const pharmacyPrepared = await request(port, "/api/nexus/pharmacy/create-referral", {
@@ -184,7 +189,7 @@ async function runRouteChecks() {
       consentToShare: false,
       confirmed: true,
       concern: "Send pharmacy review"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(pharmacySendNoConsent.status, "blocked-consent-required", "pharmacy external send should require share consent");
 
     const mobileStatus = await request(port, "/api/nexus/mobile-clinic/status");
@@ -194,14 +199,14 @@ async function runRouteChecks() {
       consentToPreparePacket: true,
       confirmed: false,
       concern: "Vitals check"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(mobileNoConfirm.status, "blocked-confirmation-required", "mobile clinic preparation should require confirmation");
 
     const mobileNoConsent = await request(port, "/api/nexus/mobile-clinic/create-request", {
       consentToPreparePacket: false,
       confirmed: true,
       concern: "Vitals check"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(mobileNoConsent.status, "blocked-consent-required", "mobile clinic preparation should require consent");
 
     const mobileEmergency = await request(port, "/api/nexus/mobile-clinic/create-request", {
@@ -220,7 +225,7 @@ async function runRouteChecks() {
       consentToShare: false,
       confirmed: true,
       concern: "Send mobile clinic request"
-    }, cookie);
+    }, cookie, { allowBlocked: true });
     assert.strictEqual(mobileSendNoConsent.status, "blocked-consent-required", "mobile clinic external send should require share consent");
 
     const askPharmacy = await request(port, "/api/nexus/intelligence/ask", { question: "What is blocking pharmacy referrals?" });
