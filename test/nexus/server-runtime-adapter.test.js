@@ -106,6 +106,24 @@ test("documents lifecycle probe reads the verified provider output from the work
   assert.equal(result.ok, true); assert.equal(result.documentId, "doc-1"); assert.equal(result.fullLifecycle, true);
 });
 
+// Confirmed: this probe used to also accept a `reopenVerified`/`savedVersion`
+// key merely APPEARING in the serialized result (JSON.stringify(result)
+// .includes(...)), regardless of its actual value -- a provider honestly
+// reporting reopenVerified: false still made the field name present in the
+// JSON, so the probe could never actually catch a dishonest or missing
+// verification.
+test("documents lifecycle probe fails closed when reopenVerified/savedVersion are present but false, not fooled by the field name alone", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const active = { db: { query: async () => ({ rows: [principal] }) }, behavior: { turn: async () => ({
+    application: "documents", state: "render_required", render: { data: { documentId: "doc-1", savedVersion: 1, reopenVerified: false } },
+    receipts: [{ verification: { evidence: [{ savedVersion: 1, reopenVerified: false }] } }]
+  }) } };
+  const result = await runObjectiveProbe("documents-lifecycle", { active, env: {}, releaseSha: "a".repeat(40) });
+  assert.equal(result.reopened, false);
+  assert.equal(result.ok, false);
+  assert.equal(result.fullLifecycle, false);
+});
+
 test("authenticated users see only their tenant-owned task status", async () => {
   let listInput; const capture = responseCapture();
   const runtime = { engine: { tasks: { list: async input => { listInput = input; return [{ taskId: "task-1", state: "running" }]; } } },

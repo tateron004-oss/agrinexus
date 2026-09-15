@@ -682,8 +682,14 @@ async function runObjectiveProbe(probe, { active, env, releaseSha }) {
         roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) }) });
     const evidence = (result.receipts || []).flatMap(item => item.verification?.evidence || item.evidence || []);
     const documentId = evidence.find(item => item?.documentId)?.documentId || result.render?.data?.documentId || null;
-    const saved = evidence.some(item => item?.savedVersion || item?.persisted === true) || JSON.stringify(result).includes("savedVersion");
-    const reopened = evidence.some(item => item?.reopenVerified === true) || JSON.stringify(result).includes("reopenVerified");
+    // Confirmed: the JSON.stringify(result).includes(...) fallbacks checked
+    // for the FIELD NAME appearing anywhere in the serialized result, not
+    // its value -- JSON.stringify({reopenVerified:false}).includes(
+    // "reopenVerified") is also true, so this acceptance gate could never
+    // actually fail on a dishonest or missing verification, only on the key
+    // being entirely absent. Rely only on the typed evidence check.
+    const saved = evidence.some(item => item?.savedVersion || item?.persisted === true);
+    const reopened = evidence.some(item => item?.reopenVerified === true);
     const fullLifecycle = result.application === "documents" && result.state === "render_required" && Boolean(documentId) && saved && reopened;
     return { ok: fullLifecycle, fullLifecycle, documentId, saved, reopened, signedReceiptCount: (result.receipts || []).length };
   }
