@@ -54,7 +54,7 @@ test("emergency health red flags bypass ordinary workflows and model planning", 
 });
 
 test("agent service continues cross-application context through one durable task engine", async () => {
-  const priorTask = { taskId: "tsk_prior", goal: "Find jobs", application: "workforce", state: "completed" };
+  const priorTask = { taskId: "tsk_prior", ownerId: "user", goal: "Find jobs", application: "workforce", state: "completed" };
   const calls = []; const service = new AgentService({
     planner: { plan: async ({ priorTask: prior }) => { assert.equal(prior, priorTask); return { goal: "Map interviews", application: "maps", riskTier: "low", planningAttempts: 1, steps: [{ title: "Map", toolId: "maps.view" }] }; } },
     tasks: { get: async () => priorTask }, conversations: { ensure: async () => {}, recent: async () => [{ role: "user", content: "Find jobs" }], append: async entry => calls.push(entry) },
@@ -66,6 +66,26 @@ test("agent service continues cross-application context through one durable task
   assert.equal(result.action, "continue"); assert.equal(result.task.application, "maps"); assert.equal(committed.metadata.continuedFrom, "tsk_prior");
   assert.equal(calls[0].role, "user"); assert.equal(calls[2].role, "assistant");
   assert.equal(calls[2].actorId, null); assert.equal(calls[2].provenance.systemActor, "nexus-brain");
+});
+
+// Confirmed: a caller-supplied taskId was resolved with only a tenant-id
+// match, not an owner match, so any tenant member could pass another
+// user's taskId and have that task's goal/state summarized into their own
+// planning turn -- and echoed back verbatim as `task` in the raw API
+// response. A task owned by someone else must be treated exactly like an
+// unknown/invalid taskId: silently ignored, not surfaced or leaked.
+test("agent service never treats another user's task as continuation context", async () => {
+  const othersTask = { taskId: "tsk_other", ownerId: "someone-else", goal: "Secret job search", application: "workforce", state: "running" };
+  const calls = []; const service = new AgentService({
+    planner: { plan: async ({ priorTask: prior }) => { assert.equal(prior, null); return { goal: "New goal", application: "general", riskTier: "low", planningAttempts: 1, steps: [{ title: "Step", toolId: "knowledge.search" }] }; } },
+    tasks: { get: async () => othersTask }, conversations: { ensure: async () => {}, recent: async () => [], append: async entry => calls.push(entry) },
+    engine: { create: async input => { calls.push(input); return { taskId: "tsk_new", ...input }; }, conversations: {} },
+    audit: { record: async event => calls.push(event) }
+  });
+  const result = await service.command({ input: { correlationId: "trace", conversationId: "cnv_01H00000000000000000000001", taskId: "tsk_other", channel: "typed", text: "Start something new" }, context });
+  assert.equal(result.action, "create");
+  assert.notEqual(result.task.taskId, "tsk_other");
+  assert.equal(JSON.stringify(result).includes("Secret job search"), false, "another user's task content must never appear in the response");
 });
 
 test("clarification plans are valid without fake execution steps", () => {

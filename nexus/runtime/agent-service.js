@@ -9,7 +9,11 @@ class AgentService {
 
   async command({ input, context }) {
     const command = createCommand({ ...input, tenantId: context.tenantId, actorId: context.userId });
-    const priorTask = command.taskId ? await this.tasks.get({ tenantId: context.tenantId, taskId: command.taskId }) : null;
+    const fetchedTask = command.taskId ? await this.tasks.get({ tenantId: context.tenantId, taskId: command.taskId }) : null;
+    // A caller-supplied taskId is otherwise only tenant-scoped, not owner-scoped -- without this
+    // check any tenant member could pull another user's task goal/state/outcome into their own
+    // planning turn (and into the raw API response) just by guessing/reusing a taskId.
+    const priorTask = fetchedTask && fetchedTask.ownerId === context.userId ? fetchedTask : null;
     await this.conversations?.ensure({ conversationId: command.conversationId, tenantId: context.tenantId,
       ownerId: context.userId, title: priorTask?.goal || command.text });
     const conversationHistory = this.conversations
