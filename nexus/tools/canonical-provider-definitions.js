@@ -12,13 +12,31 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
     riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" }),
   Object.freeze({ toolId: "health.emergency-guidance", domain: "health", description: "Display immediate emergency guidance without claiming diagnosis or dispatch",
     riskTier: "regulated", dataClassification: "health" }),
-  Object.freeze({ toolId: "telehealth.prepare", domain: "telehealth", description: "Save a governed telehealth intake" }),
+  // Confirmed live: "Save a telehealth intake for my ongoing back pain
+  // concern." completed immediately with no confirmation step at all,
+  // telling the user their intake was saved when nothing real happened
+  // (this whole execution layer is a local simulation, per
+  // scripts/provider-engines.js) -- a real health-record save with no
+  // confirmation gate, unlike the otherwise-equivalent health.record below.
+  Object.freeze({ toolId: "telehealth.prepare", domain: "telehealth", description: "Save a governed telehealth intake",
+    riskTier: "regulated", confirmationRequired: true, consentScope: "health:telehealth-intake:write", dataClassification: "health" }),
   Object.freeze({ toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" }),
   Object.freeze({ toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" }),
   Object.freeze({ toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" }),
   Object.freeze({ toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" }),
   Object.freeze({ toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation", confirmationRequired: true }),
-  Object.freeze({ toolId: "communications.send", domain: "communications", description: "Deliver a governed communication" }),
+  // Confirmed live: "Send a message to my doctor saying I'm not feeling
+  // well." (a completely natural request, no "consent"/"receipt" language)
+  // completed immediately with a fake-looking delivery receipt and no
+  // confirmation step -- a user could reasonably believe a real message
+  // reached their doctor when nothing was actually sent (this execution
+  // layer is a local simulation, per scripts/provider-engines.js).
+  // completeCommunicationPlan's own deterministic path already requires
+  // explicit consent/receipt language before it fires, but this tool's own
+  // catalog entry had no confirmationRequired gate for when the request
+  // reaches the AI planner directly instead.
+  Object.freeze({ toolId: "communications.send", domain: "communications", description: "Deliver a governed communication",
+    riskTier: "regulated", confirmationRequired: true, consentScope: "communications:send:write", dataClassification: "communications" }),
   Object.freeze({ toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" })
 ]);
 
