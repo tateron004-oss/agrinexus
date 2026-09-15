@@ -51,11 +51,13 @@ test.after(() => {
   if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
 });
 
-async function callHealth(command) {
+async function callHealth(command, extra = {}) {
   const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command } })
+    // confirmed: true by default -- these tests are about vitals-extraction
+    // correctness; the confirmation gate itself is tested separately below.
+    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command, confirmed: true, ...extra } })
   });
   return res.json();
 }
@@ -144,4 +146,29 @@ test("a real medication dosage/medicine question still reaches the pharmacist qu
   assert.ok(Array.isArray(dosage.pharmacyQuestions) && dosage.pharmacyQuestions.length > 0);
   const medicine = await callHealth("Is this medicine safe to take with my prescription?");
   assert.ok(Array.isArray(medicine.pharmacyQuestions) && medicine.pharmacyQuestions.length > 0);
+});
+
+test("weight, like every other vital, requires a real connector and does not fabricate a reading from unrelated numbers", async () => {
+  const feed = await callHealth("I weigh, say, 200 kg of feed for my cattle every morning.");
+  assert.notEqual(feed.status, "health-reading-saved");
+  const fertilizer = await callHealth("My weight is roughly 60 kilos of fertilizer per bag.");
+  assert.notEqual(fertilizer.status, "health-reading-saved");
+});
+
+test("a genuine weight report is still saved correctly, unaffected by the connector-gate fix", async () => {
+  const result = await callHealth("I weigh 180 lbs.");
+  assert.equal(result.status, "health-reading-saved");
+  assert.match(result.response, /weight reading 180/i);
+  const result2 = await callHealth("My weight is 82 kg.");
+  assert.equal(result2.status, "health-reading-saved");
+  assert.match(result2.response, /weight reading 82/i);
+});
+
+test("every real vital-save call forwards the caller's actual confirmation instead of hardcoding it -- an unconfirmed report is not saved", async () => {
+  const temp = await callHealth("My temperature is 103.", { confirmed: false });
+  assert.notEqual(temp.status, "health-reading-saved");
+  const bp = await callHealth("My blood pressure is 150 over 95.", { confirmed: false });
+  assert.notEqual(bp.status, "health-reading-saved");
+  const weight = await callHealth("I weigh 180 lbs.", { confirmed: false });
+  assert.notEqual(weight.status, "health-reading-saved");
 });

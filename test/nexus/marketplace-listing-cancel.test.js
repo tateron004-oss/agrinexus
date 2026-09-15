@@ -110,3 +110,11 @@ test("'Have you cancelled my listing yet?' is also treated as a status question"
   const result = await callMarketplace("Have you cancelled my listing yet?");
   assert.doesNotMatch(result.response || "", /Removed the saved AgriTrade listing/i);
 });
+
+test("'Did you sell my tomatoes yet?' / 'Did you list my maize for sale?' are status questions, not new listing requests", async () => {
+  const sell = await callMarketplace("Did you sell my tomatoes yet?");
+  assert.notEqual(sell.status, "needs-confirmation");
+  assert.doesNotMatch(sell.response || "", /confirm/i, "a status question must not be answered with a create-listing confirmation prompt");
+  const list = await callMarketplace("Did you list my maize for sale?");
+  assert.notEqual(list.status, "needs-confirmation");
+});

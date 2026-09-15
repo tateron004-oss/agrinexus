@@ -51,11 +51,13 @@ test.after(() => {
   if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
 });
 
-async function callHealthTool(command) {
+async function callHealthTool(command, extra = {}) {
   const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command } })
+    // confirmed: true by default -- these tests are about routing/extraction
+    // correctness, not the (separately tested) confirmation gate itself.
+    body: JSON.stringify({ name: "nexus_health_preparation", arguments: { command, confirmed: true, ...extra } })
   });
   return res.json();
 }
