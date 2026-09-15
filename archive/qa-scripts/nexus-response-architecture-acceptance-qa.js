@@ -168,7 +168,7 @@ async function withServer(env, callback) {
   const child = spawn(process.execPath, ["server.js"], {
     cwd: root,
     env: {
-      ...process.env,
+      ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1",
       ...env,
       PORT: String(port),
       HOST: "127.0.0.1",

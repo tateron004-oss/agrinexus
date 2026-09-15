@@ -51,7 +51,7 @@ async function call(route, { method, body, cookie } = {}) {
   fs.copyFileSync(dbPath, tempDbPath);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_PRESERVE_EMPTY_ENV: "1" },
     stdio: "ignore",
     windowsHide: true
   });

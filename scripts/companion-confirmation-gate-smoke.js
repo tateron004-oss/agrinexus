@@ -104,7 +104,7 @@ async function command(prompt) {
   fs.writeFileSync(tempDb, JSON.stringify(seed, null, 2));
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
+    env: { ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1", PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
     stdio: "ignore",
     windowsHide: true
   });

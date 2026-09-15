@@ -267,7 +267,7 @@ async function runRuntimeQa() {
   const child = spawn(process.execPath, ["server.js"], {
     cwd: root,
     env: {
-      ...process.env,
+      ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1",
       PORT: String(port),
       HOST: "127.0.0.1",
       AGRINEXUS_DB_PATH: tmpDb,
