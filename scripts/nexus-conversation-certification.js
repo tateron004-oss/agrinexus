@@ -215,7 +215,7 @@ function assertResult(test, result, label) {
   fs.copyFileSync(path.join(root, "db.json"), tempDb);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
+    env: { ...process.env, NEXUS_PRESERVE_EMPTY_ENV: "1", PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
     stdio: "ignore",
     windowsHide: true
   });

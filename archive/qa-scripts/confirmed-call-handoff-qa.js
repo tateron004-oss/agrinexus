@@ -101,7 +101,12 @@ function assertStagedOnly(state, label) {
       TWILIO_AUTH_TOKEN: "",
       TWILIO_PHONE_NUMBER: "",
       PUBLIC_BASE_URL: base,
-      DEMO_CALL_TO: ""
+      DEMO_CALL_TO: "",
+      // Without this, server/local-env-loader.js repopulates any of the
+      // above from a real local .env file at startup, silently activating
+      // the real OpenAI-native agent / a real Twilio account instead of the
+      // deterministic staging path this test verifies.
+      NEXUS_PRESERVE_EMPTY_ENV: "1"
     },
     stdio: "ignore",
     windowsHide: true

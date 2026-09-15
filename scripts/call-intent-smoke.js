@@ -96,7 +96,14 @@ function assertStagedCall(state, label, provider = "twilio") {
       TWILIO_AUTH_TOKEN: "",
       TWILIO_PHONE_NUMBER: "",
       PUBLIC_BASE_URL: base,
-      DEMO_CALL_TO: ""
+      DEMO_CALL_TO: "",
+      // Without this, server/local-env-loader.js repopulates any of the
+      // above from a real local .env file at startup (it treats an empty
+      // string as "not usable" and refills it) -- which silently activates
+      // the real OpenAI-native agent path on any machine with real
+      // credentials configured, bypassing the deterministic call-intent
+      // staging this test exists to verify.
+      NEXUS_PRESERVE_EMPTY_ENV: "1"
     },
     stdio: "ignore",
     windowsHide: true
