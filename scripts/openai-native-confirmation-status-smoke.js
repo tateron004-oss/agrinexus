@@ -86,6 +86,10 @@ function startMockOpenAi(toolArguments) {
       AGRINEXUS_DB_PATH: tempDbPath,
       OPENAI_API_KEY: "test-only-mock-key",
       OPENAI_RESPONSES_URL: `http://127.0.0.1:${mockPort}/v1/responses`,
+      // The CI harness disables the native agent globally by default; this
+      // test specifically exercises that path, so it must force it back on
+      // regardless of the ambient environment.
+      NEXUS_OPENAI_NATIVE_ENABLED: "true",
       NEXUS_CALLS_ENABLED: "true",
       TWILIO_ACCOUNT_SID: "",
       TWILIO_AUTH_TOKEN: "",
