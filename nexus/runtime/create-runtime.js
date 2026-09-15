@@ -39,6 +39,7 @@ const { CapabilityAdapterRegistry } = require("../tools/capability-adapter-regis
 const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.js");
 const { CapabilityExecutionAuthority } = require("./capability-execution-authority.js");
 const { AuthorityCoverage } = require("./authority-coverage.js");
+const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = require("../reminders/executor.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -72,13 +73,21 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const acceptance = new ProductionAcceptanceRepository(db);
   const path2Evidence = new Path2EvidenceRepository(db);
   const objectStorage = createObjectStore(env);
-  const governedExecutors = Object.assign({}, providers.executors, executors);
+  // reminders.schedule gets a REAL local executor (writes a real, future-
+  // scheduled row via NotificationRepository) instead of the canonical
+  // provider-engines mock every other tool here still uses -- it can never
+  // produce that mock's HMAC provider receipt, so it also needs its own
+  // verifier rather than the shared provider_receipt check below.
+  const governedExecutors = Object.assign({}, providers.executors,
+    { "reminders.schedule": createReminderScheduleExecutor({ notifications }) }, executors);
   const adapters = new CapabilityAdapterRegistry();
   const verifiers = new OutcomeVerifierRegistry();
   const verifyOutcome = verifier || (input => providers.verify(input));
   for (const [toolId, execute] of Object.entries(governedExecutors)) {
+    const isReminderSchedule = toolId === "reminders.schedule" && !executors[toolId];
     adapters.register({ toolId, implementation: `authoritative:${toolId}`, provider: providers.executors[toolId] ? "canonical-provider" : "runtime", execute });
-    verifiers.register({ toolId, method: "provider_receipt", verify: verifyOutcome });
+    verifiers.register({ toolId, method: isReminderSchedule ? "local_notification_enqueue" : "provider_receipt",
+      verify: isReminderSchedule ? verifyReminderScheduleOutcome : verifyOutcome });
   }
   const authority = new CapabilityExecutionAuthority({ adapters, verifiers,
     observe: event => observability.record({ tenantId: event.tenantId, actorId: event.actorId,

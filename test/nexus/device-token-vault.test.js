@@ -22,3 +22,32 @@ test("device token vault encrypts authenticated device material", () => {
   const plain = Buffer.concat([decipher.update(Buffer.from(ciphertext, "base64url")), decipher.final()]).toString("utf8");
   assert.deepEqual(JSON.parse(plain), { keys: { auth: "sensitive" } });
 });
+
+test("decrypt reverses encrypt for the exact same value and context", () => {
+  const vault = new DeviceTokenVault("production-test-key");
+  const context = "tenant:user:device";
+  const value = { p256dh: "public-key-material", auth: "auth-secret" };
+  const sealed = vault.encrypt(value, context);
+  assert.deepEqual(vault.decrypt(sealed, context), value);
+});
+
+test("decrypt rejects a mismatched context (authenticated-data check fails)", () => {
+  const vault = new DeviceTokenVault("production-test-key");
+  const sealed = vault.encrypt({ token: "secret" }, "tenant:user:device-1");
+  assert.throws(() => vault.decrypt(sealed, "tenant:user:device-2"));
+});
+
+test("decrypt rejects tampered ciphertext", () => {
+  const vault = new DeviceTokenVault("production-test-key");
+  const context = "tenant:user:device";
+  const sealed = vault.encrypt({ token: "secret" }, context);
+  const [version, iv, tag, ciphertext] = sealed.split(".");
+  const tampered = [version, iv, tag, ciphertext.slice(0, -2) + (ciphertext.slice(-2) === "AA" ? "BB" : "AA")].join(".");
+  assert.throws(() => vault.decrypt(tampered, context));
+});
+
+test("decrypt rejects a malformed/unsupported ciphertext", () => {
+  const vault = new DeviceTokenVault("production-test-key");
+  assert.throws(() => vault.decrypt("not-a-real-ciphertext", "tenant:user:device"),
+    error => error.code === "device_token_ciphertext_invalid");
+});

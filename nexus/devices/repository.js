@@ -27,6 +27,17 @@ class DeviceRepository {
     const result = await this.db.query(`select ${PUBLIC_COLUMNS} from nexus_devices where tenant_id=$1 and user_id=$2 order by last_seen_at desc`,[tenantId,userId]);
     return result.rows || result;
   }
+  // PUBLIC_COLUMNS deliberately excludes the push endpoint/ciphertext (client-
+  // facing list()/register() must stay secret-free) -- this is the one place
+  // real push delivery needs to read them.
+  async listPushable({ tenantId,userId }) {
+    const result = await this.db.query(
+      `select device_id,push_provider,push_endpoint,push_key_ciphertext from nexus_devices
+       where tenant_id=$1 and user_id=$2 and state='active' and push_state='registered'
+       and push_endpoint is not null and push_key_ciphertext is not null`,
+      [tenantId,userId]);
+    return result.rows || result;
+  }
   async registerPush({ tenantId,userId,deviceId,provider,pushKeyCiphertext }) {
     if (!pushKeyCiphertext) throw invalid("Encrypted push registration is required.");
     const result = await this.db.query(`update nexus_devices set push_provider=$4,push_key_ciphertext=$5,push_state='registered',updated_at=now()

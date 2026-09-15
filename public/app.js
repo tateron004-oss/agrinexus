@@ -1355,6 +1355,7 @@ const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
 const AGRINEXUS_BUILD_VERSION = "__NEXUS_RELEASE_SHA__";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__";
+let nexusVapidPublicKey = null;
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9606,6 +9607,12 @@ async function verifyLoadedBuildWithServer() {
     });
     if (!response.ok) return;
     const health = await response.json();
+    nexusVapidPublicKey = health.vapidPublicKey || nexusVapidPublicKey;
+    // Opportunistic: a returning user who already granted notification
+    // permission but has no active push subscription yet (e.g. it's their
+    // first load since this feature shipped) still gets subscribed, without
+    // needing to re-grant permission.
+    subscribeToNexusPushNotifications();
     const expectedBuild = health.webBuild || AGRINEXUS_BUILD_VERSION;
     const expectedCache = health.pwaCache || AGRINEXUS_PWA_CACHE_VERSION;
     const statusText = `Build ${AGRINEXUS_BUILD_VERSION} loaded. Server expects ${expectedBuild}.`;
@@ -9665,6 +9672,56 @@ function runUserModeSelfTest() {
   return { ok, missing };
 }
 
+function nexusLocalDeviceId() {
+  let id = localStorage.getItem("agrinexusDeviceId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("agrinexusDeviceId", id);
+  }
+  return id;
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(char => char.charCodeAt(0)));
+}
+
+// Subscribes this browser to real WebPush delivery so a reminder Nexus saves
+// can actually notify the user later, not just claim to be saved. Silently
+// no-ops when push isn't supported or the server has no VAPID key configured
+// (e.g. local dev without the env vars set) -- this is an enhancement, not a
+// requirement for the rest of the app to work.
+async function subscribeToNexusPushNotifications() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !nexusVapidPublicKey) return;
+  if (Notification.permission !== "granted") return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(nexusVapidPublicKey)
+      });
+    }
+    const deviceId = nexusLocalDeviceId();
+    const json = subscription.toJSON();
+    await requestWithTimeout("/api/nexus/runtime/devices", {
+      method: "POST",
+      body: { deviceId, platform: "web", capabilities: ["push"], pushEndpoint: json.endpoint, pushSubscription: json.keys }
+    }, 15000);
+    await requestWithTimeout(`/api/nexus/runtime/devices/${encodeURIComponent(deviceId)}/push`, {
+      method: "POST",
+      body: { provider: "webpush", pushSubscription: json.keys }
+    }, 15000);
+  } catch (_) {
+    // Best-effort: a user who already granted permission but whose browser
+    // blocks the subscribe call (e.g. no VAPID key yet) still gets the rest
+    // of the app working normally.
+  }
+}
+
 async function requestProductionMobilePermission(kind) {
   const status = $("#mobilePermissionStatus");
   const setStatus = message => {
@@ -9692,6 +9749,7 @@ async function requestProductionMobilePermission(kind) {
       const result = await Notification.requestPermission();
       setStatus(result === "granted" ? "Notifications are ready for app alerts." : "Notifications were not enabled. The platform will keep alerts inside the app.");
       updateNexusBehaviorLayer("ready", result === "granted" ? "Nexus can use browser alerts when supported." : "Nexus will keep proactive alerts inside the app.");
+      if (result === "granted") subscribeToNexusPushNotifications();
       return;
     }
     if (kind === "location") {
@@ -57315,7 +57373,16 @@ async function restoreNexusAuthoritativeRuntime() {
 
 async function processNexusAuthoritativeBehaviorResult(result, text, options = {}) {
   let message = result.response || "Nexus needs more information before it can continue.";
-  if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
+  // Confirmed: a finished task's ID was never cleared, so it kept getting
+  // sent as taskId on the NEXT, entirely unrelated command (nexus/runtime/
+  // agent-service.js reads it back as priorTask and feeds it to the planner
+  // as if still relevant). Matches nexus/tasks/state-machine.js's
+  // TERMINAL_STATES.
+  const NEXUS_TASK_TERMINAL_STATES = ["completed", "cancelled", "blocked", "expired"];
+  if (String(result.taskId || "").startsWith("tsk_")) {
+    if (NEXUS_TASK_TERMINAL_STATES.includes(result.state)) localStorage.removeItem(NEXUS_AUTHORITATIVE_TASK_KEY);
+    else localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
+  }
   let renderReceipt = null;
   // Confirmed live: this envelope always carries a render (createWorkspaceOutcome
   // runs for every state), but only render_required actually has something

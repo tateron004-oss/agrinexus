@@ -59,6 +59,11 @@ test("authoritative browser completion requires typed rendering and server ackno
   // silently fell through to legacy routing. Only render_required has a
   // real render/acknowledge round trip staged server-side.
   assert.match(gateway, /result\.render\s*&&\s*result\.state === "render_required"/);
+  // Confirmed: a finished task's ID was never cleared from localStorage, so
+  // it kept getting sent as taskId on the next, unrelated command. A
+  // terminal-state response must clear it instead of re-storing it.
+  assert.match(gateway, /NEXUS_TASK_TERMINAL_STATES\.includes\(result\.state\)/);
+  assert.match(gateway, /localStorage\.removeItem\(NEXUS_AUTHORITATIVE_TASK_KEY\)/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
   assert.doesNotMatch(gateway, /genesisWorkspaceActionFromFinalTranscript\(text\)/);
   assert.doesNotMatch(gateway, /runMusicAssistantCommand\(text/);
