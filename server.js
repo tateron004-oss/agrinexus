@@ -37539,11 +37539,17 @@ function createNexusProviderCoordinationPacket(db, lane = "pharmacy", body = {},
     sms: { attempted: false, executed: false },
     whatsapp: { attempted: false, executed: false }
   };
+  // Confirmed: every sibling packet function (nexusEmailSendPacket,
+  // the SMS/WhatsApp communications packet) returns ok: false for its
+  // confirmation/consent-required gates -- these two branches returned
+  // ok: true instead, so the REST route below (`if (!result.ok) return
+  // send(res, 400, ...)`) answered a genuinely blocked, un-actioned request
+  // with the same HTTP 200 a real completion gets.
   if (body.confirmed !== true) {
-    return { ok: true, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires explicit confirmation.", noExternalDelivery: true };
+    return { ok: false, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires explicit confirmation.", noExternalDelivery: true };
   }
   if (body.consentToPreparePacket !== true) {
-    return { ok: true, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires consent.", noExternalDelivery: true };
+    return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires consent.", noExternalDelivery: true };
   }
   const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", []);
   const result = {
@@ -37581,8 +37587,10 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
     whatsapp: { attempted: false, executed: false }
   };
   const emergencyGuidance = config.lane === "mobile-clinic" && (redFlags.length || body.urgency === "emergency_possible");
-  if (body.confirmed !== true) return { ok: true, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires explicit confirmation.", noExternalDelivery: true };
-  if (body.consentToPreparePacket !== true || body.consentToShare !== true) return { ok: true, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires consent to prepare and consent to share.", noExternalDelivery: true };
+  // Same fix as createNexusProviderCoordinationPacket just above: a blocked,
+  // un-sent request must not report ok: true.
+  if (body.confirmed !== true) return { ok: false, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires explicit confirmation.", noExternalDelivery: true };
+  if (body.consentToPreparePacket !== true || body.consentToShare !== true) return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires consent to prepare and consent to share.", noExternalDelivery: true };
   if (emergencyGuidance) {
     const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", []);
     return { ok: true, [idKey]: caseId, status: "emergency-guidance", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: null, emergencyGuidance: "Possible urgent red flags were selected. Use local emergency services or urgent care now if symptoms may be serious. Nexus does not dispatch emergency help.", noExternalDelivery: true };
