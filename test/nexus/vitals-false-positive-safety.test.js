@@ -114,3 +114,34 @@ test("blood pressure reporting is unaffected by the vitals-extraction fix", asyn
   assert.equal(result.status, "health-reading-saved");
   assert.match(result.response, /blood-pressure reading 120 over 80/i);
 });
+
+test("a bare number ratio with no blood-pressure trigger word does not fabricate a reading", async () => {
+  const harvest = await callHealth("Split the harvest 60/40 with my partner.");
+  assert.notEqual(harvest.status, "health-reading-saved");
+  const deal = await callHealth("Let's do a 50/50 split on this deal.");
+  assert.notEqual(deal.status, "health-reading-saved");
+  const blend = await callHealth("I need a 20/80 blend of fertilizer to water.");
+  assert.notEqual(blend.status, "health-reading-saved");
+});
+
+test("'bp' and 'systolic' are also recognized as real blood-pressure trigger words", async () => {
+  const bp = await callHealth("My BP is 130 over 85.");
+  assert.equal(bp.status, "health-reading-saved");
+  assert.match(bp.response, /blood-pressure reading 130 over 85/i);
+});
+
+test("an ordinary agriculture dosage/medicine question is not swept into the pharmacist question draft", async () => {
+  const fertilizer = await callHealth("What's the right dosage of fertilizer for my maize field?");
+  assert.ok(!Array.isArray(fertilizer.pharmacyQuestions) || fertilizer.pharmacyQuestions.length === 0);
+  const pesticide = await callHealth("What dosage of pesticide should I use for aphids?");
+  assert.ok(!Array.isArray(pesticide.pharmacyQuestions) || pesticide.pharmacyQuestions.length === 0);
+  const irrigation = await callHealth("How much medicine should I add to the irrigation tank?");
+  assert.ok(!Array.isArray(irrigation.pharmacyQuestions) || irrigation.pharmacyQuestions.length === 0);
+});
+
+test("a real medication dosage/medicine question still reaches the pharmacist question draft", async () => {
+  const dosage = await callHealth("What's the right dosage of my medication?");
+  assert.ok(Array.isArray(dosage.pharmacyQuestions) && dosage.pharmacyQuestions.length > 0);
+  const medicine = await callHealth("Is this medicine safe to take with my prescription?");
+  assert.ok(Array.isArray(medicine.pharmacyQuestions) && medicine.pharmacyQuestions.length > 0);
+});

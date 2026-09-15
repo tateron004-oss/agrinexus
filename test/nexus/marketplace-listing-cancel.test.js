@@ -95,3 +95,18 @@ test("browsing and creating listings are unaffected by the new cancel branch", a
   const create = await callMarketplace("List some tomatoes for sale.", { crop: "Tomatoes", confirmed: true });
   assert.equal(create.status, "completed");
 });
+
+test("'Did you delete my listing?' is a status question, not a new delete request", async () => {
+  await callMarketplace("List 15kg of beans for sale.", { crop: "Beans", quantity: "15kg", confirmed: true });
+  const result = await callMarketplace("Did you delete my listing for beans?");
+  assert.doesNotMatch(result.response || "", /Removed the saved AgriTrade listing/i);
+  assert.doesNotMatch(result.response || "", /confirm/i, "a status question must not be answered with a removal-confirmation prompt");
+
+  const after = await callMarketplace("What is listed on AgriTrade?");
+  assert.doesNotMatch(after.response, /no saved AgriTrade listings yet/i, "the status question must not have removed the listing");
+});
+
+test("'Have you cancelled my listing yet?' is also treated as a status question", async () => {
+  const result = await callMarketplace("Have you cancelled my listing yet?");
+  assert.doesNotMatch(result.response || "", /Removed the saved AgriTrade listing/i);
+});
