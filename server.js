@@ -19404,12 +19404,27 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return null;
   }
   if (toolName === "nexus_health_preparation") {
+    // Confirmed live: "Please use temp file 42 for this." and "Check pulse
+    // item 85 in the catalog." -- both completely unrelated, non-health
+    // commands -- each saved a FABRICATED vital-sign reading (temperature
+    // 42, pulse 85 bpm) to the user's real chronic-care/RPM record. The old
+    // \D{0,10}?/\D{0,15}? windows let ANY up-to-10/15 arbitrary characters
+    // sit between the trigger word and a number, so "temp"/"pulse"/
+    // "oxygen"/"glucose" appearing as an ordinary word in an unrelated
+    // sentence (a temp file, a pulse-crop marketplace listing, an oxygen
+    // tank, a glucose sensor model number) was indistinguishable from a
+    // genuine "temperature is 101" report. VITAL_VALUE_CONNECTOR requires
+    // the number to follow the trigger word through only a short, specific
+    // set of real connector words (is/was/of/reads/at/today/right now/etc,
+    // chainable so "temp today is 101" still works) -- never an arbitrary
+    // noun like "file"/"item"/"tank"/"sensor model".
+    const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
     const bp = command.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i);
-    const glucose = !bp && command.match(/\b(?:blood\s*sugar|glucose)\D{0,15}?(\d{2,3})\b/i);
-    const oxygenMatch = !bp && !glucose && command.match(/\b(?:oxygen|o2|spo2|pulse\s*ox)\D{0,10}?(\d{2,3})\b/i);
-    const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(/\btemp(?:erature)?\D{0,10}?(\d{2,3}(?:\.\d)?)\b/i);
+    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     const weightMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && command.match(/\b(?:i\s+weigh|my\s+weight\s+is)\D{0,10}?(\d{2,3}(?:\.\d)?)\s*(lbs?|pounds|kg|kilograms)?\b/i);
-    const pulseMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && !weightMatch && command.match(/\b(?:pulse|heart\s*rate)\D{0,10}?(\d{2,3})\b/i);
+    const pulseMatch = !bp && !glucose && !oxygenMatch && !temperatureMatch && !weightMatch && command.match(new RegExp(`\\b(?:pulse|heart\\s*rate)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const rpmVital = oxygenMatch ? { metric: "oxygen_saturation", value: oxygenMatch[1], unit: "%", label: "oxygen saturation" }
       : temperatureMatch ? { metric: "temperature", value: temperatureMatch[1], unit: "", label: "temperature" }
       : weightMatch ? { metric: "weight", value: weightMatch[1], unit: weightMatch[2] || "", label: "weight" }
