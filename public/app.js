@@ -57317,7 +57317,19 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   let message = result.response || "Nexus needs more information before it can continue.";
   if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
   let renderReceipt = null;
-  if (result.render) {
+  // Confirmed live: this envelope always carries a render (createWorkspaceOutcome
+  // runs for every state), but only render_required actually has something
+  // staged to render/acknowledge -- the real AuthoritativeTaskEngine.executeTask()
+  // never returns state "completed" directly (it always ends in
+  // awaiting_confirmation or awaiting_render; genuine completion only comes
+  // through the separate acknowledge() round trip). Attempting to render a
+  // confirmation_required or clarification_required outcome always threw
+  // ("outcome was not visibly or audibly verified"), which this function's
+  // caller swallowed and silently fell through to legacy routing -- so the
+  // authoritative confirmation_required/clarification_required response
+  // (and therefore the confirm-and-resume flow built on top of it) never
+  // actually reached the user through this gateway at all.
+  if (result.render && result.state === "render_required") {
     validateNexusPassivePresentation(result.render);
     const renderer = await nexusAuthoritativeOutcomeRenderer();
     recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
