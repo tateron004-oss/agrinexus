@@ -41749,7 +41749,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       trainingRecordId: nexusOperationId("NX-TRN"),
       learningProfileId: profile.learningProfileId,
       type: action,
-      status: /confirmed|accepted|completed|certified/i.test(status) && body.manualConfirmation !== true ? "manual-status-review" : status,
+      status: /confirmed|accepted|completed|certified/i.test(status) ? "manual-status-review" : status,
       providerName: cleanOpsText(body.providerName || body.trainingProviderName || "", 160),
       programName: cleanOpsText(body.programName || body.courseName || "Training support packet", 160),
       learnerGoals: cleanOpsArray(body.learnerGoals || profile.learningGoals || ""),
@@ -41882,7 +41882,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       employerId: employer.employerId,
       jobOpportunityId: job.jobOpportunityId,
       type: action,
-      status: /accepted|hired|placed|offer/i.test(status) && body.manualConfirmation !== true ? "manual-status-review" : status,
+      status: /accepted|hired|placed|offer/i.test(status) ? "manual-status-review" : status,
       summary: cleanOpsText(body.summary || command || "Application support prepared for review.", 400),
       employerSubmissionEnabled: false,
       createdAt: now,
@@ -41993,7 +41993,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
     if (action === "match_drone_mission_provider") mission.status = "provider-match-review";
     if (action === "queue_drone_mission") mission.status = "queued-for-review";
-    if (action === "track_drone_mission_status") mission.status = /flown|dispatched|completed|captured/i.test(body.status || "") && body.manualConfirmation !== true ? "manual-status-review" : cleanOpsText(body.status || "manual-status-review", 80);
+    if (action === "track_drone_mission_status") mission.status = /flown|dispatched|completed|captured/i.test(body.status || "") ? "manual-status-review" : cleanOpsText(body.status || "manual-status-review", 80);
     if (action === "create_agriculture_expert_packet_from_drone") mission.status = "agriculture-expert-packet-prepared";
     mission.updatedAt = now;
     const event = {
