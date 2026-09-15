@@ -19245,7 +19245,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_workforce_learning") {
     const learningRequest = /\b(explain|teach|lesson|learn|learning|literacy|course|courses|training|lms|class|quiz|understanding)\b/i.test(command);
-    const jobsRequest = /\b(job|jobs|employment|career|employer|resume|résumé|vacancy|vacancies|position|workforce)\b/i.test(command);
+    // Confirmed: this list of generic job-related nouns co-occurs naturally
+    // with genuine learning requests -- "Can you teach me about resume
+    // writing for a new job?", "Explain how to prepare for a job
+    // interview.", and "Teach me about career readiness." all suppressed
+    // the real learningBridge.search() course-catalog lookup below and fell
+    // through to a generic conversational fallback instead, even though
+    // this tool's own routing hints explicitly call out "career-path,
+    // employer-readiness" content as its job. Only suppress the learning
+    // branch when the command is clearly about finding/applying to a job,
+    // not learning a job-related skill.
+    const jobsRequest = /\b(find|search for|looking for|apply for|apply to)\b.*\b(job|jobs|employment|vacancy|vacancies|position)\b/i.test(command)
+      || /\b(job|jobs|employment|vacancy|vacancies)\b.*\b(near me|available|opening|openings|hiring)\b/i.test(command);
     const wantsSave = /\b(save|bookmark|keep)\b/i.test(command);
     const wantsReminder = /\bremind me\b/i.test(command);
     // Checked only when neither wantsSave nor wantsReminder matched: their
