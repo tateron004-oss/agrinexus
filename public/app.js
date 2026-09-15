@@ -56640,9 +56640,45 @@ const NEXUS_AUTHORITATIVE_CONVERSATION_KEY = "nexusAuthoritativeConversationId";
 const NEXUS_AUTHORITATIVE_TASK_KEY = "nexusAuthoritativeActiveTaskId";
 const NEXUS_AUTHORITATIVE_PRINCIPAL_KEY = "nexusAuthoritativePrincipalId";
 
+// Set whenever the behavior spine returns confirmation_required, so the next
+// matching affirm/decline reply resumes this exact task+step through
+// /behavior/confirm instead of letting a fresh command re-plan from scratch
+// (confirmed live: without this, "Yes, confirm it." created a brand-new task
+// and the AI planner arbitrarily re-classified it instead of approving the
+// pending step). Intentionally in-memory only, not persisted: a pending
+// confirmation should be resolved within the live conversation, not survive
+// a reload into a stale approval prompt.
+let nexusPendingBehaviorConfirmation = null;
+
+const NEXUS_CONFIRMATION_AFFIRM_PHRASES = new Set([
+  "yes", "yeah", "yea", "yep", "yup", "sure", "ok", "okay", "confirm", "confirmed",
+  "confirm it", "yes confirm it", "go ahead", "do it", "please do", "proceed",
+  "yes please", "yes go ahead", "that's right", "correct", "affirmative"
+]);
+const NEXUS_CONFIRMATION_DECLINE_PHRASES = new Set([
+  "no", "nope", "nah", "cancel", "cancel it", "never mind", "nevermind", "stop",
+  "don't", "do not", "no cancel it", "no thanks", "not now", "decline"
+]);
+
+function normalizeNexusConfirmationReplyText(text) {
+  return String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "").trim();
+}
+
+// Deliberately an exact-phrase match against a short, specific set, not a
+// loose keyword search: a real new command that happens to contain "yes" or
+// "no" mid-sentence must never be swallowed as a confirmation reply.
+function detectNexusPendingConfirmationReply(text) {
+  const normalized = normalizeNexusConfirmationReplyText(text);
+  if (!normalized) return null;
+  if (NEXUS_CONFIRMATION_AFFIRM_PHRASES.has(normalized)) return "approve";
+  if (NEXUS_CONFIRMATION_DECLINE_PHRASES.has(normalized)) return "decline";
+  return null;
+}
+
 function resetNexusAuthoritativeIdentityContext(principalId = "") {
   localStorage.removeItem(NEXUS_AUTHORITATIVE_CONVERSATION_KEY);
   localStorage.removeItem(NEXUS_AUTHORITATIVE_TASK_KEY);
+  nexusPendingBehaviorConfirmation = null;
   if (principalId) localStorage.setItem(NEXUS_AUTHORITATIVE_PRINCIPAL_KEY, String(principalId));
   else localStorage.removeItem(NEXUS_AUTHORITATIVE_PRINCIPAL_KEY);
   nexusAuthoritativeRecoveryStarted = false;
@@ -57277,9 +57313,101 @@ async function restoreNexusAuthoritativeRuntime() {
   }
 }
 
+async function processNexusAuthoritativeBehaviorResult(result, text, options = {}) {
+  let message = result.response || "Nexus needs more information before it can continue.";
+  if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
+  let renderReceipt = null;
+  if (result.render) {
+    validateNexusPassivePresentation(result.render);
+    const renderer = await nexusAuthoritativeOutcomeRenderer();
+    recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
+    try {
+      renderReceipt = await renderer.render(result.render);
+      recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
+        { rendererResult: renderReceipt });
+    } catch (error) {
+      recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
+        { rendererError: String(error?.message || error).slice(0, 500) });
+      throw error;
+    }
+    if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
+    message = result.render.response || message;
+  }
+  nexusAgenticBrainLastResult = {
+    ok: result.completed === true,
+    status: result.state,
+    mode: result.application,
+    message,
+    command: text,
+    result,
+    receipts: result.receipts || [],
+    renderReceipt,
+    authoritative: true,
+    legacyFallbackUsed: false,
+    source: "nexus-authoritative-behavior-spine"
+  };
+  nexusPendingBehaviorConfirmation = result.state === "confirmation_required"
+    && String(result.taskId || "").startsWith("tsk_") && result.outcome?.pendingStepId
+    ? { taskId: result.taskId, stepId: result.outcome.pendingStepId }
+    : null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  renderUserWorkspace?.();
+  setVoiceResponse(message, true, {
+    allowHandoff: false,
+    command: text,
+    source: "nexus-authoritative-behavior-spine",
+    turnToken: options.turnToken
+  });
+  // This gateway owns the request only when the authoritative spine
+  // actually answered it. A failure below falls through to the working
+  // legacy routing instead of ending the turn on a raw error message.
+  return true;
+}
+
+async function submitNexusPendingBehaviorConfirmation(approved, text, options = {}) {
+  const pending = nexusPendingBehaviorConfirmation;
+  if (!pending) return false;
+  authoritativeGenesisTranscriptRoute = null;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  setNexusPresenceState(NEXUS_PRESENCE_STATES.THINKING, {
+    lastUserInput: text,
+    lastResponse: approved ? "Nexus is confirming the pending governed action." : "Nexus is cancelling the pending governed action.",
+    nextQuestion: "",
+    activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || ""
+  });
+  try {
+    const result = await requestWithTimeout("/api/nexus/runtime/behavior/confirm", {
+      method: "POST",
+      body: {
+        taskId: pending.taskId,
+        stepId: pending.stepId,
+        approved,
+        text,
+        channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed"
+      }
+    }, 90000);
+    if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
+      throw new Error("Nexus rejected an invalid behavior-spine confirmation response. No legacy route was used.");
+    }
+    return await processNexusAuthoritativeBehaviorResult(result, text, options);
+  } catch (error) {
+    nexusPendingBehaviorConfirmation = null;
+    return false;
+  }
+}
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
+  if (nexusPendingBehaviorConfirmation) {
+    const decision = detectNexusPendingConfirmationReply(text);
+    if (decision) return submitNexusPendingBehaviorConfirmation(decision === "approve", text, options);
+    // An unrelated new command supersedes an unresolved pending confirmation
+    // rather than silently blocking it forever.
+    nexusPendingBehaviorConfirmation = null;
+  }
   // Local support and visit preparation cannot authorize or execute provider actions.
   // These explicit requests remain available even when the durable runtime is unavailable.
   if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
@@ -57310,51 +57438,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
     }
-    let message = result.response || "Nexus needs more information before it can continue.";
-    if (String(result.taskId || "").startsWith("tsk_")) localStorage.setItem(NEXUS_AUTHORITATIVE_TASK_KEY, result.taskId);
-    let renderReceipt = null;
-    if (result.render) {
-      validateNexusPassivePresentation(result.render);
-      const renderer = await nexusAuthoritativeOutcomeRenderer();
-      recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
-      try {
-        renderReceipt = await renderer.render(result.render);
-        recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
-          { rendererResult: renderReceipt });
-      } catch (error) {
-        recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
-          { rendererError: String(error?.message || error).slice(0, 500) });
-        throw error;
-      }
-      if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
-      message = result.render.response || message;
-    }
-    nexusAgenticBrainLastResult = {
-      ok: result.completed === true,
-      status: result.state,
-      mode: result.application,
-      message,
-      command: text,
-      result,
-      receipts: result.receipts || [],
-      renderReceipt,
-      authoritative: true,
-      legacyFallbackUsed: false,
-      source: "nexus-authoritative-behavior-spine"
-    };
-    openAskNexus();
-    enableHeyAgriNexusMode();
-    renderUserWorkspace?.();
-    setVoiceResponse(message, true, {
-      allowHandoff: false,
-      command: text,
-      source: "nexus-authoritative-behavior-spine",
-      turnToken: options.turnToken
-    });
-    // This gateway owns the request only when the authoritative spine
-    // actually answered it. A failure below falls through to the working
-    // legacy routing instead of ending the turn on a raw error message.
-    return true;
+    return await processNexusAuthoritativeBehaviorResult(result, text, options);
   } catch (error) {
     return false;
   }

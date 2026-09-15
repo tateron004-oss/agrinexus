@@ -84,3 +84,75 @@ test("behavior spine returns a typed render request and accepts only matching ac
   assert.equal(staged.at(-1).receipt.visible, true);
   assert.equal(acknowledgement.correlationId, "trace");
 });
+
+test("behavior spine confirm() approves a pending step and resumes the same task through to completion", async () => {
+  const approvals = [];
+  const appended = [];
+  const pendingTask = { taskId: "tsk_5", tenantId: "tenant", ownerId: "user", conversationId: "cnv_5",
+    application: "health", goal: "Record temperature", riskTier: "regulated",
+    steps: [{ stepId: "stp_5", toolId: "health.record", input: { intakeType: "temperature", temperature: 102.5 } }] };
+  const spine = new BehaviorSpine({
+    workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
+    agent: { command: async () => assert.fail("confirm must not re-plan through the agent") },
+    engine: {
+      executeTask: async () => ({ state: "completed", completed: true, receipts: [{ receiptId: "rcp_5" }] }),
+      approve: async input => { approvals.push(input); }
+    },
+    tasks: { get: async () => ({ ...pendingTask, outcome: { verified: true, visibleOrAudible: true } }) },
+    conversations: { append: async value => appended.push(value) }
+  });
+  const result = await spine.confirm({ input: { taskId: "tsk_5", stepId: "stp_5", approved: true, text: "Yes, confirm it." }, context });
+  assert.equal(approvals[0].taskId, "tsk_5");
+  assert.equal(approvals[0].stepId, "stp_5");
+  assert.equal(approvals[0].approved, true);
+  assert.equal(result.state, "completed");
+  assert.equal(result.completed, true);
+  assert.equal(result.taskId, "tsk_5");
+  assert.equal(result.render.originalText, "Yes, confirm it.");
+  assert.equal(appended.at(-1).provenance.type, "verified_outcome");
+});
+
+test("behavior spine confirm() declines a pending step, cancels the task, and never executes it", async () => {
+  const approvals = []; const transitions = []; const appended = [];
+  const pendingTask = { taskId: "tsk_6", tenantId: "tenant", ownerId: "user", conversationId: "cnv_6",
+    application: "communications", goal: "Send a message", riskTier: "regulated", steps: [] };
+  const spine = new BehaviorSpine({
+    workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
+    agent: { command: async () => assert.fail("confirm must not re-plan through the agent") },
+    engine: {
+      executeTask: async () => assert.fail("a declined step must not execute"),
+      approve: async input => { approvals.push(input); },
+      transition: async input => { transitions.push(input); return { ...pendingTask, state: "cancelled" }; }
+    },
+    tasks: { get: async () => pendingTask },
+    conversations: { append: async value => appended.push(value) }
+  });
+  const result = await spine.confirm({ input: { taskId: "tsk_6", stepId: "stp_6", approved: false, text: "No, cancel it." }, context });
+  assert.equal(approvals[0].approved, false);
+  assert.equal(transitions[0].nextState, "cancelled");
+  assert.equal(result.state, "cancelled");
+  assert.equal(result.completed, false);
+  assert.equal(result.outcome.verified, false);
+  assert.equal(result.outcome.reason, "declined_by_user");
+  assert.equal(appended.at(-1).provenance.type, "declined_outcome");
+});
+
+test("behavior spine confirm() rejects an unknown task and refuses a task owned by someone else", async () => {
+  const spine = new BehaviorSpine({
+    workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
+    agent: { command: async () => assert.fail("confirm must not re-plan through the agent") },
+    engine: { executeTask: async () => assert.fail("must not execute"), approve: async () => {} },
+    tasks: { get: async () => null }
+  });
+  await assert.rejects(() => spine.confirm({ input: { taskId: "missing", stepId: "stp_1", approved: true }, context }),
+    error => error.code === "task_not_found");
+
+  const otherOwnerSpine = new BehaviorSpine({
+    workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
+    agent: { command: async () => assert.fail("confirm must not re-plan through the agent") },
+    engine: { executeTask: async () => assert.fail("must not execute"), approve: async () => assert.fail("must not approve") },
+    tasks: { get: async () => ({ taskId: "tsk_7", tenantId: "tenant", ownerId: "someone-else", conversationId: "cnv_7", application: "health", steps: [] }) }
+  });
+  await assert.rejects(() => otherOwnerSpine.confirm({ input: { taskId: "tsk_7", stepId: "stp_1", approved: true }, context }),
+    error => error.code === "task_owner_required");
+});

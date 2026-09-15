@@ -132,6 +132,36 @@ test("behavior turn enters one authoritative spine without a caller-selected wor
   assert.equal(response.result.body.legacyFallbackUsed, false);
 });
 
+test("behavior confirm resumes a pending task+step through the authoritative spine instead of a fresh turn", async () => {
+  let confirmInput;
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    behavior: { confirm: async input => { confirmInput = input; return { schema: "nexus.behavior-turn.v1",
+      completed: true, state: "completed", taskId: "tsk_1", application: "health", legacyFallbackUsed: false }; } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ taskId: "tsk_1", stepId: "stp_1", approved: true, text: "Yes, confirm it." }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-2" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/confirm"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(confirmInput.input.taskId, "tsk_1");
+  assert.equal(confirmInput.input.stepId, "stp_1");
+  assert.equal(confirmInput.input.approved, true);
+  assert.equal(response.result.body.legacyFallbackUsed, false);
+});
+
+test("behavior confirm fails closed when the behavior spine has no confirm method", async () => {
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {} };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ taskId: "tsk_1", stepId: "stp_1", approved: true }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-3" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/confirm"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.equal(response.result.body.code, "behavior_spine_unavailable");
+});
+
 test("behavior-turn database failures log only safe diagnostic identifiers", async () => {
   const secret = "private-row-value-must-not-leak"; const logCalls = [];
   const databaseError = new Error(`null value contains ${secret}`);

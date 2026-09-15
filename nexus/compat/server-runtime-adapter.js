@@ -530,6 +530,12 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
           locale: request.locale, text: body.text }, context });
         send(res, result.completed ? 200 : 202, result); return true;
+      } else if (url.pathname === "/api/nexus/runtime/behavior/confirm" && req.method === "POST") {
+        if (!active.behavior?.confirm) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
+        const result = await active.behavior.confirm({ input: { correlationId: request.context.requestId,
+          taskId: body.taskId, stepId: body.stepId, approved: body.approved === true,
+          channel: request.channel, text: body.text }, context });
+        send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/conversation" && req.method === "GET") {
         const conversationId = String(request.query.conversationId || "").trim();
         if (!conversationId) { send(res, 400, { error: "Conversation ID is required.", code: "conversation_id_required" }); return true; }

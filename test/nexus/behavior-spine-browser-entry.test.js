@@ -43,7 +43,11 @@ test("the live voice and typed entrypoint cannot enter the legacy command core",
 });
 
 test("authoritative browser completion requires typed rendering and server acknowledgement", () => {
-  const start = source.indexOf("async function handleNexusUnifiedBrainRuntimeCommand");
+  // The render/renderer-acknowledgement handling lives in
+  // processNexusAuthoritativeBehaviorResult, a shared helper both the normal
+  // turn() gateway and the confirm-and-resume gateway call into -- start the
+  // slice there so this whitebox check covers both entrypoints.
+  const start = source.indexOf("async function processNexusAuthoritativeBehaviorResult");
   const end = source.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand", start);
   const gateway = source.slice(start, end);
   assert.match(gateway, /validateNexusPassivePresentation\(result\.render\)/);

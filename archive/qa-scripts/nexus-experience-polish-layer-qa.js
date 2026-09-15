@@ -26,7 +26,11 @@ function hasAll(source, items) {
 const polishStart = app.indexOf("function normalizeNexusExperienceMode");
 const polishEnd = app.indexOf("function handleNexusPresenceInputActivity", polishStart);
 const polishBlock = polishStart >= 0 && polishEnd > polishStart ? app.slice(polishStart, polishEnd) : "";
-const unifiedStart = app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand");
+// The render/renderer-acknowledgement handling now lives in
+// processNexusAuthoritativeBehaviorResult, a shared helper both the normal
+// turn() gateway and the confirm-and-resume gateway call into -- start the
+// slice there so this whitebox check still covers it.
+const unifiedStart = app.indexOf("async function processNexusAuthoritativeBehaviorResult");
 const unifiedEnd = app.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand", unifiedStart);
 const unifiedBlock = unifiedStart >= 0 && unifiedEnd > unifiedStart ? app.slice(unifiedStart, unifiedEnd) : "";
 const resultStart = app.indexOf("function setNexusAgenticCommandResult");
