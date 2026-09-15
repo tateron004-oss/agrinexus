@@ -2308,6 +2308,22 @@ function authRateLimit(req, bucketName, limit = 10, windowMs = 300_000) {
   return rateBucketCheck(key, limit, windowMs);
 }
 
+// The AI/agent routes accept free-form text and end every call in a full
+// writeDb() of the single shared application-state blob (one JSON file or
+// one Postgres row, serialized through one write queue -- see the write-path
+// comment near readDb()/writeDb()). The blanket rateLimit() above (180/min
+// per IP+path) is generic request hygiene, not a real budget for a route
+// this expensive; a guest account (self-registered with no verification via
+// /api/auth/guest-session, and "ai" is not one of the guest-restricted
+// permissions) can otherwise keep the shared write path busy well within
+// that blanket limit. Give these routes their own tighter, separately-keyed
+// budget, the same way login/password-reset already have theirs.
+function aiAgentRateLimit(req) {
+  const configuredLimit = Number(process.env.AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW || 60);
+  const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : 60;
+  return authRateLimit(req, "agent", effectiveLimit, 60_000);
+}
+
 function parseCookies(req) {
   return Object.fromEntries((req.headers.cookie || "").split(";").filter(Boolean).map(part => {
     const [key, ...rest] = part.trim().split("=");
@@ -50393,6 +50409,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/plan" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent planning" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
     const goal = String(body.goal || "Create an AgriNexus cross-module plan.").trim();
@@ -50501,6 +50518,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/execute" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent execution" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
     const plan = db.profile.agentPlans.find(item => item.id === body.planId) || db.profile.agentPlans[0];
@@ -50515,6 +50533,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/briefing" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent briefings" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const briefing = agentBriefing(db, user, body.purpose || "government presentation");
     await writeDb(db);
@@ -50525,6 +50544,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/reasoning-language" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent reasoning" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const command = String(body.command || "Review Nexus reasoning and language production").trim();
     const moduleSignal = conversationModuleSignal(command);
@@ -50548,6 +50568,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/command" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const canonicalCommandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language || "en");
     const canonicalCommandInputMode = body.inputMode || "api";
@@ -50710,6 +50731,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/conversation-core" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow conversation core" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const command = String(body.command || body.text || "").trim();
     const decision = await nexusConversationCoreDecision(db, user, command, {
