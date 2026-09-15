@@ -62,7 +62,10 @@ async function callLearningTool(command, cookie) {
   const res = await fetch(`${base}/api/nexus/openai-native/tool`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: "nexus_workforce_learning", arguments: { command } })
+    // confirmed: true -- learningBridge.markProgress/saveResource/
+    // createLearningReminder now forward the caller's real confirmation
+    // instead of the provider's requireConfirmation() gate being bypassed.
+    body: JSON.stringify({ name: "nexus_workforce_learning", arguments: { command, confirmed: true } })
   });
   return res.json();
 }
