@@ -52,6 +52,13 @@ test("authoritative browser completion requires typed rendering and server ackno
   const gateway = source.slice(start, end);
   assert.match(gateway, /validateNexusPassivePresentation\(result\.render\)/);
   assert.match(gateway, /renderer\.render\(result\.render\)/);
+  // Confirmed live: rendering was attempted unconditionally for every
+  // state, including confirmation_required/clarification_required -- those
+  // always throw ("outcome was not visibly or audibly verified") since
+  // nothing was actually staged to render yet, and the caller's catch
+  // silently fell through to legacy routing. Only render_required has a
+  // real render/acknowledge round trip staged server-side.
+  assert.match(gateway, /result\.render\s*&&\s*result\.state === "render_required"/);
   assert.match(source, /\/api\/nexus\/runtime\/behavior\/acknowledgements/);
   assert.doesNotMatch(gateway, /genesisWorkspaceActionFromFinalTranscript\(text\)/);
   assert.doesNotMatch(gateway, /runMusicAssistantCommand\(text/);
