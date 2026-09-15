@@ -18566,7 +18566,7 @@ function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = proc
 
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
   ensureNexusPilotState(db);
-  const confirmed = Boolean(args.confirmed || args.confirmation);
+  const confirmed = args.confirmed === true || args.confirmation === true;
   const title = sanitizePilotText(args.title || args.query || common.command || "Nexus reminder", 160);
   const when = sanitizePilotText(args.when || args.time || args.schedule || "Schedule detail needed", 120);
   if (!confirmed) {
@@ -18653,7 +18653,7 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   const isMemoryStatusQuestion = /\b(do|did|does|have|has)\s+you\s+(remember|delet(?:e|ed)|forgot(?:ten)?|forget|remov(?:e|ed)|eras(?:e|ed))\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
   const wantsCreate = !isMemoryStatusQuestion && /\b(remember|save|store)\b/i.test(commandText);
   const wantsDelete = !isMemoryStatusQuestion && /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
-  const confirmed = Boolean(args.confirmed || args.confirmation);
+  const confirmed = args.confirmed === true || args.confirmation === true;
   if (wantsCreate || wantsDelete) {
     if (!confirmed) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
@@ -19118,13 +19118,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // Confirmed: offlineExpansionBridgeProvider's sync/queue functions both
       // already have a real requireConfirmation() gate, bypassed here by
       // hardcoding true regardless of what the caller actually sent.
-      const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
+      const syncResult = nexusRealProviders.offlineExpansionBridge.sync({ confirmed: (args.confirmed === true || args.confirmation === true) }, db, process.env);
       const ok = Boolean(syncResult?.body?.ok && syncResult.body.status === "completed");
       return { ...common, capability: "automation-reminder", status: ok ? "offline-sync-completed" : "offline-sync-blocked", response: ok ? syncResult.body.message : "I could not sync the offline queue right now.", localOnly: true };
     }
     if (wantsOfflineQueue) {
       const summary = args.summary || args.content || command;
-      const queueResult = nexusRealProviders.offlineExpansionBridge.queue({ type: args.type || "workflow_plan", title: args.title || summary.slice(0, 80), summary, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
+      const queueResult = nexusRealProviders.offlineExpansionBridge.queue({ type: args.type || "workflow_plan", title: args.title || summary.slice(0, 80), summary, confirmed: args.confirmed === true || args.confirmation === true }, db, process.env);
       const ok = Boolean(queueResult?.body?.ok && queueResult.body.status === "completed");
       return { ...common, capability: "automation-reminder", status: ok ? "offline-item-queued" : "offline-queue-blocked", response: ok ? "I queued that locally for offline review. No health, payment, contact, or dispatch content was included." : (queueResult?.body?.message || "I could not queue that item — it may include sensitive or restricted content."), localOnly: true };
     }
@@ -19158,7 +19158,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // Mirrors nexus_memory's already-correct matches.length === 1 gate.
       const matches = titleQuery ? (db.nexusPilotReminders || []).filter(reminder => reminder.title.toLowerCase().includes(titleQuery)) : [];
       const match = matches.length === 1 ? matches[0] : null;
-      if (!Boolean(args.confirmed || args.confirmation)) {
+      if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
           response: match ? `I found a reminder called "${match.title}". Confirm and I will cancel it.` : "Tell me which reminder to cancel, and confirm, and I will remove it.",
@@ -19316,7 +19316,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         // createLearningReminder all already have a real requireConfirmation()
         // gate, bypassed here by hardcoding true regardless of what the
         // caller actually sent.
-        const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
+        const progressResult = nexusRealProviders.learningBridge.markProgress({ ...bestMatch, progressStatus, confirmed: (args.confirmed === true || args.confirmation === true) }, db, process.env);
         const ok = Boolean(progressResult?.body?.ok && progressResult.body.status === "completed");
         if (ok) shadowWriteCourseProgressToPostgres(progressResult.body.data.progress, realUserEmail);
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "learning-progress-recorded" : "learning-preparation-ready",
@@ -19326,8 +19326,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       }
       if (bestMatch && (wantsSave || wantsReminder)) {
         const actionResult = wantsSave
-          ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env)
-          : nexusRealProviders.learningBridge.createLearningReminder({ ...bestMatch, dueAt: args.dueAt || args.when, confirmed: Boolean(args.confirmed || args.confirmation) }, db, process.env);
+          ? nexusRealProviders.learningBridge.saveResource({ ...bestMatch, confirmed: (args.confirmed === true || args.confirmation === true) }, db, process.env)
+          : nexusRealProviders.learningBridge.createLearningReminder({ ...bestMatch, dueAt: args.dueAt || args.when, confirmed: (args.confirmed === true || args.confirmation === true) }, db, process.env);
         const ok = Boolean(actionResult?.body?.ok && actionResult.body.status === "completed");
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? (wantsSave ? "learning-resource-saved" : "learning-reminder-created") : "learning-preparation-ready",
           [ok ? `${wantsSave ? "Saved" : "Created a reminder for"} ${bestMatch.title} to the learner's local record.` : "Prepared learning guidance."],
@@ -19387,7 +19387,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         area: args.area || areaMatch?.[1]?.trim() || "field area to confirm",
         areaHectares: nexusRealProviders.droneMissionBridge.parseAreaHectares(command),
         purpose: command,
-        confirmed: Boolean(args.confirmed || args.confirmation)
+        confirmed: (args.confirmed === true || args.confirmation === true)
       }, db, process.env);
       const ok = Boolean(missionResult?.body?.ok && missionResult.body.status === "completed");
       const request = missionResult?.body?.data?.request;
@@ -19492,7 +19492,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // (nexus_workflow, nexus_marketplace_logistics, nexus_communications,
     // nexus_calendar, nexus_email, nexus_agriculture), which all forward the
     // caller's actual confirmation.
-    const wantsHealthActionConfirmed = Boolean(args.confirmed || args.confirmation);
+    const wantsHealthActionConfirmed = args.confirmed === true || args.confirmation === true;
     // Confirmed live: "Please use temp file 42 for this." and "Check pulse
     // item 85 in the catalog." -- both completely unrelated, non-health
     // commands -- each saved a FABRICATED vital-sign reading (temperature
@@ -19841,7 +19841,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         title: args.title || `Field visit: ${command}`.slice(0, 180),
         origin: routeArgs.origin || args.origin,
         destinations: [{ label: args.destinationLabel || routeArgs.destination || "Destination", addressText: routeArgs.destination || args.destination }],
-        confirmed: Boolean(args.confirmed || args.confirmation)
+        confirmed: args.confirmed === true || args.confirmation === true
       };
       const saveResult = nexusRealProviders.mapsFieldVisitBridge.saveVisitPlan(visitBody, db, process.env);
       const ok = Boolean(saveResult?.body?.ok && saveResult.body.status === "completed");
@@ -19857,7 +19857,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // nexus_memory's already-correct matches.length === 1 gate.
       const matches = titleQuery ? plans.filter(plan => plan.title.toLowerCase().includes(titleQuery)) : [];
       const match = matches.length === 1 ? matches[0] : null;
-      if (!Boolean(args.confirmed || args.confirmation)) {
+      if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
           response: match ? `I found a saved field visit plan called "${match.title}". Confirm and I will cancel it.` : "Tell me which saved field visit plan to cancel, and confirm, and I will remove it.",
@@ -19887,7 +19887,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         // true here bypassed it. createVisitPlan (the other branch) has no
         // such gate since it never contacts a real provider, so this is safe
         // for both call paths.
-        confirmed: Boolean(args.confirmed || args.confirmation)
+        confirmed: args.confirmed === true || args.confirmation === true
       };
       const visitResult = routeArgs.origin && routeArgs.destination
         ? await nexusRealProviders.mapsFieldVisitBridge.routeVisitPlan(visitBody, db, process.env)
@@ -19988,7 +19988,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       title: exportTitle,
       content: extractedExport.content,
       format: exportFormat,
-      confirmed: Boolean(args.confirmed || args.confirmation)
+      confirmed: (args.confirmed === true || args.confirmation === true)
     }, process.env);
     const wrapped = nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "document-export" }, exportResult);
     const exportData = exportResult?.body?.data;
@@ -42300,7 +42300,7 @@ async function api(req, res, url) {
     const result = nexusFullCommunicationRuntime.prepareMessage(body, {
       env: process.env,
       inputType: body.inputType || "message_action",
-      language: body.language || user.language || "en"
+      language: body.language || user?.language || "en"
     });
     return send(res, 200, { ...result, noSecretValues: true, noExecutionAuthorized: true });
   }
@@ -42314,7 +42314,7 @@ async function api(req, res, url) {
     const result = nexusMessagePreparationRuntime.prepareMessage(body, {
       env: process.env,
       inputType: body.inputType || "typed_chat",
-      language: body.language || user.language || "en"
+      language: body.language || user?.language || "en"
     });
     return send(res, 200, { ...result, noSecretValues: true, noExecutionAuthorized: true });
   }
@@ -42324,7 +42324,7 @@ async function api(req, res, url) {
     const result = nexusMessagePreparationRuntime.attemptSend(body, {
       env: process.env,
       inputType: body.inputType || "typed_chat",
-      language: body.language || user.language || "en",
+      language: body.language || user?.language || "en",
       confirmed: body.confirmed === true
     });
     return send(res, result.ok ? 200 : 409, { ...result, noSecretValues: true, noExecutionAuthorized: true });
@@ -50788,8 +50788,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusHealthcareCollaborationRuntime.prepareAction(body, {
       env: process.env,
-      confirmed: Boolean(body.confirmed),
-      clinicianReviewed: Boolean(body.clinicianReviewed)
+      confirmed: body.confirmed === true,
+      clinicianReviewed: body.clinicianReviewed === true
     });
     return send(res, 200, result);
   }
@@ -50798,8 +50798,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusHealthcareCollaborationRuntime.attemptExecution(body, {
       env: process.env,
-      confirmed: Boolean(body.confirmed),
-      clinicianReviewed: Boolean(body.clinicianReviewed)
+      confirmed: body.confirmed === true,
+      clinicianReviewed: body.clinicianReviewed === true
     });
     return send(res, result.noExecutionAuthorized ? 409 : 200, result);
   }
@@ -50842,9 +50842,9 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusAgricultureCollaborationRuntime.prepareAction(body, {
       env: process.env,
-      confirmed: Boolean(body.confirmed),
-      expertReviewed: Boolean(body.expertReviewed),
-      humanPilotApproved: Boolean(body.humanPilotApproved)
+      confirmed: body.confirmed === true,
+      expertReviewed: body.expertReviewed === true,
+      humanPilotApproved: body.humanPilotApproved === true
     });
     return send(res, 200, result);
   }
@@ -50853,9 +50853,9 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusAgricultureCollaborationRuntime.attemptExecution(body, {
       env: process.env,
-      confirmed: Boolean(body.confirmed),
-      expertReviewed: Boolean(body.expertReviewed),
-      humanPilotApproved: Boolean(body.humanPilotApproved)
+      confirmed: body.confirmed === true,
+      expertReviewed: body.expertReviewed === true,
+      humanPilotApproved: body.humanPilotApproved === true
     });
     return send(res, result.noExecutionAuthorized ? 409 : 200, result);
   }
@@ -50881,7 +50881,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const result = nexusUnifiedBrainRuntime["executeStep"](body.stepId, {
       ...nexusUnifiedBrainOptions(),
-      confirmed: Boolean(body.confirmed)
+      confirmed: body.confirmed === true
     });
     return send(res, result.noExecutionAuthorized ? 409 : 200, result);
   }
