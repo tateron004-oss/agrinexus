@@ -69,13 +69,13 @@ async function enroll(body = {}, env = process.env) {
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   if (!clean(body.courseId) || !clean(body.userId)) return blockedResponse(provider, action, "courseId and userId are required for LMS enrollment testing.");
-  return providerResponse({
-    provider,
-    action,
-    status: "blocked",
-    message: "LMS enrollment endpoint is gated for later role mapping. No enrollment was submitted.",
-    data: { courseId: clean(body.courseId), userId: clean(body.userId) }
-  });
+  // Confirmed: the only raw providerResponse({status:"blocked", ...}) call in
+  // this whole provider family that omitted ok:false -- providerResponse()
+  // defaults ok to true, so a REST caller deciding success purely from `ok`
+  // (POST /api/nexus/tools/learning/enroll, /api/nexus/tools/lms/bridge/enroll)
+  // got HTTP 200 for "No enrollment was submitted."
+  return blockedResponse(provider, action, "LMS enrollment endpoint is gated for later role mapping. No enrollment was submitted.",
+    { courseId: clean(body.courseId), userId: clean(body.userId) });
 }
 
 module.exports = { status, courses, enroll };
