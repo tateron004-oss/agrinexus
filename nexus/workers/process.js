@@ -5,6 +5,7 @@ const { createLogger } = require("../observability/logger.js");
 const { createHandlers } = require("./handlers.js");
 const { NexusWorker } = require("./worker.js");
 const { createNotificationProviders } = require("../notifications/provider-catalog.js");
+const { createWebPushProvider } = require("../notifications/webpush-provider.js");
 const { resolveWorkerReleaseSha } = require("./release-identity.js");
 const { createReleaseHeartbeat } = require("./release-heartbeat.js");
 
@@ -20,7 +21,8 @@ async function main() {
   await runtime.ready;
   const health = await checkRuntimeHealth(runtime);
   if (!health.ok) throw new Error("Nexus worker refuses to start before pgvector and migrations are ready.");
-  const deliveryProviders=createNotificationProviders();
+  const webPush = createWebPushProvider({ env: process.env, devices: runtime.devices, deviceTokens: runtime.deviceTokens });
+  const deliveryProviders={ ...createNotificationProviders(), ...(webPush ? { push: webPush } : {}) };
   const handlers=createHandlers({ runtime,deliveryProviders });
   const queues = ["default"];
   const releaseSha = resolveWorkerReleaseSha();
@@ -29,10 +31,21 @@ async function main() {
     handlers: handlerNames, logger, intervalMs: Number(process.env.NEXUS_WORKER_HEARTBEAT_MS || 30000) });
   await releaseHeartbeat.start();
   const worker = new NexusWorker({ jobs: runtime.jobs, workerId, handlers, queues, logger });
-  logger.info("worker.started", { workerId, health, registeredHandlers: Object.keys(handlers) });
+  logger.info("worker.started", { workerId, health, registeredHandlers: Object.keys(handlers), pushDeliveryConfigured: Boolean(webPush) });
+  // Nothing enqueues a "notifications.deliver" job today -- claim() itself
+  // isn't tenant-scoped (it globally sweeps whatever's due), so there's no
+  // real benefit to routing it through the durable per-tenant job queue.
+  // Piggyback it onto this poll loop's existing cadence instead.
+  const notificationIntervalMs = Number(process.env.NEXUS_NOTIFICATION_POLL_MS || 30000);
+  let lastNotificationSweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
+    if (Date.now() - lastNotificationSweepAt >= notificationIntervalMs) {
+      lastNotificationSweepAt = Date.now();
+      try { await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.notifications_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }
 }
