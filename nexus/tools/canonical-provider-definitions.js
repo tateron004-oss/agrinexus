@@ -16,6 +16,11 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
     riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" }),
   Object.freeze({ toolId: "health.emergency-guidance", domain: "health", description: "Display immediate emergency guidance without claiming diagnosis or dispatch",
     riskTier: "regulated", dataClassification: "health" }),
+  Object.freeze({ toolId: "health.chronic-intake", domain: "health", description: "Record a chronic-disease intake for provider review",
+    riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" }),
+  Object.freeze({ toolId: "health.chronic-reading", domain: "health", description: "Record a chronic-disease vital reading for provider review",
+    riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" }),
+  Object.freeze({ toolId: "health.chronic-summary", domain: "health", description: "Read back chronic-disease readings and prepare a provider-review summary" }),
   // Confirmed live: "Save a telehealth intake for my ongoing back pain
   // concern." completed immediately with no confirmation step at all,
   // telling the user their intake was saved when nothing real happened
