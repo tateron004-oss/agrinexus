@@ -43257,6 +43257,11 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/field-agents/dispatches" && req.method === "GET") {
+    // Without a real session, "requestedBy" falls back to the literal
+    // string "Standard User" for every anonymous caller, so any two
+    // unauthenticated sessions would share the same pseudo-identity and see
+    // each other's dispatches.
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
     const dispatches = canUse(user, "provider-queue")
       ? db.nexusFieldDispatches
@@ -43265,6 +43270,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/field-agents/dispatch" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     const result = assignFieldAgentDispatch(db, body, user);
     if (!result.ok) return send(res, 409, { ok: false, error: result.error, agents: db.nexusFieldAgents });
@@ -43305,6 +43311,26 @@ async function api(req, res, url) {
   if (nexusIntegrationLogsMatch && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]) });
+  }
+
+  // db.nexusCommunications/nexusNotifications/nexusOutcomes are shared,
+  // non-per-user collections that can carry real free-text content
+  // (message previews, notification bodies, outcome feedback up to 900
+  // chars) -- none of these routes (through /api/nexus/outcomes below) had
+  // any auth check. Uses exact/regex path matches rather than a prefix so
+  // the separately-reviewed-safe /communications/status and
+  // /communications/send-message routes elsewhere in this file are
+  // unaffected.
+  if (!user && (
+    url.pathname === "/api/nexus/communications"
+    || url.pathname === "/api/nexus/communications/prepare"
+    || (/^\/api\/nexus\/communications\/[^/]+$/.test(url.pathname) && !["status", "send-message"].includes(url.pathname.split("/").pop()))
+    || /^\/api\/nexus\/communications\/[^/]+\/attempt$/.test(url.pathname)
+    || url.pathname === "/api/nexus/notifications"
+    || /^\/api\/nexus\/notifications\/[^/]+\/read$/.test(url.pathname)
+    || url.pathname === "/api/nexus/outcomes"
+  )) {
+    return send(res, 401, { error: "Sign in required" });
   }
 
   if (url.pathname === "/api/nexus/communications" && req.method === "GET") {
@@ -43576,6 +43602,14 @@ async function api(req, res, url) {
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
+  }
+
+  // db.nexusKnowledgeQueries et al. are shared, non-per-user collections of
+  // every question ever asked through this feature (potentially containing
+  // sensitive free-text, e.g. a health question) -- neither history route
+  // had an auth check.
+  if (!user && (url.pathname === "/api/nexus/knowledge/history" || /^\/api\/nexus\/knowledge\/history\/[^/]+$/.test(url.pathname))) {
+    return send(res, 401, { error: "Sign in required" });
   }
 
   if (url.pathname === "/api/nexus/knowledge/history" && req.method === "GET") {
@@ -43855,6 +43889,9 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/consent-history" && req.method === "GET") {
+    // A global audit/consent trail across every session -- must not be
+    // readable by an unauthenticated caller.
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
     return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents, auditEvents: db.nexusPilotAuditEvents });
   }
@@ -44593,6 +44630,15 @@ async function api(req, res, url) {
         noExternalExecutionAuthorized: true
       });
     }
+  }
+
+  // nexusAgenticBrainRuntime persists real chronic-care/RPM task content
+  // (userGoal, chronicIntake.userConcern, readings, providerReport) into a
+  // single shared, non-per-user db.profile array -- none of the routes below
+  // had any auth check, letting an unauthenticated caller read and write
+  // every task/mission ever created here, including emergency-flagged ones.
+  if (!user && url.pathname.startsWith("/api/nexus/brain/")) {
+    return send(res, 401, { error: "Sign in required" });
   }
 
   if (url.pathname === "/api/nexus/brain/status" && req.method === "GET") {
@@ -45341,7 +45387,13 @@ async function api(req, res, url) {
     "/api/nexus/tools/patient-support/intakes": () => nexusRealProviders.patientSupportBridge.intakes(db)
   };
 
+  // The medicalGetRoutes/medicalPostRoutes dispatch tables persist real
+  // chronic-care/RPM/telehealth/pharmacy PHI (intake notes, glucose/BP
+  // readings, provider reports) into shared, non-per-user db.profile
+  // arrays -- none of these routes had any auth check. Every sub-path here
+  // except the plain "/status" ones reads or writes real record content.
   if (req.method === "GET" && medicalGetRoutes[url.pathname]) {
+    if (!user && !url.pathname.endsWith("/status")) return send(res, 401, { error: "Sign in required" });
     const result = medicalGetRoutes[url.pathname]();
     if (result.body) return sendProviderResult(res, result);
     return send(res, 200, result);
@@ -45395,6 +45447,7 @@ async function api(req, res, url) {
   };
 
   if (req.method === "POST" && medicalPostRoutes[url.pathname]) {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const [providerKey, methodName, shouldPersist] = medicalPostRoutes[url.pathname];
     const result = await nexusRealProviders[providerKey][methodName](await readBody(req), db);
     if (shouldPersist && result.body?.status === "completed") await writeDb(db);
