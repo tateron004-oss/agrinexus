@@ -9901,7 +9901,7 @@ function money(value) {
 }
 
 function row(label, value) {
-  return `<div class="row"><span>${translateText(label)}</span><strong>${translateText(value)}</strong></div>`;
+  return `<div class="row"><span>${escapeHtml(translateText(label))}</span><strong>${escapeHtml(translateText(value))}</strong></div>`;
 }
 
 function learningText() {
@@ -12968,8 +12968,8 @@ function renderNotificationPanel() {
   const proactive = nexusProactiveAlerts();
   const combined = [...proactive, ...notices].slice(0, 8);
   target.innerHTML = combined.length
-    ? combined.map(item => `<div><strong>${translateText(item.module)} - ${translateText(item.status)}</strong><span>${translateText(item.channel)}: ${translateText(item.message)}</span></div>`).join("")
-    : `<div>${translateText("No notifications sent yet.")}</div>`;
+    ? combined.map(item => `<div><strong>${escapeHtml(translateText(item.module))} - ${escapeHtml(translateText(item.status))}</strong><span>${escapeHtml(translateText(item.channel))}: ${escapeHtml(translateText(item.message))}</span></div>`).join("")
+    : `<div>${escapeHtml(translateText("No notifications sent yet."))}</div>`;
 }
 
 function renderCommunicationPanel(selector, moduleName, emptyText) {
@@ -12980,9 +12980,9 @@ function renderCommunicationPanel(selector, moduleName, emptyText) {
     ? threads.slice(0, 4).map(thread => {
       const messages = (data.profile.communicationMessages || []).filter(message => message.threadId === thread.id);
       const latest = messages[0];
-      return `<div><strong>${translateText(thread.subject)} - ${translateText(thread.channel)}</strong><span>${translateText(thread.participantName)}: ${translateText(latest?.text || thread.lastMessage || "Thread open")}</span><small>${translateText(thread.status)} - ${translateText(thread.deliveryStatus || "local-thread")}</small></div>`;
+      return `<div><strong>${escapeHtml(translateText(thread.subject))} - ${escapeHtml(translateText(thread.channel))}</strong><span>${escapeHtml(translateText(thread.participantName))}: ${escapeHtml(translateText(latest?.text || thread.lastMessage || "Thread open"))}</span><small>${escapeHtml(translateText(thread.status))} - ${escapeHtml(translateText(thread.deliveryStatus || "local-thread"))}</small></div>`;
     }).join("")
-    : `<div>${translateText(emptyText)}</div>`;
+    : `<div>${escapeHtml(translateText(emptyText))}</div>`;
 }
 
 function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecution }) {
@@ -13219,8 +13219,8 @@ function renderAgentCenter() {
   if ($("#nexusBrainTimelinePanel")) {
     $("#nexusBrainTimelinePanel").innerHTML = brainOs.timeline.map(item => `
       <div>
-        <strong>${translateText(`${item.type}: ${item.title}`)}</strong>
-        <span>${translateText(item.detail || "Evidence recorded")}</span>
+        <strong>${escapeHtml(translateText(`${item.type}: ${item.title}`))}</strong>
+        <span>${escapeHtml(translateText(item.detail || "Evidence recorded"))}</span>
       </div>
     `).join("");
   }
@@ -13275,10 +13275,10 @@ function renderAgentCenter() {
   }
   if ($("#nexusIntelligenceBriefPanel")) {
     $("#nexusIntelligenceBriefPanel").innerHTML = [
-      `<div><strong>${translateText("Recommendation")}</strong><span>${translateText(intelligence.topPriority.title)} - ${translateText(intelligence.topPriority.reason)}</span></div>`,
-      `<div><strong>${translateText("Command")}</strong><span>${translateText(`Nexus, ${intelligence.topPriority.command}`)}</span></div>`,
-      `<div><strong>${translateText("Autonomy")}</strong><span>${translateText(intelligence.autonomyLevel)}</span></div>`,
-      `<div><strong>${translateText("Situational read")}</strong><span>${translateText(intelligence.summary)}</span></div>`
+      `<div><strong>${translateText("Recommendation")}</strong><span>${escapeHtml(translateText(intelligence.topPriority.title))} - ${escapeHtml(translateText(intelligence.topPriority.reason))}</span></div>`,
+      `<div><strong>${translateText("Command")}</strong><span>${escapeHtml(translateText(`Nexus, ${intelligence.topPriority.command}`))}</span></div>`,
+      `<div><strong>${translateText("Autonomy")}</strong><span>${escapeHtml(translateText(intelligence.autonomyLevel))}</span></div>`,
+      `<div><strong>${translateText("Situational read")}</strong><span>${escapeHtml(translateText(intelligence.summary))}</span></div>`
     ].join("");
   }
   renderJarvisProductionTen("jarvisProduction");
@@ -13375,7 +13375,7 @@ function renderAgentCenter() {
     ...executions.slice(0, 6).map(item => ({ title: `${item.status} - ${item.goal}`, detail: item.summary }))
   ];
   $("#agentLogPanel").innerHTML = agentLog.length
-    ? agentLog.slice(0, 8).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    ? agentLog.slice(0, 8).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
     : `<div>${translateText("No agent execution yet. Create a plan, review it, then execute.")}</div>`;
   $("#capabilityScore").textContent = `${capabilities.operational || 0}/${capabilities.total || 0}`;
   $("#capabilityMatrixPanel").innerHTML = (capabilities.items || []).map(item => taskItem(
@@ -14746,10 +14746,10 @@ function renderModeIntelligence(prefix, mode = experienceMode) {
   }
   if (briefPanel) {
     briefPanel.innerHTML = [
-      `<div><strong>${translateText("Mode")}</strong><span>${translateText(snapshot.mode)}</span></div>`,
-      `<div><strong>${translateText("Recommendation")}</strong><span>${translateText(snapshot.topPriority.title)} - ${translateText(snapshot.topPriority.reason)}</span></div>`,
-      `<div><strong>${translateText("Command")}</strong><span>${translateText(`Nexus, ${snapshot.topPriority.command}`)}</span></div>`,
-      `<div><strong>${translateText("Intelligence read")}</strong><span>${translateText(snapshot.summary)}</span></div>`
+      `<div><strong>${translateText("Mode")}</strong><span>${escapeHtml(translateText(snapshot.mode))}</span></div>`,
+      `<div><strong>${translateText("Recommendation")}</strong><span>${escapeHtml(translateText(snapshot.topPriority.title))} - ${escapeHtml(translateText(snapshot.topPriority.reason))}</span></div>`,
+      `<div><strong>${translateText("Command")}</strong><span>${escapeHtml(translateText(`Nexus, ${snapshot.topPriority.command}`))}</span></div>`,
+      `<div><strong>${translateText("Intelligence read")}</strong><span>${escapeHtml(translateText(snapshot.summary))}</span></div>`
     ].join("");
   }
 }
@@ -16060,7 +16060,7 @@ function nexusProactiveAlerts() {
   if ((readiness.readyCount || 0) < (readiness.total || 0)) alerts.push({ module: "Admin", status: "readiness-gap", channel: "assistant", message: `${readiness.readyCount || 0}/${readiness.total || 0} production checks ready.` });
   if ((automation.readyCount || 0) < (automation.total || 0)) alerts.push({ module: "Automation", status: "automation-gap", channel: "assistant", message: `${automation.readyCount || 0}/${automation.total || 5} automation unlocks ready.` });
   if (!memory.count) alerts.push({ module: "Memory", status: "teach-nexus", channel: "assistant", message: "Say remember, then tell Nexus a preference or mission." });
-  if ((data?.profile?.notifications || []).length) alerts.push({ module: "Notifications", status: "latest", channel: "assistant", message: (data.profile.notifications || [])[0].message });
+  if ((data?.profile?.notifications || []).length) alerts.push({ module: "Notifications", status: "latest", channel: "assistant", message: escapeHtml((data.profile.notifications || [])[0].message) });
   return alerts.slice(0, 5);
 }
 
@@ -17829,7 +17829,7 @@ function renderLaunchSupportPanels() {
   const supportTarget = $("#supportPanel");
   if (supportTarget) {
     supportTarget.innerHTML = tickets.length
-      ? tickets.slice(0, 4).map(ticket => `<div><strong>${ticket.ticketNumber} - ${ticket.subject}</strong><span>${ticket.status} - ${ticket.module} - ${ticket.priority}</span></div>`).join("")
+      ? tickets.slice(0, 4).map(ticket => `<div><strong>${escapeHtml(ticket.ticketNumber)} - ${escapeHtml(ticket.subject)}</strong><span>${escapeHtml(ticket.status)} - ${escapeHtml(ticket.module)} - ${escapeHtml(ticket.priority)}</span></div>`).join("")
       : "<div>No support tickets yet.</div>";
   }
 }
@@ -18118,11 +18118,11 @@ function taskActionAttrs(action = {}) {
 function taskItem(title, detail, status = "ready", label = "Ready", action = null) {
   const actionAttrs = taskActionAttrs(action);
   const statusControl = actionAttrs
-    ? `<button class="task-chip-action" type="button" ${actionAttrs}>${translateText(label)}</button>`
-    : `<small>${translateText(label)}</small>`;
+    ? `<button class="task-chip-action" type="button" ${actionAttrs}>${escapeHtml(translateText(label))}</button>`
+    : `<small>${escapeHtml(translateText(label))}</small>`;
   return `
     <div class="task-item ${status}">
-      <div><strong>${translateText(title)}</strong><span>${translateText(detail)}</span></div>
+      <div><strong>${escapeHtml(translateText(title))}</strong><span>${escapeHtml(translateText(detail))}</span></div>
       ${statusControl}
     </div>
   `;
@@ -40446,8 +40446,8 @@ function renderElevationPanels() {
   const timeline = data.missionTimeline || { items: [], stages: [] };
   if ($("#missionTimelineCount")) $("#missionTimelineCount").textContent = `${timeline.total || 0} events`;
   if ($("#missionTimelinePanel")) {
-    const stageHtml = (timeline.stages || []).map(stage => `<div><strong>${translateText(stage.title)}</strong><span>${translateText(stage.status)}</span></div>`).join("");
-    const itemHtml = (timeline.items || []).slice(0, 8).map(item => `<div><strong>${translateText(item.module)} - ${translateText(item.title)}</strong><span>${translateText(item.detail)}</span><small>${translateText(item.status)}${item.evidence ? ` - ${translateText(item.evidence)}` : ""}</small></div>`).join("");
+    const stageHtml = (timeline.stages || []).map(stage => `<div><strong>${escapeHtml(translateText(stage.title))}</strong><span>${escapeHtml(translateText(stage.status))}</span></div>`).join("");
+    const itemHtml = (timeline.items || []).slice(0, 8).map(item => `<div><strong>${escapeHtml(translateText(item.module))} - ${escapeHtml(translateText(item.title))}</strong><span>${escapeHtml(translateText(item.detail))}</span><small>${escapeHtml(translateText(item.status))}${item.evidence ? ` - ${escapeHtml(translateText(item.evidence))}` : ""}</small></div>`).join("");
     $("#missionTimelinePanel").innerHTML = itemHtml || stageHtml || `<div>${translateText("Run a workflow to create the first mission timeline event.")}</div>`;
   }
   if ($("#liveInvestorDemoPanel")) {
@@ -40591,7 +40591,7 @@ function render() {
     row("Queue", country.queue)
   ].join("");
 
-  $("#activityFeed").innerHTML = data.profile.activity.map(item => `<div>${translateText(item)}</div>`).join("");
+  $("#activityFeed").innerHTML = data.profile.activity.map(item => `<div>${escapeHtml(translateText(item))}</div>`).join("");
   const activeCourseForDashboard = activeCourse();
   const dashboardLatestOrder = data.profile.orders[data.profile.orders.length - 1];
   const dashboardCards = [
@@ -40952,7 +40952,7 @@ function render() {
     row("Cohorts", (data.profile.learningCohorts || []).length)
   ].join("");
   $("#learningAdvancedList").innerHTML = advancedLearningOps.length
-    ? advancedLearningOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    ? advancedLearningOps.slice(0, 12).map(item => `<div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></div>`).join("")
     : "<div>No advanced learning operations have been run yet.</div>";
 
   renderWorkspace("#learningWorkspace", [
@@ -41049,7 +41049,7 @@ function render() {
     row("Shift requests", (data.profile.shiftRequests || []).length)
   ].join("");
   $("#workforceAdvancedList").innerHTML = workforceOps.length
-    ? workforceOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    ? workforceOps.slice(0, 10).map(item => `<div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></div>`).join("")
     : "<div>No advanced workforce operations have been run yet.</div>";
 
   renderProviderEvidence("#workforceIntegrationPanel", "Workforce", "No workforce provider evidence yet. Build profile, schedule interview, assign mentor, start a shift, or test workforce engines.");
@@ -41153,7 +41153,7 @@ function render() {
   ].join("");
 
   $("#intakeList").innerHTML = intakes.length
-    ? intakes.map(item => `<div><strong>${item.patientRef} - ${item.patientName || "Patient"}</strong><span>${item.riskLevel} - ${item.queueStatus} - ${item.contactMethod || "contact pending"}</span></div>`).join("")
+    ? intakes.map(item => `<div><strong>${escapeHtml(item.patientRef)} - ${escapeHtml(item.patientName || "Patient")}</strong><span>${escapeHtml(item.riskLevel)} - ${escapeHtml(item.queueStatus)} - ${escapeHtml(item.contactMethod || "contact pending")}</span></div>`).join("")
     : "<div>No patient intakes yet.</div>";
 
   $("#intakeSimulationPanel").innerHTML = [
@@ -41198,10 +41198,10 @@ function render() {
     ...pharmacyRequests.map(item => ({ title: item.requestNumber, detail: `${item.patientName} - ${item.pharmacy?.name || "pharmacy"} - provider review required` }))
   ];
   $("#ruralHealthAccessList").innerHTML = ruralEvidence.length
-    ? ruralEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    ? ruralEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
     : "<div>No rural health access evidence yet. Use Speak symptoms, Closest clinic, Mobile clinic, Find pharmacy, or Build handoff.</div>";
   $("#ruralHealthHandoffPanel").innerHTML = latestHandoffPacket
-    ? `<div><strong>${translateText(latestHandoffPacket.packetNumber)}</strong><span>${translateText(latestHandoffPacket.plainLanguageSummary || "Handoff ready")}</span><small>${translateText((latestHandoffPacket.packetForPaperClinic || []).join(" | "))}</small></div>`
+    ? `<div><strong>${translateText(latestHandoffPacket.packetNumber)}</strong><span>${escapeHtml(translateText(latestHandoffPacket.plainLanguageSummary || "Handoff ready"))}</span><small>${escapeHtml(translateText((latestHandoffPacket.packetForPaperClinic || []).join(" | ")))}</small></div>`
     : "<div>No handoff packet yet. Build handoff creates a plain-language packet for a paper or non-digital clinic.</div>";
   $("#mobileClinicSupplyPanel").innerHTML = [
     row("Mobile clinic", latestSupplyDispatch?.destination || latestSupplyRequest?.mobileClinicName || latestMobileClinic?.mobileClinic?.name || "No supply request yet"),
@@ -41217,7 +41217,7 @@ function render() {
     ...mobileClinicSupplyDeliveries.map(item => ({ title: item.deliveryNumber, detail: `${item.receivedBy} - ${item.condition} - ${item.status}` }))
   ];
   $("#mobileClinicSupplyList").innerHTML = supplyEvidence.length
-    ? supplyEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    ? supplyEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
     : "<div>No mobile clinic supply evidence yet. Request supplies, find a source, track delivery, or confirm delivery.</div>";
   const revenueEvidence = mobileClinicRevenueRecords.map(item => ({
     id: item.id,
@@ -41226,7 +41226,7 @@ function render() {
   }));
   if ($("#mobileClinicRevenueList")) {
     $("#mobileClinicRevenueList").innerHTML = revenueEvidence.length
-      ? revenueEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span>${receiptButton("mobile-clinic", item.id)}</div>`).join("")
+      ? revenueEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span>${receiptButton("mobile-clinic", item.id)}</div>`).join("")
       : "<div>No mobile clinic revenue evidence yet. Publish services, request payment, issue a receipt, or prepare payout.</div>";
   }
 
@@ -41265,7 +41265,7 @@ function render() {
     row("Outcome reviews", (data.profile.telehealthOutcomeReviews || []).length)
   ].join("");
   $("#healthAdvancedList").innerHTML = advancedHealthOps.length
-    ? advancedHealthOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    ? advancedHealthOps.slice(0, 12).map(item => `<div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></div>`).join("")
     : "<div>No advanced telehealth operations have been run yet.</div>";
 
   const encounterCounts = telehealthEncounters.reduce((summary, encounter) => {
@@ -41397,7 +41397,7 @@ function render() {
   if ($("#platformFeeLedger")) {
     const fees = data.profile.platformTransactionFees || [];
     $("#platformFeeLedger").innerHTML = fees.length
-      ? fees.slice(0, 12).map(fee => `<div><strong>${translateText(fee.feeNumber)}</strong><span>${translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`)}</span><small>${translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`)}</small>${receiptButton("platform-fee", fee.id)}</div>`).join("")
+      ? fees.slice(0, 12).map(fee => `<div><strong>${escapeHtml(translateText(fee.feeNumber))}</strong><span>${escapeHtml(translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`))}</span><small>${escapeHtml(translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`))}</small>${receiptButton("platform-fee", fee.id)}</div>`).join("")
       : "<div>No platform transaction fees yet. Prepare settlement after delivery to capture AgriNexus revenue.</div>";
   }
   if ($("#paymentCheckoutPanel")) {
@@ -41452,11 +41452,11 @@ function render() {
   });
 
   $("#orderTimeline").innerHTML = latestOrder?.timeline?.length
-    ? latestOrder.timeline.map(item => `<div><strong>${item.label}</strong><span>${item.checkpoint}</span></div>`).join("")
+    ? latestOrder.timeline.map(item => `<div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.checkpoint)}</span></div>`).join("")
     : "<div>Create an order to start the logistics timeline.</div>";
 
   $("#orderBook").innerHTML = data.profile.orders.length
-    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${order.orderNumber || order.id}</strong><span>${order.product} - ${order.stage} - ${money(order.total || 0)}</span></div>`).join("")
+    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${escapeHtml(order.orderNumber || order.id)}</strong><span>${escapeHtml(order.product)} - ${escapeHtml(order.stage)} - ${money(order.total || 0)}</span></div>`).join("")
     : "<div>No trade orders yet.</div>";
   const latestThread = (data.profile.tradeMessageThreads || [])[0];
   $("#buyerSellerPanel").innerHTML = [
@@ -41472,12 +41472,12 @@ function render() {
       .filter(message => message.threadId === latestThread.id)
       .slice()
       .reverse()
-      .map(message => `<div><strong>${translateText(message.senderName)} - ${translateText(message.channel)}</strong><span>${translateText(message.text)}</span><small>${translateText(message.status)} - ${translateText(message.providerStatus)}</small></div>`)
+      .map(message => `<div><strong>${escapeHtml(translateText(message.senderName))} - ${escapeHtml(translateText(message.channel))}</strong><span>${escapeHtml(translateText(message.text))}</span><small>${translateText(message.status)} - ${translateText(message.providerStatus)}</small></div>`)
       .join("")
     : `<div>${translateText("No buyer-seller thread yet. Message the buyer to create local communication evidence.")}</div>`;
 
   $("#tradeEvents").innerHTML = (data.profile.tradeEvents || []).length
-    ? data.profile.tradeEvents.map(event => `<div><strong>${event.type}</strong><span>${event.label}</span></div>`).join("")
+    ? data.profile.tradeEvents.map(event => `<div><strong>${escapeHtml(event.type)}</strong><span>${escapeHtml(event.label)}</span></div>`).join("")
     : "<div>No trade events yet.</div>";
   const tradeLogisticsRecords = data.profile.tradeLogisticsRecords || [];
   const latestShipping = tradeLogisticsRecords[0];
@@ -41494,7 +41494,7 @@ function render() {
   }
   if ($("#tradeLogisticsList")) {
     $("#tradeLogisticsList").innerHTML = tradeLogisticsRecords.length
-      ? tradeLogisticsRecords.slice(0, 12).map(item => `<div><strong>${translateText(item.logisticsNumber)}</strong><span>${translateText(`${item.productName} - ${item.status} - ${item.direction} - ${item.pickupLocation} to ${item.deliveryLocation}`)}</span><small>${translateText(`${item.currency} ${item.amount} - ${item.trackingNumber}${item.platformFee ? ` - fee ${item.currency} ${item.platformFee.feeAmount} - seller net ${item.currency} ${item.sellerNetAmount}` : ""}`)}</small></div>`).join("")
+      ? tradeLogisticsRecords.slice(0, 12).map(item => `<div><strong>${translateText(item.logisticsNumber)}</strong><span>${escapeHtml(translateText(`${item.productName} - ${item.status} - ${item.direction} - ${item.pickupLocation} to ${item.deliveryLocation}`))}</span><small>${escapeHtml(translateText(`${item.currency} ${item.amount} - ${item.trackingNumber}${item.platformFee ? ` - fee ${item.currency} ${item.platformFee.feeAmount} - seller net ${item.currency} ${item.sellerNetAmount}` : ""}`))}</small></div>`).join("")
       : "<div>No shipping evidence yet. Quote shipment, book shipment, schedule pickup, confirm delivery, or prepare settlement.</div>";
   }
   const tradeOps = [
@@ -41514,7 +41514,7 @@ function render() {
     row("Payment releases", (data.profile.paymentReleases || []).length)
   ].join("");
   $("#tradeAdvancedList").innerHTML = tradeOps.length
-    ? tradeOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span>${item.receiptType ? receiptButton(item.receiptType, item.receiptId) : ""}</div>`).join("")
+    ? tradeOps.slice(0, 10).map(item => `<div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span>${item.receiptType ? receiptButton(item.receiptType, item.receiptId) : ""}</div>`).join("")
     : "<div>No advanced trade operations have been run yet.</div>";
   const droneMissions = data.profile.droneMissions || [];
   const droneScans = data.profile.droneScans || [];
@@ -41547,7 +41547,7 @@ function render() {
     row("Provider", data.providers.find(item => item.id === "field-drones")?.status || "sandbox")
   ].join("");
   $("#droneMissionList").innerHTML = droneMissions.length
-    ? droneMissions.map(mission => `<div><strong>${mission.missionRef} - ${mission.productName}</strong><span>${mission.status} - ${mission.flightWindow} - ${mission.objective}</span></div>`).join("")
+    ? droneMissions.map(mission => `<div><strong>${escapeHtml(mission.missionRef)} - ${escapeHtml(mission.productName)}</strong><span>${escapeHtml(mission.status)} - ${escapeHtml(mission.flightWindow)} - ${escapeHtml(mission.objective)}</span></div>`).join("")
     : "<div>No drone missions planned yet.</div>";
   $("#droneScanList").innerHTML = droneScans.length
     ? droneScans.map(scan => {
@@ -41632,8 +41632,8 @@ function render() {
     row("AI provider", openAiProvider.mode || data.profile.aiProvider || "fallback")
   ].join("");
   $("#routeIntel").innerHTML = (data.profile.mapInsights || []).length
-    ? data.profile.mapInsights.map(item => `<div><strong>${item.label}</strong><span>${item.checkpoint} - ${item.detail}</span></div>`).join("")
-    : `<div><strong>${route.name}</strong><span>${route.checkpoints.length} checkpoints ready for AI inspection.</span></div>`;
+    ? data.profile.mapInsights.map(item => `<div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(`${item.checkpoint} - ${item.detail}`)}</span></div>`).join("")
+    : `<div><strong>${escapeHtml(route.name)}</strong><span>${route.checkpoints.length} checkpoints ready for AI inspection.</span></div>`;
   $("#aiRunHistory").innerHTML = (data.profile.aiRuns || []).length
     ? data.profile.aiRuns.map(run => `<div><strong>${run.type} - ${run.countryName}</strong><span>${run.provider}${run.model ? ` (${run.model})` : ""} - ${run.checkpoint}</span></div>`).join("")
     : "<div>No AI runs yet. Use the command center or route tools to generate one.</div>";
@@ -41654,7 +41654,7 @@ function render() {
     row("Evidence packets", (data.profile.mapEvidencePackets || []).length)
   ].join("");
   $("#mapAdvancedList").innerHTML = advancedMapOps.length
-    ? advancedMapOps.slice(0, 10).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    ? advancedMapOps.slice(0, 10).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
     : `<div>${translateText("No advanced map operations have been run yet.")}</div>`;
 
   $("#mapQuickActions").innerHTML = [
@@ -42062,7 +42062,7 @@ function render() {
     : "<div>No pilot subscribers invited yet.</div>";
   $("#adminModules").innerHTML = (data.admin?.modules || []).map(module => `<div><strong>${module.name}</strong><span>${module.status} - ${module.records} record(s)</span></div>`).join("");
   $("#adminAudit").innerHTML = (data.admin?.audit || []).length
-    ? data.admin.audit.map(event => `<div><strong>${event.type}</strong><span>${event.detail}</span></div>`).join("")
+    ? data.admin.audit.map(event => `<div><strong>${escapeHtml(event.type)}</strong><span>${escapeHtml(event.detail)}</span></div>`).join("")
     : "<div>No audit events yet.</div>";
   const adminAiProvider = data.providers.find(item => item.id === "openai") || {};
   const adminLatestAiRun = (data.profile.aiRuns || [])[0];
