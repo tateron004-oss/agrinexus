@@ -2389,7 +2389,18 @@ function currentUser(req, db) {
   const userId = sessionEntry && !sessionExpired ? sessionEntry.userId : null;
   const durableSession = userId ? null : verifyDurableAuthToken(cookies.agrinexus_auth);
   const resolvedUserId = userId || durableSession?.userId;
-  return db.users.find(user => user.id === resolvedUserId) || null;
+  const resolvedUser = db.users.find(user => user.id === resolvedUserId) || null;
+  // A durable "remember me" token is a bare signed claim with nothing server-side
+  // to delete on logout, so a captured token would otherwise keep authenticating
+  // for its full TTL even after the owner explicitly logs out. Honor a per-user
+  // revocation cutoff set by /api/logout: any durable token issued before that
+  // cutoff is rejected. A live sid session is unaffected -- it was already
+  // removed from `sessions` by the same logout call.
+  if (durableSession && resolvedUser?.authTokensRevokedAt
+    && Number(durableSession.issuedAt || 0) <= resolvedUser.authTokensRevokedAt) {
+    return null;
+  }
+  return resolvedUser;
 }
 
 function secureCookieAttribute(req) {
@@ -45922,6 +45933,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/logout" && req.method === "POST") {
     const sid = parseCookies(req).agrinexus_sid;
     if (sid) sessions.delete(sid);
+    if (user) {
+      user.authTokensRevokedAt = Date.now();
+      await writeDb(db);
+    }
     return send(res, 200, { ok: true }, {
       "set-cookie": [
         `agrinexus_sid=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`,
