@@ -4488,7 +4488,14 @@ function projectActivityForUser(activity, user) {
 }
 
 function profileForUser(profile, user) {
-  if (!profile || !isInvestorUser(user)) return profile;
+  // The existing health-record projection below was written for the
+  // Investor role, but db.profile is one shared, non-per-user blob -- a
+  // self-service guest session (/api/auth/guest-session, zero
+  // verification beyond a free-text display name) is otherwise treated as
+  // a full Standard User and would see every real chronic-care/telehealth
+  // record ever created in this workspace, unredacted. Route guests
+  // through the same projection as investors rather than skipping it.
+  if (!profile || !(isInvestorUser(user) || user?.guest === true)) return profile;
   const projected = { ...profile };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
@@ -43893,6 +43900,16 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, profile, audit: db.nexusPilotAuditEvents[0] });
   }
 
+  // db.nexusPilotRecords is a single shared, non-per-user collection that can
+  // hold real chronic-care/telehealth intake content (patient name,
+  // diagnosis, medication, etc. -- see NEXUS_PILOT_SENSITIVE_TYPES). None of
+  // the five /api/nexus/records* routes below had any auth check at all,
+  // letting an unauthenticated caller read every record ever created here
+  // and create/update arbitrary records by id.
+  if (!user && url.pathname.startsWith("/api/nexus/records")) {
+    return send(res, 401, { error: "Sign in required" });
+  }
+
   if (url.pathname === "/api/nexus/records" && req.method === "GET") {
     ensureNexusPilotState(db);
     return send(res, 200, { ok: true, records: db.nexusPilotRecords, recordTypes: NEXUS_PILOT_RECORD_TYPES, statuses: NEXUS_PILOT_RECORD_STATUSES });
@@ -44515,6 +44532,13 @@ async function api(req, res, url) {
         noSecretsExposed: true
       });
     }
+    // db.profile.nexusPersistentMemory is a single shared, non-per-user store
+    // whose records accept an arbitrary free-form `payload` (createRecord,
+    // public/nexus-persistent-memory.js) -- none of the routes below had any
+    // auth check, letting an unauthenticated caller read and write real
+    // record content (patient name/diagnosis/etc. if a caller chose to store
+    // it there) belonging to every session that has ever used this feature.
+    if (!user) return send(res, 401, { error: "Sign in required" });
     if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "GET") {
       return send(res, 200, {
         ok: true,

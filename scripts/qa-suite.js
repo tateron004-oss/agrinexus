@@ -73,7 +73,8 @@ const suites = {
     "scripts/collaboration-runtime-confirmation-coercion-smoke.js",
     "scripts/nexus-tools-communications-auth-smoke.js",
     "scripts/admin-snapshot-disclosure-smoke.js",
-    "scripts/operations-phi-and-credential-disclosure-smoke.js"
+    "scripts/operations-phi-and-credential-disclosure-smoke.js",
+    "scripts/nexus-records-and-persistent-memory-auth-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
