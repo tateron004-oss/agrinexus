@@ -78,7 +78,8 @@ const suites = {
     "scripts/nexus-second-preauth-wave-smoke.js",
     "scripts/openai-native-tool-auth-and-health-source-ssrf-smoke.js",
     "scripts/logout-durable-token-revocation-smoke.js",
-    "scripts/guest-session-cleanup-smoke.js"
+    "scripts/guest-session-cleanup-smoke.js",
+    "scripts/guest-restrictions-enforcement-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
