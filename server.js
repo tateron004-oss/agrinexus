@@ -2235,10 +2235,15 @@ function send(res, status, body, headers = {}) {
 }
 
 async function verifyNexusHealthSourceLive(sourceIdOrUrl = "") {
-  const sourceRecord = nexusEnterpriseHealthEvidenceTrust.RECOGNIZED_SOURCE_RECORDS.find(item => item.sourceId === sourceIdOrUrl) || null;
-  const targetUrl = sourceRecord?.canonicalUrl || String(sourceIdOrUrl || "");
+  // Only ever fetch a fixed, developer-curated canonicalUrl for a recognized
+  // source -- never a caller-supplied URL. sourceIdOrUrl reaches here straight
+  // from an unauthenticated request body, so falling back to it as the fetch
+  // target would let any caller force this server to make outbound HTTPS
+  // requests to an arbitrary attacker-chosen host (SSRF).
+  const sourceRecord = nexusEnterpriseHealthEvidenceTrust.RECOGNIZED_SOURCE_RECORDS.find(item => item.sourceId === sourceIdOrUrl || item.canonicalUrl === sourceIdOrUrl) || null;
+  const targetUrl = sourceRecord?.canonicalUrl || "";
   if (!/^https:\/\//i.test(targetUrl)) {
-    return { liveChecked: true, providerError: "canonical_https_url_required", httpStatus: 0 };
+    return { liveChecked: true, providerError: "unrecognized_source_or_canonical_https_url_required", httpStatus: 0 };
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Number(process.env.NEXUS_HEALTH_SOURCE_VERIFY_TIMEOUT_MS || 5000));
@@ -18770,12 +18775,6 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   };
 }
 
-// realUserEmail defaults to user's own email for every normal caller. The
-// one route that resolves an anonymous caller to a real Standard User
-// account as a local-tool-console fallback (POST /api/nexus/openai-native/tool)
-// explicitly overrides this with the ORIGINAL, possibly-null, pre-fallback
-// user's email instead, so a real Postgres shadow-write (course progress)
-// can never be attributed to a real account nobody actually authenticated as.
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
   const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
   const language = args.language || context.language || user?.language || "en";
@@ -43535,13 +43534,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/openai-native/tool" && req.method === "POST") {
-    const toolUser = user || (db.users || []).find(item => item.role === "Standard User") || (db.users || [])[0] || {
-      id: "openai-native-local-tool-user",
-      name: "Nexus local tool user",
-      role: "Standard User",
-      language: "en"
-    };
-    if (!canUse(toolUser, "ai")) return send(res, 403, { error: "Role does not allow OpenAI-native tools" });
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow OpenAI-native tools" });
     const body = await readBody(req);
     const toolName = String(body.name || body.toolName || "nexus_general_conversation").trim();
     if (!nexusOpenAiNativeToolSchemas().some(tool => tool.name === toolName)) {
@@ -43552,12 +43546,12 @@ async function api(req, res, url) {
         noSecretValuesReturned: true
       });
     }
-    const result = await executeNexusOpenAiNativeTool(db, toolUser, toolName, body.arguments || body, {
+    const result = await executeNexusOpenAiNativeTool(db, user, toolName, body.arguments || body, {
       correlationId: body.correlationId,
       command: body.command || body.arguments?.command || "",
-      language: body.language || body.arguments?.language || toolUser.language || "en",
+      language: body.language || body.arguments?.language || user.language || "en",
       outputMode: body.outputMode || ""
-    }, user?.email || null);
+    }, user.email || null);
     await writeDb(db);
     return send(res, 200, result, {
       "cache-control": "no-store, no-cache, must-revalidate, private"

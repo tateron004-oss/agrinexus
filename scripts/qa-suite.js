@@ -75,7 +75,8 @@ const suites = {
     "scripts/admin-snapshot-disclosure-smoke.js",
     "scripts/operations-phi-and-credential-disclosure-smoke.js",
     "scripts/nexus-records-and-persistent-memory-auth-smoke.js",
-    "scripts/nexus-second-preauth-wave-smoke.js"
+    "scripts/nexus-second-preauth-wave-smoke.js",
+    "scripts/openai-native-tool-auth-and-health-source-ssrf-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
