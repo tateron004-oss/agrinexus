@@ -17785,9 +17785,9 @@ function renderLaunchSupportPanels() {
     const latest = support.latest;
     const latestHtml = latest ? `
       <div>
-        <strong>${translateText(`${latest.runNumber} - ${latest.status}`)}</strong>
-        <span>${translateText(`${latest.beneficiaryGroup}: ${latest.primaryNeed}`)}</span>
-        <small>${translateText(`${latest.cooperativeName} | ${latest.country} | ${latest.childProtection}`)}</small>
+        <strong>${escapeHtml(translateText(`${latest.runNumber} - ${latest.status}`))}</strong>
+        <span>${escapeHtml(translateText(`${latest.beneficiaryGroup}: ${latest.primaryNeed}`))}</span>
+        <small>${escapeHtml(translateText(`${latest.cooperativeName} | ${latest.country} | ${latest.childProtection}`))}</small>
       </div>
     ` : `
       <div>
