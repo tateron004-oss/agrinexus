@@ -36,7 +36,7 @@ test("countAutonomousCreatedSince counts only autonomous tasks via the real crea
   assert.deepEqual(db.calls[0].params, ["t1", since]);
 });
 
-function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {} } = {}) {
+function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
   const created = { tasks: [], nudgeRecords: [] };
   const runtime = {
     records: {
@@ -48,9 +48,10 @@ function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomo
       countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0
     },
     engine: {
-      create: async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; }
+      create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; })
     }
   };
+  if (pausedTenants) runtime.autonomyControl = { isPaused: async ({ tenantId }) => Boolean(pausedTenants[tenantId]) };
   return { runtime, created };
 }
 
@@ -144,4 +145,63 @@ test("situational-awareness.sweep tracks cap and cooldown independently per tena
   const result = await handlers["situational-awareness.sweep"]({ job: { payload: { dailyAutonomousTaskCapPerTenant: 10 } } });
   assert.equal(result.created, 1);
   assert.equal(created.tasks[0].command.tenantId, "t2");
+});
+
+test("situational-awareness.sweep skips a paused tenant entirely, without even checking cooldown or the cap", async () => {
+  const listCalls = [];
+  const { runtime, created } = sweepFixture({
+    staleSubjects: [{ tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" }],
+    pausedTenants: { t1: true }
+  });
+  runtime.records.list = async input => { listCalls.push(input); return []; };
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 0);
+  assert.equal(result.skippedPaused, 1);
+  assert.equal(created.tasks.length, 0);
+  assert.equal(listCalls.length, 0);
+});
+
+test("situational-awareness.sweep still creates for an unpaused tenant while another tenant stays paused", async () => {
+  const { runtime, created } = sweepFixture({
+    staleSubjects: [
+      { tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" },
+      { tenant_id: "t2", subject_id: "sub2", last_health_record_at: "2026-08-01T00:00:00.000Z" }
+    ],
+    pausedTenants: { t1: true, t2: false }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 1);
+  assert.equal(result.skippedPaused, 1);
+  assert.equal(created.tasks[0].command.tenantId, "t2");
+});
+
+test("situational-awareness.sweep defers to the engine's own guard when a pause races the cached check", async () => {
+  const { runtime, created } = sweepFixture({
+    staleSubjects: [
+      { tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" },
+      { tenant_id: "t1", subject_id: "sub2", last_health_record_at: "2026-08-01T00:00:00.000Z" }
+    ],
+    pausedTenants: { t1: false },
+    engineCreate: async input => {
+      const error = new Error("Autonomous task creation is paused for this tenant.");
+      error.code = "autonomy_paused";
+      throw error;
+    }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 0);
+  assert.equal(result.skippedPaused, 2);
+  assert.equal(created.tasks.length, 0);
+});
+
+test("situational-awareness.sweep re-throws an unrelated engine.create failure instead of swallowing it as a pause", async () => {
+  const { runtime } = sweepFixture({
+    staleSubjects: [{ tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" }],
+    engineCreate: async () => { throw new Error("database unavailable"); }
+  });
+  const handlers = createHandlers({ runtime });
+  await assert.rejects(() => handlers["situational-awareness.sweep"]({ job: { payload: {} } }), /database unavailable/);
 });

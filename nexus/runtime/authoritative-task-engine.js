@@ -8,13 +8,20 @@ class NexusRuntimeError extends Error {
 }
 
 class AuthoritativeTaskEngine {
-  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null, observability = null, jobs = null }) {
-    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority, observability, jobs });
+  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null, observability = null, jobs = null, autonomyControl = null }) {
+    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority, observability, jobs, autonomyControl });
     this.verifier = verifier || (async ({ result }) => ({ verified: result !== undefined, method: "result_present" }));
   }
 
   async create({ command, goal, application = "general", riskTier = "low", priority = 3, dueAt = null, steps, autonomous = false }) {
     if (!Array.isArray(steps) || !steps.length) throw new NexusRuntimeError("steps_required", "At least one task step is required.");
+    // The global kill switch only ever gates new autonomous task creation --
+    // it never touches a live-conversation task the user asked for directly
+    // (autonomous is always false there), and it never touches advancing a
+    // task that already exists (agent.advance-task, acknowledgement, sweeps).
+    if (autonomous && this.autonomyControl && await this.autonomyControl.isPaused({ tenantId: command.tenantId })) {
+      throw new NexusRuntimeError("autonomy_paused", "Autonomous task creation is paused for this tenant.", 409);
+    }
     await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
     const normalized = [];
     const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));

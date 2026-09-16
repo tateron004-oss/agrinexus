@@ -128,9 +128,14 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
       const limit = Number(job.payload?.limit || 50);
       const candidates = await runtime.records.listStaleHealthSubjects({ staleBefore: new Date(Date.now() - staleMs), limit });
       const tenantCounts = new Map();
-      let created = 0;
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const subjectId = candidate.subject_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
         const recentNudges = await runtime.records.list({ tenantId, subjectId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, limit: 1 });
         const lastNudge = recentNudges[0];
@@ -141,9 +146,17 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro noticed no recent health check-in and scheduled a reminder." });
-        const task = await runtime.engine.create({ command, goal: "Nudge a health check-in after a quiet period",
-          application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a health check-in reminder",
-            toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick health check-in with Kyro." } }] });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: "Nudge a health check-in after a quiet period",
+            application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a health check-in reminder",
+              toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick health check-in with Kyro." } }] });
+        } catch (error) {
+          // A toggle can race the cached check above; the engine's own guard
+          // is the authoritative one and always wins.
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
         await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, classification: "standard",
           data: { reason: "health_checkin_stale", lastHealthRecordAt: candidate.last_health_record_at },
@@ -151,7 +164,7 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
-      return { scanned: candidates.length, created };
+      return { scanned: candidates.length, created, skippedPaused };
     }
   });
 }
