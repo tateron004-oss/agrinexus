@@ -42,6 +42,11 @@ async function main() {
   // is a global scan across tenants, not a per-tenant durable job.
   const agentSweepIntervalMs = Number(process.env.NEXUS_AGENT_SWEEP_POLL_MS || 120000);
   let lastAgentSweepAt = 0;
+  // Situational awareness looks for day-scale staleness (no health check-in
+  // in ~2 weeks), so it runs far less often than the other two sweeps --
+  // there's nothing to gain from checking every couple of minutes.
+  const situationalAwarenessIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessSweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
@@ -54,6 +59,11 @@ async function main() {
       lastAgentSweepAt = Date.now();
       try { await handlers["agent.sweep-advanceable-tasks"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.agent_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessSweepAt >= situationalAwarenessIntervalMs) {
+      lastSituationalAwarenessSweepAt = Date.now();
+      try { await handlers["situational-awareness.sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }

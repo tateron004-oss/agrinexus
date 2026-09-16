@@ -50,6 +50,16 @@ class TaskRepository {
     return (result.rows || result).map(row => row.task_document);
   }
 
+  // The cost-runaway guard a proactive trigger needs before it creates
+  // another autonomous task: how many has this tenant already gotten today.
+  // created_at is a real column (not inside task_document), so this is a
+  // cheap indexed-range count, not a JSONB scan.
+  async countAutonomousCreatedSince({ tenantId, since }) {
+    const result = await this.db.query(`select count(*)::int as count from nexus_tasks
+      where tenant_id=$1 and created_at>=$2 and (task_document->>'autonomous')='true'`, [tenantId, since]);
+    return Number((result.rows || result)[0]?.count || 0);
+  }
+
   // Deliberately not tenant-scoped, like NotificationRepository.claim() --
   // this backs a single global self-healing sweep (a crashed/missed worker
   // job shouldn't strand a task forever), not a per-tenant listing.
