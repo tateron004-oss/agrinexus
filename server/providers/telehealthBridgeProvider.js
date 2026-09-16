@@ -19,6 +19,7 @@ const {
 } = require("./medicalBridgeUtils");
 
 const zoomProvider = require("./zoomProvider");
+const dailyProvider = require("../telehealth/providers/daily");
 
 const PROVIDER = "nexus-telehealth-provider-bridge";
 const FLAG = "NEXUS_TELEHEALTH_BRIDGE_ENABLED";
@@ -123,7 +124,21 @@ async function createSession(body = {}, db, env = process.env) {
     const statusInfo = videoStatuses(env).daily;
     if (!statusInfo.enabled) return disabledResponse(PROVIDER, action, "NEXUS_DAILY_VIDEO_ENABLED");
     if (statusInfo.missingConfig.length) return missingConfigResponse(PROVIDER, action, statusInfo.missingConfig);
-    return providerResponse({ provider: PROVIDER, action, status: "prepared", message: "Daily room creation contract is configured and confirmation-gated; this phase returns safe room-prep metadata.", data: { session: { ...record, videoProvider: "daily" } } });
+    // Previously returned a "prepared" stub unconditionally, without ever
+    // calling the real, already-working Daily.co integration
+    // (server/telehealth/providers/daily.js, used correctly by
+    // server/telehealth/provider.js's own video-room flow) -- confirmed
+    // decorative by the production capability audit. Now genuinely creates
+    // a room, or genuinely reports why it couldn't.
+    const roomResult = await dailyProvider.createRoom({ id: record.id }, env);
+    if (roomResult.status === "missing_config") return missingConfigResponse(PROVIDER, action, roomResult.missingEnv);
+    if (!roomResult.ok || !roomResult.roomCreated) {
+      return providerResponse({ provider: PROVIDER, action, ok: false, status: "provider_error",
+        message: `Daily.co room creation failed: ${roomResult.providerError || roomResult.status || "unknown error"}.`,
+        data: { session: { ...record, videoProvider: "daily" }, daily: roomResult } });
+    }
+    return providerResponse({ provider: PROVIDER, action, status: "completed", message: "A real Daily.co video room was created.",
+      data: { session: { ...record, videoProvider: "daily", roomUrl: roomResult.roomUrl, roomName: roomResult.roomName, expiresAt: roomResult.expiresAt, liveRoomCreated: true } } });
   }
   if (provider === "doxy") {
     const statusInfo = videoStatuses(env).doxy;
