@@ -9,16 +9,24 @@ const provider = require(path.join(root, "server/providers/mobileClinicBridgePro
 ["Mobile Clinic Bridge", "hypertension screening", "diabetes screening", "agriculture worker health"].forEach(text => assert((read("public/app.js") + read("server/providers/mobileClinicBridgeProvider.js")).includes(text), `source must include ${text}`));
 
 const db = { profile: {} };
-assert(provider.search({ query: "primary care" }).body.data.cards.length >= 1);
-assert(provider.search({ query: "vaccination" }).body.data.cards.length >= 1);
-assert(provider.search({ query: "rural health" }).body.data.cards.length >= 1);
-assert(provider.search({ query: "agriculture worker health" }).body.data.cards.length >= 1);
-assert(provider.search({ query: "hypertension screening" }).body.data.cards.length >= 1);
-assert(provider.search({ query: "diabetes screening" }).body.data.cards.length >= 1);
-assert.equal(provider.intake({ confirmed: true, serviceType: "rural health outreach" }, db).body.status, "completed");
-assert.equal(provider.save({ confirmed: true, name: "Rural clinic" }, db).body.status, "completed");
-assert.equal(provider.visitPlan({ origin: "Nakuru", clinicLocation: "Community site" }).body.status, "prepared");
-assert.equal(provider.reminder({ confirmed: true, title: "clinic review" }, db).body.status, "completed");
-assert.equal(provider.offline({ confirmed: true, title: "clinic option" }, db).body.status, "completed");
+// search() became async when real OpenStreetMap lookup was added -- force
+// the local catalog path (no location given) so this stays a deterministic,
+// offline-safe QA check rather than depending on live network state.
+(async () => {
+  assert((await provider.search({ query: "primary care" })).body.data.cards.length >= 1);
+  assert((await provider.search({ query: "vaccination" })).body.data.cards.length >= 1);
+  assert((await provider.search({ query: "rural health" })).body.data.cards.length >= 1);
+  assert((await provider.search({ query: "agriculture worker health" })).body.data.cards.length >= 1);
+  assert((await provider.search({ query: "hypertension screening" })).body.data.cards.length >= 1);
+  assert((await provider.search({ query: "diabetes screening" })).body.data.cards.length >= 1);
+  assert.equal(provider.intake({ confirmed: true, serviceType: "rural health outreach" }, db).body.status, "completed");
+  assert.equal(provider.save({ confirmed: true, name: "Rural clinic" }, db).body.status, "completed");
+  assert.equal(provider.visitPlan({ origin: "Nakuru", clinicLocation: "Community site" }).body.status, "prepared");
+  assert.equal(provider.reminder({ confirmed: true, title: "clinic review" }, db).body.status, "completed");
+  assert.equal(provider.offline({ confirmed: true, title: "clinic option" }, db).body.status, "completed");
 
-console.log("Nexus mobile clinic bridge QA passed.");
+  console.log("Nexus mobile clinic bridge QA passed.");
+})().catch(error => {
+  console.error(error);
+  process.exit(1);
+});
