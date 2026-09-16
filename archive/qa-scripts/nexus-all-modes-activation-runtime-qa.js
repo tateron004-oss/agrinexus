@@ -131,24 +131,26 @@ includes(qaSuite, "archive/qa-scripts/nexus-all-modes-activation-runtime-qa.js",
 const tmpDb = path.join(root, `tmp-all-modes-activation-${Date.now()}.json`);
 const port = 4500 + Math.floor(Math.random() * 500);
 
-function request(method, route, body) {
+function request(method, route, body, cookie) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : "";
+    const headers = {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload)
+    };
+    if (cookie) headers.cookie = cookie;
     const req = http.request({
       hostname: "127.0.0.1",
       port,
       path: route,
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
-      }
+      headers
     }, res => {
       let data = "";
       res.on("data", chunk => { data += chunk; });
       res.on("end", () => {
         try {
-          resolve({ status: res.statusCode, body: JSON.parse(data || "{}") });
+          resolve({ status: res.statusCode, body: JSON.parse(data || "{}"), headers: res.headers });
         } catch (error) {
           reject(new Error(`Invalid JSON from ${route}: ${data}`));
         }
@@ -246,12 +248,17 @@ function waitForServer(child) {
     assert.strictEqual(providerTest.body.status, "provider_test_failed", "missing LMS credentials should fail safely");
     assert(providerTest.body.missingEnv.includes("MOODLE_TOKEN"), "provider test should show missing env name");
 
+    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+    assert.strictEqual(login.status, 200, "admin login should succeed");
+    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
+    assert(cookie, "admin login should set a session cookie");
+
     const lifecycle = await request("POST", "/api/nexus/records/lifecycle", {
       entityType: "patient",
       entityId: "test-patient",
       status: "deceased",
       reason: "QA lifecycle safety check"
-    });
+    }, cookie);
     assert.strictEqual(lifecycle.status, 200, "lifecycle route should respond");
     assert.strictEqual(lifecycle.body.record.lifecycleStatus, "deceased", "lifecycle should store deceased state");
     assert(lifecycle.body.receipt.didNot.some(item => /provider sync/i.test(item)), "lifecycle receipt should avoid live sync claim");
@@ -260,8 +267,8 @@ function waitForServer(child) {
     assert.strictEqual(cancel.status, 200, "cancel should respond");
     assert.strictEqual(cancel.body.gateStatus, "cancelled", "cancel should return cancelled");
 
-    const receipts = await request("GET", "/api/nexus/operation-receipts");
-    const audit = await request("GET", "/api/nexus/audit-log");
+    const receipts = await request("GET", "/api/nexus/operation-receipts", null, cookie);
+    const audit = await request("GET", "/api/nexus/audit-log", null, cookie);
     assert(receipts.body.receipts.length >= 4, "receipts should be visible");
     assert(audit.body.audit.length >= 4, "audit entries should be visible");
     assert(!/secret-value|auth token value|password value|sk_live_|SG\.[A-Za-z0-9_-]+/i.test(JSON.stringify(receipts.body)), "receipts should not expose secret values");

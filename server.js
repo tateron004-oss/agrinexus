@@ -42877,6 +42877,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/records/lifecycle" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     const entityType = cleanOpsText(body.entityType || "record", 80);
     const entityId = cleanOpsText(body.entityId || nexusOperationId("NX-LIFE"), 120);
@@ -42903,13 +42904,16 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/operation-receipts" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const store = ensureNexusPersistentOperations(db);
     return send(res, 200, { ok: true, receipts: store.actionReceipts.slice(0, 100), noSecretValues: true });
   }
 
   if (url.pathname === "/api/nexus/audit-log" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const store = ensureNexusPersistentOperations(db);
-    return send(res, 200, { ok: true, audit: store.auditLogs.slice(0, 100), noSecretValues: true });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, audit: store.auditLogs.slice(0, 100).map(entry => redactSensitiveAuditEntry(entry, canViewSensitive)), noSecretValues: true });
   }
 
   if (url.pathname === "/api/nexus/production/status" && req.method === "GET") {
@@ -46719,10 +46723,17 @@ async function api(req, res, url) {
     const password = String(body.password || "User2026!").trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
-    const account = db.users.find(item => String(item.email || "").toLowerCase() === email) || {
+    const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
+    // This route creates/resets throwaway sandbox logins, not general account
+    // management -- it must never overwrite the password/name/role of a
+    // real, pre-existing account (including demoting an existing Admin) just
+    // because an admin happened to supply that account's email.
+    if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
+    const account = existing || {
       id: crypto.randomUUID(),
       email,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isSandboxTestAccount: true
     };
     account.name = name;
     account.password = password;
@@ -46760,11 +46771,16 @@ async function api(req, res, url) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 10) return send(res, 400, { error: "Admin password must be at least 10 characters" });
     const account = db.users.find(item => String(item.email || "").toLowerCase() === email);
-    if (account && account.role !== "Admin") return send(res, 409, { error: "That email already belongs to a non-admin account" });
+    // This route creates/resets throwaway sandbox Admin logins, not general
+    // account management -- it must never overwrite the password/name of a
+    // real, pre-existing Admin account (a takeover of someone else's real
+    // login) just because the caller supplied that account's email.
+    if (account && !account.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
     const adminAccount = account || {
       id: crypto.randomUUID(),
       email,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isSandboxTestAccount: true
     };
     adminAccount.name = name;
     adminAccount.password = password;
