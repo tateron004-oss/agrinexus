@@ -110,7 +110,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const authorityCoverage = new AuthorityCoverage({ applications, tools, adapters, verifiers });
   const cutover = new WorkspaceCutoverPolicy({ migrations: workspaceMigrations, applications, authorityCoverage });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
-    audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority });
+    audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;

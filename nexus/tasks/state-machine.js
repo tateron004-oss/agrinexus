@@ -34,6 +34,11 @@ function createTask(input = {}, now = () => new Date()) {
     application: input.application || "general", riskTier: input.riskTier || "low",
     priority: Math.min(Math.max(Number(input.priority || 3), 1), 5), state: "draft", version: 1,
     dueAt: input.dueAt || null, recurrence: input.recurrence || null, outcome: null,
+    // A task created without a live person watching (autonomous:true) can never
+    // satisfy acknowledgeRender()'s requirement that a UI actually showed/spoke
+    // the outcome in the same turn -- it completes instead through
+    // acknowledgeAutonomousDelivery()'s real push-delivery-receipt evidence.
+    autonomous: Boolean(input.autonomous),
     createdAt: timestamp, updatedAt: timestamp, history: Object.freeze([])
   };
   assertId("task", task.taskId); assertId("conversation", task.conversationId);
