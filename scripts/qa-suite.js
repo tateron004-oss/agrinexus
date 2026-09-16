@@ -79,7 +79,8 @@ const suites = {
     "scripts/openai-native-tool-auth-and-health-source-ssrf-smoke.js",
     "scripts/logout-durable-token-revocation-smoke.js",
     "scripts/guest-session-cleanup-smoke.js",
-    "scripts/guest-restrictions-enforcement-smoke.js"
+    "scripts/guest-restrictions-enforcement-smoke.js",
+    "scripts/guest-transaction-and-provider-link-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",
