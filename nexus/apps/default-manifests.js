@@ -2,7 +2,8 @@
 
 const DEFINITIONS = [
   ["agriculture", "Agriculture Help", ["knowledge.search", "maps.view"], ["low", "medium"]],
-  ["health", "Health and Chronic Care", ["health.emergency-guidance", "health.record", "telehealth.prepare"], ["low", "medium", "high", "critical", "regulated"]],
+  ["health", "Health and Chronic Care", ["health.emergency-guidance", "health.record", "telehealth.prepare",
+    "health.chronic-intake", "health.chronic-reading", "health.chronic-summary"], ["low", "medium", "high", "critical", "regulated"]],
   ["telehealth", "Telehealth Intake", ["telehealth.prepare"], ["medium", "high", "regulated"]],
   ["mobile-clinic", "Mobile Clinic", ["clinic.find"], ["low", "medium"]],
   ["pharmacy", "Pharmacy Support", ["pharmacy.find"], ["low", "medium", "regulated"]],

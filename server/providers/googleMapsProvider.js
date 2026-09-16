@@ -226,4 +226,4 @@ async function route(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, route, mapsUrl, publicOsmRoute, cleanWaypoints, NOMINATIM_SEARCH_URL, OSRM_ROUTE_URL };
+module.exports = { status, route, mapsUrl, publicOsmRoute, cleanWaypoints, geocodeLocation, mapsFetch, NOMINATIM_SEARCH_URL, OSRM_ROUTE_URL };

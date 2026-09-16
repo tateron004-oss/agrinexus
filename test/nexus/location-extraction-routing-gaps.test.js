@@ -33,7 +33,12 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" },
+    // This file tests deterministic text-extraction/routing behavior against
+    // the local mobile-clinic/pharmacy catalogs specifically -- real
+    // OpenStreetMap search (on by default otherwise, see osmPlacesProvider.js)
+    // would make results depend on live network state instead.
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
+      NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED: "false", NEXUS_PHARMACY_OSM_SEARCH_ENABLED: "false" },
     stdio: "ignore",
     windowsHide: true
   });

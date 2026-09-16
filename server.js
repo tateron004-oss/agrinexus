@@ -2423,6 +2423,19 @@ function currentUser(req, db) {
   return resolvedUser;
 }
 
+// The /exports/:filename download route (see serveExport()) previously had
+// no ownership check at all -- any caller who learned or guessed a real
+// export's UUID filename could download it, authenticated or not. Exports
+// are created by two call sites (nexus_document_export tool and
+// /api/evidence/export), both of which already have `db` and an
+// authenticated `user` in scope; recording the creator here is what makes
+// that route's ownership check possible.
+function recordExportOwnership(db, user, exportId) {
+  if (!user?.id || !exportId) return;
+  db.exportOwners = db.exportOwners || {};
+  db.exportOwners[exportId] = { userId: user.id, createdAt: new Date().toISOString() };
+}
+
 function secureCookieAttribute(req) {
   const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
   return proto === "https" || req.socket.encrypted ? "; Secure" : "";
@@ -20057,7 +20070,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // instead of respecting what was actually asked, or honestly finding
       // nothing for a city not in the local catalog.
       const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
-      const searchResult = nexusRealProviders.mobileClinicBridge.search({ q: locationMatch?.[1]?.trim() || "" });
+      const searchResult = await nexusRealProviders.mobileClinicBridge.search({ location: locationMatch?.[1]?.trim() || "" });
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { mobileClinics: cards };
       response = cards.length
@@ -20340,6 +20353,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         downloadPath: exportData.downloadPath,
         bytes: exportData.bytes
       }];
+      recordExportOwnership(db, user, exportData.exportId);
+      await writeDb(db);
     }
     return wrapped;
   }
@@ -45746,7 +45761,7 @@ async function api(req, res, url) {
   // except the plain "/status" ones reads or writes real record content.
   if (req.method === "GET" && medicalGetRoutes[url.pathname]) {
     if (!user && !url.pathname.endsWith("/status")) return send(res, 401, { error: "Sign in required" });
-    const result = medicalGetRoutes[url.pathname]();
+    const result = await medicalGetRoutes[url.pathname]();
     if (result.body) return sendProviderResult(res, result);
     return send(res, 200, result);
   }
@@ -47918,7 +47933,10 @@ async function api(req, res, url) {
         format: requestedFileFormat,
         confirmed: true
       }, process.env);
-      if (fileResult.body?.ok) packet.fileExport = fileResult.body.data;
+      if (fileResult.body?.ok) {
+        packet.fileExport = fileResult.body.data;
+        recordExportOwnership(db, user, fileResult.body.data.exportId);
+      }
     }
     await writeDb(db);
     const state = publicState(db, user);
@@ -51987,6 +52005,38 @@ async function api(req, res, url) {
   return send(res, 404, { error: "API route not found" });
 }
 
+// Previously served any /exports/:filename to anyone who knew or guessed the
+// UUID, authenticated or not -- confirmed by the production capability audit
+// as the one remaining unauthenticated document-download path. Exported
+// filenames are unguessable UUIDs, but "unguessable" is not "authorized":
+// a leaked link, referrer header, or shared browser history would have let
+// a stranger download it. Now requires a real signed-in session AND that the
+// session's user is the same one recordExportOwnership() recorded as the
+// export's creator at export time.
+async function serveExport(req, res, url) {
+  const requestedName = decodeURIComponent(url.pathname.slice("/exports/".length));
+  if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(requestedName)) return send(res, 404, "Not found");
+  const db = await readDb();
+  const user = currentUser(req, db);
+  if (!user) return send(res, 401, { error: "Sign in required" });
+  const exportId = requestedName.replace(/\.[^.]+$/, "");
+  const owner = db.exportOwners?.[exportId];
+  if (!owner || owner.userId !== user.id) return send(res, 403, { error: "Forbidden" });
+  const exportRoot = path.resolve(String(process.env.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports"));
+  const exportPath = path.join(exportRoot, requestedName);
+  if (!exportPath.startsWith(exportRoot)) return send(res, 403, "Forbidden");
+  return fs.readFile(exportPath, (err, data) => {
+    if (err) return send(res, 404, "Not found");
+    const ext = path.extname(exportPath);
+    res.writeHead(200, {
+      "content-type": mime[ext] || "application/octet-stream",
+      "content-disposition": `attachment; filename="${requestedName}"`,
+      "cache-control": "no-store"
+    });
+    res.end(data);
+  });
+}
+
 function serveStatic(req, res, url) {
   if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
     const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
@@ -51996,23 +52046,6 @@ function serveStatic(req, res, url) {
         "content-type": "application/javascript; charset=utf-8",
         "cache-control": "no-store",
         "x-content-type-options": "nosniff"
-      });
-      res.end(data);
-    });
-  }
-  if (url.pathname.startsWith("/exports/")) {
-    const requestedName = decodeURIComponent(url.pathname.slice("/exports/".length));
-    if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(requestedName)) return send(res, 404, "Not found");
-    const exportRoot = path.resolve(String(process.env.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports"));
-    const exportPath = path.join(exportRoot, requestedName);
-    if (!exportPath.startsWith(exportRoot)) return send(res, 403, "Forbidden");
-    return fs.readFile(exportPath, (err, data) => {
-      if (err) return send(res, 404, "Not found");
-      const ext = path.extname(exportPath);
-      res.writeHead(200, {
-        "content-type": mime[ext] || "application/octet-stream",
-        "content-disposition": `attachment; filename="${requestedName}"`,
-        "cache-control": "no-store"
       });
       res.end(data);
     });
@@ -52037,6 +52070,7 @@ const server = http.createServer(async (req, res) => {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
     if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
+    if (url.pathname.startsWith("/exports/")) return await serveExport(req, res, url);
     return serveStatic(req, res, url);
   } catch (error) {
     // Log the real error server-side but never return its raw message to the
