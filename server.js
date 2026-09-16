@@ -2381,7 +2381,22 @@ function sessionTtlMs(env = process.env) {
   return Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
 }
 
+// Same unbounded-growth shape as rateBuckets (see RATE_BUCKET_SWEEP_THRESHOLD
+// above): a sid that's never presented again after expiry (a bot that never
+// logs out) sits here forever, since the only other removal paths are
+// explicit /api/logout or currentUser() lazily deleting that exact sid when
+// it happens to be presented again post-expiry. Sweep once the map grows
+// past a threshold so an unauthenticated flood of session-issuing requests
+// (e.g. /api/auth/guest-session) can't grow this without bound.
+const SESSIONS_SWEEP_THRESHOLD = 5000;
+
 function issueSession(sid, userId) {
+  if (sessions.size > SESSIONS_SWEEP_THRESHOLD) {
+    const now = Date.now();
+    for (const [key, entry] of sessions) {
+      if (entry.expiresAt <= now) sessions.delete(key);
+    }
+  }
   sessions.set(sid, { userId, expiresAt: Date.now() + sessionTtlMs() });
 }
 
@@ -45895,6 +45910,16 @@ async function api(req, res, url) {
           restrictions: existingUser.restrictions || [] }
       });
     }
+    // Guest accounts are free to create (no auth, only a display name) and
+    // otherwise permanent -- nothing else in the codebase ever removes one.
+    // db.users feeds db.json, which readDb()/writeDb() re-parse and
+    // re-serialize in full on every single request, so unchecked growth here
+    // is a compounding, unauthenticated storage/CPU cost on the whole app.
+    // Drop guest accounts whose session has aged past the normal session TTL
+    // before adding another one.
+    const guestExpiryCutoff = Date.now() - sessionTtlMs();
+    db.users = db.users.filter(item => !item.guest || new Date(item.updatedAt || item.createdAt || 0).getTime() > guestExpiryCutoff);
+
     const guestId = `guest_${crypto.randomUUID()}`;
     const guest = {
       id: guestId,
