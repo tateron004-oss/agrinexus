@@ -1,6 +1,8 @@
 "use strict";
 
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const { createBusinessApi } = require("../business/api.js");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
@@ -612,6 +614,38 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const artifactId=decodeURIComponent(url.pathname.split("/").pop()); const artifact=await active.artifacts.get({tenantId:context.tenantId,ownerId:context.userId,artifactId});
         if(!artifact){send(res,404,{error:"Artifact not found."});return true;} if(!active.objectStorage){send(res,503,{error:"Shared object storage is unavailable.",code:"object_storage_unavailable"});return true;}
         const object=await active.objectStorage.get(artifact.object_key); send(res,200,{artifact,contentBase64:object.body.toString("base64"),contentType:object.contentType}); return true;
+      } else if (url.pathname === "/api/nexus/runtime/documents" && req.method === "GET") {
+        const list = await active.documents.list({ tenantId: context.tenantId, ownerId: context.userId, limit: Number(request.query.limit) || 50 });
+        send(res, 200, { authoritative: true, documents: list.map(row => formatDocumentSummary(row)) }); return true;
+      } else if (/^\/api\/nexus\/runtime\/documents\/[^/]+$/.test(url.pathname) && req.method === "GET") {
+        const documentId = decodeURIComponent(url.pathname.split("/").pop());
+        const document = await active.documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId });
+        if (!document) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
+        // documents.create today writes real bytes to local disk (no S3
+        // credentials configured) rather than the shared object store, so
+        // object_key carries a "local:<filename>" reference instead of an S3
+        // key -- this is the one place that distinction is resolved back
+        // into real content, tenant/owner-scoped exactly like the artifacts
+        // download route above.
+        if (String(document.object_key || "").startsWith("local:")) {
+          const filename = document.object_key.slice("local:".length);
+          if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(filename)) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
+          const exportRoot = path.resolve(String(env.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports"));
+          const filePath = path.join(exportRoot, filename);
+          if (!filePath.startsWith(exportRoot)) { send(res, 403, { error: "Forbidden.", code: "path_traversal_rejected" }); return true; }
+          try {
+            const bytes = fs.readFileSync(filePath);
+            send(res, 200, { authoritative: true, document: formatDocumentSummary(document),
+              contentBase64: bytes.toString("base64"), contentType: contentTypeForFormat(document.document_type) });
+          } catch {
+            send(res, 404, { error: "The document record exists but its file is unavailable.", code: "document_file_missing" });
+          }
+          return true;
+        }
+        if (!active.objectStorage) { send(res, 503, { error: "Shared object storage is unavailable.", code: "object_storage_unavailable" }); return true; }
+        const object = await active.objectStorage.get(document.object_key);
+        send(res, 200, { authoritative: true, document: formatDocumentSummary(document), contentBase64: object.body.toString("base64"), contentType: object.contentType });
+        return true;
       } else if (url.pathname === "/api/nexus/runtime/workspaces" && req.method === "GET") {
         const statuses = await Promise.all(active.applications.list().map(async application => ({ ...application,
           migration: await active.workspaceMigrations.status(application.applicationId) })));
@@ -837,6 +871,14 @@ async function executeProductionFaultIsolation({ active, principal, releaseSha, 
     providerFailureObserved, providerFailureCode, providerFailureStage,
     databaseFailureDiagnosed, databaseFailureSafe, databaseRecovered,
     unrelatedCapabilitySurvived, recoveryReceiptVerified });
+}
+
+const DOCUMENT_CONTENT_TYPES = Object.freeze({ json: "application/json", txt: "text/plain", md: "text/markdown",
+  pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+function contentTypeForFormat(format) { return DOCUMENT_CONTENT_TYPES[String(format || "").toLowerCase()] || "application/octet-stream"; }
+function formatDocumentSummary(row) {
+  return { documentId: row.document_id, title: row.title, documentType: row.document_type,
+    version: row.version || null, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 function acceptanceAuthorized(req, expected) {

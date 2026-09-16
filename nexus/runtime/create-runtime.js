@@ -22,6 +22,7 @@ const { OpenEndedPlanner } = require("../brain/planner.js");
 const { AgentService } = require("./agent-service.js");
 const { OpenAiPlanningModel } = require("../brain/openai-planning-model.js");
 const { RecordRepository } = require("../data/record-repository.js");
+const { DocumentRepository } = require("../data/document-repository.js");
 const { WorkspaceStateRepository } = require("../apps/workspace-state-repository.js");
 const { WorkspaceMigrationRepository } = require("../apps/migration-repository.js");
 const { DeviceRepository } = require("../devices/repository.js");
@@ -43,6 +44,7 @@ const { AuthorityCoverage } = require("./authority-coverage.js");
 const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = require("../reminders/executor.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
+const { createDocumentsReadExecutor, verifyDocumentsReadOutcome } = require("../documents/read-executor.js");
 const { createMapsViewExecutor, verifyMapsViewOutcome } = require("../maps/executor.js");
 const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../health/executor.js");
 
@@ -66,6 +68,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
+  const documents = new DocumentRepository(db);
   const workspaceStates = new WorkspaceStateRepository(records);
   const autonomyControl = new AutonomyControlRepository(records);
   const workspaceMigrations = new WorkspaceMigrationRepository(db);
@@ -89,7 +92,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const LOCAL_EXECUTORS = {
     "reminders.schedule": { create: () => createReminderScheduleExecutor({ notifications }), verify: verifyReminderScheduleOutcome, method: "local_notification_enqueue" },
     "communications.send": { create: () => createCommunicationsSendExecutor({ env }), verify: verifyCommunicationsSendOutcome, method: "real_provider_send" },
-    "documents.create": { create: () => createDocumentsCreateExecutor({ env }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
+    "documents.create": { create: () => createDocumentsCreateExecutor({ env, documents }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
+    "documents.read": { create: () => createDocumentsReadExecutor({ documents }), verify: verifyDocumentsReadOutcome, method: "real_document_lookup" },
     "maps.view": { create: () => createMapsViewExecutor({ env }), verify: verifyMapsViewOutcome, method: "real_route_computation" },
     "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" }
   };
@@ -119,7 +123,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
