@@ -425,6 +425,22 @@ services:
         sync: false
       - key: SATELLITE_WEBHOOK_URL
         sync: false
+      # Web push for reminders/autonomous-task delivery (PR #382, #414). Must
+      # be set to the SAME values on both this service and nexus-background-
+      # worker below -- one registers the browser subscription with
+      # VAPID_PUBLIC_KEY, the other signs the actual push with
+      # VAPID_PRIVATE_KEY, and NEXUS_DEVICE_TOKEN_KEY must match to decrypt
+      # what the other encrypted. Not auto-generated for that reason (unlike
+      # SESSION_SECRET/PASSWORD_PEPPER below, which don't need to match
+      # across services).
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: NEXUS_DEVICE_TOKEN_KEY
+        sync: false
 
   - type: worker
     name: nexus-background-worker
@@ -455,6 +471,16 @@ services:
         generateValue: true
       - key: NEXUS_WORKER_POLL_MS
         value: "2000"
+      # Must match nexus-genesis-certified's values above exactly -- see the
+      # comment there.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: NEXUS_DEVICE_TOKEN_KEY
+        sync: false
 
 databases:
   - name: nexus-postgres
