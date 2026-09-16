@@ -13245,7 +13245,12 @@ function renderAgentCenter() {
   }
   if ($("#frontierBrainScore")) $("#frontierBrainScore").textContent = `${Number(frontier.score || 0)}%`;
   if ($("#frontierBrainStatus")) $("#frontierBrainStatus").textContent = translateText(frontier.status || "ready");
-  if ($("#frontierBrainSummary")) $("#frontierBrainSummary").textContent = translateText(frontier.plainLanguageSummary || "Frontier Nexus Brain coordinates conversation, memory, workflows, maps, providers, safety, learning, and investor evidence.");
+  if ($("#frontierBrainSummary")) {
+    const frontierSummary = frontier.plainLanguageSummary || "Frontier Nexus Brain coordinates conversation, memory, workflows, maps, providers, safety, learning, and investor evidence.";
+    $("#frontierBrainSummary").textContent = frontier.disclosureNotice
+      ? `${translateText(frontierSummary)} ${translateText(frontier.disclosureNotice)}`
+      : translateText(frontierSummary);
+  }
   if ($("#frontierBrainLayerPanel")) {
     $("#frontierBrainLayerPanel").innerHTML = (frontier.layers || []).length
       ? (frontier.layers || []).slice(0, 10).map(item => taskItem(
@@ -41877,6 +41882,7 @@ function render() {
   if ($("#networkIntelligenceScore")) $("#networkIntelligenceScore").textContent = `${Number(network.score || 0)}%`;
   if ($("#networkIntelligencePanel")) {
     $("#networkIntelligencePanel").innerHTML = [
+      network.disclosureNotice ? `<div class="legacy-intelligence-notice"><small>${translateText(network.disclosureNotice)}</small></div>` : "",
       `<div><strong>${translateText(network.status || "network-intelligence-local-ready")}</strong><span>${translateText(network.summary || "Network intelligence is ready.")}</span></div>`,
       `<div><strong>${translateText("Source truth")}</strong><span>${translateText(network.sourceTruth || "Nexus labels live provider, saved local, and local fallback sources.")}</span></div>`,
       `<div><strong>${translateText("Service lanes")}</strong><span>${translateText(`${network.liveServices || 0}/${network.totalServices || 0} live-capable lanes`)}</span></div>`,
@@ -41905,6 +41911,7 @@ function render() {
   if ($("#ecosystemIntelligencePanel")) {
     const readiness = ecosystem.readiness || {};
     $("#ecosystemIntelligencePanel").innerHTML = [
+      ecosystem.disclosureNotice ? `<div class="legacy-intelligence-notice"><small>${translateText(ecosystem.disclosureNotice)}</small></div>` : "",
       `<div><strong>${translateText(ecosystem.status || "ecosystem-local-operational")}</strong><span>${translateText(ecosystem.summary || "Ecosystem intelligence is ready.")}</span></div>`,
       `<div><strong>${translateText("Plain promise")}</strong><span>${translateText(ecosystem.plainPromise || "Ask for an outcome and Nexus coordinates the right service lanes.")}</span></div>`,
       `<div><strong>${translateText("Mission coverage")}</strong><span>${translateText(`${readiness.missionCount || 0} missions, ${readiness.graphNodes || 0} actors, ${readiness.graphEdges || 0} relationships`)}</span></div>`,
@@ -41927,6 +41934,7 @@ function render() {
   if ($("#executiveIntelligenceScore")) $("#executiveIntelligenceScore").textContent = `${Number(executive.score || 0)}%`;
   if ($("#executiveIntelligencePanel")) {
     $("#executiveIntelligencePanel").innerHTML = [
+      executive.disclosureNotice ? `<div class="legacy-intelligence-notice"><small>${translateText(executive.disclosureNotice)}</small></div>` : "",
       `<div><strong>${translateText(executive.status || "executive-intelligence-ready")}</strong><span>${translateText(executive.summary || "Executive intelligence is ready.")}</span></div>`,
       executive.latestAnalysis ? `<div><strong>${translateText(`Latest analysis: ${executive.latestAnalysis.analysisNumber}`)}</strong><span>${translateText(executive.latestAnalysis.recommendation || "")}</span><small>${translateText((executive.latestAnalysis.nextActions || [])[0] || "")}</small></div>` : `<div><strong>${translateText("Latest analysis")}</strong><span>${translateText("Ask Nexus to run strategy, market, governance, revenue, or improvement intelligence.")}</span></div>`,
       ...((executive.pillars || []).slice(0, 5).map(pillar => `<div><strong>${translateText(pillar.title)}</strong><span>${translateText(pillar.promise)}</span><small>${translateText(pillar.question)}</small></div>`))
@@ -41958,6 +41966,7 @@ function render() {
   if ($("#autonomousOrchestrationScore")) $("#autonomousOrchestrationScore").textContent = `${Number(orchestration.score || 0)}%`;
   if ($("#autonomousOrchestrationPanel")) {
     $("#autonomousOrchestrationPanel").innerHTML = [
+      orchestration.disclosureNotice ? `<div class="legacy-intelligence-notice"><small>${translateText(orchestration.disclosureNotice)}</small></div>` : "",
       `<div><strong>${translateText(orchestration.status || "autonomous-orchestration-ready")}</strong><span>${translateText(orchestration.summary || "Autonomous orchestration is ready.")}</span></div>`,
       `<div><strong>${translateText("Boundary")}</strong><span>${translateText(orchestration.autonomyBoundary || "Nexus plans and runs local intelligence; external actions still need confirmation.")}</span></div>`,
       orchestration.latestMission ? `<div><strong>${translateText(`${orchestration.latestMission.missionNumber}: ${orchestration.latestMission.title}`)}</strong><span>${translateText(`${orchestration.latestMission.score}% complete - ${orchestration.latestMission.status}`)}</span><small>${translateText(orchestration.latestMission.nextQuestion || "")}</small></div>` : `<div><strong>${translateText("No active mission")}</strong><span>${translateText("Start a launch, health network, crop commerce, or investor proof mission.")}</span></div>`,
@@ -59593,7 +59602,8 @@ async function runFrontierBrain() {
     render();
     goSection("agent");
     const result = data.frontierBrainResult || data.frontierBrain || {};
-    const message = result.plainLanguageSummary || "Frontier Nexus Brain is active. Nexus is coordinating the highest operating layer across the platform.";
+    const baseMessage = result.plainLanguageSummary || "Frontier Nexus Brain is active. Nexus is coordinating the highest operating layer across the platform.";
+    const message = result.disclosureNotice ? `${baseMessage} ${result.disclosureNotice}` : baseMessage;
     renderLiveVoiceSuggestions(["help a farmer", "help a patient", "start my course", "present the platform"]);
     updateNexusBehaviorLayer("ready", message);
     setVoiceResponse(message, true);

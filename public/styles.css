@@ -16543,3 +16543,17 @@ body.nexus-provider-question-report-open {
     margin: 0;
   }
 }
+
+/* Marks a legacy db.profile "intelligence" dashboard's score as a local
+   capability index -- separate from nexus/'s real background-executing
+   autonomous task engine -- so it's never mistaken for live task status. */
+.legacy-intelligence-notice {
+  border-left: 3px solid var(--amber, #b7791f);
+  padding-left: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.legacy-intelligence-notice small {
+  color: var(--amber, #b7791f);
+  font-style: italic;
+}

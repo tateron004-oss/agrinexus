@@ -6422,6 +6422,21 @@ function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db)
   return model;
 }
 
+// Shared disclosure for the legacy db.profile "intelligence" dashboards
+// (frontier brain, network/ecosystem/executive intelligence, autonomous
+// orchestration): each computes a score from real platform counts via an
+// arbitrary weighting formula, and none of them execute or verify real
+// actions the way nexus/'s AuthoritativeTaskEngine does. Spread into each
+// model's returned object and rendered in the matching dashboard panel so a
+// capability score here is never mistaken for that real engine's live task
+// status.
+function legacyIntelligenceDisclosure() {
+  return {
+    isRealAutonomousExecution: false,
+    disclosureNotice: "This score reflects real platform usage counts through a local scoring formula. It is a capability/readiness index, not Kyro's real background-executing autonomous task engine."
+  };
+}
+
 function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), options = {}) {
   ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
@@ -6518,6 +6533,7 @@ function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), opt
     id: crypto.randomUUID(),
     status: score >= 88 ? "frontier-operating" : score >= 72 ? "frontier-ready-for-testing" : "frontier-learning",
     score,
+    ...legacyIntelligenceDisclosure(),
     country: country.name,
     route: route.name,
     strongest,
@@ -13923,6 +13939,7 @@ function networkIntelligenceModel(db, user, providers = runtimeProviders(db)) {
   return {
     status: liveServices ? "network-intelligence-partly-live" : "network-intelligence-local-ready",
     score,
+    ...legacyIntelligenceDisclosure(),
     summary: "Network Intelligence gives Nexus a provider-aware outside-world routing layer for clinics, pharmacies, jobs, courses, buyers, logistics, maps, weather, drone/satellite data, payments, phone, SMS, WhatsApp, and live internet search.",
     sourceTruth: "Every answer is labeled as live-provider-capable, saved-local-directory, or local-platform-fallback so investors and users know what is real now and what needs credentials.",
     registry: network.serviceRegistry,
@@ -14275,6 +14292,7 @@ function ecosystemIntelligenceModel(db, user, providers = runtimeProviders(db)) 
   return {
     status: readiness.status,
     score: Math.min(100, readiness.score + missionBoost),
+    ...legacyIntelligenceDisclosure(),
     summary: "Ecosystem Intelligence lets Nexus coordinate people, providers, workflows, maps, communications, payments, learning, jobs, clinics, pharmacies, buyers, logistics, and field intelligence as one rural operating system.",
     plainPromise: "A user can ask for an outcome, and Nexus decides which service lanes should work together, what can happen now, what needs live providers, and what question to ask next.",
     readiness,
@@ -14483,6 +14501,7 @@ function executiveIntelligenceSuiteModel(db, user, providers = runtimeProviders(
   return {
     status: "executive-intelligence-ready",
     score,
+    ...legacyIntelligenceDisclosure(),
     summary: "Executive Intelligence adds Strategic, Market, Governance, Revenue, and Self-Improving Intelligence so Nexus can advise launch priorities, investor proof, country opportunity, monetization, compliance, and next upgrades.",
     pillars,
     launchPriorities: opportunities.slice(0, 5),
@@ -14771,7 +14790,11 @@ function runAutonomousOrchestrationCycle(db, user, body = {}) {
   const blockers = [];
   for (const step of mission.steps) {
     if (completed.length >= maxSteps) break;
-    if (step.status === "done") continue;
+    // "done-needs-provider" is also terminal for this loop (it's this step's
+    // final outcome, not a retry candidate) -- it just deliberately doesn't
+    // count toward doneCount/mission.score below, since the live provider
+    // gap it recorded is still real and unresolved.
+    if (step.status === "done" || step.status === "done-needs-provider") continue;
     const result = runOrchestrationStepEngine(db, user, mission, step);
     step.status = result.status;
     step.evidence = result.evidence;
@@ -14781,7 +14804,7 @@ function runAutonomousOrchestrationCycle(db, user, body = {}) {
     if (result.blocker) blockers.push(result.blocker);
   }
   const doneCount = mission.steps.filter(step => step.status === "done").length;
-  const nextStep = mission.steps.find(step => step.status !== "done") || null;
+  const nextStep = mission.steps.find(step => step.status !== "done" && step.status !== "done-needs-provider") || null;
   mission.status = doneCount === mission.steps.length ? "completed" : blockers.length ? "needs-human-input" : "active";
   mission.score = Math.round((doneCount / Math.max(1, mission.steps.length)) * 100);
   mission.currentStepId = nextStep?.id || "";
@@ -14832,8 +14855,12 @@ function runOrchestrationStepEngine(db, user, mission, step) {
   if (step.engine === "network") {
     const result = runNetworkIntelligenceQuery(db, user, { query, serviceId: step.serviceId, country: mission.country });
     const needsProvider = result.record.status !== "live-capable";
+    // A step whose live provider isn't even connected must not report "done"
+    // -- that previously happened unconditionally here, which let a mission
+    // read as fully complete while still carrying an unresolved live-provider
+    // gap underneath it.
     return {
-      status: "done",
+      status: needsProvider ? "done-needs-provider" : "done",
       evidence: `${result.record.queryNumber}: ${result.record.serviceTitle} via ${result.record.sourceLabel}`,
       sourceLabel: result.record.sourceLabel,
       blocker: needsProvider ? { stepId: step.id, title: step.title, blocker: `Live provider credentials still needed for ${result.record.serviceTitle}.`, severity: "medium" } : null
@@ -14909,6 +14936,14 @@ function autonomousOrchestrationModel(db, user, providers = runtimeProviders(db)
     score,
     summary: "Autonomous Orchestration turns a big goal into a tracked mission, runs the right intelligence engines in order, records evidence, watches blockers, asks only needed questions, resumes progress, and creates outcome reports.",
     autonomyBoundary: "Nexus can plan, run local intelligence workflows, record evidence, and recommend next actions. Real external calls, payments, dispatch, clinical care, and provider-system writes still require live providers and confirmation.",
+    // This is a local planning/demo layer over db.profile -- a different,
+    // older system from nexus/'s real AuthoritativeTaskEngine (which plans
+    // and executes real tool calls in the background, with verified
+    // completion). Surfaced in the UI and in conversational replies so a
+    // "mission" advancing here is never mistaken for that real engine
+    // actually doing something.
+    isRealAutonomousExecution: false,
+    disclosureNotice: "This is Kyro's local planning simulation, separate from Kyro's real background-executing autonomous tasks. It records what it would do and shows real platform counts, but does not perform or verify real-world actions on its own.",
     templates,
     latestMission,
     latestCycle: (orchestration.cycles || [])[0] || null,
@@ -14926,6 +14961,12 @@ function autonomousOrchestrationModel(db, user, providers = runtimeProviders(db)
   };
 }
 
+// Kept short deliberately -- said out loud in voice mode, not just displayed.
+// Distinguishes this local planning simulation from nexus/'s real
+// AuthoritativeTaskEngine, which is the system that actually executes tasks
+// in the background with verified completion.
+const AUTONOMOUS_ORCHESTRATION_DISCLOSURE = "This is a local planning simulation, not Kyro's real autonomous task engine.";
+
 function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
   const lower = String(text || "").toLowerCase();
   const orchestrationSignal = /\b(autonomous orchestration|orchestration|orchestrate|mission operator|launch agrinexus|launch.*kenya|launch.*nigeria|build rural health access network|build crop commerce network|prepare investor.*proof|continue.*mission|resume.*mission|mission report|run the mission|manage.*mission)\b/.test(lower);
@@ -14937,7 +14978,7 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
     return {
       intent: "autonomous_orchestration.status",
       status: "completed",
-      response: `Autonomous Orchestration is ${model.status} at ${model.score}%. It can create missions, run steps, watch blockers, resume progress, and build reports.`,
+      response: `Autonomous Orchestration is ${model.status} at ${model.score}%. It can create missions, run steps, watch blockers, resume progress, and build reports. ${AUTONOMOUS_ORCHESTRATION_DISCLOSURE}`,
       metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, model, moduleSignal, frontierCommunication }
     };
   }
@@ -14947,7 +14988,7 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
       intent: "autonomous_orchestration.report_created",
       status: report.status,
       response: `${report.reportNumber}: ${report.summary} Next: ${report.nextAction}`,
-      metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, report, moduleSignal, frontierCommunication }
+      metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, report, moduleSignal, frontierCommunication, disclosureNotice: AUTONOMOUS_ORCHESTRATION_DISCLOSURE }
     };
   }
   if (/\b(continue|resume|next step|keep going)\b/.test(lower)) {
@@ -14955,7 +14996,7 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
     return {
       intent: "autonomous_orchestration.cycle_completed",
       status: result.mission.status,
-      response: `${result.cycle.cycleNumber}: I advanced ${result.mission.title} to ${result.mission.score}%. ${result.mission.nextQuestion}`,
+      response: `${result.cycle.cycleNumber}: I advanced ${result.mission.title} to ${result.mission.score}%. ${result.mission.nextQuestion} (${AUTONOMOUS_ORCHESTRATION_DISCLOSURE})`,
       metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, mission: result.mission, cycle: result.cycle, moduleSignal, frontierCommunication }
     };
   }
@@ -14963,7 +15004,7 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
   return {
     intent: "autonomous_orchestration.mission_started",
     status: result.mission.status,
-    response: `${result.mission.missionNumber}: I started ${result.mission.title} and advanced it to ${result.mission.score}%. ${result.mission.nextQuestion}`,
+    response: `${result.mission.missionNumber}: I started ${result.mission.title} and advanced it to ${result.mission.score}%. ${result.mission.nextQuestion} (${AUTONOMOUS_ORCHESTRATION_DISCLOSURE})`,
     metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, mission: result.mission, cycle: result.cycle, moduleSignal, frontierCommunication }
   };
 }
@@ -27719,6 +27760,12 @@ function nexusMissionBrainModel(db, user, goalText = "", options = {}) {
     mode: "nexus-mission-brain",
     goal,
     status: risky ? "planned-needs-confirmation" : "planned-ready",
+    // missionSteps below are genuinely just "planned" (never claimed done),
+    // but this still runs on the legacy db.profile planner, not nexus/'s
+    // AuthoritativeTaskEngine -- flagged the same way as the other legacy
+    // intelligence dashboards so a plan shown here is never mistaken for a
+    // task actually running in the background.
+    ...legacyIntelligenceDisclosure(),
     confidence: Number(confidence.toFixed(2)),
     activeContext: {
       country: country.name,
