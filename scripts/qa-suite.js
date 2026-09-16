@@ -70,7 +70,8 @@ const suites = {
     "scripts/domain-provider-simulation-smoke.js",
     "scripts/operations-status-fabrication-smoke.js",
     "scripts/agent-command-rate-limit-smoke.js",
-    "scripts/collaboration-runtime-confirmation-coercion-smoke.js"
+    "scripts/collaboration-runtime-confirmation-coercion-smoke.js",
+    "scripts/nexus-tools-communications-auth-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",

@@ -19182,7 +19182,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
     const emailBody = { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed };
     const emailResult = await withActionLifecycle(db, {
-      provider: "email", action: "email.send", body: emailBody,
+      provider: "email", action: "email.send", body: emailBody, actorId: user?.id || realUserEmail || "",
       execute: () => nexusRealProviders.email.send(emailBody, process.env),
       verify: async result => {
         const data = result?.body?.data || {};
@@ -19219,24 +19219,24 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     };
     const providerResult = channel === "whatsapp"
       ? await withActionLifecycle(db, {
-          provider: "twilio", action: "whatsapp.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+          provider: "twilio", action: "whatsapp.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
           execute: () => nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
           verify: verifyRealProviderId("WhatsApp")
         })
       : channel === "call"
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+            provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
             execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
         : channel === "email"
           ? await withActionLifecycle(db, {
-              provider: "email", action: "email.send", body: { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed },
+              provider: "email", action: "email.send", body: { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
               execute: () => nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env),
               verify: verifyRealProviderId("Email")
             })
           : await withActionLifecycle(db, {
-              provider: "twilio", action: "sms.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed },
+              provider: "twilio", action: "sms.send", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
               execute: () => nexusRealProviders.twilio.sendSms({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
               verify: verifyRealProviderId("SMS")
             });
@@ -19251,7 +19251,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       confirmed: args.confirmed
     };
     const calendarResult = await withActionLifecycle(db, {
-      provider: "calendar", action: "calendar.event.create", body: calendarBody,
+      provider: "calendar", action: "calendar.event.create", body: calendarBody, actorId: user?.id || realUserEmail || "",
       execute: () => nexusRealProviders.calendar.createEvent(calendarBody, process.env),
       verify: async result => {
         const data = result?.body?.data || {};
@@ -44886,14 +44886,17 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/whatsapp/send" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     return sendProviderResult(res, await nexusRealProviders.twilio.sendWhatsapp(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/call/start" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     return sendProviderResult(res, await nexusRealProviders.twilio.startCall(await readBody(req)));
   }
 
@@ -44944,18 +44947,22 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/communications/sms/send" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendSms(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/whatsapp/send" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendWhatsapp(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/call/prepare" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required." });
     return sendProviderResult(res, nexusRealProviders.communicationsBridge.prepareCall(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/call/start" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.startCall(await readBody(req)));
   }
 
