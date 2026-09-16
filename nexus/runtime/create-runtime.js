@@ -40,6 +40,10 @@ const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.j
 const { CapabilityExecutionAuthority } = require("./capability-execution-authority.js");
 const { AuthorityCoverage } = require("./authority-coverage.js");
 const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = require("../reminders/executor.js");
+const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
+const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
+const { createMapsViewExecutor, verifyMapsViewOutcome } = require("../maps/executor.js");
+const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../health/executor.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -73,21 +77,30 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const acceptance = new ProductionAcceptanceRepository(db);
   const path2Evidence = new Path2EvidenceRepository(db);
   const objectStorage = createObjectStore(env);
-  // reminders.schedule gets a REAL local executor (writes a real, future-
-  // scheduled row via NotificationRepository) instead of the canonical
-  // provider-engines mock every other tool here still uses -- it can never
-  // produce that mock's HMAC provider receipt, so it also needs its own
-  // verifier rather than the shared provider_receipt check below.
-  const governedExecutors = Object.assign({}, providers.executors,
-    { "reminders.schedule": createReminderScheduleExecutor({ notifications }) }, executors);
+  // A growing set of canonical tools gets a REAL local/direct executor
+  // instead of the scripts/provider-engines.js mock every other tool here
+  // still uses -- none of these can produce that mock's signed HMAC
+  // provider receipt, so each also needs its own verifier rather than the
+  // shared provider_receipt check below. reminders.schedule was the first
+  // (writes a real row via NotificationRepository); this list is the
+  // reusable pattern for adding more, not a ceiling.
+  const LOCAL_EXECUTORS = {
+    "reminders.schedule": { create: () => createReminderScheduleExecutor({ notifications }), verify: verifyReminderScheduleOutcome, method: "local_notification_enqueue" },
+    "communications.send": { create: () => createCommunicationsSendExecutor({ env }), verify: verifyCommunicationsSendOutcome, method: "real_provider_send" },
+    "documents.create": { create: () => createDocumentsCreateExecutor({ env }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
+    "maps.view": { create: () => createMapsViewExecutor({ env }), verify: verifyMapsViewOutcome, method: "real_route_computation" },
+    "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" }
+  };
+  const localExecutorFns = Object.fromEntries(Object.entries(LOCAL_EXECUTORS).map(([toolId, entry]) => [toolId, entry.create()]));
+  const governedExecutors = Object.assign({}, providers.executors, localExecutorFns, executors);
   const adapters = new CapabilityAdapterRegistry();
   const verifiers = new OutcomeVerifierRegistry();
   const verifyOutcome = verifier || (input => providers.verify(input));
   for (const [toolId, execute] of Object.entries(governedExecutors)) {
-    const isReminderSchedule = toolId === "reminders.schedule" && !executors[toolId];
+    const local = LOCAL_EXECUTORS[toolId] && !executors[toolId] ? LOCAL_EXECUTORS[toolId] : null;
     adapters.register({ toolId, implementation: `authoritative:${toolId}`, provider: providers.executors[toolId] ? "canonical-provider" : "runtime", execute });
-    verifiers.register({ toolId, method: isReminderSchedule ? "local_notification_enqueue" : "provider_receipt",
-      verify: isReminderSchedule ? verifyReminderScheduleOutcome : verifyOutcome });
+    verifiers.register({ toolId, method: local ? local.method : "provider_receipt",
+      verify: local ? local.verify : verifyOutcome });
   }
   const authority = new CapabilityExecutionAuthority({ adapters, verifiers,
     observe: event => observability.record({ tenantId: event.tenantId, actorId: event.actorId,
