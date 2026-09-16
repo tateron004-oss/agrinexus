@@ -81,7 +81,8 @@ const suites = {
     "scripts/guest-session-cleanup-smoke.js",
     "scripts/guest-restrictions-enforcement-smoke.js",
     "scripts/guest-transaction-and-provider-link-smoke.js",
-    "scripts/admin-takeover-and-ops-disclosure-smoke.js"
+    "scripts/admin-takeover-and-ops-disclosure-smoke.js",
+    "scripts/investor-health-evidence-redaction-smoke.js"
   ],
   call: [
     "archive/qa-scripts/call-provider-registry-qa.js",

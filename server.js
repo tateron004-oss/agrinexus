@@ -4518,6 +4518,105 @@ function projectActivityForUser(activity, user) {
   return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for investor view.`;
 }
 
+// communicationThreads/communicationMessages are shared across every module
+// (Learning, Workforce, Trade, Healthcare, ...), not health-domain-specific
+// like HEALTH_PROFILE_ARRAY_KEYS, so they need this same conditional-by-
+// module treatment as projectIntegrationEventForUser/
+// projectNotificationForUser rather than the blanket health-record
+// projection -- a real patient name/subject/message text must never reach
+// an Investor just because it happened to travel through the messaging
+// system instead of a health-record array.
+function projectCommunicationThreadForUser(thread, user) {
+  if (!isInvestorUser(user) || !thread || typeof thread !== "object") return thread;
+  if (String(thread.module || "") !== "Healthcare") return thread;
+  return {
+    id: thread.id,
+    module: thread.module,
+    channel: thread.channel,
+    status: thread.status,
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+    subject: "Healthcare communication recorded. Patient-level details are redacted for investor view.",
+    participantName: "Redacted",
+    requesterName: "Redacted",
+    lastMessage: "Redacted for investor view.",
+    redacted: true
+  };
+}
+
+// rememberAgentMemory() (used by createCommunicationThread and many other
+// handlers) tags every stored item with a .module inferred from its own
+// text, and always lands it in one of these four arrays or the matching
+// moduleMemory["Healthcare"] bucket -- so this is a complete redaction of
+// every memory item that function can ever produce, not just the one
+// caught by testing.
+const AGENT_MEMORY_TEXT_ARRAY_KEYS = ["longTermFacts", "preferences", "learnedPatterns", "safetyBoundaries"];
+
+function projectAgentMemoryItemForUser(item, user, textField = "text") {
+  if (!isInvestorUser(user) || !item || typeof item !== "object") return item;
+  if (String(item.module || "") !== "Healthcare") return item;
+  return {
+    ...item,
+    [textField]: "Healthcare memory recorded. Patient-level details are redacted for investor view.",
+    normalized: "",
+    redacted: true
+  };
+}
+
+function projectAgentMemoryForUser(agentMemory, user) {
+  if (!isInvestorUser(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
+  const projected = { ...agentMemory };
+  for (const key of AGENT_MEMORY_TEXT_ARRAY_KEYS) {
+    if (Array.isArray(agentMemory[key])) projected[key] = agentMemory[key].map(item => projectAgentMemoryItemForUser(item, user));
+  }
+  if (agentMemory.moduleMemory && typeof agentMemory.moduleMemory === "object" && Array.isArray(agentMemory.moduleMemory.Healthcare)) {
+    // Items stored in moduleMemory[moduleName] don't carry their own
+    // .module field -- the dictionary key IS the module, so being under
+    // "Healthcare" here is itself the redaction signal; unlike the flat
+    // arrays above, every item in this bucket must be redacted.
+    projected.moduleMemory = {
+      ...agentMemory.moduleMemory,
+      Healthcare: agentMemory.moduleMemory.Healthcare.map(item => projectAgentMemoryItemForUser({ ...item, module: "Healthcare" }, user))
+    };
+  }
+  // userNeeds is keyed by need signal (e.g. "care-access"), not module, but
+  // each item under any key still carries its own real .module -- redact
+  // per-item rather than per-key.
+  if (agentMemory.userNeeds && typeof agentMemory.userNeeds === "object") {
+    projected.userNeeds = Object.fromEntries(Object.entries(agentMemory.userNeeds).map(([key, items]) => [
+      key,
+      Array.isArray(items) ? items.map(item => projectAgentMemoryItemForUser(item, user)) : items
+    ]));
+  }
+  if (Array.isArray(agentMemory.advisorHistory)) {
+    projected.advisorHistory = agentMemory.advisorHistory.map(item => projectAgentMemoryItemForUser(item, user, "event"));
+  }
+  if (Array.isArray(agentMemory.memoryTimeline)) {
+    projected.memoryTimeline = agentMemory.memoryTimeline.map(item => projectAgentMemoryItemForUser(item, user, "title"));
+  }
+  return projected;
+}
+
+function projectCommunicationMessageForUser(message, user, threadsById) {
+  if (!isInvestorUser(user) || !message || typeof message !== "object") return message;
+  const thread = threadsById?.get(message.threadId);
+  if (String(message.module || thread?.module || "") !== "Healthcare") return message;
+  return {
+    id: message.id,
+    threadId: message.threadId,
+    module: message.module,
+    sender: message.sender,
+    channel: message.channel,
+    status: message.status,
+    providerStatus: message.providerStatus,
+    createdAt: message.createdAt,
+    senderName: "Redacted",
+    recipientName: "Redacted",
+    text: "Healthcare message recorded. Patient-level details are redacted for investor view.",
+    redacted: true
+  };
+}
+
 function profileForUser(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
@@ -4546,6 +4645,16 @@ function profileForUser(profile, user) {
   }
   if (Array.isArray(profile.activity)) {
     projected.activity = profile.activity.map(activity => projectActivityForUser(activity, user));
+  }
+  if (Array.isArray(profile.communicationThreads)) {
+    projected.communicationThreads = profile.communicationThreads.map(thread => projectCommunicationThreadForUser(thread, user));
+  }
+  if (Array.isArray(profile.communicationMessages)) {
+    const threadsById = new Map((profile.communicationThreads || []).map(thread => [thread.id, thread]));
+    projected.communicationMessages = profile.communicationMessages.map(message => projectCommunicationMessageForUser(message, user, threadsById));
+  }
+  if (profile.agentMemory) {
+    projected.agentMemory = projectAgentMemoryForUser(profile.agentMemory, user);
   }
   if (profile.accessibilityProfile) {
     projected.accessibilityProfile = {
@@ -4627,7 +4736,7 @@ function publicState(db, user) {
     governmentReadiness: governmentReadinessModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
-    missionTimeline: missionTimelineModel(db),
+    missionTimeline: missionTimelineModel(db, user),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -4976,15 +5085,20 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
   };
 }
 
-function missionTimelineModel(db) {
+function missionTimelineModel(db, user = null) {
   const items = [];
+  // Investor redaction (matches projectIntegrationEventForUser/
+  // projectNotificationForUser elsewhere in this file): a Healthcare-module
+  // timeline entry must never carry a real patient reference, need summary,
+  // or participant name into an Investor's view.
+  const redact = isInvestorUser(user);
   const add = (module, title, detail, status, createdAt, evidence = "") => items.push({
     id: crypto.randomUUID(),
     module,
-    title,
-    detail,
+    title: redact && module === "Healthcare" ? "Healthcare workflow evidence recorded" : title,
+    detail: redact && module === "Healthcare" ? "Patient-level details are redacted for investor view." : detail,
     status,
-    evidence,
+    evidence: redact && module === "Healthcare" ? "" : evidence,
     createdAt: createdAt || new Date().toISOString()
   });
   (db.profile.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
@@ -5016,7 +5130,7 @@ function missionTimelineModel(db) {
 
 function evidenceExportPacket(db, user, audience = "investor") {
   const impact = impactDashboardModel(db);
-  const timeline = missionTimelineModel(db);
+  const timeline = missionTimelineModel(db, user);
   const briefing = sessionBriefingModel(db, user, runtimeProviders(db));
   const government = governmentReadinessModel(db, user, runtimeProviders(db));
   const lines = [
@@ -5075,13 +5189,13 @@ function evidenceExportPacket(db, user, audience = "investor") {
     ...timeline.items.slice(0, 12).map(item => `- ${item.module}: ${item.title} - ${item.detail} (${item.status})`),
     "",
     "## Provider Evidence",
-    ...(db.profile.integrationEvents || []).slice(0, 12).map(item => `- ${item.module}: ${item.action} - ${item.status} - ${item.detail}`),
+    ...(db.profile.integrationEvents || []).slice(0, 12).map(item => projectIntegrationEventForUser(item, user)).map(item => `- ${item.module}: ${item.action} - ${item.status} - ${item.detail}`),
     "",
     "## AI Evidence",
     ...(db.profile.aiRuns || []).slice(0, 8).map(item => `- ${item.type}: ${item.provider}${item.model ? ` (${item.model})` : ""} - ${item.reviewStatus || "pending-human-review"}`),
     "",
     "## Communication Evidence",
-    ...(db.profile.communicationThreads || []).slice(0, 8).map(item => `- ${item.module}: ${item.channel} with ${item.participantName} - ${item.subject} (${item.status})`),
+    ...(db.profile.communicationThreads || []).slice(0, 8).map(item => projectCommunicationThreadForUser(item, user)).map(item => `- ${item.module}: ${item.channel} with ${item.participantName} - ${item.subject} (${item.status})`),
     ...(db.profile.tradeMessageThreads || []).slice(0, 4).map(item => `- AgriTrade: ${item.lastChannel} with ${item.buyerName} - ${item.productName} (${item.status})`)
   ].filter(line => line !== null && line !== undefined);
   const packet = {
