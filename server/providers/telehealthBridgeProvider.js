@@ -75,8 +75,17 @@ function intakes(db) {
   return response(PROVIDER, "telehealth.intakes", "completed", "Telehealth intakes loaded.", { intakes: ensureProfileStore(db, INTAKES) });
 }
 
-function prepare(body = {}) {
+function prepare(body = {}, db, env = process.env) {
   const action = "telehealth.prepare";
+  // Every sibling action in this module (intake/createSession/saveSession)
+  // gates on the enable flag and explicit confirmation before doing
+  // anything -- this one was the sole exception, despite
+  // canonical-provider-definitions.js declaring confirmationRequired:true
+  // for telehealth.prepare. Brought in line with the rest of the module.
+  const disabled = guardEnabled(PROVIDER, action, FLAG, env);
+  if (disabled) return disabled;
+  const confirmation = requireConfirmation(body, PROVIDER, action);
+  if (confirmation) return confirmation;
   const record = normalizeIntake(body);
   const blocked = guardMedicalText(PROVIDER, action, [record.reason, record.questions.join(" ")], false);
   if (blocked) return blocked;
