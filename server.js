@@ -4542,7 +4542,14 @@ function publicState(db, user) {
     productIdentity: productIdentityMetadata(),
     user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
     permissions: user ? permissionsForRole(user.role) : {},
-    loginProfiles: DEFAULT_USERS.map(user => ({ name: user.name, email: user.email, password: user.password, role: user.role, country: user.country, language: user.language })),
+    // Never include the real password here -- this used to serialize every
+    // seeded account's cleartext password (including Admin's) into every
+    // publicState() response, reachable by any caller including a fully
+    // unauthenticated one (the pre-auth /api/nexus/operations/* routes).
+    // The client doesn't even read this field's password (public/app.js's
+    // login picker uses its own hardcoded, password-less demoLoginProfiles
+    // list), so there is no legitimate reason to ship it at all.
+    loginProfiles: DEFAULT_USERS.map(user => ({ name: user.name, email: user.email, role: user.role, country: user.country, language: user.language })),
     countries: db.countries,
     routes: db.routes,
     courses: db.courses,
@@ -4589,7 +4596,7 @@ function publicState(db, user) {
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
-    persistentOperations: nexusOperationsSummary(db),
+    persistentOperations: nexusOperationsSummary(db, user),
     // adminSnapshot() returns the full cross-tenant user directory (every
     // account's name/email/role), subscriber/support records, and a
     // platform-wide activity audit trail -- it must never be computed for a
@@ -39340,8 +39347,22 @@ function addNexusConsentRecord(db, entityType, entityId, consentType, granted = 
   return consent;
 }
 
-function nexusOperationsSummary(db) {
+// Redacts the full before/after record snapshot from an audit entry unless
+// the caller is privileged. auditLogs' before/after fields (via
+// addNexusOperationsAudit -> safeOpsSnapshot) capture the REAL constructed
+// record -- for chronic-care/health actions that includes patient name,
+// condition, medications, allergies, and risk flags. safeOpsSnapshot only
+// strips secret/token/password/key-named fields, not health content, and
+// this data has no per-tenant/per-user scoping at all (a single shared
+// collection), so any caller who can see it sees every user's records.
+function redactSensitiveAuditEntry(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, before: null, after: null };
+}
+
+function nexusOperationsSummary(db, user = null) {
   const store = ensureNexusPersistentOperations(db);
+  const canViewSensitiveAudit = canUse(user, "admin");
   return {
     ok: true,
     storage: usingPostgresState() ? "postgres-jsonb" : "local-json",
@@ -39411,7 +39432,7 @@ function nexusOperationsSummary(db) {
       auditTrail: true
     },
     recentReceipts: store.actionReceipts.slice(0, 8),
-    recentAudit: store.auditLogs.slice(0, 8)
+    recentAudit: store.auditLogs.slice(0, 8).map(entry => redactSensitiveAuditEntry(entry, canViewSensitiveAudit))
   };
 }
 
@@ -41391,14 +41412,14 @@ function parseNexusOperationsCommand(command = "") {
   return "";
 }
 
-function nexusOperationResponse(db, action, record, audit, receipt, extra = {}) {
+function nexusOperationResponse(db, user, action, record, audit, receipt, extra = {}) {
   return {
     ok: true,
     action,
     record,
     audit,
     receipt,
-    operations: nexusOperationsSummary(db),
+    operations: nexusOperationsSummary(db, user),
     noExecutionAuthorized: true,
     safety: {
       didNotDiagnose: true,
@@ -41433,7 +41454,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   ];
 
   if (action === "status") {
-    return { ok: true, action, operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "create_chronic_care_profile") {
@@ -41460,7 +41481,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     addNexusConsentRecord(db, "chronic-care", profile.chronicCareId, "preparePacket", profile.consentState.preparePacket, actor);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "chronic_care_profile_created", actor, `${profile.conditionArea} chronic care profile created for local operations memory.`, null, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, "create_chronic_care_profile", ["Created chronic care profile.", "Recorded consent state and provider review lane."], didNot, "active");
-    return nexusOperationResponse(db, action, profile, audit, receipt);
+    return nexusOperationResponse(db, user, action, profile, audit, receipt);
   }
 
   if (action === "add_rpm_reading") {
@@ -41479,7 +41500,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rpm_reading_added", actor, `${reading.type} RPM reading added.`, null, reading);
     const receipt = addNexusOperationsReceipt(db, "rpm-reading", reading.readingId, "add_rpm_reading", ["Added RPM reading to chronic care timeline.", "Kept reading local until consented provider sharing is configured."], didNot, "recorded");
-    return nexusOperationResponse(db, action, reading, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
+    return nexusOperationResponse(db, user, action, reading, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
   }
 
   if (action === "add_rtm_activity") {
@@ -41497,12 +41518,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rtm_activity_added", actor, `${activity.type} RTM activity added.`, null, activity);
     const receipt = addNexusOperationsReceipt(db, "rtm-activity", activity.activityId, "add_rtm_activity", ["Added RTM activity to chronic care timeline."], didNot, "recorded");
-    return nexusOperationResponse(db, action, activity, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
+    return nexusOperationResponse(db, user, action, activity, audit, receipt, { timeline: nexusChronicCareTimeline(store, profile.chronicCareId) });
   }
 
   if (action === "show_chronic_care_timeline") {
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
-    return { ok: true, action, record: profile, timeline: nexusChronicCareTimeline(store, profile?.chronicCareId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: profile, timeline: nexusChronicCareTimeline(store, profile?.chronicCareId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (["create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up", "create_telehealth_encounter"].includes(action)) {
@@ -41521,7 +41542,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.cases.unshift(caseItem);
     const audit = addNexusOperationsAudit(db, "case", caseItem.caseId, action, actor, `${lane} case packet prepared from chronic care profile.`, null, caseItem);
     const receipt = addNexusOperationsReceipt(db, "case", caseItem.caseId, action, [`Prepared ${lane} case packet from chronic care profile.`, "Marked sharing as consent-gated."], didNot, "prepared");
-    return nexusOperationResponse(db, action, caseItem, audit, receipt);
+    return nexusOperationResponse(db, user, action, caseItem, audit, receipt);
   }
 
   if (action === "create_intake") {
@@ -41538,24 +41559,24 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.healthcareIntakes.unshift(intake);
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, "intake_created", actor, "Healthcare intake created and linked to operations memory.", null, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, "create_intake", ["Created healthcare intake record.", "Kept external sharing disabled until consent and provider configuration."], didNot, "active");
-    return nexusOperationResponse(db, action, intake, audit, receipt);
+    return nexusOperationResponse(db, user, action, intake, audit, receipt);
   }
 
   if (["archive_intake", "delete_intake_if_allowed"].includes(action)) {
     const intake = store.healthcareIntakes.find(item => item.intakeId === body.intakeId) || store.healthcareIntakes[0];
-    if (!intake) return { ok: false, error: "intake_not_found", operations: nexusOperationsSummary(db) };
+    if (!intake) return { ok: false, error: "intake_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...intake };
     intake.status = action === "archive_intake" ? "archived" : "deactivated-delete-review";
     intake.updatedAt = now;
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "intake", entityId: intake.intakeId, action, reason: cleanOpsText(body.reason || "User requested archive/deactivate review.", 240), createdAt: now });
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, action, actor, `Intake ${intake.status}; audit trail preserved.`, before, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, action, ["Updated intake status and preserved audit trail."], ["Nexus did not hard-delete required audit records or continue outreach."], intake.status);
-    return nexusOperationResponse(db, action, intake, audit, receipt);
+    return nexusOperationResponse(db, user, action, intake, audit, receipt);
   }
 
   if (action === "mark_deceased_stop_outreach") {
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
-    if (!profile) return { ok: false, error: "chronic_care_profile_not_found", operations: nexusOperationsSummary(db) };
+    if (!profile) return { ok: false, error: "chronic_care_profile_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...profile };
     profile.status = "deceased-stop-outreach";
     profile.noContact = true;
@@ -41566,7 +41587,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "chronic-care", entityId: profile.chronicCareId, action, reason: profile.archiveReason, createdAt: now });
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "patient_deceased_stop_outreach", actor, "Profile marked deceased/no-contact; reminders and active intakes archived; audit preserved.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, action, ["Marked profile deceased/no-contact.", "Archived linked active intakes and care tasks.", "Preserved audit trail."], ["Nexus did not send reminders, messages, provider notices, or hard-delete protected records."], "deceased-stop-outreach");
-    return nexusOperationResponse(db, action, profile, audit, receipt);
+    return nexusOperationResponse(db, user, action, profile, audit, receipt);
   }
 
   if (["add_provider", "add_pharmacy_provider", "add_mobile_clinic_provider", "add_training_provider"].includes(action)) {
@@ -41588,7 +41609,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.providers.unshift(provider);
     const audit = addNexusOperationsAudit(db, "provider", provider.providerId, "provider_added", actor, `${type} provider added to directory.`, null, provider);
     const receipt = addNexusOperationsReceipt(db, "provider", provider.providerId, action, [`Added ${type} provider directory record.`], didNot, "active");
-    return nexusOperationResponse(db, action, provider, audit, receipt);
+    return nexusOperationResponse(db, user, action, provider, audit, receipt);
   }
 
   if (["add_buyer", "add_seller"].includes(action)) {
@@ -41612,12 +41633,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.parties.unshift(party);
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "buyer_seller_added", actor, `${party.type} party added to directory.`, null, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, [`Added ${party.type} directory record.`], didNot, "active");
-    return nexusOperationResponse(db, action, party, audit, receipt);
+    return nexusOperationResponse(db, user, action, party, audit, receipt);
   }
 
   if (action === "mark_party_closed") {
     const party = store.parties.find(item => item.partyId === body.partyId) || latestParty(store, "seller");
-    if (!party) return { ok: false, error: "party_not_found", operations: nexusOperationsSummary(db) };
+    if (!party) return { ok: false, error: "party_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...party };
     party.status = "closed";
     party.noContact = true;
@@ -41625,7 +41646,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "party", entityId: party.partyId, action: "marked_closed", reason: "Business closed/out of business; stop outreach.", createdAt: now });
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "business_closed_stop_outreach", actor, "Buyer/seller marked closed; transaction and shipment history preserved.", before, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, ["Marked business closed and stopped outreach.", "Preserved transaction/shipment history."], ["Nexus did not contact the party or delete historical records."], "closed");
-    return nexusOperationResponse(db, action, party, audit, receipt);
+    return nexusOperationResponse(db, user, action, party, audit, receipt);
   }
 
   if (action === "create_shipment") {
@@ -41647,7 +41668,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.shipments.unshift(shipment);
     const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_created", actor, "Shipment draft created without GPS or carrier confirmation.", null, shipment);
     const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Created shipment draft.", "Attached buyer/seller references where available."], ["Nexus did not fake GPS tracking, carrier pickup, delivery, route calculation, or dispatch."], "draft");
-    return nexusOperationResponse(db, action, shipment, audit, receipt);
+    return nexusOperationResponse(db, user, action, shipment, audit, receipt);
   }
 
   if (action === "add_tracking_event") {
@@ -41660,24 +41681,24 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     shipment.trackingEvents = [event, ...(shipment.trackingEvents || [])].slice(0, 50);
     const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "tracking_event_added", actor, `${eventStatus} tracking event added from local/manual report.`, null, event);
     const receipt = addNexusOperationsReceipt(db, "tracking-event", event.eventId, action, ["Added manual/local tracking event to shipment timeline."], ["Nexus did not claim GPS, carrier, route, or delivery confirmation unless provided by a real configured provider."], eventStatus);
-    return nexusOperationResponse(db, action, event, audit, receipt, { shipment });
+    return nexusOperationResponse(db, user, action, event, audit, receipt, { shipment });
   }
 
   if (action === "show_shipment_timeline") {
     const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
     const timeline = store.trackingEvents.filter(item => item.shipmentId === shipment?.shipmentId);
-    return { ok: true, action, record: shipment, timeline, operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: shipment, timeline, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "cancel_shipment") {
     const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
-    if (!shipment) return { ok: false, error: "shipment_not_found", operations: nexusOperationsSummary(db) };
+    if (!shipment) return { ok: false, error: "shipment_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...shipment };
     shipment.status = "cancelled";
     shipment.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_cancelled", actor, "Shipment cancelled in local ledger before confirmed external execution.", before, shipment);
     const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Cancelled shipment record before execution."], ["Nexus did not contact a carrier, cancel a real dispatch, or fake carrier confirmation."], "cancelled");
-    return nexusOperationResponse(db, action, shipment, audit, receipt);
+    return nexusOperationResponse(db, user, action, shipment, audit, receipt);
   }
 
   if (action === "create_transaction") {
@@ -41700,13 +41721,13 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     shadowWriteTradeOrderToPostgres(transaction);
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_created", actor, "Transaction draft created with payment execution disabled.", null, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Created transaction draft and payment gate."], ["Nexus did not charge, pay, refund, escrow, checkout, or create a provider transaction ID."], "draft");
-    return nexusOperationResponse(db, action, transaction, audit, receipt);
+    return nexusOperationResponse(db, user, action, transaction, audit, receipt);
   }
 
   if (action === "add_transaction_item") {
     const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store) || runNexusOperationsAction(db, { action: "create_transaction" }, user).record;
-    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
-    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db) };
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
+    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction, items: [...(transaction.items || [])] };
     const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(body.amount || "0", 80), createdAt: now };
     transaction.items = [item, ...(transaction.items || [])];
@@ -41714,27 +41735,27 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     transaction.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_item_added", actor, "Item added to transaction draft before payment execution.", before, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Added item to transaction draft.", "Kept payment provider status as none unless a real provider returns an ID."], ["Nexus did not process payment or claim receipt/refund."], "prepared");
-    return nexusOperationResponse(db, action, transaction, audit, receipt);
+    return nexusOperationResponse(db, user, action, transaction, audit, receipt);
   }
 
   if (action === "cancel_transaction") {
     const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
-    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db) };
-    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
+    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db, user) };
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction };
     transaction.status = "cancelled";
     transaction.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_cancelled", actor, "Transaction cancelled before external payment execution.", before, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Cancelled transaction before execution."], ["Nexus did not contact Stripe, charge a card, refund, or fake payment settlement."], "cancelled");
-    return nexusOperationResponse(db, action, transaction, audit, receipt);
+    return nexusOperationResponse(db, user, action, transaction, audit, receipt);
   }
 
   if (action === "settle_transaction") {
     const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
-    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db) };
-    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db) };
-    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db) };
-    if (!transaction.items || !transaction.items.length) return { ok: false, error: "transaction_has_no_items", operations: nexusOperationsSummary(db) };
+    if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db, user) };
+    if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db, user) };
+    if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
+    if (!transaction.items || !transaction.items.length) return { ok: false, error: "transaction_has_no_items", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction, items: [...(transaction.items || [])] };
     const stripeStatus = nexusRealProviders.stripe.status(process.env);
     const settledAmount = transaction.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -41752,7 +41773,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       [`Settled the transaction with a simulated payment of ${settledAmount} ${transaction.currency || "USD"}.`],
       ["Nexus did not charge a real card, contact Stripe or Paystack, or move real funds -- this is a labeled simulated settlement for demoing AgriTrade end to end before a real payment account is connected."],
       "settled");
-    return nexusOperationResponse(db, action, transaction, audit, receipt);
+    return nexusOperationResponse(db, user, action, transaction, audit, receipt);
   }
 
   if (action === "create_learning_profile") {
@@ -41773,7 +41794,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     addNexusConsentRecord(db, "learning-profile", profile.learningProfileId, "prepareReferral", profile.consentState.prepareReferral, actor);
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, "learning_profile_created", actor, "Learning profile created for local operations memory.", null, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Created learning and development profile.", "Recorded consent state for training referral preparation."], ["Nexus did not enroll the learner, certify completion, submit to an LMS, or contact a training provider."], "active");
-    return nexusOperationResponse(db, action, profile, audit, receipt);
+    return nexusOperationResponse(db, user, action, profile, audit, receipt);
   }
 
   if (["prepare_training_referral", "prepare_lms_handoff", "create_learning_plan", "create_skill_assessment_packet", "track_training_interest", "track_enrollment_status", "create_drone_training_referral"].includes(action)) {
@@ -41801,24 +41822,24 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, `${action} recorded for learning profile with execution disabled.`, null, record);
     const receipt = addNexusOperationsReceipt(db, "training-record", record.trainingRecordId, action, ["Prepared learning/training support record.", "Kept provider/LMS handoff disabled until credentials, consent, and confirmation exist."], ["Nexus did not enroll the learner, certify training, submit a referral, or claim provider acceptance."], record.status);
-    return nexusOperationResponse(db, action, record, audit, receipt, { timeline: nexusLearningTimeline(store, profile.learningProfileId) });
+    return nexusOperationResponse(db, user, action, record, audit, receipt, { timeline: nexusLearningTimeline(store, profile.learningProfileId) });
   }
 
   if (["archive_learning_profile", "delete_training_data_if_allowed"].includes(action)) {
     const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
-    if (!profile) return { ok: false, error: "learning_profile_not_found", operations: nexusOperationsSummary(db) };
+    if (!profile) return { ok: false, error: "learning_profile_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...profile };
     profile.status = action === "archive_learning_profile" ? "archived" : "deactivated-delete-review";
     profile.updatedAt = now;
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "learning-profile", entityId: profile.learningProfileId, action, reason: cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240), createdAt: now });
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, "Learning profile archived/deactivated with audit retained.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Updated learning profile status and preserved audit trail."], ["Nexus did not hard-delete audit records, contact providers, or continue training outreach."], profile.status);
-    return nexusOperationResponse(db, action, profile, audit, receipt);
+    return nexusOperationResponse(db, user, action, profile, audit, receipt);
   }
 
   if (action === "show_learning_timeline") {
     const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
-    return { ok: true, action, record: profile, timeline: nexusLearningTimeline(store, profile?.learningProfileId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: profile, timeline: nexusLearningTimeline(store, profile?.learningProfileId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "create_applicant_profile") {
@@ -41839,7 +41860,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     addNexusConsentRecord(db, "applicant", applicant.applicantId, "prepareApplication", applicant.consentState.prepareApplication, actor);
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "applicant_profile_created", actor, "Applicant career profile created for local workforce support.", null, applicant);
     const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Created applicant career profile.", "Recorded consent state for application preparation."], ["Nexus did not apply to a job, send a resume, promise employment, or contact an employer."], "active");
-    return nexusOperationResponse(db, action, applicant, audit, receipt);
+    return nexusOperationResponse(db, user, action, applicant, audit, receipt);
   }
 
   if (action === "prepare_resume_packet") {
@@ -41860,7 +41881,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     applicant.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "resume_packet_prepared", actor, "Resume packet prepared without employer submission.", null, packet);
     const receipt = addNexusOperationsReceipt(db, "resume-packet", packet.resumePacketId, action, ["Prepared resume/job readiness packet."], ["Nexus did not submit an application, contact an employer, or claim job placement."], "prepared");
-    return nexusOperationResponse(db, action, packet, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId) });
+    return nexusOperationResponse(db, user, action, packet, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId) });
   }
 
   if (["create_employer_profile", "add_employer"].includes(action)) {
@@ -41878,7 +41899,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.employerProfiles.unshift(employer);
     const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_profile_created", actor, "Employer profile added to local hiring support memory.", null, employer);
     const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Added employer/hiring company record."], ["Nexus did not contact the employer, post a job externally, or claim employer acceptance."], "active");
-    return nexusOperationResponse(db, action, employer, audit, receipt);
+    return nexusOperationResponse(db, user, action, employer, audit, receipt);
   }
 
   if (action === "add_job_opportunity") {
@@ -41902,7 +41923,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     shadowWriteWorkforceRoleToPostgres(job);
     const audit = addNexusOperationsAudit(db, "job", job.jobOpportunityId, "job_opportunity_added", actor, "Job opportunity added as draft only.", null, job);
     const receipt = addNexusOperationsReceipt(db, "job", job.jobOpportunityId, action, ["Added job opportunity draft."], ["Nexus did not publish the job externally or promise applicant placement."], "draft");
-    return nexusOperationResponse(db, action, job, audit, receipt, { pipeline: nexusHiringPipeline(store, employer.employerId) });
+    return nexusOperationResponse(db, user, action, job, audit, receipt, { pipeline: nexusHiringPipeline(store, employer.employerId) });
   }
 
   if (["prepare_application_packet", "track_application_status", "add_interview_follow_up"].includes(action)) {
@@ -41932,12 +41953,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     employer.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "application", application.applicationId, action, actor, `${action} recorded without employer submission.`, null, application);
     const receipt = addNexusOperationsReceipt(db, "application", application.applicationId, action, ["Prepared workforce/application support record."], ["Nexus did not submit the application, contact the employer, schedule an interview, or claim job placement."], application.status);
-    return nexusOperationResponse(db, action, application, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId), pipeline: nexusHiringPipeline(store, employer.employerId) });
+    return nexusOperationResponse(db, user, action, application, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId), pipeline: nexusHiringPipeline(store, employer.employerId) });
   }
 
   if (action === "mark_employer_closed") {
     const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
-    if (!employer) return { ok: false, error: "employer_not_found", operations: nexusOperationsSummary(db) };
+    if (!employer) return { ok: false, error: "employer_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...employer };
     employer.status = "closed";
     employer.noContact = true;
@@ -41945,12 +41966,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "employer", entityId: employer.employerId, action, reason: "Employer marked closed/no-contact.", createdAt: now });
     const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_closed", actor, "Employer marked closed; hiring history preserved.", before, employer);
     const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Marked employer closed and stopped outreach."], ["Nexus did not contact employer or delete historical hiring records."], "closed");
-    return nexusOperationResponse(db, action, employer, audit, receipt);
+    return nexusOperationResponse(db, user, action, employer, audit, receipt);
   }
 
   if (["archive_applicant", "no_contact_applicant", "delete_applicant_data_if_allowed"].includes(action)) {
     const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
-    if (!applicant) return { ok: false, error: "applicant_not_found", operations: nexusOperationsSummary(db) };
+    if (!applicant) return { ok: false, error: "applicant_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...applicant };
     applicant.status = action === "no_contact_applicant" ? "no-contact" : action === "archive_applicant" ? "archived" : "deactivated-delete-review";
     applicant.noContact = action === "no_contact_applicant";
@@ -41958,17 +41979,17 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "applicant", entityId: applicant.applicantId, action, reason: cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240), createdAt: now });
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, action, actor, "Applicant record status updated with audit retained.", before, applicant);
     const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Updated applicant status and preserved audit trail."], ["Nexus did not hard-delete protected records, contact employers, or continue outreach."], applicant.status);
-    return nexusOperationResponse(db, action, applicant, audit, receipt);
+    return nexusOperationResponse(db, user, action, applicant, audit, receipt);
   }
 
   if (action === "show_applicant_timeline") {
     const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
-    return { ok: true, action, record: applicant, timeline: nexusApplicantTimeline(store, applicant?.applicantId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: applicant, timeline: nexusApplicantTimeline(store, applicant?.applicantId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "show_hiring_pipeline") {
     const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
-    return { ok: true, action, record: employer, pipeline: nexusHiringPipeline(store, employer?.employerId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: employer, pipeline: nexusHiringPipeline(store, employer?.employerId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (["add_drone_provider"].includes(action)) {
@@ -41986,7 +42007,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.droneProviders.unshift(provider);
     const audit = addNexusOperationsAudit(db, "drone-provider", provider.droneProviderId, "drone_provider_added", actor, "Drone provider candidate added with dispatch disabled.", null, provider);
     const receipt = addNexusOperationsReceipt(db, "drone-provider", provider.droneProviderId, action, ["Added drone provider candidate record."], ["Nexus did not dispatch drones, schedule flights, capture imagery, or claim provider acceptance."], provider.status);
-    return nexusOperationResponse(db, action, provider, audit, receipt);
+    return nexusOperationResponse(db, user, action, provider, audit, receipt);
   }
 
   if (action === "add_drone_equipment") {
@@ -42003,7 +42024,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.droneEquipment.unshift(equipment);
     const audit = addNexusOperationsAudit(db, "drone-equipment", equipment.droneEquipmentId, "drone_equipment_added", actor, "Drone equipment candidate added for readiness review.", null, equipment);
     const receipt = addNexusOperationsReceipt(db, "drone-equipment", equipment.droneEquipmentId, action, ["Added drone equipment record."], ["Nexus did not activate flight hardware, capture images, or launch a mission."], "inventory-review");
-    return nexusOperationResponse(db, action, equipment, audit, receipt);
+    return nexusOperationResponse(db, user, action, equipment, audit, receipt);
   }
 
   if (["create_drone_mission_request", "prepare_drone_mission_packet", "match_drone_mission_provider", "queue_drone_mission", "track_drone_mission_status", "add_drone_mission_event", "create_agriculture_expert_packet_from_drone"].includes(action)) {
@@ -42053,24 +42074,24 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     }
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, `${action} recorded with drone dispatch disabled.`, before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission support record.", "Preserved provider, consent, compliance, and manual review gates."], ["Nexus did not dispatch a drone, schedule a flight, request flight authorization, capture imagery, diagnose crops, or contact a provider."], mission.status);
-    return nexusOperationResponse(db, action, mission, audit, receipt, { event, timeline: nexusDroneMissionTimeline(store, mission.droneMissionId) });
+    return nexusOperationResponse(db, user, action, mission, audit, receipt, { event, timeline: nexusDroneMissionTimeline(store, mission.droneMissionId) });
   }
 
   if (["cancel_drone_mission", "archive_drone_record"].includes(action)) {
     const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
-    if (!mission) return { ok: false, error: "drone_mission_not_found", operations: nexusOperationsSummary(db) };
+    if (!mission) return { ok: false, error: "drone_mission_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...mission };
     mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";
     mission.updatedAt = now;
     store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "drone-mission", entityId: mission.droneMissionId, action, reason: cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240), createdAt: now });
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, "Drone mission cancelled/archived before any live flight action.", before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission status and preserved audit trail."], ["Nexus did not cancel a real flight, contact a provider, or delete compliance history."], mission.status);
-    return nexusOperationResponse(db, action, mission, audit, receipt);
+    return nexusOperationResponse(db, user, action, mission, audit, receipt);
   }
 
   if (action === "show_drone_mission_timeline") {
     const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
-    return { ok: true, action, record: mission, timeline: nexusDroneMissionTimeline(store, mission?.droneMissionId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+    return { ok: true, action, record: mission, timeline: nexusDroneMissionTimeline(store, mission?.droneMissionId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "log_heat_risk_report") {
@@ -42078,13 +42099,13 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     store.heatRiskReports.unshift(report);
     const audit = addNexusOperationsAudit(db, "case", report.heatReportId, "heat_risk_report_logged", actor, "Heat risk report logged without fake prevalence map.", null, report);
     const receipt = addNexusOperationsReceipt(db, "case", report.heatReportId, action, ["Logged local heat illness/risk report.", "Displayed no-live-dataset notice when configured data is absent."], ["Nexus did not fake illness prevalence, diagnosis, dispatch, weather source, or map overlay."], "recorded");
-    return nexusOperationResponse(db, action, report, audit, receipt);
+    return nexusOperationResponse(db, user, action, report, audit, receipt);
   }
 
-  if (action === "show_action_receipts") return { ok: true, action, receipts: store.actionReceipts.slice(0, 50), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
-  if (action === "show_audit_log") return { ok: true, action, auditLogs: store.auditLogs.slice(0, 50), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  if (action === "show_action_receipts") return { ok: true, action, receipts: store.actionReceipts.slice(0, 50), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
+  if (action === "show_audit_log") return { ok: true, action, auditLogs: store.auditLogs.slice(0, 50).map(entry => redactSensitiveAuditEntry(entry, canUse(user, "admin"))), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
 
-  return { ok: false, error: "unsupported_operations_action", action, operations: nexusOperationsSummary(db) };
+  return { ok: false, error: "unsupported_operations_action", action, operations: nexusOperationsSummary(db, user) };
 }
 
 function nexusChronicCareTimeline(store, chronicCareId = "") {
@@ -42667,7 +42688,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/operations/status" && req.method === "GET") {
-    return send(res, 200, nexusOperationsSummary(db));
+    return send(res, 200, nexusOperationsSummary(db, user));
   }
 
   if (url.pathname === "/api/nexus/operations/action" && req.method === "POST") {
