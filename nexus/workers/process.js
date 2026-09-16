@@ -47,6 +47,10 @@ async function main() {
   // there's nothing to gain from checking every couple of minutes.
   const situationalAwarenessIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessSweepAt = 0;
+  // Same day-scale reasoning as situational-awareness.sweep -- escalation
+  // grace periods are measured in days, not minutes.
+  const situationalAwarenessEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessEscalationSweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
@@ -64,6 +68,11 @@ async function main() {
       lastSituationalAwarenessSweepAt = Date.now();
       try { await handlers["situational-awareness.sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.situational_awareness_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessEscalationSweepAt >= situationalAwarenessEscalationIntervalMs) {
+      lastSituationalAwarenessEscalationSweepAt = Date.now();
+      try { await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_escalation_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }
