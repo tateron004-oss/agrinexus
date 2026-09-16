@@ -43963,6 +43963,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -43970,6 +43972,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
