@@ -208,24 +208,26 @@ includes(qaSuite, "archive/qa-scripts/nexus-full-internet-services-activation-qa
 const tmpDb = path.join(root, `tmp-full-internet-services-${Date.now()}.json`);
 const port = 5100 + Math.floor(Math.random() * 300);
 
-function request(method, route, body) {
+function request(method, route, body, cookie) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : "";
+    const headers = {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload)
+    };
+    if (cookie) headers.cookie = cookie;
     const req = http.request({
       hostname: "127.0.0.1",
       port,
       path: route,
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
-      }
+      headers
     }, res => {
       let data = "";
       res.on("data", chunk => { data += chunk; });
       res.on("end", () => {
         try {
-          resolve({ status: res.statusCode, body: JSON.parse(data || "{}") });
+          resolve({ status: res.statusCode, body: JSON.parse(data || "{}"), headers: res.headers });
         } catch (error) {
           reject(new Error(`Invalid JSON from ${route}: ${data}`));
         }
@@ -323,11 +325,16 @@ async function runRuntimeQa() {
     assert(liveStatus.body.internetServices, "live execution status should include internet services");
     assert(Array.isArray(liveStatus.body.internetServiceAdapters), "live execution status should include internet service adapters");
 
-    const receipts = await request("GET", "/api/nexus/operation-receipts");
+    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+    assert.strictEqual(login.status, 200, "admin login should succeed");
+    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
+    assert(cookie, "admin login should set a session cookie");
+
+    const receipts = await request("GET", "/api/nexus/operation-receipts", null, cookie);
     assert.strictEqual(receipts.status, 200, "receipts endpoint should respond");
     assert(receipts.body.receipts.some(item => item.serviceLaneId), "internet service receipts should be visible");
 
-    const audit = await request("GET", "/api/nexus/audit-log");
+    const audit = await request("GET", "/api/nexus/audit-log", null, cookie);
     assert.strictEqual(audit.status, 200, "audit endpoint should respond");
     assert(audit.body.audit.some(item => item.entityType === "internet-service"), "internet service audit should be visible");
   } finally {
