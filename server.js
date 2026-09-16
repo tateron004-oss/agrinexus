@@ -11601,7 +11601,7 @@ async function createBuyerSellerMessage(db, user, body = {}) {
   const providerId = channel.toLowerCase().includes("whatsapp") ? "whatsapp-delivery" : channel.toLowerCase().includes("sms") ? "sms-delivery" : channel.toLowerCase().includes("email") ? "email-delivery" : "trade-market";
   const recipient = twilioRecipientForProvider(providerId, body);
   let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
-  if (["sms-delivery", "whatsapp-delivery"].includes(providerId)) {
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !user?.restrictions?.includes("communications-send")) {
     delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
     sellerMessage.status = delivery.ok ? "sent-live" : "sent-local";
     sellerMessage.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
@@ -18820,6 +18820,33 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   };
   if (!command) {
     return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
+  }
+  // A restricted account (today, only self-service guest sessions --
+  // user.restrictions is set at /api/auth/guest-session with zero identity
+  // verification beyond a free-text display name) must not reach a tool
+  // whose category it lists as blocked. This was previously enforced
+  // nowhere: neither here nor on the dedicated REST routes that share these
+  // same real-record-writing/real-message-sending code paths.
+  // Maps a tool name to the restriction category (from the restrictions
+  // array issued at /api/auth/guest-session) it must be blocked under. Only
+  // the two categories with a confirmed real code path through this
+  // dispatcher are mapped; a tool not listed here is unaffected by any
+  // restriction category. Defined inline (not as a module-level constant)
+  // because at least one existing test evaluates this function's source in
+  // isolation via vm.runInContext, without the surrounding module scope.
+  const restrictedToolCategory = {
+    nexus_communications: "communications-send",
+    nexus_email: "communications-send",
+    nexus_health_preparation: "health-record-write"
+  }[toolName];
+  if (restrictedToolCategory && user?.restrictions?.includes(restrictedToolCategory)) {
+    return {
+      ...common,
+      ok: false,
+      status: "restricted",
+      response: "This account type cannot use that action here. Sign in with a full account to continue.",
+      restrictedCategory: restrictedToolCategory
+    };
   }
   if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
     const musicResult = await musicProviderCommandResponse(db, user, command, args);
@@ -45015,16 +45042,19 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     return sendProviderResult(res, await nexusRealProviders.twilio.sendWhatsapp(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
     return sendProviderResult(res, await nexusRealProviders.twilio.startCall(await readBody(req)));
   }
 
@@ -45076,11 +45106,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/communications/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendSms(await readBody(req)));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendWhatsapp(await readBody(req)));
   }
 
@@ -45091,6 +45123,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/communications/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
     return sendProviderResult(res, await nexusRealProviders.communicationsBridge.startCall(await readBody(req)));
   }
 
@@ -45475,6 +45508,9 @@ async function api(req, res, url) {
   if (req.method === "POST" && medicalPostRoutes[url.pathname]) {
     if (!user) return send(res, 401, { error: "Sign in required" });
     const [providerKey, methodName, shouldPersist] = medicalPostRoutes[url.pathname];
+    if (shouldPersist && user.restrictions?.includes("health-record-write")) {
+      return send(res, 403, { error: "This account type cannot write health records." });
+    }
     const result = await nexusRealProviders[providerKey][methodName](await readBody(req), db);
     if (shouldPersist && result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
@@ -51575,6 +51611,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/communications/thread" && req.method === "POST") {
     if (!canUse(user, "notifications")) return send(res, 403, { error: "Role does not allow communication workflows" });
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
     const body = await readBody(req);
     const result = await createCommunicationThread(db, user, body);
     addWorkflowNote(db.profile, body.note, "Communication note");
