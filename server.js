@@ -27836,9 +27836,11 @@ function spotifyRedirectUri(req) {
 
 function spotifyUserConnection(db, user) {
   ensureMusicProfile(db.profile);
-  return db.profile.musicConnections.find(item => item.userId === user?.id && item.provider === "spotify" && item.refreshToken)
-    || db.profile.musicConnections.find(item => item.provider === "spotify" && item.refreshToken)
-    || null;
+  // Never fall back to a connection owned by a DIFFERENT user -- db.profile
+  // is a shared blob, and a fallback here would let any caller with no
+  // Spotify connection of their own control (play/pause/skip) and read the
+  // playback state/history of whichever real account happened to link one.
+  return db.profile.musicConnections.find(item => item.userId === user?.id && item.provider === "spotify" && item.refreshToken) || null;
 }
 
 async function spotifyTokenRequest(params) {
@@ -45555,6 +45557,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/music/spotify/login" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required before connecting Spotify" });
+    if (user.restrictions?.includes("account-provider-link")) return send(res, 403, { error: "This account type cannot link an external provider account." });
     if (!process.env.SPOTIFY_CLIENT_ID) return send(res, 400, { error: "SPOTIFY_CLIENT_ID is required" });
     const state = crypto.randomBytes(18).toString("hex");
     const sid = parseCookies(req).agrinexus_sid || "";
@@ -50162,6 +50165,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/trade/payment-checkout" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade payment checkout workflows" });
+    if (user.restrictions?.includes("external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     const body = await readBody(req);
     const checkout = await initializeTradePaymentCheckout(db, user, body);
     addWorkflowNote(db.profile, body.note, "Payment checkout note");

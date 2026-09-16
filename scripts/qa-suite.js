@@ -80,6 +80,7 @@ const suites = {
     "scripts/logout-durable-token-revocation-smoke.js",
     "scripts/guest-session-cleanup-smoke.js",
     "scripts/guest-restrictions-enforcement-smoke.js",
+    "scripts/guest-transaction-and-provider-link-smoke.js",
     "scripts/admin-takeover-and-ops-disclosure-smoke.js"
   ],
   call: [
