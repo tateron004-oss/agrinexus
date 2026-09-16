@@ -1,6 +1,7 @@
 "use strict";
 
 const { createId } = require("../contracts/identifiers.js");
+const { createCommand } = require("../contracts/command.js");
 
 // The notification that carries an autonomous task's outcome summary is
 // tagged with this content.kind so notifications.deliver can recognize it as
@@ -9,6 +10,12 @@ const { createId } = require("../contracts/identifiers.js");
 // payload, which is content the user asked for, not evidence the task itself
 // was delivered).
 const AUTONOMOUS_OUTCOME_NOTIFICATION_KIND = "autonomous_task_outcome";
+
+// situational-awareness.sweep's own cooldown marker: a plain (non-health-
+// classified) nexus_records row, reusing RecordRepository rather than adding
+// a new table. Its data carries no PHI, just why/when the nudge fired.
+const SITUATIONAL_AWARENESS_WORKSPACE_ID = "situational-awareness";
+const HEALTH_CHECKIN_NUDGE_RECORD_TYPE = "health_checkin_nudge";
 
 function createHandlers({ runtime, deliveryProviders = {} }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
@@ -102,6 +109,49 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
         requeued += 1;
       }
       return { scanned: stale.length, requeued };
+    },
+    // Real proactive initiative: Kyro noticing something on its own, with no
+    // request from the user in that moment, and acting. The only structural
+    // (not freeform-JSONB-guessing) signal nexus_records can honestly support
+    // today is staleness -- a subject with a health-classified record and no
+    // newer one in a while -- so that's the v1 trigger. The remedial action
+    // is scheduling a real reminders.schedule step (already a fully-real,
+    // non-confirmation-required tool), not messaging the person directly:
+    // communications.send is confirmationRequired, so an autonomous task that
+    // tried to use it would correctly stall at awaiting_confirmation and just
+    // become another approval notification -- reminders.schedule is the one
+    // canonical tool this kind of nudge can complete autonomously end to end.
+    "situational-awareness.sweep": async ({ job }) => {
+      const staleMs = Number(job.payload?.staleMs || 14 * 24 * 60 * 60 * 1000);
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listStaleHealthSubjects({ staleBefore: new Date(Date.now() - staleMs), limit });
+      const tenantCounts = new Map();
+      let created = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const subjectId = candidate.subject_id;
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
+          correlationId: createId("event"), text: "Kyro noticed no recent health check-in and scheduled a reminder." });
+        const task = await runtime.engine.create({ command, goal: "Nudge a health check-in after a quiet period",
+          application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a health check-in reminder",
+            toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick health check-in with Kyro." } }] });
+        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "health_checkin_stale", lastHealthRecordAt: candidate.last_health_record_at },
+          provenance: { source: "situational-awareness-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created };
     }
   });
 }
@@ -145,4 +195,5 @@ async function blockStalledAutonomousTaskIfApplicable({ runtime, notification, e
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
 
-module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND });
+module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
+  SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE });

@@ -42,6 +42,24 @@ class RecordRepository {
     return result.rows||result;
   }
 
+  // Deliberately not tenant-scoped, like NotificationRepository.claim() and
+  // TaskRepository.listStale() -- backs a single global proactive-signal
+  // sweep, not a per-tenant listing. Only inspects real, structural columns
+  // (classification/subject/timing) -- record `data` is a caller-defined
+  // freeform JSONB blob with no fixed shape across record types, so a
+  // per-vital-sign severity check isn't something this schema can honestly
+  // support yet.
+  async listStaleHealthSubjects({ staleBefore, limit = 50 }) {
+    const result = await this.db.query(`select tenant_id, subject_id, max(updated_at) as last_health_record_at
+      from nexus_records
+      where classification='health' and state='active' and deleted_at is null and subject_id is not null
+      group by tenant_id, subject_id
+      having max(updated_at) < $1
+      order by max(updated_at)
+      limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
   async remove({ tenantId, recordId, actorId }) {
     const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3),deleted_at=now(),updated_at=now()
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);
