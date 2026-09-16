@@ -29,7 +29,8 @@ const envExample = read(".env.example");
 (async () => {
   const db = { profile: {} };
   assert.equal(provider.intake({ confirmed: true, sessionType: "chronic_care_review", reason: "prepare questions" }, db).body.status, "completed");
-  assert.equal(provider.prepare({ videoProvider: "local", reason: "prepare questions" }, db).body.status, "prepared");
+  assert.equal(provider.prepare({ confirmed: true, videoProvider: "local", reason: "prepare questions" }, db).body.status, "prepared");
+  assert.equal(provider.prepare({ videoProvider: "local", reason: "prepare questions" }, db).body.status, "confirmation_required");
   assert.equal((await provider.createSession({ videoProvider: "local", confirmed: true, reason: "prepare questions" }, db)).body.status, "prepared");
   assert.equal((await provider.createSession({ videoProvider: "twilio", confirmed: true, reason: "prepare questions" }, db, {})).body.status, "disabled");
   assert.equal((await provider.createSession({ videoProvider: "daily", confirmed: true, reason: "prepare questions" }, db, { NEXUS_DAILY_VIDEO_ENABLED: "true" })).body.status, "missing_config");
