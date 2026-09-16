@@ -4590,7 +4590,15 @@ function publicState(db, user) {
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
     persistentOperations: nexusOperationsSummary(db),
-    admin: adminSnapshot(db, providers),
+    // adminSnapshot() returns the full cross-tenant user directory (every
+    // account's name/email/role), subscriber/support records, and a
+    // platform-wide activity audit trail -- it must never be computed for a
+    // caller who isn't actually an admin, including an anonymous request
+    // (user === null) and a self-service guest (Standard User role from
+    // /api/auth/guest-session). public/app.js already reads every admin.*
+    // field defensively (data.admin?.users || []), so omitting it here for
+    // non-admins is a safe, additive-only change.
+    admin: canUse(user, "admin") ? adminSnapshot(db, providers) : null,
     profile: profileForUser(db.profile, user)
   };
 }
@@ -11064,7 +11072,7 @@ function cloudAgentPolicy(user = {}) {
     mode: "controlled-cloud-agent",
     cloudRuntime: IS_HOSTED ? "render-cloud" : "local-cloud-sim",
     canRunSafeToolsAutomatically: true,
-    canCreateToolTemplates: user.role === "admin" || user.role === "investor",
+    canCreateToolTemplates: user?.role === "admin" || user?.role === "investor",
     canExecuteGeneratedCode: false,
     canSelfDeploy: false,
     canRetrainModel: false,
@@ -42663,22 +42671,31 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/operations/action" && req.method === "POST") {
-    const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
+    // operationsUser is only ever used to attribute/construct the local demo
+    // record runNexusOperationsAction writes (e.g. a job application's
+    // applicant name) -- it must never be substituted into publicState()
+    // below. publicState()'s admin/permissions/personalization fields are
+    // gated on the REAL caller (`user`, null for an anonymous request), not
+    // on whichever account this fallback happens to pick; passing the
+    // substituted account there previously leaked the Admin account's full
+    // admin snapshot (and identity) to a request with no session at all,
+    // since db.users[0] is the seeded Platform Admin.
+    const operationsUser = user || db.users.find(account => account.role === "Standard User") || db.users[0];
     const result = runNexusOperationsAction(db, await readBody(req), operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
-    const state = publicState(db, operationsUser);
+    const state = publicState(db, user);
     state.nexusOperationsResult = result;
     return send(res, 200, state);
   }
 
   if (url.pathname === "/api/nexus/operations/command" && req.method === "POST") {
     const body = await readBody(req);
-    const operationsUser = user || db.users.find(account => account.role === "user") || db.users[0];
+    const operationsUser = user || db.users.find(account => account.role === "Standard User") || db.users[0];
     const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
-    const state = publicState(db, operationsUser);
+    const state = publicState(db, user);
     state.nexusOperationsResult = result;
     return send(res, 200, state);
   }
