@@ -50,6 +50,16 @@ class TaskRepository {
     return (result.rows || result).map(row => row.task_document);
   }
 
+  // Deliberately not tenant-scoped, like NotificationRepository.claim() --
+  // this backs a single global self-healing sweep (a crashed/missed worker
+  // job shouldn't strand a task forever), not a per-tenant listing.
+  async listStale({ states, staleBefore, limit = 50 }) {
+    const result = await this.db.query(`select task_document from nexus_tasks
+      where state=any($1::text[]) and updated_at<$2 order by updated_at limit $3`,
+      [states, staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return (result.rows || result).map(row => row.task_document);
+  }
+
   async save(task, expectedVersion) {
     const result = await this.db.query(`update nexus_tasks set state=$1, version=$2, task_document=$3::jsonb,
       outcome=$4, outcome_verified_at=case when $1='completed' then now() else outcome_verified_at end,

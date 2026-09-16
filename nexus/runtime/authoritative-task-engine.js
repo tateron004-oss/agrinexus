@@ -8,12 +8,12 @@ class NexusRuntimeError extends Error {
 }
 
 class AuthoritativeTaskEngine {
-  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null, observability = null }) {
-    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority, observability });
+  constructor({ conversations, tasks, tools, executions, consents, audit, executors = {}, verifier, authority = null, observability = null, jobs = null }) {
+    Object.assign(this, { conversations, tasks, tools, executions, consents, audit, executors, authority, observability, jobs });
     this.verifier = verifier || (async ({ result }) => ({ verified: result !== undefined, method: "result_present" }));
   }
 
-  async create({ command, goal, application = "general", riskTier = "low", priority = 3, dueAt = null, steps }) {
+  async create({ command, goal, application = "general", riskTier = "low", priority = 3, dueAt = null, steps, autonomous = false }) {
     if (!Array.isArray(steps) || !steps.length) throw new NexusRuntimeError("steps_required", "At least one task step is required.");
     await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
     const normalized = [];
@@ -31,12 +31,21 @@ class AuthoritativeTaskEngine {
     let task = createTask({ tenantId: command.tenantId, ownerId: command.actorId,
       conversationId: command.conversationId, commandId: command.commandId,
       correlationId: command.correlationId, goal,
-      application, riskTier, priority, dueAt });
+      application, riskTier, priority, dueAt, autonomous });
     await this.tasks.create(task, normalized);
     task = transitionTask(task, "planned", { actorId: "nexus-brain", reason: "Durable plan created" });
     await this.tasks.save(task, 1);
     await this.audit.record({ tenantId: task.tenantId, actorId: command.actorId, correlationId: task.correlationId,
-      taskId: task.taskId, eventType: "task.created", outcome: "planned", metadata: { stepCount: normalized.length } });
+      taskId: task.taskId, eventType: "task.created", outcome: "planned", metadata: { stepCount: normalized.length, autonomous } });
+    if (autonomous && this.jobs) {
+      // The one moment nothing else will ever re-trigger this task on its own:
+      // right after creation. Every later re-drive (confirmation approved,
+      // a crashed job, a stalled step) goes through the self-healing sweep
+      // instead, so this key only needs to dedupe repeated create() retries
+      // at the same task version, not future re-execution.
+      await this.jobs.enqueue({ tenantId: task.tenantId, taskId: task.taskId, jobType: "agent.advance-task",
+        idempotencyKey: `agent-advance:${task.taskId}:v${task.version}`, payload: { taskId: task.taskId } });
+    }
     return { ...task, steps: normalized };
   }
 
@@ -213,6 +222,36 @@ class AuthoritativeTaskEngine {
       audible: Boolean(audible), workspace: required(workspace, "Workspace"), commandId, correlationId, evidence };
     const completed = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "completed", reason: "Authoritative renderer acknowledged the user outcome", outcome });
+    return { task: completed, state: "completed", completed: true, outcome };
+  }
+
+  // The autonomous counterpart to acknowledgeRender(): a background-executed
+  // task has no live UI to have shown or spoken the outcome, so it can never
+  // satisfy acknowledgeRender()'s rendered/visible/audible requirement. This
+  // reaches the same verifying -> completed transition on a distinct kind of
+  // real evidence instead -- a verified push-delivery receipt for the task's
+  // outcome summary -- and only ever applies to a task created autonomous:true.
+  async acknowledgeAutonomousDelivery({ context, taskId, commandId, correlationId, deliveryReceipt = {} }) {
+    const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
+    if (!task) throw new NexusRuntimeError("task_not_found", "Task not found.", 404);
+    if (task.ownerId !== context.userId && !context.hasRole?.("admin")) {
+      throw new NexusRuntimeError("task_owner_required", "Only the task owner may acknowledge its outcome.", 403);
+    }
+    if (!task.autonomous) {
+      throw new NexusRuntimeError("task_not_autonomous", "Only an autonomous task can be acknowledged by delivery receipt.", 409);
+    }
+    if (task.state !== "verifying") {
+      throw new NexusRuntimeError("render_acknowledgement_not_expected", "This task is not awaiting a delivery acknowledgement.", 409);
+    }
+    if (task.commandId !== commandId || task.correlationId !== correlationId) {
+      throw new NexusRuntimeError("command_acknowledgement_mismatch", "Delivery acknowledgement does not match the active command.", 409);
+    }
+    if (!deliveryReceipt?.verified) {
+      throw new NexusRuntimeError("delivery_outcome_unverified", "The autonomous outcome delivery was not verified.", 422);
+    }
+    const outcome = { verified: true, deliveredViaPush: true, deliveryReceipt, commandId, correlationId };
+    const completed = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "completed", reason: "Verified push delivery acknowledged the autonomous outcome", outcome });
     return { task: completed, state: "completed", completed: true, outcome };
   }
 
