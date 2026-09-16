@@ -580,6 +580,26 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/operations" && req.method === "GET") {
         if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
         send(res, 200, await active.observability.operationalView({ tenantId: context.tenantId, windowMinutes: request.query.windowMinutes })); return true;
+      } else if (url.pathname === "/api/nexus/runtime/audit/events" && req.method === "GET") {
+        // The review surface Phase 3 of the JARVIS-mode plan calls for: a
+        // list of everything Kyro (or anyone else) did, tenant-wide -- not
+        // just what one task's owner can see, so it's gated the same way
+        // as the other tenant-wide operational views above.
+        if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
+        const events = await active.audit.list({ tenantId: context.tenantId, actorId: request.query.actorId,
+          taskId: request.query.taskId, eventType: request.query.eventType, limit: Number(request.query.limit) || 100 });
+        send(res, 200, { authoritative: true, events }); return true;
+      } else if (url.pathname === "/api/nexus/runtime/autonomy/pause" && req.method === "GET") {
+        if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
+        send(res, 200, { authoritative: true, ...(await active.autonomyControl.status({ tenantId: context.tenantId })) }); return true;
+      } else if (url.pathname === "/api/nexus/runtime/autonomy/pause" && req.method === "POST") {
+        // Gated on the admin role alone, not a permission string -- this is a
+        // tenant-wide kill switch for every future autonomous task, a step
+        // above read-only operational visibility.
+        if (!context.hasRole("admin")) { send(res, 403, { error: "The admin role is required to change autonomy pause state.", code: "permission_denied" }); return true; }
+        const status = await active.autonomyControl.setPaused({ tenantId: context.tenantId, actorId: context.userId,
+          paused: body.paused === true, reason: body.reason || "" });
+        send(res, 200, { authoritative: true, ...status.data }); return true;
       } else if (url.pathname === "/api/nexus/runtime/artifacts" && req.method === "POST") {
         if (!active.objectStorage) { send(res, 503, {error:"Shared object storage is unavailable.",code:"object_storage_unavailable"}); return true; }
         const bytes=Buffer.from(String(body.contentBase64||""),"base64");

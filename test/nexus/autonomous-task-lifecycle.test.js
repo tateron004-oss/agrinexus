@@ -75,6 +75,36 @@ test("create() with autonomous:true but no jobs dependency does not throw", asyn
   assert.equal(task.autonomous, true);
 });
 
+test("create() refuses a new autonomous task when the tenant's autonomy is paused", async () => {
+  const { engine, store } = fixture();
+  engine.autonomyControl = { isPaused: async () => true };
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report" });
+  await expectCode(() => engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }], autonomous: true }), "autonomy_paused");
+  assert.equal(store.task, null);
+  assert.equal(store.jobsEnqueued.length, 0);
+});
+
+test("the autonomy pause switch never blocks an ordinary (non-autonomous) task", async () => {
+  const { engine, store } = fixture();
+  engine.autonomyControl = { isPaused: async () => true };
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report" });
+  const task = await engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] });
+  assert.equal(task.autonomous, false);
+  assert.notEqual(store.task, null);
+});
+
+test("create() with autonomous:true still succeeds once the tenant is unpaused", async () => {
+  const { engine, store } = fixture();
+  engine.autonomyControl = { isPaused: async () => false };
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report" });
+  const task = await engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }], autonomous: true });
+  assert.equal(task.autonomous, true);
+  assert.equal(store.jobsEnqueued.length, 1);
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }

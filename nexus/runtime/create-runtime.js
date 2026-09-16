@@ -34,6 +34,7 @@ const { DeviceTokenVault } = require("../security/device-token-vault.js");
 const { ProductionAcceptanceRepository } = require("../acceptance/repository.js");
 const { createObjectStore } = require("../storage/object-store.js");
 const { Path2EvidenceRepository } = require("../path2/evidence-repository.js");
+const { AutonomyControlRepository } = require("../security/autonomy-control-repository.js");
 const { BehaviorSpine } = require("./behavior-spine.js");
 const { CapabilityAdapterRegistry } = require("../tools/capability-adapter-registry.js");
 const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.js");
@@ -66,6 +67,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
   const workspaceStates = new WorkspaceStateRepository(records);
+  const autonomyControl = new AutonomyControlRepository(records);
   const workspaceMigrations = new WorkspaceMigrationRepository(db);
   const devices = new DeviceRepository(db);
   const deviceTokens = env.NEXUS_DEVICE_TOKEN_KEY ? new DeviceTokenVault(env.NEXUS_DEVICE_TOKEN_KEY) : null;
@@ -110,14 +112,14 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const authorityCoverage = new AuthorityCoverage({ applications, tools, adapters, verifiers });
   const cutover = new WorkspaceCutoverPolicy({ migrations: workspaceMigrations, applications, authorityCoverage });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
-    audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs });
+    audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs, autonomyControl });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceStates, workspaceMigrations, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }

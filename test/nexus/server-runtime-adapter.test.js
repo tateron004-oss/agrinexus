@@ -256,6 +256,55 @@ test("workspace cutover and observability status are authenticated and permissio
   assert.equal(telemetry.result.status, 200); assert.equal(telemetry.result.body.windowMinutes, "15");
 });
 
+test("audit event review requires observability permission or the admin role", async () => {
+  let listInput;
+  const runtime = { engine: { tasks: {} }, applications: { list: () => [] }, workspaceMigrations: {}, observability: {},
+    audit: { list: async input => { listInput = input; return [{ eventType: "task.created", outcome: "planned" }]; } } };
+  const denied = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", permissions: [] }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const deniedResponse = responseCapture();
+  await denied.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/audit/events"), deniedResponse.send);
+  assert.equal(deniedResponse.result.status, 403);
+  const allowed = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "admin-1", tenantId: "tenant-1", permissions: ["observability:read"] }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const allowedResponse = responseCapture();
+  await allowed.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/audit/events?taskId=tsk_1&limit=10"), allowedResponse.send);
+  assert.equal(allowedResponse.result.status, 200);
+  assert.equal(allowedResponse.result.body.events[0].eventType, "task.created");
+  assert.deepEqual(listInput, { tenantId: "tenant-1", actorId: undefined, taskId: "tsk_1", eventType: undefined, limit: 10 });
+});
+
+test("autonomy pause status is readable with observability permission, admin role, or neither refused", async () => {
+  const runtime = { engine: { tasks: {} }, applications: { list: () => [] }, workspaceMigrations: {}, observability: {},
+    autonomyControl: { status: async () => ({ paused: true, reason: "manual hold" }) } };
+  const denied = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", permissions: [] }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const deniedResponse = responseCapture();
+  await denied.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/autonomy/pause"), deniedResponse.send);
+  assert.equal(deniedResponse.result.status, 403);
+  const allowed = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "admin-1", tenantId: "tenant-1", role: "admin", permissions: [] }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const allowedResponse = responseCapture();
+  await allowed.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/autonomy/pause"), allowedResponse.send);
+  assert.equal(allowedResponse.result.status, 200);
+  assert.equal(allowedResponse.result.body.paused, true);
+  assert.equal(allowedResponse.result.body.reason, "manual hold");
+});
+
+test("toggling the autonomy pause switch requires the admin role, not just any permission", async () => {
+  let setPausedInput;
+  const runtime = { engine: { tasks: {} }, applications: { list: () => [] }, workspaceMigrations: {}, observability: {},
+    autonomyControl: { setPaused: async input => { setPausedInput = input; return { data: { paused: input.paused, reason: input.reason, changedBy: input.actorId, changedAt: "2026-09-16T00:00:00.000Z" } }; } } };
+  const nonAdmin = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", permissions: ["observability:read"] }), readJson: async () => ({ paused: true }), createRuntimeFn: () => runtime });
+  const nonAdminResponse = responseCapture();
+  await nonAdmin.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/autonomy/pause"), nonAdminResponse.send);
+  assert.equal(nonAdminResponse.result.status, 403);
+  assert.equal(setPausedInput, undefined);
+  const admin = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "admin-1", tenantId: "tenant-1", role: "admin", permissions: [] }), readJson: async () => ({ paused: true, reason: "investigating a bad trigger" }), createRuntimeFn: () => runtime });
+  const adminResponse = responseCapture();
+  await admin.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/autonomy/pause"), adminResponse.send);
+  assert.equal(adminResponse.result.status, 200);
+  assert.equal(setPausedInput.tenantId, "tenant-1"); assert.equal(setPausedInput.actorId, "admin-1");
+  assert.equal(setPausedInput.paused, true); assert.equal(setPausedInput.reason, "investigating a bad trigger");
+  assert.equal(adminResponse.result.body.paused, true);
+});
+
 test("production acceptance requires its machine token before runtime access", async () => {
   let runtimeCreated = false; const capture = responseCapture();
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret" }, resolveUser: async () => null,
