@@ -11,6 +11,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+try { $Host.UI.RawUI.WindowTitle = "Kyro desktop listener (AgriNexus)" } catch { }
+
 Add-Type -AssemblyName System.Speech
 
 if ([string]::IsNullOrWhiteSpace($Email)) { $Email = "user@agrinexus.org" }
@@ -23,14 +25,21 @@ $wakePhrases = @(
   "hey agrinexus",
   "good morning nexus",
   "good afternoon nexus",
-  "good evening nexus"
+  "good evening nexus",
+  "kyro",
+  "hey kyro",
+  "good morning kyro",
+  "good afternoon kyro",
+  "good evening kyro"
 )
 
 $stopPhrases = @(
   "nexus stop",
+  "kyro stop",
   "stop listening",
   "be quiet",
-  "pause nexus"
+  "pause nexus",
+  "pause kyro"
 )
 
 $script:WaitingForCommand = $false
@@ -244,7 +253,7 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechHypothesized -Sou
 }
 
 Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognitionRejected -SourceIdentifier AgriNexusSpeechRejected -Action {
-  Write-NexusDiagnostic "Speech heard, but Windows did not recognize it as a clear Nexus command. Try saying: Nexus open the map."
+  Write-NexusDiagnostic "Speech heard, but Windows did not recognize it as a clear command. Try saying: Kyro open the map."
 }
 
 Register-ObjectEvent -InputObject $recognizer -EventName AudioSignalProblemOccurred -SourceIdentifier AgriNexusAudioProblem -Action {
@@ -289,17 +298,18 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -Sourc
 }
 
 Write-Host ""
-Write-Host "AgriNexus Desktop Wake Listener"
+Write-Host "Kyro (AgriNexus) Desktop Wake Listener"
 Write-Host "Platform: $PlatformUrl"
 Write-Host "Session handoff: $(if (![string]::IsNullOrWhiteSpace($SessionCookie)) { 'session cookie provided' } elseif (![string]::IsNullOrWhiteSpace($Email)) { 'desktop login will use AGRINEXUS_EMAIL / AGRINEXUS_PASSWORD' } else { 'not set; add AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD for live command execution' })"
 Write-Host "Wake phrases: $($wakePhrases -join ', ')"
 Write-Host "Stop phrases: $($stopPhrases -join ', ')"
-Write-Host "Privacy: visible listener. Close this PowerShell window to stop."
-Write-Host "Diagnostics: say 'Nexus'. If the microphone works, this window should print Speech detected or Heard."
+Write-Host "Privacy: visible listener. Close this window, or say a stop phrase, to stop it for this session."
+Write-Host "Runs at sign-in: run Install-NexusStartup.ps1 once to have this start automatically; -Uninstall removes it."
+Write-Host "Diagnostics: say 'Kyro'. If the microphone works, this window should print Speech detected or Heard."
 Write-Host "Tip: if nothing prints when you talk, set your Windows default input microphone and allow desktop apps to use it."
 Write-Host ""
 
-Speak-Nexus "AgriNexus desktop listener is ready. Say Nexus when you need me."
+Speak-Nexus "Kyro's desktop listener is ready. Say Kyro when you need me."
 $recognizer.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)
 
 try {
